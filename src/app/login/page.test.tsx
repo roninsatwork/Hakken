@@ -7,6 +7,11 @@ import LoginPage from "./page";
 
 const signInMock = vi.hoisted(() => vi.fn());
 const recordMagicLinkRequestAttemptMock = vi.hoisted(() => vi.fn());
+const searchParamsGetMock = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => ({ get: searchParamsGetMock }),
+}));
 
 vi.mock("@convex-dev/auth/react", () => ({
   useAuthActions: () => ({
@@ -60,6 +65,8 @@ describe("LoginPage", () => {
   beforeEach(() => {
     signInMock.mockReset();
     recordMagicLinkRequestAttemptMock.mockReset();
+    searchParamsGetMock.mockReset();
+    searchParamsGetMock.mockReturnValue(null);
   });
 
   it("requests email magic links with the app redirect and renders neutral success copy", async () => {
@@ -104,6 +111,28 @@ describe("LoginPage", () => {
   });
 
   it("requests Google sign-in with the app redirect", () => {
+    renderLoginPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+
+    expect(signInMock).toHaveBeenCalledWith("google", { redirectTo: "/app" });
+  });
+
+  it("returns Google sign-in to the requested Deep Capture route", () => {
+    searchParamsGetMock.mockReturnValue(
+      "/demos/movement-capture?commissioning=1&deepCapture=1",
+    );
+    renderLoginPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+
+    expect(signInMock).toHaveBeenCalledWith("google", {
+      redirectTo: "/demos/movement-capture?commissioning=1&deepCapture=1",
+    });
+  });
+
+  it("rejects an external post-login redirect", () => {
+    searchParamsGetMock.mockReturnValue("https://example.com/steal");
     renderLoginPage();
 
     fireEvent.click(screen.getByRole("button", { name: /continue with google/i }));

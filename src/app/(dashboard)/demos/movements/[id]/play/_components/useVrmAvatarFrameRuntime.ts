@@ -221,6 +221,7 @@ export function useVrmAvatarFrameRuntime({
       mirrorPlayerDisplay,
       payload,
       rigBlendshapes,
+      rigDeepCapture,
       rigHands,
       targetSolverLandmarks,
     } = frameEntryRuntime.readyFrameRuntime.solvedFrameRuntime;
@@ -262,6 +263,7 @@ export function useVrmAvatarFrameRuntime({
         : externalRootMotionFrameRef?.current ?? rootMotionFrameRef.current ?? motionFrame?.rootMotionFrame ?? null,
       retargetAvatarRestRef,
       retargetSourceModelRef,
+      rigDeepCapture,
       rigHands,
       rigMeasurements: rigMeasurementsRef.current,
       rootCommandYRef,

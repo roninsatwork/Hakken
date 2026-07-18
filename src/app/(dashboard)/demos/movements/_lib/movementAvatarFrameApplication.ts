@@ -22,6 +22,7 @@ import { applyMovementAvatarLocomotionFrameOrchestrationRuntime, type MovementAv
 import { partialSupportContactLocks, supportContactAnchor } from "./movementAvatarSupportContactAnchors";
 import { applyMovementAvatarSupportFrameOrchestrationRuntime } from "./movementAvatarSupportFrame";
 import type { MovementMotionFrame } from "./movementMotionFrame";
+import type { MovementDeepCaptureFrameEvidence } from "./movementDeepCaptureContract";
 import type { MovementAvatarSupportPresentationDecision } from "./movementAvatarPipeline";
 import type { MovementRetargetFrame, MovementRetargetSourceModel } from "./movementRetargeting";
 import type { MovementRootMotionFrame } from "./movementRootMotion";
@@ -103,6 +104,7 @@ export type MovementAvatarEndFrameRuntimeResult = {
 
 export function applyMovementAvatarEndFrameRuntime({
   blendshapes,
+  deepCapture,
   expressionManager,
   hands,
   isPlayer,
@@ -110,6 +112,7 @@ export function applyMovementAvatarEndFrameRuntime({
   mirrorForDisplay,
 }: {
   blendshapes?: VrmBlendshapeCategory[] | null;
+  deepCapture?: MovementDeepCaptureFrameEvidence | null;
   expressionManager: VrmExpressionTargetWriter | null | undefined;
   hands?: VrmHandsPayload | null;
   isPlayer: boolean;
@@ -121,6 +124,7 @@ export function applyMovementAvatarEndFrameRuntime({
     expressionManager,
   });
   const handApplication = applyVrmHandsRotationTargetsToBones({
+    deepCapture,
     hands,
     isPlayer,
     lookupBone,
@@ -222,6 +226,7 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   avatarRole,
   avatarRestMap,
   blendshapes,
+  deepCapture,
   expressionManager,
   floorY,
   footLock,
@@ -244,6 +249,7 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   avatarRole: "instructor" | "player";
   avatarRestMap?: import("./movementAvatarRestPose").MovementAvatarRetargetRestMap | null;
   blendshapes?: VrmBlendshapeCategory[] | null;
+  deepCapture?: MovementDeepCaptureFrameEvidence | null;
   expressionManager: VrmExpressionTargetWriter | null | undefined;
   floorY?: number;
   footLock: Parameters<typeof applyMovementAvatarPostFrameDebugRuntime>[0]["footLock"];
@@ -281,6 +287,7 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   });
   const endFrameRuntime = applyMovementAvatarEndFrameRuntime({
     blendshapes,
+    deepCapture,
     expressionManager,
     hands,
     isPlayer,
@@ -762,6 +769,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName,
   retargetAvatarRestRef,
   retargetSourceModelRef,
+  rigDeepCapture,
   rigMeasurements,
   rigHands,
   scene,
@@ -794,6 +802,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   profileName: MovementAvatarCompletionInput["profileName"];
   retargetAvatarRestRef: MovementAvatarBodyFrameInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
+  rigDeepCapture?: MovementDeepCaptureFrameEvidence | null;
   rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
   rigHands: VrmHandsPayload | null | undefined;
   scene: MovementAvatarBodyFrameInput["scene"] & MovementAvatarCompletionInput["scene"];
@@ -904,6 +913,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     baseBonePositionRef,
     baseHipsPositionRef,
     blendshapes,
+    deepCapture: rigDeepCapture,
     calibratedFloorCorrection,
     contactLocks: avatarDecision.supportContactLocks,
     currentLowerBodyOwner: lowerBodyOwner,
@@ -1023,6 +1033,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   rigMeasurements,
   rootCommandYRef,
   retargetSourceModelRef,
+  rigDeepCapture,
   rigHands,
   scene,
   setupStateRef,
@@ -1067,6 +1078,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   recordedRootMotionFrame: MovementRootMotionFrame | null;
   retargetAvatarRestRef: MovementAvatarReadyFrameApplicationInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
+  rigDeepCapture?: MovementDeepCaptureFrameEvidence | null;
   rigMeasurements: MovementAvatarPreBodyInput["rigMeasurements"];
   rootCommandYRef?: MovementAvatarPreBodyInput["rootCommandYRef"];
   rigHands: MovementAvatarReadyFrameApplicationInput["rigHands"];
@@ -1152,6 +1164,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     profileName,
     retargetAvatarRestRef,
     retargetSourceModelRef,
+    rigDeepCapture,
     rigMeasurements,
     rigHands,
     scene,

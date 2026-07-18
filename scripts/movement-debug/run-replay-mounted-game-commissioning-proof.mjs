@@ -16,6 +16,7 @@ function timestampForPath() {
 export function parseCommissioningProofArgs(argv) {
   const args = {
     baseUrl: "http://localhost:3000",
+    deepCapture: false,
     exportPath: "",
     headed: false,
     localTestAuth: false,
@@ -27,7 +28,8 @@ export function parseCommissioningProofArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--headed") args.headed = true;
+    if (arg === "--deep-capture") args.deepCapture = true;
+    else if (arg === "--headed") args.headed = true;
     else if (arg === "--local-test-auth") args.localTestAuth = true;
     else if (arg === "--base-url") args.baseUrl = argv[++index] || args.baseUrl;
     else if (arg === "--export") args.exportPath = argv[++index] || "";
@@ -58,6 +60,7 @@ Options:
   --storage-state <file>   Playwright storage state
   --role <role>            Local auth role. Defaults to super-admin
   --headed                 Show both proof browsers
+  --deep-capture           Require schema-v3 hands, face, eyes, segmentation, and dense-body evidence
 
 Without --export, this command creates a fresh Convex export with file storage, converts the
 recording to a Replay session packet, and then runs movement:replay-game:packet-proof.
@@ -85,6 +88,7 @@ export function buildCommissioningProofPlan(args, now = timestampForPath()) {
     outDir,
     packetProofOutDir,
     packetProofSummaryPath,
+    proofProfile: args.deepCapture ? "deep-capture-v1" : "commissioning-v2",
     recordingId,
     sessionPath,
     summaryPath,
@@ -151,6 +155,7 @@ export async function runReplayMountedGameCommissioningProof(argv, deps = {}) {
   await run(process.execPath, [
     packetProofScript,
     ...proofAuthArgs(args),
+    ...(args.deepCapture ? ["--deep-capture"] : []),
     "--packet",
     plan.sessionPath,
     "--out",
@@ -164,6 +169,7 @@ export async function runReplayMountedGameCommissioningProof(argv, deps = {}) {
     packetProofOutDir: plan.packetProofOutDir,
     packetProofSummaryPath: plan.packetProofSummaryPath,
     passed: packetProofSummary.passed === true,
+    proofProfile: plan.proofProfile,
     recordingId: plan.recordingId,
     sessionPath: plan.sessionPath,
     summaryPath: plan.summaryPath,
@@ -172,7 +178,7 @@ export async function runReplayMountedGameCommissioningProof(argv, deps = {}) {
   if (!summary.passed) {
     throw new Error(`Commissioning Replay/Game proof failed. See ${plan.packetProofSummaryPath}`);
   }
-  console.log(`Commissioning Replay/Game proof passed for ${plan.recordingId}.`);
+  console.log(`${plan.proofProfile} Replay/Game proof passed for ${plan.recordingId}.`);
   console.log(`Wrote ${plan.summaryPath}`);
   return summary;
 }

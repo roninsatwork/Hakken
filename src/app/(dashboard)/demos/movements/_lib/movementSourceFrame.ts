@@ -1,4 +1,5 @@
 import type { MovementDebugReplayFrame } from "./movementDebugReplay";
+import type { MovementDeepCaptureFrameEvidence } from "./movementDeepCaptureContract";
 import type {
   MovementHandsForConfidence,
   TrackingLandmark,
@@ -103,6 +104,7 @@ export type MovementSourceFrame = {
   frameId?: string;
   landmarks: {
     blendshapes?: MovementBlendshape[];
+    deepCapture?: MovementDeepCaptureFrameEvidence;
     hands?: MovementHandsForConfidence;
     pose: TrackingLandmark[];
     worldPose: TrackingLandmark[];
@@ -125,6 +127,7 @@ export type BuildMovementSourceFrameInput = {
   blendshapes?: MovementBlendshape[];
   camera?: MovementDebugReplayFrame["camera"];
   capturedAt?: number;
+  deepCapture?: MovementDeepCaptureFrameEvidence;
   frameId?: string;
   hands?: MovementHandsForConfidence;
   movementId?: string;
@@ -185,6 +188,20 @@ function confidenceForLandmark(landmark: TrackingLandmark | undefined) {
   return clamp01(visibility) * (inFrame ? 1 : 0.25);
 }
 
+function hasCompleteFiniteLandmarkStructure(
+  landmarks: TrackingLandmark[],
+  requiredCount: number,
+  requireDepth = false,
+) {
+  if (landmarks.length < requiredCount) return false;
+
+  return landmarks.slice(0, requiredCount).every((landmark) => (
+    Number.isFinite(landmark.x) &&
+    Number.isFinite(landmark.y) &&
+    (!requireDepth || Number.isFinite(landmark.z))
+  ));
+}
+
 function average(values: number[]) {
   if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -224,6 +241,31 @@ function getPoseBounds(poseLandmarks: TrackingLandmark[]) {
 function resolveRequiredBodyParts(requirements?: MovementSourceFrameRequirements) {
   if (requirements?.bodyParts?.length) return requirements.bodyParts;
   return requirements?.mode === "upper-body" ? UPPER_BODY_REQUIREMENTS : FULL_BODY_REQUIREMENTS;
+}
+
+function hasTrustworthyRecordingAcquisitionEvidence({
+  cameraConfidence,
+  poseLandmarks,
+  requirements,
+  worldPoseLandmarks,
+}: {
+  cameraConfidence: MovementCameraConfidence;
+  poseLandmarks: TrackingLandmark[];
+  requirements?: MovementSourceFrameRequirements;
+  worldPoseLandmarks: TrackingLandmark[];
+}) {
+  const requiredBodyParts = resolveRequiredBodyParts(requirements);
+  const requiresFullBody = FULL_BODY_REQUIREMENTS.every((part) => requiredBodyParts.includes(part));
+
+  return (
+    requiresFullBody &&
+    !cameraConfidence.isStale &&
+    cameraConfidence.state !== "lost" &&
+    cameraConfidence.bodyPartConfidence.head >= 0.3 &&
+    cameraConfidence.bodyPartConfidence.torso >= 0.35 &&
+    hasCompleteFiniteLandmarkStructure(poseLandmarks, 33) &&
+    hasCompleteFiniteLandmarkStructure(worldPoseLandmarks, 33, true)
+  );
 }
 
 const CAMERA_CONFIDENCE_EVENT_MESSAGES: Record<MovementCameraMessageEvent, string> = {
@@ -347,9 +389,11 @@ export function resolveMovementCameraConfidence({
 
 export function resolveMovementStartReadiness({
   cameraConfidence,
+  recordingAcquisitionReady = false,
   requirements,
 }: {
   cameraConfidence: MovementCameraConfidence;
+  recordingAcquisitionReady?: boolean;
   requirements?: MovementSourceFrameRequirements;
 }): MovementStartReadiness {
   const requiredBodyParts = resolveRequiredBodyParts(requirements);
@@ -398,7 +442,12 @@ export function resolveMovementStartReadiness({
       blockedReasons: unique(blockedReasons),
       calibrationQuality,
       canStartGame: false,
-      canStartRecording: false,
+      // Recording acquisition and Game entry are deliberately different
+      // gates. Complete finite image/world pose evidence with trustworthy
+      // central anatomy can begin retention while distal visibility remains
+      // weak. Final commissioning and Deep Capture coverage stay fail-closed.
+      canStartRecording: recordingAcquisitionReady &&
+        (calibrationQuality === null || calibrationQuality >= 0.55),
       countdownMsRemaining,
       promptEvents: unique(promptEvents),
       requiredBodyParts,
@@ -481,6 +530,7 @@ export function buildMovementSourceFrame({
   blendshapes,
   camera,
   capturedAt = Date.now(),
+  deepCapture,
   frameId,
   hands,
   movementId,
@@ -503,6 +553,12 @@ export function buildMovementSourceFrame({
   });
   const startReadiness = resolveMovementStartReadiness({
     cameraConfidence,
+    recordingAcquisitionReady: hasTrustworthyRecordingAcquisitionEvidence({
+      cameraConfidence,
+      poseLandmarks: sourcePoseLandmarks,
+      requirements,
+      worldPoseLandmarks: sourceWorldPoseLandmarks,
+    }),
     requirements,
   });
 
@@ -513,6 +569,7 @@ export function buildMovementSourceFrame({
     frameId,
     landmarks: {
       blendshapes: blendshapes?.map((blendshape) => ({ ...blendshape })),
+      deepCapture,
       hands: cloneMovementHands(hands),
       pose: sourcePoseLandmarks,
       worldPose: sourceWorldPoseLandmarks,

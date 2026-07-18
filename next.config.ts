@@ -4,6 +4,13 @@ import { createSecureHeaders } from 'next-secure-headers';
 import path from 'node:path';
 
 const nextConfig: NextConfig = {
+  // Keep physical-device capture sessions on the local development host connected to
+  // Turbopack/HMR. Override this when the Mac's LAN address changes; production does
+  // not use this development-only origin allow-list.
+  allowedDevOrigins: (process.env.NEXT_ALLOWED_DEV_ORIGINS ?? "192.168.1.60")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   output: 'standalone',
   ...(process.env.E2E_AUTH_ENABLED === '1'
     ? {

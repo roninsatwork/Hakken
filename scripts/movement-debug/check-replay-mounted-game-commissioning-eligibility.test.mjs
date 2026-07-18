@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildReplayMountedGameCommissioningEligibilityReport,
+  compactEligibilityFailures,
+  recordingTargetsFromExport,
   runReplayMountedGameCommissioningEligibility,
 } from "./check-replay-mounted-game-commissioning-eligibility.mjs";
 
@@ -31,6 +33,31 @@ function completePacket(id = "packet-a") {
 }
 
 describe("Replay/mounted Game commissioning eligibility preflight", () => {
+  it("compacts repeated frame failures into actionable groups", () => {
+    const groups = compactEligibilityFailures([
+      "Frame 0 is missing Deep Capture profile evidence.",
+      "Frame 1 is missing Deep Capture profile evidence.",
+      "Frame 1 is missing Deep Capture profile evidence.",
+      "recording schemaVersion must be 3",
+    ]);
+
+    expect(groups).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        affectedFrameCount: 2,
+        firstFrame: 0,
+        lastFrame: 1,
+        message: "is missing Deep Capture profile evidence.",
+        occurrenceCount: 3,
+        scope: "frame",
+      }),
+      expect.objectContaining({
+        message: "recording schemaVersion must be 3",
+        occurrenceCount: 1,
+        scope: "packet",
+      }),
+    ]));
+  });
+
   it("marks complete schema-v2 packets eligible", async () => {
     const packetPath = path.resolve("tmp/movement-replay-lab/test-eligibility/complete.session.json");
     await mkdir(path.dirname(packetPath), { recursive: true });
@@ -84,6 +111,24 @@ describe("Replay/mounted Game commissioning eligibility preflight", () => {
     ]));
   });
 
+  it("does not treat a complete schema-v2 packet as Deep Capture commissioning evidence", async () => {
+    const packetPath = path.resolve("tmp/movement-replay-lab/test-eligibility/v2-not-deep.session.json");
+    await mkdir(path.dirname(packetPath), { recursive: true });
+    await writeFile(packetPath, `${JSON.stringify(completePacket())}\n`);
+
+    const report = await buildReplayMountedGameCommissioningEligibilityReport(
+      [{ packetPath }],
+      { requireDeepCapture: true },
+    );
+
+    expect(report).toMatchObject({
+      eligibleCount: 0,
+      proofProfile: "deep-capture-v1",
+    });
+    expect(report.results[0].failures).toContain("recording schemaVersion must be 3");
+    expect(report.results[0].rawFailureCount).toBeGreaterThanOrEqual(report.results[0].failures.length);
+  });
+
   it("reads manifest recording entries and writes a summary", async () => {
     const root = path.resolve("tmp/movement-replay-lab/test-eligibility/manifest");
     const packetPath = path.join(root, "complete.session.json");
@@ -111,7 +156,8 @@ describe("Replay/mounted Game commissioning eligibility preflight", () => {
       eligible: true,
       expectedFrameCount: 1,
       recordingId: "packet-from-manifest",
-      title: "Manifest Packet",
+      schemaVersion: 2,
+      title: "Complete Packet",
     });
   });
 
@@ -145,6 +191,49 @@ describe("Replay/mounted Game commissioning eligibility preflight", () => {
       convertedFromExport: exportPath,
       eligible: true,
       recordingId: "recording-a",
+    });
+  });
+
+  it("discovers every saved movement in an export without a maintained id manifest", async () => {
+    const root = path.resolve("tmp/movement-replay-lab/test-eligibility/all-recordings");
+    const exportPath = path.join(root, "export");
+    const movementsPath = path.join(exportPath, "movements");
+    const convertedOut = path.join(root, "converted");
+    await mkdir(movementsPath, { recursive: true });
+    await writeFile(path.join(movementsPath, "documents.jsonl"), [
+      JSON.stringify({ _id: "recording-a", frameCount: 10, poseData: "storage-a", title: "First" }),
+      JSON.stringify({ _id: "recording-b", frameCount: 20, poseData: "storage-b", title: "Second" }),
+      JSON.stringify({ _id: "not-a-movement-packet", title: "Missing pose data" }),
+    ].join("\n"));
+
+    await expect(recordingTargetsFromExport(exportPath)).resolves.toEqual([
+      { expectedFrameCount: 10, recordingId: "recording-a", title: "First" },
+      { expectedFrameCount: 20, recordingId: "recording-b", title: "Second" },
+    ]);
+
+    const convertedIds = [];
+    const report = await runReplayMountedGameCommissioningEligibility([
+      "--all-recordings",
+      "--export",
+      exportPath,
+      "--converted-out",
+      convertedOut,
+    ], {
+      runProcess: async (_script, args) => {
+        const recordingId = args[args.indexOf("--recording-id") + 1];
+        convertedIds.push(recordingId);
+        const outPath = args[args.indexOf("--out") + 1];
+        await mkdir(path.dirname(outPath), { recursive: true });
+        await writeFile(outPath, `${JSON.stringify(completePacket(recordingId))}\n`);
+      },
+    });
+
+    expect(convertedIds).toEqual(["recording-a", "recording-b"]);
+    expect(report).toMatchObject({
+      eligibleCount: 2,
+      selectionMode: "all-recordings",
+      sourceExport: exportPath,
+      targetCount: 2,
     });
   });
 });

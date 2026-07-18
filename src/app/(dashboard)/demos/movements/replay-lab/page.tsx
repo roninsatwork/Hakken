@@ -27,6 +27,7 @@ import {
   buildReplayStudioRepairPacket,
 } from "../_lib/movementReplayStudioRepairPacket";
 import { sourceHashForReplaySession } from "../_lib/movementReplaySourceIdentity";
+import { buildMovementDenseCaptureProofSnapshot } from "../_lib/movementDenseCaptureProof";
 import {
   resolveMovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
@@ -116,6 +117,7 @@ function replayFrameMotionPayload(
   return {
     blendshapes: frame.tracking.blendshapes,
     capturedAt: frame.capturedAt,
+    deepCapture: frame.tracking.deepCapture,
     frameId,
     faceLandmarks: frame.tracking.face,
     hands: frame.tracking.hands,
@@ -131,6 +133,7 @@ type MovementReplayLabDeterministicDebugWindow = Window & {
     boundaries: {
       acquisition: unknown;
       calibration: unknown;
+      denseFusion: unknown;
       instructorRendered: unknown;
       motionFrame: unknown;
       ownersRootSupport: unknown;
@@ -836,6 +839,9 @@ export default function MovementReplayLabPage() {
           boundaries: {
             acquisition: structuredClone(currentThreePartyPlayerPayload),
             calibration: structuredClone(replayThreePartyPlayerCalibration),
+            denseFusion: buildMovementDenseCaptureProofSnapshot(
+              currentThreePartyPlayerPayload.deepCapture,
+            ),
             instructorRendered: structuredClone(instructorDebug.avatarVisual),
             motionFrame: structuredClone(replayMotionFrameRef.current),
             ownersRootSupport: structuredClone({

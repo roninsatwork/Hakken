@@ -8,6 +8,12 @@ import type {
 } from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
 import { MOVEMENT_PLAYER_INPUT_CONTRACT } from "./movementPlayerInputContract";
+import {
+  MOVEMENT_DEEP_CAPTURE_PROFILE,
+  type MovementDeepCaptureChannelSummary,
+} from "./movementDeepCaptureContract";
+import { MOVEMENT_DEEP_CAPTURE_REFINEMENT_PROFILE } from "./movementDeepCaptureRefinement";
+import { MOVEMENT_DENSE_CAPTURE_ADAPTER_PROFILE } from "./movementDenseCapture";
 
 const DEFAULT_CAPTURE_FPS = 30;
 
@@ -69,8 +75,10 @@ export function parseMovementFramePayload(
 
     return {
       frames: envelope.frames,
-      format: envelope.schemaVersion === 2
-        ? "storage-json-v2"
+      format: envelope.schemaVersion === 3
+        ? "storage-json-v3"
+        : envelope.schemaVersion === 2
+          ? "storage-json-v2"
         : envelope.schemaVersion === 1
           ? "storage-json-v1"
           : sourceFormat,
@@ -79,6 +87,8 @@ export function parseMovementFramePayload(
         ? envelope.captureStartReadiness
         : undefined,
       channelSummary: envelope.channelSummary,
+      deepCaptureChannelSummary: envelope.deepCaptureChannelSummary,
+      deepCaptureProfile: envelope.deepCaptureProfile,
       inputContract: envelope.inputContract,
       schemaVersion: typeof envelope.schemaVersion === "number" ? envelope.schemaVersion : undefined,
       setupPrefix: envelope.setupPrefix,
@@ -93,6 +103,13 @@ export function parseMovementFramePayload(
 
 function isFramePayload(frame: MovementFrame): frame is Exclude<MovementFrame, MovementLandmark[]> {
   return !Array.isArray(frame) && isRecord(frame);
+}
+
+function stripDeepCaptureEvidence(frame: MovementFrame): MovementFrame {
+  if (!isFramePayload(frame)) return frame;
+  const legacyFrame = { ...frame };
+  delete legacyFrame.deepCapture;
+  return legacyFrame;
 }
 
 export function summarizeMovementRecordingChannels(
@@ -118,6 +135,66 @@ export function summarizeMovementRecordingChannels(
   };
 }
 
+export function summarizeMovementDeepCaptureChannels(
+  frames: MovementFrame[],
+): MovementDeepCaptureChannelSummary {
+  const totalFrames = frames.length;
+  const count = (predicate: (frame: Exclude<MovementFrame, MovementLandmark[]>) => boolean) => (
+    frames.filter((frame) => isFramePayload(frame) && predicate(frame)).length
+  );
+  const channel = (
+    presentFrames: number,
+    { minimumFrames, minimumRatio }: { minimumFrames: number; minimumRatio: number },
+  ) => ({
+    // Natural whole-body movement necessarily creates temporary face/hand
+    // occlusion. "Complete" means the recording contains enough measured
+    // evidence to prove that channel, while every source frame still remains
+    // in the packet and claimed evidence is validated independently.
+    complete: totalFrames > 0 && presentFrames >= Math.min(
+      totalFrames,
+      Math.max(minimumFrames, Math.ceil(totalFrames * minimumRatio)),
+    ),
+    presentFrames,
+    totalFrames,
+  });
+  const handCoverage = { minimumFrames: 15, minimumRatio: 0.1 };
+  const faceCoverage = { minimumFrames: 30, minimumRatio: 0.5 };
+  const bodyCoverage = { minimumFrames: 30, minimumRatio: 0.8 };
+  const hasGazeVector = (frame: Exclude<MovementFrame, MovementLandmark[]>) => {
+    const gaze = frame.deepCapture?.face?.gaze;
+    return Boolean(gaze?.left || gaze?.right || gaze?.fused);
+  };
+
+  return {
+    leftHand: channel(count((frame) => (
+      (frame.hands?.left?.landmarks.length ?? 0) >= 21 && Boolean(frame.deepCapture?.hands?.left)
+    )), handCoverage),
+    rightHand: channel(count((frame) => (
+      (frame.hands?.right?.landmarks.length ?? 0) >= 21 && Boolean(frame.deepCapture?.hands?.right)
+    )), handCoverage),
+    palmWrist: channel(count((frame) => {
+      const hands = frame.deepCapture?.hands;
+      return [hands?.left, hands?.right].every((hand) => (
+        Boolean(hand?.orientation?.palmNormal) &&
+        Boolean(hand?.orientation?.wristRotation) &&
+        hand?.orientation?.facing !== "unknown"
+      ));
+    }), handCoverage),
+    face: channel(count((frame) => (
+      (frame.deepCapture?.face?.facialTransformationMatrix?.length ?? 0) === 16
+    )), faceCoverage),
+    eyesGaze: channel(count(hasGazeVector), faceCoverage),
+    segmentation: channel(
+      count((frame) => Boolean(frame.deepCapture?.denseBody?.segmentation)),
+      bodyCoverage,
+    ),
+    denseBody: channel(count((frame) => (
+      (frame.deepCapture?.denseBody?.anchors.length ?? 0) >=
+      MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum
+    )), bodyCoverage),
+  };
+}
+
 export function buildMovementFrameEnvelope(
   frames: MovementFrame[],
   fps = DEFAULT_CAPTURE_FPS,
@@ -132,7 +209,7 @@ export function buildMovementFrameEnvelope(
     captureStartReadiness: options.captureStartReadiness ?? undefined,
     channelSummary: summarizeMovementRecordingChannels(frames),
     fps,
-    frames,
+    frames: frames.map(stripDeepCaptureEvidence),
     inputContract: {
       detector: { ...MOVEMENT_PLAYER_INPUT_CONTRACT.detector },
       filters: {
@@ -150,6 +227,36 @@ export function buildMovementFrameEnvelope(
       ),
       requiredFrameCount: prefixFrameCount,
     },
+  };
+}
+
+export function buildMovementDeepCaptureFrameEnvelope(
+  frames: MovementFrame[],
+  fps = DEFAULT_CAPTURE_FPS,
+  options: {
+    captureStartReadiness?: MovementStartReadiness | null;
+  } = {},
+): MovementFrameEnvelope {
+  const baseEnvelope = buildMovementFrameEnvelope(frames, fps, options);
+
+  return {
+    ...baseEnvelope,
+    deepCaptureChannelSummary: summarizeMovementDeepCaptureChannels(frames),
+    deepCaptureProfile: buildMovementDeepCaptureProfile(),
+    frames,
+    schemaVersion: 3,
+  };
+}
+
+export function buildMovementDeepCaptureProfile(): NonNullable<MovementFrameEnvelope["deepCaptureProfile"]> {
+  return {
+    anchorTarget: { ...MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget },
+    channels: [...MOVEMENT_DEEP_CAPTURE_PROFILE.channels],
+    denseAdapter: { ...MOVEMENT_DENSE_CAPTURE_ADAPTER_PROFILE },
+    id: MOVEMENT_DEEP_CAPTURE_PROFILE.id,
+    privacy: { ...MOVEMENT_DEEP_CAPTURE_PROFILE.privacy },
+    refinement: { ...MOVEMENT_DEEP_CAPTURE_REFINEMENT_PROFILE },
+    schemaVersion: MOVEMENT_DEEP_CAPTURE_PROFILE.schemaVersion,
   };
 }
 

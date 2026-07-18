@@ -140,4 +140,59 @@ describe("MovementSaveDialog", () => {
     expect(onPrimaryCueChange).toHaveBeenCalledWith("Roll down slowly");
     expect(onBodyFocusChange).toHaveBeenCalledWith(["ribcage", "shoulders"]);
   });
+
+  it("offers a proof-ready local packet backup independently of cloud upload errors", () => {
+    const onDownloadBackup = vi.fn();
+
+    render(
+      <MovementSaveDialog
+        isOpen
+        title="Deep Capture proof"
+        difficulty="Intermediate"
+        frameCount={MIN_MOVEMENT_CAPTURE_FRAMES}
+        isSaving={false}
+        saveError="Movement upload failed. Please try saving again."
+        backupMessage="Local packet backup downloaded."
+        backupCommand="npm run movement:replay-game:deep-local-proof -- --packet ~/Downloads/deep.json --preflight-only"
+        commissioningFailures={[]}
+        {...baseProps}
+        onClose={vi.fn()}
+        onTitleChange={vi.fn()}
+        onDifficultyChange={vi.fn()}
+        onDownloadBackup={onDownloadBackup}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const backupButton = screen.getByRole("button", { name: "Download local packet backup" });
+    expect(backupButton).toBeEnabled();
+    expect(screen.getByText(/derived tracking JSON only/i)).toBeInTheDocument();
+    expect(screen.getByText("Local packet backup downloaded.")).toBeInTheDocument();
+    expect(screen.getByText(/movement:replay-game:deep-local-proof/)).toBeInTheDocument();
+
+    fireEvent.click(backupButton);
+    expect(onDownloadBackup).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks the local packet backup when commissioning validation fails", () => {
+    render(
+      <MovementSaveDialog
+        isOpen
+        title="Incomplete proof"
+        difficulty="Intermediate"
+        frameCount={MIN_MOVEMENT_CAPTURE_FRAMES}
+        isSaving={false}
+        saveError={null}
+        commissioningFailures={["Both hands are required."]}
+        {...baseProps}
+        onClose={vi.fn()}
+        onTitleChange={vi.fn()}
+        onDifficultyChange={vi.fn()}
+        onDownloadBackup={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Download local packet backup" })).toBeDisabled();
+  });
 });

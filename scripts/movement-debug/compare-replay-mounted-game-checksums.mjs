@@ -26,6 +26,7 @@ const COMPARABLE_BOUNDARIES = [
   "playerRendered",
   "playerApplied",
 ];
+const DEEP_CAPTURE_BOUNDARY = "denseFusion";
 
 function proofIdentity(artifact, fallback = {}) {
   return Object.fromEntries(REQUIRED_IDENTITY_FIELDS.map((field) => [
@@ -281,6 +282,15 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
     sourcePacketHash: replay?.sourceHash,
   });
   const gameIdentity = proofIdentity(game, game?.final);
+  const requiresDenseFusionBoundary = [
+    replayIdentity.recordingSchemaVersion,
+    gameIdentity.recordingSchemaVersion,
+  ].some((schemaVersion) => Number(schemaVersion) >= 3) ||
+    [...replayFrameRecords.values()].some((frame) => frame?.boundaries?.denseFusion !== undefined) ||
+    gameFrames.some((frame) => frame?.boundaries?.denseFusion !== undefined);
+  const comparableBoundaries = requiresDenseFusionBoundary
+    ? [...COMPARABLE_BOUNDARIES, DEEP_CAPTURE_BOUNDARY]
+    : COMPARABLE_BOUNDARIES;
   const replayCode = codeIdentity(replay);
   const gameCode = codeIdentity(game);
   const currentCode = {
@@ -320,7 +330,7 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
   for (const gameFrame of gameFrames) {
     const replayFrame = replayFrameRecords.get(gameFrame.frameIndex);
     const replayDebug = replayFrames.get(gameFrame.frameIndex);
-    for (const boundary of COMPARABLE_BOUNDARIES) {
+    for (const boundary of comparableBoundaries) {
       const replayBoundary = boundary === "playerApplied"
         ? normalizeAppliedRoot(
             replayFrame?.boundaries?.playerApplied ?? appliedSnapshot(replayDebug),
@@ -340,7 +350,11 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
         ? null
         : movementBoundaryChecksumForComparison(gameBoundary);
       const gameDeclaredChecksum = gameFrame?.checksums?.[boundary] ?? null;
+      const missingRequiredBoundary = boundary === DEEP_CAPTURE_BOUNDARY && (
+        replayBoundary == null || gameBoundary == null
+      );
       if (
+        missingRequiredBoundary ||
         !replayChecksum ||
         !gameComputedChecksum ||
         replayChecksum !== gameComputedChecksum ||
@@ -423,6 +437,8 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
   );
 
   return {
+    comparedBoundaries: comparableBoundaries,
+    comparedBoundaryCount: comparableBoundaries.length,
     comparedFrameCount: gameFrames.length,
     divergenceCount: visualToleranceDivergences.length,
     divergences: visualToleranceDivergences,

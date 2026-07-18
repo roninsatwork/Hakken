@@ -72,6 +72,7 @@ export type MovementAvatarSolvedFrameRuntime =
     payload: VrmMotionPayload | null;
     rawPreparedInput: MovementAvatarPreparedSolverInput;
     rigBlendshapes: MovementAvatarPreparedSolverInput["rigBlendshapes"];
+    rigDeepCapture?: MovementAvatarPreparedSolverInput["rigDeepCapture"];
     rigHands: MovementAvatarPreparedSolverInput["rigHands"];
     status: "ready";
     targetSolverLandmarks: MovementAvatarPreparedSolverInput["imageLandmarks"];
@@ -113,6 +114,7 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     imageLandmarks,
     rigHands,
     rigBlendshapes,
+    rigDeepCapture,
   } = displayPreparedInput;
 
   return {
@@ -124,6 +126,7 @@ export function resolveMovementAvatarSolvedFrameRuntime({
     payload,
     rawPreparedInput,
     rigBlendshapes,
+    rigDeepCapture,
     rigHands,
     status: "ready",
     targetSolverLandmarks,

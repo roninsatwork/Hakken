@@ -36,6 +36,8 @@ export type MovementReplayRecordingLoadResult = {
 type MovementReplaySessionBuildOptions = {
   captureStartReadiness?: MovementStartReadiness;
   channelSummary?: MovementRecordingChannelSummary;
+  deepCaptureChannelSummary?: MovementFrameEnvelope["deepCaptureChannelSummary"];
+  deepCaptureProfile?: MovementFrameEnvelope["deepCaptureProfile"];
   inputContract?: MovementFrameEnvelope["inputContract"];
   schemaVersion?: number;
   setupPrefix?: MovementFrameEnvelope["setupPrefix"];
@@ -103,7 +105,17 @@ export function buildMovementReplaySessionFromRecording(
     const capturedAt = startedAt + getFrameTimestamp(frame, frameIndex * frameDurationMs);
 
     return {
+      acquisitionProfileId: getFramePayload(frame)?.acquisitionProfileId,
       bodyConfidence: {},
+      camera: getFramePayload(frame)?.camera
+        ? {
+            deviceFingerprint: getFramePayload(frame)?.camera?.deviceFingerprint,
+            trackHeight: getFramePayload(frame)?.camera?.frameHeight,
+            trackWidth: getFramePayload(frame)?.camera?.frameWidth,
+            videoHeight: getFramePayload(frame)?.camera?.frameHeight,
+            videoWidth: getFramePayload(frame)?.camera?.frameWidth,
+          }
+        : undefined,
       capturedAt,
       fallbacks: {
         lowerBody: "recorded",
@@ -116,6 +128,7 @@ export function buildMovementReplaySessionFromRecording(
       startReadiness: getFramePayload(frame)?.startReadiness,
       tracking: {
         blendshapes: getFramePayload(frame)?.blendshapes as MovementDebugReplaySession["samples"][number]["tracking"]["blendshapes"],
+        deepCapture: getFramePayload(frame)?.deepCapture,
         face: toReplayLandmarks(getFramePayload(frame)?.faceLandmarks ?? []),
         hands: Object.fromEntries(
           (["left", "right"] as const).map((side) => {
@@ -145,6 +158,8 @@ export function buildMovementReplaySessionFromRecording(
     baselineSummary: "saved movement recording",
     captureStartReadiness: options.captureStartReadiness,
     channelSummary: options.channelSummary,
+    deepCaptureChannelSummary: options.deepCaptureChannelSummary,
+    deepCaptureProfile: options.deepCaptureProfile,
     createdAt: recording.createdAt,
     durationMs,
     endedAt: startedAt + durationMs,
@@ -184,6 +199,8 @@ export async function loadMovementReplayRecording(
       {
         captureStartReadiness: parsed.captureStartReadiness,
         channelSummary: parsed.channelSummary,
+        deepCaptureChannelSummary: parsed.deepCaptureChannelSummary,
+        deepCaptureProfile: parsed.deepCaptureProfile,
         inputContract: parsed.inputContract,
         schemaVersion: parsed.schemaVersion,
         setupPrefix: parsed.setupPrefix,

@@ -434,6 +434,8 @@ export const DEFAULT_PHASE_14_SCRIPT_EXPECTATIONS = {
     "movement:architecture-plan-status-audit:strict -- --json",
     "movement:outstanding-tasks-audit:strict -- --json",
     "movement:next-proof-capture-queue",
+    "movement:replay-game:deep-tiered-finish-gate -- --through all-nine",
+    "movement:replay-game:deep-review-manifest-gate",
   ],
   "movement:proof:validate:facing-occlusion": [
     "scripts/movement-debug/validate-recording-scenario.mjs",

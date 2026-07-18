@@ -1,7 +1,7 @@
 # Replay Studio And Game Studio Runtime Alignment Plan
 
-Last reviewed: 2026-07-17
-Status: active and product-blocked. The shared post-input runtime is substantially aligned, proof identity and eight exact comparison boundaries now fail closed, and eight legacy recordings produced zero observed Replay/Game output differences. That historical evidence remains diagnostic rather than final acceptance because no complete current commissioning packet has yet been captured and exercised through fresh Replay and mounted Game runs.
+Last reviewed: 2026-07-18
+Status: active, scope-expanded, and product-blocked. The shared post-input runtime is substantially aligned, proof identity and eight schema-v2 comparison boundaries now fail closed, schema-v3 Deep Capture adds a ninth exact dense-fusion boundary, and eight legacy recordings produced zero observed Replay/Game output differences. That historical evidence remains diagnostic rather than final acceptance because no complete current commissioning packet has yet been captured and exercised through fresh Replay and mounted Game runs. The product scope now also requires a versioned Deep Capture contract for higher-fidelity hands, wrists, fingers, face, eyes, and genuinely denser whole-body evidence; existing partial hand/face foundations do not satisfy those expanded acquisition, renderer, or proof requirements end to end.
 Owner: shared Movement Studio / Replay Studio / Game Studio motion runtime
 
 Related controlling documents:
@@ -45,7 +45,7 @@ Human Game testing on 2026-07-16 exposed a further, more important contradiction
 
 ## Current Code Truth
 
-The post-input runtime and mounted recorded-Game proof route are shared. The remaining acceptance gap is source evidence and commissioning, not a separate Game bone solver.
+For the pre-expansion pose scope, the post-input runtime and mounted recorded-Game proof route are shared. Its remaining acceptance gap is source evidence and commissioning, not a separate Game bone solver. Deep Capture adds new shared acquisition, application, performance, and proof work described below.
 
 ### Replay Studio standard avatar
 
@@ -166,6 +166,108 @@ Replay Studio should replace only the physical camera and MediaPipe invocation a
 - three-party mirror proof: recorded instructor plus independently constructed opposite-player imitation through both real role paths.
 
 The Replay and Game UIs should remain separate. The acquisition configuration and runtime below the physical camera/decoder boundary must be shared and fingerprinted.
+
+## Deep Capture Scope Expansion
+
+“Deep Capture” means materially more source evidence than the existing 33-point pose skeleton. It must not be implemented by merely interpolating extra points between the current pose landmarks and labelling those points as observed.
+
+The expanded acquisition contract is a hybrid:
+
+```text
+physical RGB frame
+  -> high-rate 33-point pose skeleton
+  -> high-resolution left/right hand crops
+  -> high-resolution face/eye crop
+  -> lower-cadence dense-body estimator
+  -> temporal identity, confidence, and occlusion fusion
+  -> immutable schema-v3 Deep Capture packet
+  -> shared setup/calibration and movement-game-runtime-v1
+  -> Replay + mounted Game + final rendered-VRM proof
+```
+
+The packet must label the origin of every signal:
+
+- `observed`: returned directly by the active detector from the current image;
+- `model-estimated`: inferred by a dense body, face, gaze, depth, or orientation model from the current image;
+- `temporally-tracked`: carried from an earlier observation with age and decay metadata;
+- `derived`: calculated from other packet fields, such as a palm normal, wrist twist, joint angle, surface normal, or contact estimate.
+
+No derived or temporally tracked point may be counted as a newly observed body point. Missing, occluded, low-resolution, or ambiguous evidence must remain explicit and confidence-gated.
+
+### Hands, fingers, and wrists
+
+The Deep Capture hand contract must preserve, per anatomical side:
+
+- all 21 hand landmarks in image and world coordinates, model-level detection/presence/tracking confidence, per-point quality where the selected model supports it, detector-provided handedness, and the pose-wrist association used to resolve conflicts;
+- a native-resolution hand region of interest and crop transform so hands are re-detected at useful pixel size even when the whole body is far from the camera;
+- thumb plus four-finger MCP/PIP/DIP/tip flexion, extension, spread/abduction, opposition, and curl evidence;
+- wrist flexion/extension, radial/ulnar deviation, pronation/supination, and a signed palm normal;
+- explicit `palm-facing-camera | palm-facing-away | edge-on | unknown` classification with confidence, never a guess from a single 2D point;
+- occlusion, clipping, inter-hand overlap, reassociation, and reacquisition status;
+- final rendered hand, wrist, and every available finger-bone transform after VRM application.
+
+Current code retains hand image/world landmarks and applies finger rotations, but it assigns detected hands by pose-wrist proximity and deliberately does not apply the solved wrist rotation. Deep Capture must retain detector handedness as evidence, reconcile rather than discard disagreement, and add a reviewed wrist swing/twist application path shared by Replay and Game.
+
+### Face, eyes, and expression
+
+The Deep Capture face contract must preserve:
+
+- every dense face landmark returned by the selected model, including eye contours and iris landmarks when available;
+- all model-returned expression/blendshape coefficients rather than only the small current blink, jaw-open, and smile subset;
+- the facial transformation matrix when the selected runtime supports it;
+- bilateral blink, squint, eye-wide, brow, cheek, mouth-corner, jaw, lip, and asymmetric expression ownership;
+- per-eye gaze direction and a fused gaze target, clearly labelled `model-estimated` or `derived` rather than directly observed;
+- head/face orientation, eye visibility, glasses/occlusion status, crop resolution, and per-channel confidence;
+- final rendered eye-look, eyelid, jaw, mouth, and supported VRM expression weights.
+
+The current face detector already requests blendshapes but disables facial transformation matrices, and the renderer consumes only a narrow expression subset. Deep Capture must widen both storage and application proof without letting a face/eye failure invalidate otherwise trustworthy body evidence.
+
+### Genuinely denser whole-body capture
+
+The existing 33 pose landmarks remain the high-rate skeletal baseline, but they are not sufficient to describe rotation or surface motion across the chest, back, abdomen, shoulders, upper/lower arms, pelvis, thighs, calves, shins, hands, and feet.
+
+The target dense-body channel is browser-native and on-device:
+
+- a body segmentation/silhouette result with source-image dimensions and confidence;
+- a reviewed browser-native segmentation or dense correspondence model that runs entirely in the client browser with no raw-frame upload;
+- approximately 200-500 persistent, anatomically labelled surface anchors sampled across the visible body, not thousands of raw model vertices sent directly to the avatar;
+- stable anchor identity, body region, anatomical side, front/back ownership, source coordinates, confidence, occlusion state, observation origin, and temporal age; depth and surface normal remain optional capabilities and must never be invented when the browser model cannot measure them;
+- extra hand/foot contact contours and heel, sole, toe, knuckle, palm, elbow, knee, shoulder, chest, back, pelvis, thigh, calf, and shin surface coverage;
+- fusion with the 33-point skeleton so dense evidence improves twist, surface orientation, contact, and occlusion diagnosis without replacing the stable skeletal owner contract.
+
+Production candidates are limited to models that run locally in the client browser through WebGL, WebGPU, or WASM. The implementation spike must record supported devices, model size, frame time, memory, licence constraints, camera-distance behaviour, occlusion recovery, and accuracy before a production dependency is approved. The minimum device matrix must include a representative iPad and an older laptop; a result measured only on the development Mac cannot approve a model.
+
+Rejected research checkpoint (2026-07-18): Detectron2/DensePose is server/PyTorch oriented, SMPL-X introduces a separate commercial model-licence decision, and a DensePose plus Depth Anything service would require raw-frame processing outside the client. Those routes violate the agreed client-browser product boundary and are not implementation options for this plan. MediaPipe Pose segmentation and browser-native semantic models may still be used honestly for additional visible-body coverage without claiming full 3D geometry.
+
+Post-soak browser decision checkpoint (2026-07-18): the measured BodyPix MobileNet candidate adds browser-native semantic body coverage, but it is not yet approved because the benchmark has only run on the development machine. It does not provide true depth or surface normals, and the product must describe those fields as unavailable rather than turning that limitation into a server dependency.
+
+- Do not build or benchmark a server-GPU, external-frame-processing, DensePose, Depth Anything, or SMPL-X product path under this plan.
+- Do not require true depth or 3D normals to approve useful additional browser-native body coverage. Require honest capability labels and keep the 33-point world-pose skeleton as the stable 3D bone owner.
+- Use adaptive input resolution and cadence tiers so dense semantic capture cannot freeze the camera, hands, face, Replay Studio, or Game Studio on a lower-powered device.
+
+The next implementation step is a browser-device qualification pass: measure the existing browser-native candidate on a representative iPad and older laptop, define automatic high/medium/low capture tiers, and keep the dense channel disabled or reduced when it would break interactive frame budgets. Replay Studio and Game Studio must consume the same honestly labelled packet at every tier.
+
+Dense inference may run at a lower cadence than pose, hands, or face. Every channel therefore needs its own source timestamp, inference timestamp, cadence, age, confidence, and fail-closed coverage accounting. Temporal tracking may bridge dense updates but cannot manufacture accepted observations.
+
+### Packet, privacy, and runtime boundary
+
+This expansion requires an explicit schema v3 and a new acquisition-profile ID. Schema v2 remains readable as legacy evidence but cannot certify Deep Capture. A schema-v3 packet must include the complete setup/readiness prefix and immutable hashes plus the new hand-orientation, facial-transform/gaze, dense-body, segmentation, provenance, cadence, and coverage fields.
+
+Raw RGB frames or source video must not be persisted by default. The normal commissioning packet stores derived landmarks, masks or compact surface anchors, confidence/provenance, timing, and hashes. Persisting identifiable source imagery requires a separate explicit product/privacy decision, retention policy, and user consent.
+
+Replay, mounted Game, and live Game must consume the same versioned normalized packet below the physical detector boundary. Dense capture must not become a Capture-only diagnostic, a Replay-only visualizer, or a Game-only correction path.
+
+### Live acquisition observability
+
+Before recording starts, the capture page must show per-channel evidence rather than one generic “ready” state:
+
+- pose: observed points out of 33 and required full-body regions;
+- left/right hands: observed points out of 21, crop resolution, handedness confidence, palm orientation confidence, and wrist evidence;
+- face/eyes: dense landmark, iris/gaze, facial transform, and blendshape availability;
+- dense body: sampled anchors observed/tracked out of the configured target, region coverage, cadence, age, and segmentation quality;
+- setup/readiness: accepted prefix frames, camera metadata, clipping, source timing, and exact blocking reasons.
+
+The recorder may start with an explicitly declared reduced capability only when the requested proof profile allows it. A commissioning or Deep Capture acceptance profile must fail closed when any required channel is missing.
 
 ## Allowed Differences
 
@@ -483,23 +585,98 @@ Exit criteria:
 - Every supported behaviour is `passed` or `blocked`; none is silently skipped, averaged away, or recorded only as a limitation.
 - Squats, lateral leg raises, and side bends cannot pass Replay certification while failing in mounted Game.
 
-### Phase 12: Commission Once And Lock Regression Protection
+### Phase 12: Make Capture Start Reliable And Lock The Deep Contract
 
-Progress: 0%.
+Progress: 98%. The timed one-shot start check has been removed: Record now arms indefinitely and starts as soon as full-body readiness arrives, with explicit `ARMED - NOT RECORDING YET`, `RECORDING - N MOMENTS SAVED`, and failed-start states. The record-to-save regression passes, live channel preflight exposes exact current and Deep Capture evidence, face counting no longer applies Pose visibility semantics to valid Face Landmarker coordinates, dense-body readiness cannot contradict missing-region output, and schema v3 has a versioned profile, packet builder/parser, channel summaries, privacy defaults, fail-closed save mode, and cross-route profile guard. Once recording is active, every detected pose frame is retained with its real readiness and channel evidence; temporary occlusion is no longer silently deleted. Palm/wrist, bilateral gaze, and native-crop refinement report observed evidence rather than `planned`.
 
 Tasks:
 
-- [ ] After Phases 8-11 pass, run one short real-camera Game commissioning session covering the acceptance matrix and automatically save its complete packet.
+- [x] Replace the timed countdown and one-shot visibility check with an untimed armed state that continuously observes readiness and starts automatically whenever the whole body becomes ready. Make the not-recording, armed, active-recording, and failed-start lifecycle states visually unambiguous.
+- [x] Add a page-level regression that clicks Record, completes the countdown, starts frame retention, records at least the minimum duration, stops, and reaches the save dialog without requiring the user to approach the camera. The regression retains 180 frames and reaches the save dialog.
+- [x] Add live per-channel observability for pose, both hands, wrist/palm orientation, face, eyes/gaze, dense-body coverage, camera, setup prefix, and readiness. Current channels report exact counts; wrist/palm and gaze switch to observed counts only when their new evidence exists, while dense body remains explicitly `planned`.
+- [x] Freeze the schema-v3 field vocabulary, observation-origin labels, per-channel cadence/age rules, coverage rules, and privacy boundary. `movementDeepCaptureContract.ts` owns the typed schema and 200-500-anchor contract.
+- [x] Add a capability profile that distinguishes ordinary pose capture from required Deep Capture commissioning. Ordinary saves remain schema v2; `/demos/movement-capture?deepCapture=1` builds, hashes, validates, and stores schema v3 only when the complete required profile passes.
+- [x] Make the start/save gate list exact missing channels and regions. Do not report generic visibility failure when the whole body was present but a hand, face, eye, dense-body, or lifecycle requirement was missing. The live preflight now distinguishes coarse from native-crop-refined hand/face evidence, reports exact channel counts, and the schema-v3 validator names frame/channel/region failures before upload.
+- [x] Add architecture tests preventing Capture, Replay, and Game from owning different Deep Capture profiles or coverage thresholds. `movement:acquisition-contract-guard` now locks the one profile ID, schema, 200-500 threshold, capture builder/validator, Replay conversion/runtime carriage, shared source field, and Game runtime carriage.
+
+Exit criteria:
+
+- The record button reliably produces retained frames and a saveable packet after the countdown.
+- A failed start or save identifies the exact channel, region, confidence, age, or lifecycle reason.
+- The user is not asked to perform another session until the start regression and on-screen preflight both pass.
+
+### Phase 13: Capture And Render High-Fidelity Hands, Wrists, Face, And Eyes
+
+Progress: 78%. The shared acquisition path retains detector handedness and pose-wrist reconciliation, records native-frame hand/face ROI transforms, and now runs dedicated image-mode hand and face models against those crops behind Deep Capture mode. Crop-relative results map back into native source-frame coordinates, anatomical side remains owned by the pose-wrist association, slow inference triggers dynamic cadence backoff, and carried results expire after 150 ms with explicit `temporally-tracked` provenance. Brief detector loss no longer disables that carry merely because the current coarse ROI disappeared. Hand and face evidence now records `observed`, `temporally-carried`, or `reacquired` state plus explicit occlusion; eye visibility is bilateral and fail-closed, while eyewear remains explicitly `unknown` because the current model cannot honestly classify glasses. Capture preflight exposes carried/reacquired state instead of silently showing old evidence as current. The capture retains 21 image/world hand points, derives fail-closed palm/wrist and 15 finger-joint signals, enables facial transformation matrices, and derives bilateral plus fused gaze. The shared renderer applies wider VRM eye/expression targets and a confidence-gated, bounded wrist target only for Deep Capture evidence, with mirrored player hand ownership exchanged exactly once. A new immutable frame test passes recording-to-Replay conversion and the live-source Game adapter through the same player runtime and actual final VRM writers, proving exact equality across at least 30 bilateral wrist/finger rotations and five eye/expression writes. Deterministic guards now cover crossed-hand disagreement, camera-boundary crop clamping, edge-on palms, incomplete/occluded irises, low-resolution crop sizing, carry without a current ROI, reacquisition state, and stale carry expiry. Real RGB occlusion/reacquisition fixtures, device measurements, and browser-mounted full-sequence Replay/Game rendered proof remain open.
+
+Tasks:
+
+- [x] Add two-stage native-resolution hand/face crops and preserve all 21 image/world landmarks for each hand with handedness, crop transform, confidence, and temporal identity. Dedicated `IMAGE`-mode refiners use native camera ROIs, bounded 192/256-pixel minimum inputs, source-frame remapping, one-batch scheduling, duration-based backpressure, and a 150 ms fail-closed carry window. Schema-v3 commissioning and live preflight now reject coarse-only hand/face evidence.
+- [x] Reconcile detector handedness with pose-wrist proximity; retain disagreement as evidence instead of silently assigning one result.
+- [x] Derive palm normals and wrist swing/twist with degeneracy checks, camera-facing classification, confidence, explicit `unknown` output, and `derived` provenance.
+- [x] Apply reviewed wrist rotations and full supported finger articulation through the shared VRM path, with anatomical ownership resolved exactly once. Existing finger targets remain shared; wrist targets require non-unknown Deep Capture orientation at confidence 0.5 or higher, use bounded 0.35 interpolation, remain off for legacy evidence, and exchange sides with the facing-player display transform.
+- [x] Enable and preserve facial transformation matrices when supported, retain all dense face/iris landmarks and all model blendshapes, and add explicit per-eye/fused gaze provenance.
+- [x] Expand shared VRM expression and eye-look application beyond blink/jaw/smile while preserving asymmetric left/right ownership. The shared final writer now maps bilateral eye look, surprise, anger, sadness, pucker/funnel/stretch mouth shapes, and the existing asymmetric blinks.
+- [ ] Add occlusion, edge-on palm, crossed-hand, glasses/eye-occlusion, reacquisition, and low-resolution fixtures.
+- [ ] Add actual-renderer bilateral hand/wrist/finger/eye/expression proof in Replay and mounted Game with zero silent skips.
+
+Exit criteria:
+
+- Both palm-facing directions, wrist rotations, representative individual finger motions, blinks, gaze directions, and asymmetric expressions are measured, replayable, and visibly applied.
+- Missing or ambiguous hand/eye evidence is visible and never converted into a confident pose.
+- Replay and mounted Game produce exact packet/runtime boundary checksums and accepted final rendered transforms for the same supported frames.
+
+### Phase 14: Add Dense Whole-Body Surface Capture And Fusion
+
+Progress: 99%. The explicit Deep Capture lab can request MediaPipe's model-produced segmentation mask, immediately encode it as compact RLE with source/mask dimensions, confidence, timing, provenance, and zero invented anchors, and show `segmentation ready / 0 of 200 anchors` in preflight. A model-neutral `movement-dense-capture-adapter-v1` boundary requires a model SHA-256, runtime/timing/input metadata, 200-500 unique persistent anchors, explicit configured-region state, valid image/depth/normal/provenance fields, and fail-closed commissioning validation. The shared capture hook accepts a selected adapter, copies the current camera frame into an isolated model-sized canvas, runs one asynchronous request at a time, validates descriptor/result hash, model id, runtime, and dimensions before publication, and otherwise leaves segmentation/skeletal capture intact. Reduced-rate scheduling dynamically backs off slow inference; temporal fusion can carry a complete prior measurement for at most 300 ms with decayed confidence, `temporally-tracked` origin, and occlusion truth, then removes it. A versioned `movement-dense-capture-fusion-v1` layer now joins accepted anchors to the retained 33 image/world pose points without transferring skeletal ownership. It accounts for every configured region as current, tracked, occluded, or missing; keeps observed, model-estimated, derived, and temporally tracked counts separate; derives torso-twist only from non-occluded current surface normals; and emits foot-contact eligibility with image-floor proximity rather than inventing a calibrated contact verdict. Live preflight and schema-v3 commissioning require a valid state for every region but do not discard an otherwise valid visible-surface measurement merely because one invisible or unresolved region is explicitly `missing`. A shared `movement-dense-capture-proof-v1` snapshot now gives Replay and mounted Game the same compact ninth schema-v3 comparison boundary: exact model identity, persistent-anchor identity checksum, regional coverage, observation/estimated/tracked/derived/occluded counts, retained skeleton coverage, torso twist, and foot-contact candidates. The comparator requires and checks that boundary only for Deep Capture, retaining all eight schema-v2 boundaries unchanged. Unit boundary proof preserves exact dense model identity and each frame's anchor IDs through schema/recording conversion, Replay, the shared source boundary, and mounted Game proof packets; it no longer requires the entire visible anchor set to be identical between frames because visibility changes. `/demos/movement-capture/benchmark` provides an explicit-consent, local-download-only capture workflow for all six required RGB scenarios with a five-second walk-back countdown, ten-second takes, accepted browser-format selection, deterministic scenario filenames, manual re-download, no Convex mutation, and no movement-packet upload. `movement:dense-capture:benchmark:ingest` now finds the newest complete six-file download set, requires a second explicit consent, copies rather than moves the originals, rejects empty/unrelated files, and reports byte counts plus SHA-256 hashes. `movement:dense-capture:benchmark:prepare` then inventories the private copies and writes no manifest without complete scenario coverage; `movement:dense-capture:benchmark` refuses model approval without real clips, at least two measured candidates, per-clip results, licence/size/warm-up/median/p95/memory/thermal/device evidence, and a measured selection. Six representative RGB clips were recorded on 2026-07-18, copied non-destructively into the private benchmark workspace, individually SHA-256 hashed, and accepted as a complete six-scenario manifest. The executable loopback-only browser runner measured two pinned official BodyPix variants against five frames from every clip. The renewed anchor-aware run completed MobileNet inference on all 30 frames at 55.2 ms median and 61.3 ms p95, produced exactly 400 samples on every frame, and measured median stable-ID retention from 30.5% during the front/back turn to 70% during body occlusion. Only one of 30 sampled frames contained all 21 configured semantic regions at once; per-view misses included hands, calves, shoulders, chest/back during turning, and cropped leg/foot regions near the camera. That result corrected the former per-frame all-region rule: missing visible-model regions are now retained as explicit fusion state instead of causing 29 valid frames to vanish or encouraging fabricated back-side anchors. ResNet50 again exceeded the 90-second model-load budget and remains rejected. A dedicated MobileNet-only sustained lane then ran three complete six-clip cycles: 90 samples at 55.0 ms median and 63.7 ms p95, with cycle medians of 57.1, 55.4, and 52.3 ms, a 0.916 final-to-first latency ratio, zero TensorFlow tensor-memory growth, and a 4.96 MB peak. The soak gate passed, while its status remains `automated-soak-complete` rather than reviewed physical thermal evidence. The measured MobileNet candidate is instantiated only when `deepCapture=1`: before model loading it re-downloads and SHA-256 verifies the exact 2,658,079-byte manifest-plus-shard identity, then runs WebGL part segmentation and samples at most 400 deterministic part-relative anchors. Those anchors preserve detector anatomical left/right and front/back labels, subdivide visible torso, shoulder, shin, and calf regions, use `model-estimated` provenance, and deliberately keep depth and 3D normal `null` because BodyPix cannot measure either. The real capture path now starts conservatively from browser device memory, CPU concurrency, and iPad detection, then promotes after five sustained fast samples or demotes after two repeated slow samples across explicit high `960x540/100ms`, medium `640x360/180ms`, and low `384x216/300ms` tiers. Every dense frame records its tier, input dimensions, cadence, inference timing, and browser runtime; commissioning rejects server runtimes or inconsistent tier metadata, and the capture UI exposes the live tier without changing pose, hands, face, or recording controls. A new `/demos/movement-capture/benchmark/device` workflow accepts an existing local video on a declared iPad or older laptop, runs at least sixty adaptive samples across a sustained two-minute browser soak, and downloads only model/device measurements in a `measured-awaiting-review` JSON report. Every sample carries monotonic elapsed time so the duration can be reconstructed; the report also records browser model startup time, first/last-window latency drift, and TensorFlow start/end/peak bytes and tensor counts. After the run, the page requires the user to record whether the physical device stayed cool, became warm but responsive, or became hot/slow/unstable before enabling download; the outcome, optional note, and post-run timestamp are bound into the report. Supported iPad browsers can Share or AirDrop that exact JSON-only artifact directly to the commissioning Mac, while unsupported browsers retain the identical download path; neither transfer contains the selected video. The selected video name and contents are not included in that report and are never uploaded. `movement:dense-capture:device-review` independently recomputes both reports from all raw samples, rejects modified summaries, short or non-monotonic timelines, latency drift above 1.5, TensorFlow memory growth above 5 MB, tensor-count growth above two, raw-video fields, missing hashes, different model identities, or incomplete device classes, proves the real iPad/laptop browser class, requires a valid post-run physical observation embedded in each report, rejects hot/slow/unstable outcomes, promotes the worst-device startup/latency/memory measurements, and only binds reviewed evidence to the exact benchmark candidate after a named reviewer, ISO review time, and explicit physical-review confirmation. `movement:dense-capture:device-ingest` now locates the newest complete Downloads pair, strictly validates both before copying, preserves the originals, refuses overwrites, and writes hashes into a private ingest manifest. `movement:dense-capture:device-finish` combines that ingest with the named, time-bound physical review and worst-device candidate promotion behind both explicit consent flags. Production approval still requires the actual reports and full-sequence rendered proof; candidate selection remains deliberately pending until those real evidence lanes pass.
+
+Tasks:
+
+- [ ] Measure browser-native candidates only against representative near/far camera, turning, floor-work, occlusion, and loose-clothing clips. DensePose, Depth Anything services, SMPL-X, and external GPU processing are explicitly out of scope.
+- [ ] Record model licence, download size, warm-up, WebGL/WebGPU/WASM support, median/p95 inference time, memory, thermal behaviour, and reviewed results from a representative iPad plus older laptop before selection.
+- [x] Add automatic high/medium/low browser quality tiers for input resolution and dense inference cadence, while pose, hands, face, recording controls, and the UI remain responsive. The runtime starts conservatively from device signals, promotes only after sustained fast samples, demotes after repeated slow samples, records the chosen tier in every dense frame, and rejects server or inconsistent tier evidence at commissioning.
+- [x] Add a private physical-device benchmark workflow that uses an existing local video, runs at least sixty adaptive browser samples across a sustained two-minute soak, records latency drift, TensorFlow memory, and a post-run physical observation, transfers no raw video, and produces an explicit `measured-awaiting-review` report for either iPad or older-laptop review. Download and supported Web Share/AirDrop paths use the same timestamped JSON-only report; the consent-gated ingest copies the newest valid two-device pair without moving or overwriting Downloads originals.
+- [x] Add a strict two-device review command that re-hashes and recomputes the iPad and older-laptop reports, proves the physical browser/device class, reconstructs their sustained timelines, applies latency and TensorFlow-memory leak ceilings, records model startup time and mandatory physical thermal observations, promotes the worst-device measurements, forbids embedded video data, requires exact model identity, and cannot promote the device evidence without explicit reviewer confirmation. `movement:dense-capture:device-finish` performs preserved ingest plus strict review in one command and refuses missing consent, stale destinations, invalid benchmark evidence, or failed promotion.
+- [ ] Add body segmentation and the selected dense-model output to the shared acquisition profile. Segmentation is implemented behind the explicit Deep Capture lab and remains only partial until the selected correspondence model supplies persistent anchors and a verified model hash.
+- [ ] Produce approximately 200-500 persistent semantic or surface anchors across all configured regions with region/side/front-back identity, confidence, occlusion, origin, cadence, and age. Store depth and normals only when the selected browser model genuinely provides them.
+- [x] Add versioned skeleton/dense diagnostic fusion that preserves 33-point bone ownership, separates current/tracked/occluded/missing region evidence, derives twist only from current normals, and treats foot evidence as contact candidates until a calibrated temporal contact decision exists.
+- [ ] Fuse dense anchors with the 33-point skeleton and hand/face channels without changing anatomical side ownership or treating temporal interpolation as observation.
+- [ ] Use the dense channel to improve twist, palm/body facing, surface/contact, clipping, and occlusion diagnosis; keep final avatar bone decisions inside the shared motion runtime.
+- [x] Define reduced-rate scheduling, frame-budget backpressure, fallback to skeletal capture, and recovery without blocking the UI thread. The asynchronous adapter runs one request at a time, dynamically backs off from measured duration, preserves ordinary skeletal capture on failure, and carries only validated evidence for 300 ms.
+- [ ] Add immutable fixtures and full-sequence proof for front/back turns, torso/limb twist, floor contact, body-region coverage, dense-update gaps, and occlusion recovery.
+
+Exit criteria:
+
+- The saved packet contains genuinely more measured/model-estimated evidence across the body than the 33-point pose skeleton.
+- Every configured body region has explicit observed/tracked/missing coverage and persistent anchor identity.
+- A representative iPad and older laptop meet the supported-device budget at an automatic quality tier; development-Mac evidence alone cannot pass.
+- No raw camera frames leave the browser, and no accepted runtime depends on a server GPU or separately licensed parametric body model.
+
+### Phase 15: Commission Once And Lock Deep-Capture Regression Protection
+
+Progress: 90%. The existing record-once commissioning command now has an explicit Deep Capture mode and dedicated package command. The canonical `?commissioning=1&deepCapture=1` route now resolves to one schema-v3 save requirement instead of sending mutually exclusive schema-v2 and schema-v3 flags and rejecting an otherwise valid take before upload. A successful proof-mode save displays the exact stored recording ID, schema profile, and its direct Replay/Game proof command. A complete 60-frame schema-v3 save regression now exercises readiness, both hands and world hands, finger articulation, palm orientation, face/iris/gaze, segmentation, 200 persistent anchors, fusion, camera identity, hashing, JSON upload, `storage-json-v3` metadata, and the returned immutable recording ID. Packet construction is now shared by cloud save and a proof-mode local backup button: after a valid take the user can download the exact hashed derived-tracking JSON without raw video or images, even if upload fails, while the frames remain in the open save dialog. `movement:replay:recover-local-packet` validates that preserved schema-v2/v3 source without moving or deleting it, rebuilds the normal Replay session, and requires the recovered session to pass the complete shared Replay/Game packet preflight with zero failures. `movement:replay-game:deep-local-proof` composes that recovery with fresh Replay and the mounted Game proof, supports a safe preflight-only mode, and is printed in the browser save dialog after download. A backend acceptance test also takes the exact browser-emitted JSON, reloads it through the stored-recording Replay conversion, and requires zero failures from the same fail-closed Deep Capture packet validator used before Replay and mounted Game launch; the acquisition guard locks both recovery paths as well as the validator and storage-format boundary. `movement:replay-game:deep-latest-proof` now creates or reuses an export, inventories every saved movement, selects the newest eligible schema-v3 packet by stored creation time, and routes that immutable ID into the existing combined proof. It fails before either browser when only legacy or incomplete packets exist and explicitly retains them. Recording export preserves the schema-v3 profile, deep-channel accounting, per-frame acquisition profile, refinements, dense adapter/model identity, anchor IDs, and an opaque physical-camera fingerprint; the raw browser device id and label are not persisted. That camera identity now survives stored-packet conversion into Replay and the mounted Game source boundary. Deep-channel proof now requires explicit measured coverage rather than the physically impossible rule that both hands, face, gaze, segmentation and dense anchors be visible on every natural-motion frame: hands/palms require at least 15 frames and 10% of a take, face/gaze at least 30 frames and 50%, and segmentation/dense body at least 30 frames and 80%. Every source frame is still retained and accounted for; any evidence that is present is validated fail-closed, invalid or ambiguous claimed evidence still blocks, and coverage below the declared floor blocks. The same coverage-aware validator powers browser save and the no-browser Replay/Game eligibility command, while schema-v2 commissioning remains compatible and explicitly separate. Its report compacts repeated per-frame failures into counted frame ranges, retaining the total raw failure count without generating multi-megabyte unreadable inventories for legacy recordings. `movement:replay-game:deep-recording-inventory` discovers every saved movement directly from an export, converts each packet, preserves canonical stored titles, records the exact source export and selection mode, and therefore includes future schema-v3 recordings without a maintained ID manifest. A fresh read-only 18 July development export confirmed that the saved nine-recording acceptance set remains schema v1: all nine preserve full pose/world-pose tracks and remain regression fixtures, but none contains schema-v3 Deep Capture evidence. Ordered `deep-targeted-proof`, `deep-representative-proof`, and `deep-all-nine-proof` commands now select their declared recording sets, preflight every selected schema-v3 packet, run the mounted Game lifecycle, capture Replay, and compare exact boundaries. The representative tier is fixed to Full Motion Exercises, Full Spinal Flow, and Spins; final proof requires exactly nine recordings. The movement finish gate now invokes a strict tier-summary gate that requires targeted before representative before all-nine, refuses schema-v2 or legacy profiles, enforces tier sizes, and blocks any exact boundary drift. A versioned capture-reuse policy now compares the complete stored detector/options/filter/setup contract, Deep Capture/refinement/dense-adapter policy, selected dense-model id/hash, and physical-camera fingerprint against the current acquisition boundary. It explicitly reuses immutable packets after solver, shared-runtime, renderer, or proof-harness changes, while camera or acquisition drift requires a new live capture; missing current camera/model identity returns `cannot-determine` rather than guessing. A versioned reviewer-manifest command now binds reviewer/date, clean commit, shared runtime and acquisition fingerprints, selected dense-model hash and supported-device measurements, commissioning packet hash, and the exact seven source artifacts. Its verifier re-hashes those artifacts, rejects substituted evidence or stale code, requires the exact two-minute iPad and older-laptop timelines plus their accepted post-run physical observations, bounds latency and TensorFlow tensor-memory drift, and checks the candidate aggregates against the worst measured device before the final movement finish-gate can pass. The physical-device handoff now supports JSON-only Share/AirDrop from iPad to the Mac, followed by one consent-gated command from preserved Downloads reports to a reviewed candidate artifact; actual schema-v3 captures, browser runs, an accepted reviewer manifest, and passing tier summaries remain open.
+
+Tasks:
+
+- [x] Add `movement:replay-game:deep-commissioning-eligibility` and `movement:replay-game:deep-commissioning-proof` so one immutable recording ID is exported, validated as schema v3, and then routed through the existing fresh Replay plus mounted Game comparison without weakening schema-v2 compatibility.
+- [x] Add `movement:replay-game:deep-recording-inventory` so a fresh export can discover, convert, and classify every saved recording without a manually maintained ID list; retain exact stored titles and compact repeated per-frame failures into counted ranges.
+- [x] Prove the complete schema-v3 save path with a realistic 60-frame packet, real hashing and upload metadata, and an immutable returned recording ID; guard against validator or `storage-json-v3` drift.
+- [x] Feed the exact browser-emitted schema-v3 JSON through saved-recording Replay conversion and the shared Deep Capture Replay/Game preflight; require zero validation failures before browser proof can begin.
+- [x] Keep a failed upload from wasting a complete take: share the hashed packet builder between cloud save and a local JSON-only backup, retain the recorded frames, and provide a non-destructive command that validates and converts that exact downloaded packet into the normal Replay/Game harness session.
+- [x] Add `movement:replay-game:deep-local-proof` so one downloaded schema-v3 packet can be recovered, given a zero-failure shared preflight, and then routed through fresh Replay plus mounted Game without moving, overwriting, uploading, or deleting the original download; expose the exact preflight command in the save dialog.
+- [x] Repair the live capture contradiction shown on 18 July: use face-coordinate validity rather than body visibility for Face Landmarker counts, refuse dense-body `ready` while configured regions are missing, retain every pose frame after recording begins, replace timed one-shot start with continuous untimed arming, and validate declared natural-motion channel coverage instead of requiring mutually occluded channels on every frame.
+- [x] Add `movement:replay-game:deep-latest-proof` to fresh-export or reuse an export, inventory all recordings, select the newest eligible schema-v3 packet, and route its immutable ID into the combined Replay/Game proof without manual copying.
+- [ ] After Phases 8-14 pass, run one short real-camera Game commissioning session covering the complete Deep Capture matrix and automatically save its immutable schema-v3 packet.
 - [ ] Immediately rerun that exact packet through Replay and mounted Game and compare acquisition/setup provenance plus final rendered telemetry.
-- [ ] Record the reviewer, date, commit, runtime fingerprint, acquisition fingerprint, packet hash, and artifacts.
-- [ ] Add the targeted, representative-subset, and final all-nine mounted Game lanes to the movement finish gate in tiered order.
-- [ ] Require a new live commissioning capture only when the physical camera, MediaPipe version/options, acquisition preparation, filter profile, or setup/calibration policy changes. Shared solver or renderer repairs use the existing immutable packets.
-- [ ] Include squats, both forward and lateral leg raises, side bends, head motion, arm motion, root turns, steps/jumps, support transitions, hands, and representative face/blink input in the commissioning packet; this is a minimum floor, not an allow-list.
+- [x] Add a durable reviewer manifest that records reviewer/date, clean commit, runtime and acquisition fingerprints, model hash, packet hash, exact sustained iPad/older-laptop measurements, the honest TensorFlow-tensors-only memory scope, and exact artifact hashes. `movement:replay-game:deep-review-manifest-gate` independently requires both two-minute device timelines, bounded latency/memory/tensor drift, worst-device aggregate metrics, and re-hashes the seven required artifacts; creating an accepted instance remains part of the real commissioning run.
+- [x] Add targeted, fixed three-recording representative-subset, and final exactly-nine mounted Game lanes to the movement finish gate in tiered order. Each tier fails before browser capture on incomplete schema-v3 packets, and the strict finish gate rejects missing prior tiers, legacy profiles, incorrect tier size, failed runs, or exact boundary divergence.
+- [x] Require a new live commissioning capture only when the physical camera, detector/model version or options, acquisition preparation, filter profile, dense-body model, hand/face crop policy, or setup/calibration policy changes. `movement:replay-game:deep-capture-reuse` makes the decision from exact semantic contracts plus opaque camera/model identity; shared solver, runtime, renderer, and proof-harness repairs reuse existing immutable packets.
+- [ ] Include squats, forward/lateral leg raises, side bends, torso/limb twist, front/back turns, head motion, arm motion, palm front/back/edge-on, wrist rotation, individual and combined finger motion, gaze, blinks/asymmetric expression, root turns, steps/jumps, and support/contact transitions; this is a minimum floor, not an allow-list.
 - [ ] Capture browser-visible Replay and ordinary live Game evidence for the commissioning packet so telemetry cannot be the only product-facing acceptance proof.
 
 Exit criteria:
 
-- The one-time live session agrees with its Replay and mounted Game reproductions.
+- The one-time live session agrees with its Replay and mounted Game reproductions across every required Deep Capture channel.
 - Future Replay fixes are accepted only when the same packets automatically pass mounted Game.
 - The user is no longer the repetitive regression harness.
 
@@ -527,6 +704,11 @@ Every alignment artifact must identify:
 - camera metadata and frame orientation;
 - setup policy, accepted setup indexes, readiness transitions, and calibration checksum;
 - pose/world-pose, hand/world-hand, face, and blendshape channel completeness;
+- per-hand detector handedness, pose-wrist association, native crop transform/resolution, 21-point image/world coverage, palm normal, facing classification, wrist swing/twist, and finger-joint evidence;
+- dense face/iris landmark coverage, facial transformation matrix, full blendshape coverage, gaze provenance, eye visibility, and face-crop quality;
+- segmentation identity plus dense-body model/profile/hash;
+- persistent dense-anchor id, body region, anatomical side, front/back ownership, source coordinates, estimated depth, surface normal, confidence, occlusion state, observation origin, cadence, and temporal age;
+- per-channel expected, observed, model-estimated, temporally tracked, derived, missing, and compared counts with zero silent skips;
 - mounted Game session state and lifecycle transitions;
 - acquisition, setup, motion-frame, and final-render boundary checksums;
 - explicit supported-behaviour coverage with no hidden diagnostic limitations.
@@ -550,7 +732,10 @@ The alignment slice is complete only when all of the following are true:
 - The final all-nine deterministic and uninterrupted gates pass on one current runtime fingerprint.
 - The mounted Game proof exercises the normal setup, readiness, active-play, hold/recovery, pause/resume, and completion lifecycle without debug-only setup injection.
 - Every supported body, hand, face, root, support, and lifecycle behaviour is a hard gate; no diagnostic limitation counts as acceptance.
-- A one-time real-camera Game commissioning session visibly preserves Replay-accepted motion across the full behaviour matrix and is saved as a complete replayable packet.
+- Deep Capture uses genuinely expanded hand, face/eye, and dense-body evidence; interpolated helper points are not counted as observations.
+- The same schema-v3 packet preserves detector/model identity, per-channel timing and provenance, dense-anchor identity, and complete coverage accounting across Capture, Replay, and Game.
+- Palm-facing direction, wrist rotation, finger articulation, gaze, asymmetric expression, torso/limb twist, body-surface orientation, and configured contact regions are hard source-to-final and Replay-to-mounted-Game gates when supported.
+- A one-time real-camera Game commissioning session visibly preserves Replay-accepted motion across the full Deep Capture behaviour matrix and is saved as a complete replayable packet.
 - Rerunning that commissioning packet produces accepted Replay and mounted Game results from the same fingerprints.
 - The combined gate enforces the implication: `Replay accepted -> mounted Game accepted`; otherwise the overall result is blocked.
 - Node 22.13.0 repository gates pass before merge or push.
@@ -568,18 +753,27 @@ The alignment slice is complete only when all of the following are true:
 - Do not use a synthetic calibration or prebuilt motion frame to claim the normal Game setup lifecycle passed.
 - Do not ask the user to repeat live movements while a matching complete packet can be replayed automatically.
 - Do not call a supported behaviour accepted when its evidence is missing or listed as a diagnostic limitation.
+- Do not call interpolated skeletal helper points, held values, or temporally propagated anchors newly observed body points.
+- Do not infer `palm-facing-camera` from one 2D wrist/hand point; require a signed palm normal and sufficient non-collinear hand evidence.
+- Do not run a heavy dense model on every frame without measured device budgets, cadence control, and backpressure.
+- Do not send thousands of raw dense-model vertices directly into VRM bone application; retain a stable sampled evidence layer and a separate shared retarget decision.
+- Do not persist raw camera frames or video by default under the Deep Capture label.
+- Do not add dense-body, gaze, wrist, or expression behaviour to Capture/Replay without the mounted Game lane, or vice versa.
+- Do not ask the user to make another recording until the countdown/start regression and live per-channel preflight are green.
 
 ## Verification Strategy
 
 Use Node `22.13.0`.
 
-The following command names are required outcomes of Phases 8-12; they are planned interfaces and must not be reported as available until implemented and tested:
+The following command names are required outcomes of Phases 8-15; they are planned interfaces and must not be reported as available until implemented and tested:
 
 ```bash
 npm run movement:acquisition-contract-guard
 npm run movement:replay-game:targeted -- --packet <packet> --frame-start <n> --frame-end <n>
 npm run movement:replay-game:fast-subset -- --manifest <manifest>
 npm run movement:replay-game:certify -- --manifest <manifest>
+npm run movement:deep-capture:profile-gate -- --packet <packet>
+npm run movement:deep-capture:device-benchmark -- --profile <profile>
 ```
 
 Each command must emit one combined binary verdict. A Replay pass cannot be printed as product acceptance if its mounted Game lane is absent or failing.
@@ -596,12 +790,14 @@ Proof order:
 
 ```text
 acquisition/setup contract guards
+  -> capture countdown/start-to-save regression
+  -> Deep Capture profile and supported-device benchmark gates
   -> exact Full Motion Exercises packet/frame in Replay and mounted Game
   -> short timed failure window through the normal Game lifecycle
   -> complete Full Motion Exercises packet
   -> three-recording representative subset
   -> final nine-recording Replay + mounted Game certification
-  -> one-time real-camera commissioning when acquisition boundaries changed
+  -> one-time schema-v3 real-camera commissioning when acquisition boundaries changed
 ```
 
 Before handoff, merge, or push:
@@ -617,28 +813,33 @@ git diff --check
 ## Progress
 
 - Shared motion decision foundation: 100% for the accepted runtime contract.
-- Documented end-to-end alignment design: 100%.
+- Documented pre-expansion end-to-end alignment design: 100%.
+- Deep Capture contract and roadmap definition: 100% for this documentation slice; the expanded implementation is approximately 75% overall.
 - Shared post-input motion and final-render foundation: approximately 90%.
-- End-to-end Replay-to-Game implementation: approximately 86%; proof identity is now fail-closed, but fresh current-fingerprint Replay/Game acceptance is missing.
+- End-to-end Replay-to-Game implementation: approximately 88%; proof identity and the final reviewer record are now fail-closed, but fresh current-fingerprint Replay/Game acceptance is missing.
 - Shared acquisition/setup contract: approximately 90% implementation; no current complete packet has commissioned the ordinary live boundary.
 - Complete record-once packet: 97% implementation; capture-time commissioning validation and command preflight now share the same required-channel contract, and the saved recording ID can now drive export, Replay-session conversion, and Replay/Game packet proof in one command. No canonical commissioning packet has been captured.
 - Normal mounted Game-session replay: 85%; lifecycle, acceptance identity, and exact boundary enforcement are implemented, while fresh complete-packet and live equivalence remain open.
 - Zero-escape supported-behaviour matrix: 65%.
-- One-time commissioning and regression lock: 45% of the newly required closure phase; capture and proof tooling are fail-closed, and the saved-recording orchestration is automated, while the human recording and resulting fresh proof are still outstanding.
+- Reliable capture start and Deep Capture observability: 95%; start/save lifecycle, coarse-versus-refined live channel reporting, separate schema-v2/schema-v3 modes, fail-closed validation/upload, and cross-route drift protection are implemented, while the required-profile pre-record veto awaits dense acquisition.
+- High-fidelity hands/wrists/fingers and face/eyes/gaze: 78%; native-crop second-pass inference, source-frame remapping, short-lived carry through missing ROIs, explicit observed/carried/reacquired and occlusion state, bilateral fail-closed eye visibility, deterministic crossed-hand/edge/crop/stale guards, facial matrices, eye/expression expansion, guarded wrist/finger application, shared source-boundary carriage, and exact immutable-frame equality through recording conversion, the shared Replay/Game player runtime, and actual final VRM writers are implemented, while representative RGB occlusion/device measurements and browser-mounted full-sequence rendered proof remain open.
+- Dense whole-body surface acquisition and fusion: 78%; model segmentation, a versioned adapter/validation boundary, persistent-ID and explicit full-region-state requirements, an asynchronous shared-capture runner, descriptor/result identity checks, reduced-rate/backpressure rules, bounded temporal carry, versioned skeleton/dense region fusion with honest twist/contact-candidate semantics, a local-only six-scenario RGB capture workflow, non-destructive consent-gated download ingest with hashes, a complete six-clip manifest, an executable two-candidate GPU browser runner, exact model artifact hashes, a completed anchor-aware 30-frame MobileNet measurement, a passing three-cycle/90-sample automated soak with bounded latency drift and zero tensor-memory growth, an explicit repeat ResNet load-time rejection, a Deep-Capture-only provisional MobileNet adapter, runtime artifact re-verification, deterministic part-relative 400-anchor sampling on all measured frames, measured stable-ID retention, explicit missing-region behaviour, geometry-capability selection and reviewer vetoes, exact Replay/Game boundary preservation, compact storage, and identity-aware live preflight are implemented. Candidate selection, lower-tier-device and physical thermal review, genuine depth/normal correspondence, and full-sequence rendered proof remain open.
+- Schema-v3 Deep Capture packet and commissioning proof: 55%; types, profile, builder/parser, channel accounting, privacy defaults, guarded save selection, dense-adapter identity validation, Replay/shared-source/Game carriage, fail-closed Replay-packet validation, eligibility reporting, the one-command fresh Replay/mounted Game route, ordered proof tiers, capture-reuse decisions, and the durable reviewer-manifest gate are implemented, while actual dense acquisition and final visible proof are open.
+- One-time schema-v2 commissioning tooling remains approximately 45% of the former narrower closure phase, but that packet cannot certify the newly expanded Deep Capture scope.
 - Product acceptance: blocked.
 
-The current legacy diagnostic lane observed zero Replay/Game output differences across 10,327 active frames in eight sessions. It does not prove current-code identity because Replay captures were reused from a mismatched fingerprint, all recordings lack hands/face/schema-v2 identity, and live commissioning remains open. New artifacts now carry fail-closed current code/packet identity, all eight exported runtime boundaries are exact hard gates, the commissioning route refuses incomplete packets, and one command now starts from the saved recording ID and runs export, Replay-session conversion, fresh Replay capture, fresh mounted Game capture, and exact comparison. There is still no qualifying saved packet to run through the proof. The honest overall estimate is approximately **88%**.
+The current legacy diagnostic lane observed zero Replay/Game output differences across 10,327 active frames in eight sessions. It does not prove current-code identity because Replay captures were reused from a mismatched fingerprint, all recordings lack hands/face/schema-v2 identity, and live commissioning remains open. New artifacts now carry fail-closed current code/packet identity, all eight exported runtime boundaries are exact hard gates, the commissioning route refuses incomplete packets, and one command now starts from the saved recording ID and runs export, Replay-session conversion, fresh Replay capture, fresh mounted Game capture, and exact comparison. There is still no qualifying saved packet to run through the proof.
+
+Against the former narrower Replay/Game alignment scope, the implementation is approximately **90%**. The repaired capture lifecycle, live preflight, guarded schema-v3 path, native-crop hand/face refinement with explicit short-occlusion recovery, shared hand/face/wrist/expression slice, asynchronous dense adapter plus versioned skeleton/surface fusion runtime, private six-scenario RGB capture, a real six-clip evidence pack, an executable two-candidate browser benchmark with exact artifact hashes and an explicit heavyweight-model rejection, a hash-verified provisional MobileNet adapter producing deterministic semantic surface samples only in Deep Capture, a real 30-frame anchor/region/identity measurement, visibility-aware explicit missing-region validation, a passing 90-sample automated soak, geometry-capability production vetoes, an explicit ninth schema-v3 dense-fusion parity boundary, schema-v3 commissioning preflight/orchestration, strict targeted-to-representative-to-all-nine mounted proof tiers, semantic capture-reuse decisions with opaque physical-camera identity, a fail-closed reviewer-manifest gate, and honest segmentation foundation move the expanded roadmap estimate to approximately **90%**. Browser-mounted hand/eye proof, lower-tier-device and physical thermal review, genuine depth/normal surface correspondence, and renewed commissioning remain real new scope rather than regressions in the retained runtime.
 
 ## Immediate Next Slice
 
-1. Treat the existing nine recordings as the first evidence source. They already cover the user-reported movement families, so do not ask for a repeat human capture until their saved packets have failed the current commissioning preflight for a concrete reason.
-2. The saved-recording eligibility preflight now exists as `npm run movement:replay-game:commissioning-eligibility`. It can inspect already-converted session packets or re-convert saved recording IDs from a Convex export before applying the same fail-closed packet validator as `movement:replay-game:packet-proof`.
-3. Current export-backed result: `tmp/movement-replay-lab/current-nine-commissioning-eligibility-from-export.json` reports 0/9 eligible after converting all nine saved recording IDs from `tmp/movement-replay-lab/runs/limit100-movement-recordings.convex-export.zip`. All nine fail for the same packet-level reasons: missing schema-v2 identity, input/setup contract, source hash, complete setup prefix, per-sample readiness, and schema-v2 channel evidence for blendshapes, camera, face, hands, pose, and worldPose. This is a source-packet/evidence limitation, not a claim that the movements are absent from the videos.
-4. If a future existing recording is already schema-v2 complete with setup identity, source hash, readiness history, camera metadata, and pose/world-pose/hand/face/blendshape channel evidence, run `npm run movement:replay-game:commissioning-proof -- --recording-id <saved-id> --out tmp/movement-replay-lab/<run-name> --local-test-auth --secret sonae-local-test-auth`.
-5. Because the current nine fail for concrete packet reasons, a new `/demos/movement-capture?commissioning=1` capture, if required, is a source-packet upgrade, not a request to re-debug squats, leg raises, or side bends manually.
-6. Add browser-visible Replay and ordinary Game review to the same packet result.
-7. Replace or re-record `Head Roll` with both feet visible and regenerate a genuine current 9/9 certificate.
-8. Add the strict targeted, representative, all-nine, and commissioning lanes to the finish gate so a Replay-only repair cannot be accepted.
+1. Use the new deterministic low-resolution, edge-on palm, crossed-hand, reacquisition, eyewear-unknown, eye-occlusion, crop-boundary contract, and the six recorded RGB scenarios to prove the refined signals reach the actual shared Replay and mounted Game renderer with zero silent skips.
+2. Review MobileNetV1 0.75 quant2 as the provisional browser candidate: the three-cycle automated soak is green on the M4 Max; repeat the exact benchmark on a declared lower-tier supported device and complete physical thermal review. Keep ResNet50 rejected unless its greater-than-90-second M4 Max load failure is materially changed. Do not set `selectedCandidateId` or allow the final benchmark gate to pass before the device, thermal, licence/attribution, and body-part coverage decision is recorded.
+3. Keep the measured BodyPix lattice provisional and add a genuine depth/normal correspondence candidate before production selection. The current 400-anchor semantic layer is useful for visible-region and occlusion evidence, but it does not satisfy camera-space depth or 3D surface-normal acceptance.
+4. Treat the existing nine recordings as legacy pose/world-pose diagnostics. They remain useful for shared solver and renderer regression, but they cannot prove newly added hand, face/eye, or dense-body channels.
+5. Only after the start gate, preflight, profile, and capture channels are green, record one schema-v3 commissioning packet at `/demos/movement-capture?commissioning=1&deepCapture=1`, preflight it with `npm run movement:replay-game:deep-commissioning-eligibility -- --recording-id <id> --export <export> --fail-on-ineligible`, and run `npm run movement:replay-game:deep-commissioning-proof -- --recording-id <id>` from its immutable recording ID.
+6. Add browser-visible Replay and ordinary Game review plus strict targeted, representative, all-nine, Deep Capture, and commissioning lanes to the tiered finish gate.
 
 ## 2026-07-14 Implementation Evidence
 
@@ -698,7 +899,7 @@ The current legacy diagnostic lane observed zero Replay/Game output differences 
 
 ## 2026-07-16 Game Runtime Repair Evidence
 
-The following is historical downstream-runtime evidence. It does not close Phases 8-12 and must not be used as a current end-to-end acceptance claim.
+The following is historical downstream-runtime evidence. It does not close Phases 8-15 and must not be used as a current end-to-end acceptance claim.
 
 - Root cause: Game Guided Preview could enter the player runtime with both calibration and retarget source model null; Replay always constructed both from a neutral prefix. The lower-body solver requires that setup, explaining why Replay squats and leg raises did not carry into Game.
 - Explicit Game posture calibration and passive Guided Preview setup now use `buildMovementRecordedPlayerSetup`, the same setup builder and provenance contract as Replay.

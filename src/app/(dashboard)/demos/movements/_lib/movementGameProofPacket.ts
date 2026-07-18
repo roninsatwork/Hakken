@@ -22,6 +22,7 @@ function toInstructorFrame(
   return {
     blendshapes: sample.tracking.blendshapes,
     capturedAt: sample.capturedAt,
+    deepCapture: sample.tracking.deepCapture,
     frameId,
     faceLandmarks: sample.tracking.face,
     hands: sample.tracking.hands,
@@ -64,6 +65,7 @@ function toPlayerFrame(
       : undefined,
     camera: camera
       ? {
+          deviceFingerprint: camera.deviceFingerprint,
           facingMode: "user",
           frameHeight: camera.trackHeight ?? camera.videoHeight ?? 0,
           frameWidth: camera.trackWidth ?? camera.videoWidth ?? 0,

@@ -1,13 +1,18 @@
 import type { Id } from "@/convex/_generated/dataModel";
 import {
+  buildMovementDeepCaptureFrameEnvelope,
   buildMovementFrameEnvelope,
   hashMovementFrameEnvelopeSource,
 } from "./movementFrameCodec";
-import { validateMovementCommissioningEnvelope } from "./movementRecordingCommissioning";
+import {
+  validateMovementCommissioningEnvelope,
+  validateMovementDeepCaptureEnvelope,
+} from "./movementRecordingCommissioning";
 import type {
   MovementBodyFocus,
   MovementDifficulty,
   MovementFrame,
+  MovementFrameEnvelope,
   MovementSpineGoal,
 } from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
@@ -19,7 +24,7 @@ type MovementCreateInput = {
   difficulty: MovementDifficulty;
   poseData: Id<"_storage">;
   poseStorageId: Id<"_storage">;
-  poseDataFormat: "storage-json-v2";
+  poseDataFormat: "storage-json-v2" | "storage-json-v3";
   frameCount: number;
   durationMs: number;
   captureFps: number;
@@ -41,6 +46,14 @@ type SaveMovementRecordingInput = {
   createMovement: (input: MovementCreateInput) => Promise<unknown>;
   uploadFetch?: typeof fetch;
   requireCommissioningPacket?: boolean;
+  requireDeepCapturePacket?: boolean;
+};
+
+type BuildMovementRecordingPacketInput = {
+  captureStartReadiness?: MovementStartReadiness | null;
+  frames: MovementFrame[];
+  requireCommissioningPacket?: boolean;
+  requireDeepCapturePacket?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -68,6 +81,45 @@ export function getMovementRecordingDurationMs(frames: MovementFrame[]) {
   return Math.max(0, lastTimestamp - firstTimestamp);
 }
 
+export async function buildMovementRecordingPacket({
+  captureStartReadiness,
+  frames,
+  requireCommissioningPacket = false,
+  requireDeepCapturePacket = false,
+}: BuildMovementRecordingPacketInput): Promise<MovementFrameEnvelope> {
+  if (frames.length < MIN_MOVEMENT_CAPTURE_FRAMES) {
+    throw new Error(`Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} valid frames before saving.`);
+  }
+
+  if (requireCommissioningPacket && requireDeepCapturePacket) {
+    throw new Error("Choose either schema-v2 commissioning or schema-v3 Deep Capture, not both.");
+  }
+
+  const payload = requireDeepCapturePacket
+    ? buildMovementDeepCaptureFrameEnvelope(frames, 30, { captureStartReadiness })
+    : buildMovementFrameEnvelope(frames, 30, { captureStartReadiness });
+  payload.sourcePacketHash = await hashMovementFrameEnvelopeSource(payload);
+
+  if (requireDeepCapturePacket) {
+    const deepCaptureReport = validateMovementDeepCaptureEnvelope(payload);
+    if (!deepCaptureReport.passed) {
+      throw new Error(
+        `Deep Capture is not proof-ready: ${deepCaptureReport.failures.join(" ")}`,
+      );
+    }
+  }
+  if (requireCommissioningPacket) {
+    const commissioningReport = validateMovementCommissioningEnvelope(payload);
+    if (!commissioningReport.passed) {
+      throw new Error(
+        `Commissioning capture is not proof-ready: ${commissioningReport.failures.join(" ")}`,
+      );
+    }
+  }
+
+  return payload;
+}
+
 export async function saveMovementRecording({
   title,
   difficulty,
@@ -80,28 +132,19 @@ export async function saveMovementRecording({
   createMovement,
   uploadFetch = fetch,
   requireCommissioningPacket = false,
+  requireDeepCapturePacket = false,
 }: SaveMovementRecordingInput) {
   const trimmedTitle = title.trim();
   if (!trimmedTitle) {
     throw new Error("Add a routine name before saving.");
   }
 
-  if (frames.length < MIN_MOVEMENT_CAPTURE_FRAMES) {
-    throw new Error(`Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} valid frames before saving.`);
-  }
-
-  const payload = buildMovementFrameEnvelope(frames, 30, {
+  const payload = await buildMovementRecordingPacket({
     captureStartReadiness,
+    frames,
+    requireCommissioningPacket,
+    requireDeepCapturePacket,
   });
-  payload.sourcePacketHash = await hashMovementFrameEnvelopeSource(payload);
-  if (requireCommissioningPacket) {
-    const commissioningReport = validateMovementCommissioningEnvelope(payload);
-    if (!commissioningReport.passed) {
-      throw new Error(
-        `Commissioning capture is not proof-ready: ${commissioningReport.failures.join(" ")}`,
-      );
-    }
-  }
   const postUrl = await generateUploadUrl();
   const uploadResponse = await uploadFetch(postUrl, {
     method: "POST",
@@ -122,7 +165,7 @@ export async function saveMovementRecording({
     difficulty,
     poseData: storageId,
     poseStorageId: storageId,
-    poseDataFormat: "storage-json-v2",
+    poseDataFormat: requireDeepCapturePacket ? "storage-json-v3" : "storage-json-v2",
     frameCount: frames.length,
     durationMs,
     captureFps: payload.fps ?? 30,

@@ -54,6 +54,7 @@ describe("MovementCapturePanel", () => {
     expect(screen.getByText("Moments 4")).toBeInTheDocument();
     expect(screen.getByText("Alignment 72%")).toBeInTheDocument();
     expect(screen.getByText("Spine 81%")).toBeInTheDocument();
+    expect(screen.getByTestId("recording-lifecycle-status")).toHaveTextContent("Not recording");
     expect(screen.getByRole("button", { name: "Start posture capture" })).toBeDisabled();
   });
 
@@ -82,7 +83,35 @@ describe("MovementCapturePanel", () => {
     expect(onToggleRecording).toHaveBeenCalledTimes(1);
   });
 
-  it("shows capture countdown and blocks duplicate starts", () => {
+  it("keeps the lighter tracking overlay by default and exposes an explicit all-points toggle", () => {
+    const onToggleTrackingDetail = vi.fn();
+    const { rerender } = render(
+      <MovementCapturePanel
+        {...baseProps}
+        onToggleTrackingDetail={onToggleTrackingDetail}
+        showTrackingDetailToggle
+      />,
+    );
+
+    const essentialButton = screen.getByRole("button", { name: "Show all tracking points" });
+    expect(essentialButton).toHaveTextContent("Points: Essential");
+    expect(essentialButton).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(essentialButton);
+    expect(onToggleTrackingDetail).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <MovementCapturePanel
+        {...baseProps}
+        onToggleTrackingDetail={onToggleTrackingDetail}
+        showAllTrackingPoints
+        showTrackingDetailToggle
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Show essential tracking points" }))
+      .toHaveTextContent("Points: All");
+  });
+
+  it("shows an untimed armed state and blocks duplicate starts", () => {
     const onToggleRecording = vi.fn();
 
     render(
@@ -91,14 +120,16 @@ describe("MovementCapturePanel", () => {
         isVisionReady
         visionStatus="ready"
         isPoseReady
-        captureReadinessCountdownSeconds={3}
-        captureReadinessMessage="Walk back into frame."
-        captureReadinessStatus="countdown"
+        captureReadinessMessage="Move into position at your own pace."
+        captureReadinessStatus="waiting-for-body"
         onToggleRecording={onToggleRecording}
       />,
     );
 
-    expect(screen.getByText("Get ready: 3")).toBeInTheDocument();
+    expect(screen.getByText("Move into position at your own pace.")).toBeInTheDocument();
+    expect(screen.getByTestId("recording-lifecycle-status")).toHaveTextContent(
+      "Armed — not recording yet",
+    );
     expect(screen.getByRole("button", { name: "Start posture capture" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Start posture capture" }));
@@ -119,6 +150,9 @@ describe("MovementCapturePanel", () => {
     );
 
     expect(screen.getByText("Show your whole body.")).toBeInTheDocument();
+    expect(screen.getByTestId("recording-lifecycle-status")).toHaveTextContent(
+      "Recording did not start",
+    );
     expect(screen.getByRole("button", { name: "Start posture capture" })).toBeEnabled();
   });
 
@@ -134,6 +168,51 @@ describe("MovementCapturePanel", () => {
     );
 
     expect(screen.getByText("Posture Tracking: Ready")).toBeInTheDocument();
+    expect(screen.getByTestId("recording-lifecycle-status")).toHaveTextContent(
+      "Recording — 0 moments saved",
+    );
     expect(screen.getByRole("button", { name: "Stop posture capture" })).toBeEnabled();
+  });
+
+  it("shows exact current and planned Deep Capture channel evidence", () => {
+    render(
+      <MovementCapturePanel
+        {...baseProps}
+        isVisionReady
+        visionStatus="ready"
+        isPoseReady
+        capturePreflight={{
+          channels: [
+            {
+              id: "pose",
+              label: "Body pose",
+              message: "33/33 available",
+              observedCount: 33,
+              status: "ready",
+              targetCount: 33,
+            },
+            {
+              id: "palmWrist",
+              label: "Palm and wrist rotation",
+              message: "Planned: palm normal and wrist swing/twist are not captured yet",
+              status: "planned",
+            },
+          ],
+          currentRecordingReady: true,
+          deepCaptureBlockers: [
+            "Palm and wrist rotation: Planned: palm normal and wrist swing/twist are not captured yet",
+          ],
+          deepCaptureReady: false,
+          readyChannelCount: 1,
+          totalChannelCount: 2,
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: "Capture channel preflight" })).toBeInTheDocument();
+    expect(screen.getByText("Current gate ready")).toBeInTheDocument();
+    expect(screen.getByText("Deep Capture 1/2")).toBeInTheDocument();
+    expect(screen.getByText("33/33 available")).toBeInTheDocument();
+    expect(screen.getByText(/palm normal and wrist swing\/twist are not captured yet/i)).toBeInTheDocument();
   });
 });

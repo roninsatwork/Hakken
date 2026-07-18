@@ -61,4 +61,65 @@ describe("buildMovementGameProofPacket", () => {
     })).toThrow(/does not match movement-player-input-v1/);
   });
 
+  it("preserves dense-model identity and anchor ids in instructor and player proof frames", () => {
+    const deepCapture = {
+      denseBody: {
+        adapter: {
+          inferenceDurationMs: 30,
+          inputHeight: 360,
+          inputWidth: 640,
+          profileId: "movement-dense-capture-adapter-v1" as const,
+          qualityTier: "medium" as const,
+          runtime: "webgpu" as const,
+          targetIntervalMs: 180,
+        },
+        anchors: [{
+          anatomicalSide: "midline" as const,
+          depth: 0.2,
+          id: "abdomen-front-000",
+          image: { x: 0.5, y: 0.5 },
+          normal: { x: 0, y: 0, z: 1 },
+          occluded: false,
+          provenance: { ageMs: 0, confidence: 0.9, inferenceTimestampMs: 1, origin: "model-estimated" as const, sourceTimestampMs: 1 },
+          region: "abdomen" as const,
+          surface: "front" as const,
+        }],
+        modelHash: `sha256:${"a".repeat(64)}`,
+        modelId: "candidate@1",
+        segmentation: {
+          confidence: 0.9,
+          coverage: 0.5,
+          encoding: "model-rle" as const,
+          frameHeight: 720,
+          frameWidth: 1280,
+          maskHeight: 2,
+          maskWidth: 2,
+          payload: [[0, 1], [1, 2]],
+          provenance: { ageMs: 0, confidence: 0.9, inferenceTimestampMs: 1, origin: "model-estimated" as const, sourceTimestampMs: 1 },
+        },
+      },
+      profileId: "movement-deep-capture-v1" as const,
+    };
+    const packet = buildMovementGameProofPacket({
+      durationMs: 0,
+      endedAt: 0,
+      id: "dense-proof",
+      inputContract: MOVEMENT_PLAYER_INPUT_CONTRACT,
+      movementId: "dense-proof",
+      samples: [{
+        bodyConfidence: {},
+        capturedAt: 1,
+        fallbacks: {},
+        tracking: { deepCapture, pose: pose(), worldPose: pose() },
+      }],
+      startedAt: 0,
+    });
+
+    expect(packet.instructorFrames[0]?.deepCapture).toEqual(deepCapture);
+    expect(packet.playerFrames[0]?.deepCapture?.denseBody).toEqual(deepCapture.denseBody);
+    expect(packet.playerFrames[0]?.deepCapture?.denseBody?.anchors[0]?.id).toBe(
+      "abdomen-front-000",
+    );
+  });
+
 });

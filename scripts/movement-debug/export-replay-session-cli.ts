@@ -67,7 +67,7 @@ function numberValue(value: unknown) {
 }
 
 function movementDataFormat(value: unknown): MovementDataFormat | undefined {
-  return value === "legacy-inline-json" || value === "legacy-storage-json" || value === "storage-json-v1" || value === "storage-json-v2"
+  return value === "legacy-inline-json" || value === "legacy-storage-json" || value === "storage-json-v1" || value === "storage-json-v2" || value === "storage-json-v3"
     ? value
     : undefined;
 }
@@ -160,6 +160,8 @@ export async function runMovementReplaySessionExportCli(argv: string[]) {
     {
       captureStartReadiness: parsed.captureStartReadiness,
       channelSummary: parsed.channelSummary,
+      deepCaptureChannelSummary: parsed.deepCaptureChannelSummary,
+      deepCaptureProfile: parsed.deepCaptureProfile,
       inputContract: parsed.inputContract,
       schemaVersion: parsed.schemaVersion,
       setupPrefix: parsed.setupPrefix,

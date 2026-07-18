@@ -22,7 +22,10 @@ type MovementSaveDialogProps = {
   bodyFocus: MovementBodyFocus[];
   frameCount: number;
   isSaving: boolean;
+  isDownloadingBackup?: boolean;
   saveError: string | null;
+  backupMessage?: string | null;
+  backupCommand?: string | null;
   commissioningFailures?: string[];
   onClose: () => void;
   onTitleChange: (title: string) => void;
@@ -31,6 +34,7 @@ type MovementSaveDialogProps = {
   onPrimaryCueChange: (primaryCue: string) => void;
   onBodyFocusChange: (bodyFocus: MovementBodyFocus[]) => void;
   onSave: () => void;
+  onDownloadBackup?: () => void;
 };
 
 export default function MovementSaveDialog({
@@ -42,7 +46,10 @@ export default function MovementSaveDialog({
   bodyFocus,
   frameCount,
   isSaving,
+  isDownloadingBackup = false,
   saveError,
+  backupMessage,
+  backupCommand,
   commissioningFailures,
   onClose,
   onTitleChange,
@@ -51,8 +58,12 @@ export default function MovementSaveDialog({
   onPrimaryCueChange,
   onBodyFocusChange,
   onSave,
+  onDownloadBackup,
 }: MovementSaveDialogProps) {
   const canSave = title.trim().length > 0 && !isSaving &&
+    frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES &&
+    (!commissioningFailures || commissioningFailures.length === 0);
+  const canDownloadBackup = title.trim().length > 0 && !isDownloadingBackup &&
     frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES &&
     (!commissioningFailures || commissioningFailures.length === 0);
   const toggleBodyFocus = (focus: MovementBodyFocus) => {
@@ -168,6 +179,31 @@ export default function MovementSaveDialog({
         {saveError && (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
             <Typography className="text-sm font-medium text-red-200">{saveError}</Typography>
+          </div>
+        )}
+        {backupMessage && (
+          <div className="rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-3">
+            <Typography className="text-sm font-medium text-sky-100">{backupMessage}</Typography>
+            {backupCommand && (
+              <code className="mt-2 block select-all break-all rounded-lg bg-black/25 px-3 py-2 text-xs text-sky-100">
+                {backupCommand}
+              </code>
+            )}
+          </div>
+        )}
+        {onDownloadBackup && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <button
+              type="button"
+              onClick={onDownloadBackup}
+              disabled={!canDownloadBackup}
+              className="w-full rounded-xl border border-sky-200/25 bg-sky-300/10 px-4 py-3 font-semibold text-sky-100 transition-colors hover:bg-sky-300/15 disabled:opacity-50"
+            >
+              {isDownloadingBackup ? "Preparing local backup..." : "Download local packet backup"}
+            </button>
+            <Typography className="mt-2 text-xs text-secondary">
+              Downloads derived tracking JSON only—no camera video or images. This does not add the recording to Studio Library.
+            </Typography>
           </div>
         )}
         <button

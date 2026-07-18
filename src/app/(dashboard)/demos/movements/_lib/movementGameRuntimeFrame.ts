@@ -87,6 +87,7 @@ export function buildMovementGameInstructorRuntimeFrame({
   const sourceFrame = buildMovementSourceFrame({
     blendshapes: payload?.blendshapes,
     capturedAt: capturedAt ?? payload?.capturedAt ?? Date.now(),
+    deepCapture: payload?.deepCapture,
     frameId: payload?.frameId,
     hands: payload?.hands,
     poseLandmarks: rawLandmarks as TrackingLandmark[],

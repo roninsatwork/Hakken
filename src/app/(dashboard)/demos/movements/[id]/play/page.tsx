@@ -49,6 +49,7 @@ import {
 } from "../../_lib/movementAvatarProofFixtures";
 import { getMovementAvatarTrackingProfileName } from "../../_lib/movementAvatarProfiles";
 import { movementBoundaryChecksum } from "../../_lib/movementBoundaryChecksum";
+import { buildMovementDenseCaptureProofSnapshot } from "../../_lib/movementDenseCaptureProof";
 import {
   MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION,
   MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE,
@@ -606,6 +607,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     boundaries: {
       acquisition: unknown;
       calibration: unknown;
+      denseFusion: unknown;
       instructorRendered: unknown;
       motionFrame: unknown;
       ownersRootSupport: unknown;
@@ -616,6 +618,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     checksums: {
       acquisition: string;
       calibration: string;
+      denseFusion: string;
       instructorRendered: string;
       motionFrame: string;
       ownersRootSupport: string;
@@ -715,6 +718,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         const boundaries = {
           acquisition: structuredClone(effectivePlayerLiveLmRef.current),
           calibration: structuredClone(effectivePlayerCalibration),
+          denseFusion: buildMovementDenseCaptureProofSnapshot(
+            Array.isArray(effectivePlayerLiveLmRef.current)
+              ? undefined
+              : effectivePlayerLiveLmRef.current?.deepCapture,
+          ),
           instructorRendered: structuredClone(instructorDebug.avatarVisual),
           motionFrame: structuredClone(playerMotionFrameRef.current),
           ownersRootSupport: structuredClone({
@@ -734,6 +742,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           checksums: {
             acquisition: movementBoundaryChecksum(boundaries.acquisition),
             calibration: movementBoundaryChecksum(boundaries.calibration),
+            denseFusion: movementBoundaryChecksum(boundaries.denseFusion),
             instructorRendered: movementBoundaryChecksum(boundaries.instructorRendered),
             motionFrame: movementBoundaryChecksum(boundaries.motionFrame),
             ownersRootSupport: movementBoundaryChecksum(boundaries.ownersRootSupport),

@@ -1,13 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   MIN_MOVEMENT_CAPTURE_FRAMES,
+  buildMovementRecordingPacket,
   getMovementRecordingDurationMs,
   saveMovementRecording,
 } from "./saveMovementRecording";
 import type { MovementFrame } from "./movementTypes";
 import type { MovementStartReadiness } from "./movementSourceFrame";
-import { validateMovementCommissioningEnvelope } from "./movementRecordingCommissioning";
+import {
+  validateMovementCommissioningEnvelope,
+  validateMovementDeepCaptureEnvelope,
+} from "./movementRecordingCommissioning";
 import { buildMovementFrameEnvelope } from "./movementFrameCodec";
+import {
+  DEEP_CAPTURE_TEST_READINESS,
+  createCompleteDeepCaptureFrames,
+} from "./movementDeepCaptureTestFixture";
+import { loadMovementReplayRecording } from "./movementRecordingReplay";
 
 const landmark = { x: 0.1, y: 0.2, visibility: 0.9 };
 const captureStartReadiness: MovementStartReadiness = {
@@ -47,6 +56,23 @@ function makeCommissioningFrames(count = MIN_MOVEMENT_CAPTURE_FRAMES): MovementF
 }
 
 describe("saveMovementRecording", () => {
+  it("builds one validated schema-v3 packet for both local backup and cloud save", async () => {
+    const packet = await buildMovementRecordingPacket({
+      captureStartReadiness: DEEP_CAPTURE_TEST_READINESS,
+      frames: createCompleteDeepCaptureFrames(),
+      requireDeepCapturePacket: true,
+    });
+
+    expect(validateMovementDeepCaptureEnvelope(packet)).toEqual({
+      failures: [],
+      passed: true,
+    });
+    expect(packet).toMatchObject({
+      schemaVersion: 3,
+      sourcePacketHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+    });
+  });
+
   it("requires a title", async () => {
     await expect(saveMovementRecording({
       title: " ",
@@ -150,7 +176,7 @@ describe("saveMovementRecording", () => {
 
     expect(report.passed).toBe(false);
     expect(report.failures).toEqual(expect.arrayContaining([
-      "Recording must start from a ready full-body setup.",
+      "Recording must start from trustworthy pose acquisition evidence.",
       "Readiness evidence is missing from 60 recorded frame(s).",
       "blendshapes channel evidence is missing.",
       "camera channel evidence is missing.",
@@ -158,6 +184,85 @@ describe("saveMovementRecording", () => {
       "hands channel evidence is missing.",
       "worldPose channel evidence is missing.",
     ]));
+  });
+
+  it("fails closed before upload when schema-v3 Deep Capture channels are incomplete", async () => {
+    const uploadFetch = vi.fn();
+
+    await expect(saveMovementRecording({
+      title: "Incomplete Deep Capture",
+      difficulty: "Intermediate",
+      captureStartReadiness,
+      frames: makeCommissioningFrames(),
+      generateUploadUrl: vi.fn(async () => "https://upload.example"),
+      createMovement: vi.fn(),
+      uploadFetch,
+      requireDeepCapturePacket: true,
+    })).rejects.toThrow(/Deep Capture is not proof-ready.*denseBody Deep Capture evidence is incomplete/);
+
+    expect(uploadFetch).not.toHaveBeenCalled();
+  });
+
+  it("uploads a complete schema-v3 packet and returns its immutable recording id", async () => {
+    const createMovement = vi.fn(async () => "deep-capture-recording-id");
+    const uploadFetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ storageId: "deep-capture-storage-id" }),
+    } as Response));
+
+    await expect(saveMovementRecording({
+      title: "Deep Capture commissioning",
+      difficulty: "Intermediate",
+      captureStartReadiness: DEEP_CAPTURE_TEST_READINESS,
+      frames: createCompleteDeepCaptureFrames(),
+      generateUploadUrl: vi.fn(async () => "https://upload.example"),
+      createMovement,
+      uploadFetch,
+      requireDeepCapturePacket: true,
+    })).resolves.toBe("deep-capture-recording-id");
+
+    const uploadBody = (uploadFetch.mock.calls as unknown as Array<[string, RequestInit]>)[0]?.[1].body;
+    const envelope = JSON.parse(uploadBody as string);
+    expect(validateMovementDeepCaptureEnvelope(envelope)).toEqual({
+      failures: [],
+      passed: true,
+    });
+    expect(envelope).toMatchObject({
+      deepCaptureProfile: { id: "movement-deep-capture-v1", schemaVersion: 3 },
+      schemaVersion: 3,
+      sourcePacketHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+    });
+    expect(createMovement).toHaveBeenCalledWith(expect.objectContaining({
+      captureFps: 30,
+      durationMs: 1947,
+      frameCount: 60,
+      poseData: "deep-capture-storage-id",
+      poseDataFormat: "storage-json-v3",
+      poseStorageId: "deep-capture-storage-id",
+      schemaVersion: 3,
+      title: "Deep Capture commissioning",
+    }));
+
+    const replay = await loadMovementReplayRecording({
+      _id: "deep-capture-recording-id",
+      captureFps: 30,
+      poseData: uploadBody as string,
+      poseDataFormat: "storage-json-v3",
+      title: "Deep Capture commissioning",
+    });
+    expect(replay).toMatchObject({
+      format: "storage-json-v3",
+      session: {
+        deepCaptureProfile: { id: "movement-deep-capture-v1", schemaVersion: 3 },
+        id: "deep-capture-recording-id",
+        sampleCount: 60,
+        schemaVersion: 3,
+        sourcePacketHash: envelope.sourcePacketHash,
+      },
+    });
+    expect(replay.session.samples[0]?.tracking.deepCapture?.denseBody?.anchors).toHaveLength(200);
+    expect(replay.session.samples[0]?.tracking.hands?.left?.worldLandmarks).toHaveLength(21);
+    expect(replay.session.samples[0]?.tracking.face).toHaveLength(478);
   });
 
   it("saves a complete commissioning packet and returns its recording id", async () => {

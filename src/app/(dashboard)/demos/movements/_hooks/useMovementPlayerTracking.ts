@@ -16,7 +16,9 @@ import {
   type MovementAcquisitionCameraMetadata,
   type MovementPlayerInputContractId,
 } from "../_lib/movementPlayerInputContract";
+import { resolveMovementCameraDeviceFingerprint } from "../_lib/movementCameraDeviceFingerprint";
 import type { MovementHandSide } from "../_lib/movementTypes";
+import type { MovementDeepCaptureFrameEvidence } from "../_lib/movementDeepCaptureContract";
 import { resolveMovementReplayFrameDelay } from "../_lib/movementReplayPlaybackClock";
 
 type PlayerPoseLandmark = (NormalizedLandmark | Landmark) & {
@@ -36,6 +38,7 @@ export type MovementPlayerMotionPayload = {
   capturedAt?: number;
   frameId?: string;
   camera?: MovementAcquisitionCameraMetadata;
+  deepCapture?: MovementDeepCaptureFrameEvidence;
   landmarks?: PlayerPoseLandmark[];
   worldLandmarks?: PlayerPoseLandmark[] | null;
   faceLandmarks?: PlayerPoseLandmark[] | null;
@@ -276,6 +279,7 @@ export function useMovementPlayerTracking({
         const handResults = handLandmarker.detectForVideo(video, startTimeMs);
         const currentData: MovementPlayerMotionPayload = prepareMovementAcquisitionFrame({
           camera: {
+            deviceFingerprint: resolveMovementCameraDeviceFingerprint(video) ?? undefined,
             facingMode: "user",
             frameHeight: video.videoHeight,
             frameWidth: video.videoWidth,

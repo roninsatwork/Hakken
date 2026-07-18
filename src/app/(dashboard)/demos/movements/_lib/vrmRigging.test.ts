@@ -131,6 +131,13 @@ describe("vrmRigging", () => {
     const prepared = prepareVrmSolverInput({
       rawLandmarks: landmarks,
       payload: {
+        deepCapture: {
+          hands: {
+            left: { detectorHandedness: { label: "Left", score: 0.9 } },
+            right: { detectorHandedness: { label: "Right", score: 0.8 } },
+          },
+          profileId: "movement-deep-capture-v1",
+        } as never,
         hands: {
           left: { landmarks: [{ x: 0.2, y: 0.4, z: 0.1 }], worldLandmarks: [{ x: 0.3, y: 0.4, z: 0.1 }] },
           right: { landmarks: [{ x: 0.8, y: 0.4, z: 0.1 }], worldLandmarks: [{ x: 0.7, y: 0.4, z: 0.1 }] },
@@ -159,6 +166,8 @@ describe("vrmRigging", () => {
     });
     expect(prepared.rigHands?.right?.worldLandmarks?.[0]?.x).toBe(-0.3);
     expect(prepared.rigHands?.left?.worldLandmarks?.[0]?.x).toBe(-0.7);
+    expect(prepared.rigDeepCapture?.hands?.right?.detectorHandedness.label).toBe("Left");
+    expect(prepared.rigDeepCapture?.hands?.left?.detectorHandedness.label).toBe("Right");
   });
 
   it("prepares hand landmarks with optional x mirroring", () => {
@@ -572,6 +581,55 @@ describe("vrmRigging", () => {
     ]);
   });
 
+  it("applies a bounded wrist target only when reviewed Deep Capture orientation is trustworthy", () => {
+    const landmarks = Array.from({ length: 21 }, (_, index) => ({
+      x: 0.2 + index * 0.001,
+      y: 0.3,
+      z: 0,
+    }));
+    const solveHand = () => ({
+      LeftIndexProximal: { x: 0.2, y: 0, z: 0 },
+      LeftWrist: { x: 0.4, y: -0.2, z: 0.3 },
+    });
+    const withoutDeepEvidence = resolveVrmHandsRotationTargets({
+      hands: { left: { landmarks } },
+      isPlayer: true,
+      solveHand,
+    });
+    const withDeepEvidence = resolveVrmHandsRotationTargets({
+      deepCapture: {
+        hands: {
+          left: {
+            orientation: {
+              facing: "palm-facing-camera",
+              provenance: { confidence: 0.9 },
+              wristRotation: { x: 0.4, y: -0.2, z: 0.3 },
+            },
+          },
+        },
+        profileId: "movement-deep-capture-v1",
+      } as never,
+      hands: { left: { landmarks } },
+      isPlayer: true,
+      solveHand,
+    });
+
+    expect(withoutDeepEvidence.map((target) => target.rigKey)).toEqual([
+      "LeftIndexProximal",
+    ]);
+    expect(withDeepEvidence).toEqual([
+      expect.objectContaining({
+        rigKey: "LeftWrist",
+        slerp: 0.35,
+        vrmName: "leftHand",
+      }),
+      expect.objectContaining({
+        rigKey: "LeftIndexProximal",
+        slerp: 0.85,
+      }),
+    ]);
+  });
+
   it("maps blendshape categories to VRM expression targets outside the renderer", () => {
     expect(resolveVrmBlendshapeExpressionTargets([
       { categoryName: "eyeBlinkLeft", displayName: "eyeBlinkLeft", score: 0.2, index: 0 },
@@ -584,6 +642,27 @@ describe("vrmRigging", () => {
       { name: "blinkRight", value: 0.3 },
       { name: "aa", value: 1 },
       { name: "happy", value: 0.5 },
+    ]);
+  });
+
+  it("maps bilateral eye look and wider expression evidence through the shared VRM path", () => {
+    expect(resolveVrmBlendshapeExpressionTargets([
+      { categoryName: "eyeLookOutLeft", displayName: "eyeLookOutLeft", score: 0.8, index: 0 },
+      { categoryName: "eyeLookInRight", displayName: "eyeLookInRight", score: 0.6, index: 1 },
+      { categoryName: "eyeLookUpLeft", displayName: "eyeLookUpLeft", score: 0.4, index: 2 },
+      { categoryName: "eyeLookUpRight", displayName: "eyeLookUpRight", score: 0.2, index: 3 },
+      { categoryName: "browInnerUp", displayName: "browInnerUp", score: 0.7, index: 4 },
+      { categoryName: "eyeWideLeft", displayName: "eyeWideLeft", score: 0.5, index: 5 },
+      { categoryName: "mouthPucker", displayName: "mouthPucker", score: 0.45, index: 6 },
+      { categoryName: "mouthStretchLeft", displayName: "mouthStretchLeft", score: 0.3, index: 7 },
+      { categoryName: "mouthStretchRight", displayName: "mouthStretchRight", score: 0.5, index: 8 },
+    ])).toEqual([
+      { name: "happy", value: 0 },
+      { name: "lookUp", value: expect.closeTo(0.3) },
+      { name: "lookLeft", value: 0.7 },
+      { name: "surprised", value: 0.7 },
+      { name: "ou", value: 0.45 },
+      { name: "ee", value: 0.4 },
     ]);
   });
 
@@ -607,7 +686,7 @@ describe("vrmRigging", () => {
   it("applies expression targets to expression managers through the shared write helper", () => {
     const writes: Array<{ name: string; value: number }> = [];
     const expressionManager = {
-      setValue: (name: "aa" | "blinkLeft" | "blinkRight" | "happy", value: number) => {
+      setValue: (name: string, value: number) => {
         writes.push({ name, value });
       },
     };
@@ -628,7 +707,7 @@ describe("vrmRigging", () => {
   it("applies blendshape expression targets to expression managers through shared orchestration", () => {
     const writes: Array<{ name: string; value: number }> = [];
     const expressionManager = {
-      setValue: (name: "aa" | "blinkLeft" | "blinkRight" | "happy", value: number) => {
+      setValue: (name: string, value: number) => {
         writes.push({ name, value });
       },
     };
@@ -719,13 +798,27 @@ describe("vrmRigging", () => {
 
   it("applies hand rotation targets to VRM bones through shared orchestration", () => {
     const leftIndexProximal = new THREE.Object3D();
+    const leftHand = new THREE.Object3D();
     const rightIndexProximal = new THREE.Object3D();
     const bones: Record<string, THREE.Object3D> = {
+      leftHand,
       leftIndexProximal,
       rightIndexProximal,
     };
 
     const result = applyVrmHandsRotationTargetsToBones({
+      deepCapture: {
+        hands: {
+          left: {
+            orientation: {
+              facing: "palm-facing-away",
+              provenance: { confidence: 0.9 },
+              wristRotation: { x: 0.25, y: 0, z: 0 },
+            },
+          },
+        },
+        profileId: "movement-deep-capture-v1",
+      } as never,
       hands: {
         left: {
           landmarks: Array.from({ length: 21 }, (_, index) => ({
@@ -746,10 +839,12 @@ describe("vrmRigging", () => {
       lookupBone: (vrmName) => bones[vrmName],
       solveHand: (_landmarks, handedness) => ({
         [`${handedness}IndexProximal`]: { x: 0.25, y: 0, z: 0 },
+        [`${handedness}Wrist`]: { x: 0.25, y: 0, z: 0 },
       }),
     });
 
-    expect(result.applied).toBe(2);
+    expect(result.applied).toBe(3);
+    expect(leftHand.quaternion.w).toBeLessThan(1);
     expect(leftIndexProximal.quaternion.w).toBeLessThan(1);
     expect(rightIndexProximal.quaternion.w).toBeLessThan(1);
     expect(applyVrmHandsRotationTargetsToBones({

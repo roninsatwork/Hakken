@@ -226,6 +226,34 @@ describe("movement source frame contracts", () => {
     expect(upperBodyReadiness.canStartGame).toBe(true);
   });
 
+  it("lets recording acquisition start from complete image/world structure without weakening Game readiness", () => {
+    const pose = withCorePose().map((landmark, index) => ({
+      ...landmark,
+      visibility: [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 23, 24].includes(index)
+        ? 0.9
+        : 0.05,
+    }));
+    const frame = buildLiveMovementSourceFrame({
+      capturedAt: 2050,
+      poseLandmarks: pose,
+      requirements: { mode: "full-body" },
+      worldPoseLandmarks: pose.map((landmark) => ({ ...landmark })),
+    });
+
+    expect(frame.cameraConfidence.state).toBe("uncertain");
+    expect(frame.startReadiness.state).toBe("blocked");
+    expect(frame.startReadiness.canStartRecording).toBe(true);
+    expect(frame.startReadiness.canStartGame).toBe(false);
+    expect(resolveMovementStartGateDecision({
+      readiness: frame.startReadiness,
+      target: "recording",
+    }).canStart).toBe(true);
+    expect(resolveMovementStartGateDecision({
+      readiness: frame.startReadiness,
+      target: "game",
+    }).canStart).toBe(false);
+  });
+
   it("returns camera recovery cues for weak, cropped, and distant frames", () => {
     expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
       capturedAt: 2100,

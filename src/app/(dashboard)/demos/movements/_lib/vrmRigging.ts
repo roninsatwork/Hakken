@@ -3,6 +3,7 @@ import type { VRM } from "@pixiv/three-vrm";
 import * as Kalidokit from "kalidokit";
 import * as THREE from "three";
 import { MOVEMENT_LANDMARK_MIRROR_PAIRS } from "./movementMirrorMapping";
+import type { MovementDeepCaptureFrameEvidence } from "./movementDeepCaptureContract";
 import type { MovementHandSide } from "./movementTypes";
 
 export type VrmBlendshapeCategory = Classifications["categories"][number];
@@ -42,6 +43,7 @@ export type VrmMotionPayload = {
   worldLandmarks?: VrmPoseLandmark[] | null;
   faceLandmarks?: VrmPoseLandmark[] | null;
   blendshapes?: VrmBlendshapeCategory[];
+  deepCapture?: MovementDeepCaptureFrameEvidence;
   hands?: VrmHandsPayload;
 };
 
@@ -115,7 +117,21 @@ export type VrmStoredRotationTargetApplicationResult = {
 };
 
 export type VrmExpressionTarget = {
-  name: "aa" | "blinkLeft" | "blinkRight" | "happy";
+  name:
+    | "aa"
+    | "angry"
+    | "blinkLeft"
+    | "blinkRight"
+    | "ee"
+    | "happy"
+    | "lookDown"
+    | "lookLeft"
+    | "lookRight"
+    | "lookUp"
+    | "oh"
+    | "ou"
+    | "sad"
+    | "surprised";
   value: number;
 };
 
@@ -249,6 +265,19 @@ function swapHandsPayloadSides(hands: VrmHandsPayload): VrmHandsPayload {
   return mirroredHands;
 }
 
+function swapDeepCaptureHandSides(
+  deepCapture: MovementDeepCaptureFrameEvidence,
+): MovementDeepCaptureFrameEvidence {
+  if (!deepCapture.hands) return deepCapture;
+  return {
+    ...deepCapture,
+    hands: {
+      left: deepCapture.hands.right ?? null,
+      right: deepCapture.hands.left ?? null,
+    },
+  };
+}
+
 function mirrorBlendshapeSides(blendshapes: VrmBlendshapeCategory[]) {
   return blendshapes.map((blendshape) => {
     let name = blendshape.categoryName;
@@ -309,6 +338,7 @@ export function prepareVrmSolverInput({
   let faceLandmarks = payload?.faceLandmarks?.map(format);
   let rigHands = payload?.hands;
   let rigBlendshapes = payload?.blendshapes;
+  let rigDeepCapture = payload?.deepCapture;
 
   if (shouldReflectCoordinates) {
     reflectVrmLandmarkArrayCoordinates(imageLandmarks, (x) => 1 - x);
@@ -333,6 +363,9 @@ export function prepareVrmSolverInput({
     if (rigHands) {
       rigHands = swapHandsPayloadSides(rigHands);
     }
+    if (rigDeepCapture) {
+      rigDeepCapture = swapDeepCaptureHandSides(rigDeepCapture);
+    }
     if (payload?.blendshapes) {
       rigBlendshapes = mirrorBlendshapeSides(payload.blendshapes);
     }
@@ -348,6 +381,7 @@ export function prepareVrmSolverInput({
     solverLandmarks,
     rigHands,
     rigBlendshapes,
+    rigDeepCapture,
   };
 }
 
@@ -392,7 +426,10 @@ export function resolveVrmHandRigOptions({
   };
 }
 
-export function resolveVrmHandRotationSpecs(side: MovementHandSide): VrmHandRotationSpec[] {
+export function resolveVrmHandRotationSpecs(
+  side: MovementHandSide,
+  options: { applyWrist?: boolean } = {},
+): VrmHandRotationSpec[] {
   const handedness = side === "left" ? "Left" : "Right";
   const fingers = ["Thumb", "Index", "Middle", "Ring", "Little"];
   const joints = ["Proximal", "Intermediate", "Distal"];
@@ -402,7 +439,7 @@ export function resolveVrmHandRotationSpecs(side: MovementHandSide): VrmHandRota
       isThumb: false,
       isWrist: true,
       rigKey: `${handedness}Wrist`,
-      shouldApply: false,
+      shouldApply: options.applyWrist ?? false,
       vrmName: `${side}Hand`,
     },
     ...fingers.flatMap((finger) =>
@@ -435,17 +472,19 @@ export function strengthenVrmHandRotation(
 }
 
 export function resolveVrmHandRotationTargets({
+  applyWrist = false,
   isPlayer,
   rig,
   side,
   slerp,
 }: {
+  applyWrist?: boolean;
   isPlayer: boolean;
   rig: VrmHandRig;
   side: MovementHandSide;
   slerp: number;
 }): VrmHandRotationTarget[] {
-  return resolveVrmHandRotationSpecs(side).flatMap((spec) => {
+  return resolveVrmHandRotationSpecs(side, { applyWrist }).flatMap((spec) => {
     if (!spec.shouldApply) return [];
 
     const rotation = rig[spec.rigKey];
@@ -458,7 +497,7 @@ export function resolveVrmHandRotationTargets({
         isThumb: spec.isThumb,
         isWrist: spec.isWrist,
       }),
-      slerp,
+      slerp: spec.isWrist ? Math.min(slerp, 0.35) : slerp,
       vrmName: spec.vrmName,
     }];
   });
@@ -736,11 +775,13 @@ export function applyVrmArmLastGoodPoseToBones({
 }
 
 export function resolveVrmHandsRotationTargets({
+  deepCapture,
   hands,
   isPlayer,
   mirrorForDisplay = false,
   solveHand = solveVrmHand,
 }: {
+  deepCapture?: MovementDeepCaptureFrameEvidence | null;
   hands?: VrmHandsPayload | null;
   isPlayer: boolean;
   mirrorForDisplay?: boolean;
@@ -763,8 +804,15 @@ export function resolveVrmHandsRotationTargets({
     });
     const rig = solveHand(handLandmarks, handedness);
     if (!rig) return [];
+    const orientation = deepCapture?.hands?.[side]?.orientation;
+    const applyWrist = Boolean(
+      orientation?.wristRotation &&
+      orientation.facing !== "unknown" &&
+      orientation.provenance.confidence >= 0.5
+    );
 
     return resolveVrmHandRotationTargets({
+      applyWrist,
       isPlayer: handRigOptions.isPlayer,
       rig,
       side,
@@ -778,31 +826,56 @@ export function resolveVrmBlendshapeExpressionTargets(
 ): VrmExpressionTarget[] {
   if (!blendshapes) return [];
 
-  let smileScore = 0;
+  const scores = new Map(blendshapes.map((blendshape) => [
+    blendshape.categoryName,
+    blendshape.score,
+  ]));
+  const present = (names: string[]) => names.some((name) => scores.has(name));
+  const average = (names: string[]) => names.reduce(
+    (sum, name) => sum + (scores.get(name) ?? 0),
+    0,
+  ) / names.length;
+  const maximum = (names: string[]) => Math.max(...names.map((name) => scores.get(name) ?? 0));
   const targets: VrmExpressionTarget[] = [];
 
-  blendshapes.forEach((blendshape) => {
-    if (blendshape.categoryName === "eyeBlinkLeft") {
-      targets.push({ name: "blinkLeft", value: blendshape.score });
-    }
-    if (blendshape.categoryName === "eyeBlinkRight") {
-      targets.push({ name: "blinkRight", value: blendshape.score });
-    }
-    if (blendshape.categoryName === "jawOpen") {
-      targets.push({ name: "aa", value: Math.min(1.0, blendshape.score * 1.5) });
-    }
-    if (
-      blendshape.categoryName === "mouthSmileLeft" ||
-      blendshape.categoryName === "mouthSmileRight"
-    ) {
-      smileScore += blendshape.score / 2;
-    }
-  });
+  if (scores.has("eyeBlinkLeft")) {
+    targets.push({ name: "blinkLeft", value: scores.get("eyeBlinkLeft") ?? 0 });
+  }
+  if (scores.has("eyeBlinkRight")) {
+    targets.push({ name: "blinkRight", value: scores.get("eyeBlinkRight") ?? 0 });
+  }
+  if (scores.has("jawOpen")) {
+    targets.push({ name: "aa", value: Math.min(1, (scores.get("jawOpen") ?? 0) * 1.5) });
+  }
 
-  return [
-    ...targets,
-    { name: "happy", value: smileScore },
-  ];
+  const smile = ["mouthSmileLeft", "mouthSmileRight"];
+  targets.push({ name: "happy", value: average(smile) });
+
+  const eyeLookUp = ["eyeLookUpLeft", "eyeLookUpRight"];
+  const eyeLookDown = ["eyeLookDownLeft", "eyeLookDownRight"];
+  const eyeLookLeft = ["eyeLookOutLeft", "eyeLookInRight"];
+  const eyeLookRight = ["eyeLookInLeft", "eyeLookOutRight"];
+  if (present(eyeLookUp)) targets.push({ name: "lookUp", value: average(eyeLookUp) });
+  if (present(eyeLookDown)) targets.push({ name: "lookDown", value: average(eyeLookDown) });
+  if (present(eyeLookLeft)) targets.push({ name: "lookLeft", value: average(eyeLookLeft) });
+  if (present(eyeLookRight)) targets.push({ name: "lookRight", value: average(eyeLookRight) });
+
+  const surprise = ["browInnerUp", "eyeWideLeft", "eyeWideRight"];
+  const anger = ["browDownLeft", "browDownRight", "noseSneerLeft", "noseSneerRight"];
+  const sadness = ["mouthFrownLeft", "mouthFrownRight", "browOuterUpLeft", "browOuterUpRight"];
+  if (present(surprise)) targets.push({ name: "surprised", value: maximum(surprise) });
+  if (present(anger)) targets.push({ name: "angry", value: average(anger) });
+  if (present(sadness)) targets.push({ name: "sad", value: average(sadness) });
+  if (scores.has("mouthPucker")) targets.push({ name: "ou", value: scores.get("mouthPucker") ?? 0 });
+  if (scores.has("mouthFunnel")) targets.push({ name: "oh", value: scores.get("mouthFunnel") ?? 0 });
+  if (present(["mouthStretchLeft", "mouthStretchRight"])) {
+    targets.push({
+      name: "ee",
+      value: average(["mouthStretchLeft", "mouthStretchRight"]),
+    });
+  }
+
+  return targets;
 }
 
 export function applyVrmExpressionTargets({
@@ -905,12 +978,14 @@ export function applyVrmHandRotationTargetToBone({
 }
 
 export function applyVrmHandsRotationTargetsToBones({
+  deepCapture,
   hands,
   isPlayer,
   lookupBone,
   mirrorForDisplay = false,
   solveHand,
 }: {
+  deepCapture?: MovementDeepCaptureFrameEvidence | null;
   hands?: VrmHandsPayload | null;
   isPlayer: boolean;
   lookupBone: (vrmName: string) => THREE.Object3D | null | undefined;
@@ -923,6 +998,7 @@ export function applyVrmHandsRotationTargetsToBones({
       target,
     }).applied,
     targets: resolveVrmHandsRotationTargets({
+      deepCapture,
       hands,
       isPlayer,
       mirrorForDisplay,

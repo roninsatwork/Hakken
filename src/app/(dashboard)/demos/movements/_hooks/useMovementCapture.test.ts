@@ -4,6 +4,7 @@ import {
   getMovementCaptureFullBodyVisibility,
   resolveMovementCaptureStartReadiness,
   shouldRecordMovementCaptureFrame,
+  shouldRetainMovementCaptureFrame,
 } from "./useMovementCapture";
 
 function makeLandmarks(visibility = 0): NormalizedLandmark[] {
@@ -76,6 +77,26 @@ describe("movement capture quality", () => {
     expect(shouldRecordMovementCaptureFrame(landmarks)).toBe(false);
   });
 
+  it("retains weak or occluded frames after recording has started", () => {
+    const upperBodyOnly = makeLandmarks();
+    [11, 12, 23, 24].forEach((index) => {
+      upperBodyOnly[index] = {
+        ...upperBodyOnly[index],
+        visibility: 0.9,
+      };
+    });
+
+    expect(shouldRecordMovementCaptureFrame(upperBodyOnly)).toBe(false);
+    expect(shouldRetainMovementCaptureFrame({
+      isRecording: true,
+      landmarks: upperBodyOnly,
+    })).toBe(true);
+    expect(shouldRetainMovementCaptureFrame({
+      isRecording: false,
+      landmarks: upperBodyOnly,
+    })).toBe(false);
+  });
+
   it("uses shared full-body start readiness before capture begins", () => {
     const ready = makeLandmarks();
     setBodyVisibility(ready, 0.8);
@@ -100,9 +121,75 @@ describe("movement capture quality", () => {
       };
     });
 
-    expect(resolveMovementCaptureStartReadiness(ready).canStartRecording).toBe(true);
-    const blocked = resolveMovementCaptureStartReadiness(weakFeet);
+    expect(resolveMovementCaptureStartReadiness({
+      capturedAt: 1,
+      landmarks: ready,
+      worldLandmarks: ready,
+    }).canStartRecording).toBe(true);
+    const blocked = resolveMovementCaptureStartReadiness({
+      capturedAt: 1,
+      landmarks: weakFeet,
+      worldLandmarks: [],
+    });
     expect(blocked.canStartRecording).toBe(false);
     expect(blocked.promptEvents).toContain("show-your-feet");
+  });
+
+  it("starts evidence acquisition when distal visibility is weak but image/world pose structure is complete", () => {
+    const pose = makeLandmarks(0.05);
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 23, 24].forEach((index) => {
+      pose[index] = {
+        ...pose[index],
+        visibility: 0.9,
+      };
+    });
+    const worldPose = makeLandmarks(0.05).map((landmark, index) => ({
+      ...landmark,
+      x: index * 0.01,
+      y: index * 0.02,
+      z: index * -0.01,
+    }));
+
+    const recovered = resolveMovementCaptureStartReadiness({
+      capturedAt: 1,
+      landmarks: pose,
+      worldLandmarks: worldPose,
+    });
+
+    expect(pose.filter((landmark) => (landmark.visibility ?? 0) >= 0.2)).toHaveLength(13);
+    expect(recovered.canStartRecording).toBe(true);
+    expect(recovered.canStartGame).toBe(false);
+    expect(recovered.state).toBe("blocked");
+    expect(recovered.blockedReasons).toEqual(expect.arrayContaining([
+      "leftArm-missing",
+      "rightArm-missing",
+      "leftLeg-missing",
+      "rightLeg-missing",
+      "leftFoot-missing",
+      "rightFoot-missing",
+      "camera-uncertain",
+    ]));
+  });
+
+  it("does not recover recording readiness from incomplete or invented pose evidence", () => {
+    const pose = makeLandmarks(0.05);
+    [0, 7, 8, 11, 12, 23, 24].forEach((index) => {
+      pose[index] = { ...pose[index], visibility: 0.9 };
+    });
+    const completeWorldPose = makeLandmarks(0.9);
+
+    expect(resolveMovementCaptureStartReadiness({
+      capturedAt: 1,
+      landmarks: pose,
+      worldLandmarks: [],
+    }).canStartRecording).toBe(false);
+
+    const invalidPose = pose.map((landmark) => ({ ...landmark }));
+    invalidPose[31] = { ...invalidPose[31], x: Number.NaN };
+    expect(resolveMovementCaptureStartReadiness({
+      capturedAt: 1,
+      landmarks: invalidPose,
+      worldLandmarks: completeWorldPose,
+    }).canStartRecording).toBe(false);
   });
 });

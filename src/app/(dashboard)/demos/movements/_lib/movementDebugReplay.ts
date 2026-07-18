@@ -4,10 +4,12 @@ import type {
   MovementFrameEnvelope,
   MovementRecordingChannelSummary,
 } from "./movementTypes";
+import type { MovementDeepCaptureFrameEvidence } from "./movementDeepCaptureContract";
 
 export type MovementDebugReplayCamera = {
   aspectRatio?: number;
   deviceLabel?: string;
+  deviceFingerprint?: string;
   frameRate?: number;
   trackHeight?: number;
   trackWidth?: number;
@@ -75,6 +77,7 @@ export type MovementDebugReplayLandmark = {
 };
 
 export type MovementDebugReplayFrame = {
+  acquisitionProfileId?: string;
   baseline?: string;
   avatarVisual?: MovementDebugReplayAvatarVisual;
   bodyConfidence: Record<string, number>;
@@ -97,6 +100,7 @@ export type MovementDebugReplayFrame = {
       index: number;
       score: number;
     }>;
+    deepCapture?: MovementDeepCaptureFrameEvidence;
     face?: MovementDebugReplayLandmark[];
     hands?: Partial<Record<"left" | "right", {
       landmarks: MovementDebugReplayLandmark[];
@@ -112,6 +116,8 @@ export type MovementDebugReplaySession = {
   baselineSummary: string;
   captureStartReadiness?: MovementStartReadiness;
   channelSummary?: MovementRecordingChannelSummary;
+  deepCaptureChannelSummary?: MovementFrameEnvelope["deepCaptureChannelSummary"];
+  deepCaptureProfile?: MovementFrameEnvelope["deepCaptureProfile"];
   createdAt?: number;
   durationMs: number;
   endedAt: number;
@@ -186,6 +192,7 @@ function parseCamera(value: unknown): MovementDebugReplayCamera | undefined {
   return {
     aspectRatio: typeof value.aspectRatio === "number" ? value.aspectRatio : undefined,
     deviceLabel: typeof value.deviceLabel === "string" ? value.deviceLabel : undefined,
+    deviceFingerprint: typeof value.deviceFingerprint === "string" ? value.deviceFingerprint : undefined,
     frameRate: typeof value.frameRate === "number" ? value.frameRate : undefined,
     trackHeight: typeof value.trackHeight === "number" ? value.trackHeight : undefined,
     trackWidth: typeof value.trackWidth === "number" ? value.trackWidth : undefined,
@@ -335,6 +342,9 @@ function parseTracking(value: unknown): MovementDebugReplayFrame["tracking"] {
           }];
         })
       : undefined,
+    deepCapture: isRecord(value.deepCapture)
+      ? value.deepCapture as MovementDeepCaptureFrameEvidence
+      : undefined,
     face: Array.isArray(value.face) ? parseLandmarks(value.face) : undefined,
     hands: isRecord(value.hands)
       ? Object.fromEntries(["left", "right"].map((side) => {
@@ -365,6 +375,9 @@ export function parseMovementDebugReplayFrame(value: unknown): MovementDebugRepl
   if (!isRecord(value)) return null;
 
   return {
+    acquisitionProfileId: typeof value.acquisitionProfileId === "string"
+      ? value.acquisitionProfileId
+      : undefined,
     baseline: typeof value.baseline === "string" ? value.baseline : undefined,
     avatarVisual: parseAvatarVisual(value.avatarVisual),
     bodyConfidence: numberRecord(value.bodyConfidence),
@@ -396,6 +409,12 @@ export function parseMovementDebugReplaySession(value: unknown): MovementDebugRe
       : undefined,
     channelSummary: isRecord(value.channelSummary)
       ? value.channelSummary as MovementRecordingChannelSummary
+      : undefined,
+    deepCaptureChannelSummary: isRecord(value.deepCaptureChannelSummary)
+      ? value.deepCaptureChannelSummary as MovementFrameEnvelope["deepCaptureChannelSummary"]
+      : undefined,
+    deepCaptureProfile: isRecord(value.deepCaptureProfile)
+      ? value.deepCaptureProfile as MovementFrameEnvelope["deepCaptureProfile"]
       : undefined,
     createdAt: typeof value.createdAt === "number" ? value.createdAt : undefined,
     durationMs: numberValue(value.durationMs),

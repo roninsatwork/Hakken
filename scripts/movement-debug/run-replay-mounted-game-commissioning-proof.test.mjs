@@ -35,6 +35,20 @@ describe("Replay/mounted Game commissioning proof command", () => {
     expect(() => buildCommissioningProofPlan(args)).toThrow("Pass --recording-id <movement id>.");
   });
 
+  it("plans schema-v3 Deep Capture proof without changing the legacy default", () => {
+    const deepArgs = parseCommissioningProofArgs([
+      "--recording-id",
+      "deep-recording",
+      "--deep-capture",
+    ]);
+
+    expect(buildCommissioningProofPlan(deepArgs, "now").proofProfile).toBe("deep-capture-v1");
+    expect(buildCommissioningProofPlan(
+      parseCommissioningProofArgs(["--recording-id", "v2-recording"]),
+      "now",
+    ).proofProfile).toBe("commissioning-v2");
+  });
+
   it("orchestrates export, replay-session conversion, and packet proof in order", async () => {
     const calls = [];
     const outDir = path.resolve("tmp/movement-replay-lab/test-commissioning-proof");
@@ -49,6 +63,7 @@ describe("Replay/mounted Game commissioning proof command", () => {
       outDir,
       "--base-url",
       "http://localhost:3100",
+      "--deep-capture",
       "--local-test-auth",
       "--secret",
       "secret-a",
@@ -60,6 +75,7 @@ describe("Replay/mounted Game commissioning proof command", () => {
 
     expect(summary).toMatchObject({
       passed: true,
+      proofProfile: "deep-capture-v1",
       recordingId: "px-recording",
     });
     expect(calls).toEqual([
@@ -94,6 +110,7 @@ describe("Replay/mounted Game commissioning proof command", () => {
           "--local-test-auth",
           "--secret",
           "secret-a",
+          "--deep-capture",
           "--packet",
           path.join(outDir, "replay-session.json"),
           "--out",

@@ -5,6 +5,8 @@ import Webcam from "react-webcam";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../_hooks/useMediaPipeVision";
 import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../_lib/movementCameraConstraints";
+import type { MovementCapturePreflight } from "../_lib/movementCapturePreflight";
+import MovementCapturePreflightPanel from "./MovementCapturePreflightPanel";
 
 type MovementCapturePanelProps = {
   webcamRef: RefObject<Webcam | null>;
@@ -15,15 +17,18 @@ type MovementCapturePanelProps = {
   visionStatus: MediaPipeVisionStatus;
   visionError: string | null;
   isPoseReady: boolean;
-  captureReadinessCountdownSeconds?: number;
   captureReadinessMessage?: string | null;
-  captureReadinessStatus?: "idle" | "countdown" | "checking-visibility" | "blocked";
+  captureReadinessStatus?: "idle" | "waiting-for-body" | "blocked";
+  capturePreflight?: MovementCapturePreflight;
   frameCount: number;
   trackingQuality: number;
   spineQuality: number;
   onCameraError: () => void;
   onRetryVision: () => void;
   onToggleRecording: () => void;
+  onToggleTrackingDetail?: () => void;
+  showAllTrackingPoints?: boolean;
+  showTrackingDetailToggle?: boolean;
 };
 
 export default function MovementCapturePanel({
@@ -35,19 +40,27 @@ export default function MovementCapturePanel({
   visionStatus,
   visionError,
   isPoseReady,
-  captureReadinessCountdownSeconds = 0,
   captureReadinessMessage = null,
   captureReadinessStatus = "idle",
+  capturePreflight,
   frameCount,
   trackingQuality,
   spineQuality,
   onCameraError,
   onRetryVision,
   onToggleRecording,
+  onToggleTrackingDetail,
+  showAllTrackingPoints = false,
+  showTrackingDetailToggle = false,
 }: MovementCapturePanelProps) {
-  const isCaptureStartGateActive =
-    captureReadinessStatus === "countdown" ||
-    captureReadinessStatus === "checking-visibility";
+  const isCaptureStartGateActive = captureReadinessStatus === "waiting-for-body";
+  const lifecycleLabel = isRecording
+    ? `Recording — ${frameCount} moments saved`
+    : captureReadinessStatus === "waiting-for-body"
+      ? "Armed — not recording yet"
+      : captureReadinessStatus === "blocked"
+        ? "Recording did not start"
+        : "Not recording";
   const visionLabel =
     visionStatus === "ready"
       ? "Posture Tracking: Ready"
@@ -70,7 +83,8 @@ export default function MovementCapturePanel({
   }
 
   return (
-    <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-[#07070b] border border-white/10 shadow-[0_30px_90px_rgba(246,204,190,0.10)]">
+    <div className="flex w-full flex-col gap-3">
+      <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-[#07070b] border border-white/10 shadow-[0_30px_90px_rgba(246,204,190,0.10)]">
       <Webcam
         ref={webcamRef}
         onUserMediaError={onCameraError}
@@ -112,6 +126,22 @@ export default function MovementCapturePanel({
         </div>
       </div>
 
+      <div
+        className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border px-4 py-2 backdrop-blur-md ${
+          isRecording
+            ? "border-red-300/50 bg-red-600/85 text-white"
+            : captureReadinessStatus === "waiting-for-body"
+              ? "border-amber-200/40 bg-amber-950/85 text-amber-100"
+              : captureReadinessStatus === "blocked"
+                ? "border-red-300/40 bg-red-950/85 text-red-100"
+                : "border-white/15 bg-black/65 text-white/80"
+        }`}
+        data-testid="recording-lifecycle-status"
+        role="status"
+      >
+        <span className="text-xs font-black uppercase tracking-[0.14em]">{lifecycleLabel}</span>
+      </div>
+
       {visionError && (
         <div className="absolute top-16 left-4 right-4 z-20 rounded-2xl border border-red-500/30 bg-black/70 px-4 py-3 backdrop-blur-md">
           <Typography className="text-sm font-medium text-red-200">{visionError}</Typography>
@@ -128,35 +158,49 @@ export default function MovementCapturePanel({
       {captureReadinessStatus !== "idle" && (
         <div className="absolute bottom-24 left-1/2 z-20 w-[min(90%,360px)] -translate-x-1/2 rounded-2xl border border-white/10 bg-black/70 px-5 py-3 text-center backdrop-blur-md">
           <Typography className="text-xs font-black uppercase tracking-[0.18em] text-[#f6ccbe]">
-            {captureReadinessStatus === "countdown"
-              ? `Get ready: ${Math.max(captureReadinessCountdownSeconds, 1)}`
-              : captureReadinessStatus === "checking-visibility"
-                ? "Checking visibility"
-                : captureReadinessMessage ?? "Show your whole body"}
+            {captureReadinessMessage ?? "Show your whole body"}
           </Typography>
         </div>
       )}
 
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20">
+      {showTrackingDetailToggle && onToggleTrackingDetail && (
         <button
-          onClick={onToggleRecording}
-          disabled={!isVisionReady || isCaptureStartGateActive}
-          aria-label={isRecording ? "Stop posture capture" : "Start posture capture"}
-          className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
-            isRecording
-              ? "bg-red-500 hover:bg-red-600 shadow-[0_0_20px_#ef4444]"
-              : "bg-[#f6ccbe] text-[#17131d] hover:bg-[#f7efe7] shadow-[0_0_20px_rgba(246,204,190,0.34)]"
-          }`}
+          aria-label={showAllTrackingPoints
+            ? "Show essential tracking points"
+            : "Show all tracking points"}
+          aria-pressed={showAllTrackingPoints}
+          className="absolute bottom-20 left-4 z-20 rounded-full border border-white/15 bg-black/65 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white/85 backdrop-blur-md transition-colors hover:bg-black/80 sm:bottom-6"
+          onClick={onToggleTrackingDetail}
+          title={showAllTrackingPoints
+            ? "Return to the lighter region-balanced overlay"
+            : "Show every captured face and dense-body point"}
+          type="button"
         >
-          {isRecording
-            ? "Finish Capture"
-            : captureReadinessStatus === "countdown"
-              ? `Get Ready ${Math.max(captureReadinessCountdownSeconds, 1)}`
-              : captureReadinessStatus === "checking-visibility"
-                ? "Checking Visibility"
-                : "Start Posture Capture"}
+          Points: {showAllTrackingPoints ? "All" : "Essential"}
         </button>
+      )}
+
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20">
+          <button
+            onClick={onToggleRecording}
+            disabled={!isVisionReady || isCaptureStartGateActive}
+            aria-label={isRecording ? "Stop posture capture" : "Start posture capture"}
+            className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
+              isRecording
+                ? "bg-red-500 hover:bg-red-600 shadow-[0_0_20px_#ef4444]"
+                : "bg-[#f6ccbe] text-[#17131d] hover:bg-[#f7efe7] shadow-[0_0_20px_rgba(246,204,190,0.34)]"
+            }`}
+          >
+            {isRecording
+              ? "Finish Capture"
+              : captureReadinessStatus === "waiting-for-body"
+                ? "Waiting for whole body"
+                  : "Start Posture Capture"}
+          </button>
+        </div>
       </div>
+
+      {capturePreflight && <MovementCapturePreflightPanel capturePreflight={capturePreflight} />}
     </div>
   );
 }

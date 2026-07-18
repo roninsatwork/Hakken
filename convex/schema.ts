@@ -1870,7 +1870,8 @@ export default defineSchema({
       v.literal("legacy-inline-json"),
       v.literal("legacy-storage-json"),
       v.literal("storage-json-v1"),
-      v.literal("storage-json-v2")
+      v.literal("storage-json-v2"),
+      v.literal("storage-json-v3")
     )),
     poseStorageId: v.optional(v.id("_storage")),
     frameCount: v.optional(v.number()),

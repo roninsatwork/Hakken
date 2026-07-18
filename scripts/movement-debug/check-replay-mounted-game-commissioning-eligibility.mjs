@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { spawn } from "node:child_process";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateCompleteReplayGamePacket } from "./run-replay-mounted-game-packet-proof.mjs";
@@ -12,6 +12,8 @@ const exportSessionScript = path.join(scriptDirectory, "export-replay-session.mj
 function parseArgs(argv) {
   const args = {
     convertedOutDir: "tmp/movement-replay-lab/commissioning-eligibility-converted",
+    allRecordings: false,
+    deepCapture: false,
     exportPath: "",
     failOnIneligible: false,
     manifests: [],
@@ -22,7 +24,9 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--converted-out") args.convertedOutDir = argv[++index] || args.convertedOutDir;
+    if (arg === "--all-recordings") args.allRecordings = true;
+    else if (arg === "--deep-capture") args.deepCapture = true;
+    else if (arg === "--converted-out") args.convertedOutDir = argv[++index] || args.convertedOutDir;
     else if (arg === "--export") args.exportPath = argv[++index] || "";
     else if (arg === "--manifest") args.manifests.push(argv[++index] || "");
     else if (arg === "--recording-id") args.recordingIds.push(argv[++index] || "");
@@ -42,6 +46,7 @@ function printHelp() {
 Usage:
   npm run movement:replay-game:commissioning-eligibility -- --manifest <nine-manifest.json> --out <summary.json>
   npm run movement:replay-game:commissioning-eligibility -- --recording-manifest <nine-manifest.json> --export <convex-export.zip>
+  npm run movement:replay-game:deep-recording-inventory -- --export <convex-export.zip> --out <summary.json>
   npm run movement:replay-game:commissioning-eligibility -- --packet <session.json> --packet <session.json>
 
 Options:
@@ -49,11 +54,13 @@ Options:
   --recording-manifest <file>
                            Manifest with recordings[].id entries. Converts each recording from --export first.
   --recording-id <id>      Saved recording id to convert from --export. Can repeat.
-  --export <zip|dir>       Convex export used for --recording-id / --recording-manifest conversion.
+  --all-recordings         Discover and convert every saved movement in --export.
+  --export <zip|dir>       Convex export used for saved-recording conversion.
   --converted-out <dir>    Directory for converted Replay session packets.
   --packet <file>          Replay session packet to check. Can repeat.
   --out <file>             Write JSON summary.
   --fail-on-ineligible     Exit non-zero if any packet is ineligible.
+  --deep-capture            Require complete schema-v3 Deep Capture evidence.
 
 This is a preflight only. Eligible packets can then be passed to
 movement:replay-game:packet-proof or, by recording id, to movement:replay-game:commissioning-proof.
@@ -96,6 +103,35 @@ async function recordingTargetsFromManifest(manifestPath) {
       manifestPath: resolvedManifestPath,
       recordingId: recording.id,
       title: typeof recording.title === "string" ? recording.title : undefined,
+    }));
+}
+
+async function readMovementRowsFromExport(exportPath) {
+  const resolvedExportPath = path.resolve(exportPath);
+  const exportStats = await stat(resolvedExportPath);
+  const contents = exportStats.isDirectory()
+    ? await readFile(path.join(resolvedExportPath, "movements/documents.jsonl"), "utf8")
+    : execFileSync("unzip", ["-p", resolvedExportPath, "movements/documents.jsonl"], {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  return contents
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+export async function recordingTargetsFromExport(exportPath) {
+  if (!exportPath) throw new Error("Pass --export <convex-export.zip|dir> with --all-recordings.");
+  const rows = await readMovementRowsFromExport(exportPath);
+  return rows
+    .filter((row) => row && typeof row._id === "string" && typeof row.poseData === "string")
+    .map((row) => ({
+      expectedFrameCount: Number.isFinite(row.frameCount) ? row.frameCount : undefined,
+      recordingId: row._id,
+      title: typeof row.title === "string" ? row.title : undefined,
     }));
 }
 
@@ -145,6 +181,9 @@ async function collectTargets(args, deps = {}) {
     targets.push(...await targetsFromManifest(manifest));
   }
   const recordingTargets = args.recordingIds.filter(Boolean).map((recordingId) => ({ recordingId }));
+  if (args.allRecordings) {
+    recordingTargets.push(...await recordingTargetsFromExport(args.exportPath));
+  }
   for (const manifest of args.recordingManifests.filter(Boolean)) {
     recordingTargets.push(...await recordingTargetsFromManifest(manifest));
   }
@@ -155,31 +194,85 @@ async function collectTargets(args, deps = {}) {
   return uniqueTargets(targets);
 }
 
+function failureGroupKey(failure) {
+  const frameMatch = /^Frame (\d+) (.+)$/.exec(failure);
+  if (!frameMatch) return { frame: null, key: `packet:${failure}`, message: failure, scope: "packet" };
+  const frame = Number(frameMatch[1]);
+  const message = frameMatch[2]
+    .replace(/\banchor (?:\d+|[^\s.]+)(?= has| contains)/g, "anchor {id}");
+  return { frame, key: `frame:${message}`, message, scope: "frame" };
+}
+
+export function compactEligibilityFailures(failures) {
+  const groups = new Map();
+  for (const failure of failures) {
+    const normalized = failureGroupKey(failure);
+    const existing = groups.get(normalized.key) || {
+      affectedFrames: new Set(),
+      message: normalized.message,
+      occurrenceCount: 0,
+      scope: normalized.scope,
+    };
+    existing.occurrenceCount += 1;
+    if (normalized.frame !== null) existing.affectedFrames.add(normalized.frame);
+    groups.set(normalized.key, existing);
+  }
+
+  return [...groups.values()].map((group) => {
+    const frames = [...group.affectedFrames].sort((left, right) => left - right);
+    const affectedFrameCount = frames.length;
+    const firstFrame = affectedFrameCount > 0 ? frames[0] : null;
+    const lastFrame = affectedFrameCount > 0 ? frames[affectedFrameCount - 1] : null;
+    const summary = group.scope === "frame"
+      ? `${group.message} (${group.occurrenceCount} occurrence(s) across ${affectedFrameCount} frame(s), frames ${firstFrame}-${lastFrame})`
+      : group.occurrenceCount === 1
+        ? group.message
+        : `${group.message} (${group.occurrenceCount} occurrences)`;
+    return {
+      affectedFrameCount,
+      firstFrame,
+      lastFrame,
+      message: group.message,
+      occurrenceCount: group.occurrenceCount,
+      scope: group.scope,
+      summary,
+    };
+  });
+}
+
 function countFailures(results) {
   const counts = new Map();
   for (const result of results) {
-    for (const failure of result.failures) {
-      counts.set(failure, (counts.get(failure) || 0) + 1);
+    for (const group of result.failureGroups) {
+      const label = group.scope === "frame" ? `Per-frame: ${group.message}` : group.message;
+      counts.set(label, (counts.get(label) || 0) + group.occurrenceCount);
     }
   }
   return Object.fromEntries([...counts.entries()].sort((left, right) => right[1] - left[1]));
 }
 
-export async function buildReplayMountedGameCommissioningEligibilityReport(targets) {
+export async function buildReplayMountedGameCommissioningEligibilityReport(targets, options = {}) {
   const results = [];
   for (const target of targets) {
     const packetPath = path.resolve(target.packetPath);
     const packet = JSON.parse(await readFile(packetPath, "utf8"));
-    const failures = validateCompleteReplayGamePacket(packet);
+    const rawFailures = validateCompleteReplayGamePacket(packet, {
+      requireDeepCapture: options.requireDeepCapture,
+    });
+    const failureGroups = compactEligibilityFailures(rawFailures);
     results.push({
-      eligible: failures.length === 0,
+      createdAt: Number.isFinite(packet.createdAt) ? packet.createdAt : null,
+      eligible: rawFailures.length === 0,
       convertedFromExport: target.convertedFromExport,
       expectedFrameCount: target.expectedFrameCount,
-      failures,
+      failureGroups,
+      failures: failureGroups.map((group) => group.summary),
       packetPath,
+      rawFailureCount: rawFailures.length,
       recordingId: target.recordingId || packet.id || packet.recordingId || null,
       sampleCount: packet.sampleCount ?? null,
-      title: target.title || packet.title || packet.warningSummary || "Untitled",
+      schemaVersion: packet.schemaVersion ?? null,
+      title: packet.title || packet.warningSummary || target.title || "Untitled",
     });
   }
   const eligible = results.filter((result) => result.eligible);
@@ -189,6 +282,7 @@ export async function buildReplayMountedGameCommissioningEligibilityReport(targe
     failureCounts: countFailures(results),
     ineligibleCount: ineligible.length,
     passed: ineligible.length === 0 && results.length > 0,
+    proofProfile: options.requireDeepCapture ? "deep-capture-v1" : "commissioning-v2",
     results,
     targetCount: results.length,
   };
@@ -203,7 +297,14 @@ function printReport(report) {
     const status = result.eligible ? "ELIGIBLE" : "INELIGIBLE";
     console.log(`- ${status} ${result.title} (${result.recordingId || "unknown-id"})`);
     if (!result.eligible) {
-      console.log(`  ${result.failures.join("; ")}`);
+      const visibleFailures = result.failures.slice(0, 8);
+      console.log(`  ${visibleFailures.join("; ")}`);
+      if (result.failures.length > visibleFailures.length) {
+        console.log(
+          `  ... ${result.failures.length - visibleFailures.length} more grouped reason(s); ` +
+          `${result.rawFailureCount} raw failure occurrence(s) total.`,
+        );
+      }
     }
   }
 }
@@ -216,9 +317,18 @@ export async function runReplayMountedGameCommissioningEligibility(argv, deps = 
   }
   const targets = await collectTargets(args, deps);
   if (targets.length === 0) {
-    throw new Error("Pass at least one --manifest <file> or --packet <session.json>.");
+    throw new Error(
+      "Pass --all-recordings, at least one --recording-id/--recording-manifest, " +
+      "or at least one --manifest/--packet.",
+    );
   }
-  const report = await buildReplayMountedGameCommissioningEligibilityReport(targets);
+  const report = {
+    ...await buildReplayMountedGameCommissioningEligibilityReport(targets, {
+      requireDeepCapture: args.deepCapture,
+    }),
+    selectionMode: args.allRecordings ? "all-recordings" : "explicit-targets",
+    sourceExport: args.exportPath ? path.resolve(args.exportPath) : null,
+  };
   printReport(report);
   if (args.out) {
     const outPath = path.resolve(args.out);

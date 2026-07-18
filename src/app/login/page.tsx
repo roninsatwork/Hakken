@@ -8,10 +8,14 @@ import { Mail, ChevronRight, Loader2, ShieldCheck, CheckCircle2 } from "lucide-r
 import { FluidBackground } from "../../ui/components/layout/FluidBackground";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSearchParams } from "next/navigation";
+import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
 
 export default function LoginPage() {
   const t = useTranslations('login');
   const { signIn } = useAuthActions();
+  const searchParams = useSearchParams();
+  const redirectTo = sanitizeAuthRedirect(searchParams.get("redirectTo"));
   const recordMagicLinkRequestAttempt = useMutation(api.authEvents.recordMagicLinkRequestAttempt);
   const [email, setEmail] = useState("");
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
@@ -20,7 +24,7 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setIsSubmittingGoogle(true);
-    await signIn("google", { redirectTo: "/app" });
+    await signIn("google", { redirectTo });
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
@@ -33,7 +37,7 @@ export default function LoginPage() {
       } catch {
         console.debug("Auth diagnostics skipped.");
       }
-      await signIn("resend", { email, redirectTo: "/app" });
+      await signIn("resend", { email, redirectTo });
     } catch {
       // Fail silently to thwart user enumeration attacks
       console.debug("Auth action processed.");

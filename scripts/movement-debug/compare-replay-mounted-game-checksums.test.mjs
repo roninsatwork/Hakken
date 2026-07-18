@@ -81,6 +81,53 @@ describe("Replay/mounted Game checksum comparison", () => {
     expect(report.passed).toBe(true);
     expect(report.divergenceCount).toBe(0);
     expect(report.identityStatus).toBe("matched");
+    expect(report.comparedBoundaryCount).toBe(8);
+  });
+
+  it("adds an exact dense-fusion boundary for schema-v3 Deep Capture packets", () => {
+    const checksum = movementBoundaryChecksumForComparison({ frame: 1 });
+    const input = fixture(checksum);
+    input.replay.identity.recordingSchemaVersion = 3;
+    input.game.identity.recordingSchemaVersion = 3;
+    const denseFusion = {
+      anchorCount: 240,
+      anchorIdentityChecksum: "fnv1a32:dense",
+      regionCoverage: { chest: { currentCount: 12, state: "current" } },
+      torsoTwist: { confidence: 0.8, radians: 0.2 },
+    };
+    input.replay.frames[1].boundaries.denseFusion = structuredClone(denseFusion);
+    input.game.final.renderedFrames[0].boundaries.denseFusion = structuredClone(denseFusion);
+    input.game.final.renderedFrames[0].checksums.denseFusion =
+      movementBoundaryChecksumForComparison(denseFusion);
+
+    const report = compareReplayMountedGameChecksums(input);
+
+    expect(report.passed).toBe(true);
+    expect(report.comparedBoundaryCount).toBe(9);
+    expect(report.comparedBoundaries).toContain("denseFusion");
+  });
+
+  it("fails schema-v3 proof when dense fusion is missing or differs", () => {
+    const checksum = movementBoundaryChecksumForComparison({ frame: 1 });
+    const missing = fixture(checksum);
+    missing.replay.identity.recordingSchemaVersion = 3;
+    missing.game.identity.recordingSchemaVersion = 3;
+    expect(compareReplayMountedGameChecksums(missing)).toMatchObject({
+      passed: false,
+      firstExactChecksumDivergence: { boundary: "denseFusion", frameIndex: 1 },
+    });
+
+    const drift = fixture(checksum);
+    drift.replay.identity.recordingSchemaVersion = 3;
+    drift.game.identity.recordingSchemaVersion = 3;
+    drift.replay.frames[1].boundaries.denseFusion = { anchorCount: 240 };
+    drift.game.final.renderedFrames[0].boundaries.denseFusion = { anchorCount: 239 };
+    drift.game.final.renderedFrames[0].checksums.denseFusion =
+      movementBoundaryChecksumForComparison({ anchorCount: 239 });
+    expect(compareReplayMountedGameChecksums(drift)).toMatchObject({
+      passed: false,
+      firstExactChecksumDivergence: { boundary: "denseFusion", frameIndex: 1 },
+    });
   });
 
   it("hard-fails byte-level checksum drift even when the visual delta is in tolerance", () => {

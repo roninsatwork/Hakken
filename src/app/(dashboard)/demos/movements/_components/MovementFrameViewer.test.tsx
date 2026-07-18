@@ -19,7 +19,9 @@ const makeFrame = (): MovementFrame =>
 describe("MovementFrameViewer", () => {
   beforeEach(() => {
     vi.mocked(drawMovementSkeleton).mockClear();
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      {} as CanvasRenderingContext2D & GPUCanvasContext,
+    );
   });
 
   it("renders loading, empty, and error states", () => {

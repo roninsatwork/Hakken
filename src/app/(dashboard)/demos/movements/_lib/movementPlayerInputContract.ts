@@ -7,7 +7,6 @@ import type {
   PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
 import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
-import { resolveHandSideByWrist } from "./handMatching";
 import {
   MEDIAPIPE_FACE_MODEL_URL,
   MEDIAPIPE_HAND_CONFIDENCE,
@@ -20,6 +19,14 @@ import {
   buildMovementRecordedPlayerSetup,
   type MovementRecordedPlayerSetup,
 } from "./movementRecordedPlayerSetup";
+import {
+  buildMovementDeepCaptureFaceEvidence,
+  buildMovementDeepCaptureHandEvidence,
+  buildMovementDeepCaptureSegmentationEvidence,
+  createMovementDeepCaptureFrameEvidence,
+  resolveMovementDeepCaptureHandAssignment,
+} from "./movementDeepCaptureEvidence";
+import type { MovementDeepCaptureFrameEvidence } from "./movementDeepCaptureContract";
 import type { MovementHandSide } from "./movementTypes";
 import type { VrmMotionPayload } from "./vrmRigging";
 
@@ -72,6 +79,7 @@ export type MovementAcquisitionHandCapture = {
 };
 
 export type MovementAcquisitionCameraMetadata = {
+  deviceFingerprint?: string;
   facingMode: "user";
   frameHeight: number;
   frameWidth: number;
@@ -82,6 +90,7 @@ export type MovementAcquisitionFrame = {
   blendshapes?: Classifications["categories"];
   camera: MovementAcquisitionCameraMetadata;
   capturedAt: number;
+  deepCapture?: MovementDeepCaptureFrameEvidence;
   faceLandmarks?: NormalizedLandmark[] | null;
   hands?: Partial<Record<MovementHandSide, MovementAcquisitionHandCapture | null>>;
   landmarks?: NormalizedLandmark[];
@@ -127,6 +136,7 @@ export function prepareMovementAcquisitionFrame({
   handResults,
   poseResults,
   sourceTimestampMs,
+  includeSegmentation = false,
 }: {
   camera: MovementAcquisitionCameraMetadata;
   capturedAt: number;
@@ -135,6 +145,7 @@ export function prepareMovementAcquisitionFrame({
   handResults: HandLandmarkerResult;
   poseResults: PoseLandmarkerResult;
   sourceTimestampMs: number;
+  includeSegmentation?: boolean;
 }): MovementAcquisitionFrame {
   const frame: MovementAcquisitionFrame = {
     acquisitionProfileId: MOVEMENT_PLAYER_INPUT_CONTRACT.id,
@@ -160,6 +171,24 @@ export function prepareMovementAcquisitionFrame({
     frame.blendshapes = faceResults.faceBlendshapes[0].categories;
   }
 
+  const deepCapture: MovementDeepCaptureFrameEvidence = createMovementDeepCaptureFrameEvidence();
+  const faceEvidence = buildMovementDeepCaptureFaceEvidence({
+    camera,
+    capturedAt,
+    faceResults,
+    sourceTimestampMs,
+  });
+  if (faceEvidence) deepCapture.face = faceEvidence;
+  if (includeSegmentation) {
+    const denseBody = buildMovementDeepCaptureSegmentationEvidence({
+      camera,
+      capturedAt,
+      poseResults,
+      sourceTimestampMs,
+    });
+    if (denseBody) deepCapture.denseBody = denseBody;
+  }
+
   if (handResults.landmarks.length > 0) {
     const hands: Partial<Record<MovementHandSide, MovementAcquisitionHandCapture | null>> = {
       left: null,
@@ -169,23 +198,49 @@ export function prepareMovementAcquisitionFrame({
     const rightWrist = frame.landmarks?.[16] ?? null;
 
     handResults.landmarks.forEach((landmarks, index) => {
-      const side = resolveHandSideByWrist({
+      const assignment = resolveMovementDeepCaptureHandAssignment({
+        detectorCategory: handResults.handedness[index]?.[0]
+          ?? handResults.handednesses[index]?.[0],
         handWrist: landmarks[0],
         leftWrist,
         rightWrist,
       });
+      const { side } = assignment;
       const handFilter = side === "left" ? filters.leftHand : filters.rightHand;
       const worldFilter = side === "left" ? filters.leftHandWorld : filters.rightHandWorld;
       const worldLandmarks = handResults.worldLandmarks[index];
+      const evidence = buildMovementDeepCaptureHandEvidence({
+        assignment: assignment.assignment,
+        camera,
+        capturedAt,
+        detector: assignment.detector,
+        landmarks,
+        side,
+        sourceTimestampMs,
+        worldLandmarks,
+      });
+      const existingEvidence = deepCapture.hands?.[side];
+      if (
+        hands[side] &&
+        (existingEvidence?.detectorHandedness.score ?? 0) >=
+          (evidence?.detectorHandedness.score ?? 0)
+      ) return;
+
       hands[side] = {
         landmarks: handFilter.filter(landmarks, sourceTimestampMs),
         worldLandmarks: worldLandmarks
           ? worldFilter.filter(worldLandmarks, sourceTimestampMs)
           : null,
       };
+      if (evidence) {
+        deepCapture.hands ??= {};
+        deepCapture.hands[side] = evidence;
+      }
     });
     frame.hands = hands;
   }
+
+  if (deepCapture.denseBody || deepCapture.face || deepCapture.hands) frame.deepCapture = deepCapture;
 
   return frame;
 }

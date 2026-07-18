@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compareReplayMountedGameChecksums } from "./compare-replay-mounted-game-checksums.mjs";
+import { validateDeepCaptureReplayPacket } from "./validate-deep-capture-replay-packet.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const replayCaptureScript = path.join(scriptDirectory, "capture-replay-full-sequence.mjs");
@@ -14,6 +15,7 @@ export const REQUIRED_CHANNELS = ["blendshapes", "camera", "face", "hands", "pos
 function parseArgs(argv) {
   const args = {
     baseUrl: "http://localhost:3000",
+    deepCapture: false,
     headed: false,
     localTestAuth: false,
     outDir: "tmp/movement-replay-lab/replay-mounted-game-packet-proof",
@@ -24,7 +26,8 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--headed") args.headed = true;
+    if (arg === "--deep-capture") args.deepCapture = true;
+    else if (arg === "--headed") args.headed = true;
     else if (arg === "--local-test-auth") args.localTestAuth = true;
     else if (arg === "--base-url") args.baseUrl = argv[++index] || args.baseUrl;
     else if (arg === "--out") args.outDir = argv[++index] || args.outDir;
@@ -51,14 +54,18 @@ Options:
   --storage-state <file>    Playwright storage state
   --role <role>             Local auth role. Defaults to super-admin
   --headed                  Show both proof browsers
+  --deep-capture            Require schema-v3 Deep Capture evidence before either browser starts
 
-Legacy packets and packets without schema-v2 channel, setup, readiness, and hash identity are rejected before browser capture.
+Legacy packets and packets without the selected schema, channel, setup, readiness, and hash identity are rejected before browser capture.
 `);
 }
 
-export function validateCompleteReplayGamePacket(packet) {
+export function validateCompleteReplayGamePacket(packet, options = {}) {
   const failures = [];
-  if (packet?.schemaVersion !== 2) failures.push("recording schemaVersion must be 2");
+  const expectedSchemaVersion = options.requireDeepCapture ? 3 : 2;
+  if (packet?.schemaVersion !== expectedSchemaVersion) {
+    failures.push(`recording schemaVersion must be ${expectedSchemaVersion}`);
+  }
   if (packet?.inputContract?.id !== "movement-player-input-v1") {
     failures.push("input contract must be movement-player-input-v1");
   }
@@ -85,6 +92,7 @@ export function validateCompleteReplayGamePacket(packet) {
       failures.push(`${channel} channel total does not match sampleCount`);
     }
   }
+  if (options.requireDeepCapture) failures.push(...validateDeepCaptureReplayPacket(packet));
   return failures;
 }
 
@@ -120,7 +128,9 @@ export async function runReplayMountedGamePacketProof(argv) {
   if (!args.packet) throw new Error("Pass --packet <session.json>.");
   const packetPath = path.resolve(args.packet);
   const packet = JSON.parse(await readFile(packetPath, "utf8"));
-  const packetFailures = validateCompleteReplayGamePacket(packet);
+  const packetFailures = validateCompleteReplayGamePacket(packet, {
+    requireDeepCapture: args.deepCapture,
+  });
   if (packetFailures.length > 0) {
     throw new Error(`Complete packet preflight failed: ${packetFailures.join("; ")}`);
   }
@@ -153,6 +163,7 @@ export async function runReplayMountedGamePacketProof(argv) {
   await writeFile(comparisonPath, `${JSON.stringify(comparison, null, 2)}\n`);
   const summary = {
     comparedFrameCount: comparison.comparedFrameCount,
+    comparedBoundaryCount: comparison.comparedBoundaryCount,
     comparisonPath,
     exactChecksumDivergenceCount: comparison.exactChecksumDivergenceCount,
     failures: comparison.failures,
@@ -161,7 +172,9 @@ export async function runReplayMountedGamePacketProof(argv) {
     packetId: packet.id,
     packetPath,
     passed: game.passed === true && comparison.passed === true,
+    proofProfile: args.deepCapture ? "deep-capture-v1" : "commissioning-v2",
     replayPath,
+    schemaVersion: packet.schemaVersion,
   };
   await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
   if (!summary.passed) {
@@ -169,7 +182,7 @@ export async function runReplayMountedGamePacketProof(argv) {
   }
   console.log(
     `Replay/mounted Game packet proof passed (${summary.comparedFrameCount} active frame(s), ` +
-    "eight exact boundaries).",
+    `${summary.comparedBoundaryCount} exact boundaries).`,
   );
   console.log(`Wrote ${summaryPath}`);
   return summary;
