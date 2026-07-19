@@ -24,6 +24,7 @@ function parseArgs(argv) {
     localTestAuth: false,
     out: "",
     role: "super-admin",
+    routeMovementId: "",
     screenshot: "",
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
     skipPause: false,
@@ -43,6 +44,7 @@ function parseArgs(argv) {
     else if (arg === "--out") args.out = argv[++index] || "";
     else if (arg === "--storage-state") args.storageState = argv[++index] || "";
     else if (arg === "--role") args.role = argv[++index] || args.role;
+    else if (arg === "--route-movement-id") args.routeMovementId = argv[++index] || "";
     else if (arg === "--screenshot") args.screenshot = argv[++index] || "";
     else if (arg === "--secret") args.secret = argv[++index] || "";
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -86,6 +88,8 @@ Options:
   --allow-legacy         Exercise lifecycle but do not certify a missing input contract
   --local-test-auth      Sign in through /local-test-auth
   --role <role>          Local auth role. Defaults to super-admin
+  --route-movement-id <id>
+                         Existing movement used only to mount the Game route for an injected local packet
   --secret <secret>      Local auth secret
   --screenshot <file>    Save a visible mounted-Game frame after active rendering starts
   --skip-pause           Keep playback uninterrupted for Replay/Game parity
@@ -167,6 +171,32 @@ export function buildMountedGamePacketWindow(session, frameStart, frameEnd) {
   };
 }
 
+export function updateMountedGamePlaybackWatchdog({
+  nowMs,
+  previous,
+  proof,
+  stallTimeoutMs = 60_000,
+}) {
+  const playerFrameIndex = Number.isInteger(proof?.playerFrameIndex)
+    ? proof.playerFrameIndex
+    : previous.playerFrameIndex;
+  const renderedFrameCount = Number.isInteger(proof?.renderedFrameCount)
+    ? proof.renderedFrameCount
+    : previous.renderedFrameCount;
+  const complete = proof?.phase === "complete";
+  const didProgress = complete ||
+    playerFrameIndex > previous.playerFrameIndex ||
+    renderedFrameCount > previous.renderedFrameCount;
+  const lastProgressAt = didProgress ? nowMs : previous.lastProgressAt;
+  return {
+    complete,
+    lastProgressAt,
+    playerFrameIndex,
+    renderedFrameCount,
+    stalled: !complete && nowMs - lastProgressAt >= stallTimeoutMs,
+  };
+}
+
 function gameUrl(args, movementId) {
   const url = new URL(`/demos/movements/${movementId}/play`, args.baseUrl);
   url.searchParams.set("debugTracking", "1");
@@ -194,6 +224,10 @@ export async function runMountedGamePacketCapture(argv) {
   if (!movementId || !/^[A-Za-z0-9_-]+$/.test(movementId)) {
     throw new Error("The packet must include a selector-safe movementId.");
   }
+  const routeMovementId = args.routeMovementId || movementId;
+  if (!/^[A-Za-z0-9_-]+$/.test(routeMovementId)) {
+    throw new Error("--route-movement-id must be selector-safe.");
+  }
 
   const storageState = args.storageState || (
     await fileExists(defaultStorageState) ? defaultStorageState : ""
@@ -206,14 +240,14 @@ export async function runMountedGamePacketCapture(argv) {
     });
     const page = await context.newPage();
     page.setDefaultTimeout(60_000);
-    const redirectPath = `/demos/movements/${movementId}/play`;
+    const redirectPath = `/demos/movements/${routeMovementId}/play`;
     if (args.localTestAuth) await signInWithLocalTestAuth(page, args, redirectPath);
     await page.route("**/__movement-game-packet.json", (route) => route.fulfill(
       sourceWindow
         ? { body: JSON.stringify(session), contentType: "application/json" }
         : { contentType: "application/json", path: sessionPath },
     ));
-    await page.goto(gameUrl(args, movementId), { waitUntil: "domcontentloaded" });
+    await page.goto(gameUrl(args, routeMovementId), { waitUntil: "domcontentloaded" });
     try {
       await page.getByRole("button", { name: "Begin Practice" }).waitFor({ timeout: 15_000 });
     } catch (error) {
@@ -316,16 +350,35 @@ export async function runMountedGamePacketCapture(argv) {
         timeout: 30_000,
       });
     }
-    try {
-      await page.waitForFunction(() => window.__sonaeMovementGamePacketProof?.phase === "complete", null, {
-        timeout: Math.max(
-          90_000,
-          Math.max(Number(session.sampleCount || 0) - 60, 0) * 150 + 60_000,
-        ),
-      });
-    } catch (error) {
+    const completionDeadline = Date.now() + Math.max(
+      180_000,
+      Math.max(Number(session.sampleCount || 0) - 60, 0) * 5_000 + 60_000,
+    );
+    let completionWatchdog = {
+      complete: false,
+      lastProgressAt: Date.now(),
+      playerFrameIndex: -1,
+      renderedFrameCount: -1,
+      stalled: false,
+    };
+    while (!completionWatchdog.complete) {
       const completionState = await page.evaluate(() => window.__sonaeMovementGamePacketProof ?? null);
-      throw new Error(`Mounted Game did not complete packet playback: ${JSON.stringify(completionState)}. ${error instanceof Error ? error.message : String(error)}`);
+      completionWatchdog = updateMountedGamePlaybackWatchdog({
+        nowMs: Date.now(),
+        previous: completionWatchdog,
+        proof: completionState,
+      });
+      if (completionWatchdog.stalled) {
+        throw new Error(
+          `Mounted Game playback stopped making progress: ${JSON.stringify(completionState)}.`,
+        );
+      }
+      if (Date.now() >= completionDeadline) {
+        throw new Error(
+          `Mounted Game exceeded its progress-aware completion ceiling: ${JSON.stringify(completionState)}.`,
+        );
+      }
+      if (!completionWatchdog.complete) await page.waitForTimeout(1_000);
     }
     const finalProof = await page.evaluate(() => window.__sonaeMovementGamePacketProof);
     const uniqueProcessed = new Set(finalProof.processedFrameIndexes);
@@ -352,6 +405,7 @@ export async function runMountedGamePacketCapture(argv) {
       },
       identity: {
         avatarProfile: finalProof.avatarProfile ?? null,
+        instructorAvatarProfile: finalProof.instructorAvatarProfile ?? null,
         inputContractId: finalProof.inputContractId ?? null,
         proofMode: finalProof.proofMode ?? null,
         recordingSchemaVersion: finalProof.recordingSchemaVersion ?? null,
@@ -363,7 +417,7 @@ export async function runMountedGamePacketCapture(argv) {
       passed: failures.length === 0,
       paused: pausedProof,
       proofTier: finalProof.contractStatus === "matched" ? "contract-certified" : "legacy-lifecycle-only",
-      route: gameUrl(args, movementId),
+      route: gameUrl(args, routeMovementId),
       sourceWindow,
       visibleCanvasScreenshotPath,
       visibleScreenshotPath,

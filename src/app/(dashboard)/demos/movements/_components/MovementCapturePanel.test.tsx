@@ -199,6 +199,7 @@ describe("MovementCapturePanel", () => {
             },
           ],
           currentRecordingReady: true,
+          denseCaptureOperational: false,
           deepCaptureBlockers: [
             "Palm and wrist rotation: Planned: palm normal and wrist swing/twist are not captured yet",
           ],

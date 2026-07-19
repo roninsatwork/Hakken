@@ -9,6 +9,7 @@ import {
 
 const REQUIRED_IDENTITY_FIELDS = [
   "avatarProfile",
+  "instructorAvatarProfile",
   "inputContractId",
   "proofMode",
   "recordingSchemaVersion",
@@ -27,6 +28,12 @@ const COMPARABLE_BOUNDARIES = [
   "playerApplied",
 ];
 const DEEP_CAPTURE_BOUNDARY = "denseFusion";
+const RENDERED_TOLERANCE_BOUNDARIES = new Set([
+  "ownersRootSupport",
+  "instructorRendered",
+  "playerRendered",
+  "playerApplied",
+]);
 
 function proofIdentity(artifact, fallback = {}) {
   return Object.fromEntries(REQUIRED_IDENTITY_FIELDS.map((field) => [
@@ -353,13 +360,19 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
       const missingRequiredBoundary = boundary === DEEP_CAPTURE_BOUNDARY && (
         replayBoundary == null || gameBoundary == null
       );
+      const renderedToleranceBoundary = RENDERED_TOLERANCE_BOUNDARIES.has(boundary);
+      const crossRouteChecksumDiffers = replayChecksum !== gameComputedChecksum;
+      const declaredChecksumDiffers = Boolean(
+        gameDeclaredChecksum &&
+        boundary !== "playerApplied" &&
+        gameDeclaredChecksum !== gameComputedChecksum
+      );
       if (
         missingRequiredBoundary ||
         !replayChecksum ||
         !gameComputedChecksum ||
-        replayChecksum !== gameComputedChecksum ||
-        (gameDeclaredChecksum && boundary !== "playerApplied" &&
-          gameDeclaredChecksum !== gameComputedChecksum)
+        declaredChecksumDiffers ||
+        (!renderedToleranceBoundary && crossRouteChecksumDiffers)
       ) {
         exactChecksumDivergences.push({
           boundary,

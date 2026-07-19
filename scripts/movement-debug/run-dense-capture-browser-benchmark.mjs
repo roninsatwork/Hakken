@@ -187,6 +187,8 @@ async function runCandidateInBrowser({
   cache,
   clips,
   cycles,
+  inputMode,
+  qualityTier,
   evidenceType,
   port,
   token,
@@ -208,6 +210,8 @@ async function runCandidateInBrowser({
     model: candidate.model,
     modelUrl: `${baseUrl}/models/${candidate.id}/model.json`,
     cycles,
+    inputMode,
+    qualityTier,
   });
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__denseCaptureBenchmarkDone === true, null, { timeout: 10 * 60_000 });
@@ -252,11 +256,15 @@ export async function runDenseCaptureBrowserBenchmark({
   candidateIds = DENSE_CAPTURE_BROWSER_CANDIDATES.map((candidate) => candidate.id),
   cycles = 1,
   evidenceType = "candidate-comparison",
+  inputMode = "video",
+  qualityTier = "high",
   manifestPath,
   outPath,
   rootDir = process.cwd(),
 }) {
   if (!Number.isSafeInteger(cycles) || cycles <= 0) throw new Error("Benchmark cycles must be a positive integer.");
+  if (!["canvas", "video"].includes(inputMode)) throw new Error("Benchmark input mode must be canvas or video.");
+  if (!["high", "medium", "low"].includes(qualityTier)) throw new Error("Benchmark quality tier is invalid.");
   const selectedCandidates = DENSE_CAPTURE_BROWSER_CANDIDATES.filter(
     (candidate) => candidateIds.includes(candidate.id),
   );
@@ -304,6 +312,8 @@ export async function runDenseCaptureBrowserBenchmark({
           clips,
           cycles,
           evidenceType,
+          inputMode,
+          qualityTier,
           port: serverPort(server),
           token,
         }));
@@ -324,6 +334,8 @@ export async function runDenseCaptureBrowserBenchmark({
       candidates,
       cycles,
       evidenceType,
+      inputMode,
+      qualityTier,
       measuredAt: new Date().toISOString(),
       measurementHost: {
         architecture: process.arch,
@@ -368,7 +380,9 @@ if (isCli) {
     : DENSE_CAPTURE_BROWSER_CANDIDATES.map((candidate) => candidate.id);
   const cycles = Number(argValue(process.argv, "--cycles", "1"));
   const evidenceType = argValue(process.argv, "--evidence-type", "candidate-comparison");
-  runDenseCaptureBrowserBenchmark({ candidateIds, cycles, evidenceType, manifestPath, outPath, rootDir })
+  const inputMode = argValue(process.argv, "--input-mode", "video");
+  const qualityTier = argValue(process.argv, "--quality-tier", "high");
+  runDenseCaptureBrowserBenchmark({ candidateIds, cycles, evidenceType, inputMode, manifestPath, outPath, qualityTier, rootDir })
     .then((results) => {
       console.log(JSON.stringify({
         candidateCount: results.candidates.length,

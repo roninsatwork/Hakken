@@ -34,6 +34,7 @@ export type MovementCapturePreflightChannel = {
 export type MovementCapturePreflight = {
   channels: MovementCapturePreflightChannel[];
   currentRecordingReady: boolean;
+  denseCaptureOperational: boolean;
   deepCaptureBlockers: string[];
   deepCaptureReady: boolean;
   readyChannelCount: number;
@@ -406,6 +407,8 @@ export function buildMovementCapturePreflight({
   return {
     channels,
     currentRecordingReady: Boolean(readiness?.canStartRecording),
+    denseCaptureOperational: denseAnchorCount >= MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum &&
+      denseAdapterReady,
     deepCaptureBlockers,
     deepCaptureReady: deepCaptureBlockers.length === 0 && retainedFrameCount >= prefixTarget,
     readyChannelCount: channels.filter((channel) => channel.status === "ready").length,

@@ -14,7 +14,7 @@ export const MOVEMENT_DENSE_CAPTURE_ADAPTER_PROFILE = {
   id: "movement-dense-capture-adapter-v1",
   maximumBackoffMs: 1_000,
   qualityProfiles: MOVEMENT_DENSE_CAPTURE_QUALITY_PROFILES,
-  staleAfterMs: 300,
+  staleAfterMs: 1_200,
   targetIntervalMs: 100,
 } as const;
 
@@ -51,6 +51,10 @@ export type MovementDenseCaptureValidationReport = {
   failures: string[];
   passed: boolean;
 };
+
+function isMissingDenseEvidenceFailure(failure: string) {
+  return failure.startsWith("Dense measurement requires ");
+}
 
 export function validateMovementDenseCaptureAdapterMeasurement<Input>(
   adapter: MovementDenseCaptureAdapter<Input>,
@@ -346,7 +350,10 @@ export function createMovementDenseCaptureRuntime<Input>({
         if (disposed) return;
         const report = validateMovementDenseCaptureAdapterMeasurement(adapter, measurement);
         if (!report.passed) {
-          lastFailure = report.failures.join(" ");
+          const technicalFailures = report.failures.filter((failure) => (
+            !isMissingDenseEvidenceFailure(failure)
+          ));
+          lastFailure = technicalFailures.length > 0 ? technicalFailures.join(" ") : null;
           return;
         }
         latestEvidence = mergeMovementDenseCaptureMeasurement({ measurement, segmentation });

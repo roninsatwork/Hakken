@@ -35,10 +35,10 @@ import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "./_lib/movementNextProofReh
 import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import {
-  averageMovementCalibrations,
   buildMovementCalibration,
   type MovementTrackingDebugState,
 } from "../_lib/movementTrackingCalibration";
+import { buildMovementRecordedInstructorCalibration } from "../_lib/movementRecordedInstructorSetup";
 import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
 import { buildLiveMovementMotionFrame } from "../_lib/movementLiveMotionFrame";
 import { buildRecordedMovementMotionFrame } from "../_lib/movementRecordedMotionFrame";
@@ -100,7 +100,6 @@ import {
   getReplayStudioParitySnapshot,
   maxAvatarSegmentError,
   minNumber,
-  replayCalibrationNeutralScore,
   replayMotionFrameHistoryForBuild,
   replayShouldPresentTimedRootMotionRef,
 } from "./_lib/replayLabHelpers";
@@ -136,6 +135,7 @@ type MovementReplayLabDeterministicDebugWindow = Window & {
       acquisition: unknown;
       calibration: unknown;
       denseFusion: unknown;
+      instructorMotionFrame: unknown;
       instructorRendered: unknown;
       motionFrame: unknown;
       ownersRootSupport: unknown;
@@ -239,6 +239,10 @@ export default function MovementReplayLabPage() {
   const [replayAvatarVrmUrl] = useState(() => {
     if (typeof window === "undefined") return "/models/VIPE_Hero__1793.vrm";
     return new URLSearchParams(window.location.search).get("avatarUrl") ?? "/models/VIPE_Hero__1793.vrm";
+  });
+  const [replayInstructorAvatarVrmUrl] = useState(() => {
+    if (typeof window === "undefined") return "/models/VIPE_Hero__1914.vrm";
+    return new URLSearchParams(window.location.search).get("instructorAvatarUrl") ?? "/models/VIPE_Hero__1914.vrm";
   });
 
 
@@ -470,27 +474,9 @@ export default function MovementReplayLabPage() {
   }, [replaySession]);
   const replayInstructorCalibration = useMemo(() => {
     if (!replaySession) return null;
-
-    const calibrationSamples = replaySession.samples
-      .map((sample, index) => ({
-        calibration: buildMovementCalibration({
-          now: index,
-          poseLandmarks: sample.tracking.pose,
-        }),
-        score: replayCalibrationNeutralScore(sample),
-      }))
-      .filter((sample): sample is {
-        calibration: NonNullable<ReturnType<typeof buildMovementCalibration>>;
-        score: number;
-      } => Boolean(sample.calibration) && Number.isFinite(sample.score))
-      .sort((left, right) => (
-        left.score - right.score ||
-        right.calibration.quality - left.calibration.quality
-      ))
-      .slice(0, 8)
-      .map((sample) => sample.calibration);
-
-    return averageMovementCalibrations(calibrationSamples);
+    return buildMovementRecordedInstructorCalibration(
+      replaySession.samples.map((sample) => ({ landmarks: sample.tracking.pose })),
+    );
   }, [replaySession]);
   const replayPlayerSetup = useMemo(() => {
     if (!replaySession) return null;
@@ -853,6 +839,7 @@ export default function MovementReplayLabPage() {
             denseFusion: buildMovementDenseCaptureProofSnapshot(
               currentThreePartyPlayerPayload.deepCapture,
             ),
+            instructorMotionFrame: structuredClone(replayInstructorMotionFrameRef.current),
             instructorRendered: structuredClone(instructorDebug.avatarVisual),
             motionFrame: structuredClone(replayMotionFrameRef.current),
             ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 0.8),
@@ -1284,6 +1271,7 @@ export default function MovementReplayLabPage() {
         data-spine-side-bend={currentSpineDrive?.sideBend ?? ""}
         data-spine-twist={currentSpineDrive?.twist ?? ""}
         data-avatar-profile={getMovementAvatarTrackingProfileName(replayAvatarVrmUrl)}
+        data-instructor-avatar-profile={getMovementAvatarTrackingProfileName(replayInstructorAvatarVrmUrl)}
         data-input-contract-id={replaySession?.inputContract?.id ?? ""}
         data-parity-proof-mode={MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE}
         data-recording-schema-version={replaySession?.schemaVersion ?? ""}
@@ -1540,13 +1528,15 @@ export default function MovementReplayLabPage() {
                             motionMode="recorded"
                             name="Replay instructor proof"
                             retargetSourceModel={replayRetargetSourceModel}
-                            rootMotionFrame={currentRootMotionFrame ?? null}
-                            rootMotionFrameRef={replayShouldPresentTimedRootMotionRef(isPlaying)
+                            rootMotionFrame={isThreePartyMirrorProof
+                              ? null
+                              : currentRootMotionFrame ?? null}
+                            rootMotionFrameRef={!isThreePartyMirrorProof && replayShouldPresentTimedRootMotionRef(isPlaying)
                               ? replayTimedRootMotionFrameRef
                               : undefined}
                             showNameLabel={false}
                             trackingDebugRef={replayInstructorAvatarDebugRef}
-                            vrmUrl={replayAvatarVrmUrl}
+                            vrmUrl={replayInstructorAvatarVrmUrl}
                           />
                         ) : null}
                       </MovementMatchScene>

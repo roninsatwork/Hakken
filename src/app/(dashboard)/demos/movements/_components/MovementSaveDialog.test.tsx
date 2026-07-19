@@ -174,7 +174,8 @@ describe("MovementSaveDialog", () => {
     expect(onDownloadBackup).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks the local packet backup when commissioning validation fails", () => {
+  it("keeps a recovery backup available when commissioning validation fails", () => {
+    const onDownloadBackup = vi.fn();
     render(
       <MovementSaveDialog
         isOpen
@@ -188,11 +189,16 @@ describe("MovementSaveDialog", () => {
         onClose={vi.fn()}
         onTitleChange={vi.fn()}
         onDifficultyChange={vi.fn()}
-        onDownloadBackup={vi.fn()}
+        onDownloadBackup={onDownloadBackup}
         onSave={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Download local packet backup" })).toBeDisabled();
+    const backupButton = screen.getByRole("button", { name: "Download local packet backup" });
+    expect(backupButton).toBeEnabled();
+    expect(screen.getByText(/preserves this take without pretending missing evidence was captured/i))
+      .toBeInTheDocument();
+    fireEvent.click(backupButton);
+    expect(onDownloadBackup).toHaveBeenCalledTimes(1);
   });
 });

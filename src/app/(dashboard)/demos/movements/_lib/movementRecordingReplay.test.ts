@@ -97,9 +97,9 @@ describe("movement recording replay", () => {
           qualityProfiles: {
             high: { inputHeight: 540, inputWidth: 960, internalResolution: "medium", targetIntervalMs: 100 },
             medium: { inputHeight: 360, inputWidth: 640, internalResolution: "medium", targetIntervalMs: 180 },
-            low: { inputHeight: 216, inputWidth: 384, internalResolution: "low", targetIntervalMs: 300 },
+            low: { inputHeight: 360, inputWidth: 640, internalResolution: "medium", targetIntervalMs: 300 },
           },
-          staleAfterMs: 300,
+          staleAfterMs: 1200,
           targetIntervalMs: 100,
         },
         id: "movement-deep-capture-v1",

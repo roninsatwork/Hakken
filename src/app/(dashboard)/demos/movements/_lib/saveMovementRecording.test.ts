@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   MIN_MOVEMENT_CAPTURE_FRAMES,
+  buildMovementRecordingRecoveryPacket,
   buildMovementRecordingPacket,
   getMovementRecordingDurationMs,
   saveMovementRecording,
@@ -305,6 +306,27 @@ describe("saveMovementRecording", () => {
     })).rejects.toThrow("Commissioning capture is not proof-ready");
 
     expect(generateUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("builds a hashed recovery packet without certifying incomplete Deep Capture evidence", async () => {
+    const frames = createCompleteDeepCaptureFrames();
+    frames.forEach((frame) => {
+      if (Array.isArray(frame)) return;
+      frame.acquisitionProfileId = "movement-player-input-v1";
+      if (frame.deepCapture) delete frame.deepCapture.denseBody;
+    });
+
+    const packet = await buildMovementRecordingRecoveryPacket({
+      captureStartReadiness: DEEP_CAPTURE_TEST_READINESS,
+      frames,
+      requireDeepCapturePacket: true,
+    });
+
+    expect(packet).toMatchObject({
+      schemaVersion: 3,
+      sourcePacketHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+    });
+    expect(validateMovementDeepCaptureEnvelope(packet).passed).toBe(false);
   });
 
   it("calculates duration from first and last frame timestamps", () => {

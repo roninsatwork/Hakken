@@ -251,6 +251,12 @@ describe("useMovementInstructorPlayback source frame synchronisation", () => {
     act(() => {
       expect(result.current.advanceInstructorFrame().frameIndex).toBe(2);
     });
+    expect(result.current.instructorCurrentLmRef.current).toEqual({
+      ...frames[2],
+      landmarks: frames[2]?.landmarks?.map((landmark) => ({ ...landmark, z: landmark.z ?? 0 })),
+      worldLandmarks: undefined,
+      hands: undefined,
+    });
     act(() => {
       expect(result.current.advanceInstructorFrame().status).toBe("complete");
     });

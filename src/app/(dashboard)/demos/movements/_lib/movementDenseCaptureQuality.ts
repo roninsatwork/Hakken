@@ -14,9 +14,9 @@ export const MOVEMENT_DENSE_CAPTURE_QUALITY_PROFILES = {
     targetIntervalMs: 180,
   },
   low: {
-    inputHeight: 216,
-    inputWidth: 384,
-    internalResolution: "low" as const,
+    inputHeight: 360,
+    inputWidth: 640,
+    internalResolution: "medium" as const,
     targetIntervalMs: 300,
   },
 } as const satisfies Record<MovementDenseCaptureQualityTier, {

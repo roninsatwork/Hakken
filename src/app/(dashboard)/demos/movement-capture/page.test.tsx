@@ -194,14 +194,22 @@ describe("MovementCapturePage", () => {
 
       return {
         capturePreflight: {
-          channels: [],
+          channels: [{
+            id: "denseBody",
+            label: "Dense body surface",
+            message: "400/200 persistent anchors",
+            status: "ready",
+          }],
           currentRecordingReady: true,
+          denseCaptureOperational: true,
           deepCaptureBlockers: [],
-          deepCaptureReady: false,
-          readyChannelCount: 0,
-          totalChannelCount: 0,
+          deepCaptureReady: true,
+          readyChannelCount: 1,
+          totalChannelCount: 1,
         },
         captureStartReadiness: captureStartReadinessMock,
+        denseCaptureFailure: null,
+        denseCaptureOperational: true,
         denseCaptureQualityTier: null,
         frameCount,
         getRecordedFrames,

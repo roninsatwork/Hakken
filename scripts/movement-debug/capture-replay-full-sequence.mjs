@@ -355,6 +355,7 @@ async function main() {
 
     const meta = await lab.evaluate((element) => ({
       avatarProfile: element.getAttribute("data-avatar-profile") || "",
+      instructorAvatarProfile: element.getAttribute("data-instructor-avatar-profile") || "",
       frameCount: Number(element.getAttribute("data-frame-count") || 0),
       inputContractId: element.getAttribute("data-input-contract-id") || "",
       parityProofMode: element.getAttribute("data-parity-proof-mode") || "",
@@ -469,6 +470,7 @@ async function main() {
     };
     const identity = {
       avatarProfile: meta.avatarProfile || null,
+      instructorAvatarProfile: meta.instructorAvatarProfile || null,
       inputContractId: meta.inputContractId || null,
       proofMode: meta.parityProofMode || null,
       recordingSchemaVersion: meta.recordingSchemaVersion,

@@ -15,6 +15,7 @@ import { useMovementCapture } from "../movements/_hooks/useMovementCapture";
 import type { MovementDenseCaptureAdapter } from "../movements/_lib/movementDenseCapture";
 import {
   MIN_MOVEMENT_CAPTURE_FRAMES,
+  buildMovementRecordingRecoveryPacket,
   buildMovementRecordingPacket,
   saveMovementRecording,
 } from "../movements/_lib/saveMovementRecording";
@@ -138,6 +139,8 @@ export default function MovementCapturePage() {
   const {
     capturePreflight,
     captureStartReadiness,
+    denseCaptureFailure,
+    denseCaptureOperational,
     denseCaptureQualityTier,
     isRecording,
     frameCount,
@@ -265,6 +268,22 @@ export default function MovementCapturePage() {
         : current);
       return undefined;
     }
+    if (deepCaptureMode && denseCaptureFailure) {
+      setCaptureStartGate({
+        message: `Deep body tracking is not producing usable evidence: ${denseCaptureFailure}`,
+        status: "blocked",
+      });
+      return undefined;
+    }
+    if (deepCaptureMode && !denseCaptureOperational) {
+      setCaptureStartGate((current) => current.status === "waiting-for-body"
+        ? {
+            ...current,
+            message: "Preparing verified body-surface tracking. Recording has not started.",
+          }
+        : current);
+      return undefined;
+    }
 
     const gateDecision = resolveMovementStartGateDecision({
       readiness: captureStartReadiness,
@@ -285,31 +304,47 @@ export default function MovementCapturePage() {
     return undefined;
   }, [
     captureStartReadiness,
+    capturePreflight,
     captureStartGate.status,
     denseCaptureAdapterError,
     denseCaptureAdapterStatus,
+    denseCaptureFailure,
+    denseCaptureOperational,
     deepCaptureMode,
     startRecording,
   ]);
 
   const finishRecording = useCallback(() => {
       const frames = stopRecording();
+      setSaveError(null);
       if (commissioningMode || deepCaptureMode) {
-        const envelope = deepCaptureMode
-          ? buildMovementDeepCaptureFrameEnvelope(frames, 30, {
-              captureStartReadiness: recordingStartReadiness,
-            })
-          : buildMovementFrameEnvelope(frames, 30, {
-              captureStartReadiness: recordingStartReadiness,
-            });
-        setCommissioningReport(deepCaptureMode
-          ? validateMovementDeepCaptureEnvelope(envelope, { requireSourceHash: false })
-          : validateMovementCommissioningEnvelope(envelope, {
-            requireSourceHash: false,
-          }));
+        try {
+          const envelope = deepCaptureMode
+            ? buildMovementDeepCaptureFrameEnvelope(frames, 30, {
+                captureStartReadiness: recordingStartReadiness,
+              })
+            : buildMovementFrameEnvelope(frames, 30, {
+                captureStartReadiness: recordingStartReadiness,
+              });
+          setCommissioningReport(deepCaptureMode
+            ? validateMovementDeepCaptureEnvelope(envelope, { requireSourceHash: false })
+            : validateMovementCommissioningEnvelope(envelope, {
+              requireSourceHash: false,
+            }));
+        } catch (error) {
+          const message = error instanceof Error
+            ? error.message
+            : "Capture validation failed unexpectedly.";
+          setCommissioningReport({
+            failures: [`Capture validation could not complete: ${message}`],
+            passed: false,
+          });
+          setSaveError(
+            `Your captured frames are still retained in this page. Download the recovery packet below. ${message}`,
+          );
+        }
       }
       setCaptureStartGate(createIdleCaptureStartGate());
-      setSaveError(null);
       setBackupMessage(null);
       setBackupCommand(null);
       setShowSaveModal(true);
@@ -391,15 +426,23 @@ export default function MovementCapturePage() {
     });
 
     try {
-      const packet = await buildMovementRecordingPacket({
-        captureStartReadiness: recordingStartReadiness,
-        frames: recordedFrames,
-        requireCommissioningPacket: saveRequirements.requireCommissioningPacket,
-        requireDeepCapturePacket: saveRequirements.requireDeepCapturePacket,
-      });
+      const packet = commissioningReport?.passed
+        ? await buildMovementRecordingPacket({
+            captureStartReadiness: recordingStartReadiness,
+            frames: recordedFrames,
+            requireCommissioningPacket: saveRequirements.requireCommissioningPacket,
+            requireDeepCapturePacket: saveRequirements.requireDeepCapturePacket,
+          })
+        : await buildMovementRecordingRecoveryPacket({
+            captureStartReadiness: recordingStartReadiness,
+            frames: recordedFrames,
+            requireDeepCapturePacket: saveRequirements.requireDeepCapturePacket,
+          });
       const backup = downloadMovementRecordingLocalBackup({ packet, title });
       setBackupMessage(
-        `Local packet backup downloaded: ${backup.filename}. Keep this file until the Studio save and Replay/Game proof both pass.`,
+        commissioningReport?.passed
+          ? `Local packet backup downloaded: ${backup.filename}. Keep this file until the Studio save and Replay/Game proof both pass.`
+          : `Recovery packet downloaded: ${backup.filename}. It preserves the derived tracking take but does not claim Deep Capture proof readiness.`,
       );
       setBackupCommand(deepCaptureMode
         ? `npm run movement:replay-game:deep-local-proof -- --packet ~/Downloads/${backup.filename} --preflight-only`
@@ -524,6 +567,7 @@ export default function MovementCapturePage() {
           captureReadinessMessage={captureStartGate.message}
           captureReadinessStatus={captureStartGate.status}
           capturePreflight={capturePreflight}
+          captureTechnicalError={denseCaptureFailure}
           frameCount={frameCount}
           trackingQuality={trackingQuality}
           spineQuality={spineQuality}

@@ -51,6 +51,7 @@ function parseArgs(argv) {
     outDir: "tmp/movement-replay-lab/replay-mounted-game-packet-proof",
     packet: "",
     role: "super-admin",
+    routeMovementId: "",
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
     storageState: "",
   };
@@ -63,6 +64,7 @@ function parseArgs(argv) {
     else if (arg === "--out") args.outDir = argv[++index] || args.outDir;
     else if (arg === "--packet") args.packet = argv[++index] || "";
     else if (arg === "--role") args.role = argv[++index] || args.role;
+    else if (arg === "--route-movement-id") args.routeMovementId = argv[++index] || "";
     else if (arg === "--secret") args.secret = argv[++index] || "";
     else if (arg === "--storage-state") args.storageState = argv[++index] || "";
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -83,6 +85,7 @@ Options:
   --secret <secret>         Local auth secret
   --storage-state <file>    Playwright storage state
   --role <role>             Local auth role. Defaults to super-admin
+  --route-movement-id <id>  Existing movement used only to mount the injected packet's Game route
   --headed                  Show both proof browsers
   --deep-capture            Require schema-v3 Deep Capture evidence before either browser starts
 
@@ -174,10 +177,12 @@ export async function runReplayMountedGamePacketProof(argv) {
   const comparisonPath = path.join(outDir, "comparison.json");
   const summaryPath = path.join(outDir, "summary.json");
   const commonArgs = commonCaptureArgs(args);
+  const gameRouteArgs = args.routeMovementId
+    ? ["--route-movement-id", args.routeMovementId]
+    : [];
 
   await runProcess(replayCaptureScript, [
     ...commonArgs,
-    "--canvas-screenshot", gameCanvasScreenshotPath,
     "--debug-session-json", packetPath,
     "--out", replayPath,
     "--deterministic",
@@ -185,6 +190,8 @@ export async function runReplayMountedGamePacketProof(argv) {
   ]);
   await runProcess(gameCaptureScript, [
     ...commonArgs,
+    ...gameRouteArgs,
+    "--canvas-screenshot", gameCanvasScreenshotPath,
     "--debug-session-json", packetPath,
     "--out", gamePath,
     "--screenshot", gameScreenshotPath,

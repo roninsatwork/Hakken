@@ -12,6 +12,7 @@ import type {
   MovementDifficulty,
   MovementSpineGoal,
 } from "../_lib/movementTypes";
+import { summarizeMovementCommissioningFailures } from "../_lib/movementCommissioningFailurePresentation";
 
 type MovementSaveDialogProps = {
   isOpen: boolean;
@@ -64,8 +65,10 @@ export default function MovementSaveDialog({
     frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES &&
     (!commissioningFailures || commissioningFailures.length === 0);
   const canDownloadBackup = title.trim().length > 0 && !isDownloadingBackup &&
-    frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES &&
-    (!commissioningFailures || commissioningFailures.length === 0);
+    frameCount >= MIN_MOVEMENT_CAPTURE_FRAMES;
+  const commissioningFailureSummaries = commissioningFailures
+    ? summarizeMovementCommissioningFailures(commissioningFailures, frameCount)
+    : [];
   const toggleBodyFocus = (focus: MovementBodyFocus) => {
     onBodyFocusChange(
       bodyFocus.includes(focus)
@@ -170,10 +173,13 @@ export default function MovementSaveDialog({
               This commissioning take is not proof-ready yet:
             </Typography>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-100/80">
-              {commissioningFailures.map((failure) => (
+              {commissioningFailureSummaries.map((failure) => (
                 <li key={failure}>{failure}</li>
               ))}
             </ul>
+            <Typography className="mt-3 text-xs text-amber-100/80">
+              You can download a recovery packet below. It preserves this take without pretending missing evidence was captured.
+            </Typography>
           </div>
         )}
         {saveError && (

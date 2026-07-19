@@ -152,7 +152,7 @@ describe("movement dense capture", () => {
       occluded: true,
       provenance: {
         ageMs: 150,
-        confidence: 0.45,
+        confidence: 0.7875,
         origin: "temporally-tracked",
         sourceTimestampMs: 990,
       },
@@ -160,7 +160,7 @@ describe("movement dense capture", () => {
     expect(carried?.segmentation.coverage).toBe(0.4);
     expect(carryMovementDenseCaptureEvidence({
       currentSegmentation: segmentation,
-      nowMs: 1_301,
+      nowMs: 2_201,
       previous,
     })).toBeNull();
   });
@@ -247,6 +247,37 @@ describe("movement dense capture", () => {
     await runtime.waitForIdle();
 
     expect(runtime.getState().lastFailure).toMatch(/model hash does not match/);
+    expect(runtime.read({ currentSegmentation: segmentation, nowMs: 1_000 })).toBeNull();
+  });
+
+  it("treats a temporary low-anchor result as missing evidence rather than a runtime crash", async () => {
+    const lowAnchorMeasurement = measurement();
+    lowAnchorMeasurement.anchors = [];
+    lowAnchorMeasurement.modelId = "expected@1";
+    const adapter: MovementDenseCaptureAdapter<string> = {
+      descriptor: {
+        artifactBytes: 10_000,
+        id: "expected",
+        inputHeight: 540,
+        inputWidth: 960,
+        license: "reviewed-test-licence",
+        modelHash: `sha256:${"a".repeat(64)}`,
+        runtime: "webgpu",
+        version: "1",
+      },
+      infer: async () => lowAnchorMeasurement,
+    };
+    const runtime = createMovementDenseCaptureRuntime<string>();
+    expect(runtime.request({
+      adapter,
+      context: { frameHeight: 1080, frameWidth: 1920, sourceTimestampMs: 990 },
+      input: "frame",
+      nowMs: 10,
+      segmentation,
+    })).toBe(true);
+    await runtime.waitForIdle();
+
+    expect(runtime.getState().lastFailure).toBeNull();
     expect(runtime.read({ currentSegmentation: segmentation, nowMs: 1_000 })).toBeNull();
   });
 

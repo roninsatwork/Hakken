@@ -20,6 +20,7 @@ type MovementCapturePanelProps = {
   captureReadinessMessage?: string | null;
   captureReadinessStatus?: "idle" | "waiting-for-body" | "blocked";
   capturePreflight?: MovementCapturePreflight;
+  captureTechnicalError?: string | null;
   frameCount: number;
   trackingQuality: number;
   spineQuality: number;
@@ -43,6 +44,7 @@ export default function MovementCapturePanel({
   captureReadinessMessage = null,
   captureReadinessStatus = "idle",
   capturePreflight,
+  captureTechnicalError = null,
   frameCount,
   trackingQuality,
   spineQuality,
@@ -152,6 +154,17 @@ export default function MovementCapturePanel({
           >
             Retry tracking
           </button>
+        </div>
+      )}
+
+      {captureTechnicalError && !visionError && (
+        <div className="absolute left-4 right-4 top-16 z-20 rounded-2xl border border-red-500/40 bg-black/80 px-4 py-3 backdrop-blur-md" role="alert">
+          <Typography className="text-sm font-semibold text-red-100">
+            Deep Capture is not ready. Recording will not start.
+          </Typography>
+          <Typography className="mt-1 text-xs text-red-100/80">
+            Body-surface tracking failed: {captureTechnicalError}
+          </Typography>
         </div>
       )}
 

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
 import type { Classifications } from "@mediapipe/tasks-vision";
-import { PoseFilterWrapper } from "@/src/lib/math/OneEuroFilter";
 import {
   normalizeVrmLandmark,
   reflectVrmLandmarkArrayCoordinates,
@@ -77,14 +76,6 @@ export type MovementInstructorRetargetAnalysis = {
 
 const INSTRUCTOR_LAG_COMPENSATION_FRAMES = 6;
 const RETARGET_ANALYSIS_MIN_SOURCE_QUALITY = 0.7;
-
-function createInstructorPoseFilter() {
-  return new PoseFilterWrapper(33, 30, 0.05, 0.1);
-}
-
-function createInstructorHandFilter() {
-  return new PoseFilterWrapper(21, 30, 0.01, 0.0);
-}
 
 const withDepth = (landmarks: InstructorPoseLandmark[]) =>
   landmarks.map((landmark) => ({
@@ -297,11 +288,6 @@ export function useMovementInstructorPlayback(
     [loadedFrames, retargetSourceModel],
   );
 
-  const instructorFilterRef = useRef(createInstructorPoseFilter());
-  const instructorWorldFilterRef = useRef(createInstructorPoseFilter());
-  const instructorLeftHandFilterRef = useRef(createInstructorHandFilter());
-  const instructorRightHandFilterRef = useRef(createInstructorHandFilter());
-
   useEffect(() => {
     if (loadedFrames.length === 0) return;
 
@@ -309,53 +295,6 @@ export function useMovementInstructorPlayback(
     frameIndexRef.current = 0;
     instructorCurrentLmRef.current = loadedFrames[0] ?? [];
   }, [loadedFrames]);
-
-  const resetInstructorFilters = useCallback(() => {
-    instructorFilterRef.current = createInstructorPoseFilter();
-    instructorWorldFilterRef.current = createInstructorPoseFilter();
-    instructorLeftHandFilterRef.current = createInstructorHandFilter();
-    instructorRightHandFilterRef.current = createInstructorHandFilter();
-  }, []);
-
-  const buildFilteredFrame = useCallback((frameData: MovementInstructorMotionFrame) => {
-    const framePayload = !Array.isArray(frameData) ? frameData : null;
-    const now = performance.now();
-
-    const filteredLandmarks = instructorFilterRef.current.filter(
-      withDepth(getInstructorMotionLandmarks(frameData)),
-      now,
-    );
-
-    let filteredWorldLandmarks = framePayload?.worldLandmarks ?? [];
-    if (filteredWorldLandmarks.length > 0) {
-      filteredWorldLandmarks = instructorWorldFilterRef.current.filter(
-        withDepth(filteredWorldLandmarks),
-        now,
-      );
-    }
-
-    const filteredHands = cloneHandsPayload(framePayload?.hands);
-    if (filteredHands?.left?.landmarks) {
-      filteredHands.left.landmarks = instructorLeftHandFilterRef.current.filter(
-        withDepth(filteredHands.left.landmarks),
-        now,
-      );
-    }
-    if (filteredHands?.right?.landmarks) {
-      filteredHands.right.landmarks = instructorRightHandFilterRef.current.filter(
-        withDepth(filteredHands.right.landmarks),
-        now,
-      );
-    }
-
-    return {
-      ...(framePayload ?? {}),
-      landmarks: filteredLandmarks,
-      worldLandmarks:
-        filteredWorldLandmarks.length > 0 ? filteredWorldLandmarks : framePayload?.worldLandmarks,
-      hands: filteredHands,
-    };
-  }, []);
 
   const setInstructorFrame = useCallback(
     (frameIndex: number): InstructorPlaybackAdvance => {
@@ -370,7 +309,6 @@ export function useMovementInstructorPlayback(
 
       const clampedFrameIndex = Math.max(0, Math.min(totalFrames - 1, frameIndex));
       frameIndexRef.current = clampedFrameIndex;
-      resetInstructorFilters();
       instructorCurrentLmRef.current = cloneFramePayload(frames[clampedFrameIndex]!);
 
       return {
@@ -380,7 +318,7 @@ export function useMovementInstructorPlayback(
         lagFrame: frames[Math.max(0, clampedFrameIndex - INSTRUCTOR_LAG_COMPENSATION_FRAMES)],
       };
     },
-    [resetInstructorFilters],
+    [],
   );
 
   const resetInstructorPlayback = useCallback(() => {
@@ -414,7 +352,7 @@ export function useMovementInstructorPlayback(
 
     while (frameIndexRef.current < requestedFrameIndex) {
       frameIndexRef.current += 1;
-      instructorCurrentLmRef.current = buildFilteredFrame(frames[frameIndexRef.current]!);
+      instructorCurrentLmRef.current = cloneFramePayload(frames[frameIndexRef.current]!);
     }
 
     const lagCompIndex = Math.max(
@@ -428,7 +366,7 @@ export function useMovementInstructorPlayback(
       frameIndex: frameIndexRef.current,
       lagFrame: frames[lagCompIndex],
     };
-  }, [buildFilteredFrame, options.sourceFrameIndexRef]);
+  }, [options.sourceFrameIndexRef]);
 
   return {
     frameCount: loadedFrames.length,

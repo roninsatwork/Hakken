@@ -120,6 +120,21 @@ export async function buildMovementRecordingPacket({
   return payload;
 }
 
+export async function buildMovementRecordingRecoveryPacket({
+  captureStartReadiness,
+  frames,
+  requireDeepCapturePacket = false,
+}: Omit<BuildMovementRecordingPacketInput, "requireCommissioningPacket">) {
+  if (frames.length < MIN_MOVEMENT_CAPTURE_FRAMES) {
+    throw new Error(`Capture at least ${MIN_MOVEMENT_CAPTURE_FRAMES} valid frames before backing up.`);
+  }
+  const payload = requireDeepCapturePacket
+    ? buildMovementDeepCaptureFrameEnvelope(frames, 30, { captureStartReadiness })
+    : buildMovementFrameEnvelope(frames, 30, { captureStartReadiness });
+  payload.sourcePacketHash = await hashMovementFrameEnvelopeSource(payload);
+  return payload;
+}
+
 export async function saveMovementRecording({
   title,
   difficulty,

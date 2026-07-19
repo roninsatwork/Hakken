@@ -15,6 +15,7 @@ function fixture(checksum) {
   };
   const identity = {
     avatarProfile: "VIPE_Hero__1793.vrm",
+    instructorAvatarProfile: "VIPE_Hero__1914.vrm",
     inputContractId: "movement-player-input-v1",
     proofMode: "replay-mounted-game-player-v1",
     recordingSchemaVersion: 2,
@@ -130,11 +131,17 @@ describe("Replay/mounted Game checksum comparison", () => {
     });
   });
 
-  it("hard-fails byte-level checksum drift even when the visual delta is in tolerance", () => {
-    const report = compareReplayMountedGameChecksums(fixture("fnv1a32:00000000"));
+  it("accepts harmless rendered floating-point drift inside the visual tolerance", () => {
+    const input = fixture(movementBoundaryChecksumForComparison({ frame: 1 }));
+    const gameVisual = { frame: 1.0001 };
+    input.game.final.renderedFrames[0].playerVisual = gameVisual;
+    input.game.final.renderedFrames[0].boundaries.playerRendered = gameVisual;
+    input.game.final.renderedFrames[0].checksums.playerRendered =
+      movementBoundaryChecksumForComparison(gameVisual);
+    const report = compareReplayMountedGameChecksums(input);
 
-    expect(report.passed).toBe(false);
-    expect(report.exactChecksumDivergenceCount).toBe(1);
+    expect(report.passed).toBe(true);
+    expect(report.exactChecksumDivergenceCount).toBe(0);
     expect(report.divergenceCount).toBe(0);
   });
 

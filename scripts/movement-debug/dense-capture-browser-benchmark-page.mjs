@@ -9,6 +9,7 @@ import {
 import {
   MOVEMENT_DEEP_CAPTURE_REQUIRED_BODY_REGIONS,
 } from "../../src/app/(dashboard)/demos/movements/_lib/movementDeepCaptureContract";
+import { renderMovementDenseCaptureInput } from "../../src/app/(dashboard)/demos/movements/_lib/movementDenseCaptureInput";
 
 function reportProgress(message) {
   window.reportDenseProgress?.(message);
@@ -166,6 +167,7 @@ async function runCandidate(config) {
       const coverages = [];
       const anchorMeasurements = [];
       let previousAnchorIds = null;
+      const modelCanvas = document.createElement("canvas");
       for (const timeSeconds of sampledTimes(video.duration)) {
         const canSeek = Number.isFinite(video.duration);
         reportProgress(`${canSeek ? "seeking" : "advancing"} ${clip.id} ${timeSeconds.toFixed(2)}s`);
@@ -174,11 +176,18 @@ async function runCandidate(config) {
           30_000,
           `${clip.id} ${canSeek ? "seek" : "playback"} ${timeSeconds}`,
         );
+        const modelInput = config.inputMode === "canvas"
+          ? (renderMovementDenseCaptureInput({
+              canvas: modelCanvas,
+              qualityTier: config.qualityTier ?? "high",
+              video,
+            }) ? modelCanvas : video)
+          : video;
         const startedAt = performance.now();
         const segmentation = await withTimeout(
-          model.segmentPersonParts(video, {
+          model.segmentPersonParts(modelInput, {
             flipHorizontal: false,
-            internalResolution: "medium",
+            internalResolution: config.qualityTier === "low" ? "low" : "medium",
             maxDetections: 1,
             nmsRadius: 20,
             scoreThreshold: 0.3,

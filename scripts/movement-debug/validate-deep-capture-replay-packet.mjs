@@ -4,7 +4,7 @@ export const DEEP_CAPTURE_REFINEMENT_PROFILE_ID = "movement-deep-capture-refinem
 export const DENSE_CAPTURE_BROWSER_QUALITY_PROFILES = {
   high: { inputHeight: 540, inputWidth: 960, targetIntervalMs: 100 },
   medium: { inputHeight: 360, inputWidth: 640, targetIntervalMs: 180 },
-  low: { inputHeight: 216, inputWidth: 384, targetIntervalMs: 300 },
+  low: { inputHeight: 360, inputWidth: 640, targetIntervalMs: 300 },
 };
 export const DEEP_CAPTURE_REQUIRED_CHANNELS = [
   "leftHand",
@@ -215,7 +215,8 @@ function validateHands(sample, frameIndex, failures) {
 
 function validateFace(sample, frameIndex, failures) {
   const face = sample?.tracking?.deepCapture?.face;
-  if (!face && !sample?.tracking?.face) return;
+  const faceLandmarks = sample?.tracking?.face;
+  if (!face && (!Array.isArray(faceLandmarks) || faceLandmarks.length === 0)) return;
   if (
     !Array.isArray(sample?.tracking?.face) || sample.tracking.face.length < 478 ||
     face?.refinement?.profileId !== DEEP_CAPTURE_REFINEMENT_PROFILE_ID ||

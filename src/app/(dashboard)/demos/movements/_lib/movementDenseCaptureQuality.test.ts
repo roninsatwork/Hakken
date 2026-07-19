@@ -25,15 +25,15 @@ describe("movement dense capture browser quality tiers", () => {
     })).toBe("medium");
   });
 
-  it("uses smaller inputs and a slower dense cadence without changing other capture channels", () => {
+  it("uses a slower low-tier cadence without dropping below the viable model input", () => {
     expect(MOVEMENT_DENSE_CAPTURE_QUALITY_PROFILES.high).toMatchObject({
       inputHeight: 540,
       inputWidth: 960,
       targetIntervalMs: 100,
     });
     expect(MOVEMENT_DENSE_CAPTURE_QUALITY_PROFILES.low).toMatchObject({
-      inputHeight: 216,
-      inputWidth: 384,
+      inputHeight: 360,
+      inputWidth: 640,
       targetIntervalMs: 300,
     });
   });

@@ -52,7 +52,6 @@ import {
   type MovementDenseCaptureAdapter,
 } from "../_lib/movementDenseCapture";
 import {
-  MOVEMENT_DENSE_CAPTURE_QUALITY_PROFILES,
   readMovementDenseCaptureDeviceCapabilities,
   resolveInitialMovementDenseCaptureQualityTier,
   type MovementDenseCaptureQualityTier,
@@ -63,6 +62,11 @@ import {
   type MovementCapturePreflight,
 } from "../_lib/movementCapturePreflight";
 import { resolveMovementCameraDeviceFingerprint } from "../_lib/movementCameraDeviceFingerprint";
+import {
+  prepareMovementDeepCaptureRecordingFrame,
+  validateCompleteMovementDenseCaptureEvidence,
+} from "../_lib/movementDeepCaptureRecordingFrame";
+import { renderMovementDenseCaptureInput } from "../_lib/movementDenseCaptureInput";
 export type MovementCaptureFrame = MovementAcquisitionFrame & {
   timestamp: number;
   landmarks: NormalizedLandmark[];
@@ -144,25 +148,6 @@ function renderMovementDeepCaptureCrop({
     size.height,
   );
   return size;
-}
-
-function renderMovementDenseCaptureInput({
-  canvas,
-  qualityTier,
-  video,
-}: {
-  canvas: HTMLCanvasElement;
-  qualityTier: MovementDenseCaptureQualityTier;
-  video: HTMLVideoElement;
-}) {
-  const { inputHeight, inputWidth } = MOVEMENT_DENSE_CAPTURE_QUALITY_PROFILES[qualityTier];
-  canvas.width = inputWidth;
-  canvas.height = inputHeight;
-  const context = canvas.getContext("2d");
-  if (!context) return false;
-  context.clearRect(0, 0, inputWidth, inputHeight);
-  context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, inputWidth, inputHeight);
-  return true;
 }
 
 export function getMovementCaptureFullBodyVisibility(landmarks: NormalizedLandmark[]) {
@@ -249,6 +234,8 @@ export function useMovementCapture({
   const [spineQuality, setSpineQuality] = useState(0);
   const [denseCaptureQualityTier, setDenseCaptureQualityTier] =
     useState<MovementDenseCaptureQualityTier | null>(null);
+  const [denseCaptureFailure, setDenseCaptureFailure] = useState<string | null>(null);
+  const [denseCaptureOperational, setDenseCaptureOperational] = useState(false);
   const [captureStartReadiness, setCaptureStartReadiness] =
     useState<MovementStartReadiness | null>(null);
   const [capturePreflight, setCapturePreflight] = useState<MovementCapturePreflight>(() => (
@@ -271,6 +258,7 @@ export function useMovementCapture({
   const faceRefinementCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const handRefinementCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const denseCaptureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const denseCaptureOperationalRef = useRef(false);
   const latestAcquisitionFrameRef = useRef<MovementAcquisitionFrame | null>(null);
   const latestStartReadinessRef = useRef<MovementStartReadiness | null>(null);
   const trackingOverlayDetailRef = useRef(trackingOverlayDetail);
@@ -285,6 +273,8 @@ export function useMovementCapture({
 
   useEffect(() => {
     let animationFrameId: number | null = null;
+    denseCaptureOperationalRef.current = false;
+    setDenseCaptureOperational(false);
     const denseCaptureRuntime = createMovementDenseCaptureRuntime<HTMLCanvasElement>({
       initialQualityTier: resolveInitialMovementDenseCaptureQualityTier(
         readMovementDenseCaptureDeviceCapabilities(),
@@ -562,18 +552,31 @@ export function useMovementCapture({
 
             const segmentation = acquisitionFrame.deepCapture?.denseBody?.segmentation;
             if (enableDeepCapture && denseCaptureAdapter && segmentation) {
-              setDenseCaptureQualityTier(denseCaptureRuntime.getState().qualityTier);
+              const denseCaptureState = denseCaptureRuntime.getState();
+              setDenseCaptureQualityTier(denseCaptureState.qualityTier);
+              let currentDenseCaptureFailure = denseCaptureState.lastFailure;
               const carriedDenseEvidence = denseCaptureRuntime.read({
                 currentSegmentation: segmentation,
                 nowMs: acquisitionFrame.capturedAt,
               });
               if (carriedDenseEvidence && acquisitionFrame.deepCapture) {
+                if (!denseCaptureOperationalRef.current) {
+                  denseCaptureOperationalRef.current = true;
+                  setDenseCaptureOperational(true);
+                }
                 acquisitionFrame.deepCapture.denseBody = fuseMovementDenseCaptureEvidence({
                   evidence: carriedDenseEvidence,
                   poseLandmarks: acquisitionFrame.landmarks ?? [],
                   worldPoseLandmarks: acquisitionFrame.worldLandmarks,
                 });
+                const recordingEvidenceReport = validateCompleteMovementDenseCaptureEvidence(
+                  acquisitionFrame.deepCapture.denseBody,
+                );
+                if (!recordingEvidenceReport.passed) {
+                  currentDenseCaptureFailure = recordingEvidenceReport.failures.join(" ");
+                }
               }
+              setDenseCaptureFailure(currentDenseCaptureFailure);
 
               if (denseCaptureRuntime.schedule(startTimeMs).run) {
                 denseCaptureCanvasRef.current ??= document.createElement("canvas");
@@ -638,8 +641,11 @@ export function useMovementCapture({
               isRecording: isRecordingRef.current,
               landmarks: smoothedLandmarks,
             })) {
+              const recordingFrame = enableDeepCapture
+                ? prepareMovementDeepCaptureRecordingFrame(acquisitionFrame)
+                : acquisitionFrame;
               const currentData: MovementCaptureFrame = {
-                ...acquisitionFrame,
+                ...recordingFrame,
                 timestamp: startTimeMs,
                 landmarks: smoothedLandmarks,
                 startReadiness,
@@ -661,6 +667,9 @@ export function useMovementCapture({
             setSpineQuality(0);
             setDenseCaptureQualityTier(enableDeepCapture && denseCaptureAdapter
               ? denseCaptureRuntime.getState().qualityTier
+              : null);
+            setDenseCaptureFailure(enableDeepCapture && denseCaptureAdapter
+              ? denseCaptureRuntime.getState().lastFailure
               : null);
             setCaptureStartReadiness(null);
             setCapturePreflight(buildMovementCapturePreflight({
@@ -710,6 +719,8 @@ export function useMovementCapture({
   return {
     capturePreflight,
     captureStartReadiness,
+    denseCaptureFailure,
+    denseCaptureOperational,
     denseCaptureQualityTier,
     isRecording,
     frameCount,

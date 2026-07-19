@@ -17,6 +17,7 @@ export function parseLocalDeepCaptureProofArgs(argv) {
     packet: "",
     preflightOnly: false,
     role: "super-admin",
+    routeMovementId: "",
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
     storageState: "",
   };
@@ -29,6 +30,7 @@ export function parseLocalDeepCaptureProofArgs(argv) {
     else if (arg === "--secret") args.secret = argv[++index] || "";
     else if (arg === "--storage-state") args.storageState = argv[++index] || "";
     else if (arg === "--role") args.role = argv[++index] || args.role;
+    else if (arg === "--route-movement-id") args.routeMovementId = argv[++index] || "";
     else if (arg === "--headed") args.headed = true;
     else if (arg === "--preflight-only") args.preflightOnly = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -50,6 +52,7 @@ Options:
   --secret <secret>        Local test-auth secret
   --storage-state <file>   Existing Playwright authentication state
   --role <role>            Local auth role; defaults to super-admin
+  --route-movement-id <id> Existing movement used only to mount the injected packet's Game route
   --headed                 Show proof browsers
   --preflight-only         Recover and validate without starting browsers
 
@@ -74,6 +77,7 @@ export function buildLocalDeepCaptureProofPlan(args) {
     "--role", args.role,
   ];
   if (args.localTestAuth) proofArgs.push("--local-test-auth");
+  if (args.routeMovementId) proofArgs.push("--route-movement-id", args.routeMovementId);
   if (args.secret) proofArgs.push("--secret", args.secret);
   if (args.storageState) proofArgs.push("--storage-state", args.storageState);
   if (args.headed) proofArgs.push("--headed");

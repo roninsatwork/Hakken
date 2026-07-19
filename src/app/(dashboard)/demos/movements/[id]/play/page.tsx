@@ -34,6 +34,7 @@ import { useMovementMatchSession } from "../../_hooks/useMovementMatchSession";
 import { useMediaPipeVision } from "../../_hooks/useMediaPipeVision";
 import { useMovementFrames } from "../../_hooks/useMovementFrames";
 import { useMovementRecordedMotionFrame } from "../../_hooks/useMovementRecordedMotionFrame";
+import { buildMovementRecordedInstructorCalibration } from "../../_lib/movementRecordedInstructorSetup";
 import {
   createMovementRecordedSourcePlaybackState,
   useMovementPlayerTracking,
@@ -540,6 +541,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       : null
   ), [gameProofPacket]);
   const playerInitialFrameSequenceRef = useRef<MovementLiveInitialFrame[]>([]);
+  const instructorInitialFrameSequenceRef = useRef<MovementLiveInitialFrame[]>([]);
   const playerMotionFrameProcessingDebugRef = useRef({
     effectRunCount: 0,
     processedFrames: [] as Array<{
@@ -600,8 +602,29 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     : instructorCurrentLmRef;
   const effectiveInstructorRetargetSourceModel =
     debugInstructorRetargetSourceModel ?? instructorRetargetSourceModel;
-  const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking;
+  const effectiveInstructorCalibration = React.useMemo(() => (
+    buildMovementRecordedInstructorCalibration(
+      effectiveLoadedFrames as unknown as Array<{
+        landmarks?: MovementPlayerMotionPayload["landmarks"];
+        pose?: MovementPlayerMotionPayload["landmarks"];
+      }>,
+    )
+  ), [effectiveLoadedFrames]);
+  const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking || (
+    isDebugGamePacketRoute &&
+    Boolean(automaticPlayerSetup) &&
+    recordedGamePlaybackStateRef.current.startedAt === undefined
+  );
   const instructorMotionFrameRef = useMovementRecordedMotionFrame({
+    calibration: effectiveInstructorCalibration,
+    controlledFrameIndexRef: gameProofPacket
+      ? recordedGamePlaybackStateRef
+      : undefined,
+    controlledMotionSequence: gameProofPacket?.instructorFrames ?? null,
+    initialFrameSequenceRef: instructorInitialFrameSequenceRef,
+    initialMotionSequence: gameProofPacket
+      ? gameProofPacket.instructorFrames.slice(0, gameProofPacket.setupFrameCount)
+      : null,
     instructorFrameRef: effectiveInstructorCurrentLmRef,
     isPlaying: shouldKeepInstructorMotionFrameVisible,
     retargetSourceModel: effectiveInstructorRetargetSourceModel,
@@ -611,6 +634,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       acquisition: unknown;
       calibration: unknown;
       denseFusion: unknown;
+      instructorMotionFrame: unknown;
       instructorRendered: unknown;
       motionFrame: unknown;
       ownersRootSupport: unknown;
@@ -622,6 +646,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       acquisition: string;
       calibration: string;
       denseFusion: string;
+      instructorMotionFrame: string;
       instructorRendered: string;
       motionFrame: string;
       ownersRootSupport: string;
@@ -726,6 +751,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
               ? undefined
               : effectivePlayerLiveLmRef.current?.deepCapture,
           ),
+          instructorMotionFrame: structuredClone(instructorMotionFrameRef.current),
           instructorRendered: structuredClone(instructorDebug.avatarVisual),
           motionFrame: structuredClone(playerMotionFrameRef.current),
           ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 5),
@@ -739,6 +765,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
             acquisition: movementBoundaryChecksum(boundaries.acquisition),
             calibration: movementBoundaryChecksum(boundaries.calibration),
             denseFusion: movementBoundaryChecksum(boundaries.denseFusion),
+            instructorMotionFrame: movementBoundaryChecksum(boundaries.instructorMotionFrame),
             instructorRendered: movementBoundaryChecksum(boundaries.instructorRendered),
             motionFrame: movementBoundaryChecksum(boundaries.motionFrame),
             ownersRootSupport: movementBoundaryChecksum(boundaries.ownersRootSupport),
@@ -780,6 +807,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       debugWindow.__sonaeMovementGamePacketProof = {
         activeFrameStartIndex,
         avatarProfile: getMovementAvatarTrackingProfileName(playerAvatarUrl),
+        instructorAvatarProfile: getMovementAvatarTrackingProfileName(instructorAvatarUrl),
         contractStatus: gameProofPacket.contractStatus,
         expectedFrameCount: expectedFrameIndexes.length,
         firstRenderedBoundary: recordedGameFirstRenderedBoundaryRef.current,
@@ -854,6 +882,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     instructorMotionFrameRef,
     instructorFrameIndexRef,
     isLobby,
+    instructorAvatarUrl,
     playerAvatarUrl,
     playerMotionFrameRef,
   ]);
@@ -1433,10 +1462,11 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <MovementMatchScene>
         <VrmAvatar
           frameApplicationProofRef={isDebugGamePacketRoute ? instructorFrameApplicationProofRef : undefined}
+          frameWarmupSequenceRef={isDebugGamePacketRoute ? instructorInitialFrameSequenceRef : undefined}
           landmarksRef={effectiveInstructorCurrentLmRef}
           motionFrameRef={instructorMotionFrameRef}
           positionOffset={[-5, 0, 0]}
-          isPlaying={isPlaying}
+          isPlaying={shouldKeepInstructorMotionFrameVisible}
           showPausedPose={isDebugTracking}
           trackingDebugRef={instructorTrackingDebugRef}
           retargetSourceModel={effectiveInstructorRetargetSourceModel}

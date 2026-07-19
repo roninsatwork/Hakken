@@ -26,7 +26,10 @@ import {
   createMovementDeepCaptureFrameEvidence,
   resolveMovementDeepCaptureHandAssignment,
 } from "./movementDeepCaptureEvidence";
-import type { MovementDeepCaptureFrameEvidence } from "./movementDeepCaptureContract";
+import type {
+  MovementDeepCaptureFrameEvidence,
+  MovementDeepCaptureProfileId,
+} from "./movementDeepCaptureContract";
 import type { MovementHandSide } from "./movementTypes";
 import type { VrmMotionPayload } from "./vrmRigging";
 
@@ -86,7 +89,7 @@ export type MovementAcquisitionCameraMetadata = {
 };
 
 export type MovementAcquisitionFrame = {
-  acquisitionProfileId: MovementPlayerInputContractId;
+  acquisitionProfileId: MovementPlayerInputContractId | MovementDeepCaptureProfileId;
   blendshapes?: Classifications["categories"];
   camera: MovementAcquisitionCameraMetadata;
   capturedAt: number;

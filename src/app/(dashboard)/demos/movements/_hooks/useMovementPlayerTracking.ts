@@ -19,6 +19,7 @@ import {
 import { resolveMovementCameraDeviceFingerprint } from "../_lib/movementCameraDeviceFingerprint";
 import type { MovementHandSide } from "../_lib/movementTypes";
 import type { MovementDeepCaptureFrameEvidence } from "../_lib/movementDeepCaptureContract";
+import type { MovementDeepCaptureProfileId } from "../_lib/movementDeepCaptureContract";
 import { resolveMovementReplayFrameDelay } from "../_lib/movementReplayPlaybackClock";
 
 type PlayerPoseLandmark = (NormalizedLandmark | Landmark) & {
@@ -34,7 +35,7 @@ type PlayerHandCapture = {
 type PlayerHandsPayload = Partial<Record<MovementHandSide, PlayerHandCapture | null>>;
 
 export type MovementPlayerMotionPayload = {
-  acquisitionProfileId?: MovementPlayerInputContractId;
+  acquisitionProfileId?: MovementPlayerInputContractId | MovementDeepCaptureProfileId;
   capturedAt?: number;
   frameId?: string;
   camera?: MovementAcquisitionCameraMetadata;
@@ -95,6 +96,13 @@ export function useMovementPlayerTracking({
 }: UseMovementPlayerTrackingInput) {
   const playerLiveLmRef = useRef<MovementPlayerMotionPayload | null>(null);
   const acquisitionFiltersRef = useRef(createMovementAcquisitionFilters());
+  const hasRecordedSource = Boolean(recordedSourceSequence?.length);
+  // Recorded packet playback is a complete acquisition source. Keep it isolated
+  // from the asynchronous MediaPipe detector lifecycle so detectors becoming
+  // ready cannot restart an in-flight Replay/Game proof from frame zero.
+  const activePoseLandmarker = hasRecordedSource ? null : poseLandmarker;
+  const activeFaceLandmarker = hasRecordedSource ? null : faceLandmarker;
+  const activeHandLandmarker = hasRecordedSource ? null : handLandmarker;
 
   useEffect(() => {
     let animationFrameId: number | null = null;
@@ -274,16 +282,16 @@ export function useMovementPlayerTracking({
       const video = webcamRef.current?.video;
 
       if (
-        poseLandmarker &&
-        faceLandmarker &&
-        handLandmarker &&
+        activePoseLandmarker &&
+        activeFaceLandmarker &&
+        activeHandLandmarker &&
         video &&
         video.readyState === 4
       ) {
         const startTimeMs = performance.now();
-        const poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
-        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
-        const handResults = handLandmarker.detectForVideo(video, startTimeMs);
+        const poseResults = activePoseLandmarker.detectForVideo(video, startTimeMs);
+        const faceResults = activeFaceLandmarker.detectForVideo(video, startTimeMs);
+        const handResults = activeHandLandmarker.detectForVideo(video, startTimeMs);
         const currentData: MovementPlayerMotionPayload = prepareMovementAcquisitionFrame({
           camera: {
             deviceFingerprint: resolveMovementCameraDeviceFingerprint(video) ?? undefined,
@@ -311,7 +319,7 @@ export function useMovementPlayerTracking({
 
     if (
       (recordedSourceSequence && recordedSourceSequence.length > 0) ||
-      (poseLandmarker && faceLandmarker && handLandmarker)
+      (activePoseLandmarker && activeFaceLandmarker && activeHandLandmarker)
     ) {
       processVideo();
     }
@@ -325,10 +333,10 @@ export function useMovementPlayerTracking({
       }
     };
   }, [
-    faceLandmarker,
-    handLandmarker,
+    activeFaceLandmarker,
+    activeHandLandmarker,
+    activePoseLandmarker,
     onBodyTracked,
-    poseLandmarker,
     recordedSourceSequence,
     recordedSourcePlayback,
     webcamRef,

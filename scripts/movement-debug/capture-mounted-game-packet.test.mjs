@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { buildMountedGamePacketWindow } from "./capture-mounted-game-packet.mjs";
+import {
+  buildMountedGamePacketWindow,
+  updateMountedGamePlaybackWatchdog,
+} from "./capture-mounted-game-packet.mjs";
 
 function sample(index) {
   return {
@@ -58,5 +61,40 @@ describe("buildMountedGamePacketWindow", () => {
     expect(() => buildMountedGamePacketWindow(session, 2, 4)).toThrow(
       "cannot preserve the 3-frame setup prefix",
     );
+  });
+});
+
+describe("mounted Game playback progress watchdog", () => {
+  const initial = {
+    complete: false,
+    lastProgressAt: 1_000,
+    playerFrameIndex: 80,
+    renderedFrameCount: 10,
+    stalled: false,
+  };
+
+  test("keeps a slow browser alive while source or rendered frames advance", () => {
+    expect(updateMountedGamePlaybackWatchdog({
+      nowMs: 70_000,
+      previous: initial,
+      proof: { phase: "playing", playerFrameIndex: 81, renderedFrameCount: 10 },
+    })).toMatchObject({
+      lastProgressAt: 70_000,
+      playerFrameIndex: 81,
+      stalled: false,
+    });
+  });
+
+  test("fails a real stall and accepts explicit completion", () => {
+    expect(updateMountedGamePlaybackWatchdog({
+      nowMs: 61_000,
+      previous: initial,
+      proof: { phase: "playing", playerFrameIndex: 80, renderedFrameCount: 10 },
+    }).stalled).toBe(true);
+    expect(updateMountedGamePlaybackWatchdog({
+      nowMs: 61_000,
+      previous: initial,
+      proof: { phase: "complete", playerFrameIndex: 80, renderedFrameCount: 10 },
+    })).toMatchObject({ complete: true, stalled: false });
   });
 });

@@ -102,6 +102,8 @@
     "movement:game-visual-plan": "node scripts/movement-debug/game-visual-proof-plan.mjs",
     "movement:game-visual-capture": "node scripts/movement-debug/capture-game-visual-proof.mjs",
     "movement:game:packet-proof": "node scripts/movement-debug/capture-mounted-game-packet.mjs",
+    "movement:game:chunked-packet-proof": "node scripts/movement-debug/run-mounted-game-packet-chunked-proof.mjs",
+    "movement:deep-capture:page-proof": "node scripts/movement-debug/capture-deep-capture-page-proof.mjs",
     "movement:game:nine-proof": "node scripts/movement-debug/run-mounted-game-nine-proof.mjs",
     "movement:replay-game:compare": "node scripts/movement-debug/compare-replay-mounted-game-checksums.mjs",
     "movement:replay-game:packet-proof": "node scripts/movement-debug/run-replay-mounted-game-packet-proof.mjs",

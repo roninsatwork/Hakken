@@ -129,7 +129,9 @@ export function buildMovementReplaySessionFromRecording(
       tracking: {
         blendshapes: getFramePayload(frame)?.blendshapes as MovementDebugReplaySession["samples"][number]["tracking"]["blendshapes"],
         deepCapture: getFramePayload(frame)?.deepCapture,
-        face: toReplayLandmarks(getFramePayload(frame)?.faceLandmarks ?? []),
+        face: getFramePayload(frame)?.faceLandmarks
+          ? toReplayLandmarks(getFramePayload(frame)?.faceLandmarks ?? [])
+          : undefined,
         hands: Object.fromEntries(
           (["left", "right"] as const).map((side) => {
             const hand = getFramePayload(frame)?.hands?.[side];

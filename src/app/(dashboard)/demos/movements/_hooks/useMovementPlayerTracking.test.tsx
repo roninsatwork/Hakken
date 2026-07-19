@@ -147,6 +147,52 @@ describe("useMovementPlayerTracking recorded source boundary", () => {
     expect(stateRef.current.phase).toBe("complete");
   });
 
+  it("does not rewind recorded playback when live detector instances become ready", () => {
+    const frames: MovementPlayerMotionPayload[] = [0, 20, 40, 60].map((capturedAt) => ({
+      ...makeMovementAvatarProofMotionPayload("standing"),
+      capturedAt,
+    }));
+    const controlRef = { current: { isPlaying: true } };
+    const renderedFrameIndexRef = { current: -1 };
+    const stateRef = { current: createMovementRecordedSourcePlaybackState() };
+    const hook = renderHook(({ detectorsReady }: { detectorsReady: boolean }) => (
+      useMovementPlayerTracking({
+        faceLandmarker: detectorsReady ? ({} as never) : null,
+        handLandmarker: detectorsReady ? ({} as never) : null,
+        poseLandmarker: detectorsReady ? ({} as never) : null,
+        recordedSourcePlayback: {
+          controlRef,
+          renderedFrameIndexRef,
+          setupFrameCount: 1,
+          stateRef,
+        },
+        recordedSourceSequence: frames,
+        webcamRef: { current: null } as RefObject<Webcam | null>,
+      })
+    ), { initialProps: { detectorsReady: false } });
+
+    act(() => vi.advanceTimersByTime(21));
+    expect(stateRef.current).toMatchObject({
+      frameIndex: 1,
+      processedFrameIndexes: [0, 1],
+    });
+
+    hook.rerender({ detectorsReady: true });
+    act(() => vi.advanceTimersByTime(50));
+    expect(stateRef.current).toMatchObject({
+      frameIndex: 1,
+      processedFrameIndexes: [0, 1],
+    });
+    expect(hook.result.current.current?.capturedAt).toBe(20);
+
+    renderedFrameIndexRef.current = 1;
+    act(() => vi.advanceTimersByTime(21));
+    expect(stateRef.current).toMatchObject({
+      frameIndex: 2,
+      processedFrameIndexes: [0, 1, 2],
+    });
+  });
+
   it("continues chronological frames during the normal Game fresh-frame check", () => {
     const frames: MovementPlayerMotionPayload[] = [0, 20, 40, 60, 80].map((capturedAt) => ({
       ...makeMovementAvatarProofMotionPayload("standing"),
