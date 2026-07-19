@@ -53,6 +53,14 @@ function weakFeetPose() {
   return pose;
 }
 
+function croppedFeetPose() {
+  const pose = comfortablePose();
+  [27, 28, 29, 30, 31, 32].forEach((index) => {
+    pose[index] = { ...pose[index]!, y: 1.02 };
+  });
+  return pose;
+}
+
 function motionFrameFromPose(pose: TrackingLandmark[]) {
   const sourceFrame = buildLiveMovementSourceFrame({
     capturedAt: 1000,
@@ -61,6 +69,7 @@ function motionFrameFromPose(pose: TrackingLandmark[]) {
 
   return {
     cameraConfidence: sourceFrame.cameraConfidence,
+    startReadiness: sourceFrame.startReadiness,
     truthSkeleton: buildMovementTruthSkeleton(sourceFrame),
   } as MovementMotionFrame;
 }
@@ -80,14 +89,21 @@ describe("movementSetupRecoveryCue", () => {
     })).toBe("Keep head, shoulders, and hips visible.");
   });
 
-  it("uses camera recovery guidance before truth skeleton guidance", () => {
+  it("uses camera recovery guidance for genuinely cropped geometry", () => {
+    expect(getMovementSetupRecoveryCue({
+      motionFrame: motionFrameFromPose(croppedFeetPose()),
+      spineReadiness: "ready",
+    })).toBe("Step back so your whole body is visible.");
+  });
+
+  it("does not turn low-confidence in-frame feet into positioning guidance", () => {
     expect(getMovementSetupRecoveryCue({
       motionFrame: motionFrameFromPose(weakFeetPose()),
       spineReadiness: "ready",
-    })).toBe("Show both feet.");
+    })).toBeNull();
   });
 
-  it("falls back to truth skeleton guidance when camera confidence has no cue", () => {
+  it("suppresses confidence-only truth positioning guidance once geometry is ready", () => {
     const motionFrame = motionFrameFromPose(comfortablePose());
     motionFrame.truthSkeleton.segmentConfidence.leftLowerArm = 0.1;
     motionFrame.truthSkeleton.segmentConfidence.leftUpperArm = 0.1;
@@ -97,7 +113,7 @@ describe("movementSetupRecoveryCue", () => {
     expect(getMovementSetupRecoveryCue({
       motionFrame,
       spineReadiness: "ready",
-    })).toBe("Keep hands and elbows in frame.");
+    })).toBeNull();
   });
 
   it("omits guidance when setup is ready", () => {
@@ -139,13 +155,13 @@ describe("movementStartReadinessMessage", () => {
     })).toBe("Line up your spine first.");
   });
 
-  it("uses camera recovery cues before prompt fallback copy", () => {
+  it("uses prompt fallback copy when confidence has no geometry recovery cue", () => {
     expect(getMovementStartReadinessMessage({
       cameraRecoveryCue: getMovementCameraConfidenceRecoveryCue(
         motionFrameFromPose(weakFeetPose()).cameraConfidence,
       ),
       readiness: readinessWith({ promptEvents: ["show-your-feet"] }),
-    })).toBe("Show both feet.");
+    })).toBe("Show your feet.");
   });
 
   it.each([

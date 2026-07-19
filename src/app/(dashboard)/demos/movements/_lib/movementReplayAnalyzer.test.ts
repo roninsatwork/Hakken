@@ -407,13 +407,13 @@ describe("movement replay analyzer", () => {
       startReadinessState: "ready",
     });
     expect(analysis.gamePath.sourceFrames[1]).toMatchObject({
-      cameraHelpEvents: expect.arrayContaining(["show-your-feet"]),
-      cameraRecoveryCueEvent: "show-your-feet",
-      cameraRecoveryCueMessage: "Show both feet.",
-      cameraRecoveryCueState: "partial",
+      cameraHelpEvents: [],
+      cameraRecoveryCueEvent: null,
+      cameraRecoveryCueMessage: null,
+      cameraRecoveryCueState: null,
       scoreAllowed: true,
-      startReadinessMessage: "Show both feet.",
-      startReadinessState: "blocked",
+      startReadinessMessage: "Get ready.",
+      startReadinessState: "ready",
       truthSkeletonRecoveryCueGroup: "feet",
       truthSkeletonRecoveryCueMessage: "Step back until both feet are visible.",
       truthSkeletonRecoveryCueState: "blocked",
@@ -453,24 +453,16 @@ describe("movement replay analyzer", () => {
     expect(analysis.metrics.cameraConfidenceLostFrameCount).toBe(1);
     expect(analysis.metrics.cameraConfidenceUncertainFrameCount).toBe(0);
     expect(analysis.metrics.cameraHelpEventCount).toBeGreaterThanOrEqual(2);
-    expect(analysis.metrics.cameraRecoveryCueFrameCount).toBe(3);
+    expect(analysis.metrics.cameraRecoveryCueFrameCount).toBe(2);
     expect(analysis.metrics.cameraScoreAllowedFrameCount).toBe(2);
     expect(analysis.metrics.truthSkeletonBlockedFrameCount).toBe(2);
     expect(analysis.metrics.truthSkeletonPartialFrameCount).toBe(0);
     expect(analysis.metrics.truthSkeletonReadyFrameCount).toBe(1);
     expect(analysis.metrics.truthSkeletonRecoveryCueFrameCount).toBe(2);
-    expect(analysis.metrics.startReadinessBlockedFrameCount).toBe(2);
-    expect(analysis.metrics.startReadinessCanStartGameFrameCount).toBe(1);
-    expect(analysis.metrics.startReadinessReadyFrameCount).toBe(1);
+    expect(analysis.metrics.startReadinessBlockedFrameCount).toBe(1);
+    expect(analysis.metrics.startReadinessCanStartGameFrameCount).toBe(2);
+    expect(analysis.metrics.startReadinessReadyFrameCount).toBe(2);
     expect(analysis.gamePath.startReadinessMessageSummary).toEqual([
-      {
-        blockedFrameCount: 1,
-        canStartGameFrameCount: 0,
-        count: 1,
-        firstFrameIndex: 1,
-        message: "Show both feet.",
-        readyFrameCount: 0,
-      },
       {
         blockedFrameCount: 1,
         canStartGameFrameCount: 0,
@@ -485,6 +477,14 @@ describe("movement replay analyzer", () => {
         count: 1,
         firstFrameIndex: 0,
         message: "Step back so your whole body is visible.",
+        readyFrameCount: 1,
+      },
+      {
+        blockedFrameCount: 0,
+        canStartGameFrameCount: 1,
+        count: 1,
+        firstFrameIndex: 1,
+        message: "Get ready.",
         readyFrameCount: 1,
       },
     ]);

@@ -100,7 +100,9 @@ export function applyMovementAvatarRetargetSegmentMappingToVrmBones({
     };
   }
 
-  const timedSegmentApplicationSpec = mapping.type === "arm"
+  const timedSegmentApplicationSpec = mapping.type === "arm" ||
+    mapping.type === "leg" ||
+    mapping.type === "foot"
     ? {
         ...segmentApplicationSpec,
         maxLocalAngleStep: movementAvatarFrameRateAdjustedAngleStep(

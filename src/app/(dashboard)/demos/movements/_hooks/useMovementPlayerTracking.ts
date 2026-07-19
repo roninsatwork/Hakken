@@ -255,7 +255,14 @@ export function useMovementPlayerTracking({
         const frame = recordedSourceSequence[
           Math.min(recordedFrameIndex, recordedSourceSequence.length - 1)
         ];
-        playerLiveLmRef.current = frame ?? null;
+        // Synthetic proof poses without source timing represent a live camera
+        // lane. Publish a fresh immutable sample so start-gate stability proof
+        // exercises multiple frames instead of one permanently held object.
+        playerLiveLmRef.current = frame
+          ? frame.capturedAt === undefined
+            ? { ...frame, capturedAt: Date.now() }
+            : frame
+          : null;
         if (frame?.landmarks) onBodyTracked?.();
         if (recordedFrameIndex < recordedSourceSequence.length - 1) {
           recordedFrameIndex += 1;

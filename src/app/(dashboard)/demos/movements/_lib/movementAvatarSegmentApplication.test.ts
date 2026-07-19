@@ -681,4 +681,40 @@ describe("movement avatar segment application", () => {
     expect(applyAtDelta(1 / 60)).toBeCloseTo((Math.PI / 2) * 0.42, 5);
     expect(applyAtDelta(1 / 20)).toBeCloseTo((Math.PI / 2) * (1 - Math.pow(0.58, 3)), 5);
   });
+
+  it("scales leg easing with elapsed source time so lower body does not trail on slow frames", () => {
+    const mapping = MOVEMENT_AVATAR_LOWER_BODY_RETARGET_MAPPINGS.find(
+      (candidate) => candidate.segment === "rightThigh",
+    )!;
+    const legFrame = retargetFrame();
+    legFrame.segments.rightThigh = {
+      confidence: 0.9,
+      direction: { x: 1, y: 0, z: 0 },
+      length: 0.4,
+    };
+    const applyAtDelta = (frameDeltaSeconds: number) => {
+      const parent = new THREE.Object3D();
+      const leg = new THREE.Object3D();
+      parent.add(leg);
+      parent.updateMatrixWorld(true);
+      applyMovementAvatarRetargetSegmentMappingToVrmBones({
+        currentRestMap: {
+          rightUpperLeg: {
+            worldDirection: new THREE.Vector3(0, -1, 0),
+            worldQuaternion: new THREE.Quaternion(),
+          },
+        },
+        frameDeltaSeconds,
+        lookupBone: (boneName) => boneName === "rightUpperLeg" ? leg : null,
+        mapping,
+        refreshRestMap: () => ({}),
+        retargetFrame: legFrame,
+        segmentApplicationDecision: segmentDecision(),
+      });
+      return new THREE.Quaternion().angleTo(leg.quaternion);
+    };
+
+    expect(applyAtDelta(1 / 60)).toBeCloseTo(0.24, 5);
+    expect(applyAtDelta(1 / 20)).toBeCloseTo(0.72, 5);
+  });
 });

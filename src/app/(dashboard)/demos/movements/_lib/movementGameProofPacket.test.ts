@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { MOVEMENT_PLAYER_INPUT_CONTRACT } from "./movementPlayerInputContract";
-import { buildMovementGameProofPacket } from "./movementGameProofPacket";
+import {
+  buildMovementGameProofPacket,
+  buildMovementOwnersRootSupportProofSnapshot,
+} from "./movementGameProofPacket";
 
 function pose() {
   return Array.from({ length: 33 }, (_, index) => ({
@@ -120,6 +123,20 @@ describe("buildMovementGameProofPacket", () => {
     expect(packet.playerFrames[0]?.deepCapture?.denseBody?.anchors[0]?.id).toBe(
       "abdomen-front-000",
     );
+  });
+
+  it("normalises route stage placement without dropping relative root travel", () => {
+    expect(buildMovementOwnersRootSupportProofSnapshot({
+      avatarRoot: { appliedX: 5.4, targetX: 5.6, targetZ: 0.2 },
+      fallbacks: { lowerBody: "recorded" },
+    }, 5)).toEqual({
+      avatarRoot: { appliedX: 0.40000000000000036, targetX: 0.5999999999999996, targetZ: 0.2 },
+      bodySupport: undefined,
+      fallbacks: { lowerBody: "recorded" },
+      retarget: undefined,
+      supportConstraint: undefined,
+      supportIntent: undefined,
+    });
   });
 
 });

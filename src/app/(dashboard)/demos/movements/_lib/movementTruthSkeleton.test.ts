@@ -149,6 +149,8 @@ describe("movementTruthSkeleton", () => {
     });
     expect(skeleton.heldOrRejectedReasons).toEqual(expect.arrayContaining([
       "feet-weak",
+    ]));
+    expect(skeleton.heldOrRejectedReasons).not.toEqual(expect.arrayContaining([
       "leftFoot-missing",
       "rightFoot-missing",
     ]));

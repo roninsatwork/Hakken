@@ -212,7 +212,7 @@ describe("movementRetargeting", () => {
     expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: true });
   });
 
-  it("does not force a world-lifted sole into contact during a symmetric image squat", () => {
+    it("does not force a world-lifted sole into contact during a symmetric image squat", () => {
     const calibrationPose = withCorePose();
     const calibrationWorldPose = structuredClone(calibrationPose);
     const calibration = buildMovementRetargetSourceModel({
@@ -236,8 +236,47 @@ describe("movementRetargeting", () => {
     });
 
     expect(frame.squatDepth).toBeGreaterThan(0.55);
-    expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: true });
-  });
+      expect(frame.contacts).toEqual({ leftFoot: false, rightFoot: true });
+    });
+
+    it("recovers a visible shallow squat from coupled hip and bilateral world-segment motion", () => {
+      const calibrationPose = withCorePose();
+      const calibrationWorldPose = structuredClone(calibrationPose);
+      const calibration = buildMovementRetargetSourceModel({
+        poseLandmarks: calibrationPose,
+        worldPoseLandmarks: calibrationWorldPose,
+      });
+      const shallowSquatPose = withCorePose();
+      shallowSquatPose[23] = { ...shallowSquatPose[23]!, y: 0.71 };
+      shallowSquatPose[24] = { ...shallowSquatPose[24]!, y: 0.71 };
+      shallowSquatPose[25] = { ...shallowSquatPose[25]!, x: 0.46, y: 0.82 };
+      shallowSquatPose[26] = { ...shallowSquatPose[26]!, x: 0.54, y: 0.82 };
+      const shallowSquatWorldPose = structuredClone(calibrationWorldPose);
+      shallowSquatWorldPose[25] = {
+        ...shallowSquatWorldPose[25]!,
+        x: -0.14,
+        y: 0.35,
+        z: -0.17,
+      };
+      shallowSquatWorldPose[26] = {
+        ...shallowSquatWorldPose[26]!,
+        x: 0.14,
+        y: 0.35,
+        z: -0.17,
+      };
+
+      const frame = solveMovementRetargetFrame({
+        calibration,
+        poseLandmarks: shallowSquatPose,
+        worldPoseLandmarks: shallowSquatWorldPose,
+      });
+
+      expect(frame.hipDrop).toBeGreaterThan(0.08);
+      expect(getRecordedLowerBodySegmentMotionDepth({ calibration, frame })).toBeGreaterThan(0.18);
+      expect(frame.squatDepth).toBeGreaterThan(0.24);
+      expect(frame.contacts).toEqual({ leftFoot: true, rightFoot: true });
+      expect(getRecordedSquatPresentationDepth(frame)).toBe(frame.squatDepth);
+    });
 
   it("keeps standing neutral when the user steps farther back in camera frame", () => {
     const calibrationPose = withCorePose();

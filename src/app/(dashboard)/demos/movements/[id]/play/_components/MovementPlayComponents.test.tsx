@@ -422,6 +422,13 @@ describe("movement play components", () => {
     expect(screen.getAllByText("Show your whole body.")).toHaveLength(1);
     expect(screen.getByText("Game starts automatically")).toBeInTheDocument();
     expect(screen.getByText("Show your whole body.")).toHaveClass("sm:text-4xl");
+    expect(screen.getByTestId("movement-game-readiness-banner")).toHaveClass(
+      "left-1/2",
+      "top-1/2",
+      "-translate-x-1/2",
+      "-translate-y-1/2",
+    );
+    expect(screen.getByTestId("movement-game-readiness-banner")).not.toHaveClass("top-32");
     expect(screen.queryByText("Spine blocked")).not.toBeInTheDocument();
     expect(screen.queryByText("Waiting for spine tracking.")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();

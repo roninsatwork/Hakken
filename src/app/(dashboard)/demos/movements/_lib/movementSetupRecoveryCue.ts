@@ -56,6 +56,7 @@ export function getMovementSetupRecoveryCue({
     return "Keep head, shoulders, and hips visible.";
   }
   if (!motionFrame) return null;
+  if (motionFrame.startReadiness?.canStartGame) return null;
 
   const cameraRecoveryCue = getMovementCameraConfidenceRecoveryCue(motionFrame.cameraConfidence);
   if (cameraRecoveryCue) return cameraRecoveryCue.message;

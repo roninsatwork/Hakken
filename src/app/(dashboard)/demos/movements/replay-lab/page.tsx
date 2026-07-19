@@ -77,8 +77,9 @@ import {
 } from "./_lib/replayAvatarFollowDiagnosis";
 import { getReplayLabLiveCurrentFrameFailures } from "./_lib/replayLabFrameFailures";
 import {
-  buildOppositePlayerImitationOracle,
-} from "./_lib/replayThreePartyMirrorOracle";
+  buildMovementGameProofPlayerFrame,
+  buildMovementOwnersRootSupportProofSnapshot,
+} from "../_lib/movementGameProofPacket";
 
 import {
   AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD,
@@ -122,6 +123,7 @@ function replayFrameMotionPayload(
     faceLandmarks: frame.tracking.face,
     hands: frame.tracking.hands,
     landmarks: frame.tracking.pose,
+    pose: frame.tracking.pose,
     worldLandmarks: frame.tracking.worldPose.length > 0
       ? frame.tracking.worldPose
       : undefined,
@@ -515,10 +517,11 @@ export default function MovementReplayLabPage() {
 
     return buildMovementPlayerSetupFromPrefix(
       replaySession.samples.map((sample, frameIndex) => (
-        buildOppositePlayerImitationOracle(replayFrameMotionPayload(
-          sample,
-          `${replaySession.id}:${frameIndex}`,
-        ))
+        buildMovementGameProofPlayerFrame(
+          replayFrameMotionPayload(sample, `${replaySession.id}:${frameIndex}`),
+          replaySession,
+          frameIndex,
+        )
       )),
     );
   }, [isThreePartyMirrorProof, replaySession]);
@@ -534,7 +537,11 @@ export default function MovementReplayLabPage() {
         sample,
         `${replaySession.id}:${frameIndex}`,
       );
-      const playerPayload = buildOppositePlayerImitationOracle(instructorPayload);
+      const playerPayload = buildMovementGameProofPlayerFrame(
+        instructorPayload,
+        replaySession,
+        frameIndex,
+      );
       previousInstructorFrame = buildRecordedMovementMotionFrame({
         calibration: replayInstructorCalibration ?? buildMovementCalibration({
           poseLandmarks: instructorPayload.landmarks ?? [],
@@ -573,10 +580,14 @@ export default function MovementReplayLabPage() {
       : undefined)
     : null, [currentFrame, replaySession, safeFrameIndex]);
   const currentThreePartyPlayerPayload = useMemo(() => (
-    currentThreePartyInstructorPayload && isThreePartyMirrorProof
-      ? buildOppositePlayerImitationOracle(currentThreePartyInstructorPayload)
+    currentThreePartyInstructorPayload && isThreePartyMirrorProof && replaySession
+      ? buildMovementGameProofPlayerFrame(
+          currentThreePartyInstructorPayload,
+          replaySession,
+          safeFrameIndex,
+        )
       : null
-  ), [currentThreePartyInstructorPayload, isThreePartyMirrorProof]);
+  ), [currentThreePartyInstructorPayload, isThreePartyMirrorProof, replaySession, safeFrameIndex]);
   const replayStudioParity = useMemo(() => {
     if (currentPoseLandmarks.length < 33) return null;
 
@@ -844,14 +855,7 @@ export default function MovementReplayLabPage() {
             ),
             instructorRendered: structuredClone(instructorDebug.avatarVisual),
             motionFrame: structuredClone(replayMotionFrameRef.current),
-            ownersRootSupport: structuredClone({
-              avatarRoot: playerDebug.avatarRoot,
-              bodySupport: playerDebug.bodySupport,
-              fallbacks: playerDebug.fallbacks,
-              retarget: playerDebug.retarget,
-              supportConstraint: playerDebug.supportConstraint,
-              supportIntent: playerDebug.supportIntent,
-            }),
+            ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 0.8),
             playerApplied: structuredClone({
               avatarExpressions: playerDebug.avatarExpressions,
               avatarHands: playerDebug.avatarHands,
@@ -941,7 +945,11 @@ export default function MovementReplayLabPage() {
         `${replaySession.id}:${nextFrameIndex}`,
       );
       const playerPayload = isThreePartyMirrorProof
-        ? buildOppositePlayerImitationOracle(instructorPayload)
+        ? buildMovementGameProofPlayerFrame(
+            instructorPayload,
+            replaySession,
+            nextFrameIndex,
+          )
         : instructorPayload;
 
       if (isThreePartyMirrorProof) {

@@ -233,6 +233,22 @@ describe("movement avatar lower-body drive", () => {
     expect(drive.visualRootDrop).toBeCloseTo(0.0728);
   });
 
+  it("uses measured retarget depth instead of amplified intent when one squat contact is uncertain", () => {
+    const drive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: liveSquatIntent,
+      lowerBodyTrackingReady: true,
+      retargetContactsBothFeet: false,
+      retargetHipDrop: 0.33,
+      retargetSquatDepth: 0.98,
+    });
+
+    expect(drive.shouldDrivePlayerSquat).toBe(true);
+    expect(drive.visualRootDrop).toBeCloseTo(0.5488);
+    expect(drive.visualRootDrop).toBeLessThan(0.6);
+  });
+
   it("does not drive a player squat from knee noise without body-drop evidence", () => {
     const drive = resolveMovementAvatarLowerBodyDrive({
       hasLiveBodyCalibration: true,
@@ -276,6 +292,23 @@ describe("movement avatar lower-body drive", () => {
     expect(drive.playerLowerBodyState).toBe("held");
     expect(drive.playerSquatPresentationDepth).toBe(0);
     expect(drive.visualRootDrop).toBe(0);
+  });
+
+  it("keeps trustworthy retarget squat geometry visible without switching to a canned player squat", () => {
+    const drive = resolveMovementAvatarLowerBodyDrive({
+      hasLiveBodyCalibration: true,
+      isPlayer: true,
+      lowerBodyIntent: neutralIntent,
+      lowerBodyTrackingReady: true,
+      retargetContactsBothFeet: true,
+      retargetHipDrop: 0.11,
+      retargetSquatDepth: 0.27,
+    });
+
+    expect(drive.shouldDrivePlayerSquat).toBe(false);
+    expect(drive.playerLowerBodyState).toBe("neutral");
+    expect(drive.playerSquatPresentationDepth).toBe(0);
+    expect(drive.visualRootDrop).toBeCloseTo(0.1512);
   });
 
   it("does not bounce the player root from static planted-foot retarget noise", () => {

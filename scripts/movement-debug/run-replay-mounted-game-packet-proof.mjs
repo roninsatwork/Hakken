@@ -12,6 +12,36 @@ const replayCaptureScript = path.join(scriptDirectory, "capture-replay-full-sequ
 const gameCaptureScript = path.join(scriptDirectory, "capture-mounted-game-packet.mjs");
 export const REQUIRED_CHANNELS = ["blendshapes", "camera", "face", "hands", "pose", "worldPose"];
 
+const isFiniteNumber = (value) => typeof value === "number" && Number.isFinite(value);
+const isFiniteRotation = (value) => value && [value.x, value.y, value.z].every(isFiniteNumber);
+
+export function validateDeepCaptureRenderedAvatar(game) {
+  const failures = [];
+  const frames = game?.final?.renderedFrames ?? [];
+  if (frames.length === 0) return ["mounted Game has no rendered Deep Capture avatar frames"];
+
+  frames.forEach((frame) => {
+    const frameIndex = frame?.frameIndex ?? "unknown";
+    const hands = frame?.playerApplied?.avatarHands;
+    for (const side of ["left", "right"]) {
+      const hand = hands?.[side];
+      if (
+        !isFiniteNumber(hand?.curlMagnitude) ||
+        !isFiniteRotation(hand?.thumbProximal) ||
+        !isFiniteRotation(hand?.indexProximal) ||
+        !isFiniteRotation(hand?.middleProximal)
+      ) {
+        failures.push(`frame ${frameIndex} has non-finite final-avatar ${side} finger telemetry`);
+      }
+    }
+    const expressions = frame?.playerApplied?.avatarExpressions;
+    if (!["aa", "blinkLeft", "blinkRight", "happy"].every((key) => isFiniteNumber(expressions?.[key]))) {
+      failures.push(`frame ${frameIndex} has non-finite final-avatar face telemetry`);
+    }
+  });
+  return failures;
+}
+
 function parseArgs(argv) {
   const args = {
     baseUrl: "http://localhost:3000",
@@ -139,12 +169,15 @@ export async function runReplayMountedGamePacketProof(argv) {
   await mkdir(outDir, { recursive: true });
   const replayPath = path.join(outDir, "replay-three-party.json");
   const gamePath = path.join(outDir, "mounted-game.json");
+  const gameCanvasScreenshotPath = path.join(outDir, "mounted-game-canvas-visible.png");
+  const gameScreenshotPath = path.join(outDir, "mounted-game-visible.png");
   const comparisonPath = path.join(outDir, "comparison.json");
   const summaryPath = path.join(outDir, "summary.json");
   const commonArgs = commonCaptureArgs(args);
 
   await runProcess(replayCaptureScript, [
     ...commonArgs,
+    "--canvas-screenshot", gameCanvasScreenshotPath,
     "--debug-session-json", packetPath,
     "--out", replayPath,
     "--deterministic",
@@ -154,24 +187,30 @@ export async function runReplayMountedGamePacketProof(argv) {
     ...commonArgs,
     "--debug-session-json", packetPath,
     "--out", gamePath,
+    "--screenshot", gameScreenshotPath,
     "--skip-pause",
   ]);
 
   const replay = JSON.parse(await readFile(replayPath, "utf8"));
   const game = JSON.parse(await readFile(gamePath, "utf8"));
   const comparison = compareReplayMountedGameChecksums({ game, replay });
+  const renderedAvatarFailures = args.deepCapture
+    ? validateDeepCaptureRenderedAvatar(game)
+    : [];
   await writeFile(comparisonPath, `${JSON.stringify(comparison, null, 2)}\n`);
   const summary = {
     comparedFrameCount: comparison.comparedFrameCount,
     comparedBoundaryCount: comparison.comparedBoundaryCount,
     comparisonPath,
     exactChecksumDivergenceCount: comparison.exactChecksumDivergenceCount,
-    failures: comparison.failures,
+    failures: [...comparison.failures, ...renderedAvatarFailures],
+    gameCanvasScreenshotPath,
     gamePath,
+    gameScreenshotPath,
     identityStatus: comparison.identityStatus,
     packetId: packet.id,
     packetPath,
-    passed: game.passed === true && comparison.passed === true,
+    passed: game.passed === true && comparison.passed === true && renderedAvatarFailures.length === 0,
     proofProfile: args.deepCapture ? "deep-capture-v1" : "commissioning-v2",
     replayPath,
     schemaVersion: packet.schemaVersion,
@@ -188,7 +227,11 @@ export async function runReplayMountedGamePacketProof(argv) {
   return summary;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
+if (
+  process.argv[1] &&
+  path.basename(process.argv[1]) === "run-replay-mounted-game-packet-proof.mjs" &&
+  path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)
+) {
   runReplayMountedGamePacketProof(process.argv.slice(2)).catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

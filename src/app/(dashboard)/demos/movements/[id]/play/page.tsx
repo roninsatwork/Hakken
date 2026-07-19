@@ -54,6 +54,7 @@ import {
   MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION,
   MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE,
 } from "../../_lib/movementGameRuntimeFrame";
+import { buildMovementOwnersRootSupportProofSnapshot } from "../../_lib/movementGameProofPacket";
 import type { MovementMotionFrame } from "../../_lib/movementMotionFrame";
 import {
   parseMovementDebugGameFrameIndex,
@@ -62,6 +63,8 @@ import {
 import {
   MOVEMENT_GAME_START_FRESH_FRAME_DELAY_MS,
   MOVEMENT_GAME_START_FRESH_FRAME_INTERVAL_MS,
+  MOVEMENT_GAME_START_STABLE_FRAME_COUNT,
+  advanceMovementGameStartStability,
   shouldContinueMovementGameStartFreshFrameCheck,
 } from "../../_lib/movementGameStartFreshFrame";
 import { getMovementGameStartInstruction } from "../../_lib/movementGameStartPresentation";
@@ -509,6 +512,10 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     attempts: 0,
     lastProofFrameIndex: -1,
   });
+  const gameStartStabilityRef = useRef({
+    acceptedFrameCount: 0,
+    lastCapturedAt: null as number | null,
+  });
   gameStartGateRef.current = gameStartGate;
   const liveMotionFrameRequirements = React.useMemo(() => ({
     calibrationQuality: effectivePlayerCalibration?.quality ?? null,
@@ -721,14 +728,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           ),
           instructorRendered: structuredClone(instructorDebug.avatarVisual),
           motionFrame: structuredClone(playerMotionFrameRef.current),
-          ownersRootSupport: structuredClone({
-              avatarRoot: playerDebug.avatarRoot,
-              bodySupport: playerDebug.bodySupport,
-              fallbacks: playerDebug.fallbacks,
-              retarget: playerDebug.retarget,
-              supportConstraint: playerDebug.supportConstraint,
-              supportIntent: playerDebug.supportIntent,
-          }),
+          ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 5),
           playerApplied,
           playerRendered: structuredClone(playerDebug.avatarVisual),
           setup: structuredClone(automaticPlayerSetup),
@@ -956,6 +956,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     const readiness = sourceFrame
       ? resolveMovementStartReadiness({
           cameraConfidence: sourceFrame.cameraConfidence,
+          poseLandmarks: sourceFrame.landmarks.pose,
           requirements: {
             calibrationQuality: effectivePlayerCalibration?.quality ?? null,
           },
@@ -967,6 +968,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     if (!effectivePlayerCalibration) {
       return {
         canStart: false,
+        capturedAt: sourceFrame?.capturedAt ?? null,
         message: getMovementGameStartInstruction({
           cameraRecoveryCue,
           hasAutomaticSetup: false,
@@ -980,6 +982,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     });
     return {
       canStart: gateDecision.canStart,
+      capturedAt: sourceFrame?.capturedAt ?? null,
       message: getMovementStartReadinessMessage({
         blockedReasons: gateDecision.blockedReasons,
         cameraRecoveryCue,
@@ -1028,20 +1031,33 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       if (!active) return;
 
       const gateDecision = resolveCurrentGameStartGate();
-      if (gateDecision.canStart) {
-        const endsAt = Date.now() + MOVEMENT_GAME_START_COUNTDOWN_MS;
-      setGameStartGate({
-        countdownMsRemaining: MOVEMENT_GAME_START_COUNTDOWN_MS,
-        endsAt,
-        message: "Perfect — stay there.",
-        status: "countdown",
+      gameStartStabilityRef.current = advanceMovementGameStartStability({
+        canStart: gateDecision.canStart,
+        capturedAt: gateDecision.capturedAt,
+        state: gameStartStabilityRef.current,
       });
+      if (
+        gameStartStabilityRef.current.acceptedFrameCount >=
+        MOVEMENT_GAME_START_STABLE_FRAME_COUNT
+      ) {
+        const endsAt = Date.now() + MOVEMENT_GAME_START_COUNTDOWN_MS;
+        setGameStartGate({
+          countdownMsRemaining: MOVEMENT_GAME_START_COUNTDOWN_MS,
+          endsAt,
+          message: "Perfect — stay there.",
+          status: "countdown",
+        });
         return;
       }
 
       setGameStartGate((current) => (
         current.status === "waiting-for-readiness"
-          ? { ...current, message: gateDecision.message }
+          ? {
+              ...current,
+              message: gateDecision.canStart
+                ? "We can see your whole body — stay there."
+                : gateDecision.message,
+            }
           : current
       ));
       readinessTimeoutId = window.setTimeout(
@@ -1179,11 +1195,15 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       attempts: 0,
       lastProofFrameIndex: -1,
     };
+    gameStartStabilityRef.current = {
+      acceptedFrameCount: 0,
+      lastCapturedAt: null,
+    };
     setIsPlaying(false);
     setGameStartGate({
       countdownMsRemaining: 0,
       endsAt: null,
-      message: "Step back until your head and both feet are visible.",
+      message: "Move into view so the camera can see your whole body.",
       status: "waiting-for-readiness",
     });
   }, [

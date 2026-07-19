@@ -32,7 +32,7 @@ function toInstructorFrame(
   };
 }
 
-function toPlayerFrame(
+export function buildMovementGameProofPlayerFrame(
   frame: VrmMotionPayload,
   session: MovementDebugReplaySession,
   frameIndex: number,
@@ -58,6 +58,7 @@ function toPlayerFrame(
           : hand];
       }))
     : undefined;
+  const landmarks = withRequiredDepth(opposite.landmarks) ?? [];
   return {
     ...opposite,
     acquisitionProfileId: session.inputContract?.id === MOVEMENT_PLAYER_INPUT_CONTRACT.id
@@ -71,12 +72,48 @@ function toPlayerFrame(
           frameWidth: camera.trackWidth ?? camera.videoWidth ?? 0,
         }
       : undefined,
+    blendshapes: opposite.blendshapes?.map(({ categoryName, score }, index) => ({
+      categoryName,
+      displayName: categoryName,
+      index,
+      score,
+    })),
     faceLandmarks: withRequiredDepth(opposite.faceLandmarks),
     hands,
-    landmarks: withRequiredDepth(opposite.landmarks),
+    landmarks,
     sourceTimestampMs: frame.capturedAt,
     worldLandmarks: withRequiredDepth(opposite.worldLandmarks),
   };
+}
+
+export function buildMovementOwnersRootSupportProofSnapshot(
+  debug: {
+    avatarRoot?: Record<string, unknown> | null;
+    bodySupport?: unknown;
+    fallbacks?: unknown;
+    retarget?: unknown;
+    supportConstraint?: unknown;
+    supportIntent?: unknown;
+  } | null | undefined,
+  stageOffsetX: number,
+) {
+  const avatarRoot = debug?.avatarRoot ? structuredClone(debug.avatarRoot) : debug?.avatarRoot;
+  if (avatarRoot) {
+    for (const key of ["appliedX", "targetX"] as const) {
+      const value = avatarRoot[key];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        avatarRoot[key] = value - stageOffsetX;
+      }
+    }
+  }
+  return structuredClone({
+    avatarRoot,
+    bodySupport: debug?.bodySupport,
+    fallbacks: debug?.fallbacks,
+    retarget: debug?.retarget,
+    supportConstraint: debug?.supportConstraint,
+    supportIntent: debug?.supportIntent,
+  });
 }
 
 export function buildMovementGameProofPacket(value: unknown): MovementGameProofPacket {
@@ -108,7 +145,7 @@ export function buildMovementGameProofPacket(value: unknown): MovementGameProofP
     contractStatus: session.inputContract ? "matched" : "legacy-missing",
     instructorFrames,
     playerFrames: instructorFrames.map((frame, frameIndex) => (
-      toPlayerFrame(frame, session, frameIndex)
+      buildMovementGameProofPlayerFrame(frame, session, frameIndex)
     )),
     session,
     setupFrameCount,

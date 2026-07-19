@@ -94,8 +94,8 @@ export function resolveMovementAvatarLowerBodyDrive({
     lowerBodyTrackingReady &&
     lowerBodyIntent.confidence >= 0.35;
   const hasRetargetSquatEvidence =
-    retargetContactsBothFeet &&
-    (retargetSquatDepth > 0.08 || retargetHipDrop > 0.12);
+    (retargetContactsBothFeet && (retargetSquatDepth > 0.08 || retargetHipDrop > 0.12)) ||
+    retargetSquatDepth > 0.24;
   const hasLiveDropSquatEvidence =
     retargetHipDrop > 0.12 ||
     retargetSquatDepth > 0.08 ||
@@ -141,6 +141,10 @@ export function resolveMovementAvatarLowerBodyDrive({
     isPlayer && !shouldDrivePlayerSquat
       ? 0
       : rawPlayerSquatPresentationDepth;
+  const intentRootDrop =
+    playerSquatPresentationDepth * (isPlayer && !hasContinuousPlantedHipDrop ? 1.72 : 0.56);
+  const retargetGeometryRootDrop =
+    isPlayer && retargetSquatDepth > 0.24 ? retargetSquatDepth * 0.56 : 0;
   const playerLowerBodyState = shouldDrivePlayerSquat
     ? "planted-squat"
     : shouldDrivePlayerLegRaise && playerLegRaiseSide === "left"
@@ -164,7 +168,11 @@ export function resolveMovementAvatarLowerBodyDrive({
     shouldApplySolverTorso: isPlayer && shouldApplyLowerBody,
     shouldDrivePlayerSquat,
     visualRootDrop: lowerBodyTrackingReady && shouldApplyLowerBody
-      ? playerSquatPresentationDepth * (isPlayer && !hasContinuousPlantedHipDrop ? 1.72 : 0.56)
+      ? hasContinuousPlantedHipDrop
+        ? intentRootDrop
+        : retargetGeometryRootDrop > 0
+          ? retargetGeometryRootDrop
+          : intentRootDrop
       : 0,
   };
 }

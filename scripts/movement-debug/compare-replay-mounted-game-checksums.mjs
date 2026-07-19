@@ -540,7 +540,11 @@ export async function runReplayMountedGameChecksumComparison(argv) {
   return report;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
+if (
+  process.argv[1] &&
+  path.basename(process.argv[1]) === "compare-replay-mounted-game-checksums.mjs" &&
+  path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)
+) {
   runReplayMountedGameChecksumComparison(process.argv.slice(2)).catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

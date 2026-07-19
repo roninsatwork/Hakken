@@ -499,7 +499,7 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await expect(page.getByText("Guided Practice")).toHaveCount(0);
   });
 
-  test("debug start gate blocks weak feet setup before practice starts", async ({ page }) => {
+  test("debug start gate releases for fully framed feet with low detector confidence", async ({ page }) => {
     await gotoWithoutServerCrash(
       page,
       `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=weak-feet-standing&debugStartGate=1`,
@@ -507,13 +507,29 @@ test.describe("Movement Demo: Authenticated Smoke", () => {
     await skipWhenRedirectedToLogin(page, "Movement start-gate proof requires the super-admin storage state.");
 
     await expect(page.getByRole("button", { name: "Start practice" })).toBeVisible({ timeout: 30000 });
-    await expect(page.getByTestId("movement-hud-setup-recovery-cue")).toHaveText("Show both feet.");
 
     await page.getByRole("button", { name: "Start practice" }).click();
 
     await expect(page.getByText("Get Ready", { exact: true })).toBeVisible();
-    await expect(page.getByText("Check Setup")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId("movement-hud-setup-recovery-cue")).toHaveText("Show both feet.");
+    await expect(page.getByTestId("movement-game-start-countdown")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("movement-game-readiness-banner")).toHaveCount(0, { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Practice Complete" })).toBeVisible({ timeout: 10000 });
+  });
+
+  test("debug start gate keeps genuinely cropped lower-body coordinates blocked", async ({ page }) => {
+    await gotoWithoutServerCrash(
+      page,
+      `/demos/movements/${movementId}/play?debugTracking=1&debugPlayerPose=lower-body-out-of-frame&debugStartGate=1`,
+    );
+    await skipWhenRedirectedToLogin(page, "Movement start-gate proof requires the super-admin storage state.");
+
+    await expect(page.getByRole("button", { name: "Start practice" })).toBeVisible({ timeout: 30000 });
+    await page.getByRole("button", { name: "Start practice" }).click();
+
+    await expect(page.getByTestId("movement-game-readiness-banner")).toContainText(
+      "Step back so your whole body is visible.",
+      { timeout: 10000 },
+    );
     await expect(page.getByText("Guided Practice")).toHaveCount(0);
   });
 

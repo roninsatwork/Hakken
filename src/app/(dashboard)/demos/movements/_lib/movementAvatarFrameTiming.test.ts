@@ -50,4 +50,26 @@ describe("movement avatar frame timing", () => {
       renderDeltaSeconds: 1 / 30,
     })).toBeCloseTo(1 / 30, 8);
   });
+
+  it("gives an explicit frame jump one maximum settle budget", () => {
+    const delta = movementAvatarSourceAwareApplicationDeltaSeconds({
+      currentSourceCapturedAt: 900,
+      frameJumpReset: true,
+      previousSourceCapturedAt: 1000,
+      renderDeltaSeconds: 1 / 60,
+    });
+    expect(delta).toBe(Number.POSITIVE_INFINITY);
+    expect(movementAvatarFrameRateAdjustedSlerp(0.5, delta)).toBe(1);
+    expect(movementAvatarFrameRateAdjustedAngleStep(0.12, delta)).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("settles the first real source frame instead of easing from avatar rest pose", () => {
+    const delta = movementAvatarSourceAwareApplicationDeltaSeconds({
+      currentSourceCapturedAt: 1000,
+      previousSourceCapturedAt: null,
+      renderDeltaSeconds: 1 / 60,
+    });
+    expect(delta).toBe(Number.POSITIVE_INFINITY);
+    expect(movementAvatarFrameRateAdjustedSlerp(0.5, delta)).toBe(1);
+  });
 });

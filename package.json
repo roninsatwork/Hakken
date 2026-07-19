@@ -35,6 +35,7 @@
     "movement:replay:analyze": "node scripts/movement-debug/analyze-sessions.mjs",
     "movement:replay:compare": "node scripts/movement-debug/compare-replay-analysis.mjs",
     "movement:replay:capture": "node scripts/movement-debug/capture-replay-lab.mjs",
+    "movement:hand-fallback:browser-proof": "node scripts/movement-debug/run-browser-hand-fallback-proof.mjs",
     "movement:replay:full-sequence": "node scripts/movement-debug/capture-replay-full-sequence.mjs",
     "movement:replay:full-sequence:analyze": "node scripts/movement-debug/analyze-replay-full-sequence.mjs",
     "movement:replay:full-sequence:bundle": "node scripts/movement-debug/analyze-replay-full-sequence-bundle.mjs",

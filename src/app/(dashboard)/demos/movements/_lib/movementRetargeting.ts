@@ -797,9 +797,23 @@ export function solveMovementRetargetFrame({
     : 0;
   const kneeBendDepth = clamp((symmetricKneeLift - 0.04) / 0.18, 0, 1);
   const hipSquatDepth = clamp((hipDrop - 0.24) / 0.38, 0, 1);
+  // A close or front-facing squat can contain trustworthy bilateral thigh/shin
+  // rotation before the image-space hip-to-floor ratio crosses the older deep
+  // squat threshold. Couple the two independent geometric signals so neither
+  // mild hip drift nor isolated leg motion can manufacture squat evidence.
+  const coupledHipSquatDepth = clamp((hipDrop - 0.06) / 0.28, 0, 1);
+  const coupledSegmentSquatDepth = clamp(
+    (lowerBodySegmentMotionDepth - 0.1) / 0.42,
+    0,
+    1,
+  );
+  const coupledSquatDepth = Math.sqrt(
+    coupledHipSquatDepth * coupledSegmentSquatDepth,
+  );
   const hasLowerBodySquatMotion = lowerBodySegmentMotionDepth > 0.08 || kneeBendDepth > 0.08;
-  const squatDepth = canTrustSquatMotion && hipSquatDepth > 0.08 && hasLowerBodySquatMotion
-    ? Math.max(hipSquatDepth, kneeBendDepth)
+  const hasHipSquatMotion = hipSquatDepth > 0.08 || coupledSquatDepth > 0.08;
+  const squatDepth = canTrustSquatMotion && hasHipSquatMotion && hasLowerBodySquatMotion
+    ? Math.max(hipSquatDepth, kneeBendDepth, coupledSquatDepth)
     : 0;
   const isSymmetricSquat = squatDepth > 0.25 && Math.abs(leftKneeLift - rightKneeLift) < 0.2;
   // Replay calibration deliberately selects the most neutral frame from the
@@ -893,7 +907,7 @@ export function getRecordedSquatPresentationDepth(frame: MovementRetargetFrame) 
   const symmetricKnees = Math.abs(frame.kneeLift.left - frame.kneeLift.right) < 0.2;
   const strongSquatEvidence =
     frame.debug.sourceQuality >= 0.45 &&
-    frame.hipDrop > 0.2 &&
+    frame.hipDrop > 0.06 &&
     frame.squatDepth > 0.24 &&
     symmetricKnees;
 

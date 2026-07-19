@@ -175,7 +175,7 @@ export default function MovementHud({
 
       {isStartGateActive ? (
         <div
-          className="pointer-events-none absolute left-1/2 top-32 z-30 w-[min(88vw,760px)] -translate-x-1/2 rounded-[28px] border-2 border-[#f6ccbe]/50 bg-[#111018]/95 px-8 py-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-30 w-[min(88vw,760px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border-2 border-[#f6ccbe]/50 bg-[#111018]/95 px-8 py-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl"
           data-testid="movement-game-readiness-banner"
           role="status"
         >

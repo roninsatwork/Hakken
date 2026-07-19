@@ -16,11 +16,15 @@ function parseArgs(argv) {
   const args = {
     allowLegacy: false,
     baseUrl: defaultBaseUrl,
+    canvasScreenshot: "",
     debugSessionJson: "",
+    frameEnd: null,
+    frameStart: null,
     headed: false,
     localTestAuth: false,
     out: "",
     role: "super-admin",
+    screenshot: "",
     secret: process.env.LOCAL_TEST_AUTH_SECRET || "",
     skipPause: false,
     storageState: "",
@@ -28,14 +32,18 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--allow-legacy") args.allowLegacy = true;
+    else if (arg === "--canvas-screenshot") args.canvasScreenshot = argv[++index] || "";
     else if (arg === "--headed") args.headed = true;
     else if (arg === "--local-test-auth") args.localTestAuth = true;
     else if (arg === "--skip-pause") args.skipPause = true;
     else if (arg === "--base-url") args.baseUrl = argv[++index] || args.baseUrl;
     else if (arg === "--debug-session-json") args.debugSessionJson = argv[++index] || "";
+    else if (arg === "--frame-start") args.frameStart = Number(argv[++index]);
+    else if (arg === "--frame-end") args.frameEnd = Number(argv[++index]);
     else if (arg === "--out") args.out = argv[++index] || "";
     else if (arg === "--storage-state") args.storageState = argv[++index] || "";
     else if (arg === "--role") args.role = argv[++index] || args.role;
+    else if (arg === "--screenshot") args.screenshot = argv[++index] || "";
     else if (arg === "--secret") args.secret = argv[++index] || "";
     else if (arg === "--help" || arg === "-h") args.help = true;
     else throw new Error(`Unknown option: ${arg}`);
@@ -70,14 +78,93 @@ Usage:
 
 Options:
   --base-url <url>        App URL. Defaults to ${defaultBaseUrl}
+  --canvas-screenshot <file>
+                         Save the rendered Game canvas after active rendering starts
   --storage-state <file> Playwright storage state
+  --frame-start <index>  First source frame in a bounded repair window
+  --frame-end <index>    Last source frame in a bounded repair window
   --allow-legacy         Exercise lifecycle but do not certify a missing input contract
   --local-test-auth      Sign in through /local-test-auth
   --role <role>          Local auth role. Defaults to super-admin
   --secret <secret>      Local auth secret
+  --screenshot <file>    Save a visible mounted-Game frame after active rendering starts
   --skip-pause           Keep playback uninterrupted for Replay/Game parity
   --headed               Show the browser
 `);
+}
+
+export function buildMountedGamePacketWindow(session, frameStart, frameEnd) {
+  if (frameStart === null && frameEnd === null) {
+    return { packet: session, sourceWindow: null };
+  }
+  const samples = Array.isArray(session?.samples) ? session.samples : [];
+  if (
+    !Number.isInteger(frameStart) || !Number.isInteger(frameEnd) ||
+    frameStart < 0 || frameEnd < frameStart || frameEnd >= samples.length
+  ) {
+    throw new Error(`Invalid mounted Game frame window ${frameStart}-${frameEnd} for ${samples.length} source frames.`);
+  }
+  const requiredFrameCount = Math.max(
+    0,
+    Number(session?.setupPrefix?.requiredFrameCount ?? session?.inputContract?.setup?.prefixFrameCount ?? 0),
+  );
+  if (frameStart < requiredFrameCount) {
+    throw new Error(
+      `Mounted Game frame window ${frameStart}-${frameEnd} cannot preserve the ${requiredFrameCount}-frame setup prefix.`,
+    );
+  }
+  const packetStart = frameStart - requiredFrameCount;
+  const packetSamples = samples.slice(packetStart, frameEnd + 1);
+  const channelPresent = (sample, channel) => {
+    const tracking = sample?.tracking ?? {};
+    if (channel === "camera") return Boolean(sample?.camera);
+    if (channel === "face") return Array.isArray(tracking.face) && tracking.face.length > 0;
+    if (channel === "hands") {
+      return [tracking.hands?.left, tracking.hands?.right].some(
+        (hand) => Array.isArray(hand?.landmarks) && hand.landmarks.length === 21,
+      );
+    }
+    if (channel === "pose") return Array.isArray(tracking.pose) && tracking.pose.length === 33;
+    if (channel === "worldPose") {
+      return Array.isArray(tracking.worldPose) && tracking.worldPose.length === 33;
+    }
+    if (channel === "blendshapes") {
+      const values = tracking.blendshapes ?? tracking.faceBlendshapes;
+      return Array.isArray(values) && values.length > 0;
+    }
+    return false;
+  };
+  const channelSummary = Object.fromEntries(
+    Object.keys(session?.channelSummary ?? {}).map((channel) => {
+      const presentFrames = packetSamples.filter((sample) => channelPresent(sample, channel)).length;
+      return [channel, {
+        complete: presentFrames === packetSamples.length,
+        presentFrames,
+        totalFrames: packetSamples.length,
+      }];
+    }),
+  );
+  return {
+    packet: {
+      ...session,
+      channelSummary,
+      sampleCount: packetSamples.length,
+      samples: packetSamples,
+      setupPrefix: {
+        ...session.setupPrefix,
+        complete: true,
+        frameIndexes: Array.from({ length: requiredFrameCount }, (_, index) => index),
+        requiredFrameCount,
+      },
+    },
+    sourceWindow: {
+      activeFrameEnd: frameEnd,
+      activeFrameStart: frameStart,
+      packetFrameEnd: frameEnd,
+      packetFrameStart: packetStart,
+      setupFrameCount: requiredFrameCount,
+    },
+  };
 }
 
 function gameUrl(args, movementId) {
@@ -97,7 +184,12 @@ export async function runMountedGamePacketCapture(argv) {
   if (!args.out) throw new Error("Pass --out <file>.");
 
   const sessionPath = path.resolve(args.debugSessionJson);
-  const session = JSON.parse(await readFile(sessionPath, "utf8"));
+  const sourceSession = JSON.parse(await readFile(sessionPath, "utf8"));
+  const { packet: session, sourceWindow } = buildMountedGamePacketWindow(
+    sourceSession,
+    args.frameStart,
+    args.frameEnd,
+  );
   const movementId = typeof session.movementId === "string" ? session.movementId : session.id;
   if (!movementId || !/^[A-Za-z0-9_-]+$/.test(movementId)) {
     throw new Error("The packet must include a selector-safe movementId.");
@@ -116,10 +208,11 @@ export async function runMountedGamePacketCapture(argv) {
     page.setDefaultTimeout(60_000);
     const redirectPath = `/demos/movements/${movementId}/play`;
     if (args.localTestAuth) await signInWithLocalTestAuth(page, args, redirectPath);
-    await page.route("**/__movement-game-packet.json", (route) => route.fulfill({
-      contentType: "application/json",
-      path: sessionPath,
-    }));
+    await page.route("**/__movement-game-packet.json", (route) => route.fulfill(
+      sourceWindow
+        ? { body: JSON.stringify(session), contentType: "application/json" }
+        : { contentType: "application/json", path: sessionPath },
+    ));
     await page.goto(gameUrl(args, movementId), { waitUntil: "domcontentloaded" });
     try {
       await page.getByRole("button", { name: "Begin Practice" }).waitFor({ timeout: 15_000 });
@@ -176,6 +269,29 @@ export async function runMountedGamePacketCapture(argv) {
     } catch (error) {
       const playbackState = await page.evaluate(() => window.__sonaeMovementGamePacketProof ?? null);
       throw new Error(`Mounted Game did not render its first active frames: ${JSON.stringify(playbackState)}. ${error instanceof Error ? error.message : String(error)}`);
+    }
+    let visibleScreenshotPath = null;
+    let visibleCanvasScreenshotPath = null;
+    if (args.canvasScreenshot || args.screenshot) {
+      await page.evaluate(() => {
+        document.querySelectorAll("[data-movement-avatar-role]").forEach((element) => {
+          element.setAttribute("style", "visibility: hidden !important");
+        });
+        const scrubber = document.querySelector(
+          'input[aria-label="Debug frame number"]',
+        )?.closest("div.pointer-events-auto");
+        if (scrubber) scrubber.style.setProperty("visibility", "hidden", "important");
+      });
+    }
+    if (args.canvasScreenshot) {
+      visibleCanvasScreenshotPath = path.resolve(args.canvasScreenshot);
+      await mkdir(path.dirname(visibleCanvasScreenshotPath), { recursive: true });
+      await page.locator("canvas").first().screenshot({ path: visibleCanvasScreenshotPath });
+    }
+    if (args.screenshot) {
+      visibleScreenshotPath = path.resolve(args.screenshot);
+      await mkdir(path.dirname(visibleScreenshotPath), { recursive: true });
+      await page.screenshot({ fullPage: false, path: visibleScreenshotPath });
     }
 
     let pausedProof = null;
@@ -248,6 +364,9 @@ export async function runMountedGamePacketCapture(argv) {
       paused: pausedProof,
       proofTier: finalProof.contractStatus === "matched" ? "contract-certified" : "legacy-lifecycle-only",
       route: gameUrl(args, movementId),
+      sourceWindow,
+      visibleCanvasScreenshotPath,
+      visibleScreenshotPath,
     };
     const outPath = path.resolve(args.out);
     await mkdir(path.dirname(outPath), { recursive: true });

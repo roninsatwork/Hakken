@@ -190,6 +190,27 @@ function confidenceForLandmark(landmark: TrackingLandmark | undefined) {
   return clamp01(visibility) * (inFrame ? 1 : 0.25);
 }
 
+function isLandmarkGeometricallyInFrame(landmark: TrackingLandmark | undefined) {
+  return Boolean(
+    landmark &&
+    Number.isFinite(landmark.x) &&
+    Number.isFinite(landmark.y) &&
+    landmark.x >= 0.02 &&
+    landmark.x <= 0.98 &&
+    landmark.y >= 0.02 &&
+    landmark.y <= 0.98
+  );
+}
+
+function isBodyPartGeometricallyInFrame(
+  poseLandmarks: TrackingLandmark[],
+  part: MovementCameraBodyPart,
+) {
+  return BODY_PART_LANDMARKS[part].every((index) => (
+    isLandmarkGeometricallyInFrame(poseLandmarks[index])
+  ));
+}
+
 function hasCompleteFiniteLandmarkStructure(
   landmarks: TrackingLandmark[],
   requiredCount: number,
@@ -289,7 +310,13 @@ const CAMERA_CONFIDENCE_EVENT_PRIORITY: MovementCameraMessageEvent[] = [
 export function getMovementCameraConfidenceRecoveryCue(
   cameraConfidence: MovementCameraConfidence,
 ): MovementCameraConfidenceRecoveryCue | null {
-  if (cameraConfidence.state === "ready" && cameraConfidence.messageEvents.length === 0) {
+  const hasOnlyNonBlockingDistalWeakness =
+    cameraConfidence.messageEvents.length === 0 &&
+    cameraConfidence.reasons.every((reason) => reason === "hands-weak" || reason === "feet-weak");
+  if (
+    (cameraConfidence.state === "ready" && cameraConfidence.messageEvents.length === 0) ||
+    hasOnlyNonBlockingDistalWeakness
+  ) {
     return null;
   }
 
@@ -351,11 +378,21 @@ export function resolveMovementCameraConfidence({
   if (bodyPartConfidence.head < 0.3) reasons.push("head-weak");
   if (Math.min(bodyPartConfidence.leftHand, bodyPartConfidence.rightHand) < 0.35) {
     reasons.push("hands-weak");
-    messageEvents.push("show-your-hands");
+    if (
+      !isBodyPartGeometricallyInFrame(poseLandmarks, "leftHand") ||
+      !isBodyPartGeometricallyInFrame(poseLandmarks, "rightHand")
+    ) {
+      messageEvents.push("show-your-hands");
+    }
   }
   if (Math.min(bodyPartConfidence.leftFoot, bodyPartConfidence.rightFoot) < 0.35) {
     reasons.push("feet-weak");
-    messageEvents.push("show-your-feet");
+    if (
+      !isBodyPartGeometricallyInFrame(poseLandmarks, "leftFoot") ||
+      !isBodyPartGeometricallyInFrame(poseLandmarks, "rightFoot")
+    ) {
+      messageEvents.push("show-your-feet");
+    }
   }
   if (!bounds || frameVisibility < 0.3) {
     messageEvents.push("move-where-i-can-see-you");
@@ -391,18 +428,29 @@ export function resolveMovementCameraConfidence({
 
 export function resolveMovementStartReadiness({
   cameraConfidence,
-  recordingAcquisitionReady = false,
+  poseLandmarks,
+  recordingAcquisitionReady,
   requirements,
 }: {
   cameraConfidence: MovementCameraConfidence;
+  poseLandmarks?: TrackingLandmark[];
   recordingAcquisitionReady?: boolean;
   requirements?: MovementSourceFrameRequirements;
 }): MovementStartReadiness {
   const requiredBodyParts = resolveRequiredBodyParts(requirements);
   const visibleBodyParts = requiredBodyParts.filter((part) => (
-    cameraConfidence.bodyPartConfidence[part] >= 0.45
+    poseLandmarks
+      ? isBodyPartGeometricallyInFrame(poseLandmarks, part)
+      : cameraConfidence.bodyPartConfidence[part] >= 0.45
   ));
   const missingBodyParts = requiredBodyParts.filter((part) => !visibleBodyParts.includes(part));
+  const hasTrustworthyCentralPose =
+    cameraConfidence.bodyPartConfidence.head >= 0.3 &&
+    cameraConfidence.bodyPartConfidence.torso >= 0.35;
+  const cameraIsBlocking =
+    cameraConfidence.isStale ||
+    cameraConfidence.state === "lost" ||
+    !hasTrustworthyCentralPose;
   const countdownMsRemaining = Math.max(requirements?.countdownMsRemaining ?? 0, 0);
   const calibrationQuality = requirements?.calibrationQuality ?? null;
   const promptEvents: MovementStartPromptEvent[] = [];
@@ -427,7 +475,7 @@ export function resolveMovementStartReadiness({
     };
   }
 
-  if (missingBodyParts.length > 0 || cameraConfidence.state === "lost" || cameraConfidence.state === "uncertain") {
+  if (missingBodyParts.length > 0 || cameraIsBlocking) {
     if (missingBodyParts.some((part) => part === "leftFoot" || part === "rightFoot" || part === "leftLeg" || part === "rightLeg")) {
       promptEvents.push("show-your-whole-body", "show-your-feet");
     }
@@ -436,7 +484,7 @@ export function resolveMovementStartReadiness({
     }
     if (promptEvents.length === 0) promptEvents.push("walk-back-into-frame");
     blockedReasons.push(...missingBodyParts.map((part) => `${part}-missing`));
-    if (cameraConfidence.state === "lost" || cameraConfidence.state === "uncertain") {
+    if (cameraIsBlocking) {
       blockedReasons.push(`camera-${cameraConfidence.state}`);
     }
 
@@ -448,7 +496,7 @@ export function resolveMovementStartReadiness({
       // gates. Complete finite image/world pose evidence with trustworthy
       // central anatomy can begin retention while distal visibility remains
       // weak. Final commissioning and Deep Capture coverage stay fail-closed.
-      canStartRecording: recordingAcquisitionReady &&
+      canStartRecording: recordingAcquisitionReady === true &&
         (calibrationQuality === null || calibrationQuality >= MOVEMENT_START_MIN_CALIBRATION_QUALITY),
       countdownMsRemaining,
       promptEvents: unique(promptEvents),
@@ -479,7 +527,7 @@ export function resolveMovementStartReadiness({
     blockedReasons,
     calibrationQuality,
     canStartGame: true,
-    canStartRecording: true,
+    canStartRecording: recordingAcquisitionReady ?? true,
     countdownMsRemaining,
     promptEvents: [],
     requiredBodyParts,
@@ -558,6 +606,7 @@ export function buildMovementSourceFrame({
   });
   const startReadiness = resolveMovementStartReadiness({
     cameraConfidence,
+    poseLandmarks: sourcePoseLandmarks,
     recordingAcquisitionReady: hasTrustworthyRecordingAcquisitionEvidence({
       cameraConfidence,
       poseLandmarks: sourcePoseLandmarks,

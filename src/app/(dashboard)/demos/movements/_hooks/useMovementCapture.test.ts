@@ -132,7 +132,8 @@ describe("movement capture quality", () => {
       worldLandmarks: [],
     });
     expect(blocked.canStartRecording).toBe(false);
-    expect(blocked.promptEvents).toContain("show-your-feet");
+    expect(blocked.canStartGame).toBe(true);
+    expect(blocked.promptEvents).not.toContain("show-your-feet");
   });
 
   it("starts evidence acquisition when distal visibility is weak but image/world pose structure is complete", () => {
@@ -158,17 +159,9 @@ describe("movement capture quality", () => {
 
     expect(pose.filter((landmark) => (landmark.visibility ?? 0) >= 0.2)).toHaveLength(13);
     expect(recovered.canStartRecording).toBe(true);
-    expect(recovered.canStartGame).toBe(false);
-    expect(recovered.state).toBe("blocked");
-    expect(recovered.blockedReasons).toEqual(expect.arrayContaining([
-      "leftArm-missing",
-      "rightArm-missing",
-      "leftLeg-missing",
-      "rightLeg-missing",
-      "leftFoot-missing",
-      "rightFoot-missing",
-      "camera-uncertain",
-    ]));
+    expect(recovered.canStartGame).toBe(true);
+    expect(recovered.state).toBe("ready");
+    expect(recovered.blockedReasons).toEqual([]);
   });
 
   it("does not recover recording readiness from incomplete or invented pose evidence", () => {

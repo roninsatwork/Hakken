@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   REQUIRED_CHANNELS,
   validateCompleteReplayGamePacket,
+  validateDeepCaptureRenderedAvatar,
 } from "./run-replay-mounted-game-packet-proof.mjs";
 import { MOVEMENT_COMMISSIONING_REQUIRED_CHANNELS } from "../../src/app/(dashboard)/demos/movements/_lib/movementRecordingCommissioning";
 
@@ -57,5 +58,39 @@ describe("Replay/mounted Game packet proof preflight", () => {
       "hands channel evidence is missing",
       "face channel evidence is missing",
     ]));
+  });
+});
+
+describe("Replay/mounted Game Deep Capture final-avatar proof", () => {
+  const rotation = { x: 0.1, y: -0.2, z: 0.3 };
+  const validHand = {
+    curlMagnitude: 0.6,
+    indexProximal: rotation,
+    middleProximal: rotation,
+    thumbProximal: rotation,
+  };
+  const game = (left = validHand) => ({
+    final: {
+      renderedFrames: [{
+        frameIndex: 7,
+        playerApplied: {
+          avatarExpressions: { aa: 0, blinkLeft: 0.5, blinkRight: 0, happy: 0.2 },
+          avatarHands: { left, right: validHand },
+        },
+      }],
+    },
+  });
+
+  it("accepts finite hand and face telemetry from the final avatar", () => {
+    expect(validateDeepCaptureRenderedAvatar(game())).toEqual([]);
+  });
+
+  it("rejects the null finger telemetry produced by collapsed landmark fixtures", () => {
+    expect(validateDeepCaptureRenderedAvatar(game({
+      ...validHand,
+      indexProximal: { x: null, y: null, z: 0 },
+    }))).toEqual([
+      "frame 7 has non-finite final-avatar left finger telemetry",
+    ]);
   });
 });

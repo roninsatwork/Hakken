@@ -202,31 +202,56 @@ describe("movement source frame contracts", () => {
     ]);
   });
 
-  it("separates camera confidence from start readiness", () => {
+  it("keeps low-confidence feet honest without treating in-frame coordinates as cropping", () => {
+    const pose = weakFeetPose();
     const confidence = resolveMovementCameraConfidence({
       capturedAt: 2000,
-      poseLandmarks: weakFeetPose(),
+      poseLandmarks: pose,
     });
     const fullBodyReadiness = resolveMovementStartReadiness({
       cameraConfidence: confidence,
+      poseLandmarks: pose,
       requirements: { mode: "full-body" },
     });
     const upperBodyReadiness = resolveMovementStartReadiness({
       cameraConfidence: confidence,
+      poseLandmarks: pose,
       requirements: { mode: "upper-body" },
     });
 
     expect(confidence.state).toBe("partial");
     expect(confidence.scoreAllowed).toBe(true);
-    expect(confidence.messageEvents).toContain("show-your-feet");
-    expect(fullBodyReadiness.state).toBe("blocked");
-    expect(fullBodyReadiness.canStartRecording).toBe(false);
-    expect(fullBodyReadiness.promptEvents).toContain("show-your-feet");
+    expect(confidence.reasons).toContain("feet-weak");
+    expect(confidence.messageEvents).not.toContain("show-your-feet");
+    expect(fullBodyReadiness.state).toBe("ready");
+    expect(fullBodyReadiness.canStartGame).toBe(true);
+    expect(fullBodyReadiness.visibleBodyParts).toContain("leftFoot");
+    expect(fullBodyReadiness.visibleBodyParts).toContain("rightFoot");
     expect(upperBodyReadiness.state).toBe("ready");
     expect(upperBodyReadiness.canStartGame).toBe(true);
   });
 
-  it("lets recording acquisition start from complete image/world structure without weakening Game readiness", () => {
+  it("still blocks genuinely cropped lower-body coordinates", () => {
+    const pose = croppedFeetPose();
+    const confidence = resolveMovementCameraConfidence({
+      capturedAt: 2025,
+      poseLandmarks: pose,
+    });
+    const readiness = resolveMovementStartReadiness({
+      cameraConfidence: confidence,
+      poseLandmarks: pose,
+      requirements: { mode: "full-body" },
+    });
+
+    expect(confidence.messageEvents).toContain("step-back");
+    expect(readiness.state).toBe("blocked");
+    expect(readiness.canStartGame).toBe(false);
+    expect(readiness.visibleBodyParts).not.toContain("leftFoot");
+    expect(readiness.visibleBodyParts).not.toContain("rightFoot");
+    expect(readiness.promptEvents).toContain("show-your-feet");
+  });
+
+  it("lets complete in-frame image/world structure start despite weak distal confidence", () => {
     const pose = withCorePose().map((landmark, index) => ({
       ...landmark,
       visibility: [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 23, 24].includes(index)
@@ -241,9 +266,9 @@ describe("movement source frame contracts", () => {
     });
 
     expect(frame.cameraConfidence.state).toBe("uncertain");
-    expect(frame.startReadiness.state).toBe("blocked");
+    expect(frame.startReadiness.state).toBe("ready");
     expect(frame.startReadiness.canStartRecording).toBe(true);
-    expect(frame.startReadiness.canStartGame).toBe(false);
+    expect(frame.startReadiness.canStartGame).toBe(true);
     expect(resolveMovementStartGateDecision({
       readiness: frame.startReadiness,
       target: "recording",
@@ -251,7 +276,7 @@ describe("movement source frame contracts", () => {
     expect(resolveMovementStartGateDecision({
       readiness: frame.startReadiness,
       target: "game",
-    }).canStart).toBe(false);
+    }).canStart).toBe(true);
   });
 
   it("returns camera recovery cues for weak, cropped, and distant frames", () => {
@@ -262,11 +287,7 @@ describe("movement source frame contracts", () => {
     expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
       capturedAt: 2200,
       poseLandmarks: weakFeetPose(),
-    }))).toMatchObject({
-      event: "show-your-feet",
-      message: "Show both feet.",
-      state: "partial",
-    });
+    }))).toBeNull();
     expect(getMovementCameraConfidenceRecoveryCue(resolveMovementCameraConfidence({
       capturedAt: 2300,
       poseLandmarks: croppedFeetPose(),

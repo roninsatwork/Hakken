@@ -192,20 +192,21 @@ export function useVrmAvatarFrameRuntime({
       return;
     }
     const { avatarRoot, vrm } = frameEntryRuntime.context;
+    const frameJumpReset = consumeMovementAvatarRuntimeFrameJumpReset({
+      pendingResetRef: pendingFrameResetRef,
+      refs: resetRefs,
+      vrm,
+    });
     const sourceCapturedAt = motionFrame?.source.capturedAt;
     const applicationDeltaSeconds = movementAvatarSourceAwareApplicationDeltaSeconds({
       currentSourceCapturedAt: sourceCapturedAt,
+      frameJumpReset,
       previousSourceCapturedAt: previousAppliedSourceCapturedAtRef.current,
       renderDeltaSeconds: delta,
     });
     if (Number.isFinite(sourceCapturedAt)) {
       previousAppliedSourceCapturedAtRef.current = sourceCapturedAt!;
     }
-    consumeMovementAvatarRuntimeFrameJumpReset({
-      pendingResetRef: pendingFrameResetRef,
-      refs: resetRefs,
-      vrm,
-    });
 
     const {
       avatarRole,
