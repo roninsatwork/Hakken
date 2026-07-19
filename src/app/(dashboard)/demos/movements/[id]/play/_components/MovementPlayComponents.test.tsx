@@ -281,11 +281,11 @@ describe("movement play components", () => {
 
     expect(screen.getByText("Roll Down")).toBeInTheDocument();
     expect(screen.getByText("120")).toBeInTheDocument();
-    expect(screen.getByText("84%")).toBeInTheDocument();
-    expect(screen.getByText("76%")).toBeInTheDocument();
-    expect(screen.getAllByText("Check spine")).not.toHaveLength(0);
-    expect(screen.getByText("Stack head over hips.")).toBeInTheDocument();
-    expect(screen.getByText("Keep head, shoulders, and hips visible.")).toBeInTheDocument();
+    expect(screen.getByText("Score")).toBeInTheDocument();
+    expect(screen.queryByText("84%")).not.toBeInTheDocument();
+    expect(screen.queryByText("76%")).not.toBeInTheDocument();
+    expect(screen.queryByText("Check spine")).not.toBeInTheDocument();
+    expect(screen.queryByText("Posture Sync")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
 
     fireEvent.click(screen.getByText("Retry Vision"));
@@ -323,7 +323,7 @@ describe("movement play components", () => {
     expect(onTogglePlaying).toHaveBeenCalledTimes(1);
   });
 
-  it("shows shared setup recovery guidance when tracking is otherwise playable", () => {
+  it("shows one readiness instruction while Start waits for the player", () => {
     render(
       <MovementHud
         movementTitle="Roll Down"
@@ -338,6 +338,8 @@ describe("movement play components", () => {
         visionStatus="ready"
         visionError={null}
         calibrationStatus="Ready"
+        startReadinessMessage="Show both feet."
+        startReadinessStatus="waiting-for-readiness"
         webcamRef={React.createRef<Webcam>()}
         onTogglePlaying={vi.fn()}
         onRetryVision={vi.fn()}
@@ -346,7 +348,7 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByTestId("movement-hud-setup-recovery-cue")).toHaveTextContent("Show both feet.");
+    expect(screen.getAllByText("Show both feet.")).toHaveLength(1);
     expect(screen.queryByText("Spine ready")).not.toBeInTheDocument();
   });
 
@@ -378,7 +380,10 @@ describe("movement play components", () => {
     );
 
     expect(screen.getByText("Get Ready")).toBeInTheDocument();
-    expect(screen.getByText("Get ready: 4")).toBeInTheDocument();
+    expect(screen.getByTestId("movement-game-start-countdown")).toHaveTextContent("4");
+    expect(screen.getByText("Position detected")).toBeInTheDocument();
+    expect(screen.getByText("Perfect — stay there.")).toBeInTheDocument();
+    expect(screen.getByText(/The game will start automatically/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Start practice" }));
@@ -386,7 +391,7 @@ describe("movement play components", () => {
     expect(onTogglePlaying).not.toHaveBeenCalled();
   });
 
-  it("shows start-readiness block messages", () => {
+  it("shows one plain-language start-readiness message", () => {
     render(
       <MovementHud
         movementTitle="Roll Down"
@@ -404,7 +409,7 @@ describe("movement play components", () => {
         visionError={null}
         calibrationStatus="Ready"
         startReadinessMessage="Show your whole body."
-        startReadinessStatus="blocked"
+        startReadinessStatus="waiting-for-readiness"
         webcamRef={React.createRef<Webcam>()}
         onTogglePlaying={vi.fn()}
         onRetryVision={vi.fn()}
@@ -413,15 +418,16 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByText("Check Setup")).toBeInTheDocument();
-    expect(screen.getByText("Show your whole body.")).toBeInTheDocument();
-    expect(screen.getAllByText("Spine blocked")).not.toHaveLength(0);
-    expect(screen.getByText("Waiting for spine tracking.")).toBeInTheDocument();
-    expect(screen.getByText("Step back until head, shoulders, and hips are visible.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start practice" })).toBeEnabled();
+    expect(screen.getByText("Getting You Ready")).toBeInTheDocument();
+    expect(screen.getAllByText("Show your whole body.")).toHaveLength(1);
+    expect(screen.getByText("Game starts automatically")).toBeInTheDocument();
+    expect(screen.getByText("Show your whole body.")).toHaveClass("sm:text-4xl");
+    expect(screen.queryByText("Spine blocked")).not.toBeInTheDocument();
+    expect(screen.queryByText("Waiting for spine tracking.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
   });
 
-  it("exposes recalibration when vision is ready", () => {
+  it("keeps manual posture controls hidden while automatic setup warms", () => {
     const onCalibrate = vi.fn();
 
     render(
@@ -445,11 +451,11 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Start practice" })).toBeDisabled();
-
-    fireEvent.click(screen.getByText("Posture check"));
-
-    expect(onCalibrate).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Start practice" })).toBeEnabled();
+    expect(screen.getByText("Press Start to begin setup")).toBeInTheDocument();
+    expect(screen.queryByText("Posture check")).not.toBeInTheDocument();
+    expect(screen.queryByText("Posture Check-In")).not.toBeInTheDocument();
+    expect(onCalibrate).not.toHaveBeenCalled();
   });
 
   it("surfaces camera stream issues when vision is ready but no stream arrives", () => {
@@ -477,17 +483,17 @@ describe("movement play components", () => {
       />,
     );
 
-    expect(screen.queryByText("Camera check needed")).not.toBeInTheDocument();
+    expect(screen.queryByText("Camera needed")).not.toBeInTheDocument();
 
     act(() => {
       vi.advanceTimersByTime(3500);
     });
 
-    expect(screen.getByText("Camera check needed")).toBeInTheDocument();
+    expect(screen.getByText("Camera needed")).toBeInTheDocument();
     expect(screen.getByText("Allow camera access")).toBeInTheDocument();
   });
 
-  it("offers presenter reset and guided preview recovery from camera issues", () => {
+  it("offers reset without exposing a guided-preview bypass", () => {
     vi.useFakeTimers();
 
     const onResetStudio = vi.fn();
@@ -518,12 +524,12 @@ describe("movement play components", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Reset studio" }));
-    fireEvent.click(screen.getByRole("button", { name: "Guided Preview" }));
 
-    expect(screen.getByText("Camera check needed")).toBeInTheDocument();
+    expect(screen.getByText("Camera needed")).toBeInTheDocument();
     expect(screen.getByText("Camera permission is blocked")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guided Preview" })).not.toBeInTheDocument();
     expect(onResetStudio).toHaveBeenCalledTimes(1);
-    expect(onStartGuidedPreview).toHaveBeenCalledTimes(1);
+    expect(onStartGuidedPreview).not.toHaveBeenCalled();
   });
 
   it("labels skipped calibration as preview mode even when camera permission is blocked", () => {

@@ -5,6 +5,7 @@ import { useMovementCapture } from "../movements/_hooks/useMovementCapture";
 import type { MovementStartReadiness } from "../movements/_lib/movementSourceFrame";
 import MovementCapturePage, {
   DEEP_CAPTURE_COVERAGE_CHECKLIST,
+  resolveMovementCaptureRouteMode,
   resolveMovementRecordingSaveRequirements,
 } from "./page";
 
@@ -136,6 +137,26 @@ describe("MovementCapturePage", () => {
     });
   });
 
+  it("locks the canonical path to schema-v3 Deep Capture without query parameters", () => {
+    expect(resolveMovementCaptureRouteMode({
+      pathname: "/demos/movement-capture/deep",
+      search: "",
+    })).toEqual({
+      commissioningMode: true,
+      deepCaptureMode: true,
+    });
+  });
+
+  it("keeps ordinary capture explicit and visibly separate", () => {
+    expect(resolveMovementCaptureRouteMode({
+      pathname: "/demos/movement-capture",
+      search: "",
+    })).toEqual({
+      commissioningMode: false,
+      deepCaptureMode: false,
+    });
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-18T08:00:00.000Z"));
@@ -252,6 +273,10 @@ describe("MovementCapturePage", () => {
       expect(screen.getByText(item.instruction)).toBeInTheDocument();
     }
     expect(screen.getByText(/Nothing here is timed or compulsory/i)).toBeInTheDocument();
+    expect(screen.getByTestId("capture-profile-mode")).toHaveAttribute(
+      "data-capture-profile",
+      "schema-v3-deep-capture",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Start test capture" }));
     expect(startRecordingMock).toHaveBeenCalledTimes(1);
@@ -262,5 +287,32 @@ describe("MovementCapturePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Stop test capture" }));
     expect(stopRecordingMock).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("dialog")).toHaveTextContent("Save recording with 180 frames");
+  });
+
+  it("cannot silently look like Deep Capture on the standard route", async () => {
+    window.history.replaceState({}, "", "/demos/movement-capture");
+    render(<MovementCapturePage />);
+    await act(async () => undefined);
+
+    expect(screen.getByTestId("capture-profile-mode")).toHaveAttribute(
+      "data-capture-profile",
+      "schema-v2-standard",
+    );
+    expect(screen.getByRole("link", { name: "Switch to schema-v3 Deep Capture" })).toHaveAttribute(
+      "href",
+      "/demos/movement-capture/deep",
+    );
+  });
+
+  it("shows the locked Deep Capture profile on the canonical path", async () => {
+    window.history.replaceState({}, "", "/demos/movement-capture/deep");
+    render(<MovementCapturePage />);
+    await act(async () => undefined);
+
+    expect(screen.getByTestId("capture-profile-mode")).toHaveAttribute(
+      "data-capture-profile",
+      "schema-v3-deep-capture",
+    );
+    expect(screen.getByText("Capture profile locked: schema-v3 Deep Capture")).toBeInTheDocument();
   });
 });

@@ -11,18 +11,19 @@ describe("movement acquisition contract guard", () => {
 
   it("blocks route-local filters and setup counts", () => {
     const report = auditMovementAcquisitionContract({
-      capture: "new PoseFilterWrapper createMovementDenseCaptureRuntime denseCaptureAdapter wasOccluded occluded: !primaryFaceEvidence?.crop resolveMovementDeepCaptureHandRefinementRegion occluded: !handRefinementRegions[side] drawMovementHandOverlay drawMovementFaceOverlay drawMovementDenseBodyOverlay trackingOverlayDetail fuseMovementDenseCaptureEvidence resolveMovementCameraDeviceFingerprint",
+      capture: "new PoseFilterWrapper createMovementDenseCaptureRuntime denseCaptureAdapter wasOccluded occluded: !faceRefinementRegion resolveMovementDeepCaptureHandRefinementRegion resolveMovementDeepCaptureFaceRefinementRegion occluded: !handRefinementRegions[side] drawMovementHandOverlay drawMovementFaceOverlay drawMovementDenseBodyOverlay trackingOverlayDetail fuseMovementDenseCaptureEvidence resolveMovementCameraDeviceFingerprint",
       cameraFingerprint: 'id: "movement-camera-device-fingerprint-v1"',
       captureReuseCli: "evaluateMovementCaptureReuse",
       captureReusePolicy: 'id: "movement-capture-reuse-policy-v1" "physical-camera" "dense-body-model" "renderer"',
       captureBenchmark: "MediaRecorder Nothing on this page uploads raw RGB video consent",
       captureBenchmarkContract: 'id: "near-camera" id: "loose-clothing"',
-      capturePage: "buildMovementDeepCaptureFrameEnvelope validateMovementDeepCaptureEnvelope createMovementBodyPixDenseCaptureAdapter commissioningMode && !deepCaptureMode",
+      capturePage: 'buildMovementDeepCaptureFrameEnvelope validateMovementDeepCaptureEnvelope createMovementBodyPixDenseCaptureAdapter commissioningMode && !deepCaptureMode pathname === "/demos/movement-capture/deep" data-capture-profile="schema-v3-deep-capture" data-capture-profile="schema-v2-standard"',
       capturePreflight: "movement-dense-capture-adapter-v1 model SHA-256 is invalid",
       codec: "MOVEMENT_DEEP_CAPTURE_PROFILE",
       commissioning: "MOVEMENT_DEEP_CAPTURE_PROFILE movement-deep-capture-refinement-v1 validateMovementDenseCaptureMeasurement",
       contract: 'id: "movement-player-input-v1"; id: "mediapipe-vision-v1"; MEDIAPIPE_POSE_CONFIDENCE; prefixFrameCount: 60; sampleLimit: 12',
       deepContract: 'id: "movement-deep-capture-v1"; schemaVersion: 3; minimum: 200; maximum: 500; state: "observed" | "temporally-carried" | "reacquired"; eyewear: "unknown"',
+      deepCaptureRoute: 'export { default } from "../page"',
       deepRefinement: 'id: "movement-deep-capture-refinement-v1"; mapMovementDeepCaptureCropLandmarksToSourceFrame; origin: "temporally-tracked"',
       deepReviewManifest: "movement-deep-capture-review-manifest-v1 movementPipelineFingerprint currentWorkingTreeClean minimumSupportedDevice artifactRecord",
       deepRecordingInventory: "--all-recordings",

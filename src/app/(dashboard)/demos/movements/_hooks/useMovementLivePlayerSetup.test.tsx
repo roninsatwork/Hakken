@@ -56,4 +56,38 @@ describe("useMovementLivePlayerSetup", () => {
 
     expect(result.current).toBeNull();
   });
+
+  it("keeps collecting until a weak initial prefix is replaced by trustworthy evidence", () => {
+    const playerLiveLmRef = { current: null } as RefObject<VrmMotionRef>;
+    const { result } = renderHook(() => useMovementLivePlayerSetup({
+      isVisionReady: true,
+      playerLiveLmRef,
+    }));
+
+    for (let index = 0; index < 60; index += 1) {
+      const weakPayload = makeMovementAvatarProofMotionPayload("standing");
+      playerLiveLmRef.current = {
+        ...weakPayload,
+        capturedAt: index,
+        landmarks: weakPayload.landmarks?.map((landmark) => ({
+          ...landmark,
+          visibility: 0,
+        })),
+      };
+      act(() => vi.runOnlyPendingTimers());
+    }
+
+    expect(result.current).toBeNull();
+
+    for (let index = 60; index < 120; index += 1) {
+      playerLiveLmRef.current = {
+        ...makeMovementAvatarProofMotionPayload("standing"),
+        capturedAt: index,
+      };
+      act(() => vi.runOnlyPendingTimers());
+    }
+
+    expect(result.current?.calibration?.quality).toBeGreaterThanOrEqual(0.55);
+    expect(result.current?.retargetSourceModel).not.toBeNull();
+  });
 });

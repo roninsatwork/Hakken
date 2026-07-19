@@ -152,7 +152,7 @@ describe("movementStartReadinessMessage", () => {
     ["show-your-whole-body", "Show your whole body."],
     ["show-your-feet", "Show your feet."],
     ["show-your-hands", "Show your hands."],
-    ["hold-still-for-calibration", "Hold still for posture check."],
+    ["hold-still-for-calibration", "Hold still while the camera gets ready."],
     ["walk-back-into-frame", "Walk back into frame."],
   ] as const)("maps %s prompt events", (promptEvent, message) => {
     expect(getMovementStartReadinessMessage({

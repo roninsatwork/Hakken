@@ -6,6 +6,9 @@ describe("sanitizeAuthRedirect", () => {
     expect(sanitizeAuthRedirect(
       "/demos/movement-capture?commissioning=1&deepCapture=1",
     )).toBe("/demos/movement-capture?commissioning=1&deepCapture=1");
+    expect(sanitizeAuthRedirect("/demos/movement-capture/deep")).toBe(
+      "/demos/movement-capture/deep",
+    );
     expect(sanitizeAuthRedirect("/admin/companies?view=active")).toBe(
       "/admin/companies?view=active",
     );

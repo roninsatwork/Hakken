@@ -6,6 +6,7 @@ import {
   carryMovementDeepCaptureFaceEvidence,
   carryMovementDeepCaptureHandEvidence,
   mapMovementDeepCaptureCropLandmarksToSourceFrame,
+  resolveMovementDeepCaptureFaceRefinementRegion,
   resolveMovementDeepCaptureHandRefinementRegion,
   resolveMovementDeepCaptureRefinementInputSize,
   resolveMovementDeepCaptureObservationState,
@@ -21,6 +22,7 @@ const crop = {
   x: 600,
   y: 300,
 };
+const POSE_FACE_RIGHT_TEST_INDEXES = [4, 5, 6, 8, 10] as const;
 
 function poseWithLeftHand({
   anchorVisibility = 0.95,
@@ -43,6 +45,45 @@ function poseWithLeftHand({
   pose[17] = { visibility: anchorVisibility, x: x - 0.035 * scale, y: y - 0.15 * scale, z: 0 };
   pose[19] = { visibility: anchorVisibility, x: x + 0.02 * scale, y: y - 0.2 * scale, z: 0 };
   pose[21] = { visibility: anchorVisibility, x: x + 0.075 * scale, y: y - 0.13 * scale, z: 0 };
+  return pose;
+}
+
+function poseWithFace({
+  scale = 1,
+  visibility = 0.95,
+  x = 0.5,
+  y = 0.25,
+}: {
+  scale?: number;
+  visibility?: number;
+  x?: number;
+  y?: number;
+} = {}) {
+  const pose = Array.from({ length: 33 }, () => ({
+    visibility: 0,
+    x: 0.5,
+    y: 0.5,
+    z: 0,
+  })) satisfies NormalizedLandmark[];
+  const point = (dx: number, dy: number) => ({
+    visibility,
+    x: x + dx * scale,
+    y: y + dy * scale,
+    z: 0,
+  });
+  pose[0] = point(0, 0);
+  pose[1] = point(-0.018, -0.018);
+  pose[2] = point(-0.028, -0.02);
+  pose[3] = point(-0.04, -0.018);
+  pose[4] = point(0.018, -0.018);
+  pose[5] = point(0.028, -0.02);
+  pose[6] = point(0.04, -0.018);
+  pose[7] = point(-0.065, 0);
+  pose[8] = point(0.065, 0);
+  pose[9] = point(-0.022, 0.045);
+  pose[10] = point(0.022, 0.045);
+  pose[11] = point(-0.16, 0.2);
+  pose[12] = point(0.16, 0.2);
   return pose;
 }
 
@@ -167,6 +208,55 @@ describe("movement Deep Capture refinement", () => {
       lastDurationMs: null,
       nowMs: 1_000,
     })).toEqual({ reason: "no-roi", run: false });
+  });
+
+  it("uses a coarse face crop when the full-frame Face Landmarker found one", () => {
+    expect(resolveMovementDeepCaptureFaceRefinementRegion({
+      camera: { frameHeight: 720, frameWidth: 1280 },
+      poseLandmarks: poseWithFace(),
+      primaryCrop: crop,
+    })).toEqual({ crop, source: "face-landmarker" });
+  });
+
+  it.each([
+    ["far", poseWithFace({ scale: 0.22 })],
+    ["edge-of-frame", poseWithFace({ scale: 0.8, x: 0.025, y: 0.16 })],
+    ["rotated partial face", (() => {
+      const pose = poseWithFace();
+      pose[1]!.visibility = 0.1;
+      pose[2]!.visibility = 0.1;
+      pose[8]!.visibility = 0.1;
+      return pose;
+    })()],
+  ])("builds a bounded %s face ROI from trustworthy Pose evidence", (_name, pose) => {
+    const camera = { frameHeight: 720, frameWidth: 1280 };
+    const region = resolveMovementDeepCaptureFaceRefinementRegion({
+      camera,
+      poseLandmarks: pose,
+      primaryCrop: null,
+    });
+
+    expect(region?.source).toBe("pose-face-fallback");
+    expect(region?.crop.width).toBe(region?.crop.height);
+    expect(region?.crop.width).toBeGreaterThan(1);
+    expect((region?.crop.x ?? 0) + (region?.crop.width ?? 0)).toBeLessThanOrEqual(1280);
+    expect((region?.crop.y ?? 0) + (region?.crop.height ?? 0)).toBeLessThanOrEqual(720);
+  });
+
+  it("does not invent a face ROI from a weak nose or one-sided Pose evidence", () => {
+    expect(resolveMovementDeepCaptureFaceRefinementRegion({
+      camera: { frameHeight: 720, frameWidth: 1280 },
+      poseLandmarks: poseWithFace({ visibility: 0.1 }),
+    })).toBeNull();
+
+    const oneSided = poseWithFace();
+    POSE_FACE_RIGHT_TEST_INDEXES.forEach((index) => {
+      oneSided[index]!.visibility = 0.1;
+    });
+    expect(resolveMovementDeepCaptureFaceRefinementRegion({
+      camera: { frameHeight: 720, frameWidth: 1280 },
+      poseLandmarks: oneSided,
+    })).toBeNull();
   });
 
   it("recovers a real 21-point near-camera palm when the coarse hand detector has no ROI", () => {

@@ -6,13 +6,13 @@ import {
   MOVEMENT_PLAYER_INPUT_CONTRACT,
   buildMovementPlayerSetupFromPrefix,
 } from "../_lib/movementPlayerInputContract";
+import { MOVEMENT_START_MIN_CALIBRATION_QUALITY } from "../_lib/movementSourceFrame";
 import type { VrmMotionPayload, VrmMotionRef } from "../_lib/vrmRigging";
 
 /**
  * Builds the Game player's neutral setup from the same prefix selector used by
- * Replay. This is intentionally passive: it gives Guided Preview the same
- * calibration and retarget baseline as Replay without changing the explicit
- * posture check-in flow.
+ * Replay. Normal play uses this passive setup behind the single Start action;
+ * manual calibration remains a debug-only repair control.
  */
 export function useMovementLivePlayerSetup({
   isVisionReady,
@@ -56,14 +56,22 @@ export function useMovementLivePlayerSetup({
             framesRef.current.length >=
             MOVEMENT_PLAYER_INPUT_CONTRACT.setup.prefixFrameCount
           ) {
-            completed = true;
-            if (setupPrefixFramesRef) {
-              setupPrefixFramesRef.current = framesRef.current.slice(
-                0,
-                MOVEMENT_PLAYER_INPUT_CONTRACT.setup.prefixFrameCount,
-              );
+            const prefixFrameCount = MOVEMENT_PLAYER_INPUT_CONTRACT.setup.prefixFrameCount;
+            const candidateFrames = framesRef.current.slice(-prefixFrameCount);
+            const candidateSetup = buildMovementPlayerSetupFromPrefix(candidateFrames);
+            if (
+              candidateSetup?.calibration &&
+              candidateSetup.retargetSourceModel &&
+              candidateSetup.calibration.quality >= MOVEMENT_START_MIN_CALIBRATION_QUALITY
+            ) {
+              completed = true;
+              if (setupPrefixFramesRef) {
+                setupPrefixFramesRef.current = candidateFrames;
+              }
+              setSetup(candidateSetup);
+            } else {
+              framesRef.current = candidateFrames.slice(-(prefixFrameCount - 1));
             }
-            setSetup(buildMovementPlayerSetupFromPrefix(framesRef.current));
           }
         }
       }

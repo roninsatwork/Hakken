@@ -7,6 +7,7 @@ export const MOVEMENT_ACQUISITION_CONTRACT_PATHS = {
   captureBenchmark: "src/app/(dashboard)/demos/movement-capture/benchmark/page.tsx",
   captureBenchmarkContract: "src/app/(dashboard)/demos/movements/_lib/movementDenseBenchmarkCapture.ts",
   capturePage: "src/app/(dashboard)/demos/movement-capture/page.tsx",
+  deepCaptureRoute: "src/app/(dashboard)/demos/movement-capture/deep/page.tsx",
   capturePreflight: "src/app/(dashboard)/demos/movements/_lib/movementCapturePreflight.ts",
   codec: "src/app/(dashboard)/demos/movements/_lib/movementFrameCodec.ts",
   commissioning: "src/app/(dashboard)/demos/movements/_lib/movementRecordingCommissioning.ts",
@@ -143,6 +144,10 @@ export function auditMovementAcquisitionContract(files) {
   requireText("capturePage", "buildMovementDeepCaptureFrameEnvelope", "Capture has no schema-v3 packet path");
   requireText("capturePage", "validateMovementDeepCaptureEnvelope", "Capture bypasses Deep Capture validation");
   requireText("capturePage", "commissioningMode && !deepCaptureMode", "canonical Deep Capture URL can pass mutually exclusive save requirements");
+  requireText("capturePage", 'pathname === "/demos/movement-capture/deep"', "Deep Capture still depends only on lossy query-string state");
+  requireText("capturePage", 'data-capture-profile="schema-v3-deep-capture"', "Deep Capture mode is not visibly locked before recording");
+  requireText("capturePage", 'data-capture-profile="schema-v2-standard"', "standard capture can silently look like Deep Capture");
+  requireText("deepCaptureRoute", 'export { default } from "../page"', "canonical query-free Deep Capture route is missing");
   requireText("captureBenchmark", "MediaRecorder", "private RGB benchmark capture has no browser-local recorder");
   requireText("captureBenchmark", "Nothing on this page uploads raw RGB video", "private RGB benchmark capture hides its privacy boundary");
   requireText("captureBenchmark", "consent", "private RGB benchmark capture has no explicit consent state");
@@ -216,8 +221,9 @@ export function auditMovementAcquisitionContract(files) {
   requireText("capture", "createMovementDenseCaptureRuntime", "capture has no asynchronous dense-adapter runtime");
   requireText("capture", "denseCaptureAdapter", "capture cannot accept the selected dense adapter");
   requireText("capture", "wasOccluded", "capture cannot label refinement reacquisition after a short occlusion");
-  requireText("capture", "occluded: !primaryFaceEvidence?.crop", "face refinement carry still depends on a currently visible face ROI");
+  requireText("capture", "occluded: !faceRefinementRegion", "face refinement carry still depends on a currently visible coarse face ROI");
   requireText("capture", "resolveMovementDeepCaptureHandRefinementRegion", "capture has no pose-backed fallback hand ROI");
+  requireText("capture", "resolveMovementDeepCaptureFaceRefinementRegion", "capture has no pose-backed fallback face ROI");
   requireText("capture", "occluded: !handRefinementRegions[side]", "hand refinement carry ignores the resolved coarse-or-fallback ROI");
   requireText("capture", "drawMovementHandOverlay", "capture does not draw genuine 21-point hand evidence");
   requireText("capture", "drawMovementFaceOverlay", "capture does not expose genuine dense face evidence");

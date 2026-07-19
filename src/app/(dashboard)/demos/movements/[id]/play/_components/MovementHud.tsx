@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Webcam from "react-webcam";
-import { ArrowLeft, Crosshair, Pause, Play, RefreshCw, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
 import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../../../_lib/movementCameraConstraints";
@@ -29,7 +29,12 @@ type MovementHudProps = {
   calibrationStatus: string;
   startReadinessCountdownSeconds?: number;
   startReadinessMessage?: string | null;
-  startReadinessStatus?: "idle" | "countdown" | "checking-visibility" | "blocked";
+  startReadinessStatus?:
+    | "idle"
+    | "waiting-for-readiness"
+    | "countdown"
+    | "checking-visibility"
+    | "blocked";
   webcamRef: React.RefObject<Webcam | null>;
   onTogglePlaying: () => void;
   onRetryVision: () => void;
@@ -44,30 +49,22 @@ export default function MovementHud({
   movementTitle,
   difficulty,
   hudScore,
-  hudSync,
-  hudSpine = 0,
-  hudSpineCue = "Waiting for spine tracking.",
-  hudSpineReadiness = "blocked",
   isPlaying,
   isVisionReady,
   isTrackingCalibrated,
   isPreviewMode = false,
   isCalibrating,
-  setupRecoveryCue = null,
   visionStatus,
   visionError,
   isCameraReady = false,
   cameraError = null,
-  calibrationStatus,
   startReadinessCountdownSeconds = 0,
   startReadinessMessage = null,
   startReadinessStatus = "idle",
   webcamRef,
   onTogglePlaying,
   onRetryVision,
-  onCalibrate,
   onResetStudio,
-  onStartGuidedPreview,
   onCameraReady,
   onCameraError,
 }: MovementHudProps) {
@@ -85,53 +82,49 @@ export default function MovementHud({
   const cameraNeedsAttention =
     Boolean(cameraError) || (visionStatus === "ready" && !isCameraReady && hasCameraWaitElapsed);
   const isStartGateActive =
-    startReadinessStatus === "countdown" || startReadinessStatus === "checking-visibility";
-  let readinessLabel = "Loading Vision";
+    startReadinessStatus === "waiting-for-readiness" ||
+    startReadinessStatus === "countdown" ||
+    startReadinessStatus === "checking-visibility";
+  let readinessLabel = "Loading camera";
   if (startReadinessStatus === "countdown") {
-    readinessLabel = `Get ready: ${Math.max(startReadinessCountdownSeconds, 1)}`;
+    readinessLabel = `Starting in ${Math.max(startReadinessCountdownSeconds, 1)}`;
+  } else if (startReadinessStatus === "waiting-for-readiness") {
+    readinessLabel = startReadinessMessage ?? "Show your whole body";
   } else if (startReadinessStatus === "checking-visibility") {
-    readinessLabel = "Checking visibility";
+    readinessLabel = "Checking you're ready";
   } else if (startReadinessStatus === "blocked") {
     readinessLabel = startReadinessMessage ?? "Move where I can see you";
   } else if (visionStatus === "failed") {
-    readinessLabel = "Vision Failed";
+    readinessLabel = "Camera unavailable";
   } else if (isPreviewMode) {
     readinessLabel = "Preview mode";
   } else if (cameraNeedsAttention) {
-    readinessLabel = "Camera check needed";
+    readinessLabel = "Camera needed";
   } else if (visionStatus === "ready") {
-    readinessLabel = isTrackingCalibrated
-      ? (isPlaying ? calibrationStatus : "Ready")
-      : calibrationStatus;
+    readinessLabel = isPlaying
+      ? "Game in progress"
+      : isTrackingCalibrated
+        ? "Press Start when you're ready"
+        : "Press Start to begin setup";
   }
   const isPlaybackDisabled = isPreviewMode
     ? isCalibrating
-    : !isVisionReady || !isTrackingCalibrated || isCalibrating || isStartGateActive;
+    : !isVisionReady || isCalibrating || isStartGateActive;
   const practiceLabel = startReadinessStatus === "countdown"
     ? "Get Ready"
+    : startReadinessStatus === "waiting-for-readiness"
+      ? "Getting You Ready"
     : startReadinessStatus === "checking-visibility"
-      ? "Checking Setup"
+      ? "Starting"
       : startReadinessStatus === "blocked"
-        ? "Check Setup"
+        ? "Camera Needed"
       : isPlaying
-        ? "Guided Practice"
-        : "Studio Ready";
-  const spineReadinessLabel = hudSpineReadiness === "ready"
-    ? "Spine ready"
-    : hudSpineReadiness === "needs-attention"
-      ? "Check spine"
-      : "Spine blocked";
-  const spineReadinessClass = hudSpineReadiness === "ready"
-    ? "border-[#a8d5ba]/30 bg-[#a8d5ba]/12 text-[#dff8e8]"
-    : hudSpineReadiness === "needs-attention"
-      ? "border-[#f6ccbe]/30 bg-[#f6ccbe]/12 text-[#ffe5da]"
-      : "border-red-300/25 bg-red-300/10 text-red-100";
-  const spineRecoveryText = hudSpineReadiness === "ready"
-    ? null
-    : hudSpineReadiness === "needs-attention"
-      ? "Keep head, shoulders, and hips visible."
-      : "Step back until head, shoulders, and hips are visible.";
-  const setupRecoveryText = setupRecoveryCue ?? spineRecoveryText;
+        ? "Pause"
+        : "Start";
+  const controlReadinessLabel = isStartGateActive
+    ? "Game starts automatically"
+    : readinessLabel;
+  const displayedScore = isPlaying || hudScore > 0 ? hudScore : "—";
 
   return (
     <div className="relative z-10 flex h-full flex-col p-8 pointer-events-none" style={{ isolation: "isolate" }}>
@@ -169,11 +162,48 @@ export default function MovementHud({
         <div className="flex items-center gap-4 rounded-2xl border border-[#f6ccbe]/[0.16] bg-[#f6ccbe]/[0.08] px-6 py-2">
           <Sparkles className="h-6 w-6 text-[#f6ccbe]" />
           <div className="flex flex-col">
-            <Typography className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f6ccbe]">Alignment</Typography>
-            <Typography className="mt-1 text-3xl font-black leading-none text-white">{hudScore}</Typography>
+            <Typography className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f6ccbe]">Score</Typography>
+            <Typography
+              className="mt-1 text-3xl font-black leading-none text-white"
+              data-testid="movement-hud-score"
+            >
+              {displayedScore}
+            </Typography>
           </div>
         </div>
       </div>
+
+      {isStartGateActive ? (
+        <div
+          className="pointer-events-none absolute left-1/2 top-32 z-30 w-[min(88vw,760px)] -translate-x-1/2 rounded-[28px] border-2 border-[#f6ccbe]/50 bg-[#111018]/95 px-8 py-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl"
+          data-testid="movement-game-readiness-banner"
+          role="status"
+        >
+          <p className="text-sm font-black uppercase tracking-[0.24em] text-[#a8d5ba]">
+            {startReadinessStatus === "countdown" ? "Position detected" : "Camera setup"}
+          </p>
+          {startReadinessStatus === "countdown" ? (
+            <>
+              <p
+                className="mt-2 text-7xl font-black leading-none text-white sm:text-8xl"
+                data-testid="movement-game-start-countdown"
+              >
+                {Math.max(startReadinessCountdownSeconds, 1)}
+              </p>
+              <p className="mt-3 text-xl font-bold text-[#f6ccbe] sm:text-2xl">
+                Perfect — stay there.
+              </p>
+            </>
+          ) : (
+            <p className="mt-3 text-2xl font-black leading-tight text-white sm:text-4xl">
+              {readinessLabel}
+            </p>
+          )}
+          <p className="mt-4 text-base font-bold text-white/75 sm:text-lg">
+            You don&apos;t need to press Start again. The game will start automatically.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-auto flex items-end justify-between gap-4 pointer-events-auto">
         <div className="flex min-w-0 max-w-[min(78vw,380px)] items-center gap-4 rounded-full border border-white/10 bg-[#111018]/[0.72] p-2 pr-6 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl sm:max-w-none sm:pr-8">
@@ -190,31 +220,9 @@ export default function MovementHud({
               <span className="truncate text-lg font-bold tracking-wide text-white">
                 {practiceLabel}
               </span>
-              <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${calibrationStatus === "Ready" && visionStatus === "ready" ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
-                {readinessLabel}
+              <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${isPlaying ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
+                {controlReadinessLabel}
               </span>
-              {(hudSpine > 0 || setupRecoveryText) && (
-                <div className="mt-1 flex max-w-[320px] flex-col gap-1">
-                  {hudSpine > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] ${spineReadinessClass}`}>
-                        {spineReadinessLabel}
-                      </span>
-                      <span className="max-w-[220px] truncate text-[11px] font-bold text-[#d7eef4]">
-                        {hudSpineCue}
-                      </span>
-                    </div>
-                  ) : null}
-                  {setupRecoveryText ? (
-                    <span
-                      className="max-w-[300px] truncate text-[10px] font-bold text-white/60"
-                      data-testid="movement-hud-setup-recovery-cue"
-                    >
-                      {setupRecoveryText}
-                    </span>
-                  ) : null}
-                </div>
-              )}
               {visionError && (
                 <button
                   type="button"
@@ -229,56 +237,9 @@ export default function MovementHud({
                   <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
                     {cameraError ?? "Allow camera access"}
                   </span>
-                  {onStartGuidedPreview && (
-                    <button
-                      type="button"
-                      onClick={onStartGuidedPreview}
-                      className="inline-flex items-center gap-1 rounded-full border border-[#f6ccbe]/[0.22] bg-[#f6ccbe]/[0.10] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#f6ccbe] transition-colors hover:bg-[#f6ccbe]/[0.16] hover:text-white"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      Guided Preview
-                    </button>
-                  )}
                 </div>
               )}
-              {isVisionReady && (
-                <button
-                  type="button"
-                  onClick={onCalibrate}
-                  disabled={isCalibrating}
-                  className="mt-1 inline-flex w-fit items-center gap-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#d7eef4] underline decoration-[#d7eef4]/[0.35] underline-offset-4 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <RefreshCw className={`h-3 w-3 ${isCalibrating ? "animate-spin" : ""}`} />
-                  Posture check
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-5 rounded-full border border-white/10 bg-[#111018]/[0.72] py-4 pl-5 pr-10 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#a8d5ba]/[0.45] bg-[#a8d5ba]/[0.18]">
-            <Crosshair className="h-6 w-6 text-[#a8d5ba]" />
-          </div>
-          <div className="flex flex-col">
-            <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#a8d5ba]">Posture Sync</Typography>
-            <Typography className="text-4xl font-black text-white" data-testid="movement-hud-posture-sync">
-              {hudSync}%
-            </Typography>
-          </div>
-          <div className="h-10 w-px bg-white/15" />
-          <div className="flex flex-col">
-            <Typography className="text-[11px] font-bold uppercase tracking-widest text-[#f6ccbe]">Spine</Typography>
-            <Typography className="text-4xl font-black text-white">{hudSpine}%</Typography>
-            <Typography className={`mt-0.5 text-[10px] font-black uppercase tracking-[0.16em] ${
-              hudSpineReadiness === "ready"
-                ? "text-[#a8d5ba]"
-                : hudSpineReadiness === "needs-attention"
-                  ? "text-[#f6ccbe]"
-                  : "text-red-100"
-            }`}>
-              {spineReadinessLabel}
-            </Typography>
           </div>
         </div>
       </div>

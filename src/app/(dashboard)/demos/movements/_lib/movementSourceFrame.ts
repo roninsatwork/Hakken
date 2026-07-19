@@ -123,6 +123,8 @@ export type MovementSourceFrameRequirements = {
   mode?: "full-body" | "upper-body";
 };
 
+export const MOVEMENT_START_MIN_CALIBRATION_QUALITY = 0.55;
+
 export type BuildMovementSourceFrameInput = {
   blendshapes?: MovementBlendshape[];
   camera?: MovementDebugReplayFrame["camera"];
@@ -447,7 +449,7 @@ export function resolveMovementStartReadiness({
       // central anatomy can begin retention while distal visibility remains
       // weak. Final commissioning and Deep Capture coverage stay fail-closed.
       canStartRecording: recordingAcquisitionReady &&
-        (calibrationQuality === null || calibrationQuality >= 0.55),
+        (calibrationQuality === null || calibrationQuality >= MOVEMENT_START_MIN_CALIBRATION_QUALITY),
       countdownMsRemaining,
       promptEvents: unique(promptEvents),
       requiredBodyParts,
@@ -456,7 +458,10 @@ export function resolveMovementStartReadiness({
     };
   }
 
-  if (calibrationQuality !== null && calibrationQuality < 0.55) {
+  if (
+    calibrationQuality !== null &&
+    calibrationQuality < MOVEMENT_START_MIN_CALIBRATION_QUALITY
+  ) {
     return {
       blockedReasons: ["calibration-low-quality"],
       calibrationQuality,

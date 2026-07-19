@@ -131,6 +131,17 @@ describe("LoginPage", () => {
     });
   });
 
+  it("returns Google sign-in to the query-free locked Deep Capture route", () => {
+    searchParamsGetMock.mockReturnValue("/demos/movement-capture/deep");
+    renderLoginPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+
+    expect(signInMock).toHaveBeenCalledWith("google", {
+      redirectTo: "/demos/movement-capture/deep",
+    });
+  });
+
   it("rejects an external post-login redirect", () => {
     searchParamsGetMock.mockReturnValue("https://example.com/steal");
     renderLoginPage();

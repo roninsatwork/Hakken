@@ -35,6 +35,7 @@ import {
   carryMovementDeepCaptureHandEvidence,
   mapMovementDeepCaptureCropLandmarksToSourceFrame,
   resolveMovementDeepCaptureHandRefinementRegion,
+  resolveMovementDeepCaptureFaceRefinementRegion,
   resolveMovementDeepCaptureRefinementInputSize,
   resolveMovementDeepCaptureObservationState,
   resolveMovementDeepCaptureRefinementSchedule,
@@ -336,6 +337,11 @@ export function useMovementCapture({
               left: acquisitionFrame.deepCapture?.hands?.left,
               right: acquisitionFrame.deepCapture?.hands?.right,
             };
+            const faceRefinementRegion = resolveMovementDeepCaptureFaceRefinementRegion({
+              camera: acquisitionFrame.camera,
+              poseLandmarks: acquisitionFrame.landmarks ?? [],
+              primaryCrop: primaryFaceEvidence?.crop,
+            });
             const handRefinementRegions = {
               left: resolveMovementDeepCaptureHandRefinementRegion({
                 camera: acquisitionFrame.camera,
@@ -351,7 +357,7 @@ export function useMovementCapture({
               }),
             };
             const hasRegionOfInterest = Boolean(
-              primaryFaceEvidence?.crop ||
+              faceRefinementRegion ||
               handRefinementRegions.left ||
               handRefinementRegions.right,
             );
@@ -371,7 +377,7 @@ export function useMovementCapture({
                 const carriedFace = carryMovementDeepCaptureFaceEvidence({
                   evidence: cache.face.evidence,
                   nowMs,
-                  occluded: !primaryFaceEvidence?.crop,
+                  occluded: !faceRefinementRegion,
                 });
                 if (carriedFace) {
                   cache.face.wasOccluded ||= carriedFace.tracking.occluded;
@@ -417,7 +423,7 @@ export function useMovementCapture({
               const refinementStartedAtMs = performance.now();
               const capturedAt = Date.now();
 
-              const faceCrop = primaryFaceEvidence?.crop;
+              const faceCrop = faceRefinementRegion?.crop;
               if (faceCrop && faceRefiner) {
                 faceRefinementCanvasRef.current ??= document.createElement("canvas");
                 const inputSize = renderMovementDeepCaptureCrop({
@@ -455,7 +461,7 @@ export function useMovementCapture({
                         inputHeight: inputSize.height,
                         inputWidth: inputSize.width,
                         profileId: MOVEMENT_DEEP_CAPTURE_REFINEMENT_PROFILE.id,
-                        roiSource: "face-landmarker",
+                        roiSource: faceRefinementRegion.source,
                         source: "native-roi-second-pass",
                       };
                       acquisitionFrame.deepCapture ??= {

@@ -33,6 +33,11 @@ export type MovementDeepCaptureHandRefinementRegion = {
   source: "coarse-hand-landmarker" | "pose-hand-fallback";
 };
 
+export type MovementDeepCaptureFaceRefinementRegion = {
+  crop: MovementDeepCaptureCrop;
+  source: "face-landmarker" | "pose-face-fallback";
+};
+
 export type MovementDeepCaptureHandRefinementCandidate = {
   assignment: ReturnType<typeof resolveMovementDeepCaptureHandAssignment>;
   mappedLandmarks: NormalizedLandmark[];
@@ -49,6 +54,9 @@ const POSE_HAND_INDEXES = {
 
 const POSE_HAND_WRIST_VISIBILITY = 0.35;
 const POSE_HAND_ANCHOR_VISIBILITY = 0.25;
+const POSE_FACE_VISIBILITY = 0.35;
+const POSE_FACE_LEFT_INDEXES = [1, 2, 3, 7, 9] as const;
+const POSE_FACE_RIGHT_INDEXES = [4, 5, 6, 8, 10] as const;
 
 function finitePosePoint(landmark: NormalizedLandmark | null | undefined) {
   return Boolean(
@@ -157,6 +165,122 @@ function buildPoseHandFallbackCrop({
     x: left,
     y: top,
   };
+}
+
+function buildPoseFaceFallbackCrop({
+  frameHeight,
+  frameWidth,
+  poseLandmarks,
+}: {
+  frameHeight: number;
+  frameWidth: number;
+  poseLandmarks: NormalizedLandmark[];
+}): MovementDeepCaptureCrop | null {
+  if (frameHeight <= 0 || frameWidth <= 0) return null;
+  const nose = poseLandmarks[0];
+  if (!finitePosePoint(nose) || (nose?.visibility ?? 0) < POSE_FACE_VISIBILITY) return null;
+
+  const trustworthyFacePoint = (index: number) => {
+    const landmark = poseLandmarks[index];
+    return finitePosePoint(landmark) &&
+      (landmark?.visibility ?? 0) >= POSE_FACE_VISIBILITY
+      ? landmark
+      : null;
+  };
+  const leftPoints = POSE_FACE_LEFT_INDEXES.map(trustworthyFacePoint).filter(
+    (landmark): landmark is NormalizedLandmark => Boolean(landmark),
+  );
+  const rightPoints = POSE_FACE_RIGHT_INDEXES.map(trustworthyFacePoint).filter(
+    (landmark): landmark is NormalizedLandmark => Boolean(landmark),
+  );
+  // A nose alone cannot identify a trustworthy face box. Require evidence on
+  // both anatomical sides, then let the real Face Landmarker decide whether a
+  // genuine 478-point face exists inside the crop.
+  if (leftPoints.length === 0 || rightPoints.length === 0) return null;
+  const facePoints = [nose!, ...leftPoints, ...rightPoints];
+  if (facePoints.length < 5) return null;
+
+  const pixelPoints = facePoints.map((landmark) => ({
+    x: landmark.x * frameWidth,
+    y: landmark.y * frameHeight,
+  }));
+  const minX = Math.min(...pixelPoints.map((point) => point.x));
+  const maxX = Math.max(...pixelPoints.map((point) => point.x));
+  const minY = Math.min(...pixelPoints.map((point) => point.y));
+  const maxY = Math.max(...pixelPoints.map((point) => point.y));
+  const faceWidth = maxX - minX;
+  const faceHeight = maxY - minY;
+
+  const shoulders = [poseLandmarks[11], poseLandmarks[12]].filter(
+    (landmark): landmark is NormalizedLandmark => (
+      finitePosePoint(landmark) && (landmark?.visibility ?? 0) >= POSE_FACE_VISIBILITY
+    ),
+  );
+  const shoulderSpan = shoulders.length === 2
+    ? Math.hypot(
+        (shoulders[0]!.x - shoulders[1]!.x) * frameWidth,
+        (shoulders[0]!.y - shoulders[1]!.y) * frameHeight,
+      )
+    : 0;
+  if (faceWidth < 2 && faceHeight < 2 && shoulderSpan < 2) return null;
+
+  const minimumHalfExtent = Math.max(32, Math.min(frameWidth, frameHeight) * 0.035);
+  const maximumHalfExtent = Math.min(frameWidth, frameHeight) * 0.32;
+  const halfExtent = Math.min(
+    maximumHalfExtent,
+    Math.max(
+      minimumHalfExtent,
+      faceWidth * 0.95,
+      faceHeight * 1.8,
+      shoulderSpan * 0.28,
+    ),
+  );
+  const cropSize = Math.max(2, Math.min(
+    frameWidth,
+    frameHeight,
+    Math.ceil(halfExtent * 2),
+  ));
+  const centre = {
+    x: (minX + maxX) / 2,
+    // Pose face points do not include the forehead. Bias slightly upward while
+    // retaining the mouth/chin area inside the conservative square.
+    y: nose!.y * frameHeight - Math.max(faceHeight * 0.12, cropSize * 0.04),
+  };
+  const left = Math.min(
+    Math.max(0, Math.floor(centre.x - cropSize / 2)),
+    frameWidth - cropSize,
+  );
+  const top = Math.min(
+    Math.max(0, Math.floor(centre.y - cropSize / 2)),
+    frameHeight - cropSize,
+  );
+
+  return {
+    height: cropSize,
+    sourceFrameHeight: frameHeight,
+    sourceFrameWidth: frameWidth,
+    width: cropSize,
+    x: left,
+    y: top,
+  };
+}
+
+export function resolveMovementDeepCaptureFaceRefinementRegion({
+  camera,
+  poseLandmarks,
+  primaryCrop,
+}: {
+  camera: { frameHeight: number; frameWidth: number };
+  poseLandmarks: NormalizedLandmark[];
+  primaryCrop?: MovementDeepCaptureCrop | null;
+}): MovementDeepCaptureFaceRefinementRegion | null {
+  if (primaryCrop) return { crop: primaryCrop, source: "face-landmarker" };
+  const crop = buildPoseFaceFallbackCrop({
+    frameHeight: camera.frameHeight,
+    frameWidth: camera.frameWidth,
+    poseLandmarks,
+  });
+  return crop ? { crop, source: "pose-face-fallback" } : null;
 }
 
 export function resolveMovementDeepCaptureHandRefinementRegion({

@@ -74,6 +74,22 @@ export function resolveMovementRecordingSaveRequirements({
   } as const;
 }
 
+export function resolveMovementCaptureRouteMode({
+  pathname,
+  search,
+}: {
+  pathname: string;
+  search: string;
+}) {
+  const params = new URLSearchParams(search);
+  const deepCaptureMode = pathname === "/demos/movement-capture/deep" ||
+    params.get("deepCapture") === "1";
+  return {
+    commissioningMode: deepCaptureMode || params.get("commissioning") === "1",
+    deepCaptureMode,
+  };
+}
+
 function createIdleCaptureStartGate(): MovementCaptureStartGateState {
   return {
     message: null,
@@ -173,9 +189,12 @@ export default function MovementCapturePage() {
   const router = useRouter();
 
   React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setCommissioningMode(params.get("commissioning") === "1");
-    setDeepCaptureMode(params.get("deepCapture") === "1");
+    const mode = resolveMovementCaptureRouteMode({
+      pathname: window.location.pathname,
+      search: window.location.search,
+    });
+    setCommissioningMode(mode.commissioningMode);
+    setDeepCaptureMode(mode.deepCaptureMode);
     setCaptureModeResolved(true);
   }, []);
 
@@ -404,6 +423,25 @@ export default function MovementCapturePage() {
             Back to Studio Library
           </Link>
         </div>
+        {captureModeResolved && !deepCaptureMode && (
+          <div
+            className="rounded-2xl border border-amber-300/35 bg-amber-300/10 px-5 py-4 text-sm text-foreground"
+            data-capture-profile="schema-v2-standard"
+            data-testid="capture-profile-mode"
+          >
+            <p className="font-semibold">Standard capture — schema v2</p>
+            <p className="mt-1 text-secondary">
+              This page is not recording the full Deep Capture profile. Use the locked Deep Capture
+              route when hands, face, gaze, dense body and Replay/Game commissioning evidence are required.
+            </p>
+            <Link
+              className="mt-3 inline-flex rounded-full border border-amber-200/25 px-4 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-200/10"
+              href="/demos/movement-capture/deep"
+            >
+              Switch to schema-v3 Deep Capture
+            </Link>
+          </div>
+        )}
         {commissioningMode && (
           <div className="rounded-2xl border border-[#f6ccbe]/35 bg-[#f6ccbe]/10 px-5 py-4 text-sm text-foreground">
             <p className="font-semibold">Replay/Game commissioning capture</p>
@@ -414,7 +452,12 @@ export default function MovementCapturePage() {
           </div>
         )}
         {deepCaptureMode && (
-          <div className="rounded-2xl border border-sky-400/35 bg-sky-400/10 px-5 py-4 text-sm text-foreground">
+          <div
+            className="rounded-2xl border border-sky-400/35 bg-sky-400/10 px-5 py-4 text-sm text-foreground"
+            data-capture-profile="schema-v3-deep-capture"
+            data-testid="capture-profile-mode"
+          >
+            <p className="font-semibold text-sky-100">Capture profile locked: schema-v3 Deep Capture</p>
             <p className="font-semibold text-base">Optional movement coverage checklist</p>
             <p className="mt-1 font-medium text-sky-100">
               Nothing here is timed or compulsory. Move naturally, in any order, and take as long as you need. The recording stops only when you press Stop.

@@ -55,7 +55,11 @@ export type MovementDeepCaptureRefinementMetadata = {
   inputHeight: number;
   inputWidth: number;
   profileId: "movement-deep-capture-refinement-v1";
-  roiSource?: "coarse-hand-landmarker" | "pose-hand-fallback" | "face-landmarker";
+  roiSource?:
+    | "coarse-hand-landmarker"
+    | "pose-hand-fallback"
+    | "face-landmarker"
+    | "pose-face-fallback";
   source: "native-roi-second-pass";
 };
 

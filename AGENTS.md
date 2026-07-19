@@ -24,6 +24,13 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 - Update the estimate when scope changes, after meaningful implementation milestones, and before pausing, committing, or handing work back.
 - Use plain estimates such as "Overall: 10%. Current slice: 40%." Do not wait for the user to ask for percentages.
 
+## User-Facing UX Approval
+
+- Before changing any user-facing UX, discuss the intended experience with the user first.
+- Present the proposed flow, wording, layout, and important states, then obtain explicit approval before writing product code.
+- Feedback, criticism, and brainstorming do not authorize implementation.
+- If feedback materially changes an already approved design, pause and agree the revised design before continuing implementation.
+
 ## Verification Gates
 
 Use Node `22.13.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.

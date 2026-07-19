@@ -33,7 +33,7 @@ export function getMovementStartReadinessMessage({
   if (readiness.promptEvents.includes("show-your-feet")) return "Show your feet.";
   if (readiness.promptEvents.includes("show-your-hands")) return "Show your hands.";
   if (readiness.promptEvents.includes("hold-still-for-calibration")) {
-    return "Hold still for posture check.";
+    return "Hold still while the camera gets ready.";
   }
   if (readiness.promptEvents.includes("walk-back-into-frame")) {
     return "Walk back into frame.";
