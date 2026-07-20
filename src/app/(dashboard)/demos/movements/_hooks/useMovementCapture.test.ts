@@ -1,7 +1,12 @@
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { describe, expect, it } from "vitest";
 import {
+  createEmptyMovementFaceLandmarkerResult,
+  createEmptyMovementHandLandmarkerResult,
+  detectOptionalMovementCaptureChannel,
+  getMovementCaptureTrackingFailureMessage,
   getMovementCaptureFullBodyVisibility,
+  hasProcessableMovementVideoFrame,
   resolveMovementCaptureStartReadiness,
   shouldRecordMovementCaptureFrame,
   shouldRetainMovementCaptureFrame,
@@ -26,6 +31,81 @@ function setBodyVisibility(landmarks: NormalizedLandmark[], visibility: number) 
 }
 
 describe("movement capture quality", () => {
+  it("does not send zero-size camera frames to MediaPipe", () => {
+    expect(hasProcessableMovementVideoFrame(null)).toBe(false);
+    expect(hasProcessableMovementVideoFrame({
+      readyState: 4,
+      videoHeight: 0,
+      videoWidth: 1280,
+    })).toBe(false);
+    expect(hasProcessableMovementVideoFrame({
+      readyState: 4,
+      videoHeight: 720,
+      videoWidth: 0,
+    })).toBe(false);
+    expect(hasProcessableMovementVideoFrame({
+      readyState: 3,
+      videoHeight: 720,
+      videoWidth: 1280,
+    })).toBe(false);
+    expect(hasProcessableMovementVideoFrame({
+      readyState: 4,
+      videoHeight: 720,
+      videoWidth: 1280,
+    })).toBe(true);
+  });
+
+  it("shows a simple message when MediaPipe aborts during live tracking", () => {
+    expect(getMovementCaptureTrackingFailureMessage(new Error("Aborted()"))).toBe(
+      "Tracking stopped unexpectedly. Press Retry Tracking; if it repeats, refresh this page.",
+    );
+  });
+
+  it("keeps optional face and hand channel aborts from stopping body marker tracking", () => {
+    expect(detectOptionalMovementCaptureChannel(
+      () => {
+        throw new Error("RuntimeError: Aborted()");
+      },
+      createEmptyMovementFaceLandmarkerResult,
+    )).toEqual({
+      faceBlendshapes: [],
+      faceLandmarks: [],
+      facialTransformationMatrixes: [],
+    });
+
+    expect(detectOptionalMovementCaptureChannel(
+      () => {
+        throw new Error("Aborted()");
+      },
+      createEmptyMovementHandLandmarkerResult,
+    )).toEqual({
+      handedness: [],
+      handednesses: [],
+      landmarks: [],
+      worldLandmarks: [],
+    });
+  });
+
+  it("reports optional channel aborts so repeated failures can trigger model recovery", () => {
+    const abortError = new Error("RuntimeError: Aborted()");
+    const observedAborts: unknown[] = [];
+
+    detectOptionalMovementCaptureChannel(
+      () => {
+        throw abortError;
+      },
+      createEmptyMovementHandLandmarkerResult,
+      (error) => observedAborts.push(error),
+    );
+    detectOptionalMovementCaptureChannel(
+      createEmptyMovementHandLandmarkerResult,
+      createEmptyMovementHandLandmarkerResult,
+      (error) => observedAborts.push(error),
+    );
+
+    expect(observedAborts).toEqual([abortError]);
+  });
+
   it("scores full body visibility from shoulders, hips, knees, and feet", () => {
     const landmarks = makeLandmarks();
     setBodyVisibility(landmarks, 0.8);

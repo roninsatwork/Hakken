@@ -106,6 +106,6 @@ describe("shell layout components", () => {
     );
 
     expect(screen.getAllByRole("link", { name: "Sonae" })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Demos" })).toHaveAttribute("href", "/demos/movement-capture");
+    expect(screen.getByRole("link", { name: "Demos" })).toHaveAttribute("href", "/demos/movement-capture/deep");
   });
 });

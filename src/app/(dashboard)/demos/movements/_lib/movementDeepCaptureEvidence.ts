@@ -433,38 +433,43 @@ export function buildMovementDeepCaptureSegmentationEvidence({
   threshold?: number;
 }): MovementDeepCaptureBodyEvidence | null {
   const mask = poseResults.segmentationMasks?.[0];
-  if (!mask || mask.width <= 0 || mask.height <= 0) return null;
-  const confidenceMask = mask.getAsFloat32Array();
-  if (confidenceMask.length === 0) return null;
-  let bodyPixelCount = 0;
-  let bodyConfidenceTotal = 0;
-  confidenceMask.forEach((confidence) => {
-    if (confidence < threshold) return;
-    bodyPixelCount += 1;
-    bodyConfidenceTotal += confidence;
-  });
-  const segmentationProvenance = provenance({
-    capturedAt,
-    confidence: bodyPixelCount > 0 ? bodyConfidenceTotal / bodyPixelCount : 0,
-    sourceTimestampMs,
-  });
+  if (!mask) return null;
+  try {
+    if (mask.width <= 0 || mask.height <= 0) return null;
+    const confidenceMask = mask.getAsFloat32Array();
+    if (confidenceMask.length === 0) return null;
+    let bodyPixelCount = 0;
+    let bodyConfidenceTotal = 0;
+    confidenceMask.forEach((confidence) => {
+      if (confidence < threshold) return;
+      bodyPixelCount += 1;
+      bodyConfidenceTotal += confidence;
+    });
+    const segmentationProvenance = provenance({
+      capturedAt,
+      confidence: bodyPixelCount > 0 ? bodyConfidenceTotal / bodyPixelCount : 0,
+      sourceTimestampMs,
+    });
 
-  return {
-    anchors: [],
-    modelHash: "unverified:mediapipe-pose-landmarker",
-    modelId: "mediapipe-pose-segmentation-v1",
-    segmentation: {
-      confidence: segmentationProvenance.confidence,
-      coverage: bodyPixelCount / confidenceMask.length,
-      encoding: "model-rle",
-      frameHeight: camera.frameHeight,
-      frameWidth: camera.frameWidth,
-      maskHeight: mask.height,
-      maskWidth: mask.width,
-      payload: encodeMaskRle(confidenceMask, threshold),
-      provenance: segmentationProvenance,
-    },
-  };
+    return {
+      anchors: [],
+      modelHash: "unverified:mediapipe-pose-landmarker",
+      modelId: "mediapipe-pose-segmentation-v1",
+      segmentation: {
+        confidence: segmentationProvenance.confidence,
+        coverage: bodyPixelCount / confidenceMask.length,
+        encoding: "model-rle",
+        frameHeight: camera.frameHeight,
+        frameWidth: camera.frameWidth,
+        maskHeight: mask.height,
+        maskWidth: mask.width,
+        payload: encodeMaskRle(confidenceMask, threshold),
+        provenance: segmentationProvenance,
+      },
+    };
+  } finally {
+    mask.close();
+  }
 }
 
 export function createMovementDeepCaptureFrameEvidence() {

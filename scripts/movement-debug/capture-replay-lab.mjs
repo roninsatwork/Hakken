@@ -5,6 +5,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { movementPipelineFingerprint } from "./lib/movementPipelineFingerprint.mjs";
+import { serveLocalJsonFile } from "./lib/serveLocalJsonFile.mjs";
 import {
   buildReplaySliderSeekFidelity,
   parseReplaySliderSeekFrames,
@@ -110,10 +111,10 @@ function sanitizeFilePart(value) {
   return String(value || "unknown").replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80);
 }
 
-function replayUrl(baseUrl, args) {
+function replayUrl(baseUrl, args, debugReplaySessionUrl = "/__movement-replay-session.json") {
   const url = new URL("/demos/movements/replay-lab", baseUrl.replace(/\/$/, ""));
   if (args.debugSessionJson) {
-    url.searchParams.set("debugReplaySessionUrl", "/__movement-replay-session.json");
+    url.searchParams.set("debugReplaySessionUrl", debugReplaySessionUrl);
   }
   if (args.avatarUrl) {
     url.searchParams.set("avatarUrl", args.avatarUrl);
@@ -375,6 +376,7 @@ async function main() {
   await mkdir(args.outDir, { recursive: true });
 
   const browser = await chromium.launch({ headless: !args.headed });
+  let debugSessionServer = null;
   try {
     const context = await browser.newContext({
       storageState: storageState || undefined,
@@ -400,14 +402,15 @@ async function main() {
       await signInWithLocalTestAuth(page, args);
     }
 
+    let debugReplaySessionUrl = "/__movement-replay-session.json";
     if (args.debugSessionJson) {
-      await page.route("**/__movement-replay-session.json", (route) => route.fulfill({
-        contentType: "application/json",
-        path: path.resolve(args.debugSessionJson),
-      }));
+      debugSessionServer = await serveLocalJsonFile(path.resolve(args.debugSessionJson), {
+        name: "__movement-replay-session.json",
+      });
+      debugReplaySessionUrl = debugSessionServer.url;
     }
 
-    await page.goto(replayUrl(args.baseUrl, args), { waitUntil: "domcontentloaded" });
+    await page.goto(replayUrl(args.baseUrl, args, debugReplaySessionUrl), { waitUntil: "domcontentloaded" });
 
     const currentUrl = new URL(page.url());
     if (currentUrl.pathname === "/login") {
@@ -655,6 +658,7 @@ async function main() {
 
     await context.close();
   } finally {
+    await debugSessionServer?.close();
     await browser.close();
   }
 }

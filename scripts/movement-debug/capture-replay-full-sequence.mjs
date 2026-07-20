@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { constants } from "node:fs";
+import { constants, createReadStream, createWriteStream } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import {
@@ -9,9 +9,11 @@ import {
   movementPipelineFingerprint,
 } from "./lib/movementPipelineFingerprint.mjs";
 import { sourceHashForReplaySession } from "./lib/replay-proof-identity.mjs";
+import { serveLocalJsonFile } from "./lib/serveLocalJsonFile.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
 const defaultStorageState = "e2e/.auth/super-admin.json";
+const deterministicFrameBatchSize = 32;
 let requestedOutputPath = "";
 
 function printHelp() {
@@ -103,9 +105,9 @@ async function signInWithLocalTestAuth(page, args) {
   });
 }
 
-function replayUrl(args) {
+function replayUrl(args, debugReplaySessionUrl = "/__movement-replay-session.json") {
   const url = new URL("/demos/movements/replay-lab", args.baseUrl.replace(/\/$/, ""));
-  url.searchParams.set("debugReplaySessionUrl", "/__movement-replay-session.json");
+  url.searchParams.set("debugReplaySessionUrl", debugReplaySessionUrl);
   if (args.deterministic) url.searchParams.set("debugDeterministicReplay", "1");
   if (args.threeParty) url.searchParams.set("debugThreePartyMirror", "1");
   if (args.avatarUrl) url.searchParams.set("avatarUrl", args.avatarUrl);
@@ -118,12 +120,65 @@ function missingFrameIndexes(frames, frameCount) {
     .filter((index) => !observed.has(index));
 }
 
-async function captureDeterministicFrames(page, lab, threeParty, frameStart, frameEnd) {
+function writeToStream(stream, chunk) {
+  return new Promise((resolve, reject) => {
+    stream.write(chunk, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
+function endStream(stream) {
+  return new Promise((resolve, reject) => {
+    stream.end((error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
+async function pipeIntoStream(readable, writable) {
+  for await (const chunk of readable) {
+    await writeToStream(writable, chunk);
+  }
+}
+
+async function appendFrameChunk(stream, state, chunk) {
+  for (const frame of chunk) {
+    await writeToStream(stream, `${state.hasFrames ? ",\n" : ""}${JSON.stringify(frame)}`);
+    state.hasFrames = true;
+  }
+}
+
+async function writeReplayResultWithFrameItems(outPath, result, frameItemsPath) {
+  const stream = createWriteStream(outPath);
+  const entries = Object.entries(result).filter(([key]) => key !== "frames");
+  try {
+    await writeToStream(stream, "{\n");
+    for (const [key, value] of entries) {
+      const serialized = JSON.stringify(value, null, 2).replaceAll("\n", "\n  ");
+      await writeToStream(stream, `  ${JSON.stringify(key)}: ${serialized},\n`);
+    }
+    await writeToStream(stream, '  "frames": [\n');
+    await pipeIntoStream(createReadStream(frameItemsPath), stream);
+    await writeToStream(stream, "\n  ]\n}\n");
+  } finally {
+    await endStream(stream);
+  }
+}
+
+async function captureDeterministicFrames(page, lab, threeParty, frameStart, frameEnd, options = {}) {
   const frames = [];
+  const collectFullFrames = options.collectFullFrames !== false;
   let captureError = "";
   try {
-    for (let startFrameIndex = frameStart; startFrameIndex <= frameEnd; startFrameIndex += 250) {
-      const endFrameIndex = Math.min(frameEnd + 1, startFrameIndex + 250);
+    for (
+      let startFrameIndex = frameStart;
+      startFrameIndex <= frameEnd;
+      startFrameIndex += deterministicFrameBatchSize
+    ) {
+      const endFrameIndex = Math.min(frameEnd + 1, startFrameIndex + deterministicFrameBatchSize);
       const chunk = await page.evaluate(async ({
         endFrameIndex,
         frameWindowStart,
@@ -131,6 +186,19 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
         threeParty,
       }) => {
         const waitForAnimationFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+        const slimAvatarDebug = (debug) => debug ? structuredClone({
+          avatarExpressions: debug.avatarExpressions,
+          avatarHands: debug.avatarHands,
+          avatarHead: debug.avatarHead,
+          avatarName: debug.avatarName,
+          avatarRoot: debug.avatarRoot,
+          avatarSpine: debug.avatarSpine,
+          avatarVisual: debug.avatarVisual,
+          profileName: debug.profileName,
+          sourceCapturedAt: debug.sourceCapturedAt,
+          sourceFrameId: debug.sourceFrameId,
+          updatedAt: debug.updatedAt,
+        }) : null;
         const waitFor = async (predicate, message) => {
           for (let attempt = 0; attempt < 240; attempt += 1) {
             if (predicate()) return;
@@ -177,17 +245,18 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
           }
           const playerDebug = window.__sonaeMovementAvatarDebug?.player;
           const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
+          const replayGameBoundaryProof = window.__sonaeReplayGameBoundaryProof;
           chunkFrames.push({
             avatars: threeParty
               ? {
-                  instructor: structuredClone(instructorDebug),
-                  player: structuredClone(playerDebug),
+                  instructor: slimAvatarDebug(instructorDebug),
+                  player: slimAvatarDebug(playerDebug),
                 }
               : undefined,
-            boundaries: threeParty
-              ? structuredClone(window.__sonaeReplayGameBoundaryProof?.boundaries)
+            checksums: threeParty
+              ? structuredClone(replayGameBoundaryProof?.checksums)
               : undefined,
-            debug: structuredClone(playerDebug),
+            debug: slimAvatarDebug(playerDebug),
             frameIndex: 0 - frameWindowStart,
             renderedFrameIndex: 0,
             sourceFrameIndex: 0,
@@ -224,6 +293,7 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
           const renderedFrameIndex = Number(root.getAttribute("data-current-frame-index") || -1);
           const playerDebug = window.__sonaeMovementAvatarDebug?.player;
           const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
+          const replayGameBoundaryProof = window.__sonaeReplayGameBoundaryProof;
           if (
             !playerDebug?.avatarVisual ||
             (threeParty && !instructorDebug?.avatarVisual) ||
@@ -236,14 +306,14 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
           chunkFrames.push({
             avatars: threeParty
               ? {
-                  instructor: structuredClone(instructorDebug),
-                  player: structuredClone(playerDebug),
+                  instructor: slimAvatarDebug(instructorDebug),
+                  player: slimAvatarDebug(playerDebug),
                 }
               : undefined,
-            boundaries: threeParty
-              ? structuredClone(window.__sonaeReplayGameBoundaryProof?.boundaries)
+            checksums: threeParty
+              ? structuredClone(replayGameBoundaryProof?.checksums)
               : undefined,
-            debug: structuredClone(playerDebug),
+            debug: slimAvatarDebug(playerDebug),
             frameIndex: frameIndex - frameWindowStart,
             renderedFrameIndex,
             sourceFrameIndex: frameIndex,
@@ -256,7 +326,12 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
         startFrameIndex,
         threeParty,
       });
-      frames.push(...chunk);
+      if (options.onChunk) await options.onChunk(chunk);
+      frames.push(...(
+        collectFullFrames
+          ? chunk
+          : chunk.map((frame) => ({ frameIndex: frame.frameIndex }))
+      ));
       console.log(`Deterministic progress: ${frames.length}/${frameEnd - frameStart + 1}.`);
     }
   } catch (error) {
@@ -289,6 +364,7 @@ async function main() {
 
   const storageState = args.storageState || (await fileExists(defaultStorageState) ? defaultStorageState : "");
   const browser = await chromium.launch({ headless: !args.headed });
+  let debugSessionServer = null;
   try {
     const context = await browser.newContext({
       storageState: storageState || undefined,
@@ -298,11 +374,10 @@ async function main() {
     page.setDefaultTimeout(45_000);
 
     if (args.localTestAuth) await signInWithLocalTestAuth(page, args);
-    await page.route("**/__movement-replay-session.json", (route) => route.fulfill({
-      contentType: "application/json",
-      path: path.resolve(args.debugSessionJson),
-    }));
-    await page.goto(replayUrl(args), { waitUntil: "domcontentloaded" });
+    debugSessionServer = await serveLocalJsonFile(path.resolve(args.debugSessionJson), {
+      name: "__movement-replay-session.json",
+    });
+    await page.goto(replayUrl(args, debugSessionServer.url), { waitUntil: "domcontentloaded" });
 
     const lab = page.getByTestId("movement-replay-lab");
     try {
@@ -420,14 +495,31 @@ async function main() {
 
     let playbackError = "";
     let capture;
+    const outPath = path.resolve(args.out);
+    const streamedFrameItemsPath = `${outPath}.frames.tmp`;
+    let frameItemStream = null;
     if (args.deterministic) {
-      capture = await captureDeterministicFrames(
-        page,
-        lab,
-        args.threeParty,
-        frameStart,
-        frameEnd,
-      );
+      await mkdir(path.dirname(outPath), { recursive: true });
+      const frameItemState = { hasFrames: false };
+      frameItemStream = createWriteStream(streamedFrameItemsPath);
+      try {
+        capture = await captureDeterministicFrames(
+          page,
+          lab,
+          args.threeParty,
+          frameStart,
+          frameEnd,
+          {
+            collectFullFrames: false,
+            onChunk: (chunk) => appendFrameChunk(frameItemStream, frameItemState, chunk),
+          },
+        );
+      } finally {
+        if (frameItemStream) {
+          await endStream(frameItemStream);
+          frameItemStream = null;
+        }
+      }
       playbackError = capture.captureError;
     } else {
       await page.getByRole("button", { name: "Play replay" }).click();
@@ -510,9 +602,12 @@ async function main() {
       sourceFrameStart: frameStart,
     };
 
-    const outPath = path.resolve(args.out);
     await mkdir(path.dirname(outPath), { recursive: true });
-    await writeFile(outPath, `${JSON.stringify(result)}\n`);
+    if (args.deterministic) {
+      await writeReplayResultWithFrameItems(outPath, result, streamedFrameItemsPath);
+    } else {
+      await writeFile(outPath, `${JSON.stringify(result)}\n`);
+    }
     console.log(`Collected ${frames.length}/${captureFrameCount} rendered replay frame(s) for ${meta.sessionId}.`);
     console.log(`Playback reached source frame ${capture.currentFrameIndex}/${frameEnd}.`);
     console.log(`Missing frames: ${missingFrames.length}.`);
@@ -521,6 +616,7 @@ async function main() {
 
     await context.close();
   } finally {
+    await debugSessionServer?.close();
     await browser.close();
   }
 }

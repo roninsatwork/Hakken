@@ -211,6 +211,38 @@ function isBodyPartGeometricallyInFrame(
   ));
 }
 
+export const MOVEMENT_STRICT_WHOLE_BODY_MIN_VISIBILITY = 0.5;
+
+export type MovementStrictWholeBodyVisibility = {
+  missingBodyParts: MovementCameraBodyPart[];
+  wholeBodyVisible: boolean;
+};
+
+// The pose model always emits all 33 landmarks, guessing in-frame positions
+// for body parts the camera cannot actually see (for example the legs of a
+// seated player). Geometry alone therefore cannot gate "whole body visible":
+// each landmark must also carry real per-landmark visibility confidence.
+// This check is additive and never stored in recordings, so replaying older
+// packets keeps their original recorded readiness semantics.
+export function resolveMovementStrictWholeBodyVisibility(
+  poseLandmarks: TrackingLandmark[] | null | undefined,
+  { minVisibility = MOVEMENT_STRICT_WHOLE_BODY_MIN_VISIBILITY }: { minVisibility?: number } = {},
+): MovementStrictWholeBodyVisibility {
+  if (!poseLandmarks || poseLandmarks.length === 0) {
+    return { missingBodyParts: [...FULL_BODY_REQUIREMENTS], wholeBodyVisible: false };
+  }
+  const missingBodyParts = FULL_BODY_REQUIREMENTS.filter((part) => (
+    !BODY_PART_LANDMARKS[part].every((index) => {
+      const landmark = poseLandmarks[index];
+      return (
+        isLandmarkGeometricallyInFrame(landmark) &&
+        clamp01(landmark?.visibility ?? 1) >= minVisibility
+      );
+    })
+  ));
+  return { missingBodyParts, wholeBodyVisible: missingBodyParts.length === 0 };
+}
+
 function hasCompleteFiniteLandmarkStructure(
   landmarks: TrackingLandmark[],
   requiredCount: number,

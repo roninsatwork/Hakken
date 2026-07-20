@@ -169,7 +169,7 @@ export default function DenseBenchmarkCapturePage() {
     <>
       <Header />
       <div className="flex flex-col gap-6">
-        <Link href="/demos/movement-capture?deepCapture=1" className="flex w-fit items-center gap-2 rounded-[10px] border border-border-dim bg-sidebar/50 px-4 py-2 text-[13px] font-medium text-secondary transition-colors hover:text-foreground">
+        <Link href="/demos/movement-capture/deep" className="flex w-fit items-center gap-2 rounded-[10px] border border-border-dim bg-sidebar/50 px-4 py-2 text-[13px] font-medium text-secondary transition-colors hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Back to Deep Capture
         </Link>

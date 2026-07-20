@@ -8,6 +8,7 @@ import {
   resolveMovementCameraConfidence,
   resolveMovementStartGateDecision,
   resolveMovementStartReadiness,
+  resolveMovementStrictWholeBodyVisibility,
 } from "./movementSourceFrame";
 import type { TrackingLandmark } from "./movementTrackingCalibration";
 
@@ -229,6 +230,28 @@ describe("movement source frame contracts", () => {
     expect(fullBodyReadiness.visibleBodyParts).toContain("rightFoot");
     expect(upperBodyReadiness.state).toBe("ready");
     expect(upperBodyReadiness.canStartGame).toBe(true);
+  });
+
+  it("strict whole-body visibility rejects hallucinated in-frame lower-body guesses", () => {
+    const seatedPose = withCorePose();
+    // Seated player: the pose model keeps guessing in-frame leg/foot positions
+    // but marks them with low visibility confidence.
+    for (const index of [25, 26, 27, 28, 29, 30, 31, 32]) {
+      seatedPose[index] = { ...seatedPose[index]!, visibility: 0.2 };
+    }
+
+    const seated = resolveMovementStrictWholeBodyVisibility(seatedPose);
+    expect(seated.wholeBodyVisible).toBe(false);
+    expect(seated.missingBodyParts).toEqual(
+      expect.arrayContaining(["leftLeg", "rightLeg", "leftFoot", "rightFoot"]),
+    );
+
+    const standing = resolveMovementStrictWholeBodyVisibility(withCorePose());
+    expect(standing.wholeBodyVisible).toBe(true);
+    expect(standing.missingBodyParts).toEqual([]);
+
+    const missingFrame = resolveMovementStrictWholeBodyVisibility(null);
+    expect(missingFrame.wholeBodyVisible).toBe(false);
   });
 
   it("still blocks genuinely cropped lower-body coordinates", () => {

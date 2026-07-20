@@ -21,6 +21,7 @@ import type { MovementHandSide } from "../_lib/movementTypes";
 import type { MovementDeepCaptureFrameEvidence } from "../_lib/movementDeepCaptureContract";
 import type { MovementDeepCaptureProfileId } from "../_lib/movementDeepCaptureContract";
 import { resolveMovementReplayFrameDelay } from "../_lib/movementReplayPlaybackClock";
+import { hasProcessableMovementVideoFrame } from "./useMovementCapture";
 
 type PlayerPoseLandmark = (NormalizedLandmark | Landmark) & {
   visibility?: number;
@@ -286,7 +287,7 @@ export function useMovementPlayerTracking({
         activeFaceLandmarker &&
         activeHandLandmarker &&
         video &&
-        video.readyState === 4
+        hasProcessableMovementVideoFrame(video)
       ) {
         const startTimeMs = performance.now();
         const poseResults = activePoseLandmarker.detectForVideo(video, startTimeMs);

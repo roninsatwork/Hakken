@@ -5,7 +5,7 @@ import type {
   NormalizedLandmark,
   PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildMovementDeepCaptureFaceEvidence,
   buildMovementDeepCaptureHandEvidence,
@@ -274,9 +274,11 @@ describe("movement Deep Capture evidence", () => {
   });
 
   it("stores a compact model segmentation mask without inventing dense anchors", () => {
+    const close = vi.fn();
     const poseResults = {
       landmarks: [],
       segmentationMasks: [{
+        close,
         getAsFloat32Array: () => new Float32Array([0.1, 0.6, 0.7, 0.2]),
         height: 2,
         width: 2,
@@ -303,5 +305,6 @@ describe("movement Deep Capture evidence", () => {
       provenance: { origin: "model-estimated", sourceTimestampMs: 4_995 },
     });
     expect(evidence?.segmentation.confidence).toBeCloseTo(0.65);
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });

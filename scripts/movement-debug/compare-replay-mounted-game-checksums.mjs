@@ -208,6 +208,11 @@ function appliedSnapshot(debug) {
   };
 }
 
+function declaredBoundaryChecksum(frame, boundary) {
+  const checksum = frame?.checksums?.[boundary];
+  return typeof checksum === "string" && checksum ? checksum : null;
+}
+
 function normalizeAppliedRoot(snapshot, baseline) {
   const next = structuredClone(snapshot);
   if (next?.avatarHead) {
@@ -351,19 +356,20 @@ export function compareReplayMountedGameChecksums({ allowLegacy = false, game, r
           )
         : gameFrame?.boundaries?.[boundary];
       const replayChecksum = replayBoundary === undefined
-        ? null
+        ? declaredBoundaryChecksum(replayFrame, boundary)
         : movementBoundaryChecksumForComparison(replayBoundary);
+      const gameDeclaredChecksum = declaredBoundaryChecksum(gameFrame, boundary);
       const gameComputedChecksum = gameBoundary === undefined
-        ? null
+        ? gameDeclaredChecksum
         : movementBoundaryChecksumForComparison(gameBoundary);
-      const gameDeclaredChecksum = gameFrame?.checksums?.[boundary] ?? null;
       const missingRequiredBoundary = boundary === DEEP_CAPTURE_BOUNDARY && (
-        replayBoundary == null || gameBoundary == null
+        !replayChecksum || !gameComputedChecksum
       );
       const renderedToleranceBoundary = RENDERED_TOLERANCE_BOUNDARIES.has(boundary);
       const crossRouteChecksumDiffers = replayChecksum !== gameComputedChecksum;
       const declaredChecksumDiffers = Boolean(
         gameDeclaredChecksum &&
+        gameBoundary !== undefined &&
         boundary !== "playerApplied" &&
         gameDeclaredChecksum !== gameComputedChecksum
       );

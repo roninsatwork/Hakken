@@ -5,7 +5,7 @@ import path from "node:path";
 import { chromium } from "@playwright/test";
 
 const root = process.cwd();
-const clips = [
+const DEFAULT_CLIPS = [
   "far-camera-2026-07-18T10-52-32Z.webm",
 ];
 const clipRoot = path.join(root, "tmp/movement-replay-lab/dense-capture/clips");
@@ -37,6 +37,12 @@ async function signIn(page, baseUrl, secret) {
 async function main() {
   const baseUrl = argValue("--base-url", "http://localhost:3100");
   const secret = argValue("--secret", process.env.LOCAL_TEST_AUTH_SECRET ?? "sonae-local-test-auth");
+  const saveRecording = process.argv.includes("--save-recording");
+  const saveTitle = argValue("--title", "Automated Deep Capture Browser Proof");
+  const clips = argValue("--clips", DEFAULT_CLIPS.join(",")).split(",").map((clip) => clip.trim()).filter(Boolean);
+  // Gate-check mode: prove the armed start gate REFUSES to count down while
+  // the supplied clip does not show a trustworthy whole body.
+  const gateCheckSeconds = Number(argValue("--gate-check-seconds", "0"));
   const outDir = path.resolve(argValue(
     "--out",
     "tmp/movement-replay-lab/deep-capture-live-page-proof",
@@ -92,8 +98,12 @@ async function main() {
     const page = await context.newPage();
     page.setDefaultTimeout(90_000);
     const pageErrors = [];
+    const pageWarnings = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
     page.on("console", (message) => {
+      if (message.type() === "warning" || message.type() === "warn") {
+        pageWarnings.push(message.text());
+      }
       if (
         message.type() === "error" &&
         !message.text().includes("Blocked attempt to show a 'beforeunload' confirmation panel")
@@ -102,7 +112,54 @@ async function main() {
       }
     });
     await signIn(page, baseUrl, secret);
-    await page.getByText("Capture profile locked: schema-v3 Deep Capture").waitFor();
+    const profileMarker = page.getByTestId("capture-profile-mode");
+    await profileMarker.waitFor({ state: "attached" });
+    const captureProfile = await profileMarker.getAttribute("data-capture-profile");
+    if (captureProfile !== "schema-v3-deep-capture") {
+      throw new Error(`Capture page is not in Deep Capture mode: ${captureProfile ?? "missing profile"}`);
+    }
+
+    if (gateCheckSeconds > 0) {
+      const startButton = page.getByRole("button", { name: "Start posture capture" });
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        if (await startButton.isEnabled()) break;
+        await page.waitForTimeout(1_000);
+      }
+      if (!(await startButton.isEnabled())) {
+        throw new Error("Start button never became enabled for the gate check.");
+      }
+      await startButton.click();
+      const lifecycleStatus = page.getByTestId("recording-lifecycle-status");
+      let sawWalkBackMessage = false;
+      for (let elapsed = 0; elapsed < gateCheckSeconds; elapsed += 1) {
+        const lifecycleText = (await lifecycleStatus.innerText()).trim();
+        // "ARMED — NOT RECORDING YET" is the correct blocked state; only a
+        // leading RECORDING or GET READY label means the gate advanced.
+        if (/^(RECORDING|GET READY)/i.test(lifecycleText)) {
+          await page.screenshot({ path: path.join(outDir, "gate-check-false-start.png") });
+          throw new Error(
+            `Start gate incorrectly advanced to "${lifecycleText}" while the whole body was not visible.`,
+          );
+        }
+        const bodyText = await page.locator("body").innerText();
+        if (/walk back until/i.test(bodyText)) sawWalkBackMessage = true;
+        await page.waitForTimeout(1_000);
+      }
+      if (!sawWalkBackMessage) {
+        throw new Error("Gate check never showed a walk-back instruction while blocked.");
+      }
+      await page.screenshot({ path: path.join(outDir, "gate-check-blocked-visible.png") });
+      await writeFile(path.join(outDir, "gate-check-report.json"), JSON.stringify({
+        clips,
+        gateCheckSeconds,
+        passed: true,
+        sawWalkBackMessage,
+      }, null, 2));
+      console.log(
+        `Gate check passed: armed for ${gateCheckSeconds}s on ${clips.join(", ")} with no countdown and no recording.`,
+      );
+      return;
+    }
     let denseCaptureReady = false;
     for (let attempt = 0; attempt < 120; attempt += 1) {
       const bodyText = await page.locator("body").innerText();
@@ -179,7 +236,7 @@ async function main() {
         `Browser errors: ${pageErrors.join(" | ") || "none"}`,
       );
     }
-    await dialog.getByPlaceholder("e.g., Tall Spine Flow").fill("Automated Deep Capture Browser Proof");
+    await dialog.getByPlaceholder("e.g., Tall Spine Flow").fill(saveTitle);
     const backupButton = dialog.getByRole("button", { name: "Download local packet backup" });
     if (!(await backupButton.isEnabled())) {
       throw new Error(`Deep Capture packet was not proof-ready: ${await dialog.innerText()}`);
@@ -190,6 +247,23 @@ async function main() {
     const packetPath = path.join(outDir, "deep-capture-packet.json");
     await download.saveAs(packetPath);
     const packet = JSON.parse(await readFile(packetPath, "utf8"));
+    let savedRecordingId = null;
+    if (saveRecording) {
+      const saveButton = dialog.getByRole("button", { name: "Save Practice" });
+      if (!(await saveButton.isEnabled())) {
+        throw new Error(`Deep Capture recording was not saveable: ${await dialog.innerText()}`);
+      }
+      await saveButton.click();
+      const savedBanner = page.getByText("Proof-ready schema-v3 Deep Capture recording saved");
+      await savedBanner.waitFor({ timeout: 90_000 });
+      const savedCodes = await savedBanner.locator("..").locator("code").allTextContents();
+      savedRecordingId = savedCodes[0]?.trim() || null;
+      if (!savedRecordingId) throw new Error("Deep Capture save completed without a visible recording ID.");
+      await page.screenshot({ path: path.join(outDir, "deep-capture-saved-visible.png") });
+    }
+    const mediaPipeMaskWarnings = pageWarnings.filter((warning) =>
+      /MPMask/i.test(warning) && /not (?:been )?closed/i.test(warning)
+    );
     const report = {
       capturedMoments,
       deepCaptureProfileId: packet.deepCaptureProfile?.id ?? null,
@@ -200,6 +274,7 @@ async function main() {
         right: packet.deepCaptureChannelSummary?.rightHand?.presentFrames ?? 0,
       },
       passed: pageErrors.length === 0 &&
+        mediaPipeMaskWarnings.length === 0 &&
         packet.schemaVersion === 3 &&
         packet.deepCaptureProfile?.id === "movement-deep-capture-v1" &&
         (packet.deepCaptureChannelSummary?.denseBody?.presentFrames ?? 0) /
@@ -208,10 +283,14 @@ async function main() {
         packet.frames.every((frame) => {
           const dense = frame.deepCapture?.denseBody;
           return !dense || (dense.anchors.length >= 200 && dense.anchors.length <= 500);
-        }),
+        }) &&
+        (!saveRecording || Boolean(savedRecordingId)),
+      mediaPipeMaskWarnings,
+      pageWarnings,
       preflightBefore,
       sampleCount: packet.frames.length,
       schemaVersion: packet.schemaVersion,
+      savedRecordingId,
       sourcePacketHash: packet.sourcePacketHash,
     };
     await writeFile(path.join(outDir, "summary.json"), `${JSON.stringify(report, null, 2)}\n`);

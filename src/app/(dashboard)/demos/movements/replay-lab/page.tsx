@@ -80,6 +80,7 @@ import {
   buildMovementGameProofPlayerFrame,
   buildMovementOwnersRootSupportProofSnapshot,
 } from "../_lib/movementGameProofPacket";
+import { movementBoundaryChecksum } from "../_lib/movementBoundaryChecksum";
 
 import {
   AVATAR_FOLLOW_ACTIVE_LEG_THRESHOLD,
@@ -142,6 +143,18 @@ type MovementReplayLabDeterministicDebugWindow = Window & {
       playerApplied: unknown;
       playerRendered: unknown;
       setup: unknown;
+    };
+    checksums: {
+      acquisition: string;
+      calibration: string;
+      denseFusion: string;
+      instructorMotionFrame: string;
+      instructorRendered: string;
+      motionFrame: string;
+      ownersRootSupport: string;
+      playerApplied: string;
+      playerRendered: string;
+      setup: string;
     };
     frameIndex: number;
   };
@@ -832,26 +845,39 @@ export default function MovementReplayLabPage() {
         playerDebug.avatarVisual &&
         instructorDebug.avatarVisual
       ) {
+        const boundaries = {
+          acquisition: structuredClone(currentThreePartyPlayerPayload),
+          calibration: structuredClone(replayThreePartyPlayerCalibration),
+          denseFusion: buildMovementDenseCaptureProofSnapshot(
+            currentThreePartyPlayerPayload.deepCapture,
+          ),
+          instructorMotionFrame: structuredClone(replayInstructorMotionFrameRef.current),
+          instructorRendered: structuredClone(instructorDebug.avatarVisual),
+          motionFrame: structuredClone(replayMotionFrameRef.current),
+          ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 0.8),
+          playerApplied: structuredClone({
+            avatarExpressions: playerDebug.avatarExpressions,
+            avatarHands: playerDebug.avatarHands,
+            avatarHead: playerDebug.avatarHead,
+            avatarRoot: playerDebug.avatarRoot,
+            avatarSpine: playerDebug.avatarSpine,
+          }),
+          playerRendered: structuredClone(playerDebug.avatarVisual),
+          setup: structuredClone(replayThreePartyPlayerSetup),
+        };
         debugWindow.__sonaeReplayGameBoundaryProof = {
-          boundaries: {
-            acquisition: structuredClone(currentThreePartyPlayerPayload),
-            calibration: structuredClone(replayThreePartyPlayerCalibration),
-            denseFusion: buildMovementDenseCaptureProofSnapshot(
-              currentThreePartyPlayerPayload.deepCapture,
-            ),
-            instructorMotionFrame: structuredClone(replayInstructorMotionFrameRef.current),
-            instructorRendered: structuredClone(instructorDebug.avatarVisual),
-            motionFrame: structuredClone(replayMotionFrameRef.current),
-            ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 0.8),
-            playerApplied: structuredClone({
-              avatarExpressions: playerDebug.avatarExpressions,
-              avatarHands: playerDebug.avatarHands,
-              avatarHead: playerDebug.avatarHead,
-              avatarRoot: playerDebug.avatarRoot,
-              avatarSpine: playerDebug.avatarSpine,
-            }),
-            playerRendered: structuredClone(playerDebug.avatarVisual),
-            setup: structuredClone(replayThreePartyPlayerSetup),
+          boundaries,
+          checksums: {
+            acquisition: movementBoundaryChecksum(boundaries.acquisition),
+            calibration: movementBoundaryChecksum(boundaries.calibration),
+            denseFusion: movementBoundaryChecksum(boundaries.denseFusion),
+            instructorMotionFrame: movementBoundaryChecksum(boundaries.instructorMotionFrame),
+            instructorRendered: movementBoundaryChecksum(boundaries.instructorRendered),
+            motionFrame: movementBoundaryChecksum(boundaries.motionFrame),
+            ownersRootSupport: movementBoundaryChecksum(boundaries.ownersRootSupport),
+            playerApplied: movementBoundaryChecksum(boundaries.playerApplied),
+            playerRendered: movementBoundaryChecksum(boundaries.playerRendered),
+            setup: movementBoundaryChecksum(boundaries.setup),
           },
           frameIndex: safeFrameIndex,
         };

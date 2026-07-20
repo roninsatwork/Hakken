@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type {
+  FaceLandmarkerResult,
   FaceLandmarker,
+  HandLandmarkerResult,
   HandLandmarker,
   NormalizedLandmark,
   PoseLandmarker,
@@ -23,7 +25,9 @@ import {
 import { buildMovementSpineModel } from "../_lib/movementSpineMetrics";
 import {
   buildLiveMovementSourceFrame,
+  resolveMovementStrictWholeBodyVisibility,
   type MovementStartReadiness,
+  type MovementStrictWholeBodyVisibility,
 } from "../_lib/movementSourceFrame";
 import {
   buildMovementDeepCaptureFaceEvidence,
@@ -67,6 +71,7 @@ import {
   validateCompleteMovementDenseCaptureEvidence,
 } from "../_lib/movementDeepCaptureRecordingFrame";
 import { renderMovementDenseCaptureInput } from "../_lib/movementDenseCaptureInput";
+import { isMovementMediaPipeRuntimeAbortError } from "./useMediaPipeVision";
 export type MovementCaptureFrame = MovementAcquisitionFrame & {
   timestamp: number;
   landmarks: NormalizedLandmark[];
@@ -85,11 +90,26 @@ type UseMovementCaptureInput = {
   enableDeepCapture?: boolean;
   denseCaptureAdapter?: MovementDenseCaptureAdapter<HTMLCanvasElement> | null;
   trackingOverlayDetail?: MovementTrackingOverlayDetail;
+  trackingRecoveryToken?: number;
+  onTrackingRuntimeFailure?: () => void;
 };
 
 export const MOVEMENT_CAPTURE_RECORDING_VISIBILITY_THRESHOLD = 0.4;
 const MOVEMENT_CAPTURE_HIP_VISIBILITY_THRESHOLD = 0.35;
 const MOVEMENT_CAPTURE_KNEE_VISIBILITY_THRESHOLD = 0.25;
+
+export function hasProcessableMovementVideoFrame(
+  video: Pick<HTMLVideoElement, "readyState" | "videoHeight" | "videoWidth"> | null | undefined,
+) {
+  return Boolean(
+    video &&
+    video.readyState === 4 &&
+    Number.isFinite(video.videoWidth) &&
+    Number.isFinite(video.videoHeight) &&
+    video.videoWidth > 0 &&
+    video.videoHeight > 0
+  );
+}
 
 type MovementDeepCaptureRefinementRuntime = {
   inFlight: boolean;
@@ -201,6 +221,52 @@ export function shouldRetainMovementCaptureFrame({
   return isRecording && landmarks.length > 0;
 }
 
+export function getMovementCaptureTrackingFailureMessage(error: unknown) {
+  if (isMovementMediaPipeRuntimeAbortError(error)) {
+    return "Tracking stopped unexpectedly. Press Retry Tracking; if it repeats, refresh this page.";
+  }
+  return "Tracking stopped unexpectedly. Press Retry Tracking; if it repeats, refresh this page.";
+}
+
+export function createEmptyMovementFaceLandmarkerResult(): FaceLandmarkerResult {
+  return {
+    faceBlendshapes: [],
+    faceLandmarks: [],
+    facialTransformationMatrixes: [],
+  };
+}
+
+export function createEmptyMovementHandLandmarkerResult(): HandLandmarkerResult {
+  return {
+    handedness: [],
+    handednesses: [],
+    landmarks: [],
+    worldLandmarks: [],
+  };
+}
+
+export function detectOptionalMovementCaptureChannel<T>(
+  detect: () => T,
+  fallback: () => T,
+  onAbort?: (error: unknown) => void,
+) {
+  try {
+    return detect();
+  } catch (error) {
+    if (!isMovementMediaPipeRuntimeAbortError(error)) throw error;
+    onAbort?.(error);
+    return fallback();
+  }
+}
+
+// One aborted optional-channel frame can be a transient hiccup; this many in a
+// row means the face/hand runtime is genuinely dead and only a model rebuild
+// brings fingers and face points back.
+export const MOVEMENT_OPTIONAL_CHANNEL_ABORT_LIMIT = 3;
+
+// The preflight debug panel refreshes at reading speed, not camera speed.
+export const MOVEMENT_PREFLIGHT_UI_INTERVAL_MS = 500;
+
 export function resolveMovementCaptureStartReadiness(
   frame: Pick<MovementAcquisitionFrame, "capturedAt" | "landmarks" | "worldLandmarks">,
 ): MovementStartReadiness {
@@ -227,6 +293,8 @@ export function useMovementCapture({
   enableDeepCapture = false,
   denseCaptureAdapter = null,
   trackingOverlayDetail = "essential",
+  trackingRecoveryToken = 0,
+  onTrackingRuntimeFailure,
 }: UseMovementCaptureInput) {
   const [isRecording, setIsRecording] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
@@ -236,8 +304,12 @@ export function useMovementCapture({
     useState<MovementDenseCaptureQualityTier | null>(null);
   const [denseCaptureFailure, setDenseCaptureFailure] = useState<string | null>(null);
   const [denseCaptureOperational, setDenseCaptureOperational] = useState(false);
+  const [trackingFailure, setTrackingFailure] = useState<string | null>(null);
+  const [trackingFailureDetail, setTrackingFailureDetail] = useState<string | null>(null);
   const [captureStartReadiness, setCaptureStartReadiness] =
     useState<MovementStartReadiness | null>(null);
+  const [captureStartWholeBody, setCaptureStartWholeBody] =
+    useState<MovementStrictWholeBodyVisibility | null>(null);
   const [capturePreflight, setCapturePreflight] = useState<MovementCapturePreflight>(() => (
     buildMovementCapturePreflight({
       frame: null,
@@ -259,6 +331,9 @@ export function useMovementCapture({
   const handRefinementCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const denseCaptureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const denseCaptureOperationalRef = useRef(false);
+  const trackingFailureRef = useRef(false);
+  const optionalChannelAbortStreaksRef = useRef({ face: 0, hand: 0 });
+  const lastPreflightUiUpdateAtRef = useRef(0);
   const latestAcquisitionFrameRef = useRef<MovementAcquisitionFrame | null>(null);
   const latestStartReadinessRef = useRef<MovementStartReadiness | null>(null);
   const trackingOverlayDetailRef = useRef(trackingOverlayDetail);
@@ -272,6 +347,13 @@ export function useMovementCapture({
   }, [trackingOverlayDetail]);
 
   useEffect(() => {
+    trackingFailureRef.current = false;
+    optionalChannelAbortStreaksRef.current = { face: 0, hand: 0 };
+    setTrackingFailure(null);
+    setTrackingFailureDetail(null);
+  }, [trackingRecoveryToken]);
+
+  useEffect(() => {
     let animationFrameId: number | null = null;
     denseCaptureOperationalRef.current = false;
     setDenseCaptureOperational(false);
@@ -282,6 +364,8 @@ export function useMovementCapture({
     });
 
     const processVideo = () => {
+      if (trackingFailureRef.current) return;
+
       const video = webcamRef.current?.video;
       const canvas = canvasRef.current;
 
@@ -290,7 +374,7 @@ export function useMovementCapture({
         faceLandmarker &&
         handLandmarker &&
         video &&
-        video.readyState === 4 &&
+        hasProcessableMovementVideoFrame(video) &&
         canvas
       ) {
         const ctx = canvas.getContext("2d");
@@ -298,9 +382,71 @@ export function useMovementCapture({
         canvas.height = video.videoHeight;
 
         const startTimeMs = performance.now();
-        const poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
-        const faceResults = faceLandmarker.detectForVideo(video, startTimeMs);
-        const handResults = handLandmarker.detectForVideo(video, startTimeMs);
+        const enterTrackingRuntimeFailure = (trackingError: unknown) => {
+          trackingFailureRef.current = true;
+          setTrackingFailure(getMovementCaptureTrackingFailureMessage(trackingError));
+          setTrackingFailureDetail(
+            trackingError instanceof Error ? trackingError.message : String(trackingError),
+          );
+          setIsRecording(false);
+          onTrackingRuntimeFailure?.();
+          latestAcquisitionFrameRef.current = null;
+          latestStartReadinessRef.current = null;
+          setTrackingQuality(0);
+          setSpineQuality(0);
+          setCaptureStartReadiness(null);
+          setCaptureStartWholeBody(null);
+          lastPreflightUiUpdateAtRef.current = 0;
+          setCapturePreflight(buildMovementCapturePreflight({
+            frame: null,
+            readiness: null,
+            retainedFrameCount: recordedFramesRef.current.length,
+          }));
+        };
+        let poseResults: ReturnType<PoseLandmarker["detectForVideo"]>;
+        let faceResults: ReturnType<FaceLandmarker["detectForVideo"]>;
+        let handResults: ReturnType<HandLandmarker["detectForVideo"]>;
+        let faceChannelAbort: unknown = null;
+        let handChannelAbort: unknown = null;
+        try {
+          poseResults = poseLandmarker.detectForVideo(video, startTimeMs);
+          faceResults = detectOptionalMovementCaptureChannel(
+            () => faceLandmarker.detectForVideo(video, startTimeMs),
+            createEmptyMovementFaceLandmarkerResult,
+            (channelError) => {
+              faceChannelAbort = channelError;
+            },
+          );
+          handResults = detectOptionalMovementCaptureChannel(
+            () => handLandmarker.detectForVideo(video, startTimeMs),
+            createEmptyMovementHandLandmarkerResult,
+            (channelError) => {
+              handChannelAbort = channelError;
+            },
+          );
+        } catch (trackingError) {
+          if (!isMovementMediaPipeRuntimeAbortError(trackingError)) throw trackingError;
+          enterTrackingRuntimeFailure(trackingError);
+          return;
+        }
+
+        // A dead face or hand runtime must not silently downgrade capture to
+        // pose-only markers: after repeated aborted frames, rebuild the models
+        // through the same recovery path as a body-tracking failure.
+        const abortStreaks = optionalChannelAbortStreaksRef.current;
+        abortStreaks.face = faceChannelAbort ? abortStreaks.face + 1 : 0;
+        abortStreaks.hand = handChannelAbort ? abortStreaks.hand + 1 : 0;
+        if (
+          abortStreaks.face >= MOVEMENT_OPTIONAL_CHANNEL_ABORT_LIMIT ||
+          abortStreaks.hand >= MOVEMENT_OPTIONAL_CHANNEL_ABORT_LIMIT
+        ) {
+          enterTrackingRuntimeFailure(
+            (abortStreaks.face >= MOVEMENT_OPTIONAL_CHANNEL_ABORT_LIMIT
+              ? faceChannelAbort
+              : handChannelAbort) ?? new Error("Aborted()"),
+          );
+          return;
+        }
 
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -613,6 +759,7 @@ export function useMovementCapture({
             setTrackingQuality(Math.round(fullBodyVisibility * 100));
             setSpineQuality(spineModel?.neutralStackScore ?? 0);
             setCaptureStartReadiness(startReadiness);
+            setCaptureStartWholeBody(resolveMovementStrictWholeBodyVisibility(smoothedLandmarks));
             drawMovementSkeleton(ctx, smoothedLandmarks, canvas.width, canvas.height);
             if (enableDeepCapture) {
               drawMovementDenseBodyOverlay(
@@ -655,11 +802,17 @@ export function useMovementCapture({
               setFrameCount(recordedFramesRef.current.length);
             }
 
-            setCapturePreflight(buildMovementCapturePreflight({
-              frame: acquisitionFrame,
-              readiness: startReadiness,
-              retainedFrameCount: recordedFramesRef.current.length,
-            }));
+            // The debug preflight panel reads at a glance; refreshing it on
+            // every camera frame made it jitter constantly for no diagnostic
+            // gain. Twice a second is current enough.
+            if (startTimeMs - lastPreflightUiUpdateAtRef.current >= MOVEMENT_PREFLIGHT_UI_INTERVAL_MS) {
+              lastPreflightUiUpdateAtRef.current = startTimeMs;
+              setCapturePreflight(buildMovementCapturePreflight({
+                frame: acquisitionFrame,
+                readiness: startReadiness,
+                retainedFrameCount: recordedFramesRef.current.length,
+              }));
+            }
           } else {
             latestAcquisitionFrameRef.current = null;
             latestStartReadinessRef.current = null;
@@ -672,11 +825,16 @@ export function useMovementCapture({
               ? denseCaptureRuntime.getState().lastFailure
               : null);
             setCaptureStartReadiness(null);
-            setCapturePreflight(buildMovementCapturePreflight({
-              frame: null,
-              readiness: null,
-              retainedFrameCount: recordedFramesRef.current.length,
-            }));
+            setCaptureStartWholeBody(null);
+            const nowMs = performance.now();
+            if (nowMs - lastPreflightUiUpdateAtRef.current >= MOVEMENT_PREFLIGHT_UI_INTERVAL_MS) {
+              lastPreflightUiUpdateAtRef.current = nowMs;
+              setCapturePreflight(buildMovementCapturePreflight({
+                frame: null,
+                readiness: null,
+                retainedFrameCount: recordedFramesRef.current.length,
+              }));
+            }
           }
         }
       }
@@ -694,10 +852,29 @@ export function useMovementCapture({
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [canvasRef, denseCaptureAdapter, enableDeepCapture, faceLandmarker, faceRefiner, handLandmarker, handRefiner, isVisionReady, poseLandmarker, webcamRef]);
+  }, [
+    canvasRef,
+    denseCaptureAdapter,
+    enableDeepCapture,
+    faceLandmarker,
+    faceRefiner,
+    handLandmarker,
+    handRefiner,
+    isVisionReady,
+    onTrackingRuntimeFailure,
+    poseLandmarker,
+    webcamRef,
+  ]);
+
+  const resetTrackingFailure = useCallback(() => {
+    trackingFailureRef.current = false;
+    optionalChannelAbortStreaksRef.current = { face: 0, hand: 0 };
+    setTrackingFailure(null);
+    setTrackingFailureDetail(null);
+  }, []);
 
   const startRecording = useCallback(() => {
-    if (!isVisionReady) return;
+    if (!isVisionReady || trackingFailureRef.current) return;
 
     recordedFramesRef.current = [];
     setFrameCount(0);
@@ -719,9 +896,12 @@ export function useMovementCapture({
   return {
     capturePreflight,
     captureStartReadiness,
+    captureStartWholeBody,
     denseCaptureFailure,
     denseCaptureOperational,
     denseCaptureQualityTier,
+    trackingFailure,
+    trackingFailureDetail,
     isRecording,
     frameCount,
     trackingQuality,
@@ -729,5 +909,6 @@ export function useMovementCapture({
     startRecording,
     stopRecording,
     getRecordedFrames,
+    resetTrackingFailure,
   };
 }

@@ -6,7 +6,8 @@ export const MOVEMENT_ACQUISITION_CONTRACT_PATHS = {
   capture: "src/app/(dashboard)/demos/movements/_hooks/useMovementCapture.ts",
   captureBenchmark: "src/app/(dashboard)/demos/movement-capture/benchmark/page.tsx",
   captureBenchmarkContract: "src/app/(dashboard)/demos/movements/_lib/movementDenseBenchmarkCapture.ts",
-  capturePage: "src/app/(dashboard)/demos/movement-capture/page.tsx",
+  capturePage: "src/app/(dashboard)/demos/movement-capture/MovementCaptureClient.tsx",
+  captureBaseRedirect: "src/app/(dashboard)/demos/movement-capture/page.tsx",
   deepCaptureRoute: "src/app/(dashboard)/demos/movement-capture/deep/page.tsx",
   capturePreflight: "src/app/(dashboard)/demos/movements/_lib/movementCapturePreflight.ts",
   codec: "src/app/(dashboard)/demos/movements/_lib/movementFrameCodec.ts",
@@ -146,8 +147,10 @@ export function auditMovementAcquisitionContract(files) {
   requireText("capturePage", "commissioningMode && !deepCaptureMode", "canonical Deep Capture URL can pass mutually exclusive save requirements");
   requireText("capturePage", 'pathname === "/demos/movement-capture/deep"', "Deep Capture still depends only on lossy query-string state");
   requireText("capturePage", 'data-capture-profile="schema-v3-deep-capture"', "Deep Capture mode is not visibly locked before recording");
-  requireText("capturePage", 'data-capture-profile="schema-v2-standard"', "standard capture can silently look like Deep Capture");
-  requireText("deepCaptureRoute", 'export { default } from "../page"', "canonical query-free Deep Capture route is missing");
+  // The user-facing schema-v2 standard capture page was retired on 2026-07-20:
+  // there is one capture surface and the base route must resolve to it.
+  requireText("captureBaseRedirect", 'redirect("/demos/movement-capture/deep")', "base capture route no longer resolves to Deep Capture");
+  requireText("deepCaptureRoute", 'export { default } from "../MovementCaptureClient"', "canonical query-free Deep Capture route is missing");
   requireText("captureBenchmark", "MediaRecorder", "private RGB benchmark capture has no browser-local recorder");
   requireText("captureBenchmark", "Nothing on this page uploads raw RGB video", "private RGB benchmark capture hides its privacy boundary");
   requireText("captureBenchmark", "consent", "private RGB benchmark capture has no explicit consent state");

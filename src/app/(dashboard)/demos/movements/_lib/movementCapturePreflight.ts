@@ -135,6 +135,13 @@ function plannedChannel(
   return { id, label, message, status: "planned" };
 }
 
+// Long region lists made the debug panel resize every frame; keep the first
+// few names and fold the rest into a count so the card height stays stable.
+function summarizeMovementPreflightList(items: string[], maxShown = 3) {
+  if (items.length <= maxShown) return items.join(", ");
+  return `${items.slice(0, maxShown).join(", ")} +${items.length - maxShown} more`;
+}
+
 function trackingMessage(
   tracking: { occluded: boolean; state: string } | null | undefined,
 ) {
@@ -319,7 +326,7 @@ export function buildMovementCapturePreflight({
       ? {
           id: "denseBody",
           label: "Dense body surface",
-          message: `${denseAnchorCount}/${MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum} persistent anchors · ${denseVisibleRegionCount}/${MOVEMENT_DEEP_CAPTURE_REQUIRED_BODY_REGIONS.length} regions current/tracked/occluded${denseMissingRegions.length > 0 ? ` · missing now: ${denseMissingRegions.join(", ")}` : ""} · ${denseBody?.modelId} · ${denseBody?.adapter?.runtime}/${denseBody?.adapter?.qualityTier} · ${Math.round(denseBody?.adapter?.inferenceDurationMs ?? 0)}ms`,
+          message: `${denseAnchorCount}/${MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum} persistent anchors · ${denseVisibleRegionCount}/${MOVEMENT_DEEP_CAPTURE_REQUIRED_BODY_REGIONS.length} regions current/tracked/occluded${denseMissingRegions.length > 0 ? ` · missing now: ${summarizeMovementPreflightList(denseMissingRegions)}` : ""} · ${denseBody?.modelId} · ${denseBody?.adapter?.runtime}/${denseBody?.adapter?.qualityTier} · ${Math.round(denseBody?.adapter?.inferenceDurationMs ?? 0)}ms`,
           observedCount: denseAnchorCount,
           status: "ready",
           targetCount: MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum,
@@ -330,7 +337,7 @@ export function buildMovementCapturePreflight({
         ? {
             id: "denseBody",
             label: "Dense body surface",
-            message: `${denseAnchorCount}/${MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum} persistent anchors · ${denseVisibleRegionCount}/${MOVEMENT_DEEP_CAPTURE_REQUIRED_BODY_REGIONS.length} regions current/tracked/occluded · missing now: ${denseMissingRegions.join(", ")}`,
+            message: `${denseAnchorCount}/${MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum} persistent anchors · ${denseVisibleRegionCount}/${MOVEMENT_DEEP_CAPTURE_REQUIRED_BODY_REGIONS.length} regions current/tracked/occluded · missing now: ${summarizeMovementPreflightList(denseMissingRegions)}`,
             observedCount: denseAnchorCount,
             status: "partial",
             targetCount: MOVEMENT_DEEP_CAPTURE_PROFILE.anchorTarget.minimum,

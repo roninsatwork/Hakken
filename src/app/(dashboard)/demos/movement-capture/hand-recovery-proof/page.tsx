@@ -172,7 +172,7 @@ export default function HandRecoveryProofPage() {
           </div>
           <Link
             className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 hover:bg-white/5"
-            href="/demos/movement-capture?deepCapture=1"
+            href="/demos/movement-capture/deep"
           >
             Return to capture
           </Link>

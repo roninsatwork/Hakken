@@ -8,9 +8,11 @@ import {
   movementCodeCommit,
   movementPipelineFingerprint,
 } from "./lib/movementPipelineFingerprint.mjs";
+import { serveLocalJsonFile } from "./lib/serveLocalJsonFile.mjs";
 
 const defaultBaseUrl = "http://localhost:3000";
 const defaultStorageState = "e2e/.auth/super-admin.json";
+const mountedGameRenderedFrameBatchSize = 32;
 
 function parseArgs(argv) {
   const args = {
@@ -197,11 +199,71 @@ export function updateMountedGamePlaybackWatchdog({
   };
 }
 
-function gameUrl(args, movementId) {
+function gameUrl(args, movementId, gamePacketUrl = "/__movement-game-packet.json") {
   const url = new URL(`/demos/movements/${movementId}/play`, args.baseUrl);
   url.searchParams.set("debugTracking", "1");
-  url.searchParams.set("debugGamePacketUrl", "/__movement-game-packet.json");
+  url.searchParams.set("debugGamePacketUrl", gamePacketUrl);
   return url.toString();
+}
+
+async function readMountedGamePacketProof(page) {
+  const finalProofBase = await page.evaluate(() => {
+    const slimAvatarDebug = (debug) => debug ? structuredClone({
+      avatarExpressions: debug.avatarExpressions,
+      avatarHands: debug.avatarHands,
+      avatarHead: debug.avatarHead,
+      avatarName: debug.avatarName,
+      avatarRoot: debug.avatarRoot,
+      avatarSpine: debug.avatarSpine,
+      avatarVisual: debug.avatarVisual,
+      profileName: debug.profileName,
+      sourceCapturedAt: debug.sourceCapturedAt,
+      sourceFrameId: debug.sourceFrameId,
+      updatedAt: debug.updatedAt,
+    }) : null;
+    const proof = window.__sonaeMovementGamePacketProof;
+    if (!proof || typeof proof !== "object") return null;
+    return {
+      ...proof,
+      firstRenderedBoundary: proof.firstRenderedBoundary
+        ? {
+            frameIndex: proof.firstRenderedBoundary.frameIndex,
+            playerDebug: slimAvatarDebug(proof.firstRenderedBoundary.playerDebug),
+          }
+        : null,
+      motionFrameProcessing: proof.motionFrameProcessing
+        ? {
+            ...proof.motionFrameProcessing,
+            processedFrames: [],
+          }
+        : null,
+      renderedFrames: [],
+    };
+  });
+  if (!finalProofBase) return null;
+
+  const renderedFrameCount = Number(finalProofBase.renderedFrameCount || 0);
+  const renderedFrames = [];
+  for (let startIndex = 0; startIndex < renderedFrameCount; startIndex += mountedGameRenderedFrameBatchSize) {
+    const endIndex = Math.min(renderedFrameCount, startIndex + mountedGameRenderedFrameBatchSize);
+    const chunk = await page.evaluate(({ endIndex, startIndex }) => {
+      const proof = window.__sonaeMovementGamePacketProof;
+      const frames = Array.isArray(proof?.renderedFrames) ? proof.renderedFrames : [];
+      return frames.slice(startIndex, endIndex).map((frame) => ({
+        checksums: structuredClone(frame.checksums),
+        frameIndex: frame.frameIndex,
+        playerApplied: structuredClone(frame.playerApplied),
+        playerVisual: structuredClone(frame.playerVisual),
+      }));
+    }, { endIndex, startIndex });
+    renderedFrames.push(...chunk);
+    console.log(`Mounted Game rendered-frame readback: ${renderedFrames.length}/${renderedFrameCount}.`);
+  }
+
+  return {
+    ...finalProofBase,
+    renderedFrames,
+  };
 }
 
 export async function runMountedGamePacketCapture(argv) {
@@ -233,6 +295,7 @@ export async function runMountedGamePacketCapture(argv) {
     await fileExists(defaultStorageState) ? defaultStorageState : ""
   );
   const browser = await chromium.launch({ headless: !args.headed });
+  let gamePacketServer = null;
   try {
     const context = await browser.newContext({
       storageState: storageState || undefined,
@@ -242,12 +305,19 @@ export async function runMountedGamePacketCapture(argv) {
     page.setDefaultTimeout(60_000);
     const redirectPath = `/demos/movements/${routeMovementId}/play`;
     if (args.localTestAuth) await signInWithLocalTestAuth(page, args, redirectPath);
-    await page.route("**/__movement-game-packet.json", (route) => route.fulfill(
-      sourceWindow
-        ? { body: JSON.stringify(session), contentType: "application/json" }
-        : { contentType: "application/json", path: sessionPath },
-    ));
-    await page.goto(gameUrl(args, routeMovementId), { waitUntil: "domcontentloaded" });
+    let gamePacketUrl = "/__movement-game-packet.json";
+    if (sourceWindow) {
+      await page.route("**/__movement-game-packet.json", (route) => route.fulfill({
+        body: JSON.stringify(session),
+        contentType: "application/json",
+      }));
+    } else {
+      gamePacketServer = await serveLocalJsonFile(sessionPath, {
+        name: "__movement-game-packet.json",
+      });
+      gamePacketUrl = gamePacketServer.url;
+    }
+    await page.goto(gameUrl(args, routeMovementId, gamePacketUrl), { waitUntil: "domcontentloaded" });
     try {
       await page.getByRole("button", { name: "Begin Practice" }).waitFor({ timeout: 15_000 });
     } catch (error) {
@@ -380,7 +450,8 @@ export async function runMountedGamePacketCapture(argv) {
       }
       if (!completionWatchdog.complete) await page.waitForTimeout(1_000);
     }
-    const finalProof = await page.evaluate(() => window.__sonaeMovementGamePacketProof);
+    const finalProof = await readMountedGamePacketProof(page);
+    if (!finalProof) throw new Error("Mounted Game packet proof did not publish a final proof.");
     const uniqueProcessed = new Set(finalProof.processedFrameIndexes);
     const failures = [];
     if (finalProof.contractStatus !== "matched" && !args.allowLegacy) {
@@ -417,7 +488,7 @@ export async function runMountedGamePacketCapture(argv) {
       passed: failures.length === 0,
       paused: pausedProof,
       proofTier: finalProof.contractStatus === "matched" ? "contract-certified" : "legacy-lifecycle-only",
-      route: gameUrl(args, routeMovementId),
+      route: gameUrl(args, routeMovementId, gamePacketUrl),
       sourceWindow,
       visibleCanvasScreenshotPath,
       visibleScreenshotPath,
@@ -429,6 +500,7 @@ export async function runMountedGamePacketCapture(argv) {
     console.log(`Mounted Game packet proof passed (${finalProof.expectedFrameCount} frame(s)).`);
     console.log(`Wrote ${outPath}`);
   } finally {
+    await gamePacketServer?.close();
     await browser.close();
   }
 }

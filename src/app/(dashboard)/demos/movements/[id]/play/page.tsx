@@ -541,6 +541,12 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       : null
   ), [gameProofPacket]);
   const playerInitialFrameSequenceRef = useRef<MovementLiveInitialFrame[]>([]);
+  const collectRecordedGamePlayerWarmupFramesRef = useRef(false);
+  collectRecordedGamePlayerWarmupFramesRef.current = Boolean(
+    gameProofPacket &&
+    !isPlaying &&
+    recordedGamePlaybackStateRef.current.startedAt === undefined
+  );
   const instructorInitialFrameSequenceRef = useRef<MovementLiveInitialFrame[]>([]);
   const playerMotionFrameProcessingDebugRef = useRef({
     effectRunCount: 0,
@@ -567,6 +573,9 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   });
   const playerMotionFrameRef = useMovementLiveMotionFrame({
     calibration: effectivePlayerCalibration,
+    collectInitialFramesRef: isDebugGamePacketRoute
+      ? collectRecordedGamePlayerWarmupFramesRef
+      : undefined,
     debugProcessingRef: isDebugGamePacketRoute
       ? playerMotionFrameProcessingDebugRef
       : undefined,
@@ -630,18 +639,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     retargetSourceModel: effectiveInstructorRetargetSourceModel,
   });
   const recordedGameRenderedFramesRef = useRef(new Map<number, {
-    boundaries: {
-      acquisition: unknown;
-      calibration: unknown;
-      denseFusion: unknown;
-      instructorMotionFrame: unknown;
-      instructorRendered: unknown;
-      motionFrame: unknown;
-      ownersRootSupport: unknown;
-      playerApplied: unknown;
-      playerRendered: unknown;
-      setup: unknown;
-    };
     checksums: {
       acquisition: string;
       calibration: string;
@@ -760,7 +757,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           setup: structuredClone(automaticPlayerSetup),
         };
         recordedGameRenderedFramesRef.current.set(playback.frameIndex, {
-          boundaries,
           checksums: {
             acquisition: movementBoundaryChecksum(boundaries.acquisition),
             calibration: movementBoundaryChecksum(boundaries.calibration),

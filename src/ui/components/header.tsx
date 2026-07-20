@@ -12,7 +12,7 @@ export default function Header() {
           <Typography>{t('projectName')}</Typography>
         </Link>
         <div className="flex items-center gap-4">
-          <Link href="/demos/movement-capture">
+          <Link href="/demos/movement-capture/deep">
             <Typography>Demos</Typography>
           </Link>
         </div>

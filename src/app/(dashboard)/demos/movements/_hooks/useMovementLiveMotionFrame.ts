@@ -10,6 +10,7 @@ import type { VrmMotionRef } from "../_lib/vrmRigging";
 
 type UseMovementLiveMotionFrameInput = {
   calibration: MovementCalibration | null;
+  collectInitialFramesRef?: RefObject<boolean>;
   debugProcessingRef?: MutableRefObject<MovementLiveMotionFrameProcessingDebug>;
   initialFrameSequenceRef?: MutableRefObject<MovementLiveInitialFrame[]>;
   initialMotionSequence?: VrmMotionRef[] | null;
@@ -37,6 +38,7 @@ export type MovementLiveInitialFrame = {
 
 export function useMovementLiveMotionFrame({
   calibration,
+  collectInitialFramesRef,
   debugProcessingRef,
   initialFrameSequenceRef,
   initialMotionSequence = null,
@@ -155,7 +157,12 @@ export function useMovementLiveMotionFrame({
           });
         }
         // A detector gap is missing evidence, not a neutral human pose.
-        if (nextMotionFrame) motionFrameRef.current = nextMotionFrame;
+        if (nextMotionFrame) {
+          motionFrameRef.current = nextMotionFrame;
+          if (collectInitialFramesRef?.current && initialFrameSequenceRef) {
+            initialFrameSequenceRef.current.push({ motionFrame: nextMotionFrame, motionRef: currentMotionRef });
+          }
+        }
       }
       animationFrameId = requestAnimationFrame(updateMotionFrame);
     };
@@ -168,7 +175,16 @@ export function useMovementLiveMotionFrame({
       motionFrameRef.current = null;
       if (initialFrameSequenceRef) initialFrameSequenceRef.current = [];
     };
-  }, [calibration, debugProcessingRef, initialFrameSequenceRef, initialMotionSequence, motionSequence, playerLiveLmRef, retargetSourceModel]);
+  }, [
+    calibration,
+    collectInitialFramesRef,
+    debugProcessingRef,
+    initialFrameSequenceRef,
+    initialMotionSequence,
+    motionSequence,
+    playerLiveLmRef,
+    retargetSourceModel,
+  ]);
 
   return motionFrameRef;
 }

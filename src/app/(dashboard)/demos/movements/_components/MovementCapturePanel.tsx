@@ -17,8 +17,9 @@ type MovementCapturePanelProps = {
   visionStatus: MediaPipeVisionStatus;
   visionError: string | null;
   isPoseReady: boolean;
+  captureReadinessCountdownSeconds?: number;
   captureReadinessMessage?: string | null;
-  captureReadinessStatus?: "idle" | "waiting-for-body" | "blocked";
+  captureReadinessStatus?: "idle" | "waiting-for-body" | "countdown" | "blocked";
   capturePreflight?: MovementCapturePreflight;
   captureTechnicalError?: string | null;
   frameCount: number;
@@ -29,7 +30,9 @@ type MovementCapturePanelProps = {
   onToggleRecording: () => void;
   onToggleTrackingDetail?: () => void;
   showAllTrackingPoints?: boolean;
+  showTrackingOverlay?: boolean;
   showTrackingDetailToggle?: boolean;
+  trackingEngineSummary?: string | null;
 };
 
 export default function MovementCapturePanel({
@@ -41,10 +44,10 @@ export default function MovementCapturePanel({
   visionStatus,
   visionError,
   isPoseReady,
+  captureReadinessCountdownSeconds = 0,
   captureReadinessMessage = null,
   captureReadinessStatus = "idle",
   capturePreflight,
-  captureTechnicalError = null,
   frameCount,
   trackingQuality,
   spineQuality,
@@ -53,11 +56,21 @@ export default function MovementCapturePanel({
   onToggleRecording,
   onToggleTrackingDetail,
   showAllTrackingPoints = false,
+  showTrackingOverlay = true,
   showTrackingDetailToggle = false,
+  trackingEngineSummary = null,
 }: MovementCapturePanelProps) {
-  const isCaptureStartGateActive = captureReadinessStatus === "waiting-for-body";
+  const isCaptureStartGateActive =
+    captureReadinessStatus === "waiting-for-body" ||
+    captureReadinessStatus === "countdown";
+  const recordingDisabled = !isRecording && (
+    !isVisionReady ||
+    isCaptureStartGateActive
+  );
   const lifecycleLabel = isRecording
     ? `Recording — ${frameCount} moments saved`
+    : captureReadinessStatus === "countdown"
+      ? `Get ready — ${Math.max(captureReadinessCountdownSeconds, 1)}`
     : captureReadinessStatus === "waiting-for-body"
       ? "Armed — not recording yet"
       : captureReadinessStatus === "blocked"
@@ -96,7 +109,9 @@ export default function MovementCapturePanel({
       />
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full object-contain z-10 pointer-events-none"
+        className={`absolute inset-0 h-full w-full object-contain pointer-events-none ${
+          showTrackingOverlay ? "z-10" : "invisible"
+        }`}
       />
 
       <div className="absolute top-4 left-4 z-20">
@@ -132,7 +147,9 @@ export default function MovementCapturePanel({
         className={`absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border px-4 py-2 backdrop-blur-md ${
           isRecording
             ? "border-red-300/50 bg-red-600/85 text-white"
-            : captureReadinessStatus === "waiting-for-body"
+            : captureReadinessStatus === "countdown"
+              ? "border-emerald-200/45 bg-emerald-950/85 text-emerald-100"
+              : captureReadinessStatus === "waiting-for-body"
               ? "border-amber-200/40 bg-amber-950/85 text-amber-100"
               : captureReadinessStatus === "blocked"
                 ? "border-red-300/40 bg-red-950/85 text-red-100"
@@ -145,38 +162,51 @@ export default function MovementCapturePanel({
       </div>
 
       {visionError && (
-        <div className="absolute top-16 left-4 right-4 z-20 rounded-2xl border border-red-500/30 bg-black/70 px-4 py-3 backdrop-blur-md">
-          <Typography className="text-sm font-medium text-red-200">{visionError}</Typography>
+        <div className="absolute top-16 left-4 right-4 z-20 rounded-2xl border border-white/15 bg-black/75 px-4 py-3 backdrop-blur-md">
+          <Typography className="text-sm font-medium text-white">
+            {visionError}
+          </Typography>
           <button
             type="button"
             onClick={onRetryVision}
-            className="mt-2 rounded-full border border-red-300/30 px-3 py-1 text-xs font-bold uppercase tracking-wide text-red-100 transition-colors hover:bg-red-500/20"
+            className="mt-2 rounded-full border border-white/25 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-white/10"
           >
             Retry tracking
           </button>
         </div>
       )}
 
-      {captureTechnicalError && !visionError && (
-        <div className="absolute left-4 right-4 top-16 z-20 rounded-2xl border border-red-500/40 bg-black/80 px-4 py-3 backdrop-blur-md" role="alert">
-          <Typography className="text-sm font-semibold text-red-100">
-            Deep Capture is not ready. Recording will not start.
-          </Typography>
-          <Typography className="mt-1 text-xs text-red-100/80">
-            Body-surface tracking failed: {captureTechnicalError}
-          </Typography>
-        </div>
-      )}
-
       {captureReadinessStatus !== "idle" && (
-        <div className="absolute bottom-24 left-1/2 z-20 w-[min(90%,360px)] -translate-x-1/2 rounded-2xl border border-white/10 bg-black/70 px-5 py-3 text-center backdrop-blur-md">
-          <Typography className="text-xs font-black uppercase tracking-[0.18em] text-[#f6ccbe]">
-            {captureReadinessMessage ?? "Show your whole body"}
-          </Typography>
+        <div className="absolute left-1/2 top-1/2 z-20 w-[min(90%,420px)] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-white/15 bg-black/75 px-6 py-5 text-center shadow-2xl backdrop-blur-md">
+          {captureReadinessStatus === "countdown" ? (
+            <>
+              <Typography className="block text-xs font-black uppercase tracking-[0.24em] text-emerald-100">
+                Hold still
+              </Typography>
+              <Typography className="mt-2 block text-7xl font-black leading-none text-white">
+                {Math.max(captureReadinessCountdownSeconds, 1)}
+              </Typography>
+              <Typography className="mt-3 block text-base font-semibold text-white/85">
+                Recording is about to start
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Typography className="block text-xs font-black uppercase tracking-[0.24em] text-[#f6ccbe]">
+                Get ready
+              </Typography>
+              <Typography className="mt-3 block text-2xl font-bold text-white">
+                {captureReadinessMessage ?? "Walk back until your full body is in view."}
+              </Typography>
+              <Typography className="mt-2 block text-sm text-white/70">
+                Recording starts after a 3 second countdown.
+              </Typography>
+            </>
+          )}
         </div>
       )}
 
-      {showTrackingDetailToggle && onToggleTrackingDetail && (
+      {showTrackingOverlay && showTrackingDetailToggle && onToggleTrackingDetail && (
         <button
           aria-label={showAllTrackingPoints
             ? "Show essential tracking points"
@@ -196,7 +226,7 @@ export default function MovementCapturePanel({
         <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20">
           <button
             onClick={onToggleRecording}
-            disabled={!isVisionReady || isCaptureStartGateActive}
+            disabled={recordingDisabled}
             aria-label={isRecording ? "Stop posture capture" : "Start posture capture"}
             className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
               isRecording
@@ -206,6 +236,8 @@ export default function MovementCapturePanel({
           >
             {isRecording
               ? "Finish Capture"
+              : captureReadinessStatus === "countdown"
+                ? `Get Ready ${Math.max(captureReadinessCountdownSeconds, 1)}`
               : captureReadinessStatus === "waiting-for-body"
                 ? "Waiting for whole body"
                   : "Start Posture Capture"}
@@ -214,6 +246,14 @@ export default function MovementCapturePanel({
       </div>
 
       {capturePreflight && <MovementCapturePreflightPanel capturePreflight={capturePreflight} />}
+      {trackingEngineSummary && (
+        <Typography
+          className="px-2 text-xs text-secondary"
+          data-testid="tracking-engine-summary"
+        >
+          Tracking {trackingEngineSummary}
+        </Typography>
+      )}
     </div>
   );
 }
