@@ -1564,7 +1564,7 @@ export function runMovementArchitectureGuard({
     files,
     manifest: readJson(resolve(proofPaths.manifest)),
     packageJson: readJson(resolve("package.json")),
-    planText: fs.readFileSync(resolve("docs/plans/active/movement-studio-best-practice-architecture-plan.md"), "utf8"),
+    planText: fs.readFileSync(resolve("docs/plans/completed/movement-studio-best-practice-architecture-plan.md"), "utf8"),
     routeBypassPurityResults,
     runbookText: fs.readFileSync(resolve("scripts/movement-debug/README.md"), "utf8"),
     semanticReview: readJson(resolve(proofPaths.semanticReview)),

@@ -33,57 +33,8 @@ The latest implementation audit refreshed central plan coverage and the movement
 ### Plans
 
 - [Plans Index](./plans/index.md)
-- [Active Plans](./plans/index.md#active-plans)
-- [Agent Learning And Improvement Plan](./plans/active/agent-learning-improvement-plan.md)
-- [Agent Scheduler Upgrade Plan](./plans/active/agent-scheduler-upgrade-plan.md)
-- [Agent Skills Development Plan](./plans/active/agent-skills-development-plan.md)
-- [Agentic App Foundation Build Plan](./plans/active/agentic-app-foundation-build-plan.md)
-- [AI Runtime Retry Hardening Plan](./plans/active/ai-runtime-retry-hardening-plan.md)
-- [Analytics Scale Optimization Plan](./plans/active/analytics-scale-optimization-plan.md)
-- [Ask Sonae Safety Hardening Plan](./plans/active/ask-sonae-safety-hardening-plan.md)
-- [Auth Login Hardening Plan](./plans/active/auth-login-hardening-plan.md)
-- [Code Quality 95 Plan](./plans/active/code-quality-95-plan.md)
-- [Code Quality Refactor Plan](./plans/active/code-quality-refactor-plan.md)
-- [Company AI Batch Eval Runs Plan](./plans/active/company-ai-batch-eval-runs-plan.md)
-- [Company AI Modal To Screen Plan](./plans/active/company-ai-modal-to-screen-plan.md)
-- [Company AI Overview UX Plan](./plans/active/company-ai-overview-ux-plan.md)
-- [Company AI Upgrade Plan](./plans/active/company-ai-upgrade-plan.md)
-- [Company Admin Laptop UX Upgrade Plan](./plans/active/company-admin-laptop-ux-upgrade-plan.md)
-- [Company Workspace AI Navigation Plan](./plans/active/company-workspace-ai-navigation-plan.md)
-- [Comprehensive Test Coverage Plan](./plans/active/comprehensive-test-coverage-plan.md)
-- [Final Scale Readiness Plan](./plans/active/final-scale-readiness-plan.md)
-- [Full Agentic System Upgrade Plan](./plans/active/full-agentic-system-upgrade-plan.md)
-- [Global AI Models Split Navigation Plan](./plans/active/global-ai-models-split-navigation-plan.md)
-- [Global AI Navigation Consolidation Plan](./plans/active/global-ai-navigation-consolidation-plan.md)
-- [Global AI Widget Layout Alignment Plan](./plans/active/global-ai-widget-layout-alignment-plan.md)
-- [Human Movement Full Coverage Implementation Plan](./plans/active/human-movement-full-coverage-implementation-plan.md)
-- [Large Page Decomposition Plan](./plans/active/large-page-decomposition-plan.md)
-- [Local Real Auth E2E Plan](./plans/active/local-real-auth-e2e-plan.md)
-- [Model Provider Agnostic Plan](./plans/active/model-provider-agnostic-plan.md)
-- [Movement Demo Client Pitch Excellence Plan](./plans/active/movement-demo-client-pitch-excellence-plan.md)
-- [Movement Demo Refactor Plan](./plans/active/movement-demo-refactor-plan.md)
-- [Movement Demo Root Motion And Full Body Replay Plan](./plans/active/movement-demo-root-motion-and-full-body-replay-plan.md)
-- [Movement Demo Whole Body Tracking Plan](./plans/active/movement-demo-whole-body-tracking-plan.md)
-- [Movement Mirror Methodology Implementation Plan](./plans/active/movement-mirror-methodology-implementation-plan.md)
-- [Movement Studio Best-Practice Architecture Plan](./plans/active/movement-studio-best-practice-architecture-plan.md)
-- [Platform Scale Hardening Plan](./plans/active/platform-scale-hardening-plan.md)
-- [Post Scale Hardening Plan](./plans/active/post-scale-hardening-plan.md)
-- [Posture Studio Player Avatar Recovery Plan](./plans/active/posture-studio-player-avatar-recovery-plan.md)
-- [Posture Studio Pre-Demo Polish Plan](./plans/active/posture-studio-pre-demo-polish-plan.md)
-- [Posture Studio Skeleton Observability Plan](./plans/active/posture-studio-skeleton-observability-plan.md)
-- [Posture Studio Spine Intelligence Plan](./plans/active/posture-studio-spine-intelligence-plan.md)
-- [Replay Avatar-Follow Correction Plan](./plans/active/replay-avatar-follow-correction-plan.md)
-- [Replay Lab Visual Acceptance Tightening Plan](./plans/active/replay-lab-visual-acceptance-tightening-plan.md)
-- [Replay Studio Agent Repair Harness Plan](./plans/active/replay-studio-agent-repair-harness-plan.md)
-- [Replay Studio Avatar-Follow Observability Plan](./plans/active/replay-studio-avatar-follow-observability-plan.md)
-- [Roadmap And Debt](./plans/active/roadmap-and-debt.md)
-- [Starter Platform Expansion Plan](./plans/active/starter-platform-expansion-plan.md)
-- [System Health Alerts Plan](./plans/active/system-health-alerts-plan.md)
-- [True Agentic Platform Plan](./plans/active/true-agentic-platform-plan.md)
-- [Completed Plans](./plans/index.md#completed-plans)
-- [Central Skill Library Import Plan](./plans/completed/central-skill-library-import-plan.md)
-- [Current Cleanup Checklist](./plans/completed/current-cleanup-checklist.md)
-- [Housework Upgrade Checklist](./plans/completed/housework-upgrade-checklist.md)
+- [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single active plan and source of truth for current work.
+- Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). All previous plans were retired on 2026-07-20 to start fresh; they are historical reference only.
 
 ### Developer
 
@@ -144,11 +95,9 @@ The latest implementation audit refreshed central plan coverage and the movement
 
 Before changing movement-side behaviour, read **[Movement Mirror And Side-Ownership Contract](./developer/movement-mirror-and-side-ownership-contract.md)**. Instructor motion is anatomical identity; player-avatar motion is anatomical opposite; the instructor and player avatar must finish on the same anatomical movement. Preview mirroring, coordinate reflection, side ownership, and scoring correspondence are separate decisions.
 
-#### Required Replay Studio Repair Harness
+#### Required Movement Plan
 
-Before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the movement agent debugging workflow, read **[Replay Studio Agent Repair Harness Plan](./plans/active/replay-studio-agent-repair-harness-plan.md)**. Replay Studio is the recorded-motion source of truth; use the targeted, fast-subset, and all-nine rendered proof tiers before claiming shared-avatar acceptance, and treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
-
-For rendered fidelity thresholds, absolute head/spine/arm matching, neutral/standing continuity, and manual seek acceptance, also read **[Replay Lab Visual Acceptance Tightening Plan](./plans/active/replay-lab-visual-acceptance-tightening-plan.md)**. Human review reopened acceptance at `Full Motion Exercises` frame 281; the strengthened plan defines the `0.10` clean-frame ceiling and the ordered targeted-to-all-nine repair proof.
+Before changing movement capture, Replay Studio, or Game Studio behaviour, read **[Movement Definitive Plan](./plans/active/movement-definitive-plan.md)**. It defines the two goals (capture countdown with full-body walk-back gate; correct avatar/instructor motion in Replay and Game), the two-part acceptance (automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation), and the capture-screen rules that must never regress. Retired background on the repair-loop discipline lives in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans); treat Game Studio live-camera checks as final confirmation rather than primary diagnosis.
 
 - [Movement Tracking](./developer/movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./developer/movement-demo-client-recovery-plan.md)

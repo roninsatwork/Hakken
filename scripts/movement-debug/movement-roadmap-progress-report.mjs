@@ -9,7 +9,7 @@ import {
   buildSupportReadinessMatrix,
 } from "./movement-support-readiness-matrix.mjs";
 
-const DEFAULT_PLAN_PATH = "docs/plans/active/movement-studio-best-practice-architecture-plan.md";
+const DEFAULT_PLAN_PATH = "docs/plans/completed/movement-studio-best-practice-architecture-plan.md";
 const DEFAULT_OUT_PATH = "tmp/movement-replay-lab/current-roadmap-progress-report.json";
 const DEFAULT_MARKDOWN_OUT_PATH = "tmp/movement-replay-lab/current-roadmap-progress-report.md";
 const EXPECTED_SECTION_COUNT = 15;

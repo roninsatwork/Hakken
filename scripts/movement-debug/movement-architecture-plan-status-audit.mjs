@@ -9,7 +9,7 @@ import {
   buildSupportReadinessMatrix,
 } from "./movement-support-readiness-matrix.mjs";
 
-const DEFAULT_PLAN_PATH = "docs/plans/active/movement-studio-best-practice-architecture-plan.md";
+const DEFAULT_PLAN_PATH = "docs/plans/completed/movement-studio-best-practice-architecture-plan.md";
 
 function printHelp() {
   console.log(`Audit that the movement architecture plan's current board matches support proof.

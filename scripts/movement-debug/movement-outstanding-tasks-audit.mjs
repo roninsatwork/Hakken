@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const DEFAULT_PLAN_PATH = "docs/plans/active/movement-studio-best-practice-architecture-plan.md";
+const DEFAULT_PLAN_PATH = "docs/plans/completed/movement-studio-best-practice-architecture-plan.md";
 const DEFAULT_RUNBOOK_PATH = "scripts/movement-debug/README.md";
 const execFileAsync = promisify(execFile);
 const REQUIRED_FUTURE_FAMILY_AUDIT_SHAPES = [
@@ -38,7 +38,7 @@ const HANDOFF_DEPENDENT_FILES = [
   "scripts/movement-debug/movement-support-readiness-matrix.test.mjs",
   "scripts/movement-debug/next-proof-readiness.mjs",
   "scripts/movement-debug/next-proof-readiness.test.mjs",
-  "docs/plans/active/movement-studio-best-practice-architecture-plan.md",
+  "docs/plans/completed/movement-studio-best-practice-architecture-plan.md",
 ];
 
 function printHelp() {

@@ -447,7 +447,7 @@ describe('Quality Drift Guardrails', () => {
   test('handoff and platform plans keep movement demo files out of scope', () => {
     const guardrailFiles = [
       'AGENTS.md',
-      'docs/plans/active/code-quality-95-plan.md',
+      'docs/plans/completed/code-quality-95-plan.md',
       'docs/plans/completed/current-cleanup-checklist.md',
     ];
     const requiredNoTouchPaths = [
@@ -843,10 +843,10 @@ describe('Quality Drift Guardrails', () => {
       'convex/aiModelsActions.ts',
       'convex/aiModels.test.ts',
       'convex/seedWorkflows.ts',
-      'docs/plans/active/code-quality-95-plan.md',
+      'docs/plans/completed/code-quality-95-plan.md',
       'docs/developer/future-agent-maintenance-plan.md',
       'docs/index.md',
-      'docs/plans/active/model-provider-agnostic-plan.md',
+      'docs/plans/completed/model-provider-agnostic-plan.md',
       'messages/en.json',
       'messages/it.json',
       'src/quality-drift.test.ts',
@@ -966,7 +966,7 @@ describe('Quality Drift Guardrails', () => {
       'convex/knowledge.test.ts',
       'convex/openaiProviderService.test.ts',
       'convex/seedWorkflows.ts',
-      'docs/plans/active/model-provider-agnostic-plan.md',
+      'docs/plans/completed/model-provider-agnostic-plan.md',
       'src/app/(dashboard)/admin/ai/costs/_components/AICostCharts.test.tsx',
       'src/quality-drift.test.ts',
     ]);

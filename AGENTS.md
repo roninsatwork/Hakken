@@ -24,12 +24,26 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 - Update the estimate when scope changes, after meaningful implementation milestones, and before pausing, committing, or handing work back.
 - Use plain estimates such as "Overall: 10%. Current slice: 40%." Do not wait for the user to ask for percentages.
 
-## User-Facing UX Approval
+## Clear Communication
 
-- Before changing any user-facing UX, discuss the intended experience with the user first.
-- Present the proposed flow, wording, layout, and important states, then obtain explicit approval before writing product code.
+- Use simple, direct language. If the user says they do not understand, stop and restate the point in plainer words before continuing.
+- When asking for approval, say exactly whether the user needs to do anything. Use wording such as "You do not need to record, test, or click anything. I am only asking for approval to proceed."
+- When the user asks "what's next", answer with the next concrete action first. Do not lead with internal proof terminology, long roadmap summaries, or multiple abstract options.
+- Translate technical terms into product meaning. For example, explain "schema-v3 packet is missing" as "we do not have a current saved recording with the new evidence format."
+- Keep progress updates short and practical: what was checked, what was found, what will happen next, and whether the user needs to act.
+- Do not hide blockers behind jargon. State the blocker plainly, the evidence for it, and the next useful action.
+
+## User Alignment And Approval
+
+- Default to questions before action. Keep asking short clarifying questions until the user explicitly says "go", "go for it", "approved", or an equally clear instruction for the specific next action.
+- Approval for one action does not approve extra actions. Do not expand a "go" for investigation into repeated runs, saves, browser tests, proof gates, product changes, commits, pushes, or roadmap edits unless those exact actions were named and approved.
+- When proposing work, ask one clear question and wait. Phrase it plainly, for example: "Do you want me to run one automated capture/save test now?" or "Do you want me to create the three real recordings now?"
+- Before changing product behaviour, user-facing UX, roadmap scope, acceptance criteria, proof contracts, data schemas, capture/scoring semantics, or implementation direction, discuss the intended change with the user first.
+- Present the proposed outcome, affected surfaces, important states, risks/tradeoffs, and verification plan, then obtain explicit approval before writing product or contract-changing code.
+- This approval rule is not limited to visible UX. Treat movement capture, Replay/Game runtime behaviour, proof gates, saved-recording requirements, scoring correspondence, and roadmap status changes as user-alignment surfaces.
 - Feedback, criticism, and brainstorming do not authorize implementation.
-- If feedback materially changes an already approved design, pause and agree the revised design before continuing implementation.
+- If feedback materially changes an already approved direction, pause and agree the revised direction before continuing implementation.
+- Read-only investigation, repo-state checks, local evidence gathering, and non-mutating diagnostics may proceed without waiting, but agents must report what they are checking and ask before acting on any material change discovered.
 
 ## Verification Gates
 
@@ -80,7 +94,7 @@ If the user explicitly reopens avatar body motion, read `docs/developer/movement
 
 Before changing movement capture, display preparation, landmark ownership, scoring correspondence, retargeting, head/spine signs, hands, face, root motion, VRM bone application, or movement proof, read `docs/developer/movement-mirror-and-side-ownership-contract.md`.
 
-Follow the ordered implementation and acceptance work in `docs/plans/active/movement-mirror-methodology-implementation-plan.md`; do not skip directly to bone tuning or selected-frame proof.
+The historical implementation record is `docs/plans/completed/movement-mirror-methodology-implementation-plan.md` (retired). Current work follows `docs/plans/active/movement-definitive-plan.md`; do not skip directly to bone tuning or selected-frame proof.
 
 The non-negotiable mirror-game invariant is:
 
@@ -91,15 +105,13 @@ The non-negotiable mirror-game invariant is:
 
 Keep preview mirroring, coordinate reflection, anatomical side ownership, and player-to-instructor scoring as separate named decisions. Do not use one generic `mirror` / `facing-player` flag to represent all four.
 
-Mirror acceptance requires actual rendered VRM-bone proof. For shared avatar-behaviour changes, run the three-party instructor/player/player-avatar invariant through every rendered frame of all nine acceptance recordings with zero silent skips; selected frames, solver labels, debug metadata, or a high score are not sufficient proof.
+Mirror acceptance requires actual rendered VRM-bone proof. For shared avatar-behaviour changes, run the three-party instructor/player/player-avatar invariant through every rendered frame of the current schema-v3 acceptance recordings (see `docs/plans/active/movement-definitive-plan.md`) with zero silent skips; selected frames, solver labels, debug metadata, or a high score are not sufficient proof.
 
 ### Replay/Game Motion Vision
 
 Replay Studio is the motion source of truth. If avatar motion is broken, fix the Replay/shared motion pipeline first, prove it with recorded data such as FULL MOTION EXERCISES, and then make Game Studio consume that same shared result. Do not patch Game Studio with separate bone rules, pose-specific tuning, or live-only presentation numbers that diverge from Replay. Any remaining Game Studio difference must be explicit input cleanup before the shared pipeline, or documented VRM application plumbing with parity proof.
 
-Before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/replay-studio-agent-repair-harness-plan.md`. It defines the required record-once repair loop, canonical repair packet, durable fixture strategy, rendered telemetry, and one-command acceptance workflow. Do not treat a UI verdict or solver label as sufficient rendered-avatar proof.
-
-Before changing rendered fidelity thresholds, head/spine/arm acceptance, neutral/standing continuity, manual Replay seeking, or claiming renewed visual acceptance, also read `docs/plans/active/replay-lab-visual-acceptance-tightening-plan.md`. The strengthened contract uses a `0.10` clean-frame segment ceiling for trustworthy evidence, forbids averages from hiding a broken segment, and requires manual seek/reset proof in addition to deterministic and intended-time playback.
+All previous movement/replay plans were retired on 2026-07-20. The single source of truth is `docs/plans/active/movement-definitive-plan.md`: acceptance is the automated Replay/Game comparison passing on current schema-v3 recordings plus browser-visible confirmation. Retired plans (for example `docs/plans/completed/replay-studio-agent-repair-harness-plan.md` and `docs/plans/completed/replay-lab-visual-acceptance-tightening-plan.md`) remain useful background on the record-once repair loop and rendered-proof discipline, but they no longer gate work. Do not treat a UI verdict or solver label as sufficient rendered-avatar proof.
 
 When debugging Game Studio movement, do not ask the user to repeat live motions until the matching recording has been run through the replay/game harness. Live testing is final confirmation, not the primary debugging loop.
 
