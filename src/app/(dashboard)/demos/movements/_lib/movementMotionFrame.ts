@@ -300,17 +300,22 @@ export function resolveMovementMotionFrame({
   const headAvatarRole = usesReplayReferencePlayerHead
     ? "instructor"
     : pipelineInput.avatarRole;
-  const headCalibration = usesReplayReferencePlayerHead
-    ? null
-    : pipelineInput.calibration;
+  // The calibration's headNeutral is what makes "looking at the camera while
+  // performing" render as a level head instead of pitched down toward a low
+  // camera. It is passed through for EVERY lane uniformly (recorded lanes carry
+  // the recording's prefix calibration; live carries the live setup), so Replay
+  // and Game stay identical while heads read as looking at the viewer.
+  const headCalibration = pipelineInput.calibration;
   const avatarHeadTarget = resolveMovementAvatarHeadTarget({
     avatarRole: headAvatarRole,
     avatarRootYaw: 0,
     calibration: headCalibration,
     poseLandmarks: sourcePoseLandmarks,
+    previousHeadTarget: previousMotionFrame?.avatarHeadTarget,
     profile: pipelineInput.avatarTrackingProfile,
     shouldApplyLowerBody: avatarDecision.shouldApplyLowerBody,
     shouldApplySpine: avatarDecision.spineDrive.shouldApplySpine,
+    sourceDeltaMs,
   });
   const avatarDisplayHeadTarget = poseLandmarks === sourcePoseLandmarks
     ? avatarHeadTarget
@@ -320,9 +325,11 @@ export function resolveMovementMotionFrame({
       calibration: headCalibration,
       mirrorHeadForDisplay: mirrorMode === "facing-player",
       poseLandmarks,
+      previousHeadTarget: previousMotionFrame?.avatarDisplayHeadTarget,
       profile: pipelineInput.avatarTrackingProfile,
         shouldApplyLowerBody: avatarDisplayDecision.shouldApplyLowerBody,
         shouldApplySpine: avatarDisplayDecision.spineDrive.shouldApplySpine,
+        sourceDeltaMs,
       });
   const readability = resolveMotionReadability({
     displayDecision: avatarDisplayDecision,

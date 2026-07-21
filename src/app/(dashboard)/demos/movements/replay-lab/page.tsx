@@ -32,13 +32,11 @@ import {
   resolveMovementAvatarPipelineDecision,
 } from "../_lib/movementAvatarPipeline";
 import { MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS } from "./_lib/movementNextProofRehearsal";
-import { buildInstructorRetargetSourceModel } from "../_hooks/useMovementInstructorPlayback";
 import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import {
   buildMovementCalibration,
   type MovementTrackingDebugState,
 } from "../_lib/movementTrackingCalibration";
-import { buildMovementRecordedInstructorCalibration } from "../_lib/movementRecordedInstructorSetup";
 import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
 import { buildLiveMovementMotionFrame } from "../_lib/movementLiveMotionFrame";
 import { buildRecordedMovementMotionFrame } from "../_lib/movementRecordedMotionFrame";
@@ -477,27 +475,6 @@ export default function MovementReplayLabPage() {
       detail: `seg ${formatNumber(currentRetarget?.lowerBodySegmentMotion)} · squat ${formatNumber(currentRetarget?.squatDepth ?? currentFrame?.retarget?.squatDepth)}`,
     },
   ];
-  const replayRetargetSourceModel = useMemo(() => {
-    if (!replaySession) return null;
-
-    return buildInstructorRetargetSourceModel(
-      replaySession.samples.map((sample) => ({
-        landmarks: sample.tracking.pose,
-        worldLandmarks: sample.tracking.worldPose.length > 0
-          ? sample.tracking.worldPose
-          : null,
-      })),
-    );
-  }, [replaySession]);
-  const replayInstructorCalibration = useMemo(() => {
-    if (!replaySession) return null;
-    return buildMovementRecordedInstructorCalibration(
-      replaySession.samples.map((sample) => ({
-        faceLandmarks: sample.tracking.face ?? null,
-        landmarks: sample.tracking.pose,
-      })),
-    );
-  }, [replaySession]);
   const replayPlayerSetup = useMemo(() => {
     if (!replaySession) return null;
 
@@ -552,14 +529,16 @@ export default function MovementReplayLabPage() {
         frameIndex,
       );
       previousInstructorFrame = buildRecordedMovementMotionFrame({
-        calibration: replayInstructorCalibration ?? buildMovementCalibration({
+        // Unified lane: the recorded instructor calibrates from the same
+        // prefix-based player setup as the Replay student.
+        calibration: replayPlayerCalibration ?? buildMovementCalibration({
           poseLandmarks: instructorPayload.landmarks ?? [],
         }),
         capturedAt: sample.capturedAt,
         isPlaying: true,
         motionRef: instructorPayload,
         previousMotionFrame: previousInstructorFrame,
-        retargetSourceModel: replayRetargetSourceModel,
+        retargetSourceModel: replayPlayerRetargetSourceModel,
       });
       previousPlayerFrame = frameIndex >= playerHistoryStartIndex
         ? buildLiveMovementMotionFrame({
@@ -579,8 +558,6 @@ export default function MovementReplayLabPage() {
   }, [
     isDeterministicReplay,
     isThreePartyMirrorProof,
-    replayInstructorCalibration,
-    replayRetargetSourceModel,
     replaySession,
     replayThreePartyPlayerCalibration,
     replayThreePartyPlayerSetup,
@@ -757,7 +734,9 @@ export default function MovementReplayLabPage() {
       replayThreePartyPlayerRootMotionFrameRef.current = null;
       const instructorFrame = currentThreePartyInstructorPayload
         ? buildRecordedMovementMotionFrame({
-            calibration: replayInstructorCalibration ?? buildMovementCalibration({
+            // The recorded instructor runs the unified player lane, so it takes
+            // the same prefix-based setup as the Replay student.
+            calibration: replayPlayerCalibration ?? buildMovementCalibration({
               poseLandmarks: currentThreePartyInstructorPayload.landmarks ?? [],
             }),
             capturedAt: currentThreePartyInstructorPayload.capturedAt,
@@ -767,7 +746,7 @@ export default function MovementReplayLabPage() {
               isPlaying: isPlaying || isDeterministicReplay,
               previousMotionFrame: replayInstructorMotionFrameRef.current,
             }),
-            retargetSourceModel: replayRetargetSourceModel,
+            retargetSourceModel: replayPlayerRetargetSourceModel,
           })
         : null;
       replayInstructorMotionFrameRef.current = instructorFrame;
@@ -819,11 +798,9 @@ export default function MovementReplayLabPage() {
     isDeterministicReplay,
     isPlaying,
     isThreePartyMirrorProof,
-    replayInstructorCalibration,
     replayPlayerCalibration,
     replayPlayerRetargetSourceModel,
     replaySession,
-    replayRetargetSourceModel,
     replayThreePartyDeterministicFrames,
     replayThreePartyPlayerCalibration,
     replayThreePartyPlayerSetup,
@@ -1006,12 +983,13 @@ export default function MovementReplayLabPage() {
             })
           : null;
         previousInstructorMotionFrame = buildRecordedMovementMotionFrame({
-          calibration: replayInstructorCalibration,
+          // Unified lane: prefix-based player setup, same as the Replay student.
+          calibration: replayPlayerCalibration,
           capturedAt: sample.capturedAt,
           isPlaying: true,
           motionRef: instructorPayload,
           previousMotionFrame: previousInstructorMotionFrame,
-          retargetSourceModel: replayRetargetSourceModel,
+          retargetSourceModel: replayPlayerRetargetSourceModel,
         });
         replayInstructorMotionRef.current = instructorPayload;
         replayInstructorMotionFrameRef.current = previousInstructorMotionFrame;
@@ -1101,11 +1079,9 @@ export default function MovementReplayLabPage() {
   }, [
     isPlaying,
     isThreePartyMirrorProof,
-    replayInstructorCalibration,
     replayPlayerCalibration,
     replayPlayerRetargetSourceModel,
     replayPlayerSetup,
-    replayRetargetSourceModel,
     replaySession,
     replayThreePartyPlayerCalibration,
     replayThreePartyPlayerSetup,
@@ -1588,13 +1564,16 @@ export default function MovementReplayLabPage() {
                         />
                         {isThreePartyMirrorProof ? (
                           <VrmAvatar
+                            assetVariant="instructor-proof"
+                            debugRegistryRole="instructor"
                             landmarksRef={replayInstructorMotionRef}
                             motionFrameRef={replayInstructorMotionFrameRef}
                             positionOffset={[-0.8, 0, 0]}
+                            isPlayer
                             isPlaying={isPlaying || isDeterministicReplay}
-                            motionMode="recorded"
                             name="Replay instructor proof"
-                            retargetSourceModel={replayRetargetSourceModel}
+                            retargetSourceModel={replayPlayerRetargetSourceModel}
+                            trackingCalibration={replayPlayerCalibration}
                             rootMotionFrame={isThreePartyMirrorProof
                               ? null
                               : currentRootMotionFrame ?? null}

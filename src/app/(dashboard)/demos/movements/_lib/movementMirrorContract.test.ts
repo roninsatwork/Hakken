@@ -2,13 +2,10 @@ import { describe, expect, it } from "vitest";
 import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtures";
 import { buildLiveMovementMotionFrame } from "./movementLiveMotionFrame";
 import { buildRecordedMovementMotionFrame } from "./movementRecordedMotionFrame";
+import { buildReplayPlayerMovementMotionFrame } from "./movementReplayPlayerMotionFrame";
 import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 import { buildMovementCalibration } from "./movementTrackingCalibration";
 import { prepareVrmSolverInput } from "./vrmRigging";
-import {
-  buildOppositePlayerImitationOracle,
-  buildOppositePlayerRetargetSourceModelOracle,
-} from "../replay-lab/_lib/replayThreePartyMirrorOracle";
 
 const expectedBilateralPosePairs = [
   [1, 4],
@@ -54,12 +51,15 @@ function buildMirrorArmPair() {
 }
 
 describe("movement mirror contract", () => {
-  it("uses anatomical identity for the instructor and anatomical opposite for the player avatar", () => {
+  // The recorded instructor runs the unified player lane, so BOTH avatars use
+  // the facing-player anatomical mapping. This is what makes the Game
+  // instructor render identically to the approved Replay Studio avatar.
+  it("uses the same facing-player anatomical mapping for the recorded instructor and the live player", () => {
     const { instructor, player } = buildMirrorArmPair();
 
     expect(instructor?.display.sideMap).toEqual({
-      sourceLeft: "avatarLeft",
-      sourceRight: "avatarRight",
+      sourceLeft: "avatarRight",
+      sourceRight: "avatarLeft",
     });
     expect(player?.display.sideMap).toEqual({
       sourceLeft: "avatarRight",
@@ -115,29 +115,38 @@ describe("movement mirror contract", () => {
     });
   });
 
-  it("gives the display-side player retarget frame the instructor's final anatomical targets", () => {
-    const instructorPayload = makeMovementAvatarProofMotionPayload("right-arm-raise");
-    const instructorModel = buildMovementRetargetSourceModel({
+  it("renders the recorded instructor identically to the Replay student for the same input", () => {
+    // The unified-lane contract: the Game instructor and the approved Replay
+    // Studio avatar are the SAME runtime, so identical inputs must produce
+    // identical motion frames. This is the guard that stops the instructor
+    // from ever diverging from the Replay rendering again.
+    const payload = makeMovementAvatarProofMotionPayload("right-arm-raise");
+    const model = buildMovementRetargetSourceModel({
       poseLandmarks: neutralPayload.landmarks,
     });
-    const playerPayload = buildOppositePlayerImitationOracle(instructorPayload);
-    if (!playerPayload.landmarks) {
-      throw new Error("The opposite-player oracle must preserve source landmarks.");
-    }
-    const instructor = buildRecordedMovementMotionFrame({
-      isPlaying: true,
-      motionRef: instructorPayload,
-      retargetSourceModel: instructorModel,
+    const calibration = buildMovementCalibration({
+      poseLandmarks: neutralPayload.landmarks,
     });
-    const player = buildLiveMovementMotionFrame({
-      calibration: buildMovementCalibration({ poseLandmarks: playerPayload.landmarks }),
+    const instructor = buildRecordedMovementMotionFrame({
+      calibration,
+      capturedAt: 7000,
       isPlaying: true,
-      motionRef: playerPayload,
-      retargetSourceModel: buildOppositePlayerRetargetSourceModelOracle(instructorModel),
+      motionRef: payload,
+      retargetSourceModel: model,
+    });
+    const replayStudent = buildReplayPlayerMovementMotionFrame({
+      calibration,
+      capturedAt: 7000,
+      isPlaying: true,
+      motionRef: payload,
+      retargetSourceModel: model,
     });
 
-    expect(player?.avatarDisplayDecision.retargetFrame.segments).toEqual(
-      instructor?.avatarDisplayDecision.retargetFrame.segments,
+    expect(instructor).not.toBeNull();
+    expect(instructor?.displayLandmarks).toEqual(replayStudent?.displayLandmarks);
+    expect(instructor?.avatarDisplayDecision.retargetFrame.segments).toEqual(
+      replayStudent?.avatarDisplayDecision.retargetFrame.segments,
     );
+    expect(instructor?.mirrorMode).toBe(replayStudent?.mirrorMode);
   });
 });

@@ -4,7 +4,11 @@ import { buildRecordedMovementMotionFrame } from "./movementRecordedMotionFrame"
 import { buildMovementRetargetSourceModel } from "./movementRetargeting";
 
 describe("movementRecordedMotionFrame", () => {
-  it("adapts recorded instructor input into the shared motion-frame contract", () => {
+  // The recorded avatar (Game instructor, Replay student) runs the unified
+  // player lane: facing-player mirror, mirrored display, no standby blanking.
+  // This is what makes the Game instructor render exactly like the approved
+  // Replay Studio avatar.
+  it("adapts recorded instructor input into the unified player motion-frame contract", () => {
     const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
     const payload = {
       ...makeMovementAvatarProofMotionPayload("squat"),
@@ -21,7 +25,7 @@ describe("movementRecordedMotionFrame", () => {
     expect(motionFrame?.source.sourceOrigin).toBe("recorded-replay");
     expect(motionFrame?.source.sourceStatus).toBe("decoded");
     expect(motionFrame?.source.capturedAt).toBe(2345);
-    expect(motionFrame?.mirrorMode).toBe("same-side");
+    expect(motionFrame?.mirrorMode).toBe("facing-player");
     expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
     expect(motionFrame?.source.landmarks.blendshapes).toEqual(payload.blendshapes);
@@ -63,7 +67,7 @@ describe("movementRecordedMotionFrame", () => {
     expect(motionFrame?.held).toEqual(["readability"]);
   });
 
-  it("keeps recorded source landmarks independent from presentation standby state", () => {
+  it("keeps recorded source landmarks separate from the mirrored display pose while paused", () => {
     const neutral = makeMovementAvatarProofMotionPayload("standing").landmarks;
     const payload = makeMovementAvatarProofMotionPayload("squat");
     const motionFrame = buildRecordedMovementMotionFrame({
@@ -74,10 +78,14 @@ describe("movementRecordedMotionFrame", () => {
     });
 
     expect(motionFrame).not.toBeNull();
+    // Source landmarks stay raw/un-mirrored...
     expect(motionFrame?.source.landmarks.pose).not.toBe(payload.landmarks);
     expect(motionFrame?.source.landmarks.pose[0]?.x).toBe(payload.landmarks[0]?.x);
     expect(motionFrame?.source.landmarks.pose.some((landmark) => (landmark.visibility ?? 0) > 0)).toBe(true);
-    expect(motionFrame?.displayLandmarks.pose.every((landmark) => landmark.visibility === 0)).toBe(true);
+    // ...while the display pose holds the mirrored recorded pose (the unified
+    // player lane never blanks the avatar in standby, matching Replay Studio).
+    expect(motionFrame?.displayLandmarks.pose).not.toBe(payload.landmarks);
+    expect(motionFrame?.displayLandmarks.pose[0]?.x).toBeCloseTo(1 - (payload.landmarks[0]?.x ?? 0));
   });
 
   it("keeps recorded source world pose independent from mirrored display world pose", () => {

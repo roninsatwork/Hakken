@@ -52,11 +52,13 @@ export function useVrmAvatarFrameRuntime({
   frameSeekIndex,
   frameWarmupSequenceRef,
   groupRef,
+  holdPoseUntilPlaying = false,
   isPlaying,
   landmarksRef,
   motionFrameRef,
   name,
   positionOffset,
+  registryRole,
   runtimeRefs,
   showPausedPose,
   trackingCalibration,
@@ -74,11 +76,19 @@ export function useVrmAvatarFrameRuntime({
   frameSeekIndex?: number;
   frameWarmupSequenceRef?: RefObject<ReadonlyArray<VrmAvatarFrameWarmup>>;
   groupRef: RefObject<THREE.Group | null>;
+  // Hold the current (rest) pose entirely while not playing, instead of the
+  // default standby presentation. Used by the ordinary Game's player avatar so
+  // the start gate's partial tracking can never animate it.
+  holdPoseUntilPlaying?: boolean;
   isPlaying: boolean;
   landmarksRef: RefObject<VrmMotionRef>;
   motionFrameRef: RefObject<MovementMotionFrame | null | undefined>;
   name: string;
   positionOffset: [number, number, number];
+  // Which on-screen avatar this runtime registers as in the debug registry.
+  // Distinct from the motion role: the recorded instructor runs the player
+  // motion lane but must still be discoverable as "instructor".
+  registryRole?: "instructor" | "player";
   runtimeRefs: MovementAvatarRuntimeRefs;
   showPausedPose: boolean;
   trackingCalibration: MovementCalibration | null;
@@ -176,6 +186,14 @@ export function useVrmAvatarFrameRuntime({
       updateProof("waiting-motion");
       return;
     }
+    // The ordinary Game's player avatar must not chase partial tracking while
+    // the start gate ("step back until visible", countdown) is still running —
+    // half-visible bodies produce garbage poses. Hold the rest pose entirely
+    // until playback actually starts.
+    if (holdPoseUntilPlaying && !isPlaying) {
+      updateProof("waiting-motion");
+      return;
+    }
 
     const frameEntryRuntime = resolveMovementAvatarFrameEntryRuntime({
       avatarRoot: groupRef.current,
@@ -262,6 +280,7 @@ export function useVrmAvatarFrameRuntime({
       recordedRootMotionFrame: warmupFrame
         ? motionFrame?.rootMotionFrame ?? null
         : externalRootMotionFrameRef?.current ?? rootMotionFrameRef.current ?? motionFrame?.rootMotionFrame ?? null,
+      registryRole: registryRole ?? (usesPlayerMotionPath ? "player" : "instructor"),
       retargetAvatarRestRef,
       retargetSourceModelRef,
       rigDeepCapture,
@@ -288,7 +307,7 @@ export function useVrmAvatarFrameRuntime({
           MovementTrackingDebugState
         >>;
       }).__sonaeMovementAvatarDebug;
-      const registryDebug = registry?.[usesPlayerMotionPath ? "player" : "instructor"];
+      const registryDebug = registry?.[registryRole ?? (usesPlayerMotionPath ? "player" : "instructor")];
       if (registryDebug) {
         registryDebug.sourceCapturedAt = motionFrame.source.capturedAt;
         registryDebug.sourceFrameId = motionFrame.source.frameId;

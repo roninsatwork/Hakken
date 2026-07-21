@@ -166,26 +166,86 @@ him right. Do not re-litigate this.*
    INSTRUCTOR's follow-vs-recording telemetry per frame (as `playerVisual` already is),
    so the instructor can never silently diverge again.
 
-**WHAT WAS ACTUALLY BUILT (2026-07-21) — narrow calibration fix, mirror kept:**
-Anthony chose to KEEP the "mirror the coach" behavior (you mirror the instructor;
-scoring compares mirrored-player vs identity-instructor). So the full lane unification
-above was NOT taken — it would have changed the game to "copy exactly" and shifted
-scoring. Instead, only the mangling root cause was fixed:
-- The Game instructor now gets its calibration AND retarget source model from
-  `buildMovementPlayerSetupFromPrefix(effectiveLoadedFrames)` — the recording's stable
-  setup prefix, the same robust baseline the Replay student uses — instead of
-  `buildInstructorRetargetSourceModel` (single-guessed-neutral-frame) +
-  `buildMovementRecordedInstructorCalibration`. See `[id]/play/page.tsx` (`instructorPlayerSetup`).
-- The instructor's mirror mapping, avatar role, render path, and the whole
-  `buildRecordedMovementMotionFrame` instructor lane are UNCHANGED — so scoring semantics
-  and the mirror contract are preserved (all mirror-contract tests still pass).
-- Verified visually (ordinary-game live proof, fake webcam, `instructor-narrow-fix-proof`):
-  the instructor renders as a coherent human through arm raises and leans — the mangling is
-  gone — and still mirrors, with scoring climbing normally. Full suite green (1374 tests).
-- Not done here: the `buildInstructorRetargetSourceModel` neutral-frame heuristic still
-  exists and is still used for the knee-lift retarget ANALYSIS (not for driving the avatar);
-  leave it. The noisy-arm-data offline filter (below) was not needed — the stable neutral
-  reference alone resolved the visible mangling.
+**BUILD HISTORY (2026-07-21):**
+1. *Narrow calibration fix* (committed as `334768889`): prefix-based calibration only,
+   instructor lane otherwise unchanged. Anthony REJECTED it — instructor still mangled
+   (folds render as collapsed squats, odd arms). The mirror-vs-copy question asked around
+   this build was noise: Anthony's actual requirement is "same as Replay Studio".
+2. *FULL LANE UNIFICATION (current build):* `buildRecordedMovementMotionFrame` now routes
+   through `buildMovementGamePlayerRuntimeFrame` (source "recorded-replay") — the recorded
+   instructor IS the Replay student runtime. This carries the player lane's follow-
+   acceptance/readability holds (the "judge" below) that the old instructor lane bypassed,
+   plus the facing-player mapping and prefix calibration. Changes:
+   - `movementRecordedMotionFrame.ts`: instructor builder → player runtime.
+   - Game (`[id]/play/page.tsx`): instructor `VrmAvatar` gets `isPlayer`,
+     `assetVariant="instructor"` (distinct GLTF cache key), `debugRegistryRole="instructor"`,
+     `trackingCalibration` from the prefix setup.
+   - replay-lab: all three instructor build sites + the instructor-proof avatar moved to the
+     same prefix setup/player lane; dead `buildInstructorRetargetSourceModel` +
+     `buildMovementRecordedInstructorCalibration` usages removed from replay-lab.
+   - `registryRole` threaded through the frame-application/telemetry chain so the unified
+     instructor still registers as "instructor" in `__sonaeMovementAvatarDebug` (the
+     alignment harness requires both roles; motion role stays "player").
+   - Tests updated to the unified contract: `movementRecordedMotionFrame.test.ts`
+     (facing-player, mirrored display, no standby blanking) and
+     `movementMirrorContract.test.ts` (both avatars facing-player; instructor ===
+     Replay student for identical inputs — the guard that stops future divergence).
+   - EXPECTED BEHAVIOR CHANGE: during blocked sections (the folds, until fold retargeting
+     is fixed) the Game instructor now HOLDS a calm pose exactly like Replay Studio does,
+     instead of rendering the mangled fold. This is option (A) below, by construction.
+   - VERIFIED (2026-07-21, unified build): typecheck clean; 1374 tests pass; ordinary-game
+     live proof (`unified-lane-proof`, fake webcam, full routine) shows the instructor clean
+     and human at EVERY 4s sample — arm raises, side stretch, leg lift, no mangling — with
+     real-time pacing and scoring working (final 555); mounted alignment proof
+     (`unified-lane-alignment`) PASSED with 706 active frames and all 9 exact boundaries,
+     instructor telemetry registering correctly under the new `registryRole`. Remaining for
+     acceptance: Anthony watches it (the contract below), then (B) fold retargeting so the
+     held fold sections animate for real.
+
+**REFINEMENT ROADMAP (brainstormed with Anthony 2026-07-21, agreed order):**
+(1) head stabilization → (2) render-time frame blending (interpolate between recorded
+frames by timestamp so 13.7fps capture animates continuously) → (3) offline "studio polish"
+pass on saved recordings (non-causal smoothing, constant limb lengths — arms measured at
+9–17% length CV, up to 28% L/R asymmetry) → (4) fold retargeting (item B above) →
+(5) capture-rate improvements for future recordings (run face/hands at half rate) and an
+opt-in keep-reference-video flag for Anthony's test recordings → alongside all of it,
+(6) a side-by-side comparison strip + "worst 5 seconds" ranked list per iteration.
+
+**STEP 1 DONE — HEAD STABILIZATION (2026-07-21):** Anthony reported the avatar head "floppy,
+like it's not connected". Cause: arms/spine/feet go through temporal stabilization
+(`movementAvatarTemporalStabilization.ts`) but the HEAD had none — every noisy 13.7fps pose
+sample became an instant head target, and confidence flapping near the tracked/neutral
+threshold snapped the target between them. Fix in `movementAvatarHeadTarget.ts`:
+`stabilizeMovementAvatarHeadDecision` rate-limits head pitch/yaw/roll steps against the
+previous motion frame (3.2 rad/s while tracked; 1.4 rad/s through ownership transitions,
+100ms max step budget — same pattern as the body stabilizer); all derived values (bone
+pitch, application pose, world yaw) now come from the stabilized angles. Threaded via
+`previousHeadTarget` + `sourceDeltaMs` from `movementMotionFrame.ts` for both the source and
+display head targets — deterministic, chain-threaded, shared by both studios. Verified:
+3 new unit tests (rate cap, slower ownership transitions, no-previous passthrough), 1377
+total pass; live proof `head-stabilization-proof` shows level, attached heads at every
+sample including the side stretch, turn, and leg raise; alignment proof
+`head-stab-alignment` PASSED (707 frames, 9 exact boundaries). Anthony judged this "a great
+improvement" and raised two follow-ups, both fixed the same day (below). Next: step 2
+(frame blending), pending his sign-off.
+
+**FOLLOW-UP FIXES (2026-07-21, from Anthony's live session):**
+1. *Player avatar animated during the start gate* ("walk back into shot") on garbage
+   partial-body tracking, causing a jump/break when the game began. Reproduced with the
+   near-camera clip (avatar visibly mirrored half-visible hands during "Step back until
+   your head and both feet are visible"). Fix: `holdPoseUntilPlaying` — a VrmAvatar prop
+   threaded to `useVrmAvatarFrameRuntime` that holds the rest pose entirely while
+   `!isPlaying`. Enabled ONLY for the ordinary Game's player avatar (debug/packet-proof
+   routes keep their pre-start behaviors: warmup collection, paused-pose debug). Verified:
+   the avatar now stands in rest pose through the whole gate phase.
+2. *Heads looking down instead of at the camera.* The unification had regressed the
+   committed head-level fix: `movementMotionFrame.ts` forced `headCalibration = null` for
+   player-role frames, discarding the recording's `headNeutral` ("looking at the camera" =
+   level) so head pitch was ABSOLUTE and a low camera read as looking down. Fix: pass
+   `pipelineInput.calibration` through for every lane uniformly. The prefix setup builds
+   its headNeutral from pose landmarks (source "pose"), which matches the recorded lane's
+   pose-derived rawHead, so the neutral-relative correction engages. Verified: heads level
+   and facing the viewer at every sample; alignment proof `head-level-alignment` PASSED.
 
 **CORRECTED DIAGNOSIS (2026-07-21, after Anthony rejected the narrow fix — instructor still
 mangled in folds): REPLAY STUDIO HAS AN ACCEPTANCE JUDGE; THE GAME DOES NOT.**

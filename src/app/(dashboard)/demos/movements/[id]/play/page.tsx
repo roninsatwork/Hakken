@@ -1480,13 +1480,17 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <style>{`nextjs-portal { display: none !important; }`}</style>
       <MovementMatchScene>
         <VrmAvatar
+          assetVariant="instructor"
+          debugRegistryRole="instructor"
           frameApplicationProofRef={isDebugGamePacketRoute ? instructorFrameApplicationProofRef : undefined}
           frameWarmupSequenceRef={isDebugGamePacketRoute ? instructorInitialFrameSequenceRef : undefined}
           landmarksRef={effectiveInstructorCurrentLmRef}
           motionFrameRef={instructorMotionFrameRef}
           positionOffset={[-5, 0, 0]}
+          isPlayer
           isPlaying={shouldKeepInstructorMotionFrameVisible}
           showPausedPose={isDebugTracking}
+          trackingCalibration={effectiveInstructorCalibration}
           trackingDebugRef={instructorTrackingDebugRef}
           retargetSourceModel={effectiveInstructorRetargetSourceModel}
           vrmUrl={instructorAvatarUrl}
@@ -1515,6 +1519,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         <VrmAvatar
           frameApplicationProofRef={isDebugGamePacketRoute ? playerFrameApplicationProofRef : undefined}
           frameWarmupSequenceRef={isDebugGamePacketRoute ? playerInitialFrameSequenceRef : undefined}
+          holdPoseUntilPlaying={!isDebugGamePacketRoute && !isDebugMovementInjectionRoute && !isDebugTracking}
           landmarksRef={effectivePlayerLiveLmRef}
           positionOffset={[5, 0, 0]}
           isPlayer={true}

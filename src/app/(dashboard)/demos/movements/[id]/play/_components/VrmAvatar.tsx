@@ -28,6 +28,9 @@ const AVATAR_BASE_Y = -2.8;
 const AVATAR_FRAME_FALLBACK_SLERP = 0.35;
 
 type VrmAvatarProps = {
+  assetVariant?: string;
+  debugRegistryRole?: "instructor" | "player";
+  holdPoseUntilPlaying?: boolean;
   frameApplicationProofRef?: MutableRefObject<VrmAvatarFrameApplicationProof>;
   frameWarmupSequenceRef?: RefObject<ReadonlyArray<VrmAvatarFrameWarmup>>;
   frameSeekIndex?: number;
@@ -50,6 +53,9 @@ type VrmAvatarProps = {
 };
 
 export default function VrmAvatar({
+  assetVariant,
+  debugRegistryRole,
+  holdPoseUntilPlaying = false,
   frameApplicationProofRef,
   frameWarmupSequenceRef,
   frameSeekIndex,
@@ -90,6 +96,7 @@ export default function VrmAvatar({
   });
 
   const { avatarScene, vrmRef } = useMovementAvatarVrmAssetRuntime({
+    assetVariant,
     isPlayer,
     resetRefs: runtimeRefs.resetRefs,
     vrmUrl,
@@ -105,11 +112,13 @@ export default function VrmAvatar({
     frameSeekIndex,
     frameWarmupSequenceRef,
     groupRef: group,
+    holdPoseUntilPlaying,
     isPlaying,
     landmarksRef,
     motionFrameRef,
     name,
     positionOffset,
+    registryRole: debugRegistryRole,
     runtimeRefs,
     showPausedPose,
     trackingCalibration,

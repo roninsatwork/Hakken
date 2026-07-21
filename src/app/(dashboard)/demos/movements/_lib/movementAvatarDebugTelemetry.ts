@@ -125,6 +125,7 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   footLock,
   footWorldSnapshot,
   frameUpdatedAt,
+  registryRole = avatarRole,
   registryWindow,
   retargetFrame,
   retargetSourceModel,
@@ -146,6 +147,11 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   };
   footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   frameUpdatedAt: number;
+  // Which on-screen avatar this telemetry belongs to in the debug registry.
+  // Distinct from avatarRole (motion semantics): the recorded instructor runs
+  // the player motion lane but must still register as "instructor" so the
+  // proof harnesses can find both avatars.
+  registryRole?: "instructor" | "player";
   registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
   retargetFrame: MovementRetargetFrame;
   retargetSourceModel?: import("./movementRetargeting").MovementRetargetSourceModel | null;
@@ -187,7 +193,7 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   if (registryWindow && nextState.retarget) {
     writeMovementAvatarRetargetDebugRegistry({
       avatarName,
-      avatarRole,
+      avatarRole: registryRole,
       frameUpdatedAt,
       registryWindow,
       retarget: nextState.retarget,
@@ -196,7 +202,7 @@ export function applyMovementAvatarPostFrameDebugTelemetry({
   if (registryWindow) {
     registryWindow.__sonaeMovementAvatarDebug = {
       ...registryWindow.__sonaeMovementAvatarDebug,
-      [avatarRole]: {
+      [registryRole]: {
         ...nextState,
         avatarName,
         frameUpdatedAt,
@@ -215,6 +221,7 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   footLock,
   footWorldSnapshot,
   frameUpdatedAt,
+  registryRole,
   registryWindow,
   retargetFrame,
   retargetSourceModel,
@@ -236,6 +243,7 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
   };
   footWorldSnapshot?: MovementAvatarFootWorldRuntimeSnapshot | null;
   frameUpdatedAt: number;
+  registryRole?: "instructor" | "player";
   registryWindow?: MovementAvatarRetargetDebugRegistryWindow;
   retargetFrame: MovementRetargetFrame;
   retargetSourceModel?: import("./movementRetargeting").MovementRetargetSourceModel | null;
@@ -256,6 +264,7 @@ export function applyMovementAvatarOptionalPostFrameDebugTelemetry({
     footLock,
     footWorldSnapshot,
     frameUpdatedAt,
+    registryRole,
     registryWindow,
     retargetFrame,
     retargetSourceModel,

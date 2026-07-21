@@ -345,4 +345,102 @@ describe("movement avatar head target", () => {
     expect(target.headDecision.shouldApplyPlayerHeadMotion).toBe(false);
     expect(target.applicationPose.headPositionOffset).toBeNull();
   });
+
+  it("rate-limits head angle steps between source frames so the head cannot snap", () => {
+    const base = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+    // Pretend the previous frame's head pointed 1 radian away in yaw — a noise
+    // spike or tracking flip. At 73ms cadence the stabilized head may move at
+    // most 3.2 rad/s toward the new target.
+    const previousHeadTarget = {
+      ...base,
+      headDecision: {
+        ...base.headDecision,
+        headYaw: base.headDecision.headYaw + 1,
+      },
+    };
+    const stabilized = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0.5,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      previousHeadTarget,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+      sourceDeltaMs: 73,
+    });
+
+    const step = Math.abs(stabilized.headDecision.headYaw - previousHeadTarget.headDecision.headYaw);
+    expect(step).toBeLessThanOrEqual(3.2 * 0.073 + 0.001);
+    expect(step).toBeGreaterThan(0.1);
+    // Derived values follow the stabilized angles, not the raw ones.
+    expect(stabilized.headWorldYaw).toBeCloseTo(0.5 + stabilized.headDecision.headYaw, 6);
+  });
+
+  it("eases even more slowly through head ownership transitions", () => {
+    const base = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+    const previousHeadTarget = {
+      ...base,
+      headDecision: {
+        ...base.headDecision,
+        headOwner: "neutral",
+        headYaw: base.headDecision.headYaw + 1,
+      },
+    };
+    const stabilized = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      previousHeadTarget,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+      sourceDeltaMs: 73,
+    });
+
+    const step = Math.abs(stabilized.headDecision.headYaw - previousHeadTarget.headDecision.headYaw);
+    expect(step).toBeLessThanOrEqual(1.4 * 0.073 + 0.001);
+  });
+
+  it("leaves the head target untouched when no previous frame exists", () => {
+    const withoutPrevious = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+    });
+    const withDelta = resolveMovementAvatarHeadTarget({
+      avatarRole: "instructor",
+      avatarRootYaw: 0,
+      calibration: null,
+      headMotionIntent: neutralHeadIntent,
+      poseLandmarks: withCorePose(),
+      previousHeadTarget: null,
+      shouldApplyLowerBody: false,
+      shouldApplySpine: false,
+      sourceDeltaMs: 73,
+    });
+
+    expect(withDelta.headDecision).toEqual(withoutPrevious.headDecision);
+  });
 });

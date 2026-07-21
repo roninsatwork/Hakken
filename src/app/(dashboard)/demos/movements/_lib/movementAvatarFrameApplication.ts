@@ -152,6 +152,7 @@ export function applyMovementAvatarPostFrameDebugRuntime({
   footLock,
   footWorldSnapshot,
   frameUpdatedAt,
+  registryRole,
   registryWindow = typeof window === "undefined"
     ? undefined
     : window as Window & MovementAvatarRetargetDebugRegistryWindow,
@@ -171,6 +172,7 @@ export function applyMovementAvatarPostFrameDebugRuntime({
   footLock: Parameters<typeof applyMovementAvatarOptionalPostFrameDebugTelemetry>[0]["footLock"];
   footWorldSnapshot?: Parameters<typeof applyMovementAvatarOptionalPostFrameDebugTelemetry>[0]["footWorldSnapshot"];
   frameUpdatedAt: number;
+  registryRole?: "instructor" | "player";
   registryWindow?: (Window & MovementAvatarRetargetDebugRegistryWindow) | undefined;
   retargetFrame: MovementRetargetFrame;
   retargetSourceModel?: MovementRetargetSourceModel | null;
@@ -196,6 +198,7 @@ export function applyMovementAvatarPostFrameDebugRuntime({
     footLock,
     footWorldSnapshot,
     frameUpdatedAt,
+    registryRole,
     registryWindow,
     retargetFrame,
     retargetSourceModel,
@@ -236,6 +239,7 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   isPlayer,
   lookupBone,
   mirrorForDisplay,
+  registryRole,
   retargetFrame,
   retargetSourceModel,
   rigMeasurements,
@@ -259,6 +263,7 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
   isPlayer: boolean;
   lookupBone: (vrmName: string) => THREE.Object3D | null | undefined;
   mirrorForDisplay: boolean;
+  registryRole?: "instructor" | "player";
   retargetFrame: MovementRetargetFrame;
   retargetSourceModel?: MovementRetargetSourceModel | null;
   rigMeasurements?: Partial<MovementAvatarRigMeasurements> | null;
@@ -276,6 +281,7 @@ export function applyMovementAvatarFinalFrameOrchestrationRuntime({
     footLock,
     footWorldSnapshot,
     frameUpdatedAt,
+    registryRole,
     retargetFrame,
     retargetSourceModel,
     rigMeasurements,
@@ -539,6 +545,7 @@ export function applyMovementAvatarFrameCompletionOrchestrationRuntime(
     isPlayer: input.isPlayer,
     lookupBone: input.lookupBone,
     mirrorForDisplay: input.mirrorForDisplay,
+    registryRole: input.registryRole,
     retargetFrame: input.retargetFrame,
     retargetSourceModel: input.retargetSourceModel,
     rigMeasurements: input.rigMeasurements,
@@ -767,6 +774,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   preBodyFrameOrchestrationRuntime,
   profile,
   profileName,
+  registryRole,
   retargetAvatarRestRef,
   retargetSourceModelRef,
   rigDeepCapture,
@@ -800,6 +808,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
   preBodyFrameOrchestrationRuntime: MovementAvatarPreBodyReadyRuntime;
   profile: MovementAvatarBodyFrameInput["profile"] & MovementAvatarCompletionInput["profile"];
   profileName: MovementAvatarCompletionInput["profileName"];
+  registryRole?: "instructor" | "player";
   retargetAvatarRestRef: MovementAvatarBodyFrameInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
   rigDeepCapture?: MovementDeepCaptureFrameEvidence | null;
@@ -944,6 +953,7 @@ export function applyMovementAvatarReadyFrameApplicationRuntime({
     poseLandmarks: imageLandmarks,
     profile,
     profileName,
+    registryRole,
     retargetAppliedLowerBody,
     retargetAppliedUpperBody,
     retargetFrame,
@@ -1029,6 +1039,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   profileName,
   providedRetargetSourceModel,
   recordedRootMotionFrame,
+  registryRole,
   retargetAvatarRestRef,
   rigMeasurements,
   rootCommandYRef,
@@ -1076,6 +1087,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
   profileName: MovementAvatarReadyFrameApplicationInput["profileName"];
   providedRetargetSourceModel: MovementRetargetSourceModel | null;
   recordedRootMotionFrame: MovementRootMotionFrame | null;
+  registryRole?: "instructor" | "player";
   retargetAvatarRestRef: MovementAvatarReadyFrameApplicationInput["retargetAvatarRestRef"];
   retargetSourceModelRef: MovementAvatarMutableRef<MovementRetargetSourceModel | null>;
   rigDeepCapture?: MovementDeepCaptureFrameEvidence | null;
@@ -1162,6 +1174,7 @@ export function applyMovementAvatarReadyFrameOrchestrationRuntime({
     preBodyFrameOrchestrationRuntime,
     profile,
     profileName,
+    registryRole,
     retargetAvatarRestRef,
     retargetSourceModelRef,
     rigDeepCapture,
