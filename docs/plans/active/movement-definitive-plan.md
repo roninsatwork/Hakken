@@ -1,8 +1,73 @@
 # Movement Definitive Plan
 
-Last reviewed: 2026-07-20
+Last reviewed: 2026-07-21
 Status: THE single source of truth for all movement work. When this plan and any older movement/posture/replay plan disagree, this plan wins.
 Owner: Anthony
+
+## HANDOFF (2026-07-21) — read this first
+
+You are picking up mid-work. Read this section, then the rest of the plan.
+
+**Goal (unchanged, do not re-question it):** Replay Studio and the live Game must
+make the avatar and the instructor follow the recorded movement. Acceptance is the
+follow-fidelity rule below (0.1 per body segment) AND Anthony seeing it look right.
+
+**Environment / rules:**
+- Work on branch `dev`. Current HEAD: `4ffa204c6`. Everything below is committed and pushed.
+- Node 22.13.0 for trusted checks. If `npx -p node@22.13.0` can't reach the network, cached Node is at
+  `/Users/ants/.npm/_npx/1bd81ab945294a66/node_modules/node/bin` — prefix commands with
+  `PATH=/Users/ants/.npm/_npx/1bd81ab945294a66/node_modules/node/bin:$PATH`.
+- **sonae.ronins.co.uk is an OLD deployment** — always test on `localhost:3000`. See [[check-which-environment-anthony-sees]].
+- Never delete recordings/videos. Do not commit/push without Anthony asking (he has been approving each commit).
+- Read AGENTS.md.
+
+**The only recording that matters:** `Full Mmotion Set London`, id
+`px78w9xf95hx7kzh17gdbcvqn18awdp7`, schema v3, full body, 822 frames. It is the ONLY
+recording in the database. It contains one fast ~180° turn (around frame 300–308) and forward folds.
+
+**What is DONE and committed today (dev):**
+- `cdee59126`/`3dd660b19` — reliable capture + **live player-freeze fixed** (the avatar's
+  source-sync gate froze the live webcam on a render-timing race;
+  `shouldWaitForMovementAvatarSourceSync` now skips only the id-less live-webcam timestamp path).
+  Anthony confirmed his avatar follows now.
+- `8750e104c` — **head floor-stare fixed** (recorded head is now neutral-relative so looking
+  at the screen while recording no longer makes the avatar stare at the floor).
+- `872da795d` — **follow-variance rule** documented (see below).
+- `4ffa204c6` — **upper-arm follow fixed** at moderate confidence (quartic→squared blend in
+  `movementAvatarRetargetSegmentApplicationDecision.ts`).
+- Body follow (torso, arms, forearms, thighs, shins) is WITHIN 0.1 across the whole video.
+
+**THE OPEN BUG — head misplaced during the fast spin:**
+- ~123 of 719 frames exceed 0.1 head follow; a severe cluster at frames **285–300** where the
+  rendered head points nearly **backward** (headChain sourceError ~1.9) at high confidence.
+- Everything outside that one turn is within 0.1.
+- **What was tried and FAILED (do not repeat):** two root-yaw fixes — (a) adaptive/faster yaw
+  lerp, (b) integrating `intent.headingDelta` to follow turn direction. BOTH left the head error
+  byte-identical, proving the head flip is NOT driven by the root yaw. Reverted both.
+- **Correct next step (methodical, not another guess):** instrument the head BONE quaternion
+  application at frames ~285–300 — `applyMovementAvatarHeadQuaternionTarget` in
+  `src/app/(dashboard)/demos/movements/[id]/play/_components/movementAvatarHeadQuaternionApplication.ts`
+  uses `headNode.quaternion.slerp(target, slerp)`, which is inherently shortest-path. The prime
+  suspect is that the head bone slerps the SHORT way while the body turns the LONG way, so the
+  head flips backward for ~15 frames. Log the target vs current head quaternion and the parent
+  world quaternion at those frames to confirm, then fix the head slerp to follow the body's turn
+  (e.g. continuity-aware target or driving head as an offset from the turning parent rather than an
+  absolute world yaw). Prove with the full-video proof AND browser screenshots.
+
+**How to measure (the loop):**
+- Full-video alignment + follow proof (≈10 min, needs the dev server running on :3000):
+  `npm run movement:replay-game:deep-latest-proof -- --base-url http://localhost:3000 --local-test-auth --secret sonae-local-test-auth --export tmp/movement-replay-lab/full-motion-set-london-proof-2026-07-20/source.convex-export.zip --out tmp/movement-replay-lab/<name>`
+  Then read `tmp/movement-replay-lab/<name>/commissioning-proof/packet-proof/mounted-game.json`:
+  head follow = `playerVisual.semantic.headChain.sourceError` per frame; body segments =
+  `playerVisual.segments.*.sourceError`; alignment = `comparison.json` `exactChecksumDivergenceCount`.
+- Live-game visual repro (screenshots, fakes the webcam, no camera needed) — local diagnostic tool
+  (uncommitted): `scripts/movement-debug/capture-ordinary-game-live-proof.mjs --recording-id px78w9xf95hx7kzh17gdbcvqn18awdp7 --clip far-camera-2026-07-18T10-52-32Z.webm --out tmp/movement-replay-lab/<name>`.
+- Everything is shared runtime, so a fix lands in Replay AND Game together; the alignment proof
+  should stay at 0 exact divergences (there are ~1–4 pre-existing avatar-ease warm-up tolerance
+  frames around 104–105 that are a separate, accepted issue — do not confuse them with the head bug).
+
+**Do not chase:** foot pointing direction (exempt by the rule — noisy metric, foot lands right);
+the 3 warm-up-frame tolerance divergences (pre-existing ease settling).
 
 ## The Vision
 
