@@ -9,6 +9,7 @@ import { scoreMovementNeutralCalibrationPose } from "./movementRecordedPlayerSet
 const DEFAULT_RECORDED_INSTRUCTOR_CALIBRATION_SAMPLES = 8;
 
 export type MovementRecordedInstructorSetupFrame = {
+  faceLandmarks?: TrackingLandmark[] | null;
   landmarks?: TrackingLandmark[];
   pose?: TrackingLandmark[];
 };
@@ -26,7 +27,15 @@ export function buildMovementRecordedInstructorCalibration(
     .map((frame, index) => {
       const poseLandmarks = frame.pose ?? frame.landmarks ?? [];
       return {
-        calibration: buildMovementCalibration({ now: index, poseLandmarks }),
+        // Capture the head neutral from face landmarks when present so a
+        // consistent screen-look (the person looking down at their monitor
+        // while recording) becomes the neutral baseline and is cancelled,
+        // instead of the instructor avatar faithfully staring at the floor.
+        calibration: buildMovementCalibration({
+          faceLandmarks: frame.faceLandmarks ?? null,
+          now: index,
+          poseLandmarks,
+        }),
         score: scoreMovementNeutralCalibrationPose(poseLandmarks),
       };
     })

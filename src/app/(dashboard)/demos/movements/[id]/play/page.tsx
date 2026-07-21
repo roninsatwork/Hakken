@@ -622,6 +622,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const effectiveInstructorCalibration = React.useMemo(() => (
     buildMovementRecordedInstructorCalibration(
       effectiveLoadedFrames as unknown as Array<{
+        faceLandmarks?: MovementPlayerMotionPayload["landmarks"] | null;
         landmarks?: MovementPlayerMotionPayload["landmarks"];
         pose?: MovementPlayerMotionPayload["landmarks"];
       }>,

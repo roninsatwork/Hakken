@@ -492,7 +492,10 @@ export default function MovementReplayLabPage() {
   const replayInstructorCalibration = useMemo(() => {
     if (!replaySession) return null;
     return buildMovementRecordedInstructorCalibration(
-      replaySession.samples.map((sample) => ({ landmarks: sample.tracking.pose })),
+      replaySession.samples.map((sample) => ({
+        faceLandmarks: sample.tracking.face ?? null,
+        landmarks: sample.tracking.pose,
+      })),
     );
   }, [replaySession]);
   const replayPlayerSetup = useMemo(() => {

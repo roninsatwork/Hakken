@@ -43,9 +43,11 @@ function stabilizePoseOnlyPlayerHead(
 }
 
 export function resolveMovementAvatarRecordedHeadAngles({
+  calibration = null,
   profile = DEFAULT_MOVEMENT_AVATAR_TRACKING_PROFILE,
   rawHead,
 }: {
+  calibration?: MovementCalibration | null;
   profile?: MovementAvatarTrackingProfile;
   rawHead: MovementHeadAngles;
 }): MovementHeadAngles {
@@ -53,19 +55,30 @@ export function resolveMovementAvatarRecordedHeadAngles({
     ? { pitch: 0.78, roll: 0.72, yaw: 0.85 }
     : { pitch: 0.85, roll: 0.72, yaw: 0.8 };
 
+  // Measure the head relative to the recording's neutral head pose when the
+  // neutral was captured in the same source space (face vs pose). This makes a
+  // consistent screen-look the baseline so it reads as level, while genuine
+  // head movement away from that baseline is preserved. Falls back to absolute
+  // angles when no matching-space neutral is available.
+  const neutral = calibration?.headNeutral;
+  const neutralMatchesSource = Boolean(neutral && neutral.source === rawHead.source);
+  const neutralPitch = neutralMatchesSource ? neutral!.pitch : 0;
+  const neutralYaw = neutralMatchesSource ? neutral!.yaw : 0;
+  const neutralRoll = neutralMatchesSource ? neutral!.roll : 0;
+
   return {
     pitch: clamp(
-      rawHead.pitch * poseOnlyHeadScale.pitch + profile.headPitchOffset,
+      (rawHead.pitch - neutralPitch) * poseOnlyHeadScale.pitch + profile.headPitchOffset,
       Math.max(profile.minHeadPitch, -0.42),
       Math.min(profile.maxHeadPitch, 0.42),
     ),
     yaw: clamp(
-      rawHead.yaw * poseOnlyHeadScale.yaw + profile.headYawOffset,
+      (rawHead.yaw - neutralYaw) * poseOnlyHeadScale.yaw + profile.headYawOffset,
       -Math.min(profile.maxHeadYaw, 0.9),
       Math.min(profile.maxHeadYaw, 0.9),
     ),
     roll: clamp(
-      rawHead.roll * poseOnlyHeadScale.roll + profile.headRollOffset,
+      (rawHead.roll - neutralRoll) * poseOnlyHeadScale.roll + profile.headRollOffset,
       -Math.min(profile.maxHeadRoll, 0.35),
       Math.min(profile.maxHeadRoll, 0.35),
     ),
@@ -149,6 +162,7 @@ export function resolveMovementAvatarHeadDecision({
         : stabilizedPlayerHead
     : recordedHeadTrackingReady
       ? resolveMovementAvatarRecordedHeadAngles({
+          calibration,
           profile,
           rawHead,
         })

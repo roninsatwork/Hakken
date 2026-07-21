@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveMovementAvatarHeadTarget } from "./movementAvatarHeadTarget";
+import { resolveMovementAvatarRecordedHeadAngles } from "./movementAvatarHeadDecision";
+import type { MovementHeadAngles } from "./movementTrackingCalibration";
 import type {
   MovementCalibration,
   MovementHeadMotionIntent,
@@ -59,6 +61,49 @@ function faceLandmarks() {
   face[263] = { x: 0.58, y: 0.45, z: 0, visibility: 0.9 };
   return face;
 }
+
+describe("recorded head angles neutral subtraction", () => {
+  const facePitchedDown: MovementHeadAngles = {
+    confidence: 0.9,
+    pitch: 0.3,
+    roll: 0,
+    source: "face",
+    yaw: 0,
+  };
+
+  it("cancels a consistent screen-look when a matching-source neutral is given", () => {
+    // Neutral was captured with the same downward screen-look. Relative pitch
+    // is ~0, so the avatar reads level instead of staring at the floor.
+    const neutral = { ...neutralCalibration, headNeutral: { ...facePitchedDown } };
+    const relative = resolveMovementAvatarRecordedHeadAngles({
+      calibration: neutral,
+      rawHead: facePitchedDown,
+    });
+    expect(Math.abs(relative.pitch)).toBeLessThan(0.02);
+
+    // A deliberate extra nod beyond the baseline is preserved.
+    const nodded = resolveMovementAvatarRecordedHeadAngles({
+      calibration: neutral,
+      rawHead: { ...facePitchedDown, pitch: 0.5 },
+    });
+    expect(nodded.pitch).toBeGreaterThan(0.1);
+  });
+
+  it("falls back to absolute angles without a matching-source neutral", () => {
+    const absolute = resolveMovementAvatarRecordedHeadAngles({ rawHead: facePitchedDown });
+    expect(absolute.pitch).toBeGreaterThan(0.15);
+
+    // A pose-source neutral must not be subtracted from a face-source head.
+    const mismatched = resolveMovementAvatarRecordedHeadAngles({
+      calibration: {
+        ...neutralCalibration,
+        headNeutral: { confidence: 0.9, pitch: 0.3, roll: 0, source: "pose", yaw: 0 },
+      },
+      rawHead: facePitchedDown,
+    });
+    expect(mismatched.pitch).toBeGreaterThan(0.15);
+  });
+});
 
 describe("movement avatar head target", () => {
   it("keeps head world yaw relative to the supplied avatar root yaw", () => {
