@@ -1,16 +1,16 @@
 import { inflateSync } from "node:zlib";
 import { expect, type Page, test, type TestInfo } from "@playwright/test";
-import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from "./helpers/navigation";
+import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from "../helpers/navigation";
 import {
   makeMovementAvatarProofPose,
   type MovementAvatarProofMode,
-} from "../src/app/(dashboard)/demos/movements/_lib/movementAvatarProofFixtures";
+} from "../../src/app/(dashboard)/demos/movements/_lib/movementAvatarProofFixtures";
 import type {
   MovementDebugReplayFrame,
   MovementDebugReplaySession,
-} from "../src/app/(dashboard)/demos/movements/_lib/movementDebugReplay";
-import { buildMovementGamePathSimulation } from "../src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation";
-import type { TrackingLandmark } from "../src/app/(dashboard)/demos/movements/_lib/movementTrackingCalibration";
+} from "../../src/app/(dashboard)/demos/movements/_lib/movementDebugReplay";
+import { buildMovementGamePathSimulation } from "../../src/app/(dashboard)/demos/movements/_lib/movementGamePathSimulation";
+import type { TrackingLandmark } from "../../src/app/(dashboard)/demos/movements/_lib/movementTrackingCalibration";
 
 process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY ??= "1";
 

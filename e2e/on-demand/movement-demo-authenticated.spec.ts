@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from "./helpers/navigation";
+import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from "../helpers/navigation";
 
 const movementId = "movement_e2e_roll_down";
 

@@ -2,6 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // Retired from the routine suite (Anthony, 2026-07-21): the heavyweight
+  // movement browser tests live in e2e/on-demand/ and run only via
+  // `npm run test:e2e:movement` when we explicitly want them. Their coverage
+  // is duplicated by the fast movement unit suite and the on-demand proof
+  // harnesses (mounted-game proof, live-game capture).
+  testIgnore: /on-demand\//,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -50,8 +56,6 @@ export default defineConfig({
         /admin\/workflow-widget-journeys\.spec\.ts/,
         /admin\/routes\.spec\.ts/,
         /admin\/tables\.spec\.ts/,
-        /movement-demo-authenticated\.spec\.ts/,
-        /movement-avatar-proof\.eval\.spec\.ts/,
         /admin-roles\.spec\.ts/,
         /exports\.spec\.ts/,
       ],
