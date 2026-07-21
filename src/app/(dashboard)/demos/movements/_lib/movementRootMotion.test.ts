@@ -86,7 +86,43 @@ describe("movement root motion", () => {
     expect(second?.frameIndex).toBe(1);
     expect(third?.frameIndex).toBe(1);
     expect(history).toHaveLength(2);
-    expect(third?.rootPosition.x).toBeCloseTo(0.25, 2);
+    // The calibration anchor frame is pinned through trimming, so root travel
+    // stays measured from the original start position, not from whatever frame
+    // happens to remain oldest in the window.
+    expect(third?.rootPosition.x).toBeCloseTo(0.45, 2);
+  });
+
+  it("keeps heading stable after a past turn scrolls out of the trimmed history", () => {
+    const history: MovementRootMotionInputFrame[] = [];
+    const limit = 10;
+    const append = (yaw: number, jitter: number) =>
+      appendMovementRootMotionHistoryFrame({
+        history,
+        limit,
+        pose: standingWorldPose({ x: jitter, z: 0 }, yaw),
+        worldPose: standingWorldPose({ x: jitter, z: 0 }, yaw),
+      });
+
+    // Face the camera, turn to 90 degrees and back in small continuous steps.
+    let jitter = 0;
+    append(0, (jitter += 0.001));
+    append(0, (jitter += 0.001));
+    const turnSteps = [15, 30, 45, 60, 75, 90, 75, 60, 45, 30, 15, 0];
+    let peakHeading = 0;
+    for (const step of turnSteps) {
+      const result = append((step * Math.PI) / 180, (jitter += 0.001));
+      peakHeading = Math.max(peakHeading, Math.abs(result?.headingYaw ?? 0));
+    }
+    // The real turn must register against the pinned calibration.
+    expect(peakHeading).toBeGreaterThan(1);
+
+    // Stand still long enough for the turn frames to be trimmed away. The
+    // heading must stay near zero the whole time; before the anchor was
+    // pinned, the sliding calibration replayed the turn as a phantom sweep.
+    for (let index = 0; index < limit * 3; index++) {
+      const result = append(0, (jitter += 0.001));
+      expect(Math.abs(result?.headingYaw ?? 0)).toBeLessThan(0.1);
+    }
   });
 
   it("does not append invalid live root-motion poses", () => {

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildInstructorRetargetAnalysis,
   buildInstructorRetargetSourceModel,
@@ -229,6 +229,75 @@ describe("buildInstructorRetargetSourceModel", () => {
 
     expect(analysis.peakSquat?.frameIndex).toBe(2);
     expect(analysis.peakSquat?.sourceQuality).toBeGreaterThan(0.7);
+  });
+});
+
+describe("useMovementInstructorPlayback wall-clock playback", () => {
+  it("advances by recorded timestamps, not by one frame per render tick", () => {
+    // Recorded at ~13.3fps (75ms cadence) — a render loop calling advance at
+    // 60Hz must NOT step one frame per call.
+    const frames = Array.from({ length: 20 }, (_, index) => ({
+      timestamp: index * 75,
+      landmarks: withCorePose(),
+    })) satisfies MovementInstructorMotionFrame[];
+    let nowMs = 1000;
+    const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => nowMs);
+    try {
+      const { result } = renderHook(() => useMovementInstructorPlayback(frames));
+
+      // The first call anchors the clock; four more 60Hz ticks accumulate
+      // ~67ms of wall time — the 75ms-cadence recording stays on frame 0.
+      act(() => {
+        expect(result.current.advanceInstructorFrame().frameIndex).toBe(0);
+        for (let tick = 0; tick < 4; tick++) {
+          nowMs += 1000 / 60;
+          expect(result.current.advanceInstructorFrame().frameIndex).toBe(0);
+        }
+      });
+      // Crossing 75ms of accumulated playback time reaches frame 1.
+      act(() => {
+        nowMs += 1000 / 60;
+        expect(result.current.advanceInstructorFrame().frameIndex).toBe(1);
+      });
+      // A long stall (e.g. tab throttling or pause) is capped at 250ms of
+      // playback progress, never a fast-forward across the whole recording.
+      act(() => {
+        nowMs += 10_000;
+        const advance = result.current.advanceInstructorFrame();
+        expect(advance.frameIndex).toBeLessThanOrEqual(4);
+        expect(advance.frameIndex).toBeLessThan(frames.length - 1);
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("resyncs the playback clock when scrubbed to a frame", () => {
+    const frames = [0, 75, 150, 225].map((timestamp) => ({
+      timestamp,
+      landmarks: withCorePose(),
+    })) satisfies MovementInstructorMotionFrame[];
+    let nowMs = 5000;
+    const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => nowMs);
+    try {
+      const { result } = renderHook(() => useMovementInstructorPlayback(frames));
+
+      act(() => {
+        result.current.setInstructorFrame(2);
+      });
+      // Immediately after a scrub, playback holds the scrubbed frame...
+      act(() => {
+        nowMs += 1000 / 60;
+        expect(result.current.advanceInstructorFrame().frameIndex).toBe(2);
+      });
+      // ...and advances only after the next recorded interval elapses.
+      act(() => {
+        for (let tick = 0; tick < 5; tick++) nowMs += 1000 / 60;
+        expect(result.current.advanceInstructorFrame().frameIndex).toBe(3);
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });
 

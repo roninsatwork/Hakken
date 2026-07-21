@@ -34,7 +34,6 @@ import { useMovementMatchSession } from "../../_hooks/useMovementMatchSession";
 import { useMediaPipeVision } from "../../_hooks/useMediaPipeVision";
 import { useMovementFrames } from "../../_hooks/useMovementFrames";
 import { useMovementRecordedMotionFrame } from "../../_hooks/useMovementRecordedMotionFrame";
-import { buildMovementRecordedInstructorCalibration } from "../../_lib/movementRecordedInstructorSetup";
 import {
   createMovementRecordedSourcePlaybackState,
   useMovementPlayerTracking,
@@ -74,7 +73,10 @@ import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import {
   buildMovementRetargetSourceModel,
 } from "../../_lib/movementRetargeting";
-import { getMovementPlayerSetupWindowStartIndex } from "../../_lib/movementPlayerInputContract";
+import {
+  buildMovementPlayerSetupFromPrefix,
+  getMovementPlayerSetupWindowStartIndex,
+} from "../../_lib/movementPlayerInputContract";
 import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
@@ -604,7 +606,6 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     instructorCurrentLmRef,
     frameIndexRef: instructorFrameIndexRef,
     retargetAnalysis: instructorRetargetAnalysis,
-    retargetSourceModel: instructorRetargetSourceModel,
     advanceInstructorFrame,
     resetInstructorPlayback,
     setInstructorFrame,
@@ -617,17 +618,30 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const effectiveInstructorCurrentLmRef = isDebugInstructorPoseRoute
     ? debugInstructorLmRef
     : instructorCurrentLmRef;
-  const effectiveInstructorRetargetSourceModel =
-    debugInstructorRetargetSourceModel ?? instructorRetargetSourceModel;
-  const effectiveInstructorCalibration = React.useMemo(() => (
-    buildMovementRecordedInstructorCalibration(
-      effectiveLoadedFrames as unknown as Array<{
-        faceLandmarks?: MovementPlayerMotionPayload["landmarks"] | null;
-        landmarks?: MovementPlayerMotionPayload["landmarks"];
-        pose?: MovementPlayerMotionPayload["landmarks"];
-      }>,
+  // The instructor now runs the SAME lane as the approved Replay Studio avatar:
+  // calibration and retarget solved from the recording's setup prefix (a stable
+  // baseline), not the old single-guessed-neutral-frame heuristic that baked one
+  // frame's arm distortion into every pose.
+  const instructorPlayerSetup = React.useMemo(() => (
+    buildMovementPlayerSetupFromPrefix(
+      (effectiveLoadedFrames as unknown as Array<{
+        capturedAt?: number;
+        landmarks?: VrmMotionPayload["landmarks"];
+        pose?: VrmMotionPayload["landmarks"];
+        worldLandmarks?: VrmMotionPayload["worldLandmarks"];
+      }>).map((frame, frameIndex) => ({
+        capturedAt: frame.capturedAt,
+        frameId: `${movementId}:instructor:${frameIndex}`,
+        landmarks: (frame.landmarks ?? frame.pose ?? []) as VrmMotionPayload["landmarks"],
+        worldLandmarks: (frame.worldLandmarks && frame.worldLandmarks.length >= 33
+          ? frame.worldLandmarks
+          : undefined) as VrmMotionPayload["worldLandmarks"],
+      })),
     )
-  ), [effectiveLoadedFrames]);
+  ), [effectiveLoadedFrames, movementId]);
+  const effectiveInstructorRetargetSourceModel =
+    debugInstructorRetargetSourceModel ?? instructorPlayerSetup?.retargetSourceModel ?? null;
+  const effectiveInstructorCalibration = instructorPlayerSetup?.calibration ?? null;
   const shouldKeepInstructorMotionFrameVisible = isPlaying || isDebugTracking || (
     isDebugGamePacketRoute &&
     Boolean(automaticPlayerSetup) &&

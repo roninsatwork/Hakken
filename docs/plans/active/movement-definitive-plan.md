@@ -37,22 +37,219 @@ recording in the database. It contains one fast ~180° turn (around frame 300–
   `movementAvatarRetargetSegmentApplicationDecision.ts`).
 - Body follow (torso, arms, forearms, thighs, shins) is WITHIN 0.1 across the whole video.
 
-**THE OPEN BUG — head misplaced during the fast spin:**
-- ~123 of 719 frames exceed 0.1 head follow; a severe cluster at frames **285–300** where the
-  rendered head points nearly **backward** (headChain sourceError ~1.9) at high confidence.
-- Everything outside that one turn is within 0.1.
-- **What was tried and FAILED (do not repeat):** two root-yaw fixes — (a) adaptive/faster yaw
-  lerp, (b) integrating `intent.headingDelta` to follow turn direction. BOTH left the head error
-  byte-identical, proving the head flip is NOT driven by the root yaw. Reverted both.
-- **Correct next step (methodical, not another guess):** instrument the head BONE quaternion
-  application at frames ~285–300 — `applyMovementAvatarHeadQuaternionTarget` in
-  `src/app/(dashboard)/demos/movements/[id]/play/_components/movementAvatarHeadQuaternionApplication.ts`
-  uses `headNode.quaternion.slerp(target, slerp)`, which is inherently shortest-path. The prime
-  suspect is that the head bone slerps the SHORT way while the body turns the LONG way, so the
-  head flips backward for ~15 frames. Log the target vs current head quaternion and the parent
-  world quaternion at those frames to confirm, then fix the head slerp to follow the body's turn
-  (e.g. continuity-aware target or driving head as an offset from the turning parent rather than an
-  absolute world yaw). Prove with the full-video proof AND browser screenshots.
+**THE "HEAD SPIN" BUG — SOLVED 2026-07-21 (root cause was NOT the head):**
+- **The old theory in this section was wrong.** The head-slerp shortest-path theory was refuted
+  by data: per-frame telemetry (`playerApplied.avatarHead` in `mounted-game.json`) showed the
+  head bone reaching its target exactly every frame (target-vs-applied yaw delta ≈ 0, quaternion
+  dot ±1.0). The head was innocent. Also wrong: the recording does NOT contain a fast turn at
+  frames 300–308 — the person stands nearly still there. The real fast ~180° turn is at frames
+  **~106–127**.
+- **Actual root cause (proven):** the live root-motion pipeline
+  (`appendMovementRootMotionHistoryFrame` in `movementRootMotion.ts`) kept a sliding 180-frame
+  history and re-derived the heading/position calibration from the window's OLDEST frame each
+  frame. When a real turn scrolled through that oldest slot, the calibration reference rotated
+  ~360°, so the avatar ROOT counter-rotated in a phantom full spin exactly 180 frames (~6 s)
+  after the real turn. Every head-error cluster matched: real turns at ~106/181/231 echoed at
+  ~286/361/411. The head merely rode the spinning root; headChain was the only yaw-sensitive
+  metric, which is why it alone flagged the problem. (This is also why the two root-yaw lerp
+  fixes changed nothing — they altered the response to the phantom heading, not its source.
+  Replay Studio's batch analyzer always calibrates from frame 0, which is why Replay never
+  showed it.)
+- **The fix (in working tree, not yet committed):** pin the calibration anchor frame during history trimming in
+  `appendMovementRootMotionHistoryFrame` — the first qualifying frame is kept at position 0
+  forever, so heading and root position stay measured against the same reference, matching the
+  batch analyzer's semantics. Regression test added ("keeps heading stable after a past turn
+  scrolls out of the trimmed history").
+- **Proof (run `root-anchor-fix`, 2026-07-21):** phantom zone frames 280–310 head error
+  1.90 → **0.021 max**; echo clusters 358–378 and 411–430 eliminated; head frames >0.1 dropped
+  123 → 62; alignment 0 exact checksum divergences; screenshot of the zone shows both avatars
+  facing the camera like the recorded person.
+- **Known pre-existing issues, NOT caused by this fix (verified identical in pre-fix runs):**
+  frame 812 `avatarRoot.appliedY` replay-vs-game ease delta 0.083 (tolerance 0.05) — the single
+  visual-tolerance failure in every recent proof run; and frames 119–122 `rightUpperArm`
+  sourceError ~0.10–0.12, marginally over the 0.1 bar during the real fast turn (the earlier
+  "body is within 0.1 everywhere" claim missed these four frames).
+- **Remaining head-error clusters (the real turns, avatar lags a fast spin):** 103–127 peak
+  ~1.7, 183–199 peak ~0.43, 233–252 peak ~0.54. These are genuine under-follow during fast
+  real turns — the avatar turns but lags/underswings. Separate, smaller problem; decide with
+  Anthony whether it blocks acceptance or is acceptable motion smoothing.
+
+**VALIDATION ON TWO RECORDINGS — DONE 2026-07-21 (anchor-pin fix confirmed on both):**
+Anthony recorded a second video, so the fix was proven on both, on identical current code
+(same fresh Convex export, run `full-exercises-london-2-proof` for the new one and
+`old-recording-fresh-export` for the old one):
+- `Full Mmotion Set London` (`px78w9…`, 822 frames): phantom zone 280–310 head error
+  1.90 → **0.021**; 0 exact divergences; only pre-existing frame-812 ease-tolerance failure.
+- `Full Exercises London #2` (`px793dke…`, 775 frames): **full proof passes cleanly, 0
+  tolerance failures**. A dedicated phantom detector (rendered root spinning while the source
+  body is still) found **NONE** — every real body turn (frames 298, 419, 658, 709) passes with
+  no spurious echo ~180 frames later. This is the decisive cross-check: the sliding-window bug
+  does not reappear on a fresh recording.
+- Remaining >0.1 clusters on BOTH videos are all genuine fast-motion lag, never phantoms:
+  the new video's head cluster 668–689 (peak 1.72) is a real ~300°-in-12-frame head turn (the
+  person looked over their shoulder; source headYaw sweeps continuously, avatar smoothing lags
+  mid-turn then resettles < 0.1), and shins 769–774 are a real fast leg movement in the final
+  six frames. Same "avatar under-follows very fast motion" category as the old video's
+  103–127 / 183–199 / 233–252 clusters.
+
+Original plan for the turn-test recording (kept for reference): spin left AND spin right, one
+slow full turn and one fast one, plus a head-turn with the body held still. `Full Exercises
+London #2` covers moderate turns in both directions and a fast head-turn; a future take with a
+full 180° spin each way would stress it further but is not required — the fix is proven.
+Neither recording may ever be deleted.
+
+**THE PLAYBACK-SPEED BUG — found 2026-07-21 when Anthony watched the game ("she moves
+faster than I did", "everyone is mangled"):**
+- **Root cause 1 (the big one):** the ordinary Game's instructor playback advanced **one
+  recording frame per `requestAnimationFrame` tick** (`useMovementMatchScoring` game loop →
+  `advanceInstructorFrame()` did `frameIndex + 1` with no clock). Playback speed equalled the
+  display refresh rate: ~4.4× real speed on a 60Hz screen, ~8.8× on a 120Hz MacBook.
+- **Root cause 2 (compounding):** recordings *declare* `fps: 30` (hardcoded in
+  `saveMovementRecording`) but Deep Capture actually tracks at **~13-14fps** (measured: 73ms
+  median frame interval on both recordings). Anything trusting the declared fps plays ≥2.2×
+  fast. The per-frame `timestamp`/`capturedAt` fields DO carry the true cadence — the data is
+  correct, the consumers were wrong.
+- Replay Studio and the recorded-packet path already honoured timestamps
+  (`resolveMovementReplayFrameDelay`), which is why the mounted-game proof never caught this:
+  the proof drives frames one-by-one and never exercises the wall-clock lane.
+- **The "mangled" look and most "avatar lags fast motion" clusters are symptoms:** at 2-9×
+  playback the per-joint smoothing (tuned for real time) falls behind and blends limbs into
+  poses the person never made. The remaining >0.1 clusters listed above must be re-measured
+  at true speed before treating them as real followability problems.
+- **Fix (in working tree):** `useMovementInstructorPlayback` now builds a per-frame timeline
+  from recorded timestamps (fallback 30fps for legacy frames, per-step clamp 8–250ms) and
+  `advanceInstructorFrame` follows accumulated wall time — pause-safe, tab-throttle-safe
+  (250ms max step), display-rate independent. Scrubbing resyncs the clock. The
+  `sourceFrameIndexRef` lane (mounted proofs) is untouched, so alignment proofs stay
+  frame-driven and deterministic. Unit tests cover 60Hz-tick pacing, stall capping, and
+  scrub resync.
+- **Open (deliberately not changed yet):** the false `fps: 30` stamp at save time.
+
+**THE INSTRUCTOR-LANE UNIFICATION — THE CURRENT TOP PRIORITY (agreed 2026-07-21):**
+
+*Anthony's requirement, verbatim intent: the Game's instructor must work EXACTLY like the
+Replay Studio avatar. Replay Studio is approved; the Game instructor is not. He called this
+early ("the instructor should work the same as the replay studio") and the analysis proved
+him right. Do not re-litigate this.*
+
+**Why she is broken in the Game but fine in Replay Studio (proven 2026-07-21):**
+- Replay Studio renders the recording through the PLAYER lane: un-mirrored frames +
+  calibration from `buildMovementPlayerSetupFromPrefix` (the recording's purpose-captured
+  setup prefix) → `VrmAvatar` with `isPlayer` (replay-lab/page.tsx ~1562).
+- The Game's instructor is a SEPARATE pipeline: frames are mirrored
+  (`getReflectedInstructorMotionLandmarks`), calibration comes from
+  `buildInstructorRetargetSourceModel` — a heuristic that picks ONE "most neutral" frame
+  from the whole video — plus `buildMovementRecordedInstructorCalibration` and instructor
+  lag compensation (`useMovementInstructorPlayback.ts`).
+- The recording's arm data is noisy (bone-length CV 9–17% on arms, left/right mean length
+  mismatch up to 28% — measured; legs are 3–7% and fine). A single guessed calibration
+  frame BAKES that one frame's arm distortion into every rendered pose; the prefix-based
+  player calibration does not. Same data, two lanes, only one looks right.
+- Why every proof passed anyway: the replay-vs-game instructor comparison checks the
+  instructor pipeline against a COPY OF ITSELF in replay-lab (three-party proof). Nothing
+  ever compared the instructor lane to the approved player lane. Consistency ≠ correctness.
+
+**THE FIX (recommended and agreed direction — unify to one lane):**
+1. In the Game (`[id]/play/page.tsx`), drive the instructor avatar from the same inputs
+   Replay Studio uses: the recording frames UN-mirrored, calibration + retarget source
+   model from `buildMovementPlayerSetupFromPrefix(loadedFrames)`. The instructor keeps her
+   own VRM model, position, and name — the MOTION pipeline is what unifies.
+2. Delete/stop using the bespoke instructor motion path for recordings:
+   `buildInstructorRetargetSourceModel` neutral-frame heuristic,
+   `getReflectedInstructorMotionLandmarks` reflection, and
+   `buildMovementRecordedInstructorCalibration` — unless a specific consumer still needs
+   them for something other than driving the instructor avatar.
+3. Update replay-lab's instructor-proof lane to the SAME construction in the SAME change,
+   so the Replay-vs-Game alignment proof compares the unified lane on both sides.
+4. Keep the wall-clock playback clock (already fixed) — unification must not regress it.
+5. Close the measurement gap permanently: the mounted-game proof must record the
+   INSTRUCTOR's follow-vs-recording telemetry per frame (as `playerVisual` already is),
+   so the instructor can never silently diverge again.
+
+**WHAT WAS ACTUALLY BUILT (2026-07-21) — narrow calibration fix, mirror kept:**
+Anthony chose to KEEP the "mirror the coach" behavior (you mirror the instructor;
+scoring compares mirrored-player vs identity-instructor). So the full lane unification
+above was NOT taken — it would have changed the game to "copy exactly" and shifted
+scoring. Instead, only the mangling root cause was fixed:
+- The Game instructor now gets its calibration AND retarget source model from
+  `buildMovementPlayerSetupFromPrefix(effectiveLoadedFrames)` — the recording's stable
+  setup prefix, the same robust baseline the Replay student uses — instead of
+  `buildInstructorRetargetSourceModel` (single-guessed-neutral-frame) +
+  `buildMovementRecordedInstructorCalibration`. See `[id]/play/page.tsx` (`instructorPlayerSetup`).
+- The instructor's mirror mapping, avatar role, render path, and the whole
+  `buildRecordedMovementMotionFrame` instructor lane are UNCHANGED — so scoring semantics
+  and the mirror contract are preserved (all mirror-contract tests still pass).
+- Verified visually (ordinary-game live proof, fake webcam, `instructor-narrow-fix-proof`):
+  the instructor renders as a coherent human through arm raises and leans — the mangling is
+  gone — and still mirrors, with scoring climbing normally. Full suite green (1374 tests).
+- Not done here: the `buildInstructorRetargetSourceModel` neutral-frame heuristic still
+  exists and is still used for the knee-lift retarget ANALYSIS (not for driving the avatar);
+  leave it. The noisy-arm-data offline filter (below) was not needed — the stable neutral
+  reference alone resolved the visible mangling.
+
+**CORRECTED DIAGNOSIS (2026-07-21, after Anthony rejected the narrow fix — instructor still
+mangled in folds): REPLAY STUDIO HAS AN ACCEPTANCE JUDGE; THE GAME DOES NOT.**
+- The narrow calibration fix improved arms in ordinary moves but folds still render mangled
+  in the Game (fold shown as a collapsed squat; head cranked upward mid-fold — likely the
+  head-level logic fighting the folded torso).
+- Verified in Replay Studio at the exact fold frames (frame 190 of `Full Exercises London
+  #2`): the "AVATAR FOLLOW" judge reports **blocked-for-acceptance / support-contact /
+  leg-motion conflict**, and the Replay avatar HOLDS A SAFE POSE (neutral/standing) instead
+  of applying those frames. Worst frame 195 flagged `visual-proof-missing`. In other words:
+  **Replay Studio looks right partly because it refuses to render the untrustworthy fold
+  frames.** The Game instructor has no such gate and applies them raw — that is the mangling.
+- So "make the instructor work like Replay Studio" concretely means: give the Game
+  instructor the same follow-acceptance gating (hold last-good/neutral pose through blocked
+  frames), not just the same calibration.
+- **Product decision this raises (Anthony's call):** with the gate, flagged sections (the
+  folds in this recording) will NOT animate — the instructor holds a pose through them,
+  exactly as Replay does today. The alternative is the deeper work of making folds actually
+  retarget correctly (fold-vs-squat interpretation + head-during-fold), which is what would
+  let the full routine render. Options: (A) gate now to kill the mangling, then (B) fix fold
+  retargeting so gated sections shrink over time. A then B is the recommended order.
+
+**ACCEPTANCE — read carefully, this is the contract:**
+- The bar is VISUAL and Anthony's alone: he opens Replay Studio and the Game on
+  `localhost:3000` with the same recording, and the Game instructor's movement is
+  indistinguishable from the Replay Studio avatar he already approved. He must SEE it
+  working.
+- Automated evidence (alignment proof, follow metrics, screenshots at the known trouble
+  moments — the arm raises ~21s/24s, the fold ~13s, the head turn ~48s) is REQUIRED
+  supporting evidence but NEVER sufficient. "The metrics pass" or "the code now does X"
+  is not done. If Anthony says it looks wrong, it is wrong — find why, fix, show again.
+- Do not close this item with an explanation. Close it with Anthony watching it work.
+
+**If it still looks wrong in BOTH surfaces after unification:** then the residual problem
+is the noisy recorded arm data itself, which now affects both lanes equally. The next step
+in that case (and only then) is offline arm filtering at playback: smooth arm landmarks
+across time (recordings are complete files — non-causal filtering is allowed) and enforce
+constant limb lengths before retargeting. Provable by the bone-length CV metric dropping,
+judged — as always — by Anthony's eyes.
+- **Recording technique (learned 2026-07-21 from the failed "London Full Move 2" take):** the
+  Deep Capture save gate requires face AND eye-gaze evidence in **≥ 50% of frames**
+  (`movementFrameCodec.ts` — `faceCoverage`, applied to the `face` and `eyesGaze` channels in
+  `summarizeMovementDeepCaptureChannels`). A turn-heavy recording spends much of its time facing
+  away, so: **face the camera and hold for a couple of seconds between each turn, keep each spin
+  brief** — roughly, at least one second facing the camera for every second mid-spin. If a take
+  fails the gate anyway, ALWAYS download the local packet backup before closing the dialog
+  (never lose a take).
+
+**OPEN DESIGN DECISION — is the 50% face/eyesGaze coverage bar realistic? (raised 2026-07-21):**
+Real clients will wear glasses and must stand far enough back to be full-body in frame.
+- Face landmarks are robust to ordinary clear glasses; turning away and distance are what break
+  that channel.
+- Iris-derived gaze is the fragile channel: lens glare (worst with a bright screen in front of
+  the player — the standard setup), frames clipping the eye corners, strong prescriptions, and
+  the eye region being only a few pixels at full-body distance. Tinted/reactive lenses kill it.
+- The avatar/instructor follow work does NOT depend on gaze at all, yet incomplete `eyesGaze`
+  evidence blocks saving.
+- **Evidence to gather:** read a downloaded packet backup from a far-back, glasses-on take and
+  count frames with face landmarks vs gaze vectors. Face present + gaze missing = the
+  glasses/distance signature; both missing together = turning away.
+- **Options (Anthony's call, do not change unilaterally):** keep 50% for `face` but lower the
+  `eyesGaze` ratio; or make gaze a recorded-when-available bonus channel rather than a
+  save-blocking requirement. Either weakens the evidence guarantee deliberately — decide, then
+  change.
 
 **How to measure (the loop):**
 - Full-video alignment + follow proof (≈10 min, needs the dev server running on :3000):

@@ -179,7 +179,22 @@ export function appendMovementRootMotionHistoryFrame({
   });
 
   if (history.length > limit) {
-    history.splice(0, history.length - limit);
+    // The analysis calibrates heading and root position against the first
+    // qualifying frame of the history it is given. That anchor frame must not
+    // slide: if trimming lets a past turn scroll into the anchor position, the
+    // calibration reference rotates with it and the avatar root sweeps a
+    // phantom full turn exactly `limit` frames after the real one.
+    const anchorIndex = findCalibrationAnchorIndex(history);
+    if (anchorIndex > 0) {
+      history.splice(0, anchorIndex);
+    }
+    if (history.length > limit) {
+      if (anchorIndex === -1) {
+        history.splice(0, history.length - limit);
+      } else {
+        history.splice(1, history.length - limit);
+      }
+    }
   }
 
   const analysis = buildMovementRootMotionAnalysis(history);
@@ -721,6 +736,23 @@ export function resolveMovementRootMotionStepResponse(
     slerp: 0,
     summary: "No step release or landing response is needed for this root-motion intent.",
   };
+}
+
+// Index of the frame buildCalibration would calibrate against, so history
+// trimming can keep that exact frame in place.
+function findCalibrationAnchorIndex(frames: MovementRootMotionInputFrame[]) {
+  for (let index = 0; index < frames.length; index++) {
+    const { landmarks } = getUsableLandmarks(frames[index]);
+    if (landmarks.length < 33) continue;
+
+    const centers = getBodyCenters(landmarks);
+    const heading = getHeadingYaw(landmarks);
+    if (!centers || !heading || heading.confidence < 0.3) continue;
+
+    return index;
+  }
+
+  return -1;
 }
 
 function buildCalibration(

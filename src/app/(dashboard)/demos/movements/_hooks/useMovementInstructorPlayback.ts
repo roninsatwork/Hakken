@@ -31,6 +31,9 @@ type InstructorHandsPayload = Partial<Record<MovementHandSide, InstructorHandCap
 
 export type MovementInstructorMotionPayload = {
   frameId?: string;
+  capturedAt?: number;
+  sourceTimestampMs?: number;
+  timestamp?: number;
   pose?: InstructorPoseLandmark[];
   landmarks?: InstructorPoseLandmark[];
   worldLandmarks?: InstructorPoseLandmark[] | null;
@@ -76,6 +79,50 @@ export type MovementInstructorRetargetAnalysis = {
 
 const INSTRUCTOR_LAG_COMPENSATION_FRAMES = 6;
 const RETARGET_ANALYSIS_MIN_SOURCE_QUALITY = 0.7;
+
+// Real capture cadence is far below the render rate (Deep Capture tracks at
+// ~13-14fps while displays render at 60-120Hz), so playback must follow the
+// recorded timestamps, never "one frame per render tick".
+const DEFAULT_INSTRUCTOR_FRAME_INTERVAL_MS = 1000 / 30;
+const MIN_INSTRUCTOR_FRAME_INTERVAL_MS = 8;
+const MAX_INSTRUCTOR_FRAME_INTERVAL_MS = 250;
+
+function getInstructorFrameTimestamp(frame: MovementInstructorMotionFrame): number | null {
+  if (Array.isArray(frame)) return null;
+  for (const value of [frame.timestamp, frame.sourceTimestampMs, frame.capturedAt]) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+// Cumulative playback time for each frame, from the recorded per-frame
+// timestamps, clamped per step; frames without timestamps fall back to 30fps.
+export function buildInstructorPlaybackTimelineMs(
+  frames: MovementInstructorMotionFrame[],
+): number[] {
+  const timeline: number[] = [];
+  let elapsedMs = 0;
+  let previousTimestamp: number | null = null;
+
+  frames.forEach((frame, index) => {
+    const timestamp = getInstructorFrameTimestamp(frame);
+    if (index > 0) {
+      const rawDelta = timestamp !== null && previousTimestamp !== null
+        ? timestamp - previousTimestamp
+        : Number.NaN;
+      elapsedMs += Number.isFinite(rawDelta) && rawDelta > 0
+        ? Math.min(
+            Math.max(rawDelta, MIN_INSTRUCTOR_FRAME_INTERVAL_MS),
+            MAX_INSTRUCTOR_FRAME_INTERVAL_MS,
+          )
+        : DEFAULT_INSTRUCTOR_FRAME_INTERVAL_MS;
+    }
+    timeline.push(elapsedMs);
+    if (timestamp !== null) previousTimestamp = timestamp;
+  });
+
+  return timeline;
+}
 
 const withDepth = (landmarks: InstructorPoseLandmark[]) =>
   landmarks.map((landmark) => ({
@@ -279,6 +326,13 @@ export function useMovementInstructorPlayback(
   const instructorFramesRef = useRef<MovementInstructorMotionFrame[]>([]);
   const instructorCurrentLmRef = useRef<MovementInstructorMotionRef>([]);
   const frameIndexRef = useRef(0);
+  const playbackTimelineMsRef = useRef<number[]>([]);
+  const playbackElapsedMsRef = useRef(0);
+  const lastAdvanceAtRef = useRef<number | null>(null);
+  const playbackTimelineMs = useMemo(
+    () => buildInstructorPlaybackTimelineMs(loadedFrames),
+    [loadedFrames],
+  );
   const retargetSourceModel = useMemo(
     () => buildInstructorRetargetSourceModel(loadedFrames),
     [loadedFrames],
@@ -294,7 +348,10 @@ export function useMovementInstructorPlayback(
     instructorFramesRef.current = loadedFrames;
     frameIndexRef.current = 0;
     instructorCurrentLmRef.current = loadedFrames[0] ?? [];
-  }, [loadedFrames]);
+    playbackTimelineMsRef.current = playbackTimelineMs;
+    playbackElapsedMsRef.current = 0;
+    lastAdvanceAtRef.current = null;
+  }, [loadedFrames, playbackTimelineMs]);
 
   const setInstructorFrame = useCallback(
     (frameIndex: number): InstructorPlaybackAdvance => {
@@ -310,6 +367,8 @@ export function useMovementInstructorPlayback(
       const clampedFrameIndex = Math.max(0, Math.min(totalFrames - 1, frameIndex));
       frameIndexRef.current = clampedFrameIndex;
       instructorCurrentLmRef.current = cloneFramePayload(frames[clampedFrameIndex]!);
+      playbackElapsedMsRef.current = playbackTimelineMsRef.current[clampedFrameIndex] ?? 0;
+      lastAdvanceAtRef.current = null;
 
       return {
         status: clampedFrameIndex + 1 >= totalFrames ? "complete" : "advanced",
@@ -333,9 +392,35 @@ export function useMovementInstructorPlayback(
       return { status: "empty", frames, frameIndex: frameIndexRef.current };
     }
 
-    const requestedFrameIndex = options.sourceFrameIndexRef
-      ? Math.max(0, Math.min(totalFrames - 1, options.sourceFrameIndexRef.current.frameIndex))
-      : frameIndexRef.current + 1;
+    let requestedFrameIndex: number;
+    if (options.sourceFrameIndexRef) {
+      requestedFrameIndex = Math.max(
+        0,
+        Math.min(totalFrames - 1, options.sourceFrameIndexRef.current.frameIndex),
+      );
+    } else {
+      // Wall-clock playback: accumulate only the time between advance calls
+      // (capped, so pauses and tab throttling never fast-forward) and move to
+      // the frame the recorded timeline schedules for that elapsed time.
+      const now = performance.now();
+      const deltaMs = lastAdvanceAtRef.current === null
+        ? 0
+        : Math.min(
+            Math.max(now - lastAdvanceAtRef.current, 0),
+            MAX_INSTRUCTOR_FRAME_INTERVAL_MS,
+          );
+      lastAdvanceAtRef.current = now;
+      playbackElapsedMsRef.current += deltaMs;
+      const timeline = playbackTimelineMsRef.current;
+      requestedFrameIndex = frameIndexRef.current;
+      while (
+        requestedFrameIndex + 1 < totalFrames &&
+        (timeline[requestedFrameIndex + 1] ?? Number.POSITIVE_INFINITY) <=
+          playbackElapsedMsRef.current
+      ) {
+        requestedFrameIndex += 1;
+      }
+    }
 
     if (frameIndexRef.current + 1 >= totalFrames) {
       return { status: "complete", frames, frameIndex: frameIndexRef.current };
