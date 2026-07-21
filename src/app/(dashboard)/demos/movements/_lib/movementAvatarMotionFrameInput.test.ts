@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveMovementAvatarMotionFrameInput,
   shouldHoldMovementAvatarLastPose,
+  shouldWaitForMovementAvatarSourceSync,
 } from "./movementAvatarMotionFrameInput";
 import { resolveMovementAvatarPipelineDecision } from "./movementAvatarPipelineDecision";
 
@@ -34,6 +35,56 @@ describe("movement avatar motion-frame input", () => {
   it("holds the last rendered pose across transient active-playback gaps", () => {
     expect(shouldHoldMovementAvatarLastPose({ isPlaying: true, motionFrame: null })).toBe(true);
     expect(shouldHoldMovementAvatarLastPose({ isPlaying: false, motionFrame: null })).toBe(false);
+  });
+
+  it("skips only the id-less live-webcam timestamp race, and keeps frame-id sync strict everywhere", () => {
+    const poseLandmarks = makeMovementAvatarProofMotionPayload("standing").landmarks;
+    const input = baseInput(poseLandmarks);
+    const buildFrame = (
+      sourceOrigin: "live-webcam" | "recorded-replay",
+      capturedAt: number,
+      frameId?: string,
+    ) =>
+      resolveMovementMotionFrame({
+        ...input,
+        avatarRole: "player",
+        mirrorMode: "facing-player",
+        sourceFrame: buildMovementSourceFrame({
+          capturedAt,
+          frameId,
+          poseLandmarks,
+          sourceOrigin,
+          sourceStatus: "raw",
+        }),
+      });
+
+    // Real live webcam has NO frame ids. The newest landmark (200) is ahead of
+    // the motion frame built one tick behind (100). This must NOT freeze.
+    const liveFrame = buildFrame("live-webcam", 100);
+    expect(shouldWaitForMovementAvatarSourceSync({
+      motionFrame: liveFrame,
+      motionRefCapturedAt: 200,
+    })).toBe(false);
+
+    // The mounted Game proof drives RECORDED data through the live adapter:
+    // source is live-webcam but frames carry ids. Frame-id sync must stay
+    // strict so the deterministic proof keeps exact frame identity.
+    const proofFrame = buildFrame("live-webcam", 100, "rec:104");
+    expect(shouldWaitForMovementAvatarSourceSync({
+      motionFrame: proofFrame,
+      motionRefFrameId: "rec:105",
+    })).toBe(true);
+    expect(shouldWaitForMovementAvatarSourceSync({
+      motionFrame: proofFrame,
+      motionRefFrameId: "rec:104",
+    })).toBe(false);
+
+    // Recorded playback (no ids) with a timestamp mismatch still waits.
+    const recordedFrame = buildFrame("recorded-replay", 100);
+    expect(shouldWaitForMovementAvatarSourceSync({
+      motionFrame: recordedFrame,
+      motionRefCapturedAt: 200,
+    })).toBe(true);
   });
 
   it("prefers shared MovementMotionFrame decisions over renderer fallback decisions", () => {

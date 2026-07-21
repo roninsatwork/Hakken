@@ -21,6 +21,9 @@ export type MovementRecordedPlayerSetup = {
     inputContractId?: string;
     sampleIndexes: number[];
     sampleLimit: number;
+    // Absolute frame index where the accepted setup window starts. Replay and
+    // the live Game must agree on this or their calibrations diverge.
+    windowStartIndex?: number;
   };
   retargetSourceModel: MovementRetargetSourceModel | null;
 };

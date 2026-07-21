@@ -9,7 +9,9 @@ import { makeMovementAvatarProofMotionPayload } from "./movementAvatarProofFixtu
 import {
   MOVEMENT_PLAYER_INPUT_CONTRACT,
   buildMovementPlayerSetupFromPrefix,
+  buildMovementPlayerSetupWindow,
   createMovementAcquisitionFilters,
+  isMovementPlayerSetupAcceptable,
   prepareMovementAcquisitionFrame,
 } from "./movementPlayerInputContract";
 
@@ -116,6 +118,58 @@ describe("movement player input contract", () => {
     expect(buildMovementPlayerSetupFromPrefix(frames)?.provenance).toMatchObject({
       frameLimit: 59,
       sampleLimit: 12,
+      windowStartIndex: 0,
     });
+  });
+
+  it("slides past a weak recording start exactly like the live Game setup", () => {
+    const goodFrame = (index: number) => ({
+      ...makeMovementAvatarProofMotionPayload("standing"),
+      capturedAt: index,
+    });
+    const weakFrame = (index: number) => {
+      const frame = goodFrame(index);
+      return {
+        ...frame,
+        landmarks: (frame.landmarks ?? []).map((landmark) => ({
+          ...landmark,
+          visibility: 0,
+        })),
+        worldLandmarks: (frame.worldLandmarks ?? []).map((landmark) => ({
+          ...landmark,
+          visibility: 0,
+        })),
+      };
+    };
+    const frames = [
+      ...Array.from({ length: 30 }, (_, index) => weakFrame(index)),
+      ...Array.from({ length: 90 }, (_, index) => goodFrame(30 + index)),
+    ];
+
+    const slidingSetup = buildMovementPlayerSetupFromPrefix(frames);
+    expect(isMovementPlayerSetupAcceptable(slidingSetup)).toBe(true);
+    const windowStart = slidingSetup?.provenance.windowStartIndex ?? -1;
+    expect(windowStart).toBeGreaterThan(0);
+
+    // Replay's sliding scan and the live Game's one-frame-at-a-time advance
+    // must land on the same window and produce an identical setup object.
+    const prefixFrameCount = MOVEMENT_PLAYER_INPUT_CONTRACT.setup.prefixFrameCount;
+    let liveWindowStart = 0;
+    let liveSetup = null as ReturnType<typeof buildMovementPlayerSetupWindow>;
+    const liveBuffer: typeof frames = [];
+    for (const frame of frames) {
+      liveBuffer.push(frame);
+      if (liveBuffer.length < prefixFrameCount) continue;
+      const candidateFrames = liveBuffer.slice(-prefixFrameCount);
+      const candidate = buildMovementPlayerSetupWindow(candidateFrames, liveWindowStart);
+      if (isMovementPlayerSetupAcceptable(candidate)) {
+        liveSetup = candidate;
+        break;
+      }
+      liveBuffer.splice(0, liveBuffer.length - (prefixFrameCount - 1));
+      liveWindowStart += 1;
+    }
+
+    expect(liveSetup).toEqual(slidingSetup);
   });
 });

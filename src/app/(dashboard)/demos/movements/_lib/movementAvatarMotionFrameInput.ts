@@ -19,6 +19,51 @@ export function shouldHoldMovementAvatarLastPose({
   return isPlaying && !motionFrame;
 }
 
+/**
+ * Whether the avatar must wait because the current display landmark ref does
+ * not match the motion frame it would apply. This protects RECORDED playback
+ * and Replay/Game proof (scrubbing/seeking) from applying a frame built for a
+ * different source frame.
+ *
+ * It deliberately does NOT gate the live webcam stream: there the motion frame
+ * is always built one render tick behind the newest landmark, so a strict
+ * timestamp/frameId match would reject nearly every frame on normal render
+ * timing and freeze the avatar. Live always applies the latest motion frame.
+ */
+export function shouldWaitForMovementAvatarSourceSync({
+  motionFrame,
+  motionRefCapturedAt,
+  motionRefFrameId,
+}: {
+  motionFrame?: MovementMotionFrame | null;
+  motionRefCapturedAt?: number;
+  motionRefFrameId?: string;
+}): boolean {
+  // Frame-ID sync is authoritative whenever both sides carry an id: recorded
+  // playback, Replay, and the mounted Game proof (which drives recorded data
+  // through the live adapter) all use ids and MUST stay strict for
+  // deterministic frame identity.
+  const frameIdMismatch = Boolean(
+    motionRefFrameId && motionFrame?.source.frameId &&
+    motionRefFrameId !== motionFrame.source.frameId,
+  );
+  if (frameIdMismatch) return true;
+
+  // The timestamp path is the only one that gates the real live webcam (no
+  // frame ids). There the motion frame is always one render-tick behind the
+  // newest landmark, so a strict timestamp match rejects every frame on a
+  // render-timing race and freezes the avatar. Never wait on timestamp for a
+  // live-webcam frame; keep it strict for any other id-less source.
+  if (motionFrame?.source.sourceOrigin === "live-webcam") return false;
+
+  return Boolean(
+    !motionRefFrameId && !motionFrame?.source.frameId &&
+    Number.isFinite(motionRefCapturedAt) &&
+    Number.isFinite(motionFrame?.source.capturedAt) &&
+    motionRefCapturedAt !== motionFrame?.source.capturedAt,
+  );
+}
+
 export function resolveMovementAvatarMotionFrameInput({
   fallbackDecision,
   getFallbackDecision,

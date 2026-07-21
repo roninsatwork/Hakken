@@ -74,6 +74,7 @@ import { getStudioRoutineTitle } from "../../_lib/movementPresentation";
 import {
   buildMovementRetargetSourceModel,
 } from "../../_lib/movementRetargeting";
+import { getMovementPlayerSetupWindowStartIndex } from "../../_lib/movementPlayerInputContract";
 import { resolveMovementStartReadinessBypassReason } from "../../_lib/movementStartBypass";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "../../_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "../../_lib/movementTypes";
@@ -535,11 +536,18 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
     Boolean(automaticPlayerSetup) &&
     recordedGamePlaybackStateRef.current.startedAt === undefined
   );
-  const recordedGameSetupMotionSequence = React.useMemo(() => (
-    gameProofPacket
-      ? gameProofPacket.playerFrames.slice(0, gameProofPacket.setupFrameCount)
-      : null
-  ), [gameProofPacket]);
+  const recordedGameSetupMotionSequence = React.useMemo(() => {
+    if (!gameProofPacket) return null;
+    // Seed player motion history with the ACCEPTED setup window. When the
+    // shared sliding policy moved past a weak recording start, the window no
+    // longer begins at frame 0 and seeding from 0 would give the player a
+    // history Replay never has.
+    const windowStartIndex = getMovementPlayerSetupWindowStartIndex(automaticPlayerSetup);
+    return gameProofPacket.playerFrames.slice(
+      windowStartIndex,
+      windowStartIndex + gameProofPacket.setupFrameCount,
+    );
+  }, [automaticPlayerSetup, gameProofPacket]);
   const playerInitialFrameSequenceRef = useRef<MovementLiveInitialFrame[]>([]);
   const collectRecordedGamePlayerWarmupFramesRef = useRef(false);
   collectRecordedGamePlayerWarmupFramesRef.current = Boolean(

@@ -30,6 +30,7 @@ import type {
   MovementDeepCaptureFrameEvidence,
   MovementDeepCaptureProfileId,
 } from "./movementDeepCaptureContract";
+import { MOVEMENT_START_MIN_CALIBRATION_QUALITY } from "./movementSourceFrame";
 import type { MovementHandSide } from "./movementTypes";
 import type { VrmMotionPayload } from "./vrmRigging";
 
@@ -248,15 +249,43 @@ export function prepareMovementAcquisitionFrame({
   return frame;
 }
 
-export function buildMovementPlayerSetupFromPrefix(
-  frames: VrmMotionPayload[],
+/**
+ * Player motion history begins at the accepted setup window, never before.
+ * The live Game physically cannot have temporal state older than its setup
+ * window, so Replay must not seed its player chain with earlier frames.
+ */
+export function getMovementPlayerSetupWindowStartIndex(
+  setup: MovementRecordedPlayerSetup | null,
+): number {
+  return setup?.provenance.windowStartIndex ?? 0;
+}
+
+export function isMovementPlayerSetupAcceptable(
+  setup: MovementRecordedPlayerSetup | null,
+): boolean {
+  return Boolean(
+    setup?.calibration &&
+    setup.retargetSourceModel &&
+    setup.calibration.quality >= MOVEMENT_START_MIN_CALIBRATION_QUALITY,
+  );
+}
+
+/**
+ * Builds the setup for one candidate window. `windowFrames` must be exactly
+ * the contract's prefix length and `windowStartIndex` is the window's
+ * absolute position in the recording. Replay and the live Game both build
+ * windows through here so their setup objects are byte-identical.
+ */
+export function buildMovementPlayerSetupWindow(
+  windowFrames: VrmMotionPayload[],
+  windowStartIndex: number,
 ): MovementRecordedPlayerSetup | null {
   const { prefixFrameCount, sampleLimit } = MOVEMENT_PLAYER_INPUT_CONTRACT.setup;
-  if (frames.length < prefixFrameCount) return null;
+  if (windowFrames.length !== prefixFrameCount) return null;
 
   const setup = buildMovementRecordedPlayerSetup({
     frameLimit: prefixFrameCount - 1,
-    frames,
+    frames: windowFrames,
     sampleLimit,
   });
   return {
@@ -264,6 +293,33 @@ export function buildMovementPlayerSetupFromPrefix(
     provenance: {
       ...setup.provenance,
       inputContractId: MOVEMENT_PLAYER_INPUT_CONTRACT.id,
+      windowStartIndex,
     },
   };
+}
+
+/**
+ * Shared sliding setup policy. Starting at the recording head, accept the
+ * first prefix-length window whose calibration passes the shared quality
+ * bar — the same one-frame-at-a-time advance the live Game setup performs
+ * past a weak start. If no window ever qualifies, fall back to the first
+ * window so legacy recordings still replay; the mounted Game gate fails
+ * such packets visibly instead of silently diverging.
+ */
+export function buildMovementPlayerSetupFromPrefix(
+  frames: VrmMotionPayload[],
+): MovementRecordedPlayerSetup | null {
+  const { prefixFrameCount } = MOVEMENT_PLAYER_INPUT_CONTRACT.setup;
+  if (frames.length < prefixFrameCount) return null;
+
+  let firstWindowFallback: MovementRecordedPlayerSetup | null = null;
+  for (let start = 0; start + prefixFrameCount <= frames.length; start += 1) {
+    const candidate = buildMovementPlayerSetupWindow(
+      frames.slice(start, start + prefixFrameCount),
+      start,
+    );
+    if (isMovementPlayerSetupAcceptable(candidate)) return candidate;
+    if (start === 0) firstWindowFallback = candidate;
+  }
+  return firstWindowFallback;
 }

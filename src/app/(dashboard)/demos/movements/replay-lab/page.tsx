@@ -48,7 +48,11 @@ import {
   resolveMovementReplayFrameDelay,
   resolveMovementReplayPlaybackStep,
 } from "../_lib/movementReplayPlaybackClock";
-import { buildMovementPlayerSetupFromPrefix } from "../_lib/movementPlayerInputContract";
+import {
+  MOVEMENT_PLAYER_INPUT_CONTRACT,
+  buildMovementPlayerSetupFromPrefix,
+  getMovementPlayerSetupWindowStartIndex,
+} from "../_lib/movementPlayerInputContract";
 import {
   MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION,
   MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE,
@@ -529,6 +533,9 @@ export default function MovementReplayLabPage() {
   const replayThreePartyDeterministicFrames = useMemo(() => {
     if (!replaySession || !isThreePartyMirrorProof || !isDeterministicReplay) return null;
 
+    // The live Game's player chain cannot know frames before its accepted
+    // setup window; Replay must start its player history at the same frame.
+    const playerHistoryStartIndex = getMovementPlayerSetupWindowStartIndex(replayThreePartyPlayerSetup);
     let previousInstructorFrame: MovementMotionFrame | null = null;
     let previousPlayerFrame: MovementMotionFrame | null = null;
     return replaySession.samples.map((sample, frameIndex) => {
@@ -551,14 +558,16 @@ export default function MovementReplayLabPage() {
         previousMotionFrame: previousInstructorFrame,
         retargetSourceModel: replayRetargetSourceModel,
       });
-      previousPlayerFrame = buildLiveMovementMotionFrame({
-        calibration: replayThreePartyPlayerCalibration,
-        capturedAt: sample.capturedAt,
-        isPlaying: true,
-        motionRef: playerPayload,
-        previousMotionFrame: previousPlayerFrame,
-        retargetSourceModel: replayThreePartyPlayerSourceModel,
-      });
+      previousPlayerFrame = frameIndex >= playerHistoryStartIndex
+        ? buildLiveMovementMotionFrame({
+            calibration: replayThreePartyPlayerCalibration,
+            capturedAt: sample.capturedAt,
+            isPlaying: true,
+            motionRef: playerPayload,
+            previousMotionFrame: previousPlayerFrame,
+            retargetSourceModel: replayThreePartyPlayerSourceModel,
+          })
+        : null;
       return {
         instructor: previousInstructorFrame,
         player: previousPlayerFrame,
@@ -571,6 +580,7 @@ export default function MovementReplayLabPage() {
     replayRetargetSourceModel,
     replaySession,
     replayThreePartyPlayerCalibration,
+    replayThreePartyPlayerSetup,
     replayThreePartyPlayerSourceModel,
   ]);
   const currentThreePartyInstructorPayload = useMemo(() => currentFrame
@@ -758,7 +768,8 @@ export default function MovementReplayLabPage() {
           })
         : null;
       replayInstructorMotionFrameRef.current = instructorFrame;
-      replayMotionFrameRef.current = currentThreePartyPlayerPayload
+      replayMotionFrameRef.current = currentThreePartyPlayerPayload &&
+        safeFrameIndex >= getMovementPlayerSetupWindowStartIndex(replayThreePartyPlayerSetup)
         ? buildLiveMovementMotionFrame({
             calibration: instructorFrame?.avatarHeadTarget.headDecision.shouldApplyHeadMotion
               ? replayThreePartyPlayerCalibration
@@ -812,6 +823,7 @@ export default function MovementReplayLabPage() {
     replayRetargetSourceModel,
     replayThreePartyDeterministicFrames,
     replayThreePartyPlayerCalibration,
+    replayThreePartyPlayerSetup,
     replayThreePartyPlayerSourceModel,
     safeFrameIndex,
   ]);
@@ -839,12 +851,20 @@ export default function MovementReplayLabPage() {
       const playerDebug = replayAvatarDebugRef.current;
       const instructorDebug = replayInstructorAvatarDebugRef.current;
       const expectedFrameSuffix = `:${safeFrameIndex}`;
+      // Before the accepted setup window, the player lane is deliberately
+      // inactive (no motion history exists yet); the boundary proof records
+      // explicit null player output so frame accounting stays complete.
+      const playerRequiredForFrame =
+        safeFrameIndex >= getMovementPlayerSetupWindowStartIndex(replayThreePartyPlayerSetup);
+      const playerCommitted = Boolean(
+        playerDebug?.sourceFrameId?.endsWith(expectedFrameSuffix) && playerDebug.avatarVisual,
+      );
       if (
-        playerDebug?.sourceFrameId?.endsWith(expectedFrameSuffix) &&
+        (playerRequiredForFrame ? playerCommitted : true) &&
         instructorDebug?.sourceFrameId?.endsWith(expectedFrameSuffix) &&
-        playerDebug.avatarVisual &&
         instructorDebug.avatarVisual
       ) {
+        const activePlayerDebug = playerRequiredForFrame && playerCommitted ? playerDebug : null;
         const boundaries = {
           acquisition: structuredClone(currentThreePartyPlayerPayload),
           calibration: structuredClone(replayThreePartyPlayerCalibration),
@@ -853,16 +873,22 @@ export default function MovementReplayLabPage() {
           ),
           instructorMotionFrame: structuredClone(replayInstructorMotionFrameRef.current),
           instructorRendered: structuredClone(instructorDebug.avatarVisual),
-          motionFrame: structuredClone(replayMotionFrameRef.current),
-          ownersRootSupport: buildMovementOwnersRootSupportProofSnapshot(playerDebug, 0.8),
-          playerApplied: structuredClone({
-            avatarExpressions: playerDebug.avatarExpressions,
-            avatarHands: playerDebug.avatarHands,
-            avatarHead: playerDebug.avatarHead,
-            avatarRoot: playerDebug.avatarRoot,
-            avatarSpine: playerDebug.avatarSpine,
-          }),
-          playerRendered: structuredClone(playerDebug.avatarVisual),
+          motionFrame: activePlayerDebug ? structuredClone(replayMotionFrameRef.current) : null,
+          ownersRootSupport: activePlayerDebug
+            ? buildMovementOwnersRootSupportProofSnapshot(activePlayerDebug, 0.8)
+            : null,
+          playerApplied: activePlayerDebug
+            ? structuredClone({
+                avatarExpressions: activePlayerDebug.avatarExpressions,
+                avatarHands: activePlayerDebug.avatarHands,
+                avatarHead: activePlayerDebug.avatarHead,
+                avatarRoot: activePlayerDebug.avatarRoot,
+                avatarSpine: activePlayerDebug.avatarSpine,
+              })
+            : null,
+          playerRendered: activePlayerDebug
+            ? structuredClone(activePlayerDebug.avatarVisual)
+            : null,
           setup: structuredClone(replayThreePartyPlayerSetup),
         };
         debugWindow.__sonaeReplayGameBoundaryProof = {
@@ -966,14 +992,16 @@ export default function MovementReplayLabPage() {
         : instructorPayload;
 
       if (isThreePartyMirrorProof) {
-        previousMotionFrame = buildLiveMovementMotionFrame({
-          calibration: replayThreePartyPlayerCalibration,
-          capturedAt: sample.capturedAt,
-          isPlaying: true,
-          motionRef: playerPayload,
-          previousMotionFrame,
-          retargetSourceModel: replayThreePartyPlayerSourceModel,
-        });
+        previousMotionFrame = nextFrameIndex >= getMovementPlayerSetupWindowStartIndex(replayThreePartyPlayerSetup)
+          ? buildLiveMovementMotionFrame({
+              calibration: replayThreePartyPlayerCalibration,
+              capturedAt: sample.capturedAt,
+              isPlaying: true,
+              motionRef: playerPayload,
+              previousMotionFrame,
+              retargetSourceModel: replayThreePartyPlayerSourceModel,
+            })
+          : null;
         previousInstructorMotionFrame = buildRecordedMovementMotionFrame({
           calibration: replayInstructorCalibration,
           capturedAt: sample.capturedAt,
@@ -985,14 +1013,16 @@ export default function MovementReplayLabPage() {
         replayInstructorMotionRef.current = instructorPayload;
         replayInstructorMotionFrameRef.current = previousInstructorMotionFrame;
       } else {
-        previousMotionFrame = buildReplayPlayerMovementMotionFrame({
-          calibration: replayPlayerCalibration,
-          capturedAt: sample.capturedAt,
-          isPlaying: true,
-          motionRef: playerPayload,
-          previousMotionFrame,
-          retargetSourceModel: replayPlayerRetargetSourceModel,
-        });
+        previousMotionFrame = nextFrameIndex >= getMovementPlayerSetupWindowStartIndex(replayPlayerSetup)
+          ? buildReplayPlayerMovementMotionFrame({
+              calibration: replayPlayerCalibration,
+              capturedAt: sample.capturedAt,
+              isPlaying: true,
+              motionRef: playerPayload,
+              previousMotionFrame,
+              retargetSourceModel: replayPlayerRetargetSourceModel,
+            })
+          : null;
       }
 
       replayMotionRef.current = playerPayload;
@@ -1071,9 +1101,11 @@ export default function MovementReplayLabPage() {
     replayInstructorCalibration,
     replayPlayerCalibration,
     replayPlayerRetargetSourceModel,
+    replayPlayerSetup,
     replayRetargetSourceModel,
     replaySession,
     replayThreePartyPlayerCalibration,
+    replayThreePartyPlayerSetup,
     replayThreePartyPlayerSourceModel,
     rootMotionFrameByIndex,
   ]);
@@ -1301,6 +1333,12 @@ export default function MovementReplayLabPage() {
         data-input-contract-id={replaySession?.inputContract?.id ?? ""}
         data-parity-proof-mode={MOVEMENT_REPLAY_GAME_PARITY_PROOF_MODE}
         data-recording-schema-version={replaySession?.schemaVersion ?? ""}
+        data-player-setup-window-start={getMovementPlayerSetupWindowStartIndex(
+          isThreePartyMirrorProof ? replayThreePartyPlayerSetup : replayPlayerSetup,
+        )}
+        data-player-active-start={getMovementPlayerSetupWindowStartIndex(
+          isThreePartyMirrorProof ? replayThreePartyPlayerSetup : replayPlayerSetup,
+        ) + MOVEMENT_PLAYER_INPUT_CONTRACT.setup.prefixFrameCount}
         data-setup-policy-id={replaySession?.inputContract?.setup.id ?? ""}
         data-source-packet-hash={replaySession?.sourcePacketHash ?? ""}
         data-runtime-contract={MOVEMENT_GAME_RUNTIME_CONTRACT_VERSION}

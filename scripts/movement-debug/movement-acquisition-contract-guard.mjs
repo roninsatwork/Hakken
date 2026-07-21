@@ -241,7 +241,8 @@ export function auditMovementAcquisitionContract(files) {
   requireText("playerTracking", "createMovementAcquisitionFilters", "Game does not use the shared filter factory");
   requireText("playerTracking", "prepareMovementAcquisitionFrame", "Game does not use shared result preparation");
   requireText("playerTracking", "resolveMovementCameraDeviceFingerprint", "live Game does not retain the same camera identity boundary");
-  requireText("liveSetup", "buildMovementPlayerSetupFromPrefix", "automatic Game setup bypasses the shared setup policy");
+  requireText("liveSetup", "buildMovementPlayerSetupWindow", "automatic Game setup bypasses the shared setup policy");
+  requireText("liveSetup", "isMovementPlayerSetupAcceptable", "automatic Game setup bypasses the shared setup acceptance rule");
   requireText("trackingCalibration", "buildMovementPlayerSetupFromPrefix", "explicit Game setup bypasses the shared setup policy");
   requireText("game", "recordedSourceSequence:", "recorded mounted Game proof does not enter through the tracking boundary");
   requireText("game", "automaticPlayerSetup", "recorded mounted Game proof bypasses automatic setup");

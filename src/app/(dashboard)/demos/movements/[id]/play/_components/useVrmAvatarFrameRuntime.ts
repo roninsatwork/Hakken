@@ -7,7 +7,10 @@ import type * as THREE from "three";
 import { applyMovementAvatarReadyFrameOrchestrationRuntime } from "../../../_lib/movementAvatarFrameApplication";
 import { resolveMovementAvatarFrameEntryRuntime } from "../../../_lib/movementAvatarFrameEntry";
 import { movementAvatarSourceAwareApplicationDeltaSeconds } from "../../../_lib/movementAvatarFrameTiming";
-import { shouldHoldMovementAvatarLastPose } from "../../../_lib/movementAvatarMotionFrameInput";
+import {
+  shouldHoldMovementAvatarLastPose,
+  shouldWaitForMovementAvatarSourceSync,
+} from "../../../_lib/movementAvatarMotionFrameInput";
 import {
   getMovementAvatarTrackingProfile,
   getMovementAvatarTrackingProfileName,
@@ -157,14 +160,11 @@ export function useVrmAvatarFrameRuntime({
     const motionRefFrameId = !Array.isArray(motionRef) && motionRef
       ? motionRef.frameId
       : undefined;
-    if (
-      (motionRefFrameId && motionFrame?.source.frameId &&
-        motionRefFrameId !== motionFrame.source.frameId) ||
-      (!motionRefFrameId && !motionFrame?.source.frameId &&
-        Number.isFinite(motionRefCapturedAt) &&
-        Number.isFinite(motionFrame?.source.capturedAt) &&
-        motionRefCapturedAt !== motionFrame?.source.capturedAt)
-    ) {
+    if (shouldWaitForMovementAvatarSourceSync({
+      motionFrame,
+      motionRefCapturedAt,
+      motionRefFrameId,
+    })) {
       updateProof("waiting-motion");
       return;
     }

@@ -107,6 +107,104 @@ Learned the hard way. Any change to the capture screen must keep all of these:
   doesn't, in simple words, with no percentage bookkeeping across fifteen
   categories.
 
+## Live Game Fix Plan (2026-07-21) — the current work
+
+Anthony watched the new recording (`Full Mmotion Set London`,
+`px78w9xf95hx7kzh17gdbcvqn18awdp7`) in both studios. Replay is good. The
+ordinary live Game is broken in two specific ways, both now reproduced
+automatically with `scripts/movement-debug/capture-ordinary-game-live-proof.mjs`
+(fake full-body webcam clip, real live Game route, screenshots — no human
+needed to reproduce):
+
+Confirmed by Anthony 2026-07-21, tested with the correct recording
+(`Full Mmotion Set London`) and the startup gate behaving exactly as intended
+(you MUST be full-frame before start — this is correct and must not change;
+no UI change is wanted, only the avatars must move correctly):
+
+1. **Player avatar frozen (case B).** Fully in frame, game started and
+   scoring, and the player avatar still does not follow at all. In the
+   automated full-frame repro the player DID follow (gate reads "applied"),
+   so the freeze is input/condition specific and not yet reproduced. Next:
+   measure whether the applied player avatar bones actually change frame to
+   frame (not just whether the gate says "applied"); a stuck-but-"applied"
+   avatar means the retarget/calibration output is rest-like, a rejected gate
+   means the sync/hold path. Suspect: player calibration
+   (`useMovementLivePlayerSetup`, the sliding setup) not completing for the
+   live body even though the game starts.
+2. **Instructor looks wrong (case A).** The instructor plays the recording
+   but head and arms render wrong — the same head-pitch/arm-reach fidelity
+   Anthony saw in Replay. Deterministic and fully reproducible from the
+   recording, so it can be fixed and proven with screenshots.
+
+Note: the `.webm` files under `dense-capture/clips` are throwaway
+pretend-webcam videos for the automated test (they stand in for a live
+camera), NOT recordings. Only the full-frame clip is used, so the startup
+gate passes exactly as in real use.
+
+Why this could coexist with the passed alignment proof: the nine-boundary
+proof drives the Game through the recorded packet adapter, which bypasses the
+two live input doors (webcam → player application, stored recording →
+instructor lane). The shared post-input pipeline is genuinely aligned; these
+two doors are the remaining unshared code and they are where both defects
+live.
+
+### 2026-07-21 progress
+
+- **Live player freeze — fixed at the most likely cause.** The avatar's
+  source-sync gate required the applied motion frame's timestamp to exactly
+  match the current landmark. Correct for recorded scrubbing, but the live
+  webcam motion frame is always one render-tick behind the newest landmark,
+  so on some machines' render timing the gate rejects every frame and freezes
+  the avatar. `shouldWaitForMovementAvatarSourceSync` now never waits for a
+  `live-webcam` motion frame (recorded playback stays strict). Pure and
+  unit-tested (10 tests). This freeze is timing-dependent, which is why it
+  showed on Anthony's machine but not in a clean test clip — so the automated
+  full-frame repro could not reproduce it, and the real confirmation is
+  Anthony seeing his avatar follow in a live game.
+- Automated live-game repro after the fix: player follows (moved, 3 distinct
+  poses, gate "applied"). Instrumentation (`window.__sonaeMovementLivePlayerGate`)
+  left in place for live diagnosis.
+- Still open: instructor head/arms fidelity (case A — the floor-stare from
+  looking at the screen while recording).
+
+### Fix steps (in order)
+
+1. **Instrument the reproduction.** The harness dumps the avatar's internal
+   gate verdicts (`window.__sonaeMovementAvatarDebug`, frame application
+   proof counters) alongside each screenshot so every run states *why* a
+   frame was or was not applied.
+2. **Fix the player apply gate.** Find the gate that rejects live motion
+   frames (suspect: frameId/capturedAt mismatch between `landmarksRef` and
+   `motionFrameRef`, or the hold-last-pose path), fix it in the shared
+   runtime, and add a unit test that reproduces the exact reject with
+   live-style refs.
+3. **Close the instructor door.** Numerically diff the Game instructor lane
+   (instructor retarget source model + recorded motion frames) against
+   Replay's rendering of the same frames; fix so both consume identical
+   instructor inputs. Preferred shape: ONE loader — the ordinary Game reads
+   the recording through the same conversion Replay uses, so the second door
+   stops existing as separate code.
+4. **Regression-lock the live route.** The ordinary-game harness becomes an
+   npm command and part of acceptance for any future avatar/instructor
+   change, alongside the existing packet proof.
+
+### Acceptance for this fix — seen working, no excuses
+
+This item is done ONLY when all of the following hold, in this order:
+
+- The harness run shows the player avatar visibly mirroring the fake webcam
+  clip (arms out on screen → arms out on the avatar) across the screenshot
+  sequence, and the instructor visibly matching Replay's rendering of the
+  same recording. Screenshots are the evidence, attached to the run.
+- The automated packet proof still passes (no regression to the aligned
+  pipeline).
+- Anthony opens the live Game himself and sees his avatar follow him and the
+  instructor perform the recording correctly. His eyes are the final gate.
+
+Explanations of why the code "should" work do not count as evidence for this
+item. Checksum or test output alone does not count. Only the rendered, moving
+avatars count.
+
 ## Work Queue
 
 1. Run the Replay Studio player and the Game (instructor + player avatar) against

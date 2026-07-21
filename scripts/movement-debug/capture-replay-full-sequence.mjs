@@ -213,6 +213,9 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
         }
 
         const chunkFrames = [];
+        // Frames before the accepted setup window have no player motion by
+        // contract; only require player telemetry from the window start on.
+        const playerWindowStart = Number(root.getAttribute("data-player-setup-window-start") || 0);
         const firstSteppedFrameIndex = startFrameIndex === 0 ? 1 : startFrameIndex;
         if (startFrameIndex === 0) {
           const initialFrameIndex = stepToFrame(0);
@@ -227,11 +230,13 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
             () => window.__sonaeReplayLabCommittedFrameIndex === 0,
             "Replay refs did not commit deterministic initial frame 0.",
           );
-          await waitFor(
-            () => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual) &&
-              window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(":0"),
-            "Player avatar telemetry did not render deterministic initial frame 0.",
-          );
+          if (playerWindowStart === 0) {
+            await waitFor(
+              () => Boolean(window.__sonaeMovementAvatarDebug?.player?.avatarVisual) &&
+                window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(":0"),
+              "Player avatar telemetry did not render deterministic initial frame 0.",
+            );
+          }
           if (threeParty) {
             await waitFor(
               () => Boolean(window.__sonaeMovementAvatarDebug?.instructor?.avatarVisual) &&
@@ -276,10 +281,12 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
             () => window.__sonaeReplayLabCommittedFrameIndex === frameIndex,
             `Replay refs did not commit deterministic frame ${frameIndex}.`,
           );
-          await waitFor(
-            () => window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(`:${frameIndex}`),
-            `Player avatar telemetry did not render deterministic frame ${frameIndex}.`,
-          );
+          if (frameIndex >= playerWindowStart) {
+            await waitFor(
+              () => window.__sonaeMovementAvatarDebug?.player?.sourceFrameId?.endsWith(`:${frameIndex}`),
+              `Player avatar telemetry did not render deterministic frame ${frameIndex}.`,
+            );
+          }
           if (threeParty) {
             await waitFor(
               () => window.__sonaeMovementAvatarDebug?.instructor?.sourceFrameId?.endsWith(`:${frameIndex}`),
@@ -295,7 +302,7 @@ async function captureDeterministicFrames(page, lab, threeParty, frameStart, fra
           const instructorDebug = window.__sonaeMovementAvatarDebug?.instructor;
           const replayGameBoundaryProof = window.__sonaeReplayGameBoundaryProof;
           if (
-            !playerDebug?.avatarVisual ||
+            (frameIndex >= playerWindowStart && !playerDebug?.avatarVisual) ||
             (threeParty && !instructorDebug?.avatarVisual) ||
             renderedFrameIndex !== frameIndex
           ) {
@@ -410,8 +417,12 @@ async function main() {
         const root = document.querySelector('[data-testid="movement-replay-lab"]');
         const player = window.__sonaeMovementAvatarDebug?.player;
         const instructor = window.__sonaeMovementAvatarDebug?.instructor;
+        // When the shared sliding setup starts after frame 0, the player
+        // avatar legitimately has no motion telemetry until playback reaches
+        // the accepted window; only require it up front for window start 0.
+        const playerWindowStart = Number(root?.getAttribute("data-player-setup-window-start") || 0);
         return Number(root?.getAttribute("data-frame-count") || 0) > 0 &&
-          Boolean(player?.avatarVisual) &&
+          (playerWindowStart > 0 || Boolean(player?.avatarVisual)) &&
           (!threeParty || Boolean(instructor?.avatarVisual));
       }, args.threeParty, { timeout: 60_000 });
     } catch (error) {
