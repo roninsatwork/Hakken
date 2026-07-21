@@ -48,7 +48,13 @@ export function resolveMovementAvatarRetargetSegmentApplication({
   const armLinearConfidenceBlend = segmentType === "arm" && segment
     ? Math.max(0, Math.min(1, (segment.confidence - 0.3) / 0.6))
     : 1;
-  const armConfidenceBlend = armLinearConfidenceBlend ** 4;
+  // Squared (not quartic) keeps the very bottom of the band conservative so a
+  // first recovery frame near 0.30 confidence still does not jump toward a
+  // stale target, while letting the upper arm actually follow the recording at
+  // sustained moderate confidence (~0.4-0.6). The quartic curve left the arm
+  // near-frozen through that whole band, lagging the recorded arm past the
+  // 0.1 follow bar on otherwise-usable frames.
+  const armConfidenceBlend = armLinearConfidenceBlend ** 2;
   const legConfidenceBlend = segmentType === "leg" && segment
     ? Math.max(0, Math.min(1, (segment.confidence - 0.3) / 0.3))
     : 1;
