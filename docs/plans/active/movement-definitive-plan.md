@@ -405,6 +405,24 @@ avatar follows the recording."
   `averageUpperBodyDirectionError` / `averageLowerBodyDirectionError` per
   frame. Any body segment (non-foot) exceeding 0.1 is a follow regression.
 
+## CI notes (2026-07-21)
+
+- The Quality Gate previously timed out at 30 minutes. Root cause: the whole
+  pipeline (npm ci, browser install, lint, typecheck, unit, dev-mode e2e,
+  coverage) genuinely needs more than 30 minutes; timeout raised to 60.
+- A speed experiment (serving the e2e app from a production `output: standalone`
+  build) was REVERTED: three movement debug-route specs legitimately fail
+  against a production build (`movement-demo-authenticated.spec.ts` :469 :483
+  :536 — e.g. the "Spine blocked" debug HUD never appears). FUTURE WORK: make
+  the movement debug routes production-build compatible, then reinstate the
+  prebuilt-server e2e for a much faster gate. Details: the standalone build
+  needs `E2E_AUTH_ENABLED=1` at BUILD time (it aliases convex/react to the e2e
+  mock in next.config.ts), static assets copied into `.next/standalone/`, and
+  is served with `node .next/standalone/server.js`.
+- `npm run gate` mirrors the CI Quality Gate exactly; run it locally before any
+  push. Local baseline (2026-07-21): lint, typecheck, 1377 unit tests, 63
+  dev-mode e2e tests (14.5m), coverage thresholds — all green.
+
 ## Recordings
 
 - **The anchor recording**: being re-recorded. `Full Motion Exercises - London`
