@@ -13,8 +13,45 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  quality-gate:
-    name: Quality Gate
+  quick-checks:
+    # Runs on every push/PR: fast feedback (~10 minutes) — lint, types, unit
+    # tests. The slow browser-test suite is reserved for the full gate below
+    # and for local runs via `npm run gate`.
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node environment
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.13.0'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Workaround NPM Optional Dependency Bug
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Run unit and integration tests
+        run: npm run test:run
+
+  full-gate:
+    # Full rigor only when changes head for main: the complete browser-test
+    # suite (dev-mode server on purpose — the movement debug routes are not
+    # production-build compatible yet, see the plan's CI notes) plus coverage.
+    name: Full Gate (browser tests + coverage)
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -37,20 +74,7 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Run lint
-        run: npm run lint
-
-      - name: Run typecheck
-        run: npm run typecheck
-
-      - name: Run unit and integration tests
-        run: npm run test:run
-
       - name: Run browser tests
-        # Dev-mode server on purpose: the movement debug routes these tests
-        # exercise are not production-build compatible yet (a standalone-build
-        # experiment failed three debug-route specs). The job's timeout-minutes
-        # budget is sized for dev-mode compilation instead.
         run: npm run test:e2e
 
       - name: Run coverage
