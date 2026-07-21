@@ -16,14 +16,14 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node environment
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22.13.0'
           cache: 'npm'
@@ -45,6 +45,13 @@ jobs:
 
       - name: Run unit and integration tests
         run: npm run test:run
+
+      - name: Build production app for browser tests
+        # NEXT_PUBLIC_* values are baked in at build time; the Playwright
+        # webServer then serves this build via `next start` (see
+        # playwright.config.ts) instead of compiling every page in dev mode,
+        # which is what previously pushed the job past its time budget.
+        run: NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_CONVEX_URL="${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud}" npm run build
 
       - name: Run browser tests
         run: npm run test:e2e

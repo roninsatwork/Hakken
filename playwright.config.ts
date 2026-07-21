@@ -8,11 +8,16 @@ export default defineConfig({
   workers: 1, // Restricted to 1 worker locally to avoid DB collision during Option A tests
   reporter: 'html',
   webServer: {
-    command:
-      'E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud} npm run dev -- -p 3100',
+    // CI pre-builds the app (see .github/workflows/ci.yml) and serves the
+    // production build — dev-mode compiles every page on first visit, which is
+    // what pushed the Quality Gate past its time budget. Locally, dev mode
+    // keeps the fast iteration loop.
+    command: process.env.CI
+      ? 'E2E_AUTH_ENABLED=1 npm run start -- -p 3100'
+      : 'E2E_AUTH_ENABLED=1 NEXT_PUBLIC_E2E_AUTH_ENABLED=1 NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://e2e-placeholder.convex.cloud} npm run dev -- -p 3100',
     url: 'http://localhost:3100/login',
     reuseExistingServer: false,
-    timeout: 120000,
+    timeout: 180000,
   },
   use: {
     baseURL: 'http://localhost:3100',

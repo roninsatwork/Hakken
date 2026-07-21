@@ -558,6 +558,8 @@ export default function MovementReplayLabPage() {
   }, [
     isDeterministicReplay,
     isThreePartyMirrorProof,
+    replayPlayerCalibration,
+    replayPlayerRetargetSourceModel,
     replaySession,
     replayThreePartyPlayerCalibration,
     replayThreePartyPlayerSetup,
