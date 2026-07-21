@@ -60,6 +60,29 @@ What "fixed" means — BOTH of these, on the new recordings:
 Automated evidence alone is not acceptance. Looking right alone is not acceptance.
 Both.
 
+### RULE — follow-fidelity variance (remembered standard)
+
+The instructor and the player avatar must follow the recorded movement with a
+maximum direction variance of **0.1** for every body segment: torso, spine,
+upper arms, forearms, thighs, and shins. This is the acceptance bar for "the
+avatar follows the recording."
+
+- Measured 2026-07-21 on `Full Mmotion Set London`: upper body average
+  direction error **0.002** (p95 0.017, max 0.064) and lower body average
+  **0.021** (p95 0.039) — inside 0.1. Body follow passes.
+- **Foot pointing direction is exempt from the 0.1 bar** and tracked
+  separately. Foot *direction* is an inherently noisy metric — a tiny foot
+  position wobble reads as a large direction change while the foot is still in
+  the right place. On this recording ~245 foot-direction samples exceed 0.1
+  while every body segment above the ankle stays well under. A dedicated
+  foot-orientation pass may tighten this later; it does not block body-follow
+  acceptance.
+- How to measure: the mounted-Game proof records per-segment `sourceError`
+  (rendered avatar segment vs recorded source direction) in
+  `mounted-game.json` under `playerVisual.segments.*.sourceError`, plus
+  `averageUpperBodyDirectionError` / `averageLowerBodyDirectionError` per
+  frame. Any body segment (non-foot) exceeding 0.1 is a follow regression.
+
 ## Recordings
 
 - **The anchor recording**: being re-recorded. `Full Motion Exercises - London`
