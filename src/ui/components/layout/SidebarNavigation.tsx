@@ -491,6 +491,7 @@ export default function SidebarNavigation() {
                       isOpen={openSections.demos}
                       onToggle={() => toggleSection('demos')}
                     >
+                      <SubNavItem label="Information" href="/demos/movements/information" isActive={pathname.startsWith('/demos/movements/information')} onClick={() => setActiveItem('Demos')} />
                       <SubNavItem label="Studio Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
                       <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
 
