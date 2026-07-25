@@ -18,7 +18,7 @@ Implementation references:
 ## 1. Repository And Environment
 
 - Confirm the current branch is `dev`.
-- Use Node `22.13.0`.
+- Use Node `24.18.0`.
 - Run `npm ci` when starting from a clean checkout.
 - Run `npm run verify:env` before trusting local results.
 - Start Convex with `npm run convex:dev`.

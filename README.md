@@ -25,7 +25,7 @@ The **[/docs](./docs/index.md)** folder is the documentation hub. It is organize
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-Use Node `22.13.0` and npm 10, matching `.nvmrc`, `.node-version`, and CI.
+Use Node `24.18.0` and npm 11, matching `.nvmrc`, `.node-version`, and CI.
 
 ### 2. Install Dependencies
 ```bash

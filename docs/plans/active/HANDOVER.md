@@ -42,11 +42,11 @@ All of Phases 0–4 are complete.
 
 ## Verification gate — run all of this before claiming anything is done
 
-**Use Node 22, not the system Node.** The repo's `verify:env` check refuses to
+**Use Node 24, not the system Node.** The repo's `verify:env` check refuses to
 run the suite otherwise, and the system default here is 23.10:
 
 ```bash
-export PATH="/opt/homebrew/opt/node@22/bin:$PATH"
+export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
 ```
 
 Then:
@@ -150,10 +150,20 @@ is fixed; their size is not.
 
 ## Open tasks, not part of the plan
 
-- **#5** Upgrade Node 22.13 → current LTS. Anthony asked for this explicitly
-  ("can we not upgrade to latest version of node rather than go backwards").
-  Node 23 is an EOL odd release; the real target is Node 24 LTS. Touches
-  `.nvmrc`, `Dockerfile`, and three workflows.
+- ~~**#5** Upgrade Node~~ — **DONE 2026-07-25.** Node 24.18.0 / npm 11.16.0
+  everywhere: `.nvmrc`, `.node-version`, `package.json` engines, the lockfile's
+  engines, `Dockerfile` (`node:24.18.0-alpine`, tag confirmed to exist), three
+  workflows, `verify:env`, four docs and `.claude/launch.json`. Verified with a
+  clean `npm ci` on Node 24 followed by the whole gate.
+
+  **The thing to know:** npm 11 blocks package install scripts by default, so
+  `npm ci` now warns about four packages whose postinstall did not run. That is
+  npm's security default and it was left on. It is safe here because all 32
+  platform binaries — including the Linux and Alpine ones CI and Docker need —
+  are pinned in `package-lock.json` as optional dependencies, so the scripts are
+  fallbacks rather than requirements. If a future dependency genuinely needs its
+  install script, `npm approve-scripts <pkg>` records it in `package.json` where
+  it can be reviewed. Do not blanket-allow.
 - **#12** `workflow.task.create` connector — needs a task data model and an admin
   surface first.
 - **#14** Real connector OAuth — blocked on a token-storage decision and on

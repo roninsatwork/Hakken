@@ -22,7 +22,7 @@ Two GitHub Actions workflows protect the repository:
 - `.github/workflows/ci.yml` runs on pushes and pull requests targeting `dev` or `main`.
 - `.github/workflows/deploy.yml` runs only on pushes to `main` and deploys production after its own gate passes.
 
-Both workflows use Node `22.13.0` and `npm ci`. Both currently install `@rollup/rollup-linux-x64-gnu --no-save` after `npm ci` as a workaround for the npm optional dependency issue that can affect Rollup-based builds in CI.
+Both workflows use Node `24.18.0` and `npm ci`. Both currently install `@rollup/rollup-linux-x64-gnu --no-save` after `npm ci` as a workaround for the npm optional dependency issue that can affect Rollup-based builds in CI.
 
 ### CI Workflow
 

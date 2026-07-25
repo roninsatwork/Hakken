@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const expectedNode = { major: 22, min: "22.13.0", range: ">=22.13.0 <23" };
+const expectedNode = { major: 24, min: "24.18.0", range: ">=24.18.0 <25" };
 
 function parseVersion(version) {
   const [major = 0, minor = 0, patch = 0] = version
@@ -65,7 +65,7 @@ if (failures.length > 0) {
   console.error("Local environment does not match the CI baseline:");
   for (const failure of failures) console.error(`- ${failure}`);
   console.error("");
-  console.error("Use Node 22.13.0, then run `npm ci` before trusting local verification.");
+  console.error(`Use Node ${expectedNode.min}, then run \`npm ci\` before trusting local verification.`);
   process.exit(1);
 }
 

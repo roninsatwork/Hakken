@@ -4,7 +4,7 @@ Follow these steps to set up the Sonae development environment on your local mac
 
 ## Prerequisites
 
-- **Node.js**: `22.13.0` (`.nvmrc` / `.node-version`).
+- **Node.js**: `24.18.0` (`.nvmrc` / `.node-version`).
 - **Package Manager**: `npm` (standard for this project).
 - **Convex Account**: Sign up at [convex.dev](https://www.convex.dev/).
 
@@ -21,7 +21,7 @@ Follow these steps to set up the Sonae development environment on your local mac
     nvm use
     npm ci
     ```
-    Run `npm ci` before trusting local checks. The repository's `predev`, `pretest`, `prebuild`, and `preconvex:dev` hooks run `npm run verify:env`, which verifies Node `22.13.0` and installed direct dependency versions against `package-lock.json`.
+    Run `npm ci` before trusting local checks. The repository's `predev`, `pretest`, `prebuild`, and `preconvex:dev` hooks run `npm run verify:env`, which verifies Node `24.18.0` and installed direct dependency versions against `package-lock.json`.
 
 3.  **Environment Variables**:
     Create a `.env.local` file in the root directory. You can use `.env.example` as a template.

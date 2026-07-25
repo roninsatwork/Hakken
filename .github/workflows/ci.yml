@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node environment
         uses: actions/setup-node@v5
         with:
-          node-version: '22.13.0'
+          node-version: '24.18.0'
           cache: 'npm'
 
       - name: Install dependencies
@@ -77,7 +77,7 @@ jobs:
       - name: Setup Node environment
         uses: actions/setup-node@v5
         with:
-          node-version: '22.13.0'
+          node-version: '24.18.0'
           cache: 'npm'
 
       - name: Install dependencies

@@ -5,7 +5,7 @@
       "name": "next-dev-test-auth",
       "runtimeExecutable": "env",
       "runtimeArgs": [
-        "PATH=/opt/homebrew/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "PATH=/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
         "LOCAL_TEST_AUTH_ENABLED=1",
         "npm",
         "run",
@@ -19,7 +19,7 @@
       "name": "next-dev-e2e-auth",
       "runtimeExecutable": "env",
       "runtimeArgs": [
-        "PATH=/opt/homebrew/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "PATH=/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
         "E2E_AUTH_ENABLED=1",
         "npm",
         "run",
