@@ -76,21 +76,27 @@ function buildLocalReadiness(formData: SystemSettingsFormData): WhiteLabelReadin
   const hasEmailSender = isLikelyEmailAddress(formData.emailSenderAddress);
 
   const items: ReadinessItem[] = [
+    // Each row already named the tab that fixes it — "Set a customer-facing
+    // product name in Core Identity" — and then made the reader go and find it.
     {
       key: "identity",
       status: hasCustomName ? "ready" : "pending",
+      href: "/admin/settings?tab=identity",
     },
     {
       key: "logos",
       status: isPresent(formData.logoUrlLight) && isPresent(formData.logoUrlDark) ? "ready" : "pending",
+      href: "/admin/settings?tab=appearance",
     },
     {
       key: "brandColor",
       status: isHexColor(formData.brandColorHex) ? "ready" : "pending",
+      href: "/admin/settings?tab=appearance",
     },
     {
       key: "diagnostics",
       status: formData.diagnosticRoutingEnabled ? "pending" : "ready",
+      href: "/admin/settings?tab=options",
     },
     {
       key: "widget",
@@ -134,6 +140,10 @@ export function WhiteLabelReadinessSection({ formData, readiness, t }: WhiteLabe
         <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.score")}</span>
           <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{readinessPercent}%</span>
+          {/* A bare percentage invites the question it does not answer. */}
+          <span className="mt-1 block text-[11px] text-muted">
+            {resolvedReadiness.readyCount} of {resolvedReadiness.totalCount} checks pass
+          </span>
         </div>
         <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.ready")}</span>
@@ -146,6 +156,7 @@ export function WhiteLabelReadinessSection({ formData, readiness, t }: WhiteLabe
         <div className="border border-border-dim rounded-[12px] bg-background/50 px-4 py-3">
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono">{t("whiteLabel.summary.manual")}</span>
           <span className="mt-1 block text-[24px] leading-none font-bold text-foreground">{resolvedReadiness.manualCount}</span>
+          <span className="mt-1 block text-[11px] text-muted">{t("whiteLabel.summary.manualHint")}</span>
         </div>
       </div>
 
@@ -165,7 +176,11 @@ export function WhiteLabelReadinessSection({ formData, readiness, t }: WhiteLabe
                   <span className="text-[14px] text-foreground font-semibold">{t(`whiteLabel.items.${item.key}.label`)}</span>
                   <span className="text-[12px] text-muted leading-relaxed">{t(`whiteLabel.items.${item.key}.${descriptionKey}`)}</span>
                   {item.evidence && (
-                    <span className="text-[10px] font-mono text-muted/80">{item.evidence}</span>
+                    // A machine value — "missing-logo-variant", "#E26D28" —
+                    // useful when someone asks why, but not part of the sentence.
+                    <span className="text-[10px] font-mono text-muted/60">
+                      {t("whiteLabel.detected")}: {item.evidence}
+                    </span>
                   )}
                 </div>
               </div>
@@ -175,7 +190,7 @@ export function WhiteLabelReadinessSection({ formData, readiness, t }: WhiteLabe
                     href={item.href}
                     className="inline-flex items-center gap-1.5 text-[12px] font-medium text-brand hover:text-brand/80"
                   >
-                    {t("whiteLabel.open")}
+                    {t("whiteLabel.fixThis")}
                     <ExternalLink className="w-3 h-3" />
                   </Link>
                 )}

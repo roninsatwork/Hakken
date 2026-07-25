@@ -251,7 +251,7 @@ describe("settings sections", () => {
     );
 
     expect(screen.getByText("71%")).toBeInTheDocument();
-    expect(screen.getByText("active-branded-widget")).toBeInTheDocument();
+    expect(screen.getByText(/active-branded-widget/)).toBeInTheDocument();
     expect(screen.getByText("RESEND_FROM_EMAIL")).toBeInTheDocument();
   });
 

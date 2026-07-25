@@ -446,21 +446,23 @@ export default function SystemSettingsPage() {
               <SettingsIcon className="w-3.5 h-3.5" /> {t('options.title')}
             </h3>
 
+            {/* The heading and its sentence came from the block; the row inside
+                repeated both, word for word, wrapped in a third box. One row,
+                said once, with the switch labelled so it reads as on or off. */}
             <SettingBlock title={t('options.routingMatrix')} sub={t('options.routingMatrixSub')}>
-              <div className="flex flex-col gap-0 border border-border-dim rounded-[16px] overflow-hidden">
-                <div className="flex items-center justify-between p-5 bg-background/50 border-b border-border-dim">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[14px] text-foreground font-semibold">{t('options.routingMatrix')}</span>
-                    <span className="text-[12px] text-muted">{t('options.routingMatrixSub')}</span>
-                  </div>
-                  <button
-                    onClick={() => setFormData({ ...formData, diagnosticRoutingEnabled: !formData.diagnosticRoutingEnabled })}
-                    className={`transition-colors flex-shrink-0 ${formData.diagnosticRoutingEnabled ? "text-brand" : "text-muted"}`}
-                  >
-                    {formData.diagnosticRoutingEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                aria-pressed={formData.diagnosticRoutingEnabled}
+                onClick={() => setFormData({ ...formData, diagnosticRoutingEnabled: !formData.diagnosticRoutingEnabled })}
+                className="flex items-center justify-between gap-4 w-full rounded-[16px] border border-border-dim bg-background/50 p-5 text-left transition-colors hover:bg-hover/40"
+              >
+                <span className={`text-[14px] font-semibold ${formData.diagnosticRoutingEnabled ? "text-foreground" : "text-muted"}`}>
+                  {formData.diagnosticRoutingEnabled ? t('options.routingMatrixOn') : t('options.routingMatrixOff')}
+                </span>
+                <span className={`flex-shrink-0 transition-colors ${formData.diagnosticRoutingEnabled ? "text-brand" : "text-muted"}`}>
+                  {formData.diagnosticRoutingEnabled ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
+                </span>
+              </button>
             </SettingBlock>
 
             <SettingBlock title={t('whiteLabel.title')} sub={t('whiteLabel.subtitle')}>

@@ -1592,9 +1592,11 @@
                 }
             },
             "options": {
-                "title": "System Diagnostic Protocols",
-                "routingMatrix": "Diagnostic Routing Matrix",
-                "routingMatrixSub": "Enable developer backdoor debugging paths and cache systems."
+                "title": "Developer options",
+                "routingMatrix": "Developer diagnostic pages",
+                "routingMatrixSub": "Turns on extra debugging pages and cache controls used while building. Leave it off for anything a customer will see.",
+                "routingMatrixOn": "On",
+                "routingMatrixOff": "Off"
             },
             "whiteLabel": {
                 "title": "White-Label Readiness",
@@ -1604,7 +1606,8 @@
                     "score": "Score",
                     "ready": "Ready",
                     "pending": "Pending",
-                    "manual": "Manual"
+                    "manual": "Manual",
+                    "manualHint": "Needs a person, outside Sonae"
                 },
                 "status": {
                     "ready": "Ready",
@@ -1647,7 +1650,9 @@
                         "label": "Production setup validation",
                         "manual": "Run the production setup validator before deployment handoff and keep the output with release notes."
                     }
-                }
+                },
+                "detected": "Detected",
+                "fixThis": "Fix this"
             },
             "handoffSummary": {
                 "title": "Brand Handoff Summary",

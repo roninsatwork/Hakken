@@ -397,7 +397,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             Skill Center
           </h1>
           <p className="text-[13px] text-secondary mt-1 max-w-3xl">
-            Central management for reusable SKILL.md files and eval-backed capability packages.
+            Reusable instructions you can attach to any agent. Upload a SKILL.md file and it becomes available here.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -540,8 +540,10 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             </div>
           </div>
         ) : analytics ? (
-          <div className="rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300">
-            No enabled skill bindings need upgrade or smoke validation.
+          <div className="rounded-[8px] border border-border-dim bg-background/40 px-3 py-2 text-[12px] text-secondary">
+            {analytics.totals.enabledBindings === 0
+              ? "No agent is using these skills yet. Open an agent, go to its Skills tab, and attach one."
+              : "Every agent using these skills is on the current version and has been tested."}
           </div>
         ) : null}
       </section>
@@ -581,7 +583,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           </div>
         ) : skills.length === 0 ? (
           <div className="col-span-full border border-dashed border-border-dim rounded-[8px] p-10 text-center text-secondary">
-            No skills have been created yet.
+            No skills yet. Upload a SKILL.md file to add your first one.
           </div>
         ) : (
           skills.map((skill) => (
@@ -598,15 +600,20 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
                   </div>
                   <p className="text-[12px] text-secondary mt-1 line-clamp-2">{skill.description || "No description provided."}</p>
                 </div>
-                <ShieldCheck className="w-4 h-4 text-brand shrink-0" />
+                <ShieldCheck className="w-4 h-4 text-brand shrink-0" aria-hidden="true" />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${statusTone(skill.status)}`}>
-                  {skill.status.toLowerCase()}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`text-[11px] px-2 py-1 rounded-md border ${statusTone(skill.status)}`}>
+                  {skill.status === "ACTIVE" ? "Published" : skill.status === "DRAFT" ? "Draft" : "Archived"}
                 </span>
-                <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${riskTone(skill.riskLevel)}`}>
-                  {skill.riskLevel.toLowerCase()} risk
+                <span className={`text-[11px] px-2 py-1 rounded-md border ${riskTone(skill.riskLevel)}`}>
+                  {skill.riskLevel === "HIGH" ? "High risk" : skill.riskLevel === "MEDIUM" ? "Medium risk" : "Low risk"}
                 </span>
+                {/* A card that only describes itself leaves the reader to guess
+                    what to do next. A draft has an obvious answer. */}
+                {skill.status === "DRAFT" && (
+                  <span className="text-[11px] text-muted">Publish it to let agents use it</span>
+                )}
               </div>
             </Link>
           ))

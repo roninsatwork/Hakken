@@ -158,8 +158,8 @@ describe("AgentSkillsCatalogPage", () => {
     expect(screen.getByText("1 needs smoke")).toBeInTheDocument();
     expect(screen.getByText("Research Briefing")).toBeInTheDocument();
     expect(screen.getAllByText("Approval Handoff")).toHaveLength(2);
-    expect(screen.getByText("medium risk")).toBeInTheDocument();
-    expect(screen.getByText("high risk")).toBeInTheDocument();
+    expect(screen.getByText("Medium risk")).toBeInTheDocument();
+    expect(screen.getByText("High risk")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
 
     fireEvent.click(screen.getByRole("button", { name: /Add example skills/ }));
