@@ -33,7 +33,10 @@ const detail = {
     instruction: "Escalate material changes.",
     requiredToolMappingsJson: JSON.stringify(["risk.monitor.feed"]),
     recommendedToolMappingsJson: "[]",
-    suggestedEvalFixturesJson: "[]",
+    suggestedEvalFixturesJson: JSON.stringify([{ objective: "one" }, { objective: "two" }]),
+    sourceFilename: "risk-monitoring.SKILL.md",
+    sourceHash: "hash-1",
+    sourceMarkdown: "# Risk Monitoring",
     createdBy: "user_1",
     createdAt: Date.UTC(2026, 5, 18),
     updatedAt: Date.UTC(2026, 5, 18),
@@ -241,40 +244,46 @@ describe("AgentSkillDetailPage rollout review", () => {
     expect(await screen.findByText("1 agent updated to the latest skill version.")).toBeInTheDocument();
   });
 
-  it("saves edited skill settings and archives the skill", async () => {
+  it("reads as a document rather than a form, and publishing is the only edit", async () => {
     updateSkill.mockResolvedValue({ skillId: "skill_risk", skillVersionId: "skill_version_3" });
     archiveSkill.mockResolvedValue({ skillId: "skill_risk" });
 
     render(<AgentSkillDetail />);
 
-    await screen.findByDisplayValue("Risk Monitoring");
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Risk Monitoring Plus" } });
-    fireEvent.change(screen.getByLabelText("Risk"), { target: { value: "MEDIUM" } });
-    fireEvent.change(screen.getByLabelText("Skill instruction"), { target: { value: "Escalate material changes and cite source confidence." } });
-    fireEvent.click(screen.getByRole("button", { name: /Save skill/ }));
+    // The instruction is the content, not a field in a form.
+    expect(await screen.findByText("Instructions given to the agent")).toBeInTheDocument();
+    expect(screen.getByText("Escalate material changes.")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Skill instruction")).not.toBeInTheDocument();
 
+    // The five JSON boxes are gone. This is the whole point of the change: a
+    // reader who does not write software could not use them, and a stray comma
+    // failed silently.
+    expect(screen.queryByLabelText("Required tool mappings")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Recommended knowledge JSON")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Default rules JSON")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Suggested eval fixtures JSON")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Save skill/ })).not.toBeInTheDocument();
+
+    // Tools and examples read as sentences.
+    // Listed in the main column and again in the readiness panel beside it.
+    expect(screen.getAllByText("risk.monitor.feed").length).toBeGreaterThan(0);
+    expect(screen.getByText("available")).toBeInTheDocument();
+    expect(screen.getByText(/2 examples came with this skill/)).toBeInTheDocument();
+
+    // And the page says where it came from, so the way to change it is obvious.
+    expect(screen.getByText(/risk-monitoring.SKILL.md/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Upload new version/ })).toHaveAttribute("href", "/admin/ai/skills?import=1");
+
+    // Publishing is an operational decision the file cannot carry, so it stays.
+    fireEvent.click(screen.getByRole("button", { name: /Return to draft/ }));
     await waitFor(() => {
-      expect(updateSkill).toHaveBeenCalledWith(expect.objectContaining({
-        skillId: "skill_risk",
-        name: "Risk Monitoring Plus",
-        description: "Monitor threat signals.",
-        category: "STARTER",
-        status: "ACTIVE",
-        riskLevel: "MEDIUM",
-        instruction: "Escalate material changes and cite source confidence.",
-        requiredToolMappingsJson: "[\n  \"risk.monitor.feed\"\n]",
-        recommendedToolMappingsJson: "[]",
-        suggestedEvalFixturesJson: "[]",
-      }));
+      expect(updateSkill).toHaveBeenCalledWith({ skillId: "skill_risk", status: "DRAFT" });
     });
-    expect(await screen.findByText("Skill saved and version snapshot refreshed.")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Archive/ }));
-
     await waitFor(() => {
       expect(archiveSkill).toHaveBeenCalledWith({ skillId: "skill_risk" });
     });
-    expect(await screen.findByText("Skill archived. Existing historical bindings remain auditable.")).toBeInTheDocument();
   });
 
   it("clones the skill as a draft from the detail page", async () => {

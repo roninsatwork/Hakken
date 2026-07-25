@@ -264,7 +264,7 @@ catalogue from a filtered one from a truncated one.
 | # | Item | Size | State |
 |---|---|---|---|
 | B1 | Re-upload updates instead of duplicating | 0.5 | **done** |
-| B2 | Skill detail becomes a page you read | 0.5 | — |
+| B2 | Skill detail becomes a page you read | 0.5 | **done** |
 | B3 | Skill Center becomes search-first | 0.5 | — |
 
 **B1 (done).** Uploading an edited `SKILL.md` updates the skill it created, as a
@@ -273,10 +273,22 @@ so the page can show what was uploaded. Identity is the frontmatter name, not
 the filename, because these files are all called `SKILL.md`. An archived skill is
 never revived by an upload.
 
-**B2.** Five JSON boxes go. The instruction becomes the main content in readable
-type; tools, knowledge, rules and evals render as sentences and lists; the
-source file is shown with its name and upload date; one clear action, *Upload
-new version*. The right-hand column stops repeating "No … yet" four times.
+**B2 (done).** The five JSON boxes are gone, along with the form around them.
+The instruction is now the content of the page in readable type; tools read as a
+list with "available" or "not available" beside each; examples read as a
+sentence rather than a JSON array; and the page says which file it came from and
+when, with *Upload new version* as the primary action, landing straight on the
+upload rather than on a list to navigate out of again.
+
+**One thing stayed editable, deliberately: publishing.** Draft, published and
+archived are operational decisions the file cannot carry — a `SKILL.md` says
+what a skill does, not whether this deployment has turned it on. Everything the
+file *does* say is shown rather than offered as a form, because editing the
+database copy could only make it drift from the file that produced it.
+
+The `Clone` / `Export` / `Archive` actions stayed. So did the *Open clone* link,
+which is the one a previous refactor nearly dropped because no test covered it —
+it is covered now.
 
 **B3.** Uploading becomes the front door and is named in plain English. Search
 and filters lead; the health panel appears only once it has something to

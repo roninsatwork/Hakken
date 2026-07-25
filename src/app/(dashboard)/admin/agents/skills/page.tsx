@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -238,7 +238,11 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
     : [];
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isMarkdownOpen, setIsMarkdownOpen] = useState(false);
+  // Opened directly by the "Upload new version" button on a skill page, so
+  // that action lands on the upload rather than on a list the reader then has
+  // to find their way out of again.
+  const searchParams = useSearchParams();
+  const [isMarkdownOpen, setIsMarkdownOpen] = useState(searchParams?.get("import") === "1");
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [bundleJson, setBundleJson] = useState("");

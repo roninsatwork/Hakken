@@ -1,7 +1,6 @@
 "use client";
 
 import {useState} from "react";
-import type { FormEvent } from "react";
 import Link from "next/link";
 import { redirect, useParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
@@ -9,7 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useToast } from "@/src/context/ToastContext";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, Archive, BrainCircuit, CheckCircle2, Copy, Download, Lightbulb, Loader2, Save, UploadCloud, Users, Wrench } from "lucide-react";
+import { ArrowLeft, Archive, BrainCircuit, CheckCircle2, Copy, Download, Lightbulb, Loader2, UploadCloud, Users, Wrench } from "lucide-react";
+import { formatDateTime } from "@/src/lib/dates";
 
 type SkillStatus = Doc<"agentSkills">["status"];
 type SkillRisk = Doc<"agentSkills">["riskLevel"];
@@ -51,12 +51,20 @@ function formatJson(value: string | undefined, fallback = "") {
   }
 }
 
-function inputClassName() {
-  return "h-10 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50";
-}
-
-function textareaClassName(minHeight = "min-h-28") {
-  return `${minHeight} rounded-[8px] border border-border-dim bg-card p-3 text-[12px] text-foreground font-mono leading-relaxed outline-none focus:border-brand/50`;
+/**
+ * How many examples came with the skill.
+ *
+ * Counted rather than rendered: the fixtures are a JSON array written for the
+ * eval runner, and putting that array on screen is what this page used to do.
+ */
+function countExamples(value: string | undefined) {
+  if (!value) return 0;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch {
+    return 0;
+  }
 }
 
 type AgentSkillDetailPageProps = {
@@ -77,7 +85,8 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
   const [initializedId, setInitializedId] = useState<Id<"agentSkills"> | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   // One key per page-level action so the three header buttons spin independently.
-  const SAVE_KEY = "save";
+  const STATUS_KEY = "status";
+  const exampleCount = countExamples(detail?.skill.suggestedEvalFixturesJson);
   const CLONE_KEY = "clone";
   const ARCHIVE_KEY = "archive";
   const action = useAdminAction({ scope: "admin-agent-skill" });
@@ -108,25 +117,13 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
     });
   }
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    await action.run(() => updateSkill({
-        skillId,
-        name: form.name,
-        description: form.description || undefined,
-        category: form.category,
-        status: form.status,
-        riskLevel: form.riskLevel,
-        instruction: form.instruction,
-        requiredToolMappingsJson: form.requiredToolMappingsJson,
-        recommendedToolMappingsJson: form.recommendedToolMappingsJson,
-        recommendedKnowledgeJson: form.recommendedKnowledgeJson || undefined,
-        defaultRulesJson: form.defaultRulesJson || undefined,
-        suggestedEvalFixturesJson: form.suggestedEvalFixturesJson,
-      }), {
-      key: SAVE_KEY,
-      successMessage: "Skill saved and version snapshot refreshed.",
-      fallbackMessage: "Skill could not be saved.",
+  const setStatus = async (status: SkillStatus) => {
+    await action.run(() => updateSkill({ skillId, status }), {
+      key: STATUS_KEY,
+      successMessage: status === "ACTIVE"
+        ? "Skill published. It can now be attached to agents."
+        : "Skill returned to draft. Agents already using it keep the version they have.",
+      fallbackMessage: "The skill status could not be changed.",
     });
   };
 
@@ -182,7 +179,7 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-5 pb-12">
+    <div className="flex flex-col gap-5 pb-12">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <Link href={basePath} className="text-[12px] text-secondary hover:text-foreground flex items-center gap-1 mb-3">
@@ -193,7 +190,7 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
             <BrainCircuit className="w-6 h-6 text-brand" />
             {detail.skill.name}
           </h1>
-          <p className="text-[13px] text-secondary mt-1">Edit the reusable instructions, tool requirements, and starter evals for this skill.</p>
+          <p className="text-[13px] text-secondary mt-1">What this skill tells an agent to do, and which agents are using it.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -223,14 +220,15 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
             {action.isBusy(ARCHIVE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
             Archive
           </button>
-          <button
-            type="submit"
-            disabled={action.isBusy(SAVE_KEY)}
-            className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+          {/* The file is the source of truth, so the primary action is
+              replacing it rather than editing a copy of its contents here. */}
+          <Link
+            href={`${basePath}?import=1`}
+            className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 flex items-center gap-2"
           >
-            {action.isBusy(SAVE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save skill
-          </button>
+            <UploadCloud className="w-4 h-4" />
+            Upload new version
+          </Link>
         </div>
       </header>
 
@@ -248,64 +246,103 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
 
       <section className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Name
-              <input className={inputClassName()} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Category
-              <input className={inputClassName()} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Status
-              <select className={inputClassName()} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as SkillStatus })}>
-                <option value="DRAFT">Draft</option>
-                <option value="ACTIVE">Active</option>
-                <option value="ARCHIVED">Archived</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Risk
-              <select className={inputClassName()} value={form.riskLevel} onChange={(event) => setForm({ ...form, riskLevel: event.target.value as SkillRisk })}>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-              </select>
-            </label>
+          {/* Publishing is the one decision that is not in the file. Everything
+              else on this page is what the uploaded SKILL.md says, which is why
+              it is shown rather than offered as a form: editing the copy in the
+              database would only let it drift from the file that produced it. */}
+          <div className="rounded-[8px] border border-border-dim bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-[13px] font-semibold text-foreground">
+                {detail.skill.status === "ACTIVE"
+                  ? "Published — agents can use this skill"
+                  : detail.skill.status === "DRAFT"
+                    ? "Draft — not available to agents yet"
+                    : "Archived — kept for the record, not offered to agents"}
+              </div>
+              <p className="text-[12px] text-secondary mt-1">
+                {detail.skill.status === "ACTIVE"
+                  ? "Attach it to an agent from that agent's Skills tab."
+                  : "Publish it when you are happy with the instructions below."}
+              </p>
+            </div>
+            {detail.skill.status !== "ARCHIVED" && (
+              <button
+                type="button"
+                onClick={() => setStatus(detail.skill.status === "ACTIVE" ? "DRAFT" : "ACTIVE")}
+                disabled={action.isBusy(STATUS_KEY)}
+                className="h-10 shrink-0 px-4 rounded-[8px] border border-border-dim text-[13px] font-medium text-foreground hover:bg-hover disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {action.isBusy(STATUS_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
+                {detail.skill.status === "ACTIVE" ? "Return to draft" : "Publish skill"}
+              </button>
+            )}
           </div>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Description
-            <input className={inputClassName()} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Skill instruction
-            <textarea className={textareaClassName("min-h-52")} value={form.instruction} onChange={(event) => setForm({ ...form, instruction: event.target.value })} required />
-          </label>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Required tool mappings
-              <textarea className={textareaClassName()} value={form.requiredToolMappingsJson} onChange={(event) => setForm({ ...form, requiredToolMappingsJson: event.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Recommended tool mappings
-              <textarea className={textareaClassName()} value={form.recommendedToolMappingsJson} onChange={(event) => setForm({ ...form, recommendedToolMappingsJson: event.target.value })} />
-            </label>
+
+          <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-2">
+            <h2 className="text-[13px] font-semibold text-foreground">What this skill does</h2>
+            <p className="text-[14px] leading-relaxed text-secondary">
+              {detail.skill.description || "No summary was included in the file."}
+            </p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Recommended knowledge JSON
-              <textarea className={textareaClassName()} value={form.recommendedKnowledgeJson} onChange={(event) => setForm({ ...form, recommendedKnowledgeJson: event.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Default rules JSON
-              <textarea className={textareaClassName()} value={form.defaultRulesJson} onChange={(event) => setForm({ ...form, defaultRulesJson: event.target.value })} />
-            </label>
+
+          {/* The instruction is the skill. It used to sit in a monospaced box
+              the same size and shape as four boxes of JSON; here it is the
+              thing you actually read. */}
+          <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
+            <h2 className="text-[13px] font-semibold text-foreground">Instructions given to the agent</h2>
+            <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/90">
+              {detail.skill.instruction}
+            </p>
           </div>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Suggested eval fixtures JSON
-            <textarea className={textareaClassName("min-h-48")} value={form.suggestedEvalFixturesJson} onChange={(event) => setForm({ ...form, suggestedEvalFixturesJson: event.target.value })} />
-          </label>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
+              <h2 className="text-[13px] font-semibold text-foreground">Tools it needs</h2>
+              {detail.readiness.requiredToolMappings.length === 0 ? (
+                <p className="text-[13px] text-secondary">This skill needs no tools — it is instructions only.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {detail.readiness.requiredToolMappings.map((mapping) => (
+                    <li key={mapping} className="flex items-center justify-between gap-3 text-[13px]">
+                      <span className="text-secondary">{mapping}</span>
+                      <span className={detail.readiness.missingRequiredToolMappings.includes(mapping) ? "text-red-400 text-[12px]" : "text-emerald-400 text-[12px]"}>
+                        {detail.readiness.missingRequiredToolMappings.includes(mapping) ? "not available" : "available"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {detail.readiness.recommendedToolMappings.length > 0 && (
+                <p className="text-[12px] text-muted">
+                  Also suggested: {detail.readiness.recommendedToolMappings.join(", ")}
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
+              <h2 className="text-[13px] font-semibold text-foreground">Examples it is tested against</h2>
+              <p className="text-[13px] text-secondary">
+                {exampleCount === 0
+                  ? "No examples were included in the file. A skill with no examples cannot be checked automatically."
+                  : `${exampleCount} example${exampleCount === 1 ? "" : "s"} came with this skill and are used to test agents that have it.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
+            <h2 className="text-[13px] font-semibold text-foreground">Where this came from</h2>
+            {detail.skill.sourceFilename ? (
+              <p className="text-[13px] text-secondary">
+                Uploaded from <span className="text-foreground">{detail.skill.sourceFilename}</span>, last changed {formatDateTime(detail.skill.updatedAt)}.
+                To change it, edit that file and upload it again — it will replace this skill rather than adding a second one.
+              </p>
+            ) : (
+              <p className="text-[13px] text-secondary">
+                This skill was created in Sonae rather than uploaded from a file.
+                Uploading a SKILL.md named &ldquo;{detail.skill.name}&rdquo; will take it over from here on.
+              </p>
+            )}
+          </div>
         </div>
 
         <aside className="flex flex-col gap-3">
@@ -502,7 +539,7 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
           </div>
         </aside>
       </section>
-    </form>
+    </div>
   );
 }
 
