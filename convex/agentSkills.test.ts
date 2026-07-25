@@ -212,6 +212,31 @@ describe("agent skills", () => {
       paginationOpts: { numItems: 50, cursor: null },
       excludeSkillIds: skillIds,
     });
+
+    // Filters must narrow in the database. Applied to the page after it
+    // arrived, asking for 50 finance skills out of 261 would return whatever
+    // few happened to be in the first 50 rows — the exact fault this pass is
+    // removing elsewhere.
+    const financeOnly = await client.query(api.agentSkills.searchActiveSkills, {
+      paginationOpts: { numItems: 50, cursor: null },
+      category: "FINANCE",
+    });
+    expect(financeOnly.page.map((skill) => skill.name)).toEqual(["Invoice Reconciliation"]);
+
+    const lowRiskFinance = await client.query(api.agentSkills.searchActiveSkills, {
+      paginationOpts: { numItems: 50, cursor: null },
+      searchTerm: "Invoice",
+      category: "FINANCE",
+      riskLevel: "LOW",
+    });
+    expect(lowRiskFinance.page.map((skill) => skill.name)).toEqual(["Invoice Reconciliation"]);
+
+    const wrongRisk = await client.query(api.agentSkills.searchActiveSkills, {
+      paginationOpts: { numItems: 50, cursor: null },
+      searchTerm: "Invoice",
+      riskLevel: "HIGH",
+    });
+    expect(wrongRisk.page).toEqual([]);
     // Already-attached skills are not offered a second time.
     expect(excluded.page.map((skill) => skill._id)).not.toContain(skillIds[0]);
     expect(excluded.page.map((skill) => skill._id)).not.toContain(skillIds[1]);

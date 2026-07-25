@@ -1155,30 +1155,44 @@ export const searchActiveSkills = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
+    category: v.optional(v.string()),
+    riskLevel: v.optional(skillRiskLevelValidator),
     excludeSkillIds: v.optional(v.array(v.id("agentSkills"))),
   },
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
+    const category = args.category?.trim() ? normalizeCategory(args.category) : undefined;
     const excluded = new Set(args.excludeSkillIds ?? []);
 
+    // Both the search path and the browse path narrow in the database. The only
+    // filtering left for the page below is the exclusion list, which depends on
+    // the agent rather than the catalogue and so cannot be indexed.
     const result = searchTerm
       ? await ctx.db
           .query("agentSkills")
-          .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+          .withSearchIndex("search_name", (q) => {
+            let search = q.search("name", searchTerm).eq("status", "ACTIVE");
+            if (category) search = search.eq("category", category);
+            if (args.riskLevel) search = search.eq("riskLevel", args.riskLevel);
+            return search;
+          })
           .paginate(args.paginationOpts)
       : await ctx.db
           .query("agentSkills")
           .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
           .order("desc")
+          .filter((q) => {
+            const clauses = [
+              ...(category ? [q.eq(q.field("category"), category)] : []),
+              ...(args.riskLevel ? [q.eq(q.field("riskLevel"), args.riskLevel)] : []),
+            ];
+            return clauses.length === 0 ? q.eq(q.field("status"), "ACTIVE") : q.and(...clauses);
+          })
           .paginate(args.paginationOpts);
 
-    // The search index cannot filter by status, so active-only is applied here.
-    // Both paths therefore filter, and both can return a short page.
     return {
       ...result,
-      page: result.page.filter(
-        (skill) => skill.status === "ACTIVE" && !excluded.has(skill._id),
-      ),
+      page: result.page.filter((skill) => !excluded.has(skill._id)),
     };
   },
 });

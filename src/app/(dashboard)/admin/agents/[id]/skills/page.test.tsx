@@ -2,14 +2,20 @@ import type React from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import AgentSkillsPage from "./page";
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(),
   useQuery: vi.fn(),
+  usePaginatedQuery: vi.fn(),
 }));
+
+/** The picker pages through the database now, so it stubs a paginated result. */
+function pickerResult(page: unknown[], status = "Exhausted") {
+  return { results: page, status, loadMore: vi.fn(), isLoading: false } as unknown as ReturnType<typeof usePaginatedQuery>;
+}
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "agent_1" }),
@@ -88,8 +94,7 @@ const bindingRows = [{
   },
 }];
 
-const activeSkills = [
-  bindingRows[0].skill,
+const unattachedSkills = [
   {
     _id: "skill_followup",
     name: "Client Follow-up",
@@ -118,11 +123,12 @@ describe("AgentSkillsPage", () => {
       if (functionName === "agentSkills:getForAgent") {
         return bindingRows as unknown as ReturnType<typeof useQuery>;
       }
-      if (functionName === "agentSkills:getActiveSkills") {
-        return activeSkills as unknown as ReturnType<typeof useQuery>;
-      }
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
+    // The server excludes already-attached skills, so the stub returns only the
+    // unattached one. Returning the attached skill here would test a page the
+    // real query can never produce.
+    vi.mocked(usePaginatedQuery).mockReturnValue(pickerResult(unattachedSkills));
     vi.mocked(useMutation).mockImplementation((mutationFn) => {
       const functionName = getFunctionName(mutationFn);
       if (functionName === "agentSkills:bindSkillToAgent") return bindSkill as unknown as ReturnType<typeof useMutation>;
@@ -140,7 +146,6 @@ describe("AgentSkillsPage", () => {
     renderWithProviders(<AgentSkillsPage />);
 
     expect(screen.getByText("Attached Skill Catalog")).toBeInTheDocument();
-    expect(screen.getByText("Available")).toBeInTheDocument();
     expect(screen.getByText("Risk Monitoring")).toBeInTheDocument();
     expect(screen.getByText("New skill version available: v3. Review and upgrade this agent when ready.")).toBeInTheDocument();
     expect(screen.getByText("1 required tool mapping(s) are missing.")).toBeInTheDocument();
@@ -163,12 +168,22 @@ describe("AgentSkillsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add from Skill Center" }));
     expect(screen.getByText("Add From Skill Center")).toBeInTheDocument();
     expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
-    expect(screen.getByPlaceholderText("Search active skills")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search skills by name")).toBeInTheDocument();
     expect(screen.getByText("Instruction preview")).toBeInTheDocument();
     expect(screen.getByText("Use concrete next steps.")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText("Search active skills"), { target: { value: "follow" } });
-    expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
+    // Searching and filtering now happen in the database, so the assertion is
+    // that the page asks for them — not that it sifted a list it had already
+    // fetched, which is the behaviour that hid skills past the old 250 cap.
+    fireEvent.change(screen.getByPlaceholderText("Search skills by name"), { target: { value: "follow" } });
+    await waitFor(() => {
+      expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toMatchObject({ searchTerm: "follow" });
+    });
+
+    fireEvent.change(screen.getByLabelText("Risk"), { target: { value: "LOW" } });
+    await waitFor(() => {
+      expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toMatchObject({ riskLevel: "LOW" });
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Attach selected skill/ }));
     await waitFor(() => {
@@ -187,17 +202,15 @@ describe("AgentSkillsPage", () => {
       if (functionName === "agentSkills:getForAgent") {
         return [] as unknown as ReturnType<typeof useQuery>;
       }
-      if (functionName === "agentSkills:getActiveSkills") {
-        return [] as unknown as ReturnType<typeof useQuery>;
-      }
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
+    vi.mocked(usePaginatedQuery).mockReturnValue(pickerResult([]));
 
     renderWithProviders(<AgentSkillsPage />);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Add from Skill Center" })[0]);
 
-    expect(screen.getByText("No unattached active skills are available.")).toBeInTheDocument();
+    expect(screen.getByText("Every active skill is already attached to this agent.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
   });
 });

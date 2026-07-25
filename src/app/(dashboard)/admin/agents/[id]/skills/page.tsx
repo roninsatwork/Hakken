@@ -3,12 +3,17 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { AlertTriangle, BrainCircuit, CheckCircle2, ExternalLink, Library, Loader2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+
+type SkillRisk = Doc<"agentSkills">["riskLevel"];
+
+/** One screenful of candidates; "load more" fetches the next. */
+const PICKER_PAGE_SIZE = 20;
 
 type BindingRow = {
   binding: Doc<"agentSkillBindings">;
@@ -65,38 +70,55 @@ export default function AgentSkillsPage() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
   const bindings = useQuery(api.agentSkills.getForAgent, { agentId });
-  const skills = useQuery(api.agentSkills.getActiveSkills);
   const bindSkill = useMutation(api.agentSkills.bindSkillToAgent);
   const upgradeSkillBinding = useMutation(api.agentSkills.upgradeSkillBindingToLatest);
   const setBindingEnabled = useMutation(api.agentSkills.setBindingEnabled);
   const unbindSkill = useMutation(api.agentSkills.unbindSkillFromAgent);
   const [seedEvalFixtures, setSeedEvalFixtures] = useState(true);
   const [skillSearchTerm, setSkillSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [riskFilter, setRiskFilter] = useState<SkillRisk | "">("");
   const [selectedSkillId, setSelectedSkillId] = useState<Id<"agentSkills"> | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<BindingRow | null>(null);
   const action = useAdminAction({ scope: "admin-agent-skills" });
 
+  // Already-attached skills are excluded by the server, so the picker cannot
+  // offer one twice. Memoised because this array is a query argument: rebuilt
+  // every render it would resubscribe on every keystroke.
   const attachedSkillIds = useMemo(
-    () => new Set((bindings ?? []).map((row) => row.skill._id)),
+    () => (bindings ?? []).map((row) => row.skill._id),
     [bindings]
   );
-  const availableSkills = (skills ?? []).filter((skill) => !attachedSkillIds.has(skill._id));
-  const filteredAvailableSkills = availableSkills.filter((skill) => {
-    const search = skillSearchTerm.trim().toLowerCase();
-    if (!search) return true;
-    return [
-      skill.name,
-      skill.description,
-      skill.category,
-      skill.riskLevel,
-    ].some((value) => value?.toLowerCase().includes(search));
-  });
-  const selectedSkill = filteredAvailableSkills.find((skill) => skill._id === selectedSkillId) ?? filteredAvailableSkills[0] ?? null;
+
+  // Searched and paged in the database rather than fetched and filtered here.
+  // The old picker read the first 250 active skills and filtered them in the
+  // browser, so past 250 a skill could not be attached and nothing said so.
+  const {
+    results: pickerSkills,
+    status: pickerStatus,
+    loadMore: loadMoreSkills,
+  } = usePaginatedQuery(
+    api.agentSkills.searchActiveSkills,
+    {
+      ...(skillSearchTerm.trim() ? { searchTerm: skillSearchTerm.trim() } : {}),
+      ...(categoryFilter ? { category: categoryFilter } : {}),
+      ...(riskFilter ? { riskLevel: riskFilter } : {}),
+      excludeSkillIds: attachedSkillIds,
+    },
+    { initialNumItems: PICKER_PAGE_SIZE }
+  );
+  const isPickerLoading = pickerStatus === "LoadingFirstPage";
+  const canLoadMoreSkills = pickerStatus === "CanLoadMore";
+  const isLoadingMoreSkills = pickerStatus === "LoadingMore";
+  const hasFilters = Boolean(skillSearchTerm.trim() || categoryFilter || riskFilter);
+  const selectedSkill = pickerSkills.find((skill) => skill._id === selectedSkillId) ?? pickerSkills[0] ?? null;
   const updateCount = (bindings ?? []).filter((row) => row.hasAvailableUpdate).length;
   const toolGapCount = (bindings ?? []).filter((row) => row.readiness.missingRequiredToolMappings.length > 0).length;
   const smokeGapCount = (bindings ?? []).filter((row) => !row.evalCoverage.latestPassedRun).length;
-  const isLoading = bindings === undefined || skills === undefined;
+  // The picker loads inside its own modal, so the page no longer waits on the
+  // whole skill catalogue before it can render the agent's own skills.
+  const isLoading = bindings === undefined;
 
   const attach = async (skillId: Id<"agentSkills">) => {
     const outcome = await action.run(() => bindSkill({ agentId, skillId, seedEvalFixtures }), {
@@ -182,10 +204,14 @@ export default function AgentSkillsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
             { label: "Attached", value: bindings.length },
-            { label: "Available", value: availableSkills.length },
+            // "Available" used to live here, counted from a fetch of the first
+            // 250 active skills — so past 250 it was simply wrong. An honest
+            // total needs the maintained catalogue count (plan item A3); until
+            // then the picker itself is the place that answers "what else is
+            // there", and it answers by searching rather than by counting.
             { label: "Updates", value: updateCount },
             { label: "Tool gaps", value: toolGapCount },
             { label: "Smoke gaps", value: smokeGapCount },
@@ -343,7 +369,7 @@ export default function AgentSkillsPage() {
           </p>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="overflow-hidden rounded-[8px] border border-border-dim bg-background/50">
-              <div className="p-3 border-b border-border-dim">
+              <div className="p-3 border-b border-border-dim flex flex-col gap-2">
                 <label className="relative block">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
@@ -352,14 +378,55 @@ export default function AgentSkillsPage() {
                       setSkillSearchTerm(event.target.value);
                       setSelectedSkillId(null);
                     }}
-                    placeholder="Search active skills"
+                    placeholder="Search skills by name"
                     className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-black/15 text-[13px] text-foreground outline-none focus:border-brand/50"
                   />
                 </label>
+                {/* Filters, because search alone is not enough in a large
+                    library: when most skills share a word, searching it returns
+                    a page ranked by relevance and the one wanted may not be on
+                    it. Both filters narrow in the database. */}
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="sr-only" htmlFor="skill-picker-category">Category</label>
+                  <input
+                    id="skill-picker-category"
+                    value={categoryFilter}
+                    onChange={(event) => {
+                      setCategoryFilter(event.target.value);
+                      setSelectedSkillId(null);
+                    }}
+                    placeholder="Any category"
+                    className="h-9 px-3 rounded-[8px] border border-border-dim bg-black/15 text-[12px] text-foreground outline-none focus:border-brand/50"
+                  />
+                  <label className="sr-only" htmlFor="skill-picker-risk">Risk</label>
+                  <select
+                    id="skill-picker-risk"
+                    value={riskFilter}
+                    onChange={(event) => {
+                      setRiskFilter(event.target.value as SkillRisk | "");
+                      setSelectedSkillId(null);
+                    }}
+                    className="h-9 px-3 rounded-[8px] border border-border-dim bg-black/15 text-[12px] text-foreground outline-none focus:border-brand/50"
+                  >
+                    <option value="">Any risk</option>
+                    <option value="LOW">Low risk</option>
+                    <option value="MEDIUM">Medium risk</option>
+                    <option value="HIGH">High risk</option>
+                  </select>
+                </div>
               </div>
-              {availableSkills.length === 0 ? (
+              {isPickerLoading ? (
+                <div className="flex items-center justify-center gap-2 px-4 py-10 text-[13px] text-secondary">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading skills
+                </div>
+              ) : pickerSkills.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-[13px] text-secondary">
-                  <p>No unattached active skills are available.</p>
+                  <p>
+                    {hasFilters
+                      ? "No skills match. Try a different search or clear the filters."
+                      : "Every active skill is already attached to this agent."}
+                  </p>
                   <Link
                     href="/admin/ai/skills"
                     className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-card px-3 text-[12px] font-semibold text-foreground transition-colors hover:border-brand/40 hover:text-brand"
@@ -368,13 +435,9 @@ export default function AgentSkillsPage() {
                     Open Skill Center
                   </Link>
                 </div>
-              ) : filteredAvailableSkills.length === 0 ? (
-                <div className="p-8 text-center text-[13px] text-secondary">
-                  No active skills match this search.
-                </div>
               ) : (
                 <div className="max-h-[420px] overflow-y-auto divide-y divide-border-dim">
-                  {filteredAvailableSkills.map((skill) => {
+                  {pickerSkills.map((skill) => {
                     const isSelected = selectedSkill?._id === skill._id;
                     return (
                       <button
@@ -398,6 +461,17 @@ export default function AgentSkillsPage() {
                       </button>
                     );
                   })}
+                  {canLoadMoreSkills && (
+                    <button
+                      type="button"
+                      onClick={() => loadMoreSkills(PICKER_PAGE_SIZE)}
+                      disabled={isLoadingMoreSkills}
+                      className="w-full px-4 py-3 text-[12px] font-semibold text-secondary hover:text-foreground hover:bg-hover disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isLoadingMoreSkills && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      Show more skills
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -1023,7 +1023,14 @@ export default defineSchema({
     // is usually named SKILL.md whatever it contains, so the frontmatter name
     // is the identity, not the filename.
     .index("by_name", ["name"])
-    .searchIndex("search_name", { searchField: "name" }),
+    // `filterFields` so a search can be narrowed in the database. Filtering a
+    // page after it arrives is the mistake this whole pass exists to remove:
+    // ask for fifteen, get three, and no way to tell whether that is the answer
+    // or the truncation.
+    .searchIndex("search_name", {
+      searchField: "name",
+      filterFields: ["status", "category", "riskLevel"],
+    }),
 
   agentSkillVersions: defineTable({
     skillId: v.id("agentSkills"),

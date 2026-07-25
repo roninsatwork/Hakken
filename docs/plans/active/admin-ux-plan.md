@@ -77,6 +77,22 @@ systems"*: "backdoor" is an alarming word to attach to a switch nobody has
 explained, and the switch itself is a small icon that does not read as on or
 off. Three levels of nesting wrap a single toggle.
 
+**Settings → API Keys.** A create form fills the top of the screen whether or
+not the reader wants to create anything, and beside it sits a large empty panel
+headed *One-time secret* explaining a state that does not exist yet. Below, the
+empty table says `NO API KEYS CREATED` and then, three lines lower, *No API keys
+created* again.
+
+The words are the deeper problem. The page exists "for future public API and
+webhook surfaces" — two of the four permissions are for features not yet built
+("Use future callback delivery surfaces") — and nothing states that plainly
+once; instead it is threaded through every description. *Governed* appears
+twice, meaning nothing to a reader. `RATE/MIN` is a heading in mono capitals with
+no unit and no explanation of what happens when the rate is exceeded. And the
+reassurance under the title — "Raw secrets are returned once, then only a digest
+and prefix are stored" — is the single most important sentence on the page,
+written in a way that requires knowing what a digest is.
+
 Below it, *White-Label Readiness* scores 29% with counts of Ready 2, Pending 3
 and Manual 2 — without saying what Manual means, how the score is reached, or
 why 29% matters. Each row prints a raw identifier under the description —
@@ -175,7 +191,7 @@ decoration.
 
 ## The plan
 
-Four phases, about five days. Ordered on one principle: **a screen that shows
+Four phases, about five and a half days. Ordered on one principle: **a screen that shows
 the wrong thing is worse than a screen that shows the right thing badly.** The
 silent 250 cap is the product telling the reader something untrue, so it is
 fixed before anything is made prettier.
@@ -189,16 +205,23 @@ broken code before it is trusted.
 | # | Item | Size | State |
 |---|---|---|---|
 | A1 | Uncapped, searched, paged skill picker — server | 0.5 | **done** |
-| A2 | Wire the picker screen to it, with filters | 0.5 | next |
+| A2 | Wire the picker screen to it, with filters | 0.5 | **done** |
 | A3 | Health counts as a maintained rollup | 0.75 | — |
 | A4 | Fix search + status paging, and say "showing X of Y" | 0.25 | — |
 
 **A1 (done).** `searchActiveSkills` searches and pages in the database and
 excludes already-attached skills. Proven at 261 skills.
 
-**A2.** The attach-a-skill picker moves onto it and gains category, risk and
-status filters. Filters are load-bearing at this scale, not decoration — see the
-search-ranking finding above.
+**A2 (done).** The attach-a-skill picker searches and pages in the database and
+gained category and risk filters, both applied server-side. Filters are
+load-bearing at this scale, not decoration — see the search-ranking finding
+above. The page also stopped waiting on the whole catalogue before it could
+render the agent's own skills.
+
+One tile was removed rather than left lying: *Available* counted the catalogue
+from that capped fetch, so past 250 it was simply wrong. An honest total needs
+the maintained count from A3; until then the picker answers "what else is there"
+by searching rather than by counting.
 
 **A3.** `getSkillCatalogAnalytics` stops reading up to 25,000 documents to
 produce five numbers. Counts are maintained as bindings change, following
@@ -252,12 +275,13 @@ never changes goes, as does the repeated internal key under every label. A
 recommended set replaces ten identical dropdowns, with the cost consequence of a
 change visible where the change is made.
 
-### Phase D — System Options (0.5 days)
+### Phase D — Settings (1 day)
 
 | # | Item | Size | State |
 |---|---|---|---|
 | D1 | One toggle, stated once, in plain words | 0.25 | — |
 | D2 | Readiness rows that link to their own fix | 0.25 | — |
+| D3 | API Keys | 0.5 | — |
 
 **D1.** *Diagnostic Routing Matrix* currently appears twice on one screen with
 the same sentence under both, wrapped in three levels of box around a control
@@ -268,6 +292,15 @@ explained.
 **D2.** Every pending row names where its fix lives; each becomes a link to that
 tab. The score says how it is calculated and what "Manual" means. Machine
 identifiers — `missing-logo-variant`, `#E26D28` — stop sharing space with prose.
+
+**D3.** The list of keys leads; creating one is an action that opens a form
+rather than a form that is always open. The empty "one-time secret" panel
+appears when there is a secret to show, not before. The empty state is said
+once. Each permission is described by what it lets someone do, and the two that
+belong to unbuilt features say so plainly in one place instead of hedging every
+line with "future". "Raw secrets are returned once, then only a digest and prefix
+are stored" becomes the plain warning it needs to be: **copy this key now — it
+cannot be shown again.**
 
 ### Throughout — the vocabulary pass
 
