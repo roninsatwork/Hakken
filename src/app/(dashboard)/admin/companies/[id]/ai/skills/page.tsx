@@ -31,7 +31,6 @@ type CompanySkill = Doc<"companySkills">;
 type GlobalSkill = Doc<"agentSkills">;
 type CompanySkillBinding = Doc<"companySkillBindings">;
 type SkillStatus = CompanySkill["status"];
-type SkillRisk = CompanySkill["riskLevel"];
 type SkillSurface = CompanySkillBinding["surfaceType"];
 
 
@@ -49,37 +48,9 @@ const DEFAULT_BINDING_FORM = {
   isEnabled: true,
 };
 
-function getRiskClasses(risk: SkillRisk) {
-  if (risk === "HIGH") return "border-red-500/20 bg-red-500/10 text-red-300";
-  if (risk === "MEDIUM") return "border-amber-500/20 bg-amber-500/10 text-amber-300";
-  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
-}
 
-function getStatusClasses(status: SkillStatus) {
-  if (status === "ACTIVE") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
-  if (status === "ARCHIVED") return "border-border-dim bg-foreground/5 text-muted";
-  return "border-blue-500/20 bg-blue-500/10 text-blue-300";
-}
 
-function parseStringArray(value: string | undefined) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
-function hasJson(value: string | undefined) {
-  if (!value) return false;
-  try {
-    JSON.parse(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function getSurfaceLabel(surface: SkillSurface) {
   return SKILL_SURFACES.find((item) => item.value === surface)?.label ?? surface;
@@ -223,34 +194,21 @@ export default function CompanyAiSkillsPage() {
               No skills yet. Add one from the Skill Center.
             </div>
           ) : skills.results.map((skill) => {
-            const requiredTools = parseStringArray(skill.requiredToolsJson);
             const isExpanded = expandedSkillId === skill._id;
-            const hasApprovalPolicy = hasJson(skill.approvalPolicyJson);
 
             return (
               <div key={skill._id} className="px-4 py-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  {/* The name, and when it arrived. Risk, status, category, an
+                      instruction preview, the approval-policy state and a
+                      version label were six things on a row whose only real
+                      question is whether this company has the skill. */}
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-[14px] font-semibold text-foreground">{skill.name}</h3>
-                      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${getRiskClasses(skill.riskLevel)}`}>
-                        {skill.riskLevel} risk
-                      </span>
-                      <span className={`rounded-md border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${getStatusClasses(skill.status)}`}>
-                        {skill.status}
-                      </span>
-                      <span className="rounded-md border border-border-dim bg-foreground/5 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-secondary">
-                        {skill.category}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-[12px] leading-relaxed text-secondary">{skill.description || "No description provided."}</p>
-                    <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted">{skill.instruction}</p>
-                    <div className="mt-2 flex flex-wrap gap-3 text-[10px] font-mono uppercase tracking-widest text-muted">
-                      <span>{requiredTools.length} required tool{requiredTools.length === 1 ? "" : "s"}</span>
-                      <span>{hasApprovalPolicy ? "approval policy set" : "no approval policy"}</span>
-                      {skill.versionLabel && <span>{skill.versionLabel}</span>}
-                      <span>{formatDateTime(skill.updatedAt)}</span>
-                    </div>
+                    <h3 className="text-[14px] font-semibold text-foreground">{skill.name}</h3>
+                    <p className="mt-1 text-[12px] leading-relaxed text-secondary line-clamp-1">
+                      {skill.description || "No description."}
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted">Added {formatDateTime(skill.updatedAt)}</p>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <button
