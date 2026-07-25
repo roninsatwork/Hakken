@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import Link from "next/link";
-import { redirect, useRouter, useSearchParams } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { BarChart3, BrainCircuit, FileText, Loader2, Search } from "lucide-react";
+import { BarChart3, BrainCircuit, FileText, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import {
@@ -19,230 +18,151 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 
-type SkillStatus = Doc<"agentSkills">["status"];
-type SkillRisk = Doc<"agentSkills">["riskLevel"];
-type AiTool = Doc<"aiTools">;
-
-type MarkdownImportDraft = {
-  sourceFilename?: string;
-  sourceHash: string;
-  name: string;
-  description?: string;
-  category: string;
-  riskLevel: SkillRisk;
-  instruction: string;
-  requiredToolMappingsJson: string;
-  recommendedToolMappingsJson: string;
-  suggestedEvalFixturesJson: string;
-  validation: {
-    errors: string[];
-    warnings: string[];
-    suggestions: string[];
-  };
-};
-
-
-function riskTone(risk: SkillRisk) {
-  if (risk === "HIGH") return "border-red-500/20 bg-red-500/10 text-red-400";
-  if (risk === "MEDIUM") return "border-amber-500/20 bg-amber-500/10 text-amber-400";
-  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-400";
-}
-
-function statusTone(status: SkillStatus) {
-  if (status === "ACTIVE") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-400";
-  if (status === "ARCHIVED") return "border-border-dim bg-foreground/5 text-muted";
-  return "border-sky-500/20 bg-sky-500/10 text-sky-400";
-}
-
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
 }
 
-function parseJsonStringArray(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed)
-      ? parsed.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
-      : [];
-  } catch {
-    return [];
-  }
-}
 
-function formatJsonStringArray(values: string[]) {
-  return JSON.stringify(Array.from(new Set(values)));
-}
-
-function toggleJsonStringArrayValue(value: string, entry: string) {
-  const entries = parseJsonStringArray(value);
-  return formatJsonStringArray(entries.includes(entry)
-    ? entries.filter((item) => item !== entry)
-    : [...entries, entry]);
-}
-
-function hasJsonStringArrayValue(value: string, entry: string) {
-  return parseJsonStringArray(value).includes(entry);
-}
-
-function hasEvalFixtures(value: string) {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) && parsed.length > 0;
-  } catch {
-    return false;
-  }
-}
-
-function hasApprovalGuidance(draft: MarkdownImportDraft) {
-  return draft.riskLevel !== "HIGH" || /\b(approval|required approval|human approval|pause|confirm|do not proceed)\b/i.test(draft.instruction);
-}
-
-function hasTenantSpecificSignals(draft: MarkdownImportDraft) {
-  return /\b(acme|client id|customer id|company secret|api key|password)\b/i.test(`${draft.instruction}\n${draft.description ?? ""}`);
-}
-
-function getUnresolvedMappings(draft: MarkdownImportDraft, activeToolMappings: string[]) {
-  const active = new Set(activeToolMappings);
-  return [
-    ...parseJsonStringArray(draft.requiredToolMappingsJson),
-    ...parseJsonStringArray(draft.recommendedToolMappingsJson),
-  ].filter((mapping) => !active.has(mapping));
-}
-
-type ToolMappingPickerProps = {
-  mappings: string[];
-  value: string;
-  onChange: (value: string) => void;
-};
-
-function ToolMappingPicker({ mappings, value, onChange }: ToolMappingPickerProps) {
-  if (mappings.length === 0) {
-    return (
-      <div className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 text-[11px] text-muted">
-        No active tool mappings are available.
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-[8px] border border-border-dim bg-black/15 p-2">
-      <div className="mb-2 text-[10px] font-mono uppercase tracking-widest text-muted">Active mappings</div>
-      <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
-        {mappings.map((mapping) => {
-          const isSelected = hasJsonStringArrayValue(value, mapping);
-          return (
-            <button
-              key={mapping}
-              type="button"
-              onClick={() => onChange(toggleJsonStringArrayValue(value, mapping))}
-              className={`rounded-[8px] border px-2.5 py-1.5 font-mono text-[11px] transition-colors ${
-                isSelected
-                  ? "border-brand/40 bg-brand/15 text-brand"
-                  : "border-border-dim bg-background/40 text-secondary hover:text-foreground"
-              }`}
-            >
-              {mapping}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-type MarkdownReadinessPanelProps = {
-  draft: MarkdownImportDraft;
-  activeToolMappings: string[];
-};
-
-function MarkdownReadinessPanel({ draft, activeToolMappings }: MarkdownReadinessPanelProps) {
-  const unresolvedMappings = getUnresolvedMappings(draft, activeToolMappings);
-  const readinessRows = [
-    {
-      label: "Tool mappings",
-      ready: unresolvedMappings.length === 0,
-      detail: unresolvedMappings.length === 0 ? "All imported mappings match active tools." : `${unresolvedMappings.length} unresolved`,
-    },
-    {
-      label: "Approval",
-      ready: hasApprovalGuidance(draft),
-      detail: hasApprovalGuidance(draft) ? "Approval guidance present or not required." : "High-risk skill needs approval guidance.",
-    },
-    {
-      label: "Eval fixtures",
-      ready: hasEvalFixtures(draft.suggestedEvalFixturesJson),
-      detail: hasEvalFixtures(draft.suggestedEvalFixturesJson) ? "Starter fixtures included." : "No starter fixtures.",
-    },
-    {
-      label: "Shared scope",
-      ready: !hasTenantSpecificSignals(draft),
-      detail: hasTenantSpecificSignals(draft) ? "Review for tenant-specific facts." : "No obvious sensitive tenant facts.",
-    },
-  ];
-
-  return (
-    <div className="rounded-[8px] border border-border-dim bg-black/15 p-3">
-      <div className="mb-3 text-[11px] font-semibold text-foreground">Production readiness</div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {readinessRows.map((row) => (
-          <div key={row.label} className="rounded-[8px] border border-border-dim bg-background/40 px-3 py-2">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] font-medium text-secondary">{row.label}</span>
-              <span className={`rounded-[8px] border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest ${
-                row.ready ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300"
-              }`}
-              >
-                {row.ready ? "ready" : "review"}
-              </span>
-            </div>
-            <div className="mt-1 text-[11px] text-muted">{row.detail}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-async function readFileText(file: File) {
-  if (typeof file.text === "function") return await file.text();
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-    reader.onerror = () => reject(reader.error ?? new Error("File could not be read."));
-    reader.readAsText(file);
-  });
-}
-
-type AgentSkillsCatalogPageProps = {
-  basePath?: string;
-};
-
-export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkillsCatalogPageProps) {
+export function AgentSkillsCatalog() {
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
   const importSkillMarkdown = useMutation(api.agentSkills.importSkillMarkdown);
+  const deleteSkill = useMutation(api.agentSkills.deleteSkill);
+  const updateSkill = useMutation(api.agentSkills.updateSkill);
   const analytics = useQuery(api.agentSkills.getSkillCatalogAnalytics, {});
-  const toolCatalog = useQuery(api.aiTools.getTools, {});
-  const activeToolMappings = Array.isArray(toolCatalog)
-    ? toolCatalog
-      .filter((tool: AiTool) => tool.isActive !== false)
-      .map((tool: AiTool) => tool.handlerMapping)
-      .filter(Boolean)
-    : [];
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<SkillStatus | "">("");
   const [page, setPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: Id<"agentSkills">; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<Doc<"agentSkills"> | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const EDIT_KEY = "edit";
+
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const ADD_KEY = "add";
+
+  const addSkill = async (event: FormEvent) => {
+    event.preventDefault();
+    setValidationError("");
+    const name = newName.trim();
+    if (!name) {
+      setValidationError("Give the skill a name.");
+      return;
+    }
+    if (!newFile) {
+      setValidationError("Choose a SKILL.md file.");
+      return;
+    }
+
+    const markdown = await newFile.text();
+    const outcome = await action.run(async () => {
+      const draft = await previewSkillMarkdownImport({ markdown, filename: newFile.name });
+      const created = await importSkillMarkdown({
+        sourceFilename: newFile.name,
+        sourceHash: draft.sourceHash,
+        sourceMarkdown: markdown,
+        // The name the reader typed wins over the one in the file's frontmatter.
+        name,
+        // What the reader typed, falling back to whatever the file said.
+        description: newDescription.trim() || draft.description || undefined,
+        category: draft.category,
+        riskLevel: draft.riskLevel,
+        instruction: draft.instruction,
+        requiredToolMappingsJson: draft.requiredToolMappingsJson,
+        recommendedToolMappingsJson: draft.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: draft.suggestedEvalFixturesJson,
+      });
+      // Uploaded means available. There is no publish step.
+      await updateSkill({ skillId: created.skillId, status: "ACTIVE" });
+      return created;
+    }, { key: ADD_KEY, fallbackMessage: "The skill could not be added.", suppressErrorToast: true });
+
+    if (!outcome.ok) return;
+    setFeedback(`Added ${name}.`);
+    setNewName("");
+    setNewDescription("");
+    setNewFile(null);
+    setIsMarkdownOpen(false);
+  };
+
+  const openEdit = (skill: Doc<"agentSkills">) => {
+    setEditTarget(skill);
+    setEditName(skill.name);
+    setEditDescription(skill.description ?? "");
+    setEditFile(null);
+    setFeedback("");
+  };
+
+  /**
+   * Save the two things a skill has: what it is called, and the file behind it.
+   *
+   * Replacing the file goes through the same import path an upload does, so
+   * there is one place that turns markdown into a skill. The name is applied
+   * afterwards because the file carries its own, and the name typed here is the
+   * one the reader chose.
+   */
+  const saveEdit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editTarget) return;
+    const name = editName.trim();
+    if (!name) {
+      setValidationError("Give the skill a name.");
+      return;
+    }
+
+    const markdown = editFile ? await editFile.text() : null;
+    const outcome = await action.run(async () => {
+      if (markdown) {
+        const draft = await previewSkillMarkdownImport({ markdown, filename: editFile!.name });
+        await importSkillMarkdown({
+          sourceFilename: editFile!.name,
+          sourceHash: draft.sourceHash,
+          sourceMarkdown: markdown,
+          name: editTarget.name,
+          description: draft.description || undefined,
+          category: draft.category,
+          riskLevel: draft.riskLevel,
+          instruction: draft.instruction,
+          requiredToolMappingsJson: draft.requiredToolMappingsJson,
+          recommendedToolMappingsJson: draft.recommendedToolMappingsJson,
+          suggestedEvalFixturesJson: draft.suggestedEvalFixturesJson,
+        });
+      }
+      return await updateSkill({
+        skillId: editTarget._id,
+        name,
+        description: editDescription.trim() || undefined,
+      });
+    }, { key: EDIT_KEY, fallbackMessage: "The skill could not be saved.", suppressErrorToast: true });
+
+    if (!outcome.ok) return;
+    setFeedback(markdown ? `Saved ${name} and replaced its file.` : `Saved ${name}.`);
+    setEditTarget(null);
+  };
+  const DELETE_KEY = "delete";
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const outcome = await action.run(() => deleteSkill({ skillId: deleteTarget.id }), {
+      key: DELETE_KEY,
+      fallbackMessage: "The skill could not be deleted.",
+    });
+    if (!outcome.ok) return;
+    setFeedback(
+      outcome.data.detachedAgents > 0
+        ? `Deleted ${deleteTarget.name}. It was removed from ${outcome.data.detachedAgents} agent${outcome.data.detachedAgents === 1 ? "" : "s"}.`
+        : `Deleted ${deleteTarget.name}.`,
+    );
+    setDeleteTarget(null);
+  };
   // Opened directly by the "Upload new version" button on a skill page, so
   // that action lands on the upload rather than on a list the reader then has
   // to find their way out of again.
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isMarkdownOpen, setIsMarkdownOpen] = useState(searchParams?.get("import") === "1");
-  const [markdownFile, setMarkdownFile] = useState<File | null>(null);
-  const [markdownSourceText, setMarkdownSourceText] = useState("");
-  const [markdownDraft, setMarkdownDraft] = useState<MarkdownImportDraft | null>(null);
   // Each dialog on this page runs one write, so each gets its own busy key.
-  const PARSE_KEY = "parse";
-  const MARKDOWN_SAVE_KEY = "markdown-save";
   const action = useAdminAction({ scope: "admin-agent-skills" });
   // Local `error` carries client-side validation only — a missing file, an empty
   // one. Server failures come from the runner, which has already unwrapped and
@@ -250,14 +170,13 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
   const [validationError, setValidationError] = useState("");
   const error = validationError || action.error;
   const [feedback, setFeedback] = useState("");
-  const [importedSkillId, setImportedSkillId] = useState<Id<"agentSkills"> | null>(null);
   const {
     results: skills,
     status,
     loadMore,
   } = usePaginatedQuery(
     api.agentSkills.getPaginatedSkills,
-    { searchTerm, ...(statusFilter ? { status: statusFilter } : {}) },
+    { searchTerm },
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
   /**
@@ -271,7 +190,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
    */
   const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
   const pageSkills = skills.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
-  const isFiltered = Boolean(searchTerm.trim() || statusFilter);
+  const isFiltered = Boolean(searchTerm.trim());
   const knownTotal = !isFiltered && analytics?.computedAt && !analytics.isPartial
     ? analytics.totals.skills
     : skills.length;
@@ -288,71 +207,6 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
   // is nothing to report on yet, so the panel stays away rather than showing
   // five zeros to someone who has just arrived.
   const hasSkills = analytics === undefined || analytics.totals.skills > 0 || skills.length > 0;
-
-
-
-
-  const resetMarkdownImport = () => {
-    setMarkdownFile(null);
-    setMarkdownSourceText("");
-    setMarkdownDraft(null);
-    setValidationError("");
-  };
-
-  const parseMarkdown = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!markdownFile) {
-      setValidationError("Choose a SKILL.md file to import.");
-      return;
-    }
-    if (!markdownSourceText.trim()) {
-      setValidationError("The selected SKILL.md file is empty.");
-      return;
-    }
-    setFeedback("");
-    setImportedSkillId(null);
-    const outcome = await action.run(
-      () => previewSkillMarkdownImport({ markdown: markdownSourceText, filename: markdownFile.name }),
-      { key: PARSE_KEY, fallbackMessage: "SKILL.md could not be parsed.", suppressErrorToast: true },
-    );
-    if (outcome.ok) setMarkdownDraft(outcome.data as MarkdownImportDraft);
-  };
-
-  const saveMarkdownDraft = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!markdownDraft) return;
-    setFeedback("");
-    setImportedSkillId(null);
-    const outcome = await action.run(() => importSkillMarkdown({
-        sourceFilename: markdownDraft.sourceFilename,
-        sourceHash: markdownDraft.sourceHash,
-        // The file itself, kept so the skill page can show what was uploaded
-        // and hand the original back rather than a rebuilt approximation.
-        sourceMarkdown: markdownSourceText,
-        name: markdownDraft.name,
-        description: markdownDraft.description || undefined,
-        category: markdownDraft.category,
-        riskLevel: markdownDraft.riskLevel,
-        instruction: markdownDraft.instruction,
-        requiredToolMappingsJson: markdownDraft.requiredToolMappingsJson,
-        recommendedToolMappingsJson: markdownDraft.recommendedToolMappingsJson,
-        suggestedEvalFixturesJson: markdownDraft.suggestedEvalFixturesJson,
-      }), { key: MARKDOWN_SAVE_KEY, fallbackMessage: "SKILL.md could not be imported.", suppressErrorToast: true });
-    // The reviewed draft stays on screen if the import failed.
-    if (!outcome.ok) return;
-    setImportedSkillId(outcome.data.skillId);
-    setIsMarkdownOpen(false);
-    resetMarkdownImport();
-    // Which of the three happened matters: "imported" on a re-upload would have
-    // the reader hunting for a second copy that was never created.
-    setFeedback(
-      outcome.data.outcome === "CREATED"
-        ? `Added ${markdownDraft.name} as a draft skill.`
-        : outcome.data.outcome === "UPDATED"
-          ? `Updated ${markdownDraft.name} from the file. Agents using it keep working until you roll them onto the new version.`
-          : `${markdownDraft.name} is already up to date — the file has not changed since the last upload.`,
-    );
-  };
 
   return (
     <div className="flex flex-col gap-5 h-full pb-12">
@@ -373,13 +227,12 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           type="button"
           onClick={() => {
             setIsMarkdownOpen(true);
-            resetMarkdownImport();
             setFeedback("");
           }}
           className="h-10 shrink-0 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
         >
           <FileText className="w-4 h-4" />
-          Upload a skill file
+          Add new skill
         </button>
       </header>
 
@@ -390,11 +243,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             : "border-red-500/20 bg-red-500/10 text-red-300"
         }`}>
           {feedback || error}
-          {importedSkillId && (
-            <Link href={`${basePath}/${importedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
-              Open imported skill
-            </Link>
-          )}
+
         </div>
       )}
 
@@ -443,47 +292,6 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             </div>
           ))}
         </div>
-        {analytics && analytics.needsAttention.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <div className="text-[11px] uppercase tracking-widest font-mono text-muted">Needs attention</div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-              {analytics.needsAttention.slice(0, 4).map((row: {
-                skillId: Id<"agentSkills">;
-                name: string;
-                category: string;
-                riskLevel: SkillRisk;
-                outdatedAgents: number;
-                needsSmokeAgents: number;
-                validatedAgents: number;
-              }) => (
-                <Link
-                  key={row.skillId}
-                  href={`${basePath}/${row.skillId}`}
-                  className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 hover:border-brand/40 transition-colors flex flex-col gap-2"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[12px] font-semibold text-foreground">{row.name}</span>
-                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${riskTone(row.riskLevel)}`}>
-                      {row.riskLevel.toLowerCase()}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
-                    <span>{row.category}</span>
-                    <span>{row.outdatedAgents} outdated</span>
-                    <span>{row.needsSmokeAgents} needs smoke</span>
-                    <span>{row.validatedAgents} validated</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : analytics ? (
-          <div className="rounded-[8px] border border-border-dim bg-background/40 px-3 py-2 text-[12px] text-secondary">
-            {analytics.totals.enabledBindings === 0
-              ? "No agent is using these skills yet. Open an agent, go to its Skills tab, and attach one."
-              : "Every agent using these skills is on the current version and has been tested."}
-          </div>
-        ) : null}
       </section>
       )}
 
@@ -499,18 +307,6 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
           />
         </div>
-        <label className="sr-only" htmlFor="skill-status-filter">Filter by status</label>
-        <select
-          id="skill-status-filter"
-          value={statusFilter}
-          onChange={(event) => { setStatusFilter(event.target.value as SkillStatus | ""); setPage(1); }}
-          className="h-10 px-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-48"
-        >
-          <option value="">All statuses</option>
-          <option value="ACTIVE">Published</option>
-          <option value="DRAFT">Draft</option>
-          <option value="ARCHIVED">Archived</option>
-        </select>
       </div>
 
       {/* The repo's standard admin table, the same one the model catalogue,
@@ -518,7 +314,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           things that only this screen had, and it scanned worse the longer the
           catalogue got. */}
       <AdminTableShell
-        minWidthClassName="min-w-[860px]"
+        minWidthClassName="min-w-[640px]"
         footer={
           <AdminPaginationFooter
             page={page}
@@ -538,199 +334,187 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         }
       >
         <thead>
+          {/* A skill is a name and a file. Category, status, risk and the
+              description were four columns of things nobody was going to act
+              on. */}
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="px-4 py-3 font-medium">Skill</th>
-            <th className="px-4 py-3 font-medium w-[150px]">Category</th>
-            <th className="px-4 py-3 font-medium w-[130px]">Status</th>
-            <th className="px-4 py-3 font-medium w-[130px]">Risk</th>
-            <th className="px-4 py-3 font-medium w-[170px]">Last changed</th>
+            <th className="px-4 py-3 font-medium w-[220px]">File</th>
+            <th className="px-4 py-3 font-medium w-[190px]">Uploaded</th>
+            <th className="px-4 py-3 font-medium w-[120px] text-right"></th>
           </tr>
         </thead>
         <tbody>
           {status === "LoadingFirstPage" ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <AdminTableLoadingRow colSpan={4} />
           ) : skills.length === 0 ? (
             <AdminTableEmptyRow
-              colSpan={5}
+              colSpan={4}
               icon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
               label="No skills yet — upload a SKILL.md file to add your first one"
             />
           ) : pageSkills.map((skill) => (
             <tr
               key={skill._id}
-              onClick={() => router.push(`${basePath}/${skill._id}`)}
+              onClick={() => openEdit(skill)}
               className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors cursor-pointer"
             >
               <td className="px-4 py-3">
                 <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
-                <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
-                  {skill.description || "No description in the file."}
-                </div>
               </td>
-              <td className="px-4 py-3 text-[12px] text-secondary">{skill.category}</td>
-              <td className="px-4 py-3">
-                <span className={`text-[11px] px-2 py-1 rounded-md border ${statusTone(skill.status)}`}>
-                  {skill.status === "ACTIVE" ? "Published" : skill.status === "DRAFT" ? "Draft" : "Archived"}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <span className={`text-[11px] px-2 py-1 rounded-md border ${riskTone(skill.riskLevel)}`}>
-                  {skill.riskLevel === "HIGH" ? "High risk" : skill.riskLevel === "MEDIUM" ? "Medium risk" : "Low risk"}
-                </span>
+              <td className="px-4 py-3 text-[12px] text-secondary truncate">
+                {skill.sourceFilename || "—"}
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
+              <td className="px-4 py-3 text-right whitespace-nowrap">
+                <button
+                  type="button"
+                  aria-label={`Edit ${skill.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openEdit(skill);
+                  }}
+                  className="p-2 rounded-md text-muted hover:text-foreground hover:bg-foreground/10 transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete ${skill.name}`}
+                  onClick={(event) => {
+                    // The row navigates; the button must not.
+                    event.stopPropagation();
+                    setDeleteTarget({ id: skill._id, name: skill.name });
+                  }}
+                  className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </AdminTableShell>
 
+      <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Edit skill" size="lg">
+        <form onSubmit={saveEdit} className="flex flex-col gap-4 px-1 pb-2">
+          {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
+          <label className="flex flex-col gap-1 text-[12px] text-secondary">
+            Name
+            <input
+              value={editName}
+              onChange={(event) => setEditName(event.target.value)}
+              className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[12px] text-secondary">
+            Description
+            <textarea
+              value={editDescription}
+              onChange={(event) => setEditDescription(event.target.value)}
+              rows={3}
+              placeholder="What this skill is for, in your own words."
+              className="rounded-[8px] border border-border-dim bg-card px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand/50 resize-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[12px] text-secondary">
+            Replace the file
+            <input
+              type="file"
+              accept=".md,.markdown,text/markdown"
+              onChange={(event) => setEditFile(event.target.files?.[0] ?? null)}
+              className="text-[13px] text-secondary file:mr-3 file:rounded-[8px] file:border-0 file:bg-foreground/10 file:px-3 file:py-2 file:text-[12px] file:text-foreground"
+            />
+            <span className="text-[11px] text-muted">
+              {editTarget?.sourceFilename
+                ? `Currently ${editTarget.sourceFilename}. Leave empty to keep it.`
+                : "No file behind this skill yet."}
+            </span>
+          </label>
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={() => setEditTarget(null)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
+              Cancel
+            </button>
+            <button type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+              {action.isBusy(EDIT_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
+              Save
+            </button>
+          </div>
+        </form>
+      </SonaeModal>
 
-      <SonaeModal
-        isOpen={isMarkdownOpen}
-        onClose={() => {
-          setIsMarkdownOpen(false);
-          resetMarkdownImport();
-        }}
-        title="Import SKILL.md"
-        size="lg"
-      >
-        {!markdownDraft ? (
-          <form onSubmit={parseMarkdown} className="flex flex-col gap-4 px-1 pb-2">
-            {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-            <label className="flex flex-col gap-2 text-[12px] text-secondary">
-              SKILL.md file
-              <input
-                type="file"
-                accept=".md,text/markdown,text/plain"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  setMarkdownFile(file);
-                  setMarkdownSourceText("");
-                  setValidationError("");
-                  if (!file) return;
-                  try {
-                    setMarkdownSourceText(await readFileText(file));
-                  } catch (err) {
-                    setValidationError(err instanceof Error ? err.message : "File could not be read.");
-                  }
-                }}
-                className="rounded-[8px] border border-dashed border-border-dim bg-card p-4 text-[13px] text-foreground file:mr-3 file:rounded-[8px] file:border-0 file:bg-brand file:px-3 file:py-2 file:text-[12px] file:font-medium file:text-white"
-              />
-            </label>
-            {markdownFile && (
-              <div className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 text-[12px] text-secondary">
-                Selected file: <span className="font-mono text-foreground">{markdownFile.name}</span>
-              </div>
-            )}
-            <div className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 text-[12px] text-secondary">
-              The import creates a draft skill. Review the parsed fields before publishing or attaching it to agents.
-            </div>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-              <button type="submit" disabled={action.isBusy(PARSE_KEY) || !markdownSourceText.trim()} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
-                {action.isBusy(PARSE_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Parse file
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={saveMarkdownDraft} className="flex flex-col gap-4 px-1 pb-2">
-            {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-            {markdownDraft.validation.errors.length > 0 && (
-              <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">
-                <div className="font-semibold mb-1">Blocking issues</div>
-                <ul className="list-disc pl-4 space-y-1">
-                  {markdownDraft.validation.errors.map((message) => <li key={message}>{message}</li>)}
-                </ul>
-              </div>
-            )}
-            {markdownDraft.validation.warnings.length > 0 && (
-              <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 p-3 text-[12px] text-amber-300">
-                <div className="font-semibold mb-1">Warnings</div>
-                <ul className="list-disc pl-4 space-y-1">
-                  {markdownDraft.validation.warnings.map((message) => <li key={message}>{message}</li>)}
-                </ul>
-              </div>
-            )}
-            {markdownDraft.validation.suggestions.length > 0 && (
-              <div className="rounded-[8px] border border-sky-500/20 bg-sky-500/10 p-3 text-[12px] text-sky-300">
-                <div className="font-semibold mb-1">Suggestions</div>
-                <ul className="list-disc pl-4 space-y-1">
-                  {markdownDraft.validation.suggestions.map((message) => <li key={message}>{message}</li>)}
-                </ul>
-              </div>
-            )}
-            <MarkdownReadinessPanel draft={markdownDraft} activeToolMappings={activeToolMappings} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-[12px] text-secondary">
-                Name
-                <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.name} onChange={(event) => setMarkdownDraft({ ...markdownDraft, name: event.target.value })} required />
-              </label>
-              <label className="flex flex-col gap-1 text-[12px] text-secondary">
-                Category
-                <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.category} onChange={(event) => setMarkdownDraft({ ...markdownDraft, category: event.target.value })} />
-              </label>
-              <label className="flex flex-col gap-1 text-[12px] text-secondary">
-                Status
-                <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-muted" value="DRAFT" disabled readOnly />
-              </label>
-              <label className="flex flex-col gap-1 text-[12px] text-secondary">
-                Risk
-                <select className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.riskLevel} onChange={(event) => setMarkdownDraft({ ...markdownDraft, riskLevel: event.target.value as SkillRisk })}>
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                </select>
-              </label>
-            </div>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Description
-              <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={markdownDraft.description ?? ""} onChange={(event) => setMarkdownDraft({ ...markdownDraft, description: event.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Instruction
-              <textarea className="min-h-40 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.instruction} onChange={(event) => setMarkdownDraft({ ...markdownDraft, instruction: event.target.value })} required />
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-[12px] text-secondary">
-                Required tool mappings JSON
-                <textarea className="min-h-20 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.requiredToolMappingsJson} onChange={(event) => setMarkdownDraft({ ...markdownDraft, requiredToolMappingsJson: event.target.value })} />
-                <ToolMappingPicker
-                  mappings={activeToolMappings}
-                  value={markdownDraft.requiredToolMappingsJson}
-                  onChange={(value) => setMarkdownDraft({ ...markdownDraft, requiredToolMappingsJson: value })}
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-[12px] text-secondary">
-                Recommended tool mappings JSON
-                <textarea className="min-h-20 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.recommendedToolMappingsJson} onChange={(event) => setMarkdownDraft({ ...markdownDraft, recommendedToolMappingsJson: event.target.value })} />
-                <ToolMappingPicker
-                  mappings={activeToolMappings}
-                  value={markdownDraft.recommendedToolMappingsJson}
-                  onChange={(value) => setMarkdownDraft({ ...markdownDraft, recommendedToolMappingsJson: value })}
-                />
-              </label>
-            </div>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Suggested eval fixtures JSON
-              <textarea className="min-h-24 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={markdownDraft.suggestedEvalFixturesJson} onChange={(event) => setMarkdownDraft({ ...markdownDraft, suggestedEvalFixturesJson: event.target.value })} />
-            </label>
-            <div className="flex justify-between gap-2">
-              <button type="button" onClick={() => setMarkdownDraft(null)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Choose another file</button>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-                <button
-                  type="submit"
-                  disabled={action.isBusy(MARKDOWN_SAVE_KEY) || markdownDraft.validation.errors.length > 0}
-                  className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                  {action.isBusy(MARKDOWN_SAVE_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  Save draft
-                </button>
-              </div>
-            </div>
-          </form>
-        )}
+      <SonaeModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete skill" size="sm">
+        <div className="flex flex-col gap-5 px-1 pb-2">
+          <p className="text-[13px] leading-relaxed text-secondary">
+            Delete <span className="text-foreground font-semibold">{deleteTarget?.name}</span>? This removes the
+            file and takes the skill away from any agent using it. It cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDelete}
+              disabled={action.isBusy(DELETE_KEY)}
+              className="h-10 px-4 rounded-[8px] bg-red-500 text-white text-[13px] font-medium hover:bg-red-600 disabled:opacity-50 flex items-center gap-2"
+            >
+              {action.isBusy(DELETE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Delete skill
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+
+      <SonaeModal isOpen={isMarkdownOpen} onClose={() => setIsMarkdownOpen(false)} title="Add new skill" size="lg">
+        {/* A skill is a name and a file. The previous version of this dialog
+            parsed the file, showed a readiness panel, a tool-mapping picker and
+            a list of validation warnings before it would let anyone finish. */}
+        <form onSubmit={addSkill} className="flex flex-col gap-4 px-1 pb-2">
+          {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
+          <label className="flex flex-col gap-1 text-[12px] text-secondary">
+            Name
+            <input
+              value={newName}
+              onChange={(event) => setNewName(event.target.value)}
+              placeholder="What you want to call this skill"
+              className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[12px] text-secondary">
+            Description
+            <textarea
+              value={newDescription}
+              onChange={(event) => setNewDescription(event.target.value)}
+              rows={3}
+              placeholder="What this skill is for, in your own words."
+              className="rounded-[8px] border border-border-dim bg-card px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand/50 resize-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-[12px] text-secondary">
+            Skill file
+            <input
+              type="file"
+              accept=".md,.markdown,text/markdown"
+              onChange={(event) => setNewFile(event.target.files?.[0] ?? null)}
+              className="text-[13px] text-secondary file:mr-3 file:rounded-[8px] file:border-0 file:bg-foreground/10 file:px-3 file:py-2 file:text-[12px] file:text-foreground"
+            />
+            <span className="text-[11px] text-muted">A SKILL.md file. Its contents become the instructions the agent follows.</span>
+          </label>
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
+              Cancel
+            </button>
+            <button type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+              {action.isBusy(ADD_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
+              Add skill
+            </button>
+          </div>
+        </form>
       </SonaeModal>
 
     </div>

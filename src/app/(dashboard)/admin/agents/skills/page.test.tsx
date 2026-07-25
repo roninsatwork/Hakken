@@ -115,6 +115,7 @@ describe("AgentSkillsCatalogPage", () => {
   const previewSkillMarkdownImport = vi.fn();
   const importSkillMarkdown = vi.fn();
   const seedStarterSkills = vi.fn();
+  const updateSkill = vi.fn();
   const loadMore = vi.fn();
 
   beforeEach(() => {
@@ -134,6 +135,9 @@ describe("AgentSkillsCatalogPage", () => {
     });
     vi.mocked(useMutation).mockImplementation((mutationFn) => {
       const functionName = getFunctionName(mutationFn);
+      if (functionName === "agentSkills:updateSkill") {
+        return updateSkill as unknown as ReturnType<typeof useMutation>;
+      }
       if (functionName === "agentSkills:seedStarterSkills") {
         return seedStarterSkills as unknown as ReturnType<typeof useMutation>;
       }
@@ -154,17 +158,12 @@ describe("AgentSkillsCatalogPage", () => {
     render(<AgentSkillsCatalog />);
 
     expect(screen.getByText("Skill Center")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Upload a skill file/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add new skill/ })).toBeInTheDocument();
     expect(screen.getByText("How your skills are being used")).toBeInTheDocument();
     expect(screen.getByText("In use by agents")).toBeInTheDocument();
     expect(screen.getByText("Out of date")).toBeInTheDocument();
     expect(screen.getByText("Untested")).toBeInTheDocument();
-    expect(screen.getByText("2 outdated")).toBeInTheDocument();
-    expect(screen.getByText("1 needs smoke")).toBeInTheDocument();
     expect(screen.getByText("Research Briefing")).toBeInTheDocument();
-    expect(screen.getAllByText("Approval Handoff")).toHaveLength(2);
-    expect(screen.getByText("Medium risk")).toBeInTheDocument();
-    expect(screen.getByText("High risk")).toBeInTheDocument();
     expect(screen.getByText("Research Briefing")).toBeInTheDocument();
 
     // Uploading a SKILL.md is the only way skills arrive, so it is the only
@@ -177,22 +176,6 @@ describe("AgentSkillsCatalogPage", () => {
     // The standard admin table with the standard numbered pager.
     expect(screen.getByRole("button", { name: /Next/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Previous/ })).toBeInTheDocument();
-  });
-
-  it("keeps catalog links inside a custom base path", () => {
-    render(<AgentSkillsCatalog basePath="/admin/ai/skills" />);
-
-    expect(screen.getByText("Research Briefing")).toBeInTheDocument();
-  });
-
-  it("narrows by status in the database rather than sifting a fetched page", async () => {
-    render(<AgentSkillsCatalog />);
-
-    fireEvent.change(screen.getByLabelText("Filter by status"), { target: { value: "DRAFT" } });
-
-    await waitFor(() => {
-      expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toMatchObject({ status: "DRAFT" });
-    });
   });
 
   it("hides the health panel until it has something to measure", () => {
@@ -221,10 +204,10 @@ describe("AgentSkillsCatalogPage", () => {
 
     expect(screen.queryByText("How your skills are being used")).not.toBeInTheDocument();
     // The way in is still obvious.
-    expect(screen.getByRole("button", { name: /Upload a skill file/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add new skill/ })).toBeInTheDocument();
   });
 
-  it("imports a SKILL.md file as a reviewed draft", async () => {
+  it("adds a skill from a name and a file, and asks for nothing else", async () => {
     previewSkillMarkdownImport.mockResolvedValue({
       sourceFilename: "SKILL.md",
       sourceHash: "skillhash",
@@ -232,69 +215,43 @@ describe("AgentSkillsCatalogPage", () => {
       description: "Verify browser workflows.",
       category: "QA",
       riskLevel: "MEDIUM",
-      instruction: "Use browser checks to verify local UI behavior.",
-      requiredToolMappingsJson: "[\"browser.open\"]",
+      instruction: "Use browser checks.",
+      requiredToolMappingsJson: "[]",
       recommendedToolMappingsJson: "[]",
       suggestedEvalFixturesJson: "[]",
-      validation: {
-        errors: [],
-        warnings: ["No examples or eval fixtures were found."],
-        suggestions: ["Add at least two starter eval fixtures before marking the skill production-ready."],
-      },
+      validation: { errors: [], warnings: [], suggestions: [] },
     });
-    importSkillMarkdown.mockResolvedValue({ skillId: "skill_markdown", skillVersionId: "skill_markdown_version_1", outcome: "CREATED" });
-    const file = new File(["# Browser QA\n\nVerify browser workflows."], "SKILL.md", { type: "text/markdown" });
-    Object.defineProperty(file, "text", {
-      value: vi.fn().mockResolvedValue("# Browser QA\n\nVerify browser workflows."),
-    });
+    importSkillMarkdown.mockResolvedValue({ skillId: "skill_new", skillVersionId: "v1", outcome: "CREATED" });
+    updateSkill.mockResolvedValue({ skillId: "skill_new" });
+
+    const file = new File(["# Browser QA"], "SKILL.md", { type: "text/markdown" });
+    Object.defineProperty(file, "text", { value: vi.fn().mockResolvedValue("# Browser QA") });
 
     render(<AgentSkillsCatalog />);
+    fireEvent.click(screen.getByRole("button", { name: /Add new skill/ }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Upload a skill file/ }));
-    fireEvent.change(screen.getByLabelText("SKILL.md file"), { target: { files: [file] } });
-    expect(await screen.findByText("Selected file:")).toBeInTheDocument();
-    const parseButton = screen.getByRole("button", { name: "Parse file" });
-    await waitFor(() => {
-      expect(parseButton).not.toBeDisabled();
-    });
-    fireEvent.click(parseButton);
-
-    await waitFor(() => {
-      expect(previewSkillMarkdownImport).toHaveBeenCalledWith({
-        markdown: "# Browser QA\n\nVerify browser workflows.",
-        filename: "SKILL.md",
-      });
-    });
-    expect(await screen.findByDisplayValue("Browser QA")).toBeInTheDocument();
-    expect(screen.getByText("No examples or eval fixtures were found.")).toBeInTheDocument();
-    expect(screen.getByText("Production readiness")).toBeInTheDocument();
-    expect(screen.getByText("All imported mappings match active tools.")).toBeInTheDocument();
-    expect(screen.getByText("No starter fixtures.")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "browser.open" })).toHaveLength(2);
+    // A skill is a name, a description and a file. There is no parse step, no
+    // readiness panel, no risk picker and no publish button.
+    expect(screen.queryByRole("button", { name: "Parse file" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Production readiness")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Browser QA Review" } });
-    fireEvent.click(screen.getAllByRole("button", { name: "browser.screenshot" })[1]);
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Checks the UI." } });
+    fireEvent.change(screen.getByLabelText(/Skill file/), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "Add skill" }));
 
     await waitFor(() => {
-      expect(importSkillMarkdown).toHaveBeenCalledWith({
-        sourceFilename: "SKILL.md",
-        sourceHash: "skillhash",
-        // The file itself now travels with the import, so the skill can show
-        // what was uploaded and a re-upload can be matched to it.
-        sourceMarkdown: "# Browser QA\n\nVerify browser workflows.",
+      expect(importSkillMarkdown).toHaveBeenCalledWith(expect.objectContaining({
+        // The name typed here wins over the one in the file's frontmatter.
         name: "Browser QA Review",
-        description: "Verify browser workflows.",
-        category: "QA",
-        riskLevel: "MEDIUM",
-        instruction: "Use browser checks to verify local UI behavior.",
-        requiredToolMappingsJson: "[\"browser.open\"]",
-        recommendedToolMappingsJson: "[\"browser.screenshot\"]",
-        suggestedEvalFixturesJson: "[]",
-      });
+        description: "Checks the UI.",
+        sourceMarkdown: "# Browser QA",
+      }));
     });
-    expect(await screen.findByText("Added Browser QA Review as a draft skill.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/ai/skills/skill_markdown");
+    // Added means available: no publish step to forget.
+    await waitFor(() => {
+      expect(updateSkill).toHaveBeenCalledWith({ skillId: "skill_new", status: "ACTIVE" });
+    });
   });
 
 });

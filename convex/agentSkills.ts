@@ -1961,6 +1961,59 @@ export const importSkillMarkdown = superAdminMutation({
   },
 });
 
+/**
+ * Delete a skill outright, with everything that belongs to it.
+ *
+ * Archiving already existed and is the gentler option: it keeps the record and
+ * leaves history auditable. Deleting is what someone means when they uploaded
+ * the wrong file and want it gone, so it removes the skill, its version
+ * snapshots and its agent attachments.
+ *
+ * It reports how many agents lose the skill rather than refusing when any do.
+ * Refusing would send the reader hunting through agents to detach it by hand;
+ * telling them the consequence before they confirm, and again afterwards, is
+ * more useful and less patronising. The audit entry keeps the record of what
+ * was removed after the rows themselves are gone.
+ */
+export const deleteSkill = superAdminMutation({
+  args: { skillId: v.id("agentSkills") },
+  handler: async (ctx, args) => {
+    const { userId } = ctx;
+    const skill = await ctx.db.get(args.skillId);
+    if (!skill) throw new Error("Skill not found.");
+
+    const bindings = await ctx.db
+      .query("agentSkillBindings")
+      .withIndex("by_skill_enabled", (q) => q.eq("skillId", args.skillId))
+      .take(SKILL_BINDING_LIMIT);
+    for (const binding of bindings) await ctx.db.delete(binding._id);
+
+    const versions = await ctx.db
+      .query("agentSkillVersions")
+      .withIndex("by_skill_created", (q) => q.eq("skillId", args.skillId))
+      .take(SKILL_CATALOG_LIMIT);
+    for (const version of versions) await ctx.db.delete(version._id);
+
+    await ctx.db.delete(args.skillId);
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "DELETE_AGENT_SKILL",
+      entityId: args.skillId,
+      entityType: "agentSkills",
+      timestamp: Date.now(),
+      metadata: JSON.stringify({
+        name: skill.name,
+        sourceFilename: skill.sourceFilename,
+        detachedAgents: bindings.length,
+        deletedVersions: versions.length,
+      }),
+    });
+
+    return { detachedAgents: bindings.length };
+  },
+});
+
 export const archiveSkill = superAdminMutation({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {

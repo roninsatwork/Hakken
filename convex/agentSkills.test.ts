@@ -370,6 +370,80 @@ describe("agent skills", () => {
     expect(page.page.every((skill) => skill.status === "ACTIVE")).toBe(true);
   });
 
+  test("deleting a skill takes its versions and agent attachments with it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const markdown = [
+      "---",
+      "name: Temporary Skill",
+      "---",
+      "# Temporary Skill",
+      "",
+      "## Instructions",
+      "",
+      "Do the thing until told otherwise.",
+    ].join("\n");
+    const preview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+      filename: "SKILL.md",
+      markdown,
+    });
+    const imported = await client.mutation(api.agentSkills.importSkillMarkdown, {
+      sourceFilename: preview.sourceFilename,
+      sourceHash: preview.sourceHash,
+      sourceMarkdown: markdown,
+      name: preview.name,
+      description: preview.description,
+      category: preview.category,
+      riskLevel: preview.riskLevel,
+      instruction: preview.instruction,
+      requiredToolMappingsJson: preview.requiredToolMappingsJson,
+      recommendedToolMappingsJson: preview.recommendedToolMappingsJson,
+      suggestedEvalFixturesJson: preview.suggestedEvalFixturesJson,
+    });
+
+    const agentId = await t.run(async (ctx) => {
+      return await ctx.db.insert("agents", {
+        name: "Helper",
+        modelId: "test-provider-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.patch(imported.skillId, { status: "ACTIVE" });
+    });
+    await client.mutation(api.agentSkills.bindSkillToAgent, { agentId, skillId: imported.skillId });
+
+    const result = await client.mutation(api.agentSkills.deleteSkill, { skillId: imported.skillId });
+    // The reader is told the consequence rather than being blocked by it.
+    expect(result).toMatchObject({ detachedAgents: 1 });
+
+    const after = await t.run(async (ctx) => {
+      const skill = await ctx.db.get(imported.skillId);
+      const versions = await ctx.db.query("agentSkillVersions").collect();
+      const bindings = await ctx.db.query("agentSkillBindings").collect();
+      const audit = await ctx.db
+        .query("auditLogs")
+        .filter((q) => q.eq(q.field("actionType"), "DELETE_AGENT_SKILL"))
+        .first();
+      return { skill, versionCount: versions.length, bindingCount: bindings.length, audit };
+    });
+
+    // Nothing left pointing at a skill that no longer exists.
+    expect(after.skill).toBeNull();
+    expect(after.versionCount).toBe(0);
+    expect(after.bindingCount).toBe(0);
+    // The record of what was removed outlives the rows.
+    expect(after.audit).not.toBeNull();
+    expect(after.audit?.metadata).toContain("Temporary Skill");
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

@@ -5,7 +5,7 @@ export default function GlobalAiSkillsPage() {
   return (
     <>
       <AiWorkspaceNav />
-      <AgentSkillsCatalog basePath="/admin/ai/skills" />
+      <AgentSkillsCatalog />
     </>
   );
 }
