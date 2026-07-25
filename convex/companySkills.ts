@@ -278,10 +278,22 @@ export const getSkillsForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     status: v.optional(skillStatusValidator),
+    searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
+    const searchTerm = args.searchTerm?.trim();
+
+    // Searching narrows in the database, and the company and status narrow with
+    // it, so a page comes back full rather than sifted after the fact.
+    if (searchTerm) {
+      return await ctx.db
+        .query("companySkills")
+        .withSearchIndex("search_name", (q) =>
+          q.search("name", searchTerm).eq("companyId", args.companyId).eq("status", args.status ?? "ACTIVE"))
+        .paginate(args.paginationOpts);
+    }
 
     return await ctx.db
       .query("companySkills")
