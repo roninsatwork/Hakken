@@ -122,11 +122,18 @@ process — the Properties page in Italian.
 
 ## Worth checking when convenient
 
-- **The CI result for today's two pushes has not been read.** The `gh` command
-  line tool is not installed on this Mac, so it could not be checked from the
-  terminal. Look at the Actions tab on GitHub. Both pushes ran the full gate
-  locally first, so a failure would most likely be an environment difference
-  rather than the code.
+- **The CI result for today's three pushes has not been read.** All three ran
+  the full gate locally first, so a failure would most likely be an environment
+  difference rather than the code. Check
+  https://github.com/roninsatwork/Sonae/actions — the top three rows.
+
+  **Why it needed a human.** The repo is private, so it cannot be read without
+  logging in. The `gh` command line tool is now installed but not logged in, and
+  logging it in means handling Anthony's GitHub credentials, which is his to do,
+  not mine. Anthony does not use the terminal, so the practical fix is to
+  **install the Claude extension in Chrome** — a browser install, no terminal —
+  after which CI results can be read in his existing logged-in session and he
+  never has to check by hand.
 - **The deploy workflows install a Rollup Linux package by hand after
   `npm ci`**, a workaround for an old npm bug (`docs/developer/deployment.md`).
   Now that the project is on npm 11 that workaround may no longer be needed, and
