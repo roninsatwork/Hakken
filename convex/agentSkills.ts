@@ -1,10 +1,15 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { assertAdminCanAccessCompany, requireAdmin, requireSuperAdmin } from "./authz";
 import { adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import {
+  emptyAgentSkillRollup,
+  getAgentSkillRollup,
+  replaceAgentSkillRollup,
+} from "./utils/agentSkillRollupService";
 
 const SKILL_CATALOG_LIMIT = 250;
 const SKILL_BINDING_LIMIT = 100;
@@ -1197,14 +1202,27 @@ export const searchActiveSkills = superAdminQuery({
   },
 });
 
-export const getSkillCatalogAnalytics = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
+/**
+ * Walk the catalogue and total it up.
+ *
+ * This is the expensive part — up to `SKILL_CATALOG_LIMIT` skills, each with up
+ * to `SKILL_BINDING_LIMIT` bindings — and it used to run on every page load of
+ * the Skill Center. It now runs on a schedule and on demand, writing its answer
+ * to a rollup document that the screen reads in a single lookup.
+ *
+ * It reports `skillsCounted` and `isPartial` rather than presenting a truncated
+ * walk as a complete count. That distinction is the whole point: the previous
+ * version stopped at 250 skills and said nothing.
+ */
+export async function computeAgentSkillRollup(ctx: Pick<MutationCtx, "db">) {
+  {
     const skills = await ctx.db
       .query("agentSkills")
       .withIndex("by_category_created")
       .order("desc")
-      .take(SKILL_CATALOG_LIMIT);
+      .take(SKILL_CATALOG_LIMIT + 1);
+    const isPartial = skills.length > SKILL_CATALOG_LIMIT;
+    if (isPartial) skills.length = SKILL_CATALOG_LIMIT;
     const latestVersionPairs = await Promise.all(skills.map(async (skill) => {
       const latestVersion = await ctx.db
         .query("agentSkillVersions")
@@ -1300,23 +1318,79 @@ export const getSkillCatalogAnalytics = superAdminQuery({
     });
 
     return {
-      totals: {
-        skills: skills.length,
-        activeSkills: skills.filter((skill) => skill.status === "ACTIVE").length,
-        draftSkills: skills.filter((skill) => skill.status === "DRAFT").length,
-        archivedSkills: skills.filter((skill) => skill.status === "ARCHIVED").length,
-        highRiskSkills: skills.filter((skill) => skill.riskLevel === "HIGH").length,
-        totalBindings,
-        enabledBindings,
-        activeAgentBindings,
-        outdatedBindings,
-        currentBindings,
-        validatedBindings,
-        needsSmokeBindings,
-        highRiskNeedsSmokeBindings,
-      },
+      skills: skills.length,
+      activeSkills: skills.filter((skill) => skill.status === "ACTIVE").length,
+      draftSkills: skills.filter((skill) => skill.status === "DRAFT").length,
+      archivedSkills: skills.filter((skill) => skill.status === "ARCHIVED").length,
+      highRiskSkills: skills.filter((skill) => skill.riskLevel === "HIGH").length,
+      totalBindings,
+      enabledBindings,
+      activeAgentBindings,
+      outdatedBindings,
+      currentBindings,
+      validatedBindings,
+      needsSmokeBindings,
+      highRiskNeedsSmokeBindings,
       needsAttention: needsAttention.slice(0, 8),
+      skillsCounted: skills.length,
+      isPartial,
     };
+  }
+}
+
+/**
+ * The Skill Center health panel: one document, no fan-out.
+ *
+ * Returns `computedAt: null` when no rebuild has run, so the screen can say
+ * "not measured yet" instead of showing five confident zeros — which is how the
+ * old panel managed to read as broken on a brand new account.
+ */
+export const getSkillCatalogAnalytics = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rollup = await getAgentSkillRollup(ctx);
+    const totals = rollup ?? { ...emptyAgentSkillRollup, computedAt: null };
+
+    return {
+      totals: {
+        skills: totals.skills,
+        activeSkills: totals.activeSkills,
+        draftSkills: totals.draftSkills,
+        archivedSkills: totals.archivedSkills,
+        highRiskSkills: totals.highRiskSkills,
+        totalBindings: totals.totalBindings,
+        enabledBindings: totals.enabledBindings,
+        activeAgentBindings: totals.activeAgentBindings,
+        outdatedBindings: totals.outdatedBindings,
+        currentBindings: totals.currentBindings,
+        validatedBindings: totals.validatedBindings,
+        needsSmokeBindings: totals.needsSmokeBindings,
+        highRiskNeedsSmokeBindings: totals.highRiskNeedsSmokeBindings,
+      },
+      needsAttention: totals.needsAttention,
+      computedAt: rollup?.computedAt ?? null,
+      skillsCounted: totals.skillsCounted,
+      isPartial: totals.isPartial,
+    };
+  },
+});
+
+/** Recompute the Skill Center counts now. Also runs on a schedule. */
+export const rebuildSkillCatalogRollup = superAdminMutation({
+  args: {},
+  handler: async (ctx) => {
+    const totals = await computeAgentSkillRollup(ctx);
+    await replaceAgentSkillRollup(ctx, totals, Date.now());
+    return { skillsCounted: totals.skillsCounted, isPartial: totals.isPartial };
+  },
+});
+
+export const rebuildSkillCatalogRollupInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const totals = await computeAgentSkillRollup(ctx);
+    await replaceAgentSkillRollup(ctx, totals, Date.now());
+    return null;
   },
 });
 

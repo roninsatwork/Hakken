@@ -206,7 +206,7 @@ broken code before it is trusted.
 |---|---|---|---|
 | A1 | Uncapped, searched, paged skill picker — server | 0.5 | **done** |
 | A2 | Wire the picker screen to it, with filters | 0.5 | **done** |
-| A3 | Health counts as a maintained rollup | 0.75 | — |
+| A3 | Health counts as a maintained rollup | 0.75 | **done** |
 | A4 | Fix search + status paging, and say "showing X of Y" | 0.25 | — |
 
 **A1 (done).** `searchActiveSkills` searches and pages in the database and
@@ -223,11 +223,28 @@ from that capped fetch, so past 250 it was simply wrong. An honest total needs
 the maintained count from A3; until then the picker answers "what else is there"
 by searching rather than by counting.
 
-**A3.** `getSkillCatalogAnalytics` stops reading up to 25,000 documents to
-produce five numbers. Counts are maintained as bindings change, following
-`convex/inventoryRollups.ts`. Reading them then costs the same at ten skills or
-ten thousand. **Indexing cannot fix this** — an index finds rows, it does not
-count them.
+**A3 (done).** `getSkillCatalogAnalytics` no longer reads up to 25,000 documents
+to produce five numbers. It reads one rollup document. **Indexing cannot fix
+this** — an index finds rows, it does not total them.
+
+*Rebuilt on a schedule rather than incrementally, and that was a deliberate
+choice.* The tempting design keeps counters up to date on every write. But these
+counts depend on facts that change in at least eight places — a binding created,
+removed or disabled; a skill gaining a version, which makes every binding of it
+outdated at once; an eval run passing; a skill archived. Eight write paths each
+of which must stay correct for ever is how counters silently drift, and a number
+that is quietly wrong is worse than one that is honestly late. So a single
+rebuild walks the catalogue every ten minutes and on demand, and the screen is
+given `computedAt` so it can say how old the answer is.
+
+Two properties the tests pin down, both confirmed to fail when removed:
+
+- **"Not measured yet" is distinguishable from "measured, and it is zero".**
+  `computedAt` is null before the first rebuild. Five confident zeros on a new
+  account is how the old panel managed to read as broken.
+- **A truncated walk is never presented as a total.** Past the walk limit the
+  rollup reports `isPartial` and `skillsCounted`, so the screen can say what it
+  actually counted.
 
 **A4.** Two smaller truths: the existing list filters a search page by status
 *after* paginating, so asking for 15 can return 3 with odd "load more"

@@ -242,6 +242,87 @@ describe("agent skills", () => {
     expect(excluded.page.map((skill) => skill._id)).not.toContain(skillIds[1]);
   });
 
+  test("the health panel reads a rollup, reports its age, and never passes a truncated walk off as a total", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    // Nothing measured yet. Five confident zeros would be a lie of a different
+    // kind, so the panel is told the difference.
+    const beforeAnyRebuild = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
+    expect(beforeAnyRebuild.computedAt).toBeNull();
+    expect(beforeAnyRebuild.totals.skills).toBe(0);
+
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (let index = 0; index < 3; index += 1) {
+        await ctx.db.insert("agentSkills", {
+          name: `Counted ${index}`,
+          category: "GENERAL",
+          status: index === 0 ? "DRAFT" : "ACTIVE",
+          riskLevel: index === 1 ? "HIGH" : "LOW",
+          instruction: "Do the thing.",
+          createdBy: adminId,
+          createdAt: now + index,
+          updatedAt: now + index,
+        });
+      }
+    });
+
+    // Still zero: the read does no counting of its own. That is the point —
+    // the old panel totalled the whole catalogue on every page load.
+    const beforeRebuild = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
+    expect(beforeRebuild.totals.skills).toBe(0);
+
+    const rebuild = await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
+    expect(rebuild).toMatchObject({ skillsCounted: 3, isPartial: false });
+
+    const afterRebuild = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
+    expect(afterRebuild.totals).toMatchObject({
+      skills: 3,
+      activeSkills: 2,
+      draftSkills: 1,
+      highRiskSkills: 1,
+    });
+    expect(afterRebuild.computedAt).toBeTypeOf("number");
+    expect(afterRebuild.isPartial).toBe(false);
+    expect(afterRebuild.skillsCounted).toBe(3);
+  });
+
+  test("a catalogue larger than one rebuild can walk is reported as partial, not as the whole truth", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+      const now = Date.now();
+      // One past the walk limit of 250.
+      for (let index = 0; index < 251; index += 1) {
+        await ctx.db.insert("agentSkills", {
+          name: `Bulk ${index}`,
+          category: "GENERAL",
+          status: "ACTIVE",
+          riskLevel: "LOW",
+          instruction: "Do the thing.",
+          createdBy: adminId,
+          createdAt: now + index,
+          updatedAt: now + index,
+        });
+      }
+      return adminId;
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const rebuild = await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
+    // The number is honest about being incomplete rather than presenting 250 as
+    // the size of a 251-skill catalogue.
+    expect(rebuild).toMatchObject({ skillsCounted: 250, isPartial: true });
+
+    const analytics = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
+    expect(analytics.isPartial).toBe(true);
+    expect(analytics.skillsCounted).toBe(250);
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {
@@ -815,6 +896,9 @@ describe("agent skills", () => {
         versionNumber: 2,
       },
     });
+    // The panel reads a pre-computed rollup rather than totalling the catalogue
+    // on every load, so the counts are rebuilt before they are read.
+    await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
     const updateLagAnalytics = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
     expect(updateLagAnalytics.totals).toMatchObject({
       enabledBindings: 1,
@@ -894,6 +978,7 @@ describe("agent skills", () => {
       },
       latestPassedRun: null,
     });
+    await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
     const staleAnalytics = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
     expect(staleAnalytics.totals).toMatchObject({
       enabledBindings: 1,
@@ -962,6 +1047,7 @@ describe("agent skills", () => {
         }),
       }),
     }));
+    await client.mutation(api.agentSkills.rebuildSkillCatalogRollup, {});
     const validatedAnalytics = await client.query(api.agentSkills.getSkillCatalogAnalytics, {});
     expect(validatedAnalytics.totals).toMatchObject({
       enabledBindings: 1,

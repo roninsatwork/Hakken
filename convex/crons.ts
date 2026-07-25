@@ -30,6 +30,18 @@ crons.interval(
   {}
 );
 
+// Recompute the Skill Center counts. They used to be totalled on every page
+// load by walking every skill and all of its agent bindings; counting cannot be
+// indexed away, so it happens here instead. Ten minutes keeps the panel close
+// enough to live while leaving the read path a single document lookup, and the
+// screen shows how old the numbers are either way.
+crons.interval(
+  "agent-skill-rollup-rebuild",
+  { minutes: 10 },
+  internal.agentSkills.rebuildSkillCatalogRollupInternal,
+  {}
+);
+
 // Run hourly dispatcher to evaluate auto-purge schedule
 crons.hourly(
   "audit-log-purge-dispatcher",

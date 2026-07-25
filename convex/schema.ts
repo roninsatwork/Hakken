@@ -144,6 +144,53 @@ export default defineSchema({
     .index("by_scope_use_case", ["scope", "useCase"])
     .index("by_company_use_case", ["companyId", "useCase"]),
 
+  /**
+   * Pre-computed counts for the Skill Center health panel.
+   *
+   * Those five numbers used to be produced on every page load by reading up to
+   * 250 skills and up to 100 bindings for each — up to 25,000 documents, and
+   * silently wrong past the 250th skill. Counting cannot be indexed away: an
+   * index finds rows, it does not total them. So the totals are computed once,
+   * on a schedule and on demand, and read as a single document.
+   *
+   * `computedAt` and `isPartial` exist so the screen can say how old the
+   * numbers are and whether they cover the whole catalogue. A number whose age
+   * and completeness are visible is honest; the same number presented as live
+   * truth is not.
+   */
+  agentSkillRollups: defineTable({
+    key: v.string(),
+    skills: v.number(),
+    activeSkills: v.number(),
+    draftSkills: v.number(),
+    archivedSkills: v.number(),
+    highRiskSkills: v.number(),
+    totalBindings: v.number(),
+    enabledBindings: v.number(),
+    activeAgentBindings: v.number(),
+    outdatedBindings: v.number(),
+    currentBindings: v.number(),
+    validatedBindings: v.number(),
+    needsSmokeBindings: v.number(),
+    highRiskNeedsSmokeBindings: v.number(),
+    needsAttention: v.array(v.object({
+      skillId: v.id("agentSkills"),
+      name: v.string(),
+      category: v.string(),
+      riskLevel: v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH")),
+      boundAgents: v.number(),
+      enabledAgents: v.number(),
+      outdatedAgents: v.number(),
+      needsSmokeAgents: v.number(),
+      validatedAgents: v.number(),
+    })),
+    /** How many skills the rebuild actually walked. */
+    skillsCounted: v.number(),
+    /** True when the catalogue is larger than one rebuild can cover. */
+    isPartial: v.boolean(),
+    computedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   inventoryRollups: defineTable({
     key: v.string(),
     totalProvisionedUsers: v.number(),

@@ -130,6 +130,7 @@ import type * as tenantFunctions from "../tenantFunctions.js";
 import type * as toolConnectorDefinitions from "../toolConnectorDefinitions.js";
 import type * as userManagementService from "../userManagementService.js";
 import type * as users from "../users.js";
+import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
 import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
@@ -280,6 +281,7 @@ declare const fullApi: ApiFromModules<{
   toolConnectorDefinitions: typeof toolConnectorDefinitions;
   userManagementService: typeof userManagementService;
   users: typeof users;
+  "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
   "utils/fileParser": typeof utils_fileParser;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;
   "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;
