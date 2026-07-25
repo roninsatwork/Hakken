@@ -97,11 +97,13 @@ that passed for the wrong reason.
 
 ---
 
-## Next: nothing in the plan. Ask Anthony.
+## Next: nothing in the plan.
 
-The plan is finished. The obvious candidates are the open tasks below — the Node
-24 upgrade (#5) is the one he asked for explicitly. Nothing has been committed;
-that decision is his.
+The plan is finished and pushed to `dev`. Everything left over lives in
+**`docs/plans/active/OUTSTANDING-TASKS.md`** — seven items, what each needs
+before it can start, and which two are waiting on Anthony rather than on a
+developer. Read that rather than the list at the bottom of this file, which is
+kept only for the technical detail behind each entry.
 
 ---
 
