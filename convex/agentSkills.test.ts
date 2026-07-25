@@ -444,6 +444,88 @@ describe("agent skills", () => {
     expect(after.audit?.metadata).toContain("Temporary Skill");
   });
 
+  test("re-uploading a file updates the companies that already took the skill", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const build = (instruction: string) => [
+      "---",
+      "name: Client Follow-up",
+      "---",
+      "# Client Follow-up",
+      "",
+      "## Instructions",
+      "",
+      instruction,
+    ].join("\n");
+
+    const upload = async (instruction: string) => {
+      const markdown = build(instruction);
+      const preview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+        filename: "SKILL.md",
+        markdown,
+      });
+      return await client.mutation(api.agentSkills.importSkillMarkdown, {
+        sourceFilename: preview.sourceFilename,
+        sourceHash: preview.sourceHash,
+        sourceMarkdown: markdown,
+        name: preview.name,
+        description: preview.description,
+        category: preview.category,
+        riskLevel: preview.riskLevel,
+        instruction: preview.instruction,
+        requiredToolMappingsJson: preview.requiredToolMappingsJson,
+        recommendedToolMappingsJson: preview.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: preview.suggestedEvalFixturesJson,
+      });
+    };
+
+    const created = await upload("Follow up within two working days.");
+    await t.run(async (ctx) => await ctx.db.patch(created.skillId, { status: "ACTIVE" }));
+
+    // Two companies take it, and one of them later drops it.
+    const companyIds = await t.run(async (ctx) => {
+      const now = Date.now();
+      const keep = await ctx.db.insert("companies", { name: "Keeps It", createdAt: now });
+      const drop = await ctx.db.insert("companies", { name: "Dropped It", createdAt: now });
+      for (const [companyId, status] of [[keep, "ACTIVE"], [drop, "ARCHIVED"]] as const) {
+        await ctx.db.insert("companySkills", {
+          companyId,
+          sourceAgentSkillId: created.skillId,
+          name: "Client Follow-up",
+          category: "IMPORTED",
+          status,
+          riskLevel: "LOW",
+          instruction: "Follow up within two working days.",
+          createdBy: adminId,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      return { keep, drop };
+    });
+
+    const updated = await upload("Follow up within one working day.");
+    expect(updated.outcome).toBe("UPDATED");
+    // The company that still has it is told; the one that dropped it is not.
+    expect(updated.refreshedCompanies).toBe(1);
+
+    const copies = await t.run(async (ctx) => {
+      const rows = await ctx.db.query("companySkills").collect();
+      return rows.map((row) => ({ companyId: row.companyId, status: row.status, instruction: row.instruction }));
+    });
+
+    const live = copies.find((row) => row.companyId === companyIds.keep);
+    const dropped = copies.find((row) => row.companyId === companyIds.drop);
+    expect(live?.instruction).toContain("one working day");
+    // Archived means someone removed it on purpose; a re-upload must not revive it.
+    expect(dropped?.instruction).toContain("two working days");
+    expect(dropped?.status).toBe("ARCHIVED");
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

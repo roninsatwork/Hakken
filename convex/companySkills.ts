@@ -291,6 +291,61 @@ export const getSkillsForCompany = adminQuery({
   },
 });
 
+/**
+ * Central skills this company has not taken yet — searched and paged.
+ *
+ * `getImportableGlobalSkills` reads the first 250 active skills and filters
+ * them in one go, so past 250 a skill simply could not be added to a company
+ * and nothing said so. The library is meant to grow to hundreds, which makes
+ * that a real ceiling rather than a theoretical one.
+ *
+ * The exclusion list is the company's own skills, which is a small,
+ * company-scoped read; the catalogue side is what pages.
+ */
+export const searchImportableGlobalSkills = adminQuery({
+  args: {
+    companyId: v.id("companies"),
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireCompanyAccess(ctx, args.companyId);
+    const searchTerm = args.searchTerm?.trim();
+
+    const [companyActiveSkills, companyDraftSkills] = await Promise.all([
+      ctx.db
+        .query("companySkills")
+        .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+        .take(1000),
+      ctx.db
+        .query("companySkills")
+        .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "DRAFT"))
+        .take(1000),
+    ]);
+    const alreadyTaken = new Set(
+      [...companyActiveSkills, ...companyDraftSkills]
+        .map((skill) => skill.sourceAgentSkillId)
+        .filter((skillId): skillId is Id<"agentSkills"> => Boolean(skillId)),
+    );
+
+    const result = searchTerm
+      ? await ctx.db
+          .query("agentSkills")
+          .withSearchIndex("search_name", (q) => q.search("name", searchTerm).eq("status", "ACTIVE"))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("agentSkills")
+          .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
+          .order("desc")
+          .paginate(args.paginationOpts);
+
+    return {
+      ...result,
+      page: result.page.filter((skill) => !alreadyTaken.has(skill._id)),
+    };
+  },
+});
+
 export const getImportableGlobalSkills = adminQuery({
   args: {
     companyId: v.id("companies"),

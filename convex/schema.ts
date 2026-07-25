@@ -1278,6 +1278,9 @@ export default defineSchema({
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
     .index("by_company_category_status", ["companyId", "category", "status"])
     .index("by_company_source_skill", ["companyId", "sourceAgentSkillId"])
+    // Re-uploading a SKILL.md has to reach every company copy made from it, and
+    // the company is not known at that point — only the skill.
+    .index("by_source_skill", ["sourceAgentSkillId"])
     .searchIndex("search_name", {
       searchField: "name",
       filterFields: ["companyId", "status"],
