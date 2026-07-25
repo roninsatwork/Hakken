@@ -250,9 +250,12 @@ describe("AgentSkillDetailPage rollout review", () => {
 
     render(<AgentSkillDetail />);
 
-    // The instruction is the content, not a field in a form.
-    expect(await screen.findByText("Instructions given to the agent")).toBeInTheDocument();
-    expect(screen.getByText("Escalate material changes.")).toBeInTheDocument();
+    // The uploaded file itself is the content. Anthony's question on first
+    // seeing this page was "I don't see the MD file", and he was right: a
+    // prettified breakdown of the file's parsed fields is a second rendering of
+    // something he wrote and would recognise.
+    expect(await screen.findByText("# Risk Monitoring")).toBeInTheDocument();
+    expect(screen.getByText("risk-monitoring.SKILL.md")).toBeInTheDocument();
     expect(screen.queryByLabelText("Skill instruction")).not.toBeInTheDocument();
 
     // The five JSON boxes are gone. This is the whole point of the change: a
@@ -264,14 +267,10 @@ describe("AgentSkillDetailPage rollout review", () => {
     expect(screen.queryByLabelText("Suggested eval fixtures JSON")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Save skill/ })).not.toBeInTheDocument();
 
-    // Tools and examples read as sentences.
-    // Listed in the main column and again in the readiness panel beside it.
+    // What the file cannot tell you stays beside it: whether the tools it needs
+    // actually exist here, and who is using it.
     expect(screen.getAllByText("risk.monitor.feed").length).toBeGreaterThan(0);
-    expect(screen.getByText("available")).toBeInTheDocument();
-    expect(screen.getByText(/2 examples came with this skill/)).toBeInTheDocument();
-
-    // And the page says where it came from, so the way to change it is obvious.
-    expect(screen.getByText(/risk-monitoring.SKILL.md/)).toBeInTheDocument();
+    expect(screen.getByText("Required tools are available.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Upload new version/ })).toHaveAttribute("href", "/admin/ai/skills?import=1");
 
     // Publishing is an operational decision the file cannot carry, so it stays.

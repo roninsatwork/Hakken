@@ -3,14 +3,20 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
-import { redirect, useSearchParams } from "next/navigation";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { BarChart3, BrainCircuit, FileText, Loader2, Plus, Search, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
+import { BarChart3, BrainCircuit, FileText, Loader2, Search } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import {
+  AdminPaginationFooter,
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 
 type SkillStatus = Doc<"agentSkills">["status"];
@@ -35,17 +41,6 @@ type MarkdownImportDraft = {
   };
 };
 
-const emptyForm = {
-  name: "",
-  description: "",
-  category: "GENERAL",
-  riskLevel: "MEDIUM" as SkillRisk,
-  status: "DRAFT" as SkillStatus,
-  instruction: "",
-  requiredToolMappings: "[]",
-  recommendedToolMappings: "[]",
-  suggestedEvalFixtures: "[]",
-};
 
 function riskTone(risk: SkillRisk) {
   if (risk === "HIGH") return "border-red-500/20 bg-red-500/10 text-red-400";
@@ -223,11 +218,8 @@ type AgentSkillsCatalogPageProps = {
 };
 
 export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkillsCatalogPageProps) {
-  const createSkill = useMutation(api.agentSkills.createSkill);
-  const importSkillBundle = useMutation(api.agentSkills.importSkillBundle);
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
   const importSkillMarkdown = useMutation(api.agentSkills.importSkillMarkdown);
-  const seedStarterSkills = useMutation(api.agentSkills.seedStarterSkills);
   const analytics = useQuery(api.agentSkills.getSkillCatalogAnalytics, {});
   const toolCatalog = useQuery(api.aiTools.getTools, {});
   const activeToolMappings = Array.isArray(toolCatalog)
@@ -238,22 +230,17 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
     : [];
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<SkillStatus | "">("");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [page, setPage] = useState(1);
   // Opened directly by the "Upload new version" button on a skill page, so
   // that action lands on the upload rather than on a list the reader then has
   // to find their way out of again.
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [isMarkdownOpen, setIsMarkdownOpen] = useState(searchParams?.get("import") === "1");
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [bundleJson, setBundleJson] = useState("");
   const [markdownFile, setMarkdownFile] = useState<File | null>(null);
   const [markdownSourceText, setMarkdownSourceText] = useState("");
   const [markdownDraft, setMarkdownDraft] = useState<MarkdownImportDraft | null>(null);
   // Each dialog on this page runs one write, so each gets its own busy key.
-  const CREATE_KEY = "create";
-  const SEED_KEY = "seed";
-  const IMPORT_KEY = "import";
   const PARSE_KEY = "parse";
   const MARKDOWN_SAVE_KEY = "markdown-save";
   const action = useAdminAction({ scope: "admin-agent-skills" });
@@ -273,58 +260,37 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
     { searchTerm, ...(statusFilter ? { status: statusFilter } : {}) },
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
+  /**
+   * A page at a time, out of what has been fetched.
+   *
+   * The numbered pager wants a total, and a total means counting the whole
+   * catalogue on every view — which is what was just removed to make this
+   * scale. So the count comes from the maintained rollup when nothing is
+   * filtered, and while searching the pager simply stops claiming a total it
+   * cannot know.
+   */
+  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
+  const pageSkills = skills.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
+  const isFiltered = Boolean(searchTerm.trim() || statusFilter);
+  const knownTotal = !isFiltered && analytics?.computedAt && !analytics.isPartial
+    ? analytics.totals.skills
+    : skills.length;
+  const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
+
+  // Stepping past what has been fetched pulls the next page in first.
+  const goToPage = (next: number) => {
+    setPage(next);
+    const needed = next * ADMIN_PAGE_SIZE;
+    if (skills.length < needed && status === "CanLoadMore") loadMore(ADMIN_PAGE_SIZE);
+  };
+
   // Undefined while loading. Zero counted skills and an empty page means there
   // is nothing to report on yet, so the panel stays away rather than showing
   // five zeros to someone who has just arrived.
   const hasSkills = analytics === undefined || analytics.totals.skills > 0 || skills.length > 0;
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    const outcome = await action.run(() => createSkill({
-        name: form.name,
-        description: form.description || undefined,
-        category: form.category,
-        status: form.status,
-        riskLevel: form.riskLevel,
-        instruction: form.instruction,
-        requiredToolMappingsJson: form.requiredToolMappings,
-        recommendedToolMappingsJson: form.recommendedToolMappings,
-        suggestedEvalFixturesJson: form.suggestedEvalFixtures,
-      }), { key: CREATE_KEY, fallbackMessage: "Skill could not be created.", suppressErrorToast: true });
-    // The draft stays on screen if the save failed.
-    if (!outcome.ok) return;
-    setForm(emptyForm);
-    setIsCreateOpen(false);
-  };
 
-  const seedStarters = async () => {
-    setFeedback("");
-    const outcome = await action.run(() => seedStarterSkills({}), {
-      key: SEED_KEY,
-      fallbackMessage: "Starter skills could not be seeded.",
-      suppressErrorToast: true,
-    });
-    if (!outcome.ok) return;
-    const { createdCount, skippedCount } = outcome.data;
-    setFeedback(`Created ${createdCount} starter skill${createdCount === 1 ? "" : "s"}; skipped ${skippedCount} existing.`);
-  };
 
-  const importBundle = async (event: FormEvent) => {
-    event.preventDefault();
-    setFeedback("");
-    setImportedSkillId(null);
-    const outcome = await action.run(() => importSkillBundle({ bundleJson }), {
-      key: IMPORT_KEY,
-      fallbackMessage: "Skill bundle could not be imported.",
-      suppressErrorToast: true,
-    });
-    // The pasted bundle stays in the box if the import failed.
-    if (!outcome.ok) return;
-    setImportedSkillId(outcome.data.skillId);
-    setBundleJson("");
-    setIsImportOpen(false);
-    setFeedback("Skill bundle imported as a draft.");
-  };
 
   const resetMarkdownImport = () => {
     setMarkdownFile(null);
@@ -400,49 +366,21 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             Reusable instructions you can attach to any agent. Upload a SKILL.md file and it becomes available here.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setIsMarkdownOpen(true);
-              resetMarkdownImport();
-              setFeedback("");
-            }}
-            className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
-          >
-            <FileText className="w-4 h-4" />
-            Upload a skill file
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsImportOpen(true);
-              setValidationError("");
-              setFeedback("");
-            }}
-            className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors"
-          >
-            <UploadCloud className="w-4 h-4 text-brand" />
-            Restore from backup
-          </button>
-          <button
-            type="button"
-            onClick={seedStarters}
-            disabled={action.isBusy(SEED_KEY)}
-            className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors disabled:opacity-50"
-          >
-            {action.isBusy(SEED_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-brand" />}
-            Add example skills
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors"
-          >
-            <Plus className="w-4 h-4 text-brand" />
-            Write one here
-          </button>
-        </div>
+        {/* One action, because there is one way skills arrive: a SKILL.md
+            file. The other three were equal-weight buttons for paths almost
+            nobody takes; they are still here, below, at the size they deserve. */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsMarkdownOpen(true);
+            resetMarkdownImport();
+            setFeedback("");
+          }}
+          className="h-10 shrink-0 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+        >
+          <FileText className="w-4 h-4" />
+          Upload a skill file
+        </button>
       </header>
 
       {(feedback || error) && (
@@ -556,7 +494,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }}
             placeholder="Search skills by name"
             className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
           />
@@ -565,7 +503,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         <select
           id="skill-status-filter"
           value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value as SkillStatus | "")}
+          onChange={(event) => { setStatusFilter(event.target.value as SkillStatus | ""); setPage(1); }}
           className="h-10 px-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-48"
         >
           <option value="">All statuses</option>
@@ -575,131 +513,77 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         </select>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {status === "LoadingFirstPage" ? (
-          <div className="col-span-full border border-border-dim rounded-[8px] p-8 text-secondary flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading skills
-          </div>
-        ) : skills.length === 0 ? (
-          <div className="col-span-full border border-dashed border-border-dim rounded-[8px] p-10 text-center text-secondary">
-            No skills yet. Upload a SKILL.md file to add your first one.
-          </div>
-        ) : (
-          skills.map((skill) => (
-            <Link
+      {/* The repo's standard admin table, the same one the model catalogue,
+          API keys and approvals use. A card grid was a second way of listing
+          things that only this screen had, and it scanned worse the longer the
+          catalogue got. */}
+      <AdminTableShell
+        minWidthClassName="min-w-[860px]"
+        footer={
+          <AdminPaginationFooter
+            page={page}
+            totalPages={totalPages}
+            totalCount={knownTotal}
+            pageSize={ADMIN_PAGE_SIZE}
+            isLoading={status === "LoadingMore"}
+            onPageChange={goToPage}
+            labels={{
+              empty: "No skills yet",
+              showing: (start, end, total) =>
+                isFiltered
+                  ? `Showing ${start}-${end} of ${total} matching`
+                  : `Showing ${start}-${end} of ${total} skills`,
+            }}
+          />
+        }
+      >
+        <thead>
+          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+            <th className="px-4 py-3 font-medium">Skill</th>
+            <th className="px-4 py-3 font-medium w-[150px]">Category</th>
+            <th className="px-4 py-3 font-medium w-[130px]">Status</th>
+            <th className="px-4 py-3 font-medium w-[130px]">Risk</th>
+            <th className="px-4 py-3 font-medium w-[170px]">Last changed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {status === "LoadingFirstPage" ? (
+            <AdminTableLoadingRow colSpan={5} />
+          ) : skills.length === 0 ? (
+            <AdminTableEmptyRow
+              colSpan={5}
+              icon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
+              label="No skills yet — upload a SKILL.md file to add your first one"
+            />
+          ) : pageSkills.map((skill) => (
+            <tr
               key={skill._id}
-              href={`${basePath}/${skill._id}`}
-              className="border border-border-dim rounded-[8px] bg-card px-4 py-4 hover:border-brand/40 transition-colors flex flex-col gap-3"
+              onClick={() => router.push(`${basePath}/${skill._id}`)}
+              className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors cursor-pointer"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-[16px] font-semibold text-foreground truncate">{skill.name}</h2>
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{skill.category}</span>
-                  </div>
-                  <p className="text-[12px] text-secondary mt-1 line-clamp-2">{skill.description || "No description provided."}</p>
+              <td className="px-4 py-3">
+                <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
+                <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
+                  {skill.description || "No description in the file."}
                 </div>
-                <ShieldCheck className="w-4 h-4 text-brand shrink-0" aria-hidden="true" />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+              </td>
+              <td className="px-4 py-3 text-[12px] text-secondary">{skill.category}</td>
+              <td className="px-4 py-3">
                 <span className={`text-[11px] px-2 py-1 rounded-md border ${statusTone(skill.status)}`}>
                   {skill.status === "ACTIVE" ? "Published" : skill.status === "DRAFT" ? "Draft" : "Archived"}
                 </span>
+              </td>
+              <td className="px-4 py-3">
                 <span className={`text-[11px] px-2 py-1 rounded-md border ${riskTone(skill.riskLevel)}`}>
                   {skill.riskLevel === "HIGH" ? "High risk" : skill.riskLevel === "MEDIUM" ? "Medium risk" : "Low risk"}
                 </span>
-                {/* A card that only describes itself leaves the reader to guess
-                    what to do next. A draft has an obvious answer. */}
-                {skill.status === "DRAFT" && (
-                  <span className="text-[11px] text-muted">Publish it to let agents use it</span>
-                )}
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
+              </td>
+              <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </AdminTableShell>
 
-      {/* How many of how many. The list previously showed a page and a "Load
-          more" button, so there was no way to tell a full catalogue from a
-          filtered one — or from a truncated one. The total comes from the
-          rollup, which is why it is described as counted rather than live. */}
-      {skills.length > 0 && (
-        <div className="self-center flex flex-col items-center gap-2">
-          <p className="text-[12px] text-muted">
-            {searchTerm.trim()
-              ? `Showing ${skills.length} matching skill${skills.length === 1 ? "" : "s"}`
-              : analytics?.computedAt
-                ? `Showing ${skills.length} of ${analytics.isPartial ? `${analytics.skillsCounted}+` : analytics.totals.skills} skills`
-                : `Showing ${skills.length} skill${skills.length === 1 ? "" : "s"}`}
-          </p>
-          {status === "CanLoadMore" && (
-            <button
-              type="button"
-              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-              className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-hover transition-colors"
-            >
-              Load more
-            </button>
-          )}
-        </div>
-      )}
-
-      <SonaeModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="New agent skill" size="lg">
-        <form onSubmit={submit} className="flex flex-col gap-4 px-1 pb-2">
-          {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Name
-              <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Category
-              <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Status
-              <select className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as SkillStatus })}>
-                <option value="DRAFT">Draft</option>
-                <option value="ACTIVE">Active</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Risk
-              <select className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={form.riskLevel} onChange={(event) => setForm({ ...form, riskLevel: event.target.value as SkillRisk })}>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-              </select>
-            </label>
-          </div>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Description
-            <input className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-foreground" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Instruction
-            <textarea className="min-h-36 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={form.instruction} onChange={(event) => setForm({ ...form, instruction: event.target.value })} required />
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Required tool mappings JSON
-              <textarea className="min-h-20 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={form.requiredToolMappings} onChange={(event) => setForm({ ...form, requiredToolMappings: event.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 text-[12px] text-secondary">
-              Suggested eval fixtures JSON
-              <textarea className="min-h-20 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]" value={form.suggestedEvalFixtures} onChange={(event) => setForm({ ...form, suggestedEvalFixtures: event.target.value })} />
-            </label>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setIsCreateOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-            <button type="submit" disabled={action.isBusy(CREATE_KEY)} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
-              {action.isBusy(CREATE_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Create
-            </button>
-          </div>
-        </form>
-      </SonaeModal>
 
       <SonaeModal
         isOpen={isMarkdownOpen}
@@ -849,27 +733,6 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         )}
       </SonaeModal>
 
-      <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Import skill bundle" size="lg">
-        <form onSubmit={importBundle} className="flex flex-col gap-4 px-1 pb-2">
-          {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Bundle JSON
-            <textarea
-              className="min-h-64 rounded-[8px] border border-border-dim bg-card p-3 text-foreground font-mono text-[12px]"
-              value={bundleJson}
-              onChange={(event) => setBundleJson(event.target.value)}
-              required
-            />
-          </label>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setIsImportOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-            <button type="submit" disabled={action.isBusy(IMPORT_KEY)} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
-              {action.isBusy(IMPORT_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Import draft
-            </button>
-          </div>
-        </form>
-      </SonaeModal>
     </div>
   );
 }

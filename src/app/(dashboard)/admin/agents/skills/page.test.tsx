@@ -11,6 +11,13 @@ vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
 }));
 
+const push = vi.fn();
+vi.mock("next/navigation", () => ({
+  redirect: vi.fn(),
+  useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>
@@ -143,9 +150,7 @@ describe("AgentSkillsCatalogPage", () => {
     });
   });
 
-  it("renders skill cards and catalog actions", async () => {
-    seedStarterSkills.mockResolvedValue({ createdCount: 2, skippedCount: 4 });
-
+  it("lists skills in the standard admin table, with upload as the only way in", async () => {
     render(<AgentSkillsCatalog />);
 
     expect(screen.getByText("Skill Center")).toBeInTheDocument();
@@ -160,22 +165,24 @@ describe("AgentSkillsCatalogPage", () => {
     expect(screen.getAllByText("Approval Handoff")).toHaveLength(2);
     expect(screen.getByText("Medium risk")).toBeInTheDocument();
     expect(screen.getByText("High risk")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
+    expect(screen.getByText("Research Briefing")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Add example skills/ }));
-    await waitFor(() => {
-      expect(seedStarterSkills).toHaveBeenCalledWith({});
-    });
-    expect(await screen.findByText("Created 2 starter skills; skipped 4 existing.")).toBeInTheDocument();
+    // Uploading a SKILL.md is the only way skills arrive, so it is the only
+    // action on the page. Seeding examples, writing one by hand and restoring a
+    // bundle were removed at Anthony's direction; their Convex functions remain.
+    expect(screen.queryByRole("button", { name: /Add example skills/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Write one here/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Restore from backup/ })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    expect(loadMore).toHaveBeenCalledWith(15);
+    // The standard admin table with the standard numbered pager.
+    expect(screen.getByRole("button", { name: /Next/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Previous/ })).toBeInTheDocument();
   });
 
   it("keeps catalog links inside a custom base path", () => {
     render(<AgentSkillsCatalog basePath="/admin/ai/skills" />);
 
-    expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
+    expect(screen.getByText("Research Briefing")).toBeInTheDocument();
   });
 
   it("narrows by status in the database rather than sifting a fetched page", async () => {
@@ -290,62 +297,4 @@ describe("AgentSkillsCatalogPage", () => {
     expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/ai/skills/skill_markdown");
   });
 
-  it("creates a skill from the catalog modal", async () => {
-    createSkill.mockResolvedValue("skill_new");
-
-    render(<AgentSkillsCatalog />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Write one here/ }));
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Client Follow-up" } });
-    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "COMMUNICATIONS" } });
-    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "ACTIVE" } });
-    fireEvent.change(screen.getByLabelText("Risk"), { target: { value: "LOW" } });
-    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Draft client-safe follow-up messages." } });
-    fireEvent.change(screen.getByLabelText("Instruction"), { target: { value: "Draft concise follow-ups using approved context only." } });
-    fireEvent.change(screen.getByLabelText("Required tool mappings JSON"), { target: { value: "[\"crm.contacts.read\"]" } });
-    fireEvent.change(screen.getByLabelText("Suggested eval fixtures JSON"), { target: { value: "[]" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create" }));
-
-    await waitFor(() => {
-      expect(createSkill).toHaveBeenCalledWith({
-        name: "Client Follow-up",
-        description: "Draft client-safe follow-up messages.",
-        category: "COMMUNICATIONS",
-        status: "ACTIVE",
-        riskLevel: "LOW",
-        instruction: "Draft concise follow-ups using approved context only.",
-        requiredToolMappingsJson: "[\"crm.contacts.read\"]",
-        recommendedToolMappingsJson: "[]",
-        suggestedEvalFixturesJson: "[]",
-      });
-    });
-  });
-
-  it("imports a skill bundle as a draft", async () => {
-    importSkillBundle.mockResolvedValue({ skillId: "skill_imported", skillVersionId: "skill_imported_version_1" });
-    const bundleJson = JSON.stringify({
-      format: "sonae.agentSkillBundle.v1",
-      skill: {
-        name: "Imported Skill",
-        category: "IMPORTED",
-        riskLevel: "LOW",
-        instruction: "Imported behavior.",
-        requiredToolMappings: [],
-        recommendedToolMappings: [],
-        suggestedEvalFixtures: [],
-      },
-    });
-
-    render(<AgentSkillsCatalog />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Restore from backup/ }));
-    fireEvent.change(screen.getByLabelText("Bundle JSON"), { target: { value: bundleJson } });
-    fireEvent.click(screen.getByRole("button", { name: "Import draft" }));
-
-    await waitFor(() => {
-      expect(importSkillBundle).toHaveBeenCalledWith({ bundleJson });
-    });
-    expect(await screen.findByText("Skill bundle imported as a draft.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/ai/skills/skill_imported");
-  });
 });

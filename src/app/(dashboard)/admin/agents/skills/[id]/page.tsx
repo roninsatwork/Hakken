@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useToast } from "@/src/context/ToastContext";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, Archive, BrainCircuit, CheckCircle2, Copy, Download, Lightbulb, Loader2, UploadCloud, Users, Wrench } from "lucide-react";
+import { ArrowLeft, Archive, BrainCircuit, CheckCircle2, Copy, Download, FileText, Lightbulb, Loader2, UploadCloud, Users, Wrench } from "lucide-react";
 import { formatDateTime } from "@/src/lib/dates";
 
 type SkillStatus = Doc<"agentSkills">["status"];
@@ -51,21 +51,6 @@ function formatJson(value: string | undefined, fallback = "") {
   }
 }
 
-/**
- * How many examples came with the skill.
- *
- * Counted rather than rendered: the fixtures are a JSON array written for the
- * eval runner, and putting that array on screen is what this page used to do.
- */
-function countExamples(value: string | undefined) {
-  if (!value) return 0;
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed) ? parsed.length : 0;
-  } catch {
-    return 0;
-  }
-}
 
 type AgentSkillDetailPageProps = {
   basePath?: string;
@@ -86,7 +71,6 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
   const [form, setForm] = useState<FormData>(emptyForm);
   // One key per page-level action so the three header buttons spin independently.
   const STATUS_KEY = "status";
-  const exampleCount = countExamples(detail?.skill.suggestedEvalFixturesJson);
   const CLONE_KEY = "clone";
   const ARCHIVE_KEY = "archive";
   const action = useAdminAction({ scope: "admin-agent-skill" });
@@ -278,71 +262,46 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
             )}
           </div>
 
-          <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-2">
-            <h2 className="text-[13px] font-semibold text-foreground">What this skill does</h2>
-            <p className="text-[14px] leading-relaxed text-secondary">
-              {detail.skill.description || "No summary was included in the file."}
-            </p>
-          </div>
-
-          {/* The instruction is the skill. It used to sit in a monospaced box
-              the same size and shape as four boxes of JSON; here it is the
-              thing you actually read. */}
-          <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
-            <h2 className="text-[13px] font-semibold text-foreground">Instructions given to the agent</h2>
-            <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/90">
-              {detail.skill.instruction}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
-              <h2 className="text-[13px] font-semibold text-foreground">Tools it needs</h2>
-              {detail.readiness.requiredToolMappings.length === 0 ? (
-                <p className="text-[13px] text-secondary">This skill needs no tools — it is instructions only.</p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {detail.readiness.requiredToolMappings.map((mapping) => (
-                    <li key={mapping} className="flex items-center justify-between gap-3 text-[13px]">
-                      <span className="text-secondary">{mapping}</span>
-                      <span className={detail.readiness.missingRequiredToolMappings.includes(mapping) ? "text-red-400 text-[12px]" : "text-emerald-400 text-[12px]"}>
-                        {detail.readiness.missingRequiredToolMappings.includes(mapping) ? "not available" : "available"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {detail.readiness.recommendedToolMappings.length > 0 && (
-                <p className="text-[12px] text-muted">
-                  Also suggested: {detail.readiness.recommendedToolMappings.join(", ")}
+          {/* The file, as it was uploaded.
+              This page used to show a prettified breakdown of the file's parsed
+              fields — what it does, its instructions, its tools, its examples —
+              which is a second rendering of something the reader already wrote
+              and would recognise. Anthony's question on seeing it was "I don't
+              see the MD file", which is the right question. So it shows the
+              file. The parsed detail that is *not* in the file — whether its
+              tools exist, who is using it — is in the column beside. */}
+          {detail.skill.sourceMarkdown ? (
+            <div className="rounded-[8px] border border-border-dim bg-card overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-dim px-5 py-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-brand shrink-0" />
+                  <span className="text-[13px] font-semibold text-foreground truncate">
+                    {detail.skill.sourceFilename || "SKILL.md"}
+                  </span>
+                </div>
+                <span className="text-[12px] text-muted">Uploaded {formatDateTime(detail.skill.updatedAt)}</span>
+              </div>
+              <pre className="px-5 py-4 text-[13px] leading-relaxed text-foreground/90 whitespace-pre-wrap break-words font-mono">
+                {detail.skill.sourceMarkdown}
+              </pre>
+            </div>
+          ) : (
+            <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-4">
+              <div>
+                <h2 className="text-[13px] font-semibold text-foreground">No file behind this skill</h2>
+                <p className="text-[13px] text-secondary mt-1">
+                  It was seeded as an example or written here rather than uploaded. Upload a SKILL.md named
+                  &ldquo;{detail.skill.name}&rdquo; and it will take over from here on, file and all.
                 </p>
-              )}
+              </div>
+              <div>
+                <h3 className="text-[12px] font-semibold text-foreground">What it tells the agent</h3>
+                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-secondary mt-1">
+                  {detail.skill.instruction}
+                </p>
+              </div>
             </div>
-
-            <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
-              <h2 className="text-[13px] font-semibold text-foreground">Examples it is tested against</h2>
-              <p className="text-[13px] text-secondary">
-                {exampleCount === 0
-                  ? "No examples were included in the file. A skill with no examples cannot be checked automatically."
-                  : `${exampleCount} example${exampleCount === 1 ? "" : "s"} came with this skill and are used to test agents that have it.`}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-[8px] border border-border-dim bg-card p-5 flex flex-col gap-3">
-            <h2 className="text-[13px] font-semibold text-foreground">Where this came from</h2>
-            {detail.skill.sourceFilename ? (
-              <p className="text-[13px] text-secondary">
-                Uploaded from <span className="text-foreground">{detail.skill.sourceFilename}</span>, last changed {formatDateTime(detail.skill.updatedAt)}.
-                To change it, edit that file and upload it again — it will replace this skill rather than adding a second one.
-              </p>
-            ) : (
-              <p className="text-[13px] text-secondary">
-                This skill was created in Sonae rather than uploaded from a file.
-                Uploading a SKILL.md named &ldquo;{detail.skill.name}&rdquo; will take it over from here on.
-              </p>
-            )}
-          </div>
+          )}
         </div>
 
         <aside className="flex flex-col gap-3">
