@@ -185,7 +185,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
         id: agentId,
         isActive: true,
       })
-    ).rejects.toThrow("Activation blocked: run a successful smoke eval before activating this agent.");
+    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
 
     const smokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, { agentId });
     expect(smokeEval.runId).toBeDefined();
@@ -208,8 +208,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
       },
       activeEvalFixtureCount: 1,
       successfulSmokeEvalRunCount: 1,
-      activationRisk: false,
-      activationWarnings: [],
+      // A configuration check ran and passed, but no model was called — so the
+      // agent is not yet shown as ready. This assertion used to expect no
+      // warnings at all, which is how an agent could be activated having never
+      // produced a token.
+      successfulModelGradedEvalCount: 0,
+      activationWarnings: ["smokeEval"],
       latestSmokeEvalRun: {
         runId: smokeEval.runId,
         objective: "Smoke eval: Answer a support handbook question.",
@@ -228,7 +232,9 @@ describe("OWASP: Broken Access Control - Agents", () => {
       latestAt: undefined,
       smokePassed: false,
     });
-    expect(readyState.checks.every((check) => check.status === "PASS")).toBe(true);
+    // Everything except the eval itself is satisfied.
+    expect(readyState.checks.filter((check) => check.status !== "PASS").map((check) => check.key))
+      .toEqual(["smokeEval"]);
     const smokeRunSteps = await t.run(async (ctx) =>
       ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", smokeEval.runId)).collect()
     );
@@ -320,7 +326,9 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(blockedReadiness).toMatchObject({
       successfulSmokeEvalRunCount: 1,
       activationRisk: false,
-      activationWarnings: ["releaseGate"],
+      // Neither eval so far called a model, so the eval check warns alongside
+      // the release gate.
+      activationWarnings: ["smokeEval", "releaseGate"],
       latestSmokeEvalRun: {
         runId: failedReleaseEval.runId,
         status: "FAILED",
@@ -363,7 +371,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
         id: agentId,
         isActive: true,
       })
-    ).rejects.toThrow("Activation blocked: latest smoke eval must pass before activating this agent.");
+    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
 
     await expect(
       client.mutation(api.agentEvalFixtures.runSmokeEval, {
@@ -377,7 +385,10 @@ describe("OWASP: Broken Access Control - Agents", () => {
         id: agentId,
         isActive: true,
       })
-    ).rejects.toThrow("Activation blocked: critical eval suite must pass before activating this agent.");
+    // Still only configuration checks have run, so the missing model-graded
+    // eval is the accurate blocker — the critical suite is unsatisfied for the
+    // same underlying reason.
+    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
 
     await t.run(async (ctx) => {
       const now = Date.now();
@@ -413,6 +424,40 @@ describe("OWASP: Broken Access Control - Agents", () => {
       criticalFixtureCount: 1,
       passedCriticalFixtureCount: 1,
       blockedCriticalFixtureCount: 0,
+    });
+
+    // Activation now needs evidence the agent actually produced something. The
+    // configuration checks above confirm it is wired up correctly; this is the
+    // run where a model was called and its answer graded.
+    await t.run(async (ctx) => {
+      const now = Date.now() + 20;
+      const gradedRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Smoke eval: Answer a support handbook question.",
+        status: "SUCCESS",
+        userId: adminId,
+        startedAt: now,
+        completedAt: now + 1,
+        updatedAt: now + 1,
+        finalOutput: "Model-graded smoke eval passed.",
+      });
+      await ctx.db.insert("agentRunSteps", {
+        runId: gradedRunId,
+        agentId,
+        stepIndex: 1,
+        kind: "OBSERVE",
+        status: "SUCCESS",
+        input: "Answer a support handbook question.",
+        output: JSON.stringify({
+          status: "PASSED",
+          gradingMode: "MODEL_GRADED",
+          fixtureId: passingFixtureId,
+          fixtureType: "HAPPY_PATH",
+        }),
+        startedAt: now,
+        completedAt: now,
+      });
     });
 
     await expect(
@@ -549,7 +594,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
         id: agentId,
         isActive: true,
       })
-    ).rejects.toThrow("Activation blocked: run a successful smoke eval before activating this agent.");
+    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
   });
 
   test("model-graded smoke evals queue without unlocking activation until grading succeeds", async () => {
@@ -664,7 +709,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
         id: agentId,
         isActive: true,
       })
-    ).rejects.toThrow("Activation blocked: run a successful smoke eval before activating this agent.");
+    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
   });
 
   test("release gates can require current model-graded eval success", async () => {
@@ -749,10 +794,13 @@ describe("OWASP: Broken Access Control - Agents", () => {
       })],
     });
 
+    // A configuration check is not evidence the agent works, so the missing
+    // model-graded eval is the accurate blocker and reported first. The critical
+    // suite is blocked for the same underlying reason.
     await expect(client.mutation(api.agents.updateAgent, {
       id: agentId,
       isActive: true,
-    })).rejects.toThrow("Activation blocked: critical eval suite must pass before activating this agent.");
+    })).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
 
     await t.run(async (ctx) => {
       const now = Date.now() + 10;

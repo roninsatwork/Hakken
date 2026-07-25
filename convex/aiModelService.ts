@@ -1,5 +1,20 @@
 import type { Doc } from "./_generated/dataModel";
 
+/**
+ * Last-resort model identifier, used only when the catalogue holds nothing
+ * enabled at all.
+ *
+ * This is a compiled-in provider model ID and it pins whatever generation was
+ * current when it was written — so it is reached only after every
+ * catalogue-driven path has been exhausted (see `getFirstEnabledModel`). On any
+ * deployment with a single enabled model it is unreachable.
+ *
+ * It should not exist. The correct behaviour when nothing is configured is to
+ * fail with "configure and enable an AI model", because routing to a guessed ID
+ * turns a clear configuration error into an opaque provider 404. That change
+ * affects agent creation as well as execution and is recorded as outstanding in
+ * the plan rather than made as a side effect.
+ */
 export const SYSTEM_FAILSAFE_MODEL_ID = "gemini-2.5-flash";
 export const GOOGLE_VERTEX_EMBEDDING_MODEL_ID = "text-embedding-004";
 export const GOOGLE_VERTEX_EMBEDDING_DIMENSIONS = 768;
@@ -39,8 +54,24 @@ export function getActiveDefaultModel(models: AiModelSelection[]) {
   return models.find((model) => model.isDefault && model.isEnabled);
 }
 
+/**
+ * Any enabled model, when no default is marked.
+ *
+ * The catalogue is the source of truth for what this deployment can actually
+ * call. Reaching past it to a compiled-in identifier means running against a
+ * model nobody configured — and, because that identifier pins a generation
+ * chosen when it was written, one the provider may since have retired. A
+ * retired ID does not fail as "no model configured"; it fails as an opaque 404
+ * from the provider, several layers from the cause.
+ */
+export function getFirstEnabledModel(models: AiModelSelection[]) {
+  return models.find((model) => model.isEnabled);
+}
+
 export function getDefaultModelId(models: AiModelSelection[]) {
-  return getActiveDefaultModel(models)?.modelId ?? SYSTEM_FAILSAFE_MODEL_ID;
+  return getActiveDefaultModel(models)?.modelId
+    ?? getFirstEnabledModel(models)?.modelId
+    ?? SYSTEM_FAILSAFE_MODEL_ID;
 }
 
 function resolveModelMetadata(model: AiModelSelection) {
@@ -67,6 +98,17 @@ export function resolveExecutionModel(args: {
   if (defaultModel) {
     return {
       ...resolveModelMetadata(defaultModel),
+      source: "default",
+    };
+  }
+
+  // Prefer anything the deployment has actually enabled over the compiled-in
+  // identifier below. A catalogue with models but no default marked is a
+  // configuration gap, not a reason to call a model nobody chose.
+  const enabledModel = getFirstEnabledModel(args.defaultModels);
+  if (enabledModel) {
+    return {
+      ...resolveModelMetadata(enabledModel),
       source: "default",
     };
   }

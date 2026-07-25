@@ -19,6 +19,24 @@ export function isAnonymousWidgetThread(thread: Doc<"threads">) {
   return Boolean(thread.widgetId && !thread.userId);
 }
 
+/**
+ * The analytics dimensions every message row copies from its thread.
+ *
+ * Denormalised onto the message so reporting does not have to join back to the
+ * thread. Anything that inserts a message must use this, including recovery
+ * paths outside `chat.ts` — a row written without them is invisible to the
+ * dashboards.
+ */
+export function getThreadMessageDimensions(thread: Doc<"threads"> | null) {
+  return {
+    companyId: thread?.companyId,
+    userId: thread?.userId,
+    agentId: thread?.agentId,
+    widgetId: thread?.widgetId,
+    analyticsDimensionsVersion: 1,
+  };
+}
+
 export async function digestWidgetAccessToken(value: string) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);

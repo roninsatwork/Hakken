@@ -2,6 +2,7 @@ import { mutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { requireSuperAdmin } from "./authz";
 import { replaceGlobalInventoryRollup } from "./utils/inventoryRollupService";
+import { superAdminMutation } from "./tenantFunctions";
 
 export async function rebuildGlobalInventoryRollupData(ctx: MutationCtx) {
   const users = await ctx.db.query("users").take(10000);
@@ -41,11 +42,9 @@ export async function rebuildGlobalInventoryRollupData(ctx: MutationCtx) {
   };
 }
 
-export const rebuildGlobalInventoryRollup = mutation({
+export const rebuildGlobalInventoryRollup = superAdminMutation({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-
     await rebuildGlobalInventoryRollupData(ctx);
     return true;
   },

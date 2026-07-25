@@ -43,8 +43,23 @@ jobs:
       - name: Run typecheck
         run: npm run typecheck
 
-      - name: Run unit and integration tests
-        run: npm run test:run
+      # Coverage runs here, not only on PRs into main, because dev previously
+      # accumulated changes with no coverage enforcement at all. This runs the
+      # full unit/integration suite, so no separate test:run step is needed.
+      # The browser suite stays in the full gate below.
+      - name: Run unit and integration tests with coverage
+        run: npm run test:coverage
+
+      - name: Check coverage thresholds
+        run: npm run coverage:check
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-quick
+          path: coverage/
+          if-no-files-found: ignore
 
   full-gate:
     # Full rigor only when changes head for main: the complete browser-test
@@ -80,14 +95,10 @@ jobs:
       - name: Run coverage
         run: npm run test:coverage
 
+      # No skip-if-missing escape hatch: a missing coverage summary means the
+      # coverage run failed, which must fail the gate rather than pass it.
       - name: Check coverage thresholds
-        if: always()
-        run: |-
-          if [ ! -f coverage/coverage-summary.json ]; then
-            echo "coverage/coverage-summary.json was not generated; skipping threshold check."
-            exit 0
-          fi
-          npm run coverage:check
+        run: npm run coverage:check
 
       - name: Upload coverage report
         if: always()

@@ -63,7 +63,13 @@
         "profile": "Il Mio Profilo",
         "admin": "Pannello Admin",
         "logout": "Esci",
-        "dashboard": "Dashboard"
+        "dashboard": "Dashboard",
+        "errorBoundary": {
+            "title": "Impossibile caricare questa pagina",
+            "description": "Si è verificato un errore durante il caricamento di questa sezione. L’errore è stato registrato. Puoi riprovare e, se il problema persiste, contatta il tuo amministratore.",
+            "reference": "Riferimento: {digest}",
+            "retry": "Riprova"
+        }
     },
     "landing": {
         "getStarted": "Inizia ora",
@@ -366,25 +372,6 @@
         "propertiesScrapedData": "Dati Estratti",
         "impersonatingLabel": "Workspace in Impersonificazione",
         "exitWorkspace": "Esci da Workspace"
-    },
-    "properties": {
-        "search": {
-            "title": "Scegli la tua area di ricerca",
-            "description": "Per iniziare, vai su Rightmove, esegui la ricerca desiderata e incolla l'indirizzo web (URL) qui sotto. Eventuali filtri impostati su Rightmove (come parcheggio o tipo di contratto) verranno acquisiti automaticamente.",
-            "fetchingDetailsTitle": "Recupero Dettagli Completi",
-            "fetchingDetailsDesc": "Non ci limitiamo a scorrere i risultati della ricerca: il nostro sistema apre accuratamente ogni singolo annuncio immobiliare per raccogliere gallerie fotografiche complete, planimetrie e caratteristiche principali. Per farlo in sicurezza e garantire l'acquisizione di tutti i dati, questo processo può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire il progresso live nella scheda Log.",
-            "step1": "Incolla URL Sorgente",
-            "urlPlaceholder": "https://www.rightmove.co.uk/property-for-sale/find.html?...",
-            "step2": "Limite Globale",
-            "limitDesc": "Scegli quante proprietà raccogliere (Massimo 1000).",
-            "gatherButton": "Raccogli Proprietà",
-            "startingSearch": "Avvio Ricerca...",
-            "urlError": "Errore: Incolla prima un URL di ricerca Rightmove valido.",
-            "searchSuccess": "Ricerca avviata con successo! La raccolta dei dettagli completi della proprietà può richiedere fino a 30 minuti. Ti consigliamo di prendere un caffè mentre aspetti! Puoi seguire l'avanzamento nella scheda Log."
-        },
-        "meta": {
-            "title": "Proprietà - Sonae"
-        }
     },
     "properties": {
         "search": {
@@ -900,24 +887,29 @@
                 "install": "Installa",
                 "installing": "Installazione...",
                 "sync": "Sincronizza",
-                "test": "Test",
-                "testing": "Test in corso...",
+                "test": "Convalida",
+                "testing": "Convalida in corso...",
                 "manage": "Gestisci",
-                "untested": "NON TESTATO"
+                "untested": "NON CONVALIDATO",
+                "availability": {
+                    "unavailable": "NON DISPONIBILE",
+                    "partial": "{available} SU {total} DISPONIBILI",
+                    "unavailableHelp": "Questo connettore è solo una dichiarazione: non è ancora implementato. Un agente che lo richiama registrerà la chiamata come non implementata e non eseguirà l'azione."
+                }
             },
             "connectorDetails": {
                 "back": "Torna ai Connettori",
-                "untested": "NON TESTATO",
+                "untested": "NON CONVALIDATO",
                 "active": "Attivo",
                 "disabled": "Disattivato",
                 "save": "Salva Modifiche",
                 "saving": "Salvataggio...",
-                "test": "Test Connessione",
-                "testing": "Test in corso...",
+                "test": "Convalida configurazione",
+                "testing": "Convalida in corso...",
                 "noSecrets": "Non sono richiesti riferimenti segreto.",
                 "noTools": "Questo connettore non espone ancora tool eseguibili.",
                 "noGeneratedTools": "Nessun tool generato e attualmente collegato.",
-                "noTestLogs": "Nessun test di connessione registrato.",
+                "noTestLogs": "Nessun controllo di configurazione registrato.",
                 "noSecretRegistry": "Nessun record di riferimento segreto sincronizzato.",
                 "required": "Richiesto",
                 "optional": "Opzionale",
@@ -927,7 +919,7 @@
                     "oauth": "Connessione OAuth",
                     "generatedTools": "Tool Generati",
                     "secretRegistry": "Registro Riferimenti Segreto",
-                    "testHistory": "Storico Test"
+                    "testHistory": "Cronologia convalide"
                 },
                 "fields": {
                     "authMode": "Modalità Auth",

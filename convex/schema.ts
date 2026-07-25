@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
+// template:remove:start movement
 const movementCameraBodyPartValidator = v.union(
   v.literal("head"),
   v.literal("torso"),
@@ -39,6 +40,7 @@ const movementStartReadinessValidator = v.object({
   ),
   visibleBodyParts: v.array(movementCameraBodyPartValidator),
 });
+// template:remove:end
 
 export default defineSchema({
   ...authTables,
@@ -66,6 +68,9 @@ export default defineSchema({
     logoUrlDark: v.optional(v.string()),
     emailSenderName: v.optional(v.string()),
     emailSenderAddress: v.optional(v.string()),
+    // Where the assistant should send pricing enquiries. Deployment-specific,
+    // so it must never be hardcoded into a seeded AI rule.
+    salesContactEmail: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
     fontFamily: v.optional(v.string()), // Deprecated, keep for legacy
     headingFontFamily: v.optional(v.string()),
@@ -96,7 +101,12 @@ export default defineSchema({
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
     darkRing: v.optional(v.string()),
-    diagnosticRoutingEnabled: v.optional(v.boolean())
+    diagnosticRoutingEnabled: v.optional(v.boolean()),
+    // Which white-label navigation profile this deployment uses. Previously the
+    // profiles were advisory text in an admin screen that nothing consumed.
+    // Kept a scalar because SystemSettingsFormData carries scalars only; the
+    // resolver also supports per-deployment overrides if that is ever needed.
+    navigationProfileKey: v.optional(v.string()),
   }),
 
   aiProviders: defineTable({
@@ -149,6 +159,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_key", ["key"]),
   
+  // template:remove:start arcade
   arcadeScores: defineTable({
     userId: v.id("users"),
     companyId: v.optional(v.id("companies")),
@@ -157,6 +168,7 @@ export default defineSchema({
     playedAt: v.number(),
   }).index("by_game_score", ["game", "score"])
     .index("by_user", ["userId"]),
+  // template:remove:end
 
   plans: defineTable({
     name: v.string(),
@@ -512,6 +524,91 @@ export default defineSchema({
     .index("by_workflow_started", ["workflowId", "startedAt"])
     .index("by_schedule_started", ["scheduleId", "startedAt"]),
 
+  /**
+   * The resumable state of an in-flight agent run: one row per run, replaced as
+   * the objective loop advances.
+   *
+   * The loop used to hold everything in memory inside a single Convex action, so
+   * a run that was killed part-way lost every step it had completed and the user
+   * got a generic failure. This is what a continuation reads to pick up where the
+   * previous segment left off, and what the sweeper reads to tell a dead run from
+   * a slow one.
+   *
+   * Deleted once the run reaches a terminal state — it is working state, not an
+   * audit trail. The audit trail is `agentRunSteps`.
+   */
+  agentRunCheckpoints: defineTable({
+    runId: v.id("agentRuns"),
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    threadId: v.optional(v.id("threads")),
+    status: v.union(
+      v.literal("ACTIVE"),
+      v.literal("AWAITING_APPROVAL")
+    ),
+    /**
+     * The provider conversation so far, serialised. Carries the expensive parts
+     * of the run — the RAG context, retrieved memories and every tool result —
+     * so a continuation does not repeat that work or pay for it twice.
+     */
+    transcriptJson: v.string(),
+    /** Set when the transcript had to be trimmed from the front to fit. */
+    transcriptTrimmed: v.optional(v.boolean()),
+    /** Loop counters, so budgets are enforced across the whole run, not per segment. */
+    stepIndex: v.number(),
+    loopIndex: v.number(),
+    toolCallCount: v.number(),
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    /** The reply row being streamed into, so one answer stays one message. */
+    streamMessageId: v.optional(v.id("messages")),
+    /**
+     * How many leading turns form the run's stable prompt prefix — the part
+     * every turn re-sends and every provider's caching depends on being
+     * unchanged. Zero means no prefix is being tracked, which is what a trimmed
+     * transcript falls back to.
+     */
+    stablePrefixTurns: v.optional(v.number()),
+    /**
+     * Provider-side cache object holding that prefix, where the provider works
+     * that way. Carried across segments so a continuation reuses the cache
+     * rather than paying to build a second one.
+     */
+    promptCacheName: v.optional(v.string()),
+    segmentCount: v.number(),
+    resumeAttempts: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_run", ["runId"])
+    .index("by_status_updated", ["status", "updatedAt"])
+    .index("by_company_updated", ["companyId", "updatedAt"]),
+
+  /**
+   * Completed side-effecting tool calls, keyed by the caller's idempotency key.
+   *
+   * `idempotencyKey` was accepted by the one write tool and recorded in the
+   * audit log, and nothing ever read it back — so a retried write applied twice.
+   * With the runtime now able to resume a run after a crash or an approval, a
+   * tool call genuinely can be re-issued, and a key that does not deduplicate is
+   * worse than no key at all: it advertises a protection that is not there.
+   *
+   * Scoped by company so one tenant's key can never suppress another's write.
+   */
+  agentToolIdempotency: defineTable({
+    companyId: v.id("companies"),
+    handlerMapping: v.string(),
+    idempotencyKey: v.string(),
+    /** The original result, replayed verbatim so a retry looks like the first call. */
+    resultJson: v.string(),
+    runId: v.optional(v.id("agentRuns")),
+    toolCallId: v.optional(v.id("agentToolCalls")),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_scope_key", ["companyId", "handlerMapping", "idempotencyKey"])
+    .index("by_expires", ["expiresAt"]),
+
   agentRunSteps: defineTable({
     runId: v.id("agentRuns"),
     agentId: v.id("agents"),
@@ -565,6 +662,7 @@ export default defineSchema({
       v.literal("PENDING"),
       v.literal("APPROVAL_REQUIRED"),
       v.literal("SUCCESS"),
+      v.literal("NOT_IMPLEMENTED"),
       v.literal("FAILED"),
       v.literal("DENIED"),
       v.literal("CANCELLED")
@@ -1336,6 +1434,16 @@ export default defineSchema({
     widgetAccessTokenHash: v.optional(v.string()),
     sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
+    /**
+     * Marks a thread the platform created for itself rather than for a person.
+     *
+     * An eval has to run through the real chat runtime to test the agent that
+     * ships — same tools, memories, skills, retrieval and budgets — and that
+     * runtime needs a thread. Without this flag those threads would appear in
+     * the admin's own conversation list, which is both confusing and a slow
+     * leak of eval transcripts into a personal history.
+     */
+    purpose: v.optional(v.literal("EVAL")),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId", "updatedAt"])
@@ -1361,6 +1469,12 @@ export default defineSchema({
     widgetId: v.optional(v.id("widgets")),
     analyticsDimensionsVersion: v.optional(v.number()),
     attachments: v.optional(v.array(v.id("_storage"))),
+    // Set while a reply is still being written token by token. Clients show a
+    // caret; readers see the answer build instead of watching a spinner.
+    isStreaming: v.optional(v.boolean()),
+    // When the stream opened, so a reply orphaned by a killed run can be told
+    // apart from one that is genuinely still arriving.
+    streamStartedAt: v.optional(v.number()),
   })
     .index("by_thread", ["threadId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
@@ -1374,6 +1488,14 @@ export default defineSchema({
   agents: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
+    // Per-agent runtime budget. Unset means the platform default; values are
+    // clamped to the ceilings in agentRuntimeService so a misconfigured agent
+    // cannot spend without limit. Previously every agent on the platform shared
+    // one hardcoded budget.
+    maxSteps: v.optional(v.number()),
+    maxToolCalls: v.optional(v.number()),
+    maxRuntimeMs: v.optional(v.number()),
+    maxCostGBP: v.optional(v.number()),
     avatar: v.optional(v.string()), // Optional icon/avatar
     modelId: v.string(), // Provider model identifier
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
@@ -1619,14 +1741,44 @@ export default defineSchema({
     .index("by_active_workflow_last_run", ["isActive", "workflowId", "lastRunTs"])
     .index("by_active_last_run", ["isActive", "lastRunTs"]),
 
+  // Applied-migration ledger. One row per named migration, so a backfill runs
+  // once, can resume from its cursor after a failure, and leaves an audit
+  // trail of what was changed and when.
+  dataMigrations: defineTable({
+    name: v.string(),
+    status: v.union(
+      v.literal("RUNNING"),
+      v.literal("COMPLETED"),
+      v.literal("FAILED"),
+    ),
+    /** Pagination cursor for the next batch; absent once complete. */
+    cursor: v.optional(v.string()),
+    /** Documents examined, including ones that needed no change. */
+    processed: v.number(),
+    /** Documents actually patched. */
+    updated: v.number(),
+    batches: v.number(),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  }).index("by_name", ["name"]),
+
   swarmLogs: defineTable({
     threadId: v.id("threads"),
+    // Denormalised from the owning thread so swarm logs carry tenant
+    // provenance of their own. Optional because rows written before this field
+    // was added are not backfilled; see the migrations item in
+    // docs/plans/active/platform-hardening-plan.md.
+    companyId: v.optional(v.id("companies")),
     message: v.string(),
     status: v.union(v.literal("pending"), v.literal("running"), v.literal("success"), v.literal("error")),
     order: v.number(),
     isHeading: v.optional(v.boolean()),
     createdAt: v.number(),
-  }).index("by_thread", ["threadId", "order"]),
+  })
+    .index("by_thread", ["threadId", "order"])
+    .index("by_company", ["companyId"]),
 
   aiModels: defineTable({
     modelId: v.string(), // Provider model identifier
@@ -1682,6 +1834,7 @@ export default defineSchema({
     .index("by_execution_node_status_started", ["executionId", "nodeId", "status", "startedAt"])
     .index("by_execution_status_started", ["executionId", "status", "startedAt"]),
 
+  // template:remove:start salesReports
   // Generated Agent Reports
   salesReports: defineTable({
     companyId: v.optional(v.id("companies")),
@@ -1743,6 +1896,7 @@ export default defineSchema({
     createdAt: v.number()
   }).index("by_company", ["companyId", "createdAt"])
     .index("by_agent", ["agentId", "createdAt"]),
+  // template:remove:end
 
   // Website Widget Integration
   widgets: defineTable({
@@ -1812,6 +1966,7 @@ export default defineSchema({
     .index("by_company_date", ["companyId", "date"])
     .index("by_user_date", ["userId", "date"]),
 
+  // template:remove:start properties
   apifyRuns: defineTable({
     runId: v.string(), // The Apify run ID
     actorId: v.string(),
@@ -1861,7 +2016,9 @@ export default defineSchema({
       searchField: "address",
       filterFields: ["companyId"],
     }),
+  // template:remove:end
 
+  // template:remove:start movement
   movements: defineTable({
     title: v.string(),
     difficulty: v.string(),
@@ -1923,6 +2080,7 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_createdAt", ["createdAt"])
     .index("by_movement_createdAt", ["movementId", "createdAt"]),
+  // template:remove:end
 
   mockStorageMetadata: defineTable({
     storageId: v.string(),

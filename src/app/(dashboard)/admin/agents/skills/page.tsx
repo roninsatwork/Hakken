@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BarChart3, BrainCircuit, FileText, Loader2, Plus, Search, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -243,12 +244,18 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
   const [markdownFile, setMarkdownFile] = useState<File | null>(null);
   const [markdownSourceText, setMarkdownSourceText] = useState("");
   const [markdownDraft, setMarkdownDraft] = useState<MarkdownImportDraft | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isParsingMarkdown, setIsParsingMarkdown] = useState(false);
-  const [isSavingMarkdown, setIsSavingMarkdown] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
-  const [error, setError] = useState("");
+  // Each dialog on this page runs one write, so each gets its own busy key.
+  const CREATE_KEY = "create";
+  const SEED_KEY = "seed";
+  const IMPORT_KEY = "import";
+  const PARSE_KEY = "parse";
+  const MARKDOWN_SAVE_KEY = "markdown-save";
+  const action = useAdminAction({ scope: "admin-agent-skills" });
+  // Local `error` carries client-side validation only — a missing file, an empty
+  // one. Server failures come from the runner, which has already unwrapped and
+  // reported them; the dialogs render whichever is current.
+  const [validationError, setValidationError] = useState("");
+  const error = validationError || action.error;
   const [feedback, setFeedback] = useState("");
   const [importedSkillId, setImportedSkillId] = useState<Id<"agentSkills"> | null>(null);
   const {
@@ -263,10 +270,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSaving(true);
-    setError("");
-    try {
-      await createSkill({
+    const outcome = await action.run(() => createSkill({
         name: form.name,
         description: form.description || undefined,
         category: form.category,
@@ -276,92 +280,74 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         requiredToolMappingsJson: form.requiredToolMappings,
         recommendedToolMappingsJson: form.recommendedToolMappings,
         suggestedEvalFixturesJson: form.suggestedEvalFixtures,
-      });
-      setForm(emptyForm);
-      setIsCreateOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Skill could not be created.");
-    } finally {
-      setIsSaving(false);
-    }
+      }), { key: CREATE_KEY, fallbackMessage: "Skill could not be created.", suppressErrorToast: true });
+    // The draft stays on screen if the save failed.
+    if (!outcome.ok) return;
+    setForm(emptyForm);
+    setIsCreateOpen(false);
   };
 
   const seedStarters = async () => {
-    setIsSeeding(true);
-    setError("");
     setFeedback("");
-    try {
-      const result = await seedStarterSkills({});
-      setFeedback(`Created ${result.createdCount} starter skill${result.createdCount === 1 ? "" : "s"}; skipped ${result.skippedCount} existing.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Starter skills could not be seeded.");
-    } finally {
-      setIsSeeding(false);
-    }
+    const outcome = await action.run(() => seedStarterSkills({}), {
+      key: SEED_KEY,
+      fallbackMessage: "Starter skills could not be seeded.",
+      suppressErrorToast: true,
+    });
+    if (!outcome.ok) return;
+    const { createdCount, skippedCount } = outcome.data;
+    setFeedback(`Created ${createdCount} starter skill${createdCount === 1 ? "" : "s"}; skipped ${skippedCount} existing.`);
   };
 
   const importBundle = async (event: FormEvent) => {
     event.preventDefault();
-    setIsImporting(true);
-    setError("");
     setFeedback("");
     setImportedSkillId(null);
-    try {
-      const result = await importSkillBundle({ bundleJson });
-      setImportedSkillId(result.skillId);
-      setBundleJson("");
-      setIsImportOpen(false);
-      setFeedback("Skill bundle imported as a draft.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Skill bundle could not be imported.");
-    } finally {
-      setIsImporting(false);
-    }
+    const outcome = await action.run(() => importSkillBundle({ bundleJson }), {
+      key: IMPORT_KEY,
+      fallbackMessage: "Skill bundle could not be imported.",
+      suppressErrorToast: true,
+    });
+    // The pasted bundle stays in the box if the import failed.
+    if (!outcome.ok) return;
+    setImportedSkillId(outcome.data.skillId);
+    setBundleJson("");
+    setIsImportOpen(false);
+    setFeedback("Skill bundle imported as a draft.");
   };
 
   const resetMarkdownImport = () => {
     setMarkdownFile(null);
     setMarkdownSourceText("");
     setMarkdownDraft(null);
-    setError("");
+    setValidationError("");
   };
 
   const parseMarkdown = async (event: FormEvent) => {
     event.preventDefault();
     if (!markdownFile) {
-      setError("Choose a SKILL.md file to import.");
+      setValidationError("Choose a SKILL.md file to import.");
       return;
     }
     if (!markdownSourceText.trim()) {
-      setError("The selected SKILL.md file is empty.");
+      setValidationError("The selected SKILL.md file is empty.");
       return;
     }
-    setIsParsingMarkdown(true);
-    setError("");
     setFeedback("");
     setImportedSkillId(null);
-    try {
-      const draft = await previewSkillMarkdownImport({
-        markdown: markdownSourceText,
-        filename: markdownFile.name,
-      }) as MarkdownImportDraft;
-      setMarkdownDraft(draft);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "SKILL.md could not be parsed.");
-    } finally {
-      setIsParsingMarkdown(false);
-    }
+    const outcome = await action.run(
+      () => previewSkillMarkdownImport({ markdown: markdownSourceText, filename: markdownFile.name }),
+      { key: PARSE_KEY, fallbackMessage: "SKILL.md could not be parsed.", suppressErrorToast: true },
+    );
+    if (outcome.ok) setMarkdownDraft(outcome.data as MarkdownImportDraft);
   };
 
   const saveMarkdownDraft = async (event: FormEvent) => {
     event.preventDefault();
     if (!markdownDraft) return;
-    setIsSavingMarkdown(true);
-    setError("");
     setFeedback("");
     setImportedSkillId(null);
-    try {
-      const result = await importSkillMarkdown({
+    const outcome = await action.run(() => importSkillMarkdown({
         sourceFilename: markdownDraft.sourceFilename,
         sourceHash: markdownDraft.sourceHash,
         name: markdownDraft.name,
@@ -372,16 +358,13 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         requiredToolMappingsJson: markdownDraft.requiredToolMappingsJson,
         recommendedToolMappingsJson: markdownDraft.recommendedToolMappingsJson,
         suggestedEvalFixturesJson: markdownDraft.suggestedEvalFixturesJson,
-      });
-      setImportedSkillId(result.skillId);
-      setIsMarkdownOpen(false);
-      resetMarkdownImport();
-      setFeedback("SKILL.md imported as a draft.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "SKILL.md could not be imported.");
-    } finally {
-      setIsSavingMarkdown(false);
-    }
+      }), { key: MARKDOWN_SAVE_KEY, fallbackMessage: "SKILL.md could not be imported.", suppressErrorToast: true });
+    // The reviewed draft stays on screen if the import failed.
+    if (!outcome.ok) return;
+    setImportedSkillId(outcome.data.skillId);
+    setIsMarkdownOpen(false);
+    resetMarkdownImport();
+    setFeedback("SKILL.md imported as a draft.");
   };
 
   return (
@@ -413,7 +396,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             type="button"
             onClick={() => {
               setIsImportOpen(true);
-              setError("");
+              setValidationError("");
               setFeedback("");
             }}
             className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors"
@@ -424,10 +407,10 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           <button
             type="button"
             onClick={seedStarters}
-            disabled={isSeeding}
+            disabled={action.isBusy(SEED_KEY)}
             className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors disabled:opacity-50"
           >
-            {isSeeding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-brand" />}
+            {action.isBusy(SEED_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-brand" />}
             Seed starters
           </button>
           <button
@@ -637,8 +620,8 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setIsCreateOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-            <button type="submit" disabled={isSaving} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
-              {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <button type="submit" disabled={action.isBusy(CREATE_KEY)} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
+              {action.isBusy(CREATE_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Create
             </button>
           </div>
@@ -666,12 +649,12 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
                   const file = event.target.files?.[0] ?? null;
                   setMarkdownFile(file);
                   setMarkdownSourceText("");
-                  setError("");
+                  setValidationError("");
                   if (!file) return;
                   try {
                     setMarkdownSourceText(await readFileText(file));
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : "File could not be read.");
+                    setValidationError(err instanceof Error ? err.message : "File could not be read.");
                   }
                 }}
                 className="rounded-[8px] border border-dashed border-border-dim bg-card p-4 text-[13px] text-foreground file:mr-3 file:rounded-[8px] file:border-0 file:bg-brand file:px-3 file:py-2 file:text-[12px] file:font-medium file:text-white"
@@ -687,8 +670,8 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-              <button type="submit" disabled={isParsingMarkdown || !markdownSourceText.trim()} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
-                {isParsingMarkdown && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <button type="submit" disabled={action.isBusy(PARSE_KEY) || !markdownSourceText.trim()} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
+                {action.isBusy(PARSE_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Parse file
               </button>
             </div>
@@ -781,10 +764,10 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
                 <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
                 <button
                   type="submit"
-                  disabled={isSavingMarkdown || markdownDraft.validation.errors.length > 0}
+                  disabled={action.isBusy(MARKDOWN_SAVE_KEY) || markdownDraft.validation.errors.length > 0}
                   className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50"
                 >
-                  {isSavingMarkdown && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {action.isBusy(MARKDOWN_SAVE_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Save draft
                 </button>
               </div>
@@ -807,8 +790,8 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           </label>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setIsImportOpen(false)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground">Cancel</button>
-            <button type="submit" disabled={isImporting} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
-              {isImporting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <button type="submit" disabled={action.isBusy(IMPORT_KEY)} className="h-9 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium flex items-center gap-2 disabled:opacity-50">
+              {action.isBusy(IMPORT_KEY) && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Import draft
             </button>
           </div>

@@ -945,8 +945,8 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     const client = t.withIdentity({ subject: userId });
 
-    await expect(t.query(api.aiModels.getModels, {})).rejects.toThrow("Unauthenticated request");
-    await expect(t.query(api.aiModels.getModel, { modelId })).rejects.toThrow("Unauthenticated request");
+    await expect(t.query(api.aiModels.getModels, {})).rejects.toThrow("Unauthenticated");
+    await expect(t.query(api.aiModels.getModel, { modelId })).rejects.toThrow("Unauthenticated");
 
     const models = await client.query(api.aiModels.getModels, {});
     const model = await client.query(api.aiModels.getModel, { modelId });

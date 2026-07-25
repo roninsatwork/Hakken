@@ -2,6 +2,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { getCurrentUser, requireSuperAdmin } from "./authz";
+import { publicQuery, superAdminMutation } from "./tenantFunctions";
 import {
   buildAuditPurgeConfigPayload,
   calculateAuditPurgeCutoff,
@@ -30,7 +31,9 @@ export const logAction = internalMutation({
 });
 
 // 2. Fetch Config for UI
-export const getConfig = query({
+export const getConfig = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+  args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
     if (current?.user.role !== "SUPER_ADMIN") return null;
@@ -41,7 +44,7 @@ export const getConfig = query({
 });
 
 // 3. Update Audit Log Config
-export const updateConfig = mutation({
+export const updateConfig = superAdminMutation({
   args: {
     enabled: v.boolean(),
     retentionDays: v.number(),
@@ -50,7 +53,7 @@ export const updateConfig = mutation({
     nextRunTimestamp: v.optional(v.number()), // Let the UI blindly pass the existing payload
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireSuperAdmin(ctx);
+    const { userId, user } = ctx;
 
     const now = Date.now();
     const payload = buildAuditPurgeConfigPayload(args);
@@ -126,7 +129,9 @@ export const executePurge = internalMutation({
 });
 
 // 6. View Recent Logs (UI Feed)
-export const getRecentLogs = query({
+export const getRecentLogs = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+  args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
     if (current?.user.role !== "SUPER_ADMIN") return [];

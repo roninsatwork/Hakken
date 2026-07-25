@@ -1,7 +1,9 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
+import { buildPricingProtocolInstruction } from "./aiRules";
 import schema from "./schema";
+import { DEFAULT_SETTINGS } from "./settingsService";
 
 describe("AI Rules Validation", () => {
   test("getOffsetPaginatedRules isolates by companyId", async () => {
@@ -482,5 +484,44 @@ describe("AI Rules Validation", () => {
       priority: "HIGH",
       isActive: true,
     });
+  });
+
+  test("seedPricingRule uses configured branding instead of a hardcoded contact", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("users", { email: "super@test.com", role: "SUPER_ADMIN" });
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Copilot",
+        salesContactEmail: "sales@acmecorp.com",
+      });
+    });
+
+    const ruleId = await t.mutation(internal.aiRules.seedPricingRule, {});
+    const rule = await t.run(async (ctx) => await ctx.db.get(ruleId));
+
+    expect(rule?.instruction).toContain("Acme Copilot");
+    expect(rule?.instruction).toContain("sales@acmecorp.com");
+  });
+
+  test("seeded pricing rule never carries a hardcoded personal contact", () => {
+    // This shipped in every fork and every customer deployment.
+    const withoutContact = buildPricingProtocolInstruction({});
+    const withContact = buildPricingProtocolInstruction({
+      platformName: "Acme Copilot",
+      salesContactEmail: "sales@acmecorp.com",
+    });
+
+    for (const instruction of [withoutContact, withContact]) {
+      expect(instruction).not.toContain("ronins.co.uk");
+    }
+
+    // With nothing configured, fall back to the platform default name and omit
+    // the referral address rather than inventing one.
+    expect(withoutContact).toContain(DEFAULT_SETTINGS.platformName);
+    expect(withoutContact).not.toContain("@");
+    expect(withoutContact).toContain("a member of the team will follow up");
+
+    expect(withContact).toContain("contact sales@acmecorp.com");
   });
 });

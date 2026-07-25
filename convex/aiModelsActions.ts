@@ -13,6 +13,7 @@ import {
 import { listAnthropicModels } from "./anthropicProviderService";
 import { listOpenAIModels } from "./openaiProviderService";
 import { buildVertexProviderConfig } from "./vertexProviderService";
+import { superAdminAction } from "./tenantFunctions";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
@@ -211,11 +212,9 @@ async function syncAnthropicModelCatalogue(ctx: ActionCtx) {
   return formattedModels;
 }
 
-export const syncGoogleModels = action({
+export const syncGoogleModels = superAdminAction({
   args: {},
   handler: async (ctx) => {
-    await requireActionSuperAdmin(ctx);
-
     try {
       return await syncGoogleVertexModelCatalogue(ctx);
     } catch (e: unknown) {
@@ -224,11 +223,9 @@ export const syncGoogleModels = action({
   },
 });
 
-export const syncOpenAIModels = action({
+export const syncOpenAIModels = superAdminAction({
   args: {},
   handler: async (ctx) => {
-    await requireActionSuperAdmin(ctx);
-
     try {
       return await syncOpenAIModelCatalogue(ctx);
     } catch (e: unknown) {
@@ -237,11 +234,9 @@ export const syncOpenAIModels = action({
   },
 });
 
-export const syncAnthropicModels = action({
+export const syncAnthropicModels = superAdminAction({
   args: {},
   handler: async (ctx) => {
-    await requireActionSuperAdmin(ctx);
-
     try {
       return await syncAnthropicModelCatalogue(ctx);
     } catch (e: unknown) {
@@ -250,11 +245,9 @@ export const syncAnthropicModels = action({
   },
 });
 
-export const syncVertexModels = action({
+export const syncVertexModels = superAdminAction({
   args: {},
   handler: async (ctx) => {
-    await requireActionSuperAdmin(ctx);
-
     try {
       return await syncGoogleVertexModelCatalogue(ctx);
     } catch (e: unknown) {
@@ -263,12 +256,11 @@ export const syncVertexModels = action({
   },
 });
 
-export const testProviderConnection = action({
+export const testProviderConnection = superAdminAction({
   args: {
     providerKey: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireActionSuperAdmin(ctx);
     const displayName = getProviderDisplayName(args.providerKey);
 
     try {

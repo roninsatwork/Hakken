@@ -1,9 +1,10 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { getActiveCompanyId, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { getActiveCompanyId } from "./authz";
 
 const WEBHOOK_DELIVERY_PREVIEW_MAX_LENGTH = 2000;
 const WEBHOOK_DELIVERY_EVENT_TYPE_MAX_LENGTH = 120;
@@ -91,14 +92,14 @@ function getManagedCompanyId(user: Doc<"users">, companyId: Id<"companies"> | un
   return activeCompanyId;
 }
 
-export const list = query({
+export const list = adminQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     status: v.optional(webhookDeliveryStatusValidator),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const companyId = getManagedCompanyId(user, args.companyId);
 
     const page = companyId
@@ -135,13 +136,13 @@ export const list = query({
   },
 });
 
-export const getSummary = query({
+export const getSummary = adminQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     lookbackDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const companyId = getManagedCompanyId(user, args.companyId);
     const lookbackDays = Math.min(Math.max(args.lookbackDays ?? 7, 1), 90);
     const cutoff = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;

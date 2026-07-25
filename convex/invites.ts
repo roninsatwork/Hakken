@@ -11,6 +11,7 @@ import {
 import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
+import { adminAction, adminMutation, adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
@@ -25,7 +26,9 @@ function escapeEmailText(value: string) {
 // --- QUERIES & MUTATIONS ---
 
 // Get active email template for invites
-export const getActiveTemplate = query({
+export const getActiveTemplate = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
+  args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
     if (!current) return null;
@@ -49,7 +52,7 @@ export const getActiveTemplate = query({
 });
 
 // Let admins save their live WYSIWYG/Text edits
-export const saveTemplate = mutation({
+export const saveTemplate = superAdminMutation({
   args: {
     subject: v.string(),
     headline: v.string(),
@@ -57,7 +60,7 @@ export const saveTemplate = mutation({
     ctaText: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const template = await ctx.db
       .query("emailTemplates")
@@ -91,9 +94,9 @@ export const saveTemplate = mutation({
 });
 
 // Fetch all active/pending invites for the Admin Dashboard Left-Column
-export const getPendingInvites = query({
+export const getPendingInvites = adminQuery({
   handler: async (ctx) => {
-    const { user } = await requireAdmin(ctx);
+    const { user } = ctx;
 
     if (user.role === "SUPER_ADMIN") {
       return await ctx.db
@@ -111,10 +114,10 @@ export const getPendingInvites = query({
   },
 });
 
-export const getInvitesByCompany = query({
+export const getInvitesByCompany = adminQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx);
+    const { user } = ctx;
 
     if (!canAccessCompany(user, args.companyId)) {
       throw new Error("Unauthorized");
@@ -129,10 +132,10 @@ export const getInvitesByCompany = query({
 });
 
 // Revoke/Delete a pending invitation
-export const revokeInvite = mutation({
+export const revokeInvite = adminMutation({
   args: { id: v.id("invitations") },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx);
+    const { userId, user } = ctx;
 
     const invite = await ctx.db.get(args.id);
     if (!invite) throw new Error("Invite not found");
@@ -209,7 +212,7 @@ export const createInviteRecord = internalMutation({
 // --- ACTIONS (External API Hooks) ---
 
 // Dispatches the Resend hook natively without breaking Edge boundaries via Internal Fetch.
-export const dispatchInviteEmail = action({
+export const dispatchInviteEmail = adminAction({
   args: {
     email: v.string(),
     companyId: v.optional(v.id("companies")),

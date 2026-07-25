@@ -1,8 +1,8 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { requireSuperAdmin } from "./authz";
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import {
   buildCompanyProfilePatch,
   buildCompanyRecord,
@@ -22,15 +22,9 @@ const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
 const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
 const COMPANY_OPTIONS_MAX_LIMIT = 200;
 
-export const getCompanies = query({
+export const getCompanies = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
-
     const companies = await ctx.db.query("companies").order("desc").take(10000);
     
     // Attach basic stats dynamically
@@ -49,18 +43,12 @@ export const getCompanies = query({
   },
 });
 
-export const getPaginatedCompanies = query({
+export const getPaginatedCompanies = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
-
     const searchTerm = args.searchTerm?.trim();
     const companiesPage = searchTerm
       ? await ctx.db
@@ -90,18 +78,12 @@ export const getPaginatedCompanies = query({
   },
 });
 
-export const getCompanyOptions = query({
+export const getCompanyOptions = superAdminQuery({
   args: {
     searchTerm: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
-
     const limit = Math.min(Math.max(Math.floor(args.limit ?? COMPANY_OPTIONS_DEFAULT_LIMIT), 1), COMPANY_OPTIONS_MAX_LIMIT);
     const searchTerm = args.searchTerm?.trim();
 
@@ -122,11 +104,9 @@ export const getCompanyOptions = query({
   },
 });
 
-export const getCompanyById = query({
+export const getCompanyById = superAdminQuery({
   args: { id: v.id("companies") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     return await ctx.db.get(args.id);
   },
 });
@@ -138,10 +118,10 @@ export const getCompanyByIdInternal = internalQuery({
   },
 });
 
-export const createCompany = mutation({
+export const createCompany = superAdminMutation({
   args: { name: v.string(), systemPrompt: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const { userId: adminId } = await requireSuperAdmin(ctx);
+    const { userId: adminId } = ctx;
 
     const now = Date.now();
     const newCompanyId = await ctx.db.insert("companies", buildCompanyRecord({
@@ -163,10 +143,10 @@ export const createCompany = mutation({
   },
 });
 
-export const updateCompany = mutation({
+export const updateCompany = superAdminMutation({
   args: { id: v.id("companies"), name: v.string(), systemPrompt: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const { userId: adminId } = await requireSuperAdmin(ctx);
+    const { userId: adminId } = ctx;
 
     const previous = await ctx.db.get(args.id);
     const now = Date.now();
@@ -185,10 +165,10 @@ export const updateCompany = mutation({
   },
 });
 
-export const deleteCompany = mutation({
+export const deleteCompany = superAdminMutation({
   args: { id: v.id("companies") },
   handler: async (ctx, args) => {
-    const { userId: adminId } = await requireSuperAdmin(ctx);
+    const { userId: adminId } = ctx;
 
     const company = await ctx.db.get(args.id);
     const now = Date.now();
@@ -215,14 +195,10 @@ export const deleteCompany = mutation({
   },
 });
 
-export const updateCompanyPrompt = mutation({
+export const updateCompanyPrompt = superAdminMutation({
   args: { id: v.id("companies"), systemPrompt: v.string() },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
+    const { userId } = ctx;
 
     const now = Date.now();
     await ctx.db.patch(args.id, { systemPrompt: args.systemPrompt });
@@ -240,21 +216,15 @@ export const updateCompanyPrompt = mutation({
   },
 });
 
-export const updateCompanyDescription = mutation({
+export const updateCompanyDescription = superAdminMutation({
   args: { id: v.id("companies"), description: v.string() },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
-
     await ctx.db.patch(args.id, { description: args.description });
     return args.id;
   },
 });
 
-export const updateCompanyProfile = mutation({
+export const updateCompanyProfile = superAdminMutation({
   args: { 
     id: v.id("companies"), 
     name: v.string(), 
@@ -262,11 +232,7 @@ export const updateCompanyProfile = mutation({
     overview: v.optional(v.string()) 
   },
   handler: async (ctx, args) => {
-    const { userId: adminId } = await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
+    const { userId: adminId } = ctx;
 
     const previous = await ctx.db.get(args.id);
     const now = Date.now();
@@ -289,15 +255,9 @@ export const updateCompanyProfile = mutation({
   },
 });
 
-export const assignPlanToCompany = mutation({
+export const assignPlanToCompany = superAdminMutation({
   args: { id: v.id("companies"), planId: v.optional(v.id("plans")) },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System level clearance required.",
-      "Unauthenticated Admin Request"
-    );
-
     const company = await ctx.db.get(args.id);
     if (!company) throw new Error("Company not found");
 

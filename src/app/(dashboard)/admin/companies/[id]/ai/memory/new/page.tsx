@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "convex/react";
 import { BrainCircuit } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 import {
@@ -35,27 +36,23 @@ export default function NewCompanyMemoryPage() {
   const createMemory = useMutation(api.companyMemories.createMemory);
 
   const [formData, setFormData] = useState(DEFAULT_FORM);
-  const [submitError, setSubmitError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-ai" });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError("");
-    try {
-      await createMemory({
-        companyId,
-        title: formData.title || undefined,
-        content: formData.content,
-        category: formData.category,
-        confidence: Number(formData.confidence),
-      });
-      router.push(backHref);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Company memory could not be saved.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(() => createMemory({
+          companyId,
+          title: formData.title || undefined,
+          content: formData.content,
+          category: formData.category,
+          confidence: Number(formData.confidence),
+      }), {
+      fallbackMessage: "Company memory could not be saved.",
+      // The form renders the message itself, so a toast would repeat it.
+      suppressErrorToast: true,
+    });
+    // The filled-in form stays on screen if the save failed.
+    if (outcome.ok) router.push(backHref);
   };
 
   return (
@@ -68,12 +65,12 @@ export default function NewCompanyMemoryPage() {
       />
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{submitError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <CompanyMemoryFormFields formData={formData} setFormData={setFormData} titleHint="Optional" />
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Saving..." : "Create approved memory"}
-            isSubmitting={isSubmitting}
+            submitLabel={action.isBusy() ? "Saving..." : "Create approved memory"}
+            isSubmitting={action.isBusy()}
           />
         </div>
       </form>

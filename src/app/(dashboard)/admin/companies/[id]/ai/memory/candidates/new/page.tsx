@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "convex/react";
 import { Clock } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 import {
@@ -35,28 +36,24 @@ export default function NewCompanyMemoryCandidatePage() {
   const createCandidate = useMutation(api.companyMemories.createCandidate);
 
   const [formData, setFormData] = useState(DEFAULT_FORM);
-  const [submitError, setSubmitError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-ai" });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError("");
-    try {
-      await createCandidate({
-        companyId,
-        title: formData.title || undefined,
-        content: formData.content,
-        category: formData.category,
-        reason: formData.reason || undefined,
-        confidence: Number(formData.confidence),
-      });
-      router.push(backHref);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Memory suggestion could not be saved.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(() => createCandidate({
+          companyId,
+          title: formData.title || undefined,
+          content: formData.content,
+          category: formData.category,
+          reason: formData.reason || undefined,
+          confidence: Number(formData.confidence),
+      }), {
+      fallbackMessage: "Memory suggestion could not be saved.",
+      // The form renders the message itself, so a toast would repeat it.
+      suppressErrorToast: true,
+    });
+    // The filled-in form stays on screen if the save failed.
+    if (outcome.ok) router.push(backHref);
   };
 
   return (
@@ -69,12 +66,12 @@ export default function NewCompanyMemoryCandidatePage() {
       />
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{submitError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <CompanyMemoryFormFields formData={formData} setFormData={setFormData} showReason titleHint="Optional" />
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Saving..." : "Save suggestion"}
-            isSubmitting={isSubmitting}
+            submitLabel={action.isBusy() ? "Saving..." : "Save suggestion"}
+            isSubmitting={action.isBusy()}
           />
         </div>
       </form>

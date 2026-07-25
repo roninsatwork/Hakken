@@ -17,7 +17,7 @@ describe("agent intent orchestrator", () => {
     });
 
     await expect(t.action(api.orchestrator.routeAgentIntent, { prompt: "Help me" })).rejects.toThrow(
-      "Unauthorized"
+      "Unauthenticated request"
     );
     await expect(
       t.withIdentity({ subject: userId }).action(api.orchestrator.routeAgentIntent, { prompt: "Help me" })

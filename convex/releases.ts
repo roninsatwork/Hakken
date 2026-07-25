@@ -1,8 +1,8 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireSuperAdmin } from "./authz";
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { isGlobalAgent } from "./agentService";
 import { buildAgentReadiness } from "./agents";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
@@ -640,13 +640,11 @@ async function getReleaseWithAgent(ctx: { db: Parameters<typeof buildAgentReadin
   return { release, agent };
 }
 
-export const getReleaseReadinessOverview = query({
+export const getReleaseReadinessOverview = superAdminQuery({
   args: {
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     const limit = Math.min(Math.max(args.limit ?? DEFAULT_AGENT_LIMIT, 1), MAX_AGENT_LIMIT);
     const allAgents = await ctx.db
       .query("agents")
@@ -736,11 +734,9 @@ export const getReleaseReadinessOverview = query({
   },
 });
 
-export const getRecentReleases = query({
+export const getRecentReleases = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     const releases = await ctx.db
       .query("agentReleases")
       .withIndex("by_status_created", (q) => q.eq("status", "PENDING_SIGNOFF"))
@@ -789,13 +785,11 @@ export const getRecentReleases = query({
   },
 });
 
-export const getLatestReleaseForAgent = query({
+export const getLatestReleaseForAgent = superAdminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     const release = await ctx.db
       .query("agentReleases")
       .withIndex("by_agent_created", (q) => q.eq("agentId", args.agentId))
@@ -816,7 +810,7 @@ export const getLatestReleaseForAgent = query({
   },
 });
 
-export const createReleaseCandidate = mutation({
+export const createReleaseCandidate = superAdminMutation({
   args: {
     agentId: v.id("agents"),
     title: v.optional(v.string()),
@@ -827,7 +821,7 @@ export const createReleaseCandidate = mutation({
     activationWindowEnd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
     if (!isGlobalAgent(agent)) throw new Error("Release candidate can only be created for a global agent.");
@@ -874,13 +868,13 @@ export const createReleaseCandidate = mutation({
   },
 });
 
-export const approveReleaseCandidate = mutation({
+export const approveReleaseCandidate = superAdminMutation({
   args: {
     releaseId: v.id("agentReleases"),
     approvalComment: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    const { userId } = ctx;
     const { release } = await getReleaseWithAgent(ctx, args.releaseId);
     if (release.status !== "PENDING_SIGNOFF") {
       throw new Error("Only pending release candidates can be approved.");
@@ -913,13 +907,13 @@ export const approveReleaseCandidate = mutation({
   },
 });
 
-export const cancelReleaseCandidate = mutation({
+export const cancelReleaseCandidate = superAdminMutation({
   args: {
     releaseId: v.id("agentReleases"),
     cancellationReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    const { userId } = ctx;
     const { release } = await getReleaseWithAgent(ctx, args.releaseId);
     if (release.status !== "PENDING_SIGNOFF" && release.status !== "APPROVED") {
       throw new Error("Only pending or approved release candidates can be cancelled.");
@@ -995,12 +989,12 @@ async function activateReleaseRecord(
     return args.releaseId;
 }
 
-export const activateReleaseCandidate = mutation({
+export const activateReleaseCandidate = superAdminMutation({
   args: {
     releaseId: v.id("agentReleases"),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    const { userId } = ctx;
     return await activateReleaseRecord(ctx, {
       releaseId: args.releaseId,
       userId,
@@ -1065,13 +1059,13 @@ export const activateDueReleaseCandidates = internalMutation({
   },
 });
 
-export const rollbackRelease = mutation({
+export const rollbackRelease = superAdminMutation({
   args: {
     releaseId: v.id("agentReleases"),
     rollbackReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
+    const { userId } = ctx;
     const { release, agent } = await getReleaseWithAgent(ctx, args.releaseId);
     if (release.status !== "ACTIVATED") {
       throw new Error("Only activated releases can be rolled back.");

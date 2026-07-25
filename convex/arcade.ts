@@ -3,15 +3,14 @@ import { v } from "convex/values";
 
 import { paginationOptsValidator } from "convex/server";
 import { getActiveCompanyId, requireCurrentUser } from "./authz";
+import { tenantMutation, tenantQuery } from "./tenantFunctions";
 
-export const getPaginatedLeaderboard = query({
+export const getPaginatedLeaderboard = tenantQuery({
   args: { 
     game: v.string(),
     paginationOpts: paginationOptsValidator
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
-
     // Fetch paginated scores for the given game
     const scoresPage = await ctx.db
       .query("arcadeScores")
@@ -35,11 +34,9 @@ export const getPaginatedLeaderboard = query({
   },
 });
 
-export const getScoresCount = query({
+export const getScoresCount = tenantQuery({
   args: { game: v.string() },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
-
     const scores = await ctx.db
       .query("arcadeScores")
       .withIndex("by_game_score", (q) => q.eq("game", args.game))
@@ -48,10 +45,10 @@ export const getScoresCount = query({
   },
 });
 
-export const submitScore = mutation({
+export const submitScore = tenantMutation({
   args: { game: v.string(), score: v.number() },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthorized");
+    const { userId, user } = ctx;
 
     // Insert the score
     await ctx.db.insert("arcadeScores", {

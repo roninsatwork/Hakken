@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { BrainCircuit, Loader2, MessageSquareText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 import {
@@ -47,42 +48,40 @@ export default function NewChatMemoryCandidatePage() {
 
   const [formData, setFormData] = useState(DEFAULT_FORM);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-ai" });
 
-  useEffect(() => {
-    if (!thread || !selectedMessage || hasHydrated) return;
-    setFormData({
-      title: thread.title ? `${thread.title.slice(0, 70)} memory` : "",
-      content: selectedMessage.content,
-      category: "OTHER",
-      reason: `Candidate created from chat thread ${threadId}.`,
-      confidence: "0.7",
-    });
-    setHasHydrated(true);
-  }, [hasHydrated, selectedMessage, thread, threadId]);
+  // Hydrating during render rather than in an effect: React re-runs this
+  // component before committing, so the fields are populated in the same
+  // paint. In an effect the user sees an empty form first.
+  if (thread && selectedMessage && !hasHydrated) {
+      setFormData({
+        title: thread.title ? `${thread.title.slice(0, 70)} memory` : "",
+        content: selectedMessage.content,
+        category: "OTHER",
+        reason: `Candidate created from chat thread ${threadId}.`,
+        confidence: "0.7",
+      });
+      setHasHydrated(true);
+  }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError("");
-    try {
-      await createMemoryCandidateFromChat({
-        companyId,
-        threadId,
-        messageId: selectedMessage?._id,
-        title: formData.title || undefined,
-        content: formData.content,
-        category: formData.category,
-        reason: formData.reason || undefined,
-        confidence: Number(formData.confidence),
-      });
-      router.push(backHref);
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Memory candidate could not be created.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(() => createMemoryCandidateFromChat({
+          companyId,
+          threadId,
+          messageId: selectedMessage?._id,
+          title: formData.title || undefined,
+          content: formData.content,
+          category: formData.category,
+          reason: formData.reason || undefined,
+          confidence: Number(formData.confidence),
+      }), {
+      fallbackMessage: "Memory candidate could not be created.",
+      // The form renders the message itself, so a toast would repeat it.
+      suppressErrorToast: true,
+    });
+    // The filled-in form stays on screen if the save failed.
+    if (outcome.ok) router.push(backHref);
   };
 
   if (thread === undefined || messages === undefined || !hasHydrated) {
@@ -121,12 +120,12 @@ export default function NewChatMemoryCandidatePage() {
 
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{submitError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <CompanyMemoryFormFields formData={formData} setFormData={setFormData} showReason titleHint="Optional" />
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Creating..." : "Create candidate"}
-            isSubmitting={isSubmitting}
+            submitLabel={action.isBusy() ? "Creating..." : "Create candidate"}
+            isSubmitting={action.isBusy()}
           />
         </div>
       </form>

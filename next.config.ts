@@ -47,6 +47,13 @@ const nextConfig: NextConfig = {
       },
     });
 
+    // `frameGuard: false` drops X-Frame-Options so the widget can be framed at
+    // all. Which sites may frame it is decided per widget, at request time, by
+    // `applyWidgetEmbedPolicy` in src/proxy.ts — it emits an enforcing
+    // `Content-Security-Policy: frame-ancestors` built from that widget's
+    // allowedDomains. No frame-ancestors directive is declared here: static
+    // config has no request context, and the spec ignores frame-ancestors in
+    // report-only policies anyway, so declaring one would only mislead.
     const embedHeaders = createSecureHeaders({
       frameGuard: false,
       contentSecurityPolicy: {
@@ -58,7 +65,6 @@ const nextConfig: NextConfig = {
           imgSrc: ["'self'", "data:", "blob:", "https:"],
           connectSrc: ["'self'", "https:", "wss:", "ws:"],
           frameSrc: ["'self'", "https:"],
-          frameAncestors: ["*"],
         },
       },
     });

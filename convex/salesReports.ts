@@ -1,15 +1,12 @@
-import { internalQuery, query, internalMutation } from "./_generated/server";
+import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveCompanyId, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { getActiveCompanyId } from "./authz";
 
-export const getLatestReport = query({
+export const getLatestReport = adminQuery({
   args: {},
   handler: async (ctx) => {
-      const { user } = await requireAdmin(
-        ctx,
-        "Unauthorized: Insufficient privileges to view executive reports.",
-        "Unauthenticated request"
-      );
+      const { user } = ctx;
 
       let reports;
       if (user.role !== "SUPER_ADMIN") {

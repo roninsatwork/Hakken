@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -10,6 +10,8 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useToast } from "@/src/context/ToastContext";
 
 type AgentRun = Doc<"agentRuns">;
 type AgentRunFeedback = Doc<"agentRunFeedback">;
@@ -148,11 +150,19 @@ export default function AgentRunsPage() {
   const agentId = params.id as Id<"agents">;
   const requestedRunId = searchParams.get("runId") as Id<"agentRuns"> | null;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [activeRunId, setActiveRunId] = useState<Id<"agentRuns"> | null>(null);
-  const [detailRunId, setDetailRunId] = useState<Id<"agentRuns"> | null>(null);
-  const [activeCandidateId, setActiveCandidateId] = useState<Id<"agentMemoryCandidates"> | null>(null);
-  const [isRunningEvalSuite, setIsRunningEvalSuite] = useState(false);
-  const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
+
+  // Seeded from the URL so a link straight to ?runId=… opens the detail on the
+  // first render rather than flashing the list and then opening it.
+  const [detailRunId, setDetailRunId] = useState<Id<"agentRuns"> | null>(requestedRunId);
+  const [syncedRunId, setSyncedRunId] = useState<Id<"agentRuns"> | null>(requestedRunId);
+
+  // The suite is page-level rather than per-row, so it needs a key of its own
+  // to avoid sharing a busy flag with every row action.
+  const EVAL_SUITE_KEY = "eval-suite";
+  // One runner for every write on this page: it owns the per-row busy state,
+  // unwraps failures into a sentence, and reports them. See useAdminAction.
+  const action = useAdminAction({ scope: "admin-agent-runs" });
+  const { showToast } = useToast();
   const [feedbackDraft, setFeedbackDraft] = useState<{
     run: AgentRun;
     rating: FeedbackRating;
@@ -239,46 +249,35 @@ export default function AgentRunsPage() {
   }, [improvementSuggestions]);
   const activeEvalFixtureCount = evalFixtures?.length ?? 0;
 
-  useEffect(() => {
-    if (requestedRunId) setDetailRunId(requestedRunId);
-  }, [requestedRunId]);
+  // Adjusting state during render rather than in an effect: React re-runs this
+  // component before committing, so the detail opens in the same paint. Doing it
+  // in an effect renders the closed state first and then immediately again.
+  if (requestedRunId && requestedRunId !== syncedRunId) {
+    setSyncedRunId(requestedRunId);
+    setDetailRunId(requestedRunId);
+  }
 
   const handleReplay = async (runId: Id<"agentRuns">, mode: ReplayMode = "CURRENT_ACTIVE") => {
-    setActiveRunId(runId);
-    try {
-      const replay = await replayRun({ runId, mode });
-      setModalState({
-        title: "Replay queued",
-        message: mode === "SAME_VERSION"
-          ? `Created replay run ${replay.runId}. It is pinned to the source run's agent version snapshot and links back to the original run.`
-          : `Created replay run ${replay.runId}. It will execute with the current active agent configuration and keep a link back to the original run.`,
-      });
-    } catch (error) {
-      setModalState({
-        title: "Replay blocked",
-        message: error instanceof Error ? error.message : "The run could not be replayed.",
-      });
-    } finally {
-      setActiveRunId(null);
+    const outcome = await action.run(() => replayRun({ runId, mode }), {
+      key: runId,
+      fallbackMessage: "The run could not be replayed.",
+    });
+    if (outcome.ok) {
+      showToast(
+        mode === "SAME_VERSION"
+          ? `Replay ${outcome.data.runId} queued against the source run's version snapshot.`
+          : `Replay ${outcome.data.runId} queued against the current active configuration.`,
+        "success",
+      );
     }
   };
 
   const handleCancel = async (runId: Id<"agentRuns">) => {
-    setActiveRunId(runId);
-    try {
-      await cancelRun({ runId, reason: "Cancelled from the agent Runs dashboard" });
-      setModalState({
-        title: "Run cancelled",
-        message: "Pending approvals and tool calls for this run were cancelled and audited.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Cancel blocked",
-        message: error instanceof Error ? error.message : "The run could not be cancelled.",
-      });
-    } finally {
-      setActiveRunId(null);
-    }
+    await action.run(() => cancelRun({ runId, reason: "Cancelled from the agent Runs dashboard" }), {
+      key: runId,
+      successMessage: "Run cancelled. Pending approvals and tool calls were cancelled and audited.",
+      fallbackMessage: "The run could not be cancelled.",
+    });
   };
 
   const openFeedback = (run: AgentRun) => {
@@ -293,168 +292,115 @@ export default function AgentRunsPage() {
 
   const handleFeedbackSubmit = async () => {
     if (!feedbackDraft) return;
-    setActiveRunId(feedbackDraft.run._id);
-    try {
-      await upsertFeedback({
+    const outcome = await action.run(
+      () => upsertFeedback({
         runId: feedbackDraft.run._id,
         rating: feedbackDraft.rating,
         labels: feedbackDraft.labels,
         comment: feedbackDraft.comment,
-      });
-      setFeedbackDraft(null);
-      setModalState({
-        title: "Feedback saved",
-        message: "This run feedback is now available for learning analytics and future improvement workflows.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Feedback blocked",
-        message: error instanceof Error ? error.message : "The feedback could not be saved.",
-      });
-    } finally {
-      setActiveRunId(null);
-    }
+      }),
+      {
+        key: feedbackDraft.run._id,
+        successMessage: "Feedback saved. It now feeds learning analytics and improvement workflows.",
+        fallbackMessage: "The feedback could not be saved.",
+      },
+    );
+    // The draft stays open on failure so the comment is not lost.
+    if (outcome.ok) setFeedbackDraft(null);
   };
 
   const handleReflect = async (runId: Id<"agentRuns">) => {
-    setActiveRunId(runId);
-    try {
-      await createReflection({ runId });
-      setModalState({
-        title: "Reflection generated",
-        message: "The failure reflection now links the run trace to a structured category, evidence, and proposed next learning artifacts.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Reflection blocked",
-        message: error instanceof Error ? error.message : "The reflection could not be generated.",
-      });
-    } finally {
-      setActiveRunId(null);
-    }
+    await action.run(() => createReflection({ runId }), {
+      key: runId,
+      successMessage: "Reflection generated: the run trace now has a category, evidence and next steps.",
+      fallbackMessage: "The reflection could not be generated.",
+    });
   };
 
   const handleGenerateMemoryCandidates = async (runId: Id<"agentRuns">) => {
-    setActiveRunId(runId);
-    try {
-      const result = await generateMemoryCandidates({ runId, autoApplyLowRisk: false });
-      setModalState({
-        title: result.createdIds.length > 0 ? "Memory candidate created" : "No new candidate",
-        message: result.createdIds.length > 0
-          ? `Created ${result.createdIds.length} candidate memory item${result.createdIds.length === 1 ? "" : "s"} for review.`
-          : "No new safe candidate memory could be generated from this run.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Memory candidate blocked",
-        message: error instanceof Error ? error.message : "The candidate memory could not be generated.",
-      });
-    } finally {
-      setActiveRunId(null);
-    }
+    const outcome = await action.run(
+      () => generateMemoryCandidates({ runId, autoApplyLowRisk: false }),
+      { key: runId, fallbackMessage: "The candidate memory could not be generated." },
+    );
+    if (!outcome.ok) return;
+    const created = outcome.data.createdIds.length;
+    showToast(
+      created > 0
+        ? `Created ${created} candidate memory item${created === 1 ? "" : "s"} for review.`
+        : "No new safe candidate memory could be generated from this run.",
+      created > 0 ? "success" : "info",
+    );
   };
 
   const handleCandidateDecision = async (candidateId: Id<"agentMemoryCandidates">, decision: "APPROVED" | "REJECTED") => {
-    setActiveCandidateId(candidateId);
-    try {
-      await decideMemoryCandidate({
+    await action.run(
+      () => decideMemoryCandidate({
         candidateId,
         decision,
         ...(decision === "REJECTED" ? { rejectionReason: "Rejected from the agent Runs dashboard" } : {}),
-      });
-      setModalState({
-        title: decision === "APPROVED" ? "Memory applied" : "Memory rejected",
-        message: decision === "APPROVED"
-          ? "The approved candidate has been stored as governed agent memory."
-          : "The candidate was rejected and will not be used as agent memory.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Memory review blocked",
-        message: error instanceof Error ? error.message : "The candidate memory could not be reviewed.",
-      });
-    } finally {
-      setActiveCandidateId(null);
-    }
+      }),
+      {
+        key: candidateId,
+        successMessage: decision === "APPROVED"
+          ? "Candidate stored as governed agent memory."
+          : "Candidate rejected. It will not be used as agent memory.",
+        fallbackMessage: "The candidate memory could not be reviewed.",
+      },
+    );
   };
 
   const handleCreateEvalFixture = async (runId: Id<"agentRuns">) => {
-    setActiveRunId(runId);
-    try {
-      await createEvalFixture({ runId });
-      setModalState({
-        title: "Eval fixture saved",
-        message: "This run is now available as a regression fixture for future agent improvement checks.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Eval fixture blocked",
-        message: error instanceof Error ? error.message : "The eval fixture could not be created.",
-      });
-    } finally {
-      setActiveRunId(null);
-    }
+    await action.run(() => createEvalFixture({ runId }), {
+      key: runId,
+      successMessage: "Saved as a regression fixture for future improvement checks.",
+      fallbackMessage: "The eval fixture could not be created.",
+    });
   };
 
   const handleRunEvalSuite = async () => {
-    setIsRunningEvalSuite(true);
-    try {
-      const result = await runEvalSuite({ agentId });
-      setModalState({
-        title: "Eval suite complete",
-        message: `Ran ${result.total} contract eval${result.total === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.active} still active.`,
-      });
-    } catch (error) {
-      setModalState({
-        title: "Eval suite blocked",
-        message: error instanceof Error ? error.message : "The eval suite could not be run.",
-      });
-    } finally {
-      setIsRunningEvalSuite(false);
-    }
+    const outcome = await action.run(() => runEvalSuite({ agentId }), {
+      key: EVAL_SUITE_KEY,
+      fallbackMessage: "The eval suite could not be run.",
+    });
+    if (!outcome.ok) return;
+    const { total, passed, failed, active } = outcome.data;
+    showToast(
+      `Ran ${total} contract eval${total === 1 ? "" : "s"}: ${passed} passed, ${failed} failed, ${active} still active.`,
+      failed > 0 ? "info" : "success",
+    );
   };
 
   const handleGenerateSuggestions = async (runId: Id<"agentRuns">) => {
-    setActiveRunId(runId);
-    try {
-      const result = await generateImprovementSuggestions({ runId });
-      setModalState({
-        title: result.createdIds.length > 0 ? "Suggestion created" : "No new suggestion",
-        message: result.createdIds.length > 0
-          ? `Created ${result.createdIds.length} config suggestion${result.createdIds.length === 1 ? "" : "s"} for review.`
-          : "No new config suggestion could be generated from this run.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Suggestion blocked",
-        message: error instanceof Error ? error.message : "The suggestion could not be generated.",
-      });
-    } finally {
-      setActiveRunId(null);
-    }
+    const outcome = await action.run(() => generateImprovementSuggestions({ runId }), {
+      key: runId,
+      fallbackMessage: "The suggestion could not be generated.",
+    });
+    if (!outcome.ok) return;
+    const created = outcome.data.createdIds.length;
+    showToast(
+      created > 0
+        ? `Created ${created} config suggestion${created === 1 ? "" : "s"} for review.`
+        : "No new config suggestion could be generated from this run.",
+      created > 0 ? "success" : "info",
+    );
   };
 
   const handleSuggestionDecision = async (suggestionId: Id<"agentImprovementSuggestions">, decision: "APPROVED" | "REJECTED") => {
-    setActiveRunId(null);
-    try {
-      await decideImprovementSuggestion({
+    await action.run(
+      () => decideImprovementSuggestion({
         suggestionId,
         decision,
         apply: decision === "APPROVED",
         ...(decision === "REJECTED" ? { rejectionReason: "Rejected from the agent Runs dashboard" } : {}),
-      });
-      setModalState({
-        title: decision === "APPROVED" ? "Suggestion applied" : "Suggestion rejected",
-        message: decision === "APPROVED"
-          ? "The approved suggestion was applied and a new agent version snapshot was recorded."
-          : "The suggestion was rejected and no configuration was changed.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Suggestion review blocked",
-        message: error instanceof Error ? error.message : "The suggestion could not be reviewed.",
-      });
-    }
+      }),
+      {
+        key: suggestionId,
+        successMessage: decision === "APPROVED"
+          ? "Suggestion applied. A new agent version snapshot was recorded."
+          : "Suggestion rejected. No configuration was changed.",
+        fallbackMessage: "The suggestion could not be reviewed.",
+      },
+    );
   };
 
   return (
@@ -512,10 +458,10 @@ export default function AgentRunsPage() {
               <button
                 type="button"
                 onClick={handleRunEvalSuite}
-                disabled={!evalFixtures || activeEvalFixtureCount === 0 || isRunningEvalSuite}
+                disabled={!evalFixtures || activeEvalFixtureCount === 0 || action.isBusy(EVAL_SUITE_KEY)}
                 className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-9"
               >
-                {isRunningEvalSuite ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                {action.isBusy(EVAL_SUITE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
                 Run suite
               </button>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-6 gap-y-2 min-w-0 lg:min-w-[540px]">
@@ -770,27 +716,27 @@ export default function AgentRunsPage() {
                         <button
                           type="button"
                           onClick={() => handleCandidateDecision(candidate._id, "APPROVED")}
-                          disabled={activeCandidateId === candidate._id}
+                          disabled={action.isBusy(candidate._id)}
                           className="p-2 rounded-md bg-white/[0.04] hover:bg-emerald-500/10 text-secondary hover:text-emerald-400 border border-border-dim transition-all disabled:opacity-50"
                           title="Approve memory candidate"
                         >
-                          {activeCandidateId === candidate._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          {action.isBusy(candidate._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleCandidateDecision(candidate._id, "REJECTED")}
-                          disabled={activeCandidateId === candidate._id}
+                          disabled={action.isBusy(candidate._id)}
                           className="p-2 rounded-md bg-white/[0.04] hover:bg-red-500/10 text-secondary hover:text-red-400 border border-border-dim transition-all disabled:opacity-50"
                           title="Reject memory candidate"
                         >
-                          {activeCandidateId === candidate._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                          {action.isBusy(candidate._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
                         </button>
                       </div>
                     ))}
                     <button
                       type="button"
                       onClick={() => openFeedback(run)}
-                      disabled={activeRunId === run._id}
+                      disabled={action.isBusy(run._id)}
                       className="p-2 rounded-md bg-white/[0.04] hover:bg-emerald-500/10 text-secondary hover:text-emerald-400 border border-border-dim transition-all disabled:opacity-50"
                       title="Leave feedback"
                     >
@@ -800,66 +746,66 @@ export default function AgentRunsPage() {
                       <button
                         type="button"
                         onClick={() => handleGenerateMemoryCandidates(run._id)}
-                        disabled={activeRunId === run._id}
+                        disabled={action.isBusy(run._id)}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-emerald-500/10 text-secondary hover:text-emerald-400 border border-border-dim transition-all disabled:opacity-50"
                         title="Generate memory candidate"
                       >
-                        {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                        {action.isBusy(run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
                       </button>
                     )}
                     {canLearnFrom(run.status) && (
                       <button
                         type="button"
                         onClick={() => handleCreateEvalFixture(run._id)}
-                        disabled={activeRunId === run._id}
+                        disabled={action.isBusy(run._id)}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-sky-500/10 text-secondary hover:text-sky-400 border border-border-dim transition-all disabled:opacity-50"
                         title="Create eval fixture"
                       >
-                        {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+                        {action.isBusy(run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
                       </button>
                     )}
                     {canLearnFrom(run.status) && (
                       <button
                         type="button"
                         onClick={() => handleGenerateSuggestions(run._id)}
-                        disabled={activeRunId === run._id}
+                        disabled={action.isBusy(run._id)}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-indigo-500/10 text-secondary hover:text-indigo-400 border border-border-dim transition-all disabled:opacity-50"
                         title="Generate config suggestion"
                       >
-                        {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <SlidersHorizontal className="w-4 h-4" />}
+                        {action.isBusy(run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <SlidersHorizontal className="w-4 h-4" />}
                       </button>
                     )}
                     {canReplay(run.status) && (
                       <button
                         type="button"
                         onClick={() => handleReflect(run._id)}
-                        disabled={activeRunId === run._id}
+                        disabled={action.isBusy(run._id)}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-sky-500/10 text-secondary hover:text-sky-400 border border-border-dim transition-all disabled:opacity-50"
                         title="Generate reflection"
                       >
-                        {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+                        {action.isBusy(run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                       </button>
                     )}
                     {canReplay(run.status) && (
                       <button
                         type="button"
                         onClick={() => handleReplay(run._id, "CURRENT_ACTIVE")}
-                        disabled={activeRunId === run._id}
+                        disabled={action.isBusy(run._id)}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-brand/10 text-secondary hover:text-brand border border-border-dim transition-all disabled:opacity-50"
                         title="Replay with current active config"
                       >
-                        {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                        {action.isBusy(run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                       </button>
                     )}
                     {canCancel(run.status) && (
                       <button
                         type="button"
                         onClick={() => handleCancel(run._id)}
-                        disabled={activeRunId === run._id}
+                        disabled={action.isBusy(run._id)}
                         className="p-2 rounded-md bg-white/[0.04] hover:bg-amber-500/10 text-secondary hover:text-amber-400 border border-border-dim transition-all disabled:opacity-50"
                         title="Cancel run"
                       >
-                        {activeRunId === run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                        {action.isBusy(run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
                       </button>
                     )}
                   </div>
@@ -883,25 +829,6 @@ export default function AgentRunsPage() {
         />
       </div>
 
-      <SonaeModal
-        isOpen={!!modalState}
-        onClose={() => setModalState(null)}
-        title={modalState?.title || ""}
-        size="sm"
-      >
-        <div className="flex flex-col gap-6">
-          <p className="text-[14px] text-secondary leading-relaxed">{modalState?.message}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setModalState(null)}
-              className="px-5 py-2.5 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 transition-all"
-            >
-              Acknowledge
-            </button>
-          </div>
-        </div>
-      </SonaeModal>
 
       <SonaeModal
         isOpen={!!detailRunId}
@@ -984,10 +911,10 @@ export default function AgentRunsPage() {
                   <button
                     type="button"
                     onClick={() => handleReplay(runDetail.run._id, "CURRENT_ACTIVE")}
-                    disabled={activeRunId === runDetail.run._id}
+                    disabled={action.isBusy(runDetail.run._id)}
                     className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
-                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                    {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                     Replay current
                   </button>
                 )}
@@ -995,10 +922,10 @@ export default function AgentRunsPage() {
                   <button
                     type="button"
                     onClick={() => handleReplay(runDetail.run._id, "SAME_VERSION")}
-                    disabled={activeRunId === runDetail.run._id}
+                    disabled={action.isBusy(runDetail.run._id)}
                     className="px-3 py-2 rounded-[8px] border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 text-[12px] font-semibold hover:bg-indigo-500/15 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
-                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+                    {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
                     Replay version
                   </button>
                 )}
@@ -1006,10 +933,10 @@ export default function AgentRunsPage() {
                   <button
                     type="button"
                     onClick={() => handleReflect(runDetail.run._id)}
-                    disabled={activeRunId === runDetail.run._id}
+                    disabled={action.isBusy(runDetail.run._id)}
                     className="px-3 py-2 rounded-[8px] border border-sky-500/20 bg-sky-500/10 text-sky-300 text-[12px] font-semibold hover:bg-sky-500/15 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
-                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+                    {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                     Reflect
                   </button>
                 )}
@@ -1017,10 +944,10 @@ export default function AgentRunsPage() {
                   <button
                     type="button"
                     onClick={() => handleCreateEvalFixture(runDetail.run._id)}
-                    disabled={activeRunId === runDetail.run._id}
+                    disabled={action.isBusy(runDetail.run._id)}
                     className="px-3 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
-                    {activeRunId === runDetail.run._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
+                    {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
                     {runDetail.evalFixtureContext.activeCount > 0 ? "Update eval" : "Create eval"}
                   </button>
                 )}
@@ -1336,7 +1263,7 @@ export default function AgentRunsPage() {
 
       <SonaeModal
         isOpen={!!feedbackDraft}
-        onClose={() => !activeRunId && setFeedbackDraft(null)}
+        onClose={() => !action.isBusy() && setFeedbackDraft(null)}
         title="Run feedback"
         size="lg"
       >
@@ -1412,7 +1339,7 @@ export default function AgentRunsPage() {
               <button
                 type="button"
                 onClick={() => setFeedbackDraft(null)}
-                disabled={!!activeRunId}
+                disabled={action.isBusy()}
                 className="px-5 py-2.5 rounded-[8px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all disabled:opacity-50"
               >
                 Cancel
@@ -1420,10 +1347,10 @@ export default function AgentRunsPage() {
               <button
                 type="button"
                 onClick={handleFeedbackSubmit}
-                disabled={!!activeRunId}
+                disabled={action.isBusy()}
                 className="px-5 py-2.5 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
               >
-                {activeRunId ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
                 Save feedback
               </button>
             </div>

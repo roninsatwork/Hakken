@@ -20,6 +20,16 @@ crons.interval(
   {}
 );
 
+// Revive agent runs whose action died without reaching a terminal state, and
+// fail the ones that cannot be revived. Without this a killed action leaves a
+// run marked RUNNING and a reply marked as streaming for ever.
+crons.interval(
+  "agent-run-stall-recovery",
+  { minutes: 2 },
+  internal.agentRunCheckpoints.recoverStalledRuns,
+  {}
+);
+
 // Run hourly dispatcher to evaluate auto-purge schedule
 crons.hourly(
   "audit-log-purge-dispatcher",
@@ -33,6 +43,15 @@ crons.hourly(
   "unified-data-purge-dispatcher",
   { minuteUTC: 15 },
   internal.purges.dispatcher,
+  {}
+);
+
+// Drop tool idempotency records past their window, so the table that makes
+// retried writes safe does not grow without bound.
+crons.hourly(
+  "tool-idempotency-purge",
+  { minuteUTC: 45 },
+  internal.aiToolWriteTools.purgeExpiredToolIdempotency,
   {}
 );
 

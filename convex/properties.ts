@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import { publicQuery, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 
 function getPropertyScope(user: Doc<"users">) {
   const activeCompanyId = getActiveCompanyId(user);
@@ -11,13 +12,13 @@ function getPropertyScope(user: Doc<"users">) {
   };
 }
 
-export const listProperties = query({
+export const listProperties = tenantQuery({
   args: {
     paginationOpts: v.any(),
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx);
+    const { user } = ctx;
     const { activeCompanyId, canReadAllCompanies } = getPropertyScope(user);
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
@@ -55,7 +56,8 @@ export const listProperties = query({
   },
 });
 
-export const getPropertiesCount = query({
+export const getPropertiesCount = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { searchTerm: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
@@ -100,10 +102,10 @@ export const getPropertiesCount = query({
   }
 });
 
-export const getProperty = query({
+export const getProperty = tenantQuery({
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx);
+    const { user } = ctx;
 
     const property = await ctx.db.get(args.id);
     if (!property) return null;
@@ -119,10 +121,10 @@ export const getProperty = query({
   },
 });
 
-export const deleteProperty = mutation({
+export const deleteProperty = tenantMutation({
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx);
+    const { user } = ctx;
 
     const property = await ctx.db.get(args.id);
     if (!property) throw new Error("Property not found");
@@ -138,7 +140,12 @@ export const deleteProperty = mutation({
   },
 });
 
-export const getLatestRuns = query(async (ctx) => {
+export const getLatestRuns = publicQuery({
+  // Returns an empty list rather than throwing when the caller has no session
+  // or no company, so the dashboard renders an empty state instead of an error.
+  reason: "Returns an empty result for callers without a session or company; scoping happens inside the handler.",
+  args: {},
+  handler: async (ctx) => {
   const current = await getCurrentUser(ctx);
   if (!current) return [];
 
@@ -154,10 +161,10 @@ export const getLatestRuns = query(async (ctx) => {
   return await ctx.db.query("apifyRuns")
     .withIndex("by_company", (q) => q.eq("companyId", activeCompanyId))
     .order("desc")
-    .take(5);
+      .take(5);
+  },
 });
 
-export const getAllRunsAdmin = query(async (ctx) => {
-  await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
+export const getAllRunsAdmin = superAdminQuery(async (ctx) => {
   return await ctx.db.query("apifyRuns").order("desc").take(5);
 });

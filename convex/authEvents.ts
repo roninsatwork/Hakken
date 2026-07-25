@@ -3,6 +3,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getActiveCompanyId, requireAdmin } from "./authz";
+import { adminQuery, publicMutation } from "./tenantFunctions";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -46,10 +47,10 @@ export async function logAuthEvent(ctx: AuthEventCtx, event: AuthEventInput) {
   });
 }
 
-export const getRecentAuthEvents = query({
+export const getRecentAuthEvents = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated");
+    const { user } = ctx;
     const activeCompanyId = getActiveCompanyId(user);
 
     const events =
@@ -76,7 +77,8 @@ export const getRecentAuthEvents = query({
   },
 });
 
-export const recordMagicLinkRequestAttempt = mutation({
+export const recordMagicLinkRequestAttempt = publicMutation({
+  reason: "Records a sign-in attempt, which by definition happens before anyone is authenticated.",
   args: {
     email: v.string(),
     provider: v.optional(v.string()),

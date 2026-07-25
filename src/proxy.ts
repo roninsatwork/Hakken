@@ -1,5 +1,10 @@
 import { convexAuthNextjsMiddleware, createRouteMatcher, isAuthenticatedNextjs, nextjsMiddlewareRedirect } from "@convex-dev/auth/nextjs/server";
+import { ConvexHttpClient } from "convex/browser";
+import { NextResponse } from "next/server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
+import { decideWidgetEmbed, widgetIdFromPathname } from "@/src/lib/widgetEmbedPolicy";
 
 const isSignInPage = createRouteMatcher(["/login"]);
 const isLandingPage = createRouteMatcher(["/"]);
@@ -15,7 +20,70 @@ function requestedLoginRedirect(request: Parameters<typeof isSignInPage>[0]) {
   return requested ? sanitizeAuthRedirect(requested) : null;
 }
 
+/**
+ * Emit a per-widget `frame-ancestors` policy for `/w/<widgetId>`.
+ *
+ * The static header in `next.config.ts` cannot do this: it has no request
+ * context, so it cannot look up which domains a given widget authorises. This
+ * is the only control that actually stops the widget being embedded on a site
+ * its owner never approved — the iframe runs on our own origin, so neither the
+ * `Origin` header nor anything the iframe reports about its parent can be
+ * trusted for that decision.
+ */
+async function applyWidgetEmbedPolicy(request: Request & { nextUrl: URL }, widgetId: string) {
+  const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+
+  // Fail closed. Without a backend we cannot know the allowlist, so the widget
+  // must not be embeddable at all rather than falling back to permissive.
+  if (!convexUrl) {
+    return new NextResponse("Widget embedding is unavailable.", {
+      status: 503,
+      headers: { "Content-Security-Policy": "frame-ancestors 'none'" },
+    });
+  }
+
+  let allowedDomains: string[] | undefined;
+  let widgetExists = false;
+
+  try {
+    const widget = await new ConvexHttpClient(convexUrl).query(api.widgets.getWidgetById, {
+      widgetId: widgetId as Id<"widgets">,
+    });
+    widgetExists = Boolean(widget);
+    allowedDomains = widget?.allowedDomains;
+  } catch {
+    // An invalid id or an unreachable backend both mean we cannot authorise an
+    // embed, so deny rather than guess.
+    widgetExists = false;
+  }
+
+  const decision = decideWidgetEmbed({
+    allowedDomains,
+    widgetExists,
+    referer: request.headers.get("referer"),
+  });
+
+  if (!decision.allowed) {
+    return new NextResponse("This widget is not authorised for this site.", {
+      status: 403,
+      headers: { "Content-Security-Policy": `frame-ancestors ${decision.frameAncestors}` },
+    });
+  }
+
+  const response = NextResponse.next();
+  // Enforcing, unlike the report-only policy in next.config.ts.
+  response.headers.set("Content-Security-Policy", `frame-ancestors ${decision.frameAncestors}`);
+  return response;
+}
+
 export default convexAuthNextjsMiddleware(async (request) => {
+  // Runs before the auth branches: the widget iframe is a public, anonymous
+  // surface and its embedding policy does not depend on the visitor's session.
+  const widgetId = widgetIdFromPathname(request.nextUrl.pathname);
+  if (widgetId) {
+    return await applyWidgetEmbedPolicy(request, widgetId);
+  }
+
   if (process.env.E2E_AUTH_ENABLED === "1") {
     const e2eRole = request.cookies.get("sonae_e2e_auth")?.value;
     if (e2eRole) {

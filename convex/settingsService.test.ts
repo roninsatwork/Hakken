@@ -14,7 +14,13 @@ import {
   isStorageLogoReference,
   mergeSettingsWithDefaults,
 } from "./settingsService";
-import { buildEmailBranding, buildEmailFromAddress, isLikelyEmailAddress } from "./emailBrandingService";
+import {
+  UNCONFIGURED_EMAIL_ADDRESS,
+  buildEmailBranding,
+  buildEmailFromAddress,
+  isLikelyEmailAddress,
+  resolveEnvFromAddress,
+} from "./emailBrandingService";
 
 describe("settings service helpers", () => {
   test("detects storage logo references without changing existing http behavior", () => {
@@ -98,10 +104,38 @@ describe("settings service helpers", () => {
         },
       })
     ).toBe("Deploy Sender <verified@example.com>");
+    // With no sender configured, fall back to an address that cannot be
+    // delivered to, rather than one belonging to whoever built the platform.
     expect(buildEmailBranding({ platformName: "Acme Ops" })).toMatchObject({
       platformName: "Acme Ops",
-      fromAddress: "Sonae <noreply@ronins.co.uk>",
+      fromAddress: `Sonae <${UNCONFIGURED_EMAIL_ADDRESS}>`,
     });
+    expect(UNCONFIGURED_EMAIL_ADDRESS).toMatch(/\.invalid$/);
+  });
+
+  test("reads the sender from whichever environment variable a deployment already uses", () => {
+    // Deployments already set AUTH_EMAIL; demanding a second variable for the
+    // same fact would be pointless configuration.
+    expect(resolveEnvFromAddress({ AUTH_EMAIL: "Acme <noreply@example.com>" })).toBe(
+      "Acme <noreply@example.com>",
+    );
+    expect(resolveEnvFromAddress({ RESEND_FROM_EMAIL: "noreply@example.com" })).toBe(
+      "noreply@example.com",
+    );
+
+    // RESEND_FROM_EMAIL is the more specific name, so it wins.
+    expect(
+      resolveEnvFromAddress({
+        RESEND_FROM_EMAIL: "specific@example.com",
+        AUTH_EMAIL: "general@example.com",
+      }),
+    ).toBe("specific@example.com");
+
+    // A value that is not an address at all must be ignored rather than used as
+    // a sender, which would fail silently at send time.
+    expect(resolveEnvFromAddress({ AUTH_EMAIL: "not-an-address" })).toBeUndefined();
+    expect(resolveEnvFromAddress({ AUTH_EMAIL: "   " })).toBeUndefined();
+    expect(resolveEnvFromAddress({})).toBeUndefined();
   });
 
   test("builds code-backed white-label readiness from settings and widget evidence", () => {

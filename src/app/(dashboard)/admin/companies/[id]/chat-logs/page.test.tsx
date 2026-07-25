@@ -13,6 +13,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/companies/company123/ai/chat-logs",
 }));
 
+// The page reads the configured platform name so exported transcripts are
+// labelled with the deployment's brand rather than a hardcoded product name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Acme Copilot" }),
+}));
+
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode; href: string }) => (
     <a href={href} {...props}>

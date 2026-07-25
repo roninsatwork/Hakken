@@ -1,5 +1,6 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -210,7 +211,7 @@ describe("ReleaseCenterPage", () => {
   });
 
   it("renders release readiness summary and agent rows", () => {
-    render(<ReleaseCenterPage />);
+    renderWithProviders(<ReleaseCenterPage />);
 
     expect(screen.getByText("Developer Ship Checks")).toBeInTheDocument();
     expect(screen.getByText("Release Lifecycle")).toBeInTheDocument();

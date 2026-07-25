@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { ClipboardCheck } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { CompanySkillCheckboxPicker } from "@/src/app/(dashboard)/admin/_components/CompanySkillCheckboxPicker";
 import {
@@ -82,8 +83,7 @@ export default function NewCompanyEvalPage() {
 
   const [caseForm, setCaseForm] = useState(DEFAULT_CASE_FORM);
   const [requiredSkillIds, setRequiredSkillIds] = useState<Array<Id<"companySkills">>>([]);
-  const [caseError, setCaseError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-ai" });
 
   const toggleRequiredSkill = (skillId: Id<"companySkills">) => {
     setRequiredSkillIds((current) =>
@@ -95,30 +95,27 @@ export default function NewCompanyEvalPage() {
 
   const handleCreateCase = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setCaseError("");
-    try {
-      await createCase({
-        companyId,
-        name: caseForm.name,
-        category: caseForm.category,
-        severity: caseForm.severity,
-        targetSurface: caseForm.targetSurface,
-        prompt: caseForm.prompt,
-        expectedBehavior: caseForm.expectedBehavior,
-        forbiddenClaimsJson: caseForm.forbiddenClaimsJson || undefined,
-        requiredSourcesJson: caseForm.requiredSourcesJson || undefined,
-        requiredMemoriesJson: caseForm.requiredMemoriesJson || undefined,
-        requiredSkillsJson: requiredSkillIds.length > 0 ? JSON.stringify(requiredSkillIds) : undefined,
-        expectedModelUseCase: caseForm.expectedModelUseCase || undefined,
-        judgeRubric: caseForm.judgeRubric || undefined,
-      });
-      router.push(backHref);
-    } catch (error) {
-      setCaseError(error instanceof Error ? error.message : "Eval case could not be created.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(() => createCase({
+          companyId,
+          name: caseForm.name,
+          category: caseForm.category,
+          severity: caseForm.severity,
+          targetSurface: caseForm.targetSurface,
+          prompt: caseForm.prompt,
+          expectedBehavior: caseForm.expectedBehavior,
+          forbiddenClaimsJson: caseForm.forbiddenClaimsJson || undefined,
+          requiredSourcesJson: caseForm.requiredSourcesJson || undefined,
+          requiredMemoriesJson: caseForm.requiredMemoriesJson || undefined,
+          requiredSkillsJson: requiredSkillIds.length > 0 ? JSON.stringify(requiredSkillIds) : undefined,
+          expectedModelUseCase: caseForm.expectedModelUseCase || undefined,
+          judgeRubric: caseForm.judgeRubric || undefined,
+      }), {
+      fallbackMessage: "Eval case could not be created.",
+      // The form renders the message itself, so a toast would repeat it.
+      suppressErrorToast: true,
+    });
+    // The filled-in form stays on screen if the save failed.
+    if (outcome.ok) router.push(backHref);
   };
 
   return (
@@ -132,7 +129,7 @@ export default function NewCompanyEvalPage() {
 
       <form onSubmit={handleCreateCase} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{caseError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <AdminModalFormField label="Name">
             <input
               className={adminModalInputClassName}
@@ -242,8 +239,8 @@ export default function NewCompanyEvalPage() {
           </AdminModalFormField>
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Creating..." : "Create eval"}
-            isSubmitting={isSubmitting}
+            submitLabel={action.isBusy() ? "Creating..." : "Create eval"}
+            isSubmitting={action.isBusy()}
           />
         </div>
       </form>

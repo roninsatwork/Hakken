@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
@@ -30,6 +31,7 @@ export default function ChatLogsDashboard() {
   const [selectedThreadId, setSelectedThreadId] = useState<Id<"threads"> | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const t = useTranslations("ai.chatLogs");
+  const { platformName } = useSystemSettings();
 
   const itemsPerPage = ADMIN_PAGE_SIZE;
 
@@ -54,6 +56,7 @@ export default function ChatLogsDashboard() {
       thread: activeThread,
       messages,
       userLabel: t("viewer.userLabel"),
+      assistantLabel: platformName,
     });
     
     try {

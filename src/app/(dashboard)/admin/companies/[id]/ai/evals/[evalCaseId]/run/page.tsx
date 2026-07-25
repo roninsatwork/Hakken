@@ -19,6 +19,7 @@ import {
   CompanyAiFormPageHeader,
   getSafeCompanyAiReturnTo,
 } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiFormPage";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 const DEFAULT_RUN_FORM = {
   answer: "",
@@ -66,9 +67,9 @@ export default function RunCompanyEvalPage() {
 
   const [runForm, setRunForm] = useState(DEFAULT_RUN_FORM);
   const [evidenceSkillIds, setEvidenceSkillIds] = useState<Array<Id<"companySkills">>>([]);
-  const [runError, setRunError] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [runFeedback, setRunFeedback] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-eval-run" });
 
   const toggleEvidenceSkill = (skillId: Id<"companySkills">) => {
     setEvidenceSkillIds((current) =>
@@ -80,29 +81,38 @@ export default function RunCompanyEvalPage() {
 
   const handleRunCase = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setRunError("");
+    setValidationError("");
     setRunFeedback("");
+
+    // Parsing the evidence field is the author's own typing being checked, not
+    // a server failure, so it stays out of the runner — otherwise a stray comma
+    // would be reported to error tracking as an incident.
+    let evidenceJson: string | undefined;
     try {
-      const evidenceJson = buildEvidenceJson(runForm.evidenceJson, evidenceSkillIds);
-      const result = await runCase({
+      evidenceJson = buildEvidenceJson(runForm.evidenceJson, evidenceSkillIds);
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : "Evidence JSON could not be read.");
+      return;
+    }
+
+    const outcome = await action.run(
+      () => runCase({
         evalCaseId,
         answer: runForm.answer,
         evidenceJson,
         resolvedModelId: runForm.resolvedModelId || undefined,
         resolvedUseCase: runForm.resolvedUseCase || undefined,
         judgeNotes: runForm.judgeNotes || undefined,
-      });
-      if (result.status === "FAILED") {
-        setRunFeedback(`Run recorded as failed at ${formatPercent(result.score)}. Stay here to adjust evidence or go back to the eval list.`);
-        return;
-      }
-      router.push(backHref);
-    } catch (error) {
-      setRunError(error instanceof Error ? error.message : "Eval run could not be recorded.");
-    } finally {
-      setIsSubmitting(false);
+      }),
+      { fallbackMessage: "Eval run could not be recorded.", suppressErrorToast: true },
+    );
+    if (!outcome.ok) return;
+
+    if (outcome.data.status === "FAILED") {
+      setRunFeedback(`Run recorded as failed at ${formatPercent(outcome.data.score)}. Stay here to adjust evidence or go back to the eval list.`);
+      return;
     }
+    router.push(backHref);
   };
 
   if (evalCase === undefined) {
@@ -141,7 +151,7 @@ export default function RunCompanyEvalPage() {
 
       <form onSubmit={handleRunCase} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{runError}</AdminModalFormError>
+          <AdminModalFormError>{validationError || action.error}</AdminModalFormError>
           {runFeedback && (
             <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-100">
               {runFeedback}
@@ -202,8 +212,8 @@ export default function RunCompanyEvalPage() {
           </AdminModalFormField>
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Running..." : "Record run"}
-            isSubmitting={isSubmitting}
+            submitLabel={action.isBusy() ? "Running..." : "Record run"}
+            isSubmitting={action.isBusy()}
           />
         </div>
       </form>

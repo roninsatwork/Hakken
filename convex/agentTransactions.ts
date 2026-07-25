@@ -1,19 +1,20 @@
 import { v } from "convex/values";
-import { query, internalMutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireAdmin } from "./authz";
 import { getDefaultModelId, getExecutionModelPool } from "./aiModelService";
 
 const AGENT_TRANSACTION_STATS_LIMIT = 1000;
 const MODEL_SEED_CATALOG_LIMIT = 500;
 
-export const getForAgent = query({
+export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const baseQuery = ctx.db
       .query("agentTransactions")
       .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
@@ -30,10 +31,10 @@ export const getForAgent = query({
   },
 });
 
-export const getStatsForAgent = query({
+export const getStatsForAgent = adminQuery({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const baseQuery = ctx.db
       .query("agentTransactions")
       .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));

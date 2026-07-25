@@ -1,9 +1,9 @@
 import { v } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
-import { requireAdmin } from "./authz";
+import { internalMutation } from "./_generated/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { normalizeSearchTerm, paginateItems } from "./adminQueryService";
 
-export const getOffsetPaginated = query({
+export const getOffsetPaginated = adminQuery({
   args: {
     agentId: v.id("agents"),
     searchTerm: v.optional(v.string()),
@@ -11,7 +11,7 @@ export const getOffsetPaginated = query({
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
 
     if (user.role === "ADMIN" && !user.companyId) {
        throw new Error("Unauthorized");
@@ -118,10 +118,10 @@ export const insertAgentLogInternal = internalMutation({
   },
 });
 
-export const getLogById = query({
+export const getLogById = adminQuery({
   args: { id: v.id("agentLogs") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const log = await ctx.db.get(args.id);
     if (!log) return null;
     
@@ -134,10 +134,10 @@ export const getLogById = query({
   },
 });
 
-export const deleteLog = mutation({
+export const deleteLog = adminMutation({
   args: { id: v.id("agentLogs") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const log = await ctx.db.get(args.id);
     if (!log) throw new Error("Log not found");
     

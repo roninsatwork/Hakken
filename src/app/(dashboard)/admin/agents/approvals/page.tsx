@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AlertTriangle, CheckCircle2, Clock, Loader2, ShieldCheck, XCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -27,36 +27,26 @@ export default function AgentApprovalsPage() {
     status,
     loadMore,
   } = usePaginatedQuery(api.agentRuns.getPendingApprovals, {}, { initialNumItems: ADMIN_PAGE_SIZE });
-  const [submittingId, setSubmittingId] = useState<Id<"agentRunApprovals"> | null>(null);
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const action = useAdminAction({ scope: "admin-agent-approvals" });
 
   const isLoading = status === "LoadingFirstPage";
   const isLoadingMore = status === "LoadingMore";
   const canLoadMore = status === "CanLoadMore";
 
   const submitDecision = async (approvalId: Id<"agentRunApprovals">, decision: Decision) => {
-    if (submittingId) return;
-
-    setSubmittingId(approvalId);
-    setFeedback(null);
-    try {
-      await decideApproval({
+    await action.run(
+      () => decideApproval({
         approvalId,
         decision,
         decisionReason: `${decision.toLowerCase()} from agent approvals queue.`,
-      });
-      setFeedback({
-        type: "success",
-        text: decision === "APPROVED" ? "Approval recorded. The run will resume." : "Decision recorded.",
-      });
-    } catch (error) {
-      setFeedback({
-        type: "error",
-        text: error instanceof Error ? error.message : "Failed to record approval decision.",
-      });
-    } finally {
-      setSubmittingId(null);
-    }
+      }),
+      {
+        key: approvalId,
+        successMessage:
+          decision === "APPROVED" ? "Approval recorded. The run will resume." : "Decision recorded.",
+        fallbackMessage: "Failed to record approval decision.",
+      },
+    );
   };
 
   return (
@@ -77,17 +67,6 @@ export default function AgentApprovalsPage() {
         </div>
       </header>
 
-      {feedback && (
-        <div className={`flex items-center gap-2 rounded-[8px] border px-4 py-3 text-[13px] ${
-          feedback.type === "success"
-            ? "border-[#10b981]/20 bg-[#10b981]/10 text-[#10b981]"
-            : "border-red-500/20 bg-red-500/10 text-red-500"
-        }`}>
-          {feedback.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-          <span>{feedback.text}</span>
-        </div>
-      )}
-
       <div className="flex flex-col gap-3">
         {isLoading ? (
           [1, 2, 3].map((item) => (
@@ -101,7 +80,7 @@ export default function AgentApprovalsPage() {
         ) : (
           approvals.map((entry) => {
             const preview = safeFormatJson(entry.approval.previewJson);
-            const isSubmitting = submittingId === entry.approval._id;
+            const isSubmitting = action.isBusy(entry.approval._id);
 
             return (
               <div

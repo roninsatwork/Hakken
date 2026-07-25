@@ -17,6 +17,8 @@ type SettingsType = {
   borderRadius?: string;
   logoUrlLight?: string;
   logoUrlDark?: string;
+  /** White-label navigation profile; filters the sidebar when set. */
+  navigationProfileKey?: string;
 
   lightBg?: string;
   lightFg?: string;

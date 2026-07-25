@@ -1,9 +1,10 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
@@ -594,13 +595,13 @@ async function applyCandidateMemory(ctx: Pick<MutationCtx, "db">, args: {
   return memoryId;
 }
 
-export const generateForRun = mutation({
+export const generateForRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
     autoApplyLowRisk: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -713,14 +714,14 @@ export const generateForRun = mutation({
   },
 });
 
-export const decideCandidate = mutation({
+export const decideCandidate = adminMutation({
   args: {
     candidateId: v.id("agentMemoryCandidates"),
     decision: candidateDecisionValidator,
     rejectionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const candidate = await ctx.db.get(args.candidateId);
     if (!candidate) throw new Error("Memory candidate not found");
     assertAdminCanAccessCompany(user, candidate.companyId);
@@ -768,13 +769,13 @@ export const decideCandidate = mutation({
   },
 });
 
-export const getForRun = query({
+export const getForRun = adminQuery({
   args: {
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -787,12 +788,12 @@ export const getForRun = query({
   },
 });
 
-export const getRecentForAgent = query({
+export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -814,13 +815,13 @@ export const getRecentForAgent = query({
   },
 });
 
-export const getReviewInboxForAgent = query({
+export const getReviewInboxForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
     mode: v.optional(reviewInboxModeValidator),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }

@@ -113,6 +113,41 @@ describe("release readiness overview", () => {
 
     await client.mutation(api.agentEvalFixtures.runSmokeEval, { agentId: readyAgentId });
 
+    // A configuration check no longer makes an agent ready — activation needs
+    // evidence a model was actually called and its answer graded.
+    await t.run(async (ctx) => {
+      const now = Date.now() + 5;
+      const fixture = (await ctx.db.query("agentEvalFixtures").collect())
+        .find((row) => row.agentId === readyAgentId);
+      const gradedRunId = await ctx.db.insert("agentRuns", {
+        agentId: readyAgentId,
+        triggerType: "MANUAL",
+        objective: "Smoke eval: Answer using the release handbook.",
+        status: "SUCCESS",
+        userId: superAdminId,
+        startedAt: now,
+        completedAt: now + 1,
+        updatedAt: now + 1,
+        finalOutput: "Model-graded smoke eval passed.",
+      });
+      await ctx.db.insert("agentRunSteps", {
+        runId: gradedRunId,
+        agentId: readyAgentId,
+        stepIndex: 1,
+        kind: "OBSERVE",
+        status: "SUCCESS",
+        input: "Answer using the release handbook.",
+        output: JSON.stringify({
+          status: "PASSED",
+          gradingMode: "MODEL_GRADED",
+          fixtureId: fixture?._id,
+          fixtureType: "HAPPY_PATH",
+        }),
+        startedAt: now,
+        completedAt: now,
+      });
+    });
+
     const overview = await client.query(api.releases.getReleaseReadinessOverview, {});
     expect(overview.summary).toMatchObject({
       total: 3,
@@ -124,7 +159,8 @@ describe("release readiness overview", () => {
     expect(overview.agents.find((agent) => agent.name === "Ready Candidate")).toMatchObject({
       status: "READY_FOR_RELEASE",
       activeEvalFixtureCount: 1,
-      successfulSmokeEvalRunCount: 1,
+      // The configuration check plus the model-graded run that makes it ready.
+      successfulSmokeEvalRunCount: 2,
       nextAction: "Review release notes, owner, and activation window.",
     });
     expect(overview.agents.find((agent) => agent.name === "Blocked Draft")).toMatchObject({
@@ -172,7 +208,7 @@ describe("release readiness overview", () => {
     expect(recentReleases[0]?.evidenceSummary).toMatchObject({
       summary: "Release evidence was complete when this record was created or refreshed.",
       items: expect.arrayContaining([
-        { label: "Smoke evals", value: "1 passed", status: "PASS" },
+        { label: "Smoke evals", value: "2 passed", status: "PASS" },
         { label: "Release gate", value: "1/1 critical passed", status: "PASS" },
       ]),
     });

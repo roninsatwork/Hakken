@@ -1,21 +1,24 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { getCurrentUser } from "./authz";
+import { canAccessThread } from "./chatService";
+import { publicQuery } from "./tenantFunctions";
 
-export const getSwarmLogs = query({
-  args: { threadId: v.id("threads") },
+export const getSwarmLogs = publicQuery({
+  reason: "Widget conversations show agent progress; gated on the hashed widget session token.",
+  args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
-    
+
     const thread = await ctx.db.get(args.threadId);
     if (!thread) return [];
 
-    if (thread.widgetId && !thread.userId) {
-       // Allow access
-    } else {
-       if (!current || thread.userId !== current.userId) {
-         return [];
-       }
+    // Swarm logs expose agent reasoning and tool-dispatch traces, so they are
+    // gated exactly like thread messages. Anonymous widget threads must present
+    // a valid widget session token; this previously allowed unauthenticated
+    // reads for any widget thread id.
+    if (!(await canAccessThread(ctx, thread, current, args.widgetAccessToken))) {
+      return [];
     }
 
     return await ctx.db
@@ -35,8 +38,13 @@ export const appendSwarmLog = internalMutation({
     isHeading: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    // Carry the owning thread's tenant onto the log row so swarm logs can be
+    // scoped and purged by company without a thread join.
+    const thread = await ctx.db.get(args.threadId);
+
     return await ctx.db.insert("swarmLogs", {
       threadId: args.threadId,
+      companyId: thread?.companyId,
       message: args.message,
       status: args.status,
       order: args.order,

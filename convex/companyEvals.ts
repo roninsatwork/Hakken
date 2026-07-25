@@ -1,8 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { recordCompanyAiDriftEvent, resolveCompanyAiDriftEvents } from "./companyReadiness";
 
@@ -294,14 +295,14 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
 }
 
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+  const { user, userId } = await requireAdmin(ctx);
   const company = await ctx.db.get(companyId);
   if (!company) throw new Error("Company not found");
   assertAdminCanAccessCompany(user, companyId);
   return { userId, company };
 }
 
-export const getSummary = query({
+export const getSummary = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -350,7 +351,7 @@ export const getSummary = query({
   },
 });
 
-export const getCasesForCompany = query({
+export const getCasesForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     status: v.optional(evalStatusValidator),
@@ -375,7 +376,7 @@ export const getCasesForCompany = query({
   },
 });
 
-export const getCaseById = query({
+export const getCaseById = adminQuery({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
@@ -387,7 +388,7 @@ export const getCaseById = query({
   },
 });
 
-export const getRunsForCase = query({
+export const getRunsForCase = adminQuery({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
@@ -404,7 +405,7 @@ export const getRunsForCase = query({
   },
 });
 
-export const getLatestRunsForCompany = query({
+export const getLatestRunsForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -434,7 +435,7 @@ export const getLatestRunsForCompany = query({
   },
 });
 
-export const createCase = mutation({
+export const createCase = adminMutation({
   args: {
     companyId: v.id("companies"),
     name: v.string(),
@@ -512,7 +513,7 @@ export const createCase = mutation({
   },
 });
 
-export const archiveCase = mutation({
+export const archiveCase = adminMutation({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
@@ -552,7 +553,7 @@ export const archiveCase = mutation({
   },
 });
 
-export const runCase = mutation({
+export const runCase = adminMutation({
   args: {
     evalCaseId: v.id("companyEvalCases"),
     answer: v.string(),
@@ -581,7 +582,7 @@ export const runCase = mutation({
   },
 });
 
-export const runBatch = mutation({
+export const runBatch = adminMutation({
   args: {
     companyId: v.id("companies"),
     mode: evalBatchModeValidator,

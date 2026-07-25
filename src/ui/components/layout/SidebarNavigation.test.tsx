@@ -1,5 +1,8 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+// template:remove:start movement
+import { fireEvent } from "@testing-library/react";
+// template:remove:end
+import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SidebarNavigation from "./SidebarNavigation";
@@ -187,6 +190,7 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: "System Prompt" })).not.toBeInTheDocument();
   });
 
+  // template:remove:start movement
   it("links Replay Alignment from the Posture Studio submenu", () => {
     vi.mocked(usePathname).mockReturnValue("/demos/movements/replay-lab");
 
@@ -200,4 +204,5 @@ describe("SidebarNavigation AI guardrails", () => {
       "/demos/movements/replay-lab",
     );
   });
+  // template:remove:end
 });

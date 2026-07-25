@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, List, RefreshCw, Search, Star } from "lucide-react";
+import { AlertTriangle, Bot, List, RefreshCw, Search, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
@@ -18,6 +18,7 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import useDebounce from "@/src/hooks/useDebounce";
+import { isModelCostMeasurable } from "@/convex/agentRuntimeService";
 import { cn } from "@/src/ui/lib/utils";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import {
@@ -249,6 +250,15 @@ export default function AIModelCataloguePage() {
                         {model.displayName}
                         {model.isDefault && (
                           <Star className="w-3 h-3 fill-brand text-brand" />
+                        )}
+                        {model.isEnabled && !isModelCostMeasurable(model) && (
+                          <span
+                            title="No cost per token is set for this model, so spend cannot be measured and the cost cap can never stop a run. Agents using it are held to a reduced step and tool budget. Open the model to add its pricing."
+                            className="inline-flex items-center gap-1 rounded-full border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#f59e0b]"
+                          >
+                            <AlertTriangle className="w-3 h-3" />
+                            No pricing
+                          </span>
                         )}
                       </h3>
                     </div>

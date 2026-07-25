@@ -4,51 +4,17 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { buildAgentSystemInstruction } from "./aiPromptAssembly";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
-
-function buildGradingPrompt(args: {
-  objective: string;
-  expectedFinalOutputRubric: string;
-  modelOutput: string;
-}) {
-  return [
-    "Grade this agent smoke eval using the rubric.",
-    "Return strict JSON only with this shape:",
-    "{\"pass\": boolean, \"reason\": string, \"confidence\": number}",
-    "",
-    `Objective: ${args.objective}`,
-    `Rubric: ${args.expectedFinalOutputRubric}`,
-    `Agent output: ${args.modelOutput}`,
-  ].join("\n");
-}
-
-function parsePassFromGradingOutput(output: string) {
-  const trimmed = output.trim();
-  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    return { pass: false, reason: "Grading response was not valid JSON." };
-  }
-
-  try {
-    const parsed = JSON.parse(jsonMatch[0]) as unknown;
-    if (!parsed || typeof parsed !== "object") {
-      return { pass: false, reason: "Grading response JSON was not an object." };
-    }
-    const result = parsed as { pass?: unknown; reason?: unknown };
-    return {
-      pass: result.pass === true,
-      reason: typeof result.reason === "string" ? result.reason : "No grading reason provided.",
-    };
-  } catch {
-    return { pass: false, reason: "Grading response could not be parsed." };
-  }
-}
+import {
+  buildGradingPrompt,
+  parseGradeVerdict,
+  selectGraderModel,
+} from "./agentEvalGradingService";
 
 function getRequestedModelId(agent: Doc<"agents">) {
   return agent.modelSelectionMode === "inherit" ? undefined : agent.modelId;
@@ -92,24 +58,52 @@ export const gradeSmokeEvalWithModel = internalAction({
       providerModelId = modelConfig.providerModelId;
 
       const ai = createVertexGenAIClient();
-      const targetModel = getGoogleVertexProviderModelId(modelConfig, "agent smoke eval grading");
-      const agentResponse = await generateVertexContentWithRetry(ai, {
-        model: targetModel,
-        contents: [{
-          role: "user",
-          parts: [{ text: context.fixture.objective }],
-        }],
-        config: {
-          systemInstruction: buildAgentSystemInstruction(context.agent.systemPrompt),
-          temperature: context.agent.temperature !== undefined ? context.agent.temperature : 0.1,
-        },
-      }, {
-        operation: "agentSmokeEvalGenerate",
+
+      // Run the objective through the real runtime rather than calling the
+      // provider directly. The previous version sent the system prompt and the
+      // objective and nothing else — no tools, memories, skills, retrieval,
+      // history or budgets — so it graded a model, not the agent that ships. An
+      // agent whose whole job is looking things up would be evaluated with its
+      // ability to look things up removed.
+      const evalThreadId = await ctx.runMutation(internal.agentEvalFixtures.createEvalThreadInternal, {
+        agentId: args.agentId,
+        companyId: args.companyId,
+        userId: args.userId,
+        fixtureId: args.fixtureId,
       });
-      const modelOutput = agentResponse.text || "Agent produced no readable output.";
+
+      await ctx.runAction(internal.agentRuntime.runAgentObjective, {
+        threadId: evalThreadId,
+        agentId: args.agentId,
+        content: context.fixture.objective,
+      });
+
+      const outcome = await ctx.runQuery(internal.agentEvalFixtures.getEvalThreadOutcomeInternal, {
+        threadId: evalThreadId,
+      });
+      const modelOutput = outcome.output || "Agent produced no readable output.";
+
+      // Grade with a different model from the one under test. The same model
+      // marking its own homework favours its own output, and a model that has
+      // just confidently asserted something wrong is the least likely thing to
+      // notice — so the grade measured self-consistency, not correctness.
+      const enabledModels = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
+      const grader = selectGraderModel({
+        targetModelId: modelConfig.modelId,
+        enabledModelIds: enabledModels
+          .filter((model) => model.isEnabled)
+          .map((model) => model.modelId),
+      });
+      const graderConfig = grader.independent
+        ? await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+          requestedModelId: grader.modelId,
+          companyId: args.companyId,
+          useCase: "agent",
+        })
+        : modelConfig;
 
       const gradingResponse = await generateVertexContentWithRetry(ai, {
-        model: targetModel,
+        model: getGoogleVertexProviderModelId(graderConfig, "agent smoke eval grading"),
         contents: [{
           role: "user",
           parts: [{
@@ -127,11 +121,16 @@ export const gradeSmokeEvalWithModel = internalAction({
         operation: "agentSmokeEvalGrade",
       });
       const gradingOutput = gradingResponse.text || "";
-      const grade = parsePassFromGradingOutput(gradingOutput);
+      const grade = parseGradeVerdict(gradingOutput);
       const status = grade.pass ? "SUCCESS" : "FAILED";
+      // A deployment with one enabled model cannot grade independently. Say so
+      // on the result rather than letting a weaker grade read like a full one.
+      const independenceNote = grader.independent
+        ? `Graded by ${graderConfig.modelId}.`
+        : `Graded by the model under test — no other model is enabled, so this grade is not independent.`;
       const finalOutput = grade.pass
-        ? `Model-graded smoke eval passed. ${grade.reason}`
-        : `Model-graded smoke eval failed. ${grade.reason}`;
+        ? `Model-graded smoke eval passed. ${grade.reason} ${independenceNote}`
+        : `Model-graded smoke eval failed. ${grade.reason} ${independenceNote}`;
 
       await ctx.runMutation(internal.agentEvalFixtures.completeModelGradedSmokeEvalInternal, {
         runId: args.runId,
@@ -148,8 +147,10 @@ export const gradeSmokeEvalWithModel = internalAction({
         modelId,
         providerKey,
         providerModelId,
-        inputTokens: (agentResponse.usageMetadata?.promptTokenCount || 0) + (gradingResponse.usageMetadata?.promptTokenCount || 0),
-        outputTokens: (agentResponse.usageMetadata?.candidatesTokenCount || 0) + (gradingResponse.usageMetadata?.candidatesTokenCount || 0),
+        // The agent's own spend is already recorded against its run; this adds
+        // what the grading pass cost on top.
+        inputTokens: outcome.inputTokens + (gradingResponse.usageMetadata?.promptTokenCount || 0),
+        outputTokens: outcome.outputTokens + (gradingResponse.usageMetadata?.candidatesTokenCount || 0),
       });
     } catch (error: unknown) {
       const errorMessage = normalizeAiRuntimeError(error, "Model-graded smoke eval failed.").error;

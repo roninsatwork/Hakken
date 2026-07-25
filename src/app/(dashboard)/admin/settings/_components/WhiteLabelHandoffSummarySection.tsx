@@ -1,5 +1,6 @@
 "use client";
 
+import { UNCONFIGURED_EMAIL_ADDRESS } from "@/convex/emailBrandingService";
 import { AlertCircle, CheckCircle2, Mail, Palette, PackageCheck } from "lucide-react";
 import type { SystemSettingsFormData } from "./types";
 
@@ -34,7 +35,11 @@ function buildLocalSummary(formData: SystemSettingsFormData): WhiteLabelHandoffS
   const hasLightLogo = isPresent(formData.logoUrlLight);
   const hasDarkLogo = isPresent(formData.logoUrlDark);
   const logoMode = hasLightLogo && hasDarkLogo ? "light-and-dark" : hasLightLogo || hasDarkLogo ? "partial" : "missing";
-  const senderAddress = isPresent(formData.emailSenderAddress) ? String(formData.emailSenderAddress).trim() : "noreply@ronins.co.uk";
+  // No real address as a fallback: this screen exists to show a client what
+  // their handoff looks like, so a builder-owned domain here is exactly wrong.
+  const senderAddress = isPresent(formData.emailSenderAddress)
+    ? String(formData.emailSenderAddress).trim()
+    : UNCONFIGURED_EMAIL_ADDRESS;
   const senderName = isPresent(formData.emailSenderName) ? String(formData.emailSenderName).trim() : productName;
 
   return {

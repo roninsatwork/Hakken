@@ -161,7 +161,7 @@ describe("app template catalogue", () => {
     const knowledgeConnectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
       key: "sonae-knowledge",
     });
-    await superAdminClient.mutation(api.aiTools.testConnectorConnection, {
+    await superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, {
       connectorId: knowledgeConnectorId,
     });
     const plans = await superAdminClient.query(api.appTemplates.getRecentLaunchPlans, {});

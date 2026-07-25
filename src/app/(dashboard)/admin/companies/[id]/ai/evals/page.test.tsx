@@ -1,5 +1,6 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -72,7 +73,7 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
   });
 
   it("keeps page navigation in the header and eval actions with the active cases table", () => {
-    render(<CompanyAiEvalsPage />);
+    renderWithProviders(<CompanyAiEvalsPage />);
 
     const title = screen.getByRole("heading", { level: 1, name: "Company Evals" });
     const header = title.closest("header");

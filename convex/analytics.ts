@@ -14,6 +14,7 @@ import {
     resolveTimestampRange,
 } from "./analyticsService";
 import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils/inventoryRollupService";
+import { adminQuery, superAdminQuery } from "./tenantFunctions";
 
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
@@ -71,7 +72,7 @@ export async function requireAnalyticsCompanyAccess(ctx: QueryCtx, companyId: Id
     return admin;
 }
 
-export const getGlobalAICosts = query({
+export const getGlobalAICosts = superAdminQuery({
   args: {
     timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
@@ -80,7 +81,6 @@ export const getGlobalAICosts = query({
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-    await requireAnalyticsSuperAdmin(ctx, "Unauthorized AI Logistics query");
 
     // 1. Establish Temporal Boundaries
     const { start: startDate, end: endDate } = resolveTimestampRange(args);
@@ -158,13 +158,12 @@ export const getGlobalAICosts = query({
   }
 });
 
-export const getPlatformOverview = query({
+export const getPlatformOverview = superAdminQuery({
   args: {},
   handler: async (ctx) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Core Authorization Check
-    await requireAnalyticsSuperAdmin(ctx);
 
     const now = Date.now();
     const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
@@ -233,13 +232,13 @@ export const getPlatformOverview = query({
   }
 });
 
-export const getUserCostOverview = query({
+export const getUserCostOverview = adminQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
     // 1. Authorization Check
-    const admin = await requireAnalyticsAdmin(ctx);
+    const admin = ctx.user;
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("User not found");
     assertAnalyticsUserAccess(admin, targetUser);
@@ -293,7 +292,7 @@ export const getUserCostOverview = query({
   }
 });
 
-export const getUserCostThreads = query({
+export const getUserCostThreads = adminQuery({
   args: {
     userId: v.id("users"),
     paginationOpts: paginationOptsValidator,
@@ -301,7 +300,7 @@ export const getUserCostThreads = query({
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-    const admin = await requireAnalyticsAdmin(ctx);
+    const admin = ctx.user;
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("User not found");
     assertAnalyticsUserAccess(admin, targetUser);
@@ -356,7 +355,7 @@ export const getUserCostThreads = query({
 // FULL RESOLUTION REAL-TIME TELEMETRY ENGINE
 // ----------------------------------------------------
 
-export const getCompanyMetrics = query({
+export const getCompanyMetrics = adminQuery({
   args: { 
     companyId: v.id("companies"), 
     timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
@@ -679,10 +678,9 @@ export const getCompanyMetrics = query({
   }
 });
 
-export const getGlobalInventoryMetrics = query({
+export const getGlobalInventoryMetrics = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAnalyticsSuperAdmin(ctx);
 
     const rollup = await getGlobalInventoryRollup(ctx);
 
@@ -699,7 +697,7 @@ export const getGlobalInventoryMetrics = query({
   }
 });
 
-export const getGlobalAnalytics = query({
+export const getGlobalAnalytics = superAdminQuery({
   args: { 
     timeframe: v.union(v.literal("today"), v.literal("yesterday"), v.literal("7d"), v.literal("14d"), v.literal("30d"), v.literal("60d"), v.literal("90d"), v.literal("180d"), v.literal("365d"), v.literal("ytd"), v.literal("custom")),
     customStart: v.optional(v.number()),
@@ -708,7 +706,6 @@ export const getGlobalAnalytics = query({
   handler: async (ctx, args) => {
     const aiModelsFetch = await ctx.db.query("aiModels").take(10000);
     const { modelMap, defaultModelId } = buildModelCostContext(aiModelsFetch);
-    await requireAnalyticsSuperAdmin(ctx);
 
     const { now, start: startDate, end: endDate } = resolveDateRange(args);
     const aggregationType = getAggregationType(startDate.getTime(), endDate.getTime());

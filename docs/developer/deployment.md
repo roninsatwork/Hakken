@@ -26,26 +26,141 @@ Both workflows use Node `22.13.0` and `npm ci`. Both currently install `@rollup/
 
 ### CI Workflow
 
-The `CI` workflow runs:
+The `CI` workflow has two jobs.
+
+**Quick Checks** — every push and PR to `dev`, and every PR to `main`:
 
 1. `npm run lint`
 2. `npm run typecheck`
-3. `npm run test:run`
-4. `npm run test:e2e`
-5. `npm run test:coverage`
-6. `npm run coverage:check` when a coverage summary exists
+3. `npm run test:coverage` (runs the full unit/integration suite)
+4. `npm run coverage:check`
+
+**Full Gate** — only on PRs into `main`, adding the browser suite:
+
+1. `npm run test:e2e`
+2. `npm run test:coverage`
+3. `npm run coverage:check`
+
+Coverage is enforced on `dev` too, not just on the way to `main`, because `dev`
+previously accumulated changes with no coverage enforcement at all.
 
 Failed Playwright runs upload `playwright-report/`. Coverage runs upload `coverage/`.
+
+### Coverage Scope
+
+`npm run coverage:check` gates on **platform code only**. The movement demo
+(`src/app/(dashboard)/demos`, `src/lib/movements`, `convex/movements*`,
+`scripts/movement-debug`) is reported alongside but not gated.
+
+That split exists because the demo is roughly half of non-test `src/` and is
+better covered than the platform is (74% versus 62% lines as of 2026-07-25), so
+a single repo-wide number would let platform coverage fall while the headline
+figure stayed healthy. Thresholds live in `coverage-thresholds.json`; `current`
+is the gate and may never be set below `floor`, so the ratchet only turns one
+way.
 
 ### Production Deploy Workflow
 
 The deployment sequence is managed by `.github/workflows/deploy.yml`:
 
-1. Testing firewall: `npm audit --audit-level=high`, `npm run lint`, `npm run typecheck`, `npm run test:run`, and `npm run build`.
+1. Testing firewall: `npm audit --omit=dev --audit-level=high`, `npm run lint`, `npm run typecheck`, `npm run test:run`, and `npm run build`.
 2. Convex synchrony: `npx convex deploy` with `CONVEX_DEPLOY_KEY`.
 3. Container build: Docker image built with `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_DEPLOYMENT` build args.
 4. Registry push: image pushed to Google Artifact Registry.
 5. Cloud Run rollout: image deployed to the `sonae-app` service in `us-central1` with port `3000`.
+
+Every image is tagged twice: with the commit SHA and with `latest`. Cloud Run is
+deployed from the **SHA tag**, so each revision records exactly which image is
+serving traffic and previous images remain addressable.
+
+The audit step is scoped with `--omit=dev` because the gate exists to block
+shipping a vulnerable artifact, and devDependencies are not part of the deployed
+image. It is not a blanket `npm audit`: the ESLint 9 toolchain transitively pins
+`minimatch@3` -> `brace-expansion@1`, and advisory GHSA-mh99-v99m-4gvg has no
+patched 1.x release. ESLint 10 resolves it, but `eslint-plugin-react` and
+`eslint-plugin-jsx-a11y` still cap their peer range at ESLint 9, so the dev chain
+cannot currently be made clean. `.github/workflows/security-audit.yml` runs
+weekly and reports the full tree so the debt is tracked rather than hidden;
+promote its full-tree step to blocking once those plugins support ESLint 10.
+
+## Health Checks
+
+- `GET /api/health` — liveness. No network calls, safe to poll frequently. This
+  is what the container `HEALTHCHECK` uses; a failure means restarting the
+  container is reasonable.
+- `GET /api/health?deps=1` — readiness. Also confirms the Convex deployment
+  answers over HTTP. Use this for external monitoring. A failure here is *not*
+  fixed by a restart.
+
+Both return `version` (the commit SHA the image was built from) so a running
+container can be tied back to an exact revision. Neither returns configuration
+values, only whether they are present. Both report `e2eBackdoorExposed`, which
+is `true` only if the e2e auth backdoor is somehow enabled in production — treat
+that as an incident.
+
+## Rolling Back
+
+Find the SHA you want (the deploy job's summary prints the deployed SHA, and
+`git log main` gives you the previous one), then point the service at it:
+
+```bash
+gcloud run services update sonae-app --region us-central1 --image us-central1-docker.pkg.dev/$GCP_PROJECT/sonae-repo/sonae-app:<PREVIOUS_SHA>
+```
+
+Confirm the rollback took effect:
+
+```bash
+curl -s https://<service-url>/api/health?deps=1
+```
+
+The reported `version` should match `<PREVIOUS_SHA>`.
+
+**Important caveat: this rolls back the application, not the database.**
+`npx convex deploy` runs before the image is built and pushes schema changes
+that are not versioned with the image. If a release included a schema or data
+migration, rolling the image back leaves the app running against a newer schema.
+
+Keep rollback viable by making schema changes **backwards compatible**: add
+fields as optional, backfill them with a migration, and only make them required
+in a later release once no running version writes rows without them. A release
+that follows that rule is safe to roll back; one that does not is forward-only.
+
+## Data Migrations
+
+Schema deploys never touch existing rows, so adding a field to live data needs a
+backfill. `convex/dataMigrations.ts` holds a registry of named migrations, each
+processing one page per transaction and recording progress in the `dataMigrations`
+table, so a run resumes from its cursor instead of restarting.
+
+**Preferred: run them from the admin UI.** Settings → Scripts → *Apply pending
+data migrations* starts every registered migration that has not completed, and
+records the run with its actor in the maintenance script history and audit log.
+Re-run it to see progress; it will not restart a migration already in flight.
+
+The CLI equivalents are available for automation or when the admin UI is not
+reachable.
+
+List what is registered and what has run:
+
+```bash
+npx convex run dataMigrations:listStatus '{}'
+```
+
+Run one (safe to re-run; migrations must be idempotent):
+
+```bash
+npx convex run dataMigrations:run '{"name":"2026-07-25-swarm-logs-company-id"}'
+```
+
+Rules for adding a migration:
+
+- Name it `YYYY-MM-DD-short-description`; the name is the ledger's identity, so
+  never rename or reuse one.
+- Make it idempotent — skip rows already in the target state. A resumed or
+  retried run must be safe.
+- Leave rows alone when the source data is genuinely absent rather than
+  inventing a value.
+- A completed migration will not re-run without `force: true`.
 
 ## Pre-Deployment Setup Validation
 

@@ -1,9 +1,10 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, getActiveCompanyId, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 
 const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_REASON_MAX_LENGTH = 240;
@@ -136,13 +137,13 @@ async function enrichApiKey(ctx: Pick<QueryCtx, "db">, apiKey: Doc<"apiKeys">) {
   };
 }
 
-export const list = query({
+export const list = adminQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
 
     const page = user.role === "SUPER_ADMIN" && !args.companyId
       ? await ctx.db.query("apiKeys").withIndex("by_created").order("desc").paginate(args.paginationOpts)
@@ -159,7 +160,7 @@ export const list = query({
   },
 });
 
-export const create = mutation({
+export const create = adminMutation({
   args: {
     companyId: v.optional(v.id("companies")),
     name: v.string(),
@@ -168,7 +169,7 @@ export const create = mutation({
     rateLimitPerMinute: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const companyId = getManagedCompanyId(user, args.companyId);
     assertAdminCanAccessCompany(user, companyId);
 
@@ -221,13 +222,13 @@ export const create = mutation({
   },
 });
 
-export const revoke = mutation({
+export const revoke = adminMutation({
   args: {
     apiKeyId: v.id("apiKeys"),
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const apiKey = await ctx.db.get(args.apiKeyId);
     if (!apiKey) throw new Error("API key not found.");
     assertAdminCanAccessCompany(user, apiKey.companyId);

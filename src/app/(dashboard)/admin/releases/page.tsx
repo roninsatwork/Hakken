@@ -18,6 +18,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type ReleaseStatus = "DRAFT_BLOCKED" | "READY_FOR_RELEASE" | "LIVE_NEEDS_ATTENTION" | "LIVE";
 
@@ -350,8 +351,7 @@ export default function ReleaseCenterPage() {
   const cancelReleaseCandidate = useMutation(api.releases.cancelReleaseCandidate);
   const activateReleaseCandidate = useMutation(api.releases.activateReleaseCandidate);
   const rollbackRelease = useMutation(api.releases.rollbackRelease);
-  const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState("");
+  const action = useAdminAction({ scope: "admin-releases" });
   const [candidateOwnerEmails, setCandidateOwnerEmails] = useState<Record<string, string>>({});
   const [candidateWindowStarts, setCandidateWindowStarts] = useState<Record<string, string>>({});
   const [candidateWindowEnds, setCandidateWindowEnds] = useState<Record<string, string>>({});
@@ -359,19 +359,11 @@ export default function ReleaseCenterPage() {
   const [cancellationReasons, setCancellationReasons] = useState<Record<string, string>>({});
   const [rollbackReasons, setRollbackReasons] = useState<Record<string, string>>({});
 
-  const runReleaseAction = async (key: string, action: () => Promise<unknown>, successMessage: string) => {
-    if (busyAction) return;
-    setBusyAction(key);
-    setActionMessage("");
-    try {
-      await action();
-      setActionMessage(successMessage);
-    } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : "Release action failed.");
-    } finally {
-      setBusyAction(null);
-    }
-  };
+  // Every release action on this page wants the same options, so they are named
+  // once here rather than repeated at five call sites. The work itself is the
+  // shared runner's.
+  const runReleaseAction = (key: string, perform: () => Promise<unknown>, successMessage: string) =>
+    action.run(perform, { key, successMessage, fallbackMessage: "Release action failed." });
 
   const getCandidateWindowArgs = (agentId: string) => {
     const start = candidateWindowStarts[agentId];
@@ -585,7 +577,7 @@ export default function ReleaseCenterPage() {
                       </div>
                       <button
                         type="button"
-                        disabled={busyAction !== null}
+                        disabled={action.isBusy()}
                         onClick={() => runReleaseAction(
                           `create:${agent.agentId}`,
                           () => createReleaseCandidate({
@@ -597,7 +589,7 @@ export default function ReleaseCenterPage() {
                         )}
                         className="rounded-[8px] bg-foreground text-background px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
                       >
-                        {busyAction === `create:${agent.agentId}` ? "Creating..." : "Create release candidate"}
+                        {action.isBusy(`create:${agent.agentId}`) ? "Creating..." : "Create release candidate"}
                       </button>
                     </div>
                   ) : null}
@@ -625,11 +617,6 @@ export default function ReleaseCenterPage() {
             <h2 className="text-[16px] font-semibold text-foreground">Ship Check Records</h2>
             <p className="text-[12px] text-secondary mt-1">Developer/operator sign-off, activation, and rollback records for agent releases.</p>
           </div>
-          {actionMessage ? (
-            <span className="rounded-[8px] border border-border-dim bg-background/30 px-3 py-2 text-[12px] text-secondary">
-              {actionMessage}
-            </span>
-          ) : null}
         </div>
 
         {recentReleases === undefined ? (
@@ -736,7 +723,7 @@ export default function ReleaseCenterPage() {
                         </label>
                         <button
                           type="button"
-                          disabled={busyAction !== null}
+                          disabled={action.isBusy()}
                           onClick={() => runReleaseAction(
                             `approve:${release._id}`,
                             () => approveReleaseCandidate({
@@ -747,7 +734,7 @@ export default function ReleaseCenterPage() {
                           )}
                           className="rounded-[8px] bg-foreground text-background px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
                         >
-                          {busyAction === `approve:${release._id}` ? "Approving..." : "Approve"}
+                          {action.isBusy(`approve:${release._id}`) ? "Approving..." : "Approve"}
                         </button>
                       </div>
                     ) : null}
@@ -759,7 +746,7 @@ export default function ReleaseCenterPage() {
                             <>
                               <button
                                 type="button"
-                                disabled={busyAction !== null || !activationWindowState.canActivate}
+                                disabled={action.isBusy() || !activationWindowState.canActivate}
                                 onClick={() => runReleaseAction(
                                   `activate:${release._id}`,
                                   () => activateReleaseCandidate({ releaseId: release._id }),
@@ -767,7 +754,7 @@ export default function ReleaseCenterPage() {
                                 )}
                                 className="rounded-[8px] bg-foreground text-background px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
                               >
-                                {busyAction === `activate:${release._id}` ? "Activating..." : activationWindowState.label}
+                                {action.isBusy(`activate:${release._id}`) ? "Activating..." : activationWindowState.label}
                               </button>
                               <p className="text-[11px] leading-relaxed text-muted">{activationWindowState.detail}</p>
                             </>
@@ -792,7 +779,7 @@ export default function ReleaseCenterPage() {
                         </label>
                         <button
                           type="button"
-                          disabled={busyAction !== null}
+                          disabled={action.isBusy()}
                           onClick={() => runReleaseAction(
                             `cancel:${release._id}`,
                             () => cancelReleaseCandidate({
@@ -803,7 +790,7 @@ export default function ReleaseCenterPage() {
                           )}
                           className="rounded-[8px] border border-border-dim bg-background/30 px-3 py-2 text-[12px] font-medium text-secondary hover:text-foreground disabled:opacity-50"
                         >
-                          {busyAction === `cancel:${release._id}` ? "Cancelling..." : "Cancel candidate"}
+                          {action.isBusy(`cancel:${release._id}`) ? "Cancelling..." : "Cancel candidate"}
                         </button>
                       </div>
                     ) : null}
@@ -824,7 +811,7 @@ export default function ReleaseCenterPage() {
                         </label>
                         <button
                           type="button"
-                          disabled={busyAction !== null}
+                          disabled={action.isBusy()}
                           onClick={() => runReleaseAction(
                             `rollback:${release._id}`,
                             () => rollbackRelease({
@@ -835,7 +822,7 @@ export default function ReleaseCenterPage() {
                           )}
                           className="rounded-[8px] border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[12px] font-medium text-rose-500 hover:bg-rose-500/15 disabled:opacity-50"
                         >
-                          {busyAction === `rollback:${release._id}` ? "Rolling back..." : "Rollback"}
+                          {action.isBusy(`rollback:${release._id}`) ? "Rolling back..." : "Rollback"}
                         </button>
                       </div>
                     ) : null}

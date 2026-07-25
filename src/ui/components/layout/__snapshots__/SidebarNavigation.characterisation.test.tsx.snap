@@ -1,0 +1,107 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`sidebar navigation characterisation > company admin navigation is unchanged 1`] = `
+{
+  "links": [
+    "Ask Sonae -> /app/assistant",
+    "Dashboard -> /app/settings",
+    "Information -> /demos/movements/information",
+    "Logs -> /app/properties/logs",
+    "Replay Alignment -> /demos/movements/replay-lab",
+    "Sales Report -> /app/reports",
+    "Sonae -> /",
+    "Studio Library -> /demos/movements",
+    "Team Members -> /app/settings/team",
+    "authDiagnostics -> /app/settings/auth-diagnostics",
+    "dashboard -> /app",
+    "propertiesScrapedData -> /app/properties/scraped-data",
+    "propertiesSearch -> /app/properties/search",
+  ],
+  "sections": [
+    "Organization",
+    "Posture Studio",
+    "Reports",
+    "properties",
+  ],
+}
+`;
+
+exports[`sidebar navigation characterisation > signed-out navigation is unchanged 1`] = `
+{
+  "links": [
+    "Ask Sonae -> /app/assistant",
+    "Information -> /demos/movements/information",
+    "Logs -> /app/properties/logs",
+    "Replay Alignment -> /demos/movements/replay-lab",
+    "Sales Report -> /app/reports",
+    "Sonae -> /",
+    "Studio Library -> /demos/movements",
+    "dashboard -> /app",
+    "propertiesScrapedData -> /app/properties/scraped-data",
+    "propertiesSearch -> /app/properties/search",
+  ],
+  "sections": [
+    "Posture Studio",
+    "Reports",
+    "properties",
+  ],
+}
+`;
+
+exports[`sidebar navigation characterisation > standard user navigation is unchanged 1`] = `
+{
+  "links": [
+    "Ask Sonae -> /app/assistant",
+    "Information -> /demos/movements/information",
+    "Logs -> /app/properties/logs",
+    "Replay Alignment -> /demos/movements/replay-lab",
+    "Sales Report -> /app/reports",
+    "Sonae -> /",
+    "Studio Library -> /demos/movements",
+    "dashboard -> /app",
+    "propertiesScrapedData -> /app/properties/scraped-data",
+    "propertiesSearch -> /app/properties/search",
+  ],
+  "sections": [
+    "Posture Studio",
+    "Reports",
+    "properties",
+  ],
+}
+`;
+
+exports[`sidebar navigation characterisation > super admin navigation is unchanged 1`] = `
+{
+  "links": [
+    "Plans -> /admin/settings/plans",
+    "Sonae -> /",
+    "agentApprovals -> /admin/agents/approvals",
+    "analytics -> /admin/settings/analytics",
+    "apiKeys -> /admin/settings/api-keys",
+    "authDiagnostics -> /admin/auth-diagnostics",
+    "dashboard -> /admin",
+    "invitations -> /admin/super-admins/invite",
+    "launch -> /admin/app-kits",
+    "manageAgents -> /admin/agents",
+    "manageCompanies -> /admin/companies",
+    "manageGlobalAi -> /admin/ai",
+    "manageWorkflows -> /admin/workflows",
+    "releaseCenter -> /admin/releases",
+    "runObservatory -> /admin/run-observatory",
+    "schedules -> /admin/workflows/schedules",
+    "scripts -> /admin/settings/scripts",
+    "systemAdmins -> /admin/super-admins",
+    "systemHealth -> /admin/settings/system-health",
+    "systemSettings -> /admin/settings",
+    "webhookDeliveries -> /admin/settings/webhook-deliveries",
+  ],
+  "sections": [
+    "agents",
+    "ai",
+    "companies",
+    "maintenance",
+    "settings",
+    "systemAdmins",
+  ],
+}
+`;

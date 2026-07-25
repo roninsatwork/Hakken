@@ -218,12 +218,17 @@ Status:
 Before any push intended for `main`, run:
 
 ```bash
-npm audit --audit-level=high
+npm audit --omit=dev --audit-level=high
 npm run lint:all
 npm run check
 npm run build
 git diff --check
 ```
+
+The audit is scoped to runtime dependencies because that is what ships. A plain
+`npm audit` also reports the ESLint 9 toolchain, which transitively pins
+`minimatch@3` -> `brace-expansion@1` with no patched 1.x release. The weekly
+`security-audit` workflow reports the full tree so that debt stays visible.
 
 If the app server was stopped for the build, restart:
 

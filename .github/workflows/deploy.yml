@@ -41,8 +41,19 @@ jobs:
       - name: Workaround NPM Optional Dependency Bug
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
+      # Scoped to runtime dependencies: this gate exists to block shipping a
+      # vulnerable artifact, and devDependencies (ESLint, Vitest, Playwright)
+      # are not part of the deployed image.
+      #
+      # This is deliberately NOT a blanket `npm audit`. The ESLint 9 toolchain
+      # transitively pins minimatch@3 -> brace-expansion@1, and the advisory
+      # GHSA-mh99-v99m-4gvg has no patched 1.x release. ESLint 10 resolves it
+      # but eslint-plugin-react/jsx-a11y still cap their peer range at ESLint 9,
+      # so the dev chain cannot currently be made clean. The weekly
+      # security-audit workflow tracks it so it is fixed when upstream lands,
+      # rather than silently ignored here.
       - name: Run production audit
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Run lint
         run: npm run lint
@@ -65,18 +76,44 @@ jobs:
         run: |-
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
+      # Tag every image with the commit SHA as well as :latest. :latest alone
+      # is not rollback-able — once it is overwritten the previous image has no
+      # name left to deploy. The SHA tag is the immutable handle used by the
+      # rollback procedure in docs/developer/deployment.md.
       - name: Build and Push Docker image
+        env:
+          IMAGE_BASE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}
         run: |-
-          docker build --progress=plain --build-arg NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} --build-arg CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }} -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:latest . > docker_build.log 2>&1 || (echo '### Docker Build Failed! :x:' >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; tail -n 50 docker_build.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; cat docker_build.log; exit 1)
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:latest
+          docker build --progress=plain \
+            --build-arg NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} \
+            --build-arg CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }} \
+            --build-arg BUILD_SHA=${{ github.sha }} \
+            -t "$IMAGE_BASE:${{ github.sha }}" \
+            -t "$IMAGE_BASE:latest" \
+            . > docker_build.log 2>&1 || (echo '### Docker Build Failed! :x:' >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; tail -n 50 docker_build.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; cat docker_build.log; exit 1)
+          docker push "$IMAGE_BASE:${{ github.sha }}"
+          docker push "$IMAGE_BASE:latest"
 
+      # Deploy the immutable SHA tag, not :latest, so the revision records
+      # exactly which image is serving traffic.
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:latest
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
           flags: '--allow-unauthenticated --port=3000'
           env_vars: |-
             NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
             CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }}
+
+      - name: Record deployed revision
+        run: |-
+          echo "### Deployed \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Verify: \`curl -s https://<service-url>/api/health?deps=1\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Roll back to the previous commit SHA (see docs/developer/deployment.md):" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "gcloud run services update ${{ env.SERVICE }} --region ${{ env.REGION }} --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:<PREVIOUS_SHA>" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

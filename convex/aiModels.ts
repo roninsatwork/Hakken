@@ -4,6 +4,7 @@ import { requireCurrentUser, requireSuperAdmin } from "./authz";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
+import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import {
   ANTHROPIC_PROVIDER_KEY,
   DEFAULT_MODEL_USE_CASES,
@@ -46,21 +47,18 @@ function withInferredProviders(models: Doc<"aiModels">[]) {
   return models.map(withInferredProvider);
 }
 
-export const getModels = query({
+export const getModels = tenantQuery({
   args: {},
   handler: async (ctx) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
     return withInferredProviders(await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT));
   },
 });
 
-export const getActiveModels = query({
+export const getActiveModels = tenantQuery({
   args: {
     useCase: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
-
     const [rawModels, disabledProviders] = await Promise.all([
       ctx.db
         .query("aiModels")
@@ -92,7 +90,7 @@ export const getActiveModels = query({
   },
 });
 
-export const getOffsetPaginatedModels = query({
+export const getOffsetPaginatedModels = superAdminQuery({
   args: {
     searchTerm: v.optional(v.string()),
     statusFilter: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
@@ -103,7 +101,6 @@ export const getOffsetPaginatedModels = query({
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const term = normalizeSearchTerm(args.searchTerm);
     const statusEnabled = args.statusFilter === undefined ? undefined : args.statusFilter === "active";
     const providerFilter = args.providerFilter && args.providerFilter !== "all" ? args.providerFilter : undefined;
@@ -194,10 +191,9 @@ export const getOffsetPaginatedModels = query({
   },
 });
 
-export const getProviders = query({
+export const getProviders = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const providers = await ctx.db.query("aiProviders").withIndex("by_provider_key").take(50);
     const providersByKey = new Map(providers.map((provider) => [provider.providerKey, provider]));
     const mergedProviders = PLATFORM_PROVIDER_KEYS.map((providerKey) => {
@@ -339,13 +335,13 @@ function summarizeDefaultModel(model: Doc<"aiModels"> | null) {
   };
 }
 
-export const setProviderEnabled = mutation({
+export const setProviderEnabled = superAdminMutation({
   args: {
     providerKey: v.string(),
     isEnabled: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const now = Date.now();
     await upsertProviderStatus(ctx, {
       providerKey: args.providerKey,
@@ -367,11 +363,9 @@ export const setProviderEnabled = mutation({
   },
 });
 
-export const getGlobalModelDefaults = query({
+export const getGlobalModelDefaults = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-
     const defaults = await Promise.all(DEFAULT_MODEL_USE_CASES.map(async (useCase) => {
       const defaultRow = await ctx.db
         .query("aiModelDefaults")
@@ -399,13 +393,13 @@ export const getGlobalModelDefaults = query({
   },
 });
 
-export const setGlobalModelDefault = mutation({
+export const setGlobalModelDefault = superAdminMutation({
   args: {
     useCase: v.string(),
     modelId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const model = await assertModelCanBeDefaultForUseCase(ctx, args);
     const now = Date.now();
     const existingDefault = await ctx.db
@@ -443,12 +437,12 @@ export const setGlobalModelDefault = mutation({
   },
 });
 
-export const clearGlobalModelDefault = mutation({
+export const clearGlobalModelDefault = superAdminMutation({
   args: {
     useCase: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     if (!isSupportedDefaultUseCase(args.useCase)) {
       throw new Error("Unsupported AI model default use case.");
     }
@@ -578,13 +572,11 @@ export const resolveModelForExecution = internalQuery({
   },
 });
 
-export const getCompanyModelDefaults = query({
+export const getCompanyModelDefaults = superAdminQuery({
   args: {
     companyId: v.id("companies"),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-
     const company = await ctx.db.get(args.companyId);
     if (!company) throw new Error("Company not found");
 
@@ -634,14 +626,14 @@ export const getCompanyModelDefaults = query({
   },
 });
 
-export const setCompanyModelDefault = mutation({
+export const setCompanyModelDefault = superAdminMutation({
   args: {
     companyId: v.id("companies"),
     useCase: v.string(),
     modelId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
 
     const company = await ctx.db.get(args.companyId);
     if (!company) throw new Error("Company not found");
@@ -688,13 +680,13 @@ export const setCompanyModelDefault = mutation({
   },
 });
 
-export const clearCompanyModelDefault = mutation({
+export const clearCompanyModelDefault = superAdminMutation({
   args: {
     companyId: v.id("companies"),
     useCase: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
 
     if (!isSupportedDefaultUseCase(args.useCase)) {
       throw new Error("Unsupported AI model default use case.");
@@ -764,10 +756,10 @@ export const resolveEmbeddingModelConfigForExecution = internalQuery({
   },
 });
 
-export const toggleModelEnforcement = mutation({
+export const toggleModelEnforcement = superAdminMutation({
   args: { modelId: v.id("aiModels"), isEnabled: v.boolean() },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
 
     if (!args.isEnabled) {
       const model = await ctx.db.get(args.modelId);
@@ -798,10 +790,10 @@ export const toggleModelEnforcement = mutation({
   },
 });
 
-export const setDefaultModel = mutation({
+export const setDefaultModel = superAdminMutation({
   args: { modelId: v.id("aiModels") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
 
     const currentDefaults = await ctx.db
       .query("aiModels")
@@ -1012,16 +1004,15 @@ export const backfillGoogleVertexModelProviders = internalMutation({
   },
 });
 
-export const getModel = query({
+export const getModel = tenantQuery({
   args: { modelId: v.id("aiModels") },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
     const model = await ctx.db.get(args.modelId);
     return model ? withInferredProvider(model) : model;
   },
 });
 
-export const updatePricingConfig = mutation({
+export const updatePricingConfig = superAdminMutation({
   args: {
     modelId: v.id("aiModels"),
     friendlyName: v.optional(v.string()),
@@ -1033,7 +1024,7 @@ export const updatePricingConfig = mutation({
     outputReasoningCost: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
 
     const { modelId, ...fields } = args;
     await ctx.db.patch(modelId, fields);

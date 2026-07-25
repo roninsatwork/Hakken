@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { mutation, query, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { requireSuperAdmin } from "./authz";
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { SYSTEM_FAILSAFE_MODEL_ID, getDefaultModelId } from "./aiModelService";
 import {
   buildAgentUpdatePatch,
@@ -506,6 +506,18 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
   const toolBindingCount = toolBindings.length;
   const activeEvalFixtureCount = activeEvalFixtures.length;
   const successfulSmokeEvalRunCount = successfulSmokeEvalRuns.length;
+  /**
+   * Successful evals that actually put the objective to a model.
+   *
+   * A `CONTRACT_ONLY` smoke eval checks configuration — that the rubric is
+   * non-empty, the tool mappings are bound, the blocked-actions JSON parses —
+   * and then writes a synthetic successful run. It is a useful check and it is
+   * not evidence the agent works, because no model was ever called. Counting it
+   * towards activation meant an agent could go live having never produced a
+   * token.
+   */
+  const successfulModelGradedEvalCount = successfulSmokeEvalRecords
+    .filter((record) => record.metadata.gradingMode === "MODEL_GRADED").length;
   const modelReadiness = await resolveAgentModelReadiness(ctx, { agent });
   const fixtureCoverage = EVAL_FIXTURE_TYPE_ORDER.map((type) => {
     const fixturesForType = activeEvalFixtures.filter((fixture) => fixture.type === type);
@@ -615,8 +627,12 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
     },
     {
       key: "smokeEval",
-      status: successfulSmokeEvalRunCount > 0 ? "PASS" : "WARN",
-      count: successfulSmokeEvalRunCount,
+      // Only a model-graded eval counts as a pass. A configuration check that
+      // never called a model is progress, not evidence.
+      status: successfulModelGradedEvalCount > 0
+        ? "PASS"
+        : "WARN",
+      count: successfulModelGradedEvalCount,
       latestAt: successfulSmokeEvalRuns[0]?.completedAt ?? successfulSmokeEvalRuns[0]?.updatedAt,
     },
     {
@@ -645,6 +661,7 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
     },
     fixtureCoverage,
     successfulSmokeEvalRunCount,
+    successfulModelGradedEvalCount,
     latestSmokeEvalAt: latestSmokeEvalRun?.completedAt ?? latestSmokeEvalRun?.updatedAt,
     latestSmokeEvalRun: latestSmokeEvalRun ? {
       runId: latestSmokeEvalRun._id,
@@ -673,11 +690,9 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
   };
 }
 
-export const list = query({
+export const list = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
-
     const allAgents = await ctx.db
       .query("agents")
       .withIndex("by_workflow_created", (q) => q.eq("workflowId", undefined))
@@ -687,14 +702,12 @@ export const list = query({
   },
 });
 
-export const getPaginatedAgents = query({
+export const getPaginatedAgents = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
-
     const searchTerm = args.searchTerm?.trim();
     const result = searchTerm
       ? await ctx.db
@@ -714,11 +727,9 @@ export const getPaginatedAgents = query({
   },
 });
 
-export const get = query({
+export const get = superAdminQuery({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     const agent = await ctx.db.get(args.id);
     if (!agent) throw new Error("Agent not found");
 
@@ -739,22 +750,21 @@ export const get = query({
   },
 });
 
-export const getAgentReadiness = query({
+export const getAgentReadiness = superAdminQuery({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
     return await buildAgentReadiness(ctx, args.id);
   },
 });
 
-export const createAgent = mutation({
+export const createAgent = superAdminMutation({
   args: { 
     name: v.string(), 
     description: v.optional(v.string()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const now = Date.now();
     const defaultModelId = await resolveDefaultModelIdForUseCase(ctx, "agent");
@@ -781,22 +791,21 @@ export const createAgent = mutation({
   },
 });
 
-export const getAgentTemplatesForCreation = query({
+export const getAgentTemplatesForCreation = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
     return getAgentTemplates();
   },
 });
 
-export const createAgentFromTemplate = mutation({
+export const createAgentFromTemplate = superAdminMutation({
   args: {
     templateId: v.string(),
     name: v.optional(v.string()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const template = getAgentTemplateById(args.templateId);
     if (!template) throw new Error("Agent template not found.");
 
@@ -848,7 +857,7 @@ export const createAgentFromTemplate = mutation({
   },
 });
 
-export const updateAgent = mutation({
+export const updateAgent = superAdminMutation({
   args: { 
     id: v.id("agents"), 
     name: v.optional(v.string()),
@@ -875,7 +884,7 @@ export const updateAgent = mutation({
     releaseGateRequiresModelGrading: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const { id, storageId, ...updates } = args;
     const existingAgent = await ctx.db.get(id);
@@ -903,8 +912,14 @@ export const updateAgent = mutation({
 
     if (updates.isActive === true && existingAgent.isActive === false) {
       const readiness = await buildAgentReadiness(ctx, id);
-      if (readiness.successfulSmokeEvalRunCount === 0) {
-        throw new Error("Activation blocked: run a successful smoke eval before activating this agent.");
+      if (readiness.successfulModelGradedEvalCount === 0) {
+        // The gate used to accept a configuration check, which writes a
+        // synthetic successful run without calling a model — so an agent could
+        // be activated having never produced a token.
+        throw new Error(
+          "Activation blocked: run a model-graded eval before activating this agent. "
+          + "A configuration check confirms the agent is wired up correctly, but does not test what it says.",
+        );
       }
       if (readiness.latestSmokeEvalRun?.status !== "SUCCESS") {
         throw new Error("Activation blocked: latest smoke eval must pass before activating this agent.");
@@ -961,10 +976,10 @@ export const updateAgent = mutation({
   },
 });
 
-export const deleteAgent = mutation({
+export const deleteAgent = superAdminMutation({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const agent = await ctx.db.get(args.id);
 
@@ -1024,12 +1039,12 @@ export const getForCompanyInternal = internalQuery({
   },
 });
 
-export const createInlineAgent = mutation({
+export const createInlineAgent = superAdminMutation({
   args: { 
     workflowId: v.id("workflows"),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const now = Date.now();
     const defaultModelId = await resolveDefaultModelIdForUseCase(ctx, "workflow");
@@ -1053,10 +1068,10 @@ export const createInlineAgent = mutation({
   },
 });
 
-export const promoteToGlobal = mutation({
+export const promoteToGlobal = superAdminMutation({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const now = Date.now();
 
     await ctx.db.patch(args.id, buildPromoteAgentPatch(now));

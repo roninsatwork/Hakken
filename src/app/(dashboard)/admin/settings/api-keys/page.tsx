@@ -14,6 +14,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type ApiKeyScope = "agent:run" | "workflow:run" | "run:read" | "webhook:deliver";
 
@@ -38,13 +39,16 @@ export default function ApiKeysPage() {
   const [scopes, setScopes] = useState<ApiKeyScope[]>(["agent:run", "run:read"]);
   const [rateLimitPerMinute, setRateLimitPerMinute] = useState(60);
   const [expiresAt, setExpiresAt] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [oneTimeKey, setOneTimeKey] = useState<{ apiKey: string; keyPrefix: string } | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{ id: Id<"apiKeys">; name: string } | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
-  const [isRevoking, setIsRevoking] = useState(false);
-  const [revokeError, setRevokeError] = useState("");
+
+  // Two runners rather than one: the create form and the revoke modal each show
+  // their failure inline, and a single shared `error` would leak the form's
+  // failure into the modal.
+  const createAction = useAdminAction({ scope: "admin-api-keys-create" });
+  const revokeAction = useAdminAction({ scope: "admin-api-keys-revoke" });
 
   const {
     results: apiKeys,
@@ -66,58 +70,52 @@ export default function ApiKeysPage() {
   };
 
   const handleCreate = async () => {
-    setCreateError("");
+    setValidationError("");
     setOneTimeKey(null);
     if (!selectedCompanyId) {
-      setCreateError("Choose a company before creating a tenant-scoped API key.");
+      setValidationError("Choose a company before creating a tenant-scoped API key.");
       return;
     }
     if (!name.trim()) {
-      setCreateError("Name the API key before creating it.");
+      setValidationError("Name the API key before creating it.");
       return;
     }
     if (scopes.length === 0) {
-      setCreateError("Select at least one scope.");
+      setValidationError("Select at least one scope.");
       return;
     }
 
-    setIsCreating(true);
-    try {
-      const result = await createApiKey({
+    const outcome = await createAction.run(
+      () => createApiKey({
         companyId: selectedCompanyId,
         name: name.trim(),
         scopes,
         rateLimitPerMinute,
         ...(expiresAt ? { expiresAt: new Date(expiresAt).getTime() } : {}),
-      });
-      setOneTimeKey({ apiKey: result.apiKey, keyPrefix: result.record.keyPrefix });
-      setName("");
-      setExpiresAt("");
-      setRateLimitPerMinute(60);
-      setScopes(["agent:run", "run:read"]);
-    } catch (error) {
-      setCreateError(error instanceof Error ? error.message : "Failed to create API key.");
-    } finally {
-      setIsCreating(false);
-    }
+      }),
+      { fallbackMessage: "Failed to create API key.", suppressErrorToast: true },
+    );
+    if (!outcome.ok) return;
+
+    setOneTimeKey({ apiKey: outcome.data.apiKey, keyPrefix: outcome.data.record.keyPrefix });
+    setName("");
+    setExpiresAt("");
+    setRateLimitPerMinute(60);
+    setScopes(["agent:run", "run:read"]);
   };
 
   const handleRevoke = async () => {
     if (!revokeTarget) return;
-    setIsRevoking(true);
-    setRevokeError("");
-    try {
-      await revokeApiKey({
+    const outcome = await revokeAction.run(
+      () => revokeApiKey({
         apiKeyId: revokeTarget.id,
         ...(revokeReason.trim() ? { reason: revokeReason.trim() } : {}),
-      });
-      setRevokeTarget(null);
-      setRevokeReason("");
-    } catch (error) {
-      setRevokeError(error instanceof Error ? error.message : "Failed to revoke API key.");
-    } finally {
-      setIsRevoking(false);
-    }
+      }),
+      { fallbackMessage: "Failed to revoke API key.", suppressErrorToast: true },
+    );
+    if (!outcome.ok) return;
+    setRevokeTarget(null);
+    setRevokeReason("");
   };
 
   return (
@@ -207,19 +205,19 @@ export default function ApiKeysPage() {
             ))}
           </div>
 
-          {createError && (
+          {(validationError || createAction.error) && (
             <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-[13px] text-red-400">
-              {createError}
+              {validationError || createAction.error}
             </div>
           )}
 
           <button
             type="button"
             onClick={handleCreate}
-            disabled={isCreating}
+            disabled={createAction.isBusy()}
             className="w-fit inline-flex items-center gap-2 px-3 py-2 rounded-[8px] bg-foreground text-background text-[13px] font-semibold disabled:opacity-50"
           >
-            {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {createAction.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Create API key
           </button>
         </div>
@@ -319,7 +317,7 @@ export default function ApiKeysPage() {
                   onClick={() => {
                     setRevokeTarget({ id: apiKey._id, name: apiKey.name });
                     setRevokeReason("");
-                    setRevokeError("");
+                    revokeAction.clearError();
                   }}
                   disabled={apiKey.status === "REVOKED"}
                   className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-40"
@@ -351,7 +349,7 @@ export default function ApiKeysPage() {
             placeholder="Rotated, leaked, no longer needed..."
             className="w-full rounded-[8px] border border-border-dim bg-background px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand"
           />
-          {revokeError && <div className="text-[13px] text-red-400">{revokeError}</div>}
+          {revokeAction.error && <div className="text-[13px] text-red-400">{revokeAction.error}</div>}
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
@@ -363,10 +361,10 @@ export default function ApiKeysPage() {
             <button
               type="button"
               onClick={handleRevoke}
-              disabled={isRevoking}
+              disabled={revokeAction.isBusy()}
               className="px-3 py-2 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[13px] font-semibold disabled:opacity-50 flex items-center gap-2"
             >
-              {isRevoking && <Loader2 className="w-4 h-4 animate-spin" />}
+              {revokeAction.isBusy() && <Loader2 className="w-4 h-4 animate-spin" />}
               Revoke key
             </button>
           </div>

@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useToast } from "@/src/context/ToastContext";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -185,19 +187,21 @@ function MetricTile({ label, value, icon: Icon }: { label: string; value: string
 export default function AgentEvalsPage() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
-  const [activeFixtureId, setActiveFixtureId] = useState<Id<"agentEvalFixtures"> | "suite" | null>(null);
+  // Page-level actions need busy keys of their own so they do not share a
+  // spinner with the per-fixture row actions.
+  const SUITE_KEY = "suite";
+  const PRESET_SAVE_KEY = "preset-save";
+  const FIXTURE_SAVE_KEY = "fixture-save";
+  const action = useAdminAction({ scope: "admin-agent-evals" });
+  const { showToast } = useToast();
   const [isAuthoringFixture, setIsAuthoringFixture] = useState(false);
-  const [isSavingFixture, setIsSavingFixture] = useState(false);
   const [editingFixtureId, setEditingFixtureId] = useState<Id<"agentEvalFixtures"> | null>(null);
   const [pendingArchiveFixture, setPendingArchiveFixture] = useState<AgentEvalFixture | null>(null);
-  const [isArchivingFixture, setIsArchivingFixture] = useState(false);
   const [selectedSkillId, setSelectedSkillId] = useState<SkillFilter>("ALL");
   const [fixtureForm, setFixtureForm] = useState(emptyFixtureForm);
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
-  const [isSavingPreset, setIsSavingPreset] = useState(false);
   const [editingPresetId, setEditingPresetId] = useState<Id<"agentEvalSuitePresets"> | null>(null);
   const [pendingArchivePreset, setPendingArchivePreset] = useState<AgentEvalSuitePreset | null>(null);
-  const [isArchivingPreset, setIsArchivingPreset] = useState(false);
   const [presetForm, setPresetForm] = useState({
     name: "",
     description: "",
@@ -206,7 +210,6 @@ export default function AgentEvalsPage() {
     requiresModelGrading: false,
     fixtureIds: [] as Id<"agentEvalFixtures">[],
   });
-  const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
 
   const fixtures = useQuery(api.agentEvalFixtures.getRecentForAgent, { agentId });
   const evalHistory = useQuery(api.agentEvalFixtures.getSmokeEvalHistory, { agentId, limit: 15 });
@@ -315,27 +318,23 @@ export default function AgentEvalsPage() {
     suitePresetId?: Id<"agentEvalSuitePresets">,
     gradingMode?: "CONTRACT_ONLY" | "MODEL_GRADED",
   ) => {
-    setActiveFixtureId("suite");
-    try {
-      const result = await runEvalSuite({
+    const outcome = await action.run(
+      () => runEvalSuite({
         agentId,
         ...(suiteTag ? { suiteTag } : {}),
         ...(fixtureIds && fixtureIds.length > 0 ? { fixtureIds } : {}),
         ...(suitePresetId ? { suitePresetId } : {}),
         ...(gradingMode ? { gradingMode } : {}),
-      });
-      setModalState({
-        title: "Eval suite complete",
-        message: `Ran ${result.suitePresetName ? `${result.suitePresetName} ` : suiteTag ? `${suiteTag} ` : ""}${result.total} contract eval${result.total === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.active} still active.`,
-      });
-    } catch (error) {
-      setModalState({
-        title: "Eval suite blocked",
-        message: error instanceof Error ? error.message : "The eval suite could not be run.",
-      });
-    } finally {
-      setActiveFixtureId(null);
-    }
+      }),
+      { key: SUITE_KEY, fallbackMessage: "The eval suite could not be run." },
+    );
+    if (!outcome.ok) return;
+    const result = outcome.data;
+    const label = result.suitePresetName ? `${result.suitePresetName} ` : suiteTag ? `${suiteTag} ` : "";
+    showToast(
+      `Ran ${label}${result.total} contract eval${result.total === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.active} still active.`,
+      result.failed > 0 ? "info" : "success",
+    );
   };
 
   const openNewPresetModal = () => {
@@ -365,7 +364,7 @@ export default function AgentEvalsPage() {
   };
 
   const closePresetModal = () => {
-    if (isSavingPreset) return;
+    if (action.isBusy(PRESET_SAVE_KEY)) return;
     setIsPresetModalOpen(false);
     setEditingPresetId(null);
     setPresetForm({
@@ -379,8 +378,7 @@ export default function AgentEvalsPage() {
   };
 
   const savePreset = async () => {
-    setIsSavingPreset(true);
-    try {
+    const outcome = await action.run(async () => {
       const presetId = await saveSuitePreset({
         agentId,
         ...(editingPresetId ? { presetId: editingPresetId } : {}),
@@ -406,83 +404,62 @@ export default function AgentEvalsPage() {
           releaseGateRequiresModelGrading: false,
         });
       }
-      setPresetForm({ name: "", description: "", suiteTag: "", isReleaseGate: false, requiresModelGrading: false, fixtureIds: [] });
-      setEditingPresetId(null);
-      setIsPresetModalOpen(false);
-      setModalState({
-        title: editingPresetId ? "Suite preset updated" : "Suite preset saved",
-        message: presetForm.isReleaseGate
-          ? "The suite preset is saved and is now the release gate for this agent."
-          : "The suite preset is available for future eval runs.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Preset blocked",
-        message: error instanceof Error ? error.message : "The suite preset could not be saved.",
-      });
-    } finally {
-      setIsSavingPreset(false);
-    }
+    }, {
+      key: PRESET_SAVE_KEY,
+      successMessage: presetForm.isReleaseGate
+        ? "Suite preset saved. It is now the release gate for this agent."
+        : "Suite preset saved and available for future eval runs.",
+      fallbackMessage: "The suite preset could not be saved.",
+    });
+    // The form stays open on failure so the author's input is not lost.
+    if (!outcome.ok) return;
+    setPresetForm({ name: "", description: "", suiteTag: "", isReleaseGate: false, requiresModelGrading: false, fixtureIds: [] });
+    setEditingPresetId(null);
+    setIsPresetModalOpen(false);
   };
 
   const confirmArchivePreset = async () => {
     if (!pendingArchivePreset) return;
-    setIsArchivingPreset(true);
-    try {
-      await archiveSuitePreset({ presetId: pendingArchivePreset._id });
-      setModalState({
-        title: "Suite preset archived",
-        message: "The preset was removed from runnable lists. Any release gate using it was returned to tag mode.",
-      });
-      setPendingArchivePreset(null);
-    } catch (error) {
-      setModalState({
-        title: "Archive blocked",
-        message: error instanceof Error ? error.message : "The suite preset could not be archived.",
-      });
-    } finally {
-      setIsArchivingPreset(false);
-    }
+    const outcome = await action.run(() => archiveSuitePreset({ presetId: pendingArchivePreset._id }), {
+      key: pendingArchivePreset._id,
+      successMessage: "Preset archived. Any release gate using it returned to tag mode.",
+      fallbackMessage: "The suite preset could not be archived.",
+    });
+    // The confirmation stays open on failure so the user can retry or cancel.
+    if (outcome.ok) setPendingArchivePreset(null);
   };
 
   const setPresetReleaseGate = async (preset: AgentEvalSuitePreset) => {
-    try {
-      await updateAgent({
+    await action.run(
+      () => updateAgent({
         id: agentId,
         releaseGateMode: "PRESET",
         releaseGateSuitePresetId: preset._id,
         releaseGateRequiresModelGrading: preset.requiresModelGrading === true,
-      });
-      setModalState({
-        title: "Release gate updated",
-        message: "This preset now controls the critical eval gate for activation.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Release gate blocked",
-        message: error instanceof Error ? error.message : "The release gate could not be updated.",
-      });
-    }
+      }),
+      {
+        key: preset._id,
+        successMessage: "Release gate updated. This preset now controls activation.",
+        fallbackMessage: "The release gate could not be updated.",
+      },
+    );
   };
 
   const runFixture = async (fixtureId: Id<"agentEvalFixtures">) => {
-    setActiveFixtureId(fixtureId);
-    try {
-      const result = await runSmokeEval({ agentId, fixtureId });
-      setModalState({
-        title: result.status === "SUCCESS" ? "Eval passed" : "Eval failed",
-        message: result.status === "SUCCESS"
-          ? `Fixture ${fixtureId} passed its contract checks.`
-          : `Fixture ${fixtureId} failed: ${result.missingToolMappings.length > 0 ? `missing ${result.missingToolMappings.join(", ")}` : "review the eval history for details."}`,
-      });
-    } catch (error) {
-      setModalState({
-        title: "Eval blocked",
-        message: error instanceof Error ? error.message : "The fixture could not be run.",
-      });
-    } finally {
-      setActiveFixtureId(null);
-    }
+    const outcome = await action.run(() => runSmokeEval({ agentId, fixtureId }), {
+      key: fixtureId,
+      fallbackMessage: "The fixture could not be run.",
+    });
+    if (!outcome.ok) return;
+    const result = outcome.data;
+    // A failing eval is a result, not an error — it gets a plain notice rather
+    // than the error tone, which is reserved for the call itself going wrong.
+    showToast(
+      result.status === "SUCCESS"
+        ? "Fixture passed its contract checks."
+        : `Fixture failed: ${result.missingToolMappings.length > 0 ? `missing ${result.missingToolMappings.join(", ")}` : "review the eval history for details."}`,
+      result.status === "SUCCESS" ? "success" : "info",
+    );
   };
 
   const openNewFixtureModal = () => {
@@ -498,15 +475,14 @@ export default function AgentEvalsPage() {
   };
 
   const closeFixtureModal = () => {
-    if (isSavingFixture) return;
+    if (action.isBusy(FIXTURE_SAVE_KEY)) return;
     setIsAuthoringFixture(false);
     setEditingFixtureId(null);
     setFixtureForm(emptyFixtureForm);
   };
 
   const saveFixture = async () => {
-    setIsSavingFixture(true);
-    try {
+    const outcome = await action.run(async () => {
       const expectedToolMappings = fixtureForm.expectedToolMappings
         .split(",")
         .map((mapping) => mapping.trim())
@@ -538,43 +514,28 @@ export default function AgentEvalsPage() {
           ...(tags.length > 0 ? { tags } : {}),
         });
       }
-      setFixtureForm(emptyFixtureForm);
-      setEditingFixtureId(null);
-      setIsAuthoringFixture(false);
-      setModalState({
-        title: editingFixtureId ? "Fixture updated" : "Fixture created",
-        message: editingFixtureId
-          ? "The eval fixture contract was updated and will be used in future suite runs."
-          : "The eval fixture is now available for suite runs.",
-      });
-    } catch (error) {
-      setModalState({
-        title: "Fixture blocked",
-        message: error instanceof Error ? error.message : "The eval fixture could not be created.",
-      });
-    } finally {
-      setIsSavingFixture(false);
-    }
+    }, {
+      key: FIXTURE_SAVE_KEY,
+      successMessage: editingFixtureId
+        ? "Fixture updated. It will be used in future suite runs."
+        : "Fixture created and available for suite runs.",
+      fallbackMessage: "The eval fixture could not be saved.",
+    });
+    // The author's work stays on screen if the save failed.
+    if (!outcome.ok) return;
+    setFixtureForm(emptyFixtureForm);
+    setEditingFixtureId(null);
+    setIsAuthoringFixture(false);
   };
 
   const confirmArchiveFixture = async () => {
     if (!pendingArchiveFixture) return;
-    setIsArchivingFixture(true);
-    try {
-      await archiveFixture({ fixtureId: pendingArchiveFixture._id });
-      setModalState({
-        title: "Fixture archived",
-        message: "The eval fixture was removed from active suite runs. Existing eval history remains available.",
-      });
-      setPendingArchiveFixture(null);
-    } catch (error) {
-      setModalState({
-        title: "Archive blocked",
-        message: error instanceof Error ? error.message : "The eval fixture could not be archived.",
-      });
-    } finally {
-      setIsArchivingFixture(false);
-    }
+    const outcome = await action.run(() => archiveFixture({ fixtureId: pendingArchiveFixture._id }), {
+      key: pendingArchiveFixture._id,
+      successMessage: "Fixture archived. Existing eval history remains available.",
+      fallbackMessage: "The eval fixture could not be archived.",
+    });
+    if (outcome.ok) setPendingArchiveFixture(null);
   };
 
   const latestEvalPassed = readiness?.latestSmokeEvalRun?.status === "SUCCESS";
@@ -611,28 +572,28 @@ export default function AgentEvalsPage() {
           <button
             type="button"
             onClick={() => runSuite(undefined, releaseGatePolicy?.fixtures.map((fixture) => fixture.fixtureId))}
-            disabled={!hasCriticalFixtures || activeFixtureId !== null}
+            disabled={!hasCriticalFixtures || action.isBusy()}
             className="px-4 py-2 rounded-[8px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-[13px] font-semibold hover:bg-emerald-500/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-10"
           >
-            {activeFixtureId === "suite" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {action.isBusy(SUITE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
             Run critical
           </button>
           <button
             type="button"
             onClick={() => runSuite(undefined, releaseGatePolicy?.fixtures.map((fixture) => fixture.fixtureId), undefined, "MODEL_GRADED")}
-            disabled={!hasCriticalFixtures || activeFixtureId !== null}
+            disabled={!hasCriticalFixtures || action.isBusy()}
             className="px-4 py-2 rounded-[8px] border border-violet-500/30 bg-violet-500/10 text-violet-300 text-[13px] font-semibold hover:bg-violet-500/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-10"
           >
-            {activeFixtureId === "suite" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            {action.isBusy(SUITE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
             Model gate
           </button>
           <button
             type="button"
             onClick={() => runSuite()}
-            disabled={!fixtures || fixtures.length === 0 || activeFixtureId !== null}
+            disabled={!fixtures || fixtures.length === 0 || action.isBusy()}
             className="px-4 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[13px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-10"
           >
-            {activeFixtureId === "suite" ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+            {action.isBusy(SUITE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
             Run full suite
           </button>
         </div>
@@ -721,7 +682,7 @@ export default function AgentEvalsPage() {
                     <button
                       type="button"
                       onClick={() => runSuite(undefined, skill.fixtureIds)}
-                      disabled={skill.fixtureIds.length === 0 || activeFixtureId !== null}
+                      disabled={skill.fixtureIds.length === 0 || action.isBusy()}
                       className="px-2.5 py-1.5 rounded-md border border-brand/30 bg-brand/10 text-[10px] uppercase tracking-widest font-mono text-brand hover:bg-brand/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                       <PlayCircle className="w-3 h-3" />
@@ -730,7 +691,7 @@ export default function AgentEvalsPage() {
                     <button
                       type="button"
                       onClick={() => runSuite(undefined, skill.fixtureIds, undefined, "MODEL_GRADED")}
-                      disabled={skill.fixtureIds.length === 0 || activeFixtureId !== null}
+                      disabled={skill.fixtureIds.length === 0 || action.isBusy()}
                       className="px-2.5 py-1.5 rounded-md border border-violet-500/20 bg-violet-500/10 text-[10px] uppercase tracking-widest font-mono text-violet-300 hover:bg-violet-500/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                       <ShieldCheck className="w-3 h-3" />
@@ -923,7 +884,7 @@ export default function AgentEvalsPage() {
                   key={tag}
                   type="button"
                   onClick={() => runSuite(tag)}
-                  disabled={activeFixtureId !== null}
+                  disabled={action.isBusy()}
                   className="px-2.5 py-1.5 rounded-md border border-border-dim bg-white/[0.03] text-[10px] uppercase tracking-widest font-mono text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   <PlayCircle className="w-3 h-3" />
@@ -965,7 +926,7 @@ export default function AgentEvalsPage() {
                         <button
                           type="button"
                           onClick={() => runSuite(undefined, undefined, preset._id)}
-                          disabled={activeFixtureId !== null}
+                          disabled={action.isBusy()}
                           className="px-2.5 py-1.5 rounded-md border border-border-dim bg-white/[0.03] text-[10px] uppercase tracking-widest font-mono text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                         >
                           <PlayCircle className="w-3 h-3" />
@@ -1043,16 +1004,16 @@ export default function AgentEvalsPage() {
                       <button
                         type="button"
                         onClick={() => runFixture(fixture._id)}
-                        disabled={activeFixtureId !== null}
+                        disabled={action.isBusy()}
                         className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[11px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
                       >
-                        {activeFixtureId === fixture._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
+                        {action.isBusy(fixture._id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
                         Run
                       </button>
                       <button
                         type="button"
                         onClick={() => openEditFixtureModal(fixture)}
-                        disabled={activeFixtureId !== null}
+                        disabled={action.isBusy()}
                         className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[11px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -1061,7 +1022,7 @@ export default function AgentEvalsPage() {
                       <button
                         type="button"
                         onClick={() => setPendingArchiveFixture(fixture)}
-                        disabled={activeFixtureId !== null}
+                        disabled={action.isBusy()}
                         className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-[11px] font-medium text-red-300 hover:bg-red-500/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
                       >
                         <Archive className="w-3.5 h-3.5" />
@@ -1248,7 +1209,7 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={closeFixtureModal}
-              disabled={isSavingFixture}
+              disabled={action.isBusy(FIXTURE_SAVE_KEY)}
               className="px-4 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50"
             >
               Cancel
@@ -1256,10 +1217,10 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={saveFixture}
-              disabled={isSavingFixture}
+              disabled={action.isBusy(FIXTURE_SAVE_KEY)}
               className="px-4 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[13px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isSavingFixture && <Loader2 className="w-4 h-4 animate-spin" />}
+              {action.isBusy(FIXTURE_SAVE_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
               {editingFixtureId ? "Save fixture" : "Create fixture"}
             </button>
           </div>
@@ -1268,7 +1229,7 @@ export default function AgentEvalsPage() {
 
       <SonaeModal
         isOpen={!!pendingArchiveFixture}
-        onClose={() => !isArchivingFixture && setPendingArchiveFixture(null)}
+        onClose={() => !action.isBusy(pendingArchiveFixture?._id) && setPendingArchiveFixture(null)}
         title="Archive eval fixture"
         size="sm"
       >
@@ -1285,7 +1246,7 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={() => setPendingArchiveFixture(null)}
-              disabled={isArchivingFixture}
+              disabled={action.isBusy(pendingArchiveFixture?._id)}
               className="px-4 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50"
             >
               Cancel
@@ -1293,10 +1254,10 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={confirmArchiveFixture}
-              disabled={isArchivingFixture}
+              disabled={action.isBusy(pendingArchiveFixture?._id)}
               className="px-4 py-2 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-300 text-[13px] font-semibold hover:bg-red-500/15 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isArchivingFixture && <Loader2 className="w-4 h-4 animate-spin" />}
+              {action.isBusy(pendingArchiveFixture?._id) && <Loader2 className="w-4 h-4 animate-spin" />}
               Archive fixture
             </button>
           </div>
@@ -1360,7 +1321,7 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={closePresetModal}
-              disabled={isSavingPreset}
+              disabled={action.isBusy(PRESET_SAVE_KEY)}
               className="px-4 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50"
             >
               Cancel
@@ -1368,10 +1329,10 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={savePreset}
-              disabled={isSavingPreset}
+              disabled={action.isBusy(PRESET_SAVE_KEY)}
               className="px-4 py-2 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[13px] font-semibold hover:bg-brand/15 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isSavingPreset && <Loader2 className="w-4 h-4 animate-spin" />}
+              {action.isBusy(PRESET_SAVE_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
               {editingPresetId ? "Save preset" : "Create preset"}
             </button>
           </div>
@@ -1380,7 +1341,7 @@ export default function AgentEvalsPage() {
 
       <SonaeModal
         isOpen={!!pendingArchivePreset}
-        onClose={() => !isArchivingPreset && setPendingArchivePreset(null)}
+        onClose={() => !action.isBusy(pendingArchivePreset?._id) && setPendingArchivePreset(null)}
         title="Archive suite preset"
         size="sm"
       >
@@ -1397,7 +1358,7 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={() => setPendingArchivePreset(null)}
-              disabled={isArchivingPreset}
+              disabled={action.isBusy(pendingArchivePreset?._id)}
               className="px-4 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50"
             >
               Cancel
@@ -1405,35 +1366,16 @@ export default function AgentEvalsPage() {
             <button
               type="button"
               onClick={confirmArchivePreset}
-              disabled={isArchivingPreset}
+              disabled={action.isBusy(pendingArchivePreset?._id)}
               className="px-4 py-2 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-300 text-[13px] font-semibold hover:bg-red-500/15 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isArchivingPreset && <Loader2 className="w-4 h-4 animate-spin" />}
+              {action.isBusy(pendingArchivePreset?._id) && <Loader2 className="w-4 h-4 animate-spin" />}
               Archive preset
             </button>
           </div>
         </div>
       </SonaeModal>
 
-      <SonaeModal
-        isOpen={!!modalState}
-        onClose={() => setModalState(null)}
-        title={modalState?.title || ""}
-        size="sm"
-      >
-        <div className="pt-2 pb-4 px-1 flex flex-col gap-6">
-          <p className="text-[14px] text-secondary leading-relaxed">{modalState?.message}</p>
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setModalState(null)}
-              className="px-5 py-2.5 rounded-[10px] bg-brand text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm"
-            >
-              Acknowledge
-            </button>
-          </div>
-        </div>
-      </SonaeModal>
     </div>
   );
 }

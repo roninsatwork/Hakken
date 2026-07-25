@@ -300,7 +300,7 @@ describe("Agent Runs", () => {
       "Unauthorized"
     );
     await expect(t.query(api.agentRuns.getForAgent, { agentId, paginationOpts })).rejects.toThrow(
-      "Unauthenticated request"
+      "Unauthenticated"
     );
   });
 

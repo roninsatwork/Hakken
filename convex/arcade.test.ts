@@ -56,7 +56,7 @@ describe("arcade scores", () => {
     });
     expect(await userAClient.query(api.arcade.getScoresCount, { game: "ronins-run" })).toBe(2);
     await expect(t.query(api.arcade.getScoresCount, { game: "ronins-run" })).rejects.toThrow(
-      "Unauthenticated request"
+      "Unauthenticated"
     );
   });
 });

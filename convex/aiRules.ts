@@ -9,6 +9,8 @@ import {
 } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { DEFAULT_SETTINGS } from "./settingsService";
+import { publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
   const seen = new Set<string>();
@@ -34,7 +36,8 @@ function buildRuleAuditMetadata(metadata: Record<string, unknown>, args: { trigg
 }
 
 // Fetch rules based on company context. If companyId is absent, fetches global rules.
-export const getRules = query({
+export const getRules = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -84,7 +87,8 @@ export const getRules = query({
   },
 });
 
-export const getOffsetPaginatedRules = query({
+export const getOffsetPaginatedRules = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -185,18 +189,48 @@ export const getActiveRulesInternal = internalQuery({
   },
 });
 
+/**
+ * Compose the seeded pricing-protocol instruction from deployment settings.
+ *
+ * This previously hardcoded both the platform name and a specific person's
+ * email address, so every fork and every customer deployment shipped an agent
+ * that routed pricing enquiries to the original author. The referral sentence
+ * is emitted only when a sales contact is actually configured; the
+ * do-not-quote-prices instruction stands on its own without it.
+ */
+export function buildPricingProtocolInstruction(args: {
+  platformName?: string;
+  salesContactEmail?: string;
+}) {
+  const platformName = args.platformName?.trim() || DEFAULT_SETTINGS.platformName;
+  const salesContactEmail = args.salesContactEmail?.trim();
+
+  const instruction =
+    "Under no circumstances should you provide strict numbers or definitive pricing. " +
+    `${platformName} operates strictly on a custom enterprise agreement model.`;
+
+  return salesContactEmail
+    ? `${instruction} If the user asks about costs, immediately tell them to contact ${salesContactEmail} for a bespoke architectural quote.`
+    : `${instruction} If the user asks about costs, tell them that a member of the team will follow up with a bespoke quote.`;
+}
+
 export const seedPricingRule = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Acquire a valid admin ID to satisfy schema constraints
     const adminUser = await ctx.db.query("users").filter(q => q.eq(q.field("role"), "SUPER_ADMIN")).first();
-    
+
     if (!adminUser) throw new Error("No super administrators found in system.");
+
+    const settings = await ctx.db.query("systemSettings").first();
 
     return await ctx.db.insert("aiRules", {
       name: "Pricing Protocol",
       trigger: "pricing, cost, how much does it cost, subscription",
-      instruction: "Under no circumstances should you provide strict numbers or definitive pricing. Sonae operates strictly on a custom enterprise agreement model. If the user asks about costs, immediately tell them to contact anthony@ronins.co.uk for a bespoke architectural quote.",
+      instruction: buildPricingProtocolInstruction({
+        platformName: settings?.platformName,
+        salesContactEmail: settings?.salesContactEmail,
+      }),
       priority: "HIGH",
       isActive: true,
       createdBy: adminUser._id,
@@ -206,10 +240,10 @@ export const seedPricingRule = internalMutation({
 });
 
 // Fetch a single rule for the Edit screen
-export const getRuleById = query({
+export const getRuleById = tenantQuery({
   args: { id: v.id("aiRules") },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx, "Unauthenticated");
+    const { user } = ctx;
     const rule = await ctx.db.get(args.id);
     
     if (!rule) return null;
@@ -236,7 +270,7 @@ export const getRuleById = query({
   },
 });
 
-export const createRule = mutation({
+export const createRule = tenantMutation({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -247,7 +281,7 @@ export const createRule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
 
     if (user.role !== "SUPER_ADMIN" && args.agentId) {
        // Agents are global in Sonae. If an ADMIN creates a rule for an agent,
@@ -283,7 +317,7 @@ export const createRule = mutation({
   },
 });
 
-export const updateRule = mutation({
+export const updateRule = tenantMutation({
   args: {
     id: v.id("aiRules"),
     name: v.string(),
@@ -293,7 +327,7 @@ export const updateRule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
     
     if (!existingRule) throw new Error("Entities not found");
@@ -323,13 +357,13 @@ export const updateRule = mutation({
   },
 });
 
-export const toggleRuleActive = mutation({
+export const toggleRuleActive = tenantMutation({
   args: {
     id: v.id("aiRules"),
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
     if (!existingRule) throw new Error("Entities not found");
     assertAdminCanAccessCompany(user, existingRule.companyId);
@@ -349,10 +383,10 @@ export const toggleRuleActive = mutation({
   },
 });
 
-export const deleteRule = mutation({
+export const deleteRule = tenantMutation({
   args: { id: v.id("aiRules") },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
     if (!existingRule) throw new Error("Entities not found");
     assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: Sonae architectural deletion prevented.");

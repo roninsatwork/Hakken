@@ -8,14 +8,15 @@ import type { Doc } from "./_generated/dataModel";
 import { requireActionUser } from "./actionAuth";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
+import { tenantAction } from "./tenantFunctions";
 
-export const routeAgentIntent = action({
+export const routeAgentIntent = tenantAction({
   args: {
     prompt: v.string(),
   },
   handler: async (ctx, args) => {
     // Authenticate routing dispatch
-    const { user } = await requireActionUser(ctx, "Unauthorized", "User not found in system");
+    const { user } = ctx;
 
     try {
         // Fetch pool of active agents available to this company

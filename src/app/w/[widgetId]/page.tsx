@@ -3,12 +3,50 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Id, type Doc } from "@/convex/_generated/dataModel";
 import { Bot, Send, Loader2, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
+import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+
+
+/**
+ * Assistant text plus its streaming state.
+ *
+ * A separate component because the presentation depends on a ticking clock, and
+ * hooks cannot be called from inside the message map.
+ */
+function WidgetAssistantContent({
+    content,
+    message,
+    accentColor,
+}: {
+    content: string;
+    message: Doc<"messages">;
+    accentColor: string;
+}) {
+    const presentation = useStreamPresentation(message);
+
+    return (
+        <>
+            <SonaeMarkdown content={content} />
+            {presentation === "streaming" && (
+                <span
+                    role="status"
+                    aria-label="Still writing"
+                    className="inline-block w-[2px] h-[1.1em] -mb-[0.15em] ml-[2px] animate-pulse"
+                    style={{ backgroundColor: accentColor }}
+                />
+            )}
+            {presentation === "stalled" && (
+                <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
+            )}
+        </>
+    );
+}
 
 export default function WidgetIframePage() {
   const params = useParams();
@@ -101,6 +139,10 @@ export default function WidgetIframePage() {
   useEffect(() => {
       if (messages && messages.length > prevMessagesCount.current) {
           const latestMessage = messages[messages.length - 1];
+          // A streamed reply appears as soon as its first token lands. Chiming
+          // then would announce an answer that has barely started, so wait for
+          // it to finish before playing.
+          if (latestMessage.isStreaming) return;
           if (latestMessage.role !== "user" && widget?.enableSounds) {
               audioRef.current?.play().catch(e => console.log("Audio play blocked by browser", e));
           }
@@ -359,7 +401,9 @@ export default function WidgetIframePage() {
                                      }`}
                                      style={isUser ? { backgroundColor: primaryColor } : undefined}
                                   >
-                                       {isUser ? displayContent : <SonaeMarkdown content={displayContent} />}
+                                       {isUser ? displayContent : (
+                                          <WidgetAssistantContent content={displayContent} message={message} accentColor={primaryColor} />
+                                       )}
                                   </div>
                               </motion.div>
                            )

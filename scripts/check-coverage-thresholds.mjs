@@ -1,10 +1,31 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * Coverage gate, scoped to the platform.
+ *
+ * The movement demo is roughly half of non-test `src/` and is better covered
+ * than the platform is, so a single repo-wide number flatters the code that
+ * actually ships to customers. This script therefore splits coverage into
+ * "platform" (gating) and "demo" (reported only), so the demo can stay in the
+ * repo without hiding platform regressions.
+ *
+ * See docs/plans/active/platform-hardening-plan.md (P1.6 / P2.2).
+ */
+
 const rootDir = process.cwd();
 const thresholdsPath = path.join(rootDir, "coverage-thresholds.json");
 const summaryPath = path.join(rootDir, "coverage", "coverage-summary.json");
 const coverageTolerance = 0.05;
+const METRICS = ["lines", "statements", "branches", "functions"];
+
+/** Files owned by the movement demo rather than the platform. */
+const DEMO_PATH_PATTERNS = [
+  /^src\/app\/\(dashboard\)\/demos\//,
+  /^src\/lib\/movements\//,
+  /^convex\/movements/,
+  /^scripts\/movement-debug\//,
+];
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -15,19 +36,49 @@ function formatPercent(value) {
 }
 
 function assertThresholdShape(name, thresholds) {
-  for (const metric of ["lines", "statements", "branches", "functions"]) {
+  for (const metric of METRICS) {
     if (typeof thresholds[metric] !== "number") {
       throw new Error(`${name}.${metric} must be a number.`);
     }
   }
 }
 
+function toRepoRelative(filePath) {
+  const withSlash = rootDir.endsWith(path.sep) ? rootDir : `${rootDir}${path.sep}`;
+  const relative = filePath.startsWith(withSlash) ? filePath.slice(withSlash.length) : filePath;
+  return relative.split(path.sep).join("/");
+}
+
+function isDemoFile(relativePath) {
+  return DEMO_PATH_PATTERNS.some((pattern) => pattern.test(relativePath));
+}
+
+/** Aggregate covered/total per metric across a set of per-file summary entries. */
+function aggregate(entries) {
+  const totals = Object.fromEntries(METRICS.map((metric) => [metric, { covered: 0, total: 0 }]));
+
+  for (const entry of entries) {
+    for (const metric of METRICS) {
+      totals[metric].covered += entry[metric]?.covered ?? 0;
+      totals[metric].total += entry[metric]?.total ?? 0;
+    }
+  }
+
+  return Object.fromEntries(
+    METRICS.map((metric) => {
+      const { covered, total } = totals[metric];
+      return [metric, { covered, total, pct: total === 0 ? 100 : (covered / total) * 100 }];
+    }),
+  );
+}
+
 const config = readJson(thresholdsPath);
 assertThresholdShape("current", config.current);
 assertThresholdShape("floor", config.floor);
 
+// The ratchet only turns one way: `current` may never be lowered below `floor`.
 const configurationFailures = [];
-for (const metric of ["lines", "statements", "branches", "functions"]) {
+for (const metric of METRICS) {
   if (config.current[metric] < config.floor[metric]) {
     configurationFailures.push(
       `${metric}: current ${formatPercent(config.current[metric])} is below floor ${formatPercent(config.floor[metric])}`,
@@ -46,36 +97,57 @@ if (!fs.existsSync(summaryPath)) {
   process.exit(1);
 }
 
-const summary = readJson(summaryPath).total;
-const coverageFailures = [];
-const rows = [];
+const summary = readJson(summaryPath);
+const platformEntries = [];
+const demoEntries = [];
 
-for (const metric of ["lines", "statements", "branches", "functions"]) {
-  const actual = Number(summary[metric]?.pct ?? 0);
-  const required = config.current[metric];
-  const covered = summary[metric]?.covered ?? 0;
-  const total = summary[metric]?.total ?? 0;
-  rows.push({ metric, actual, required, covered, total });
-
-  if (actual + coverageTolerance < required) {
-    coverageFailures.push(`${metric}: ${formatPercent(actual)} is below required ${formatPercent(required)}`);
-  }
+for (const [filePath, entry] of Object.entries(summary)) {
+  if (filePath === "total") continue;
+  (isDemoFile(toRepoRelative(filePath)) ? demoEntries : platformEntries).push(entry);
 }
 
+if (platformEntries.length === 0) {
+  console.error("No platform files found in the coverage summary; refusing to pass vacuously.");
+  process.exit(1);
+}
+
+const platform = aggregate(platformEntries);
+const demo = aggregate(demoEntries);
+
+const coverageFailures = [];
+const rows = METRICS.map((metric) => {
+  const actual = platform[metric].pct;
+  const required = config.current[metric];
+
+  if (actual + coverageTolerance < required) {
+    coverageFailures.push(
+      `${metric}: platform ${formatPercent(actual)} is below required ${formatPercent(required)}`,
+    );
+  }
+
+  return { metric, actual, required, platform: platform[metric], demo: demo[metric] };
+});
+
 const table = [
-  "| Metric | Actual | Required | Covered |",
-  "| --- | ---: | ---: | ---: |",
+  "| Metric | Platform (gated) | Required | Covered | Demo (not gated) |",
+  "| --- | ---: | ---: | ---: | ---: |",
   ...rows.map(
-    ({ metric, actual, required, covered, total }) =>
-      `| ${metric} | ${formatPercent(actual)} | ${formatPercent(required)} | ${covered}/${total} |`,
+    ({ metric, actual, required, platform: p, demo: d }) =>
+      `| ${metric} | ${formatPercent(actual)} | ${formatPercent(required)} | ${p.covered}/${p.total} | ${formatPercent(d.pct)} |`,
   ),
 ].join("\n");
 
-console.log("Coverage threshold summary:");
+console.log("Coverage threshold summary (gate applies to platform code only):");
 console.log(table);
+console.log(
+  `\nDemo files excluded from the gate: ${demoEntries.length} of ${demoEntries.length + platformEntries.length}.`,
+);
 
 if (process.env.GITHUB_STEP_SUMMARY) {
-  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Coverage Summary\n\n${table}\n`);
+  fs.appendFileSync(
+    process.env.GITHUB_STEP_SUMMARY,
+    `### Coverage Summary\n\nGate applies to platform code only; the movement demo is reported but not gated.\n\n${table}\n`,
+  );
 }
 
 if (coverageFailures.length > 0) {

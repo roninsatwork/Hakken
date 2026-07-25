@@ -480,7 +480,10 @@ describe("OWASP: Broken Access Control - Workflows", () => {
       outputData: JSON.stringify({ _system: { isIterator: true }, items: ["one", "two"] }),
     });
 
-    expect(iteratorReady).toEqual(["worker"]);
+    // One scheduled worker per fanned-out step. `executeNode` claims a single
+    // PENDING step per invocation, so scheduling "worker" once for two items
+    // ran only the first and left the second PENDING forever.
+    expect(iteratorReady).toEqual(["worker", "worker"]);
 
     const workerInputs = await t.run(async (ctx) => {
       const steps = await ctx.db
@@ -609,6 +612,7 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     expect(resumedState.downstreamSteps[0].status).toBe("PENDING");
   });
 
+  // template:remove:start properties
   test("BOLA and Sandboxing inside Workflow Database Operations", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -831,4 +835,5 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     }) as Doc<"properties">;
     expect(foreignDoc._id).toBe(propertyBId);
   });
+  // template:remove:end
 });

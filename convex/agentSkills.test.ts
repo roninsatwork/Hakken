@@ -495,7 +495,7 @@ describe("agent skills", () => {
     await expect(client.mutation(api.agents.updateAgent, {
       id: agentId,
       isActive: true,
-    })).rejects.toThrow("Activation blocked: enabled skills are missing required tools or high-risk skill smoke evals.");
+    })).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
 
     const skillFixtureId = await t.run(async (ctx) => {
       const fixtures = await ctx.db
@@ -690,7 +690,7 @@ describe("agent skills", () => {
     await expect(client.mutation(api.agents.updateAgent, {
       id: agentId,
       isActive: true,
-    })).rejects.toThrow("Activation blocked: enabled skills are missing required tools or high-risk skill smoke evals.");
+    })).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
 
     const refreshedSkillSmokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, {
       agentId,
@@ -733,6 +733,43 @@ describe("agent skills", () => {
       validatedBindings: 1,
       needsSmokeBindings: 0,
       highRiskNeedsSmokeBindings: 0,
+    });
+
+    // Activation now needs evidence a model was actually called and its answer
+    // graded — configuration checks alone are no longer sufficient.
+    await t.run(async (ctx) => {
+      const now = Date.now() + 30;
+      const gradedRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "MANUAL",
+        objective: "Smoke eval: skill coverage",
+        status: "SUCCESS",
+        startedAt: now,
+        completedAt: now + 1,
+        updatedAt: now + 1,
+        finalOutput: "Model-graded smoke eval passed.",
+      });
+      // Carries the same skill evidence as the fixture, so this run counts as
+      // the skill's current coverage rather than displacing it with one that
+      // has none.
+      const skillFixture = await ctx.db.get(skillFixtureId);
+      await ctx.db.insert("agentRunSteps", {
+        runId: gradedRunId,
+        agentId,
+        stepIndex: 1,
+        kind: "OBSERVE",
+        status: "SUCCESS",
+        input: "skill coverage",
+        output: JSON.stringify({
+          status: "PASSED",
+          gradingMode: "MODEL_GRADED",
+          fixtureId: skillFixtureId,
+          fixtureType: skillFixture?.type ?? "HAPPY_PATH",
+          sourceEvidenceJson: skillFixture?.sourceEvidenceJson,
+        }),
+        startedAt: now,
+        completedAt: now,
+      });
     });
 
     await expect(client.mutation(api.agents.updateAgent, {

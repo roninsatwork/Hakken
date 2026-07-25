@@ -8,6 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { SonaeMarkdown } from "./SonaeMarkdown";
 import Image from "next/image";
 import { formatTime } from "@/src/lib/dates";
+import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
+import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
@@ -16,6 +18,12 @@ interface ChatMessageProps {
 export default function ChatMessage({ message }: ChatMessageProps) {
   const isAssistant = message.role === "assistant";
   const user = useQuery(api.users.getMe);
+
+  // A reply whose run was killed outright cannot mark itself finished, so a
+  // caret would blink against an answer that is never coming. Anything older
+  // than the longest a run may take is treated as abandoned and says so.
+  const presentation = useStreamPresentation(message);
+  const isStreaming = presentation === "streaming";
 
   return (
     <motion.div
@@ -40,13 +48,32 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         }`}
       >
         <div className={`text-[14px] leading-[1.7] font-light tracking-wide ${isAssistant ? "" : "whitespace-pre-wrap"}`}>
-          {isAssistant ? <SonaeMarkdown content={message.content} /> : message.content}
+          {isAssistant ? (
+            <>
+              <SonaeMarkdown content={message.content} />
+              {isStreaming && (
+                <span
+                  aria-label="Still writing"
+                  role="status"
+                  className="inline-block w-[2px] h-[1.1em] -mb-[0.15em] ml-[2px] bg-brand animate-pulse"
+                />
+              )}
+              {presentation === "stalled" && (
+                <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
+              )}
+            </>
+          ) : (
+            message.content
+          )}
         </div>
-        
-        {/* Ambient Subtle Timestamp Data */}
-        <div className={`text-[10px] font-mono mt-3 uppercase tracking-widest ${isAssistant ? "text-left opacity-40" : "text-right opacity-50 dark:opacity-40"}`}>
-          {formatTime(message.createdAt, { locale: [], options: { hour: '2-digit', minute: '2-digit' } })}
-        </div>
+
+        {/* Ambient Subtle Timestamp Data. Hidden mid-stream: a clock next to a
+            half-written reply reads as though the answer is already finished. */}
+        {!isStreaming && (
+          <div className={`text-[10px] font-mono mt-3 uppercase tracking-widest ${isAssistant ? "text-left opacity-40" : "text-right opacity-50 dark:opacity-40"}`}>
+            {formatTime(message.createdAt, { locale: [], options: { hour: '2-digit', minute: '2-digit' } })}
+          </div>
+        )}
       </div>
       
       {/* User Avatar Badge */}

@@ -25,7 +25,7 @@ export default function ConnectorsDashboard() {
   const t = useTranslations("admin.aiTools.marketplace");
   const deleteToolMutation = useMutation(api.aiTools.deleteTool);
   const installConnector = useMutation(api.aiTools.installConnector);
-  const testConnectorConnection = useMutation(api.aiTools.testConnectorConnection);
+  const validateConnectorConfiguration = useMutation(api.aiTools.validateConnectorConfiguration);
   const marketplace = useQuery(api.aiTools.getConnectorMarketplace) || [];
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,7 +75,7 @@ export default function ConnectorsDashboard() {
     if (testingConnectorId) return;
     setTestingConnectorId(connectorId);
     try {
-      await testConnectorConnection({ connectorId });
+      await validateConnectorConfiguration({ connectorId });
     } catch (e) {
       console.error(e);
     } finally {
@@ -156,13 +156,32 @@ export default function ConnectorsDashboard() {
               <div key={connector.key} className="border border-border-dim bg-background/40 rounded-[8px] p-3 flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-brand bg-brand/10 border border-brand/20 rounded-[6px] px-2 py-0.5">
                         {connector.category}
                       </span>
                       <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted bg-foreground/5 border border-border-dim rounded-[6px] px-2 py-0.5">
                         {connector.authMode}
                       </span>
+                      {/*
+                        Derived from whether an implementation exists, not from
+                        the catalogue. Most of these connectors are declarations
+                        with nothing behind them, and installing one used to look
+                        identical to installing one that works.
+                      */}
+                      {connector.availability !== "AVAILABLE" && (
+                        <span
+                          data-testid={`connector-availability-${connector.key}`}
+                          className="text-[10px] font-bold tracking-[0.1em] uppercase text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-[6px] px-2 py-0.5"
+                        >
+                          {connector.availability === "UNAVAILABLE"
+                            ? t("availability.unavailable")
+                            : t("availability.partial", {
+                              available: connector.executableToolCount,
+                              total: connector.totalToolCount,
+                            })}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-[14px] font-semibold text-foreground mt-2 truncate">{connector.name}</h3>
                     <p className="text-[12px] text-muted mt-1 line-clamp-2">{connector.description}</p>

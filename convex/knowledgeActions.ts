@@ -13,6 +13,7 @@ import { requireActionAdmin } from "./actionAuth";
 import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
 import { createVertexGenAIClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { adminAction } from "./tenantFunctions";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -66,11 +67,9 @@ export const ingestDocument = internalAction({
   },
 });
 
-export const mapWebsite = action({
+export const mapWebsite = adminAction({
   args: { url: v.string() },
   handler: async (ctx, args) => {
-    await requireActionAdmin(ctx, "Unauthorized: Only administrators can map new external sites.");
-
     const firecrawlKey = process.env.FIRECRAWL_API_KEY;
     if (!firecrawlKey) throw new Error("FIRECRAWL_API_KEY environment variable not set");
 

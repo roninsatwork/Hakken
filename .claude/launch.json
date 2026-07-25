@@ -13,6 +13,20 @@
       ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "//": "Signs in via /api/e2e-auth?role=... with no secret required, so admin screens can be inspected visually. E2E_AUTH_ENABLED also swaps convex/react for src/e2e/convexReactMock.tsx, so data is fixture data: good for verifying layout, navigation and role-dependent rendering, not for verifying real query results.",
+      "name": "next-dev-e2e-auth",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PATH=/opt/homebrew/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "E2E_AUTH_ENABLED=1",
+        "npm",
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

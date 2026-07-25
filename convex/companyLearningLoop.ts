@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 
@@ -94,7 +95,7 @@ function parseJsonArray(value: string | undefined, label: string) {
 }
 
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+  const { user, userId } = await requireAdmin(ctx);
   const company = await ctx.db.get(companyId);
   if (!company) throw new Error("Company not found");
   assertAdminCanAccessCompany(user, companyId);
@@ -177,7 +178,7 @@ function buildFixtureContextJson(args: {
   });
 }
 
-export const getSuggestionsForCompany = query({
+export const getSuggestionsForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -389,7 +390,7 @@ export const getSuggestionsForCompany = query({
   },
 });
 
-export const createMemoryCandidateFromChat = mutation({
+export const createMemoryCandidateFromChat = adminMutation({
   args: {
     companyId: v.id("companies"),
     threadId: v.id("threads"),
@@ -436,7 +437,7 @@ export const createMemoryCandidateFromChat = mutation({
   },
 });
 
-export const createEvalCaseFromChat = mutation({
+export const createEvalCaseFromChat = adminMutation({
   args: {
     companyId: v.id("companies"),
     threadId: v.id("threads"),

@@ -1,13 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
 import { redactPII } from "./utils/pii";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
+import { publicMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   assertCanAccessThread,
   assertWithinMessageRateLimit,
   canAccessThread,
+  getThreadMessageDimensions,
   isAnonymousWidgetThread,
   incrementChatQuota,
   isChatQuotaExceeded,
@@ -30,30 +31,26 @@ const safetyRefusalCategoryValidator = v.union(
 
 const safetyRefusalSourceValidator = v.union(v.literal("assistant"), v.literal("agent"));
 
-function getThreadMessageDimensions(thread: Doc<"threads"> | null) {
-  return {
-    companyId: thread?.companyId,
-    userId: thread?.userId,
-    agentId: thread?.agentId,
-    widgetId: thread?.widgetId,
-    analyticsDimensionsVersion: 1,
-  };
-}
-
-export const getThreads = query({
+export const getThreads = tenantQuery({
   args: {},
   handler: async (ctx) => {
-    const { userId } = await requireCurrentUser(ctx, "Unauthorized");
+    const { userId } = ctx;
 
-    return await ctx.db
+    const threads = await ctx.db
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc") // newest first
       .take(USER_THREAD_LIST_LIMIT);
+
+    // Eval threads belong to the platform, not to the person who triggered
+    // them. They are visible on the agent's eval screen, not in a conversation
+    // list somebody scrolls looking for their own chats.
+    return threads.filter((thread) => thread.purpose !== "EVAL");
   },
 });
 
-export const getMessages = query({
+export const getMessages = publicQuery({
+  reason: "Anonymous widget visitors read their own thread; gated on the hashed widget session token.",
   args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
@@ -91,20 +88,19 @@ export const getThreadInternal = internalQuery({
   },
 });
 
-export const generateChatUploadUrl = mutation({
+export const generateChatUploadUrl = tenantMutation({
   args: {},
   handler: async (ctx) => {
-    await requireCurrentUser(ctx, "Unauthorized");
     return await ctx.storage.generateUploadUrl();
   },
 });
 
-export const createThread = mutation({
+export const createThread = tenantMutation({
   args: {
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthorized");
+    const { userId, user } = ctx;
 
     const now = Date.now();
     const activeCompanyId = getActiveCompanyId(user);
@@ -122,7 +118,8 @@ export const createThread = mutation({
   },
 });
 
-export const sendMessage = mutation({
+export const sendMessage = publicMutation({
+  reason: "Anonymous widget visitors post to their own thread; gated on the hashed widget session token.",
   args: {
     threadId: v.id("threads"),
     content: v.string(),
@@ -284,6 +281,94 @@ export const saveAssistantMessage = internalMutation({
   },
 });
 
+/**
+ * Open a streamed assistant reply.
+ *
+ * Deliberately called on the *first* text fragment rather than when the run
+ * starts. The chat surfaces infer "assistant is thinking" from the last message
+ * being the user's, so inserting an empty row up front would replace the
+ * thinking indicator with a blank bubble for however long the model takes to
+ * produce its first token.
+ */
+export const startStreamingAssistantMessage = internalMutation({
+  args: {
+    threadId: v.id("threads"),
+    content: v.string(),
+    modelUsed: v.optional(v.string()),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+
+    return await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      role: "assistant",
+      content: args.content,
+      createdAt: Date.now(),
+      isStreaming: true,
+      streamStartedAt: Date.now(),
+      modelUsed: args.modelUsed,
+      providerKey: args.providerKey,
+      providerModelId: args.providerModelId,
+      ...getThreadMessageDimensions(thread),
+    });
+  },
+});
+
+/**
+ * Replace the partial text of a streamed reply.
+ *
+ * Takes the whole accumulated answer rather than a delta so a retried or
+ * out-of-order write cannot corrupt the text — the last write always wins with
+ * the correct value.
+ */
+export const appendStreamingAssistantMessage = internalMutation({
+  args: { messageId: v.id("messages"), content: v.string() },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    // The row can legitimately be gone if the thread was deleted mid-run.
+    if (!message || !message.isStreaming) return;
+
+    await ctx.db.patch(args.messageId, { content: args.content });
+  },
+});
+
+/**
+ * Close a streamed reply.
+ *
+ * Clearing `isStreaming` is what stops the caret, so every path out of a run —
+ * success, budget stop, provider failure — must reach this. A reply left marked
+ * as streaming is shown as stalled once it ages out; see `streamingService`.
+ */
+export const finishStreamingAssistantMessage = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    content: v.string(),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    modelUsed: v.optional(v.string()),
+    providerKey: v.optional(v.string()),
+    providerModelId: v.optional(v.string()),
+    companyMemoryEvidenceJson: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) return;
+
+    await ctx.db.patch(args.messageId, {
+      content: args.content,
+      isStreaming: false,
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      modelUsed: args.modelUsed,
+      providerKey: args.providerKey,
+      providerModelId: args.providerModelId,
+      companyMemoryEvidenceJson: args.companyMemoryEvidenceJson,
+    });
+  },
+});
+
 export const saveAssistantSafetyRefusal = internalMutation({
   args: {
     threadId: v.id("threads"),
@@ -320,12 +405,12 @@ export const saveAssistantSafetyRefusal = internalMutation({
   },
 });
 
-export const deleteThread = mutation({
+export const deleteThread = tenantMutation({
   args: {
     threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireCurrentUser(ctx, "Unauthorized Sonae Deletion");
+    const { userId } = ctx;
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {
@@ -349,13 +434,13 @@ export const deleteThread = mutation({
   },
 });
 
-export const renameThread = mutation({
+export const renameThread = tenantMutation({
   args: {
     threadId: v.id("threads"),
     title: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireCurrentUser(ctx, "Unauthorized");
+    const { userId } = ctx;
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {

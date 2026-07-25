@@ -1,11 +1,12 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { getNextStepIndex, updateMemoryUsageOutcomeForRun } from "./agentRunStateService";
 
 const AGENT_RUN_DETAIL_LIMIT = 500;
 const AGENT_RUN_ANALYTICS_LIMIT = 500;
@@ -54,6 +55,10 @@ const toolCallStatusValidator = v.union(
   v.literal("PENDING"),
   v.literal("APPROVAL_REQUIRED"),
   v.literal("SUCCESS"),
+  // A connector the catalogue advertises with no implementation behind it.
+  // Distinct from SUCCESS because it did nothing, and from FAILED because
+  // nothing was attempted — recording it as either hides a capability gap.
+  v.literal("NOT_IMPLEMENTED"),
   v.literal("FAILED"),
   v.literal("DENIED"),
   v.literal("CANCELLED")
@@ -90,35 +95,6 @@ function isReplayableRunStatus(status: string) {
 
 function isCancelableRunStatus(status: string) {
   return status === "QUEUED" || status === "RUNNING" || status === "PENDING_APPROVAL";
-}
-
-async function getNextStepIndex(ctx: Pick<MutationCtx, "db">, runId: Id<"agentRuns">) {
-  const latestStep = await ctx.db
-    .query("agentRunSteps")
-    .withIndex("by_run_step", (q) => q.eq("runId", runId))
-    .order("desc")
-    .first();
-
-  return (latestStep?.stepIndex ?? 0) + 1;
-}
-
-async function updateMemoryUsageOutcomeForRun(
-  ctx: Pick<MutationCtx, "db">,
-  runId: Id<"agentRuns">,
-  status: TerminalRunStatus
-) {
-  const now = Date.now();
-  const usageRows = await ctx.db
-    .query("agentMemoryUsage")
-    .withIndex("by_run", (q) => q.eq("runId", runId))
-    .take(AGENT_RUN_DETAIL_LIMIT);
-
-  await Promise.all(usageRows.map((usage) =>
-    ctx.db.patch(usage._id, {
-      outcome: status,
-      updatedAt: now,
-    })
-  ));
 }
 
 function getApprovalFinalOutput(status: "REJECTED" | "CANCELLED", reason?: string) {
@@ -453,14 +429,14 @@ function incrementCount(target: Record<string, number>, key: string, increment =
   target[key] = (target[key] ?? 0) + increment;
 }
 
-export const getForAgent = query({
+export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
     paginationOpts: paginationOptsValidator,
     status: v.optional(agentRunStatusValidator),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const baseQuery = args.status
       ? ctx.db
           .query("agentRuns")
@@ -480,12 +456,12 @@ export const getForAgent = query({
   },
 });
 
-export const getRunDetail = query({
+export const getRunDetail = adminQuery({
   args: {
     runId: v.id("agentRuns"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) return null;
 
@@ -719,12 +695,39 @@ export const getLatestStepIndexInternal = internalQuery({
   },
 });
 
-export const getAnalyticsForAgent = query({
+/**
+ * What a running action needs to know about its own run.
+ *
+ * Cancellation is a row in the database: `cancelRun` marks the run and returns,
+ * with no way to interrupt an action already in flight. The objective loop
+ * therefore has to come and look between steps. Kept deliberately small — this
+ * is read once per model turn and once before each tool call.
+ */
+export const getRunExecutionStateInternal = internalQuery({
+  args: { runId: v.id("agentRuns") },
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run) return null;
+
+    return {
+      status: run.status,
+      finalOutput: run.finalOutput,
+      startedAt: run.startedAt,
+      objective: run.objective,
+      agentId: run.agentId,
+      threadId: run.threadId,
+      companyId: run.companyId,
+      userId: run.userId,
+    };
+  },
+});
+
+export const getAnalyticsForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -876,6 +879,7 @@ export const getAnalyticsForAgent = query({
       approvalsRequired: number;
       denied: number;
       cancelled: number;
+      notImplemented: number;
     }> = {};
     for (const toolCall of toolCalls) {
       const key = toolCall.handlerMapping;
@@ -888,11 +892,16 @@ export const getAnalyticsForAgent = query({
           approvalsRequired: 0,
           denied: 0,
           cancelled: 0,
+          notImplemented: 0,
         };
       }
       toolStats[key].calls += 1;
       if (toolCall.status === "SUCCESS") toolStats[key].successes += 1;
       if (toolCall.status === "FAILED") toolStats[key].failures += 1;
+      // Counted on its own line. Folding it into failures would say the
+      // connector is broken; folding it into successes is what the runtime used
+      // to do. It is neither — the capability does not exist.
+      if (toolCall.status === "NOT_IMPLEMENTED") toolStats[key].notImplemented += 1;
       if (toolCall.status === "APPROVAL_REQUIRED") toolStats[key].approvalsRequired += 1;
       if (toolCall.status === "DENIED") toolStats[key].denied += 1;
       if (toolCall.status === "CANCELLED") toolStats[key].cancelled += 1;
@@ -975,13 +984,13 @@ export const getAnalyticsForAgent = query({
   },
 });
 
-export const getRunObservatory = query({
+export const getRunObservatory = adminQuery({
   args: {
     lookbackDays: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -1090,6 +1099,7 @@ export const getRunObservatory = query({
       failures: number;
       approvalsRequired: number;
       denied: number;
+      notImplemented: number;
       writeOrExternal: number;
     }> = {};
     for (const toolCall of sampledToolCalls) {
@@ -1102,11 +1112,13 @@ export const getRunObservatory = query({
           failures: 0,
           approvalsRequired: 0,
           denied: 0,
+          notImplemented: 0,
           writeOrExternal: 0,
         };
       }
       toolStats[key].calls += 1;
       if (toolCall.status === "FAILED" || toolCall.status === "CANCELLED") toolStats[key].failures += 1;
+      if (toolCall.status === "NOT_IMPLEMENTED") toolStats[key].notImplemented += 1;
       if (toolCall.status === "APPROVAL_REQUIRED") toolStats[key].approvalsRequired += 1;
       if (toolCall.status === "DENIED") toolStats[key].denied += 1;
       if (toolCall.sideEffectLevel === "WRITE" || toolCall.sideEffectLevel === "DESTRUCTIVE" || toolCall.sideEffectLevel === "EXTERNAL") {
@@ -1163,12 +1175,12 @@ export const getRunObservatory = query({
   },
 });
 
-export const getPendingApprovals = query({
+export const getPendingApprovals = adminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -1206,14 +1218,14 @@ export const getPendingApprovals = query({
   },
 });
 
-export const decideApproval = mutation({
+export const decideApproval = adminMutation({
   args: {
     approvalId: v.id("agentRunApprovals"),
     decision: v.union(v.literal("APPROVED"), v.literal("REJECTED"), v.literal("CANCELLED")),
     decisionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const approval = await ctx.db.get(args.approvalId);
     if (!approval) throw new Error("Approval not found");
     if (approval.status !== "PENDING") throw new Error("Approval has already been reviewed");
@@ -1284,17 +1296,26 @@ export const decideApproval = mutation({
     });
     await updateMemoryUsageOutcomeForRun(ctx, approval.runId, runStatus);
 
+    // The run is over, so its parked position is not something to resume from.
+    // A rejected run's checkpoint sits in AWAITING_APPROVAL, which the stalled-
+    // run sweeper deliberately ignores, so nothing else would ever remove it.
+    const checkpoint = await ctx.db
+      .query("agentRunCheckpoints")
+      .withIndex("by_run", (q) => q.eq("runId", approval.runId))
+      .first();
+    if (checkpoint) await ctx.db.delete(checkpoint._id);
+
     return true;
   },
 });
 
-export const replayRun = mutation({
+export const replayRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
     mode: v.optional(replayModeValidator),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -1381,13 +1402,13 @@ export const replayRun = mutation({
   },
 });
 
-export const cancelRun = mutation({
+export const cancelRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -1704,6 +1725,87 @@ export const getApprovalResumeContextInternal = internalQuery({
       toolCall,
       agent,
     };
+  },
+});
+
+/**
+ * Hand an approved tool's result back to the model and restart the loop.
+ *
+ * Human-in-the-loop used to end here: the tool ran, a fixed sentence was posted
+ * ("Approved tool call completed"), and the run was marked finished. The model
+ * never saw the result, so an agent that asked permission to look something up
+ * could not then use what it found — approval was a one-shot side-effect
+ * executor rather than a pause in the agent's reasoning.
+ *
+ * The transcript comes in already extended with the call and its result, so all
+ * that remains is to record the outcome, put the run back to RUNNING and hand it
+ * to the scheduler. Returns false when there is no checkpoint to resume into, in
+ * which case the caller falls back to concluding the run.
+ */
+export const continueRunAfterApprovalInternal = internalMutation({
+  args: {
+    approvalId: v.id("agentRunApprovals"),
+    status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
+    resultJson: v.string(),
+    transcriptJson: v.string(),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const approval = await ctx.db.get(args.approvalId);
+    if (!approval) throw new Error("Approval not found");
+
+    const run = await ctx.db.get(approval.runId);
+    if (!run) throw new Error("Run not found");
+
+    const checkpoint = await ctx.db
+      .query("agentRunCheckpoints")
+      .withIndex("by_run", (q) => q.eq("runId", approval.runId))
+      .first();
+    if (!checkpoint || checkpoint.status !== "AWAITING_APPROVAL") return false;
+
+    const now = Date.now();
+    const resultStepIndex = await getNextStepIndex(ctx, approval.runId);
+    await ctx.db.insert("agentRunSteps", {
+      runId: approval.runId,
+      agentId: approval.agentId,
+      companyId: approval.companyId,
+      stepIndex: resultStepIndex,
+      kind: "TOOL_RESULT",
+      status: args.status,
+      output: args.resultJson,
+      startedAt: now,
+      completedAt: now,
+      ...(args.error !== undefined ? { error: args.error } : {}),
+    });
+
+    if (approval.toolCallId) {
+      await ctx.db.patch(approval.toolCallId, {
+        status: args.status,
+        resultJson: args.resultJson,
+        completedAt: now,
+        ...(args.error !== undefined ? { error: args.error } : {}),
+      });
+    }
+
+    // Back to RUNNING, not to a terminal status: the objective is not finished,
+    // it was waiting.
+    await ctx.db.patch(approval.runId, {
+      status: "RUNNING",
+      updatedAt: now,
+    });
+
+    await ctx.db.patch(checkpoint._id, {
+      status: "ACTIVE",
+      transcriptJson: args.transcriptJson,
+      stepIndex: resultStepIndex,
+      updatedAt: now,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.agentRuntime.continueAgentObjective, {
+      runId: approval.runId,
+    });
+
+    return true;
   },
 });
 

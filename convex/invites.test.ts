@@ -344,7 +344,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
         role: "USER",
         template,
       })
-    ).rejects.toThrow("Unauthorized: Insufficient privileges to dispatch invites");
+    ).rejects.toThrow("Unauthorized");
     await expect(
       adminAClient.action(api.invites.dispatchInviteEmail, {
         email: "blocked-super@test.com",
@@ -352,7 +352,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
         role: "SUPER_ADMIN",
         template,
       })
-    ).rejects.toThrow("Unauthorized: Cannot invite external or elevated roles");
+    ).rejects.toThrow("Unauthorized");
 
     await expect(
       adminAClient.action(api.invites.dispatchInviteEmail, {

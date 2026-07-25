@@ -1,8 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
@@ -104,7 +105,7 @@ function getRejectedFingerprint(content: string) {
 }
 
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+  const { user, userId } = await requireAdmin(ctx);
   const company = await ctx.db.get(companyId);
   if (!company) throw new Error("Company not found");
   assertAdminCanAccessCompany(user, companyId);
@@ -129,7 +130,7 @@ function buildAuditMetadata(extra: Record<string, unknown>) {
   return JSON.stringify(extra);
 }
 
-export const getSummary = query({
+export const getSummary = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -173,7 +174,7 @@ export const getSummary = query({
   },
 });
 
-export const getPreviewForCompany = query({
+export const getPreviewForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     limit: v.optional(v.number()),
@@ -192,7 +193,7 @@ export const getPreviewForCompany = query({
   },
 });
 
-export const getMemoryById = query({
+export const getMemoryById = adminQuery({
   args: {
     memoryId: v.id("companyMemories"),
   },
@@ -280,7 +281,7 @@ export const recordRuntimeUsageInternal = internalMutation({
   },
 });
 
-export const getForCompany = query({
+export const getForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     status: v.optional(memoryStatusValidator),
@@ -307,7 +308,7 @@ export const getForCompany = query({
   },
 });
 
-export const getCandidatesForCompany = query({
+export const getCandidatesForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     status: v.optional(candidateStatusValidator),
@@ -334,7 +335,7 @@ export const getCandidatesForCompany = query({
   },
 });
 
-export const createMemory = mutation({
+export const createMemory = adminMutation({
   args: {
     companyId: v.id("companies"),
     title: v.optional(v.string()),
@@ -392,7 +393,7 @@ export const createMemory = mutation({
   },
 });
 
-export const updateMemory = mutation({
+export const updateMemory = adminMutation({
   args: {
     memoryId: v.id("companyMemories"),
     title: v.string(),
@@ -442,7 +443,7 @@ export const updateMemory = mutation({
   },
 });
 
-export const archiveMemory = mutation({
+export const archiveMemory = adminMutation({
   args: {
     memoryId: v.id("companyMemories"),
   },
@@ -482,7 +483,7 @@ export const archiveMemory = mutation({
   },
 });
 
-export const createCandidate = mutation({
+export const createCandidate = adminMutation({
   args: {
     companyId: v.id("companies"),
     title: v.optional(v.string()),
@@ -530,7 +531,7 @@ export const createCandidate = mutation({
   },
 });
 
-export const approveCandidate = mutation({
+export const approveCandidate = adminMutation({
   args: {
     candidateId: v.id("companyMemoryCandidates"),
   },
@@ -591,7 +592,7 @@ export const approveCandidate = mutation({
   },
 });
 
-export const rejectCandidate = mutation({
+export const rejectCandidate = adminMutation({
   args: {
     candidateId: v.id("companyMemoryCandidates"),
     rejectionReason: v.optional(v.string()),

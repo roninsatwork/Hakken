@@ -117,6 +117,26 @@ if (profile === "production") {
   warnings.push("Auth provider: no Google OAuth or Resend key found. Local test auth can still work when explicitly enabled.");
 }
 
+// Sending mail without a configured sender is not a soft failure: magic-link
+// sign-in, invites, scheduled reports and workflow emails all use it. With
+// nothing set the sender falls back to a deliberately undeliverable
+// `.invalid` address (see convex/emailBrandingService.ts) rather than
+// impersonating a domain this deployment does not own — so the mail is simply
+// never delivered. Catch it here rather than when someone cannot sign in.
+const hasSenderAddress = ["RESEND_FROM_EMAIL", "AUTH_EMAIL"].some(hasValue);
+if (hasResendAuth && !hasSenderAddress) {
+  const message =
+    "Email sender is not set. Email sending is configured (RESEND_API_KEY present) but no sender address is. " +
+    "Set AUTH_EMAIL or RESEND_FROM_EMAIL to an address on a domain verified with your mail provider, or set the sender in Settings. " +
+    "Until then magic-link sign-in and invite emails will not be delivered.";
+
+  if (profile === "production") {
+    failures.push(message);
+  } else {
+    warnings.push(message);
+  }
+}
+
 const hasGoogleVertex = validateProviderGroup("Google Vertex AI", ["GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"]);
 const hasOpenAI = ["OPENAI_API_KEY", "OPEN_AI_API_KEY", "OPENAI_KEY"].some(hasValue);
 const hasAnthropic = hasValue("ANTHROPIC_API_KEY");

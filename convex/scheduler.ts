@@ -1,19 +1,17 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { requireSuperAdmin } from "./authz";
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
 const SCHEDULE_LIST_LIMIT = 100;
 const WORKFLOW_EXECUTION_LIST_LIMIT = 50;
 const WORKFLOW_EXECUTION_STEP_DETAIL_LIMIT = 500;
 
-export const getSchedules = query({
+export const getSchedules = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-
     const schedules = await ctx.db
       .query("schedules")
       .withIndex("by_createdAt")
@@ -47,7 +45,7 @@ export const getSchedules = query({
   },
 });
 
-export const createSchedule = mutation({
+export const createSchedule = superAdminMutation({
   args: {
     name: v.string(),
     workflowId: v.optional(v.id("workflows")),
@@ -56,7 +54,7 @@ export const createSchedule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
+    const { userId } = ctx;
     
     if (!args.workflowId && !args.agentId) {
       throw new Error("Must select a target payload (Workflow or Agent).");
@@ -77,15 +75,14 @@ export const createSchedule = mutation({
   },
 });
 
-export const getSchedule = query({
+export const getSchedule = superAdminQuery({
   args: { scheduleId: v.id("schedules") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
     return await ctx.db.get(args.scheduleId);
   },
 });
 
-export const updateSchedule = mutation({
+export const updateSchedule = superAdminMutation({
   args: {
     scheduleId: v.id("schedules"),
     name: v.string(),
@@ -95,8 +92,6 @@ export const updateSchedule = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-
     if (!args.workflowId && !args.agentId) {
       throw new Error("Must select a target payload (Workflow or Agent).");
     }
@@ -115,13 +110,12 @@ export const updateSchedule = mutation({
   },
 });
 
-export const toggleSchedule = mutation({
+export const toggleSchedule = superAdminMutation({
   args: {
     scheduleId: v.id("schedules"),
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
     const schedule = await ctx.db.get(args.scheduleId);
 
     await ctx.db.patch(args.scheduleId, {
@@ -138,25 +132,23 @@ export const toggleSchedule = mutation({
   },
 });
 
-export const deleteSchedule = mutation({
+export const deleteSchedule = superAdminMutation({
   args: {
     scheduleId: v.id("schedules"),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-
     await ctx.db.delete(args.scheduleId);
     return true;
   },
 });
 
-export const manualRunSchedule = mutation({
+export const manualRunSchedule = superAdminMutation({
   args: {
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
+    const { userId } = ctx;
     
     if (!args.workflowId && !args.agentId) {
       throw new Error("Cannot run: no target specified.");
@@ -255,11 +247,9 @@ export const completeSimulation = internalMutation({
 });
 
 // For Logs View
-export const getWorkflowExecutions = query({
+export const getWorkflowExecutions = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-
     const execs = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_startedAt")
@@ -281,11 +271,9 @@ export const getWorkflowExecutions = query({
   }
 });
 
-export const getWorkflowExecution = query({
+export const getWorkflowExecution = superAdminQuery({
   args: { executionId: v.id("workflowExecutions") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized System Access", "Unauthorized");
-
     const exec = await ctx.db.get(args.executionId);
     if (!exec) return null;
 

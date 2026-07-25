@@ -91,12 +91,101 @@ ${configuredAgentPrompt}`;
   return instruction;
 }
 
-export function orderAssistantKnowledgeMatches<T>(args: {
+export type KnowledgeMatchTier = "thread" | "company" | "global";
+
+export type RankedKnowledgeMatch<T> = {
+  match: T;
+  tier: KnowledgeMatchTier;
+  /** Vector similarity after the tier weighting below. */
+  score: number;
+};
+
+/**
+ * Mild preference for more specific knowledge, applied as a multiplier so it
+ * breaks ties without overriding relevance: a strongly matching company
+ * document still outranks a weakly matching thread upload.
+ */
+const KNOWLEDGE_TIER_WEIGHTS: Record<KnowledgeMatchTier, number> = {
+  thread: 1.1,
+  company: 1.05,
+  global: 1,
+};
+
+/**
+ * Merge the three retrieval tiers into one relevance-ordered list.
+ *
+ * This previously concatenated the tiers (`[...global, ...company, ...thread]`)
+ * and discarded `_score` entirely. Because the caller then truncates to a
+ * character budget, a deployment with enough global knowledge would fill the
+ * budget with global chunks and never reach company or thread matches — so a
+ * file the user had just uploaded to the conversation could not influence the
+ * answer at all.
+ */
+export function rankAssistantKnowledgeMatches<T extends { _score: number }>(args: {
   globalMatches: T[];
   companyMatches: T[];
   threadMatches: T[];
-}) {
-  return [...args.globalMatches, ...args.companyMatches, ...args.threadMatches];
+}): RankedKnowledgeMatch<T>[] {
+  const ranked: RankedKnowledgeMatch<T>[] = [
+    ...args.threadMatches.map((match) => ({ match, tier: "thread" as const })),
+    ...args.companyMatches.map((match) => ({ match, tier: "company" as const })),
+    ...args.globalMatches.map((match) => ({ match, tier: "global" as const })),
+  ].map((entry) => ({
+    ...entry,
+    score: entry.match._score * KNOWLEDGE_TIER_WEIGHTS[entry.tier],
+  }));
+
+  // Sort is stable in ES2019+, so equal scores keep the tier precedence above.
+  return ranked.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Fill the retrieval character budget from a ranked match list.
+ *
+ * Runs two passes over the same list: the first admits only thread matches, up
+ * to `threadReserveRatio` of the budget, and the second fills the remainder
+ * purely by rank. Reserving that slice is what guarantees a file uploaded into
+ * the conversation is represented even when a large global knowledge base
+ * scores higher across the board.
+ *
+ * `loadChunk` is injected so the caller keeps ownership of the database read.
+ */
+export async function selectKnowledgeChunksWithinBudget<T extends { _id: string }>(args: {
+  ranked: RankedKnowledgeMatch<T>[];
+  maxChars: number;
+  threadReserveRatio: number;
+  loadChunk: (id: T["_id"]) => Promise<{ text: string; agentId?: unknown } | null>;
+}): Promise<string[]> {
+  const chunkTexts: string[] = [];
+  const taken = new Set<string>();
+  let used = 0;
+
+  const collect = async (entries: RankedKnowledgeMatch<T>[], budget: number) => {
+    for (const entry of entries) {
+      if (used >= budget) break;
+      // Checked before loading so the second pass never re-reads a chunk the
+      // reserved pass already admitted.
+      if (taken.has(entry.match._id)) continue;
+
+      const chunk = await args.loadChunk(entry.match._id);
+      // Agent-scoped chunks belong to a specific agent's knowledge, not the
+      // assistant's shared retrieval.
+      if (!chunk || chunk.agentId) continue;
+      if (used + chunk.text.length > budget) break;
+
+      taken.add(entry.match._id);
+      chunkTexts.push(chunk.text);
+      used += chunk.text.length;
+    }
+  };
+
+  await collect(
+    args.ranked.filter((entry) => entry.tier === "thread"),
+    Math.floor(args.maxChars * args.threadReserveRatio),
+  );
+  await collect(args.ranked, args.maxChars);
+
+  return chunkTexts;
 }
 
 function sanitizeHistoryRole(role: string) {

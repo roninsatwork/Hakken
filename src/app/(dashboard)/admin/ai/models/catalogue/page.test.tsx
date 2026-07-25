@@ -102,4 +102,30 @@ describe("AIModelCataloguePage", () => {
     expect(screen.queryByText("Platform Defaults")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sync" })).not.toBeInTheDocument();
   });
+
+  it("flags an enabled model that has no pricing configured", () => {
+    // Without per-token rates the runtime cannot measure spend, so the cost cap
+    // never fires and agents on that model are held to a smaller budget. That is
+    // invisible unless the catalogue says so.
+    const models = [
+      { _id: "m1", modelId: "priced", providerModelId: "priced", displayName: "Priced Model",
+        providerKey: "google", isEnabled: true, isDefault: false, standardInputCostBelow200k: 1 },
+      { _id: "m2", modelId: "free", providerModelId: "free", displayName: "Unpriced Model",
+        providerKey: "google", isEnabled: true, isDefault: false },
+      { _id: "m3", modelId: "off", providerModelId: "off", displayName: "Disabled Model",
+        providerKey: "google", isEnabled: false, isDefault: false },
+    ];
+    vi.mocked(useQuery).mockImplementation(((_query: unknown, args: unknown) =>
+      args && typeof args === "object" && "page" in args
+        ? { data: models, totalCount: models.length, totalPages: 1, page: 1 }
+        : []) as unknown as typeof useQuery);
+
+    render(<AIModelCataloguePage />);
+
+    const warnings = screen.getAllByText("No pricing");
+    expect(warnings).toHaveLength(1);
+    // The warning belongs to the unpriced, enabled model — not the priced one
+    // and not one that is switched off and cannot be costing anything.
+    expect(warnings[0].closest("tr")?.textContent).toContain("Unpriced Model");
+  });
 });

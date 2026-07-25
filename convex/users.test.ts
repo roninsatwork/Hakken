@@ -485,9 +485,7 @@ describe("OWASP: Broken Access Control - Users", () => {
     const userClient = t.withIdentity({ subject: standardUserId });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    await expect(userClient.mutation(api.users.impersonateCompany, { companyId })).rejects.toThrow(
-      "Unauthorized: Only super admins can impersonate tenants"
-    );
+    await expect(userClient.mutation(api.users.impersonateCompany, { companyId })).rejects.toThrow("Unauthorized");
     await expect(superAdminClient.mutation(api.users.assignSuperAdminToCompany, { userId: standardUserId, companyId })).rejects.toThrow(
       "Invalid target user"
     );

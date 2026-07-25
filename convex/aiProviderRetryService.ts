@@ -16,6 +16,15 @@ export type ProviderRetryContext = {
   operation: string;
   policy?: Partial<ProviderRetryPolicy>;
   onRetry?: (event: ProviderRetryEvent) => void;
+  /**
+   * Veto a retry the classifier would otherwise allow.
+   *
+   * Some operations stop being safe to repeat partway through. A streamed reply
+   * that has already put text in front of a reader is the case in point: a
+   * retry restarts the answer from the beginning and duplicates what they saw.
+   * Returning false makes the original error surface instead.
+   */
+  shouldRetry?: (attempt: number) => boolean;
 };
 
 export type ProviderRetryEvent = {
@@ -262,7 +271,9 @@ export async function withProviderRetry<T>(
     } catch (error) {
       lastError = error;
       const classification = classifyProviderError(error);
-      const canRetry = classification.retryable === true && attempt < policy.maxAttempts;
+      const canRetry = classification.retryable === true
+        && attempt < policy.maxAttempts
+        && (context.shouldRetry?.(attempt) ?? true);
       const delayMs = calculateRetryDelayMs({
         attempt,
         retryAfterMs: classification.retryAfterMs,

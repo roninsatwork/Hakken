@@ -59,7 +59,7 @@ describe("Widget Authorization", () => {
         ...widgetInput,
         isGlobal: true,
       })
-    ).rejects.toThrow("Unauthorized: Only Super Admins can manage global widgets.");
+    ).rejects.toThrow("Unauthorized");
 
     const globalWidgetId = await superAdminClient.mutation(api.widgets.saveWidget, {
       ...widgetInput,
@@ -272,18 +272,23 @@ describe("Widget Authorization", () => {
       return { companyId, creatorId, widgetId, inactiveWidgetId, agentId, otherAgentId };
     });
 
-    await expect(
-      t.mutation(api.widgets.createWidgetThread, {
-        widgetId,
-        sourceUrl: "javascript:alert(1)",
-      })
-    ).rejects.toThrow("Unauthorized: Invalid source URL format");
-    await expect(
-      t.mutation(api.widgets.createWidgetThread, {
-        widgetId,
-        sourceUrl: "https://evil.example.net",
-      })
-    ).rejects.toThrow("Unauthorized: Source origin is not authorized for this widget.");
+    // The reported source URL is client-supplied and therefore untrusted; this
+    // is a sanity filter, not the embedding boundary. Enforcement lives in the
+    // per-widget frame-ancestors header emitted by src/proxy.ts.
+    const unauthorizedSource = "Unauthorized: Source origin is not authorized for this widget.";
+    for (const sourceUrl of [
+      "javascript:alert(1)",
+      "//support.example.com",
+      "https://evil.example.net",
+      // Reads as the allowed host but resolves to evil.example.net.
+      "https://support.example.com@evil.example.net/",
+      // Suffix lookalike rather than a real subdomain.
+      "https://support.example.com.evil.example.net/",
+    ]) {
+      await expect(
+        t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl })
+      ).rejects.toThrow(unauthorizedSource);
+    }
 
     const createdThread = await t.mutation(api.widgets.createWidgetThread, {
       widgetId,
@@ -297,13 +302,13 @@ describe("Widget Authorization", () => {
       threadId,
       content: "Injected visitor message",
       widgetAccessToken: "wrong-token",
-    })).rejects.toThrow("Unauthorized: Invalid widget session");
+    })).rejects.toThrow("Unauthorized");
     await expect(t.mutation(api.chat.sendMessage, {
       threadId,
       content: "Switch me",
       dynamicAgentId: otherAgentId,
       widgetAccessToken: accessToken,
-    })).rejects.toThrow("Unauthorized: Widget conversations cannot switch agents");
+    })).rejects.toThrow("Unauthorized");
     await expect(t.mutation(api.chat.sendMessage, {
       threadId,
       content: "Legitimate visitor message",
@@ -338,13 +343,9 @@ describe("Widget Authorization", () => {
     await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId: otherThreadId, widgetAccessToken: accessToken })).rejects.toThrow(
       "Invalid thread mapping for target widget"
     );
-    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: "wrong-token" })).rejects.toThrow(
-      "Unauthorized: Invalid widget session"
-    );
+    await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: "wrong-token" })).rejects.toThrow("Unauthorized");
     await expect(t.mutation(api.widgets.generateWidgetUploadUrl, { widgetId, threadId, widgetAccessToken: accessToken })).resolves.toContain("http");
-    await expect(t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId, widgetAccessToken: "wrong-token" })).rejects.toThrow(
-      "Unauthorized: Invalid widget session"
-    );
+    await expect(t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId, widgetAccessToken: "wrong-token" })).rejects.toThrow("Unauthorized");
     await expect(t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId, widgetAccessToken: accessToken })).resolves.toEqual({
       success: true,
       storageId,

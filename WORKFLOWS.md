@@ -57,13 +57,12 @@ Sonae uses a bracket syntax to pass data between nodes.
 *   **Manual Trigger:** Allows you (the Admin) to push a button to run the flow instantly.
 
 ### Logic (The Brain)
-*   **Code Sandbox:** Write raw Javascript (V8). The system safely sandboxes it to modify your data arrays.
+*   **Code Transform:** Reshapes data using `{{node.output.field}}` placeholders. This substitutes variables into a string or JSON structure — it does **not** run Javascript, and there is no script sandbox. To transform data with real logic, use an AI Agent or an API Action.
 *   **Condition (If/Else):** Splits the workflow path depending on if a variable passes a rule (e.g. `If confidence_score > 80`).
 *   **Web Request:** Makes a REST API (`GET`, `POST`) call to an external service like Slack.
 
 ### Agents (The Intelligence)
-*   **AI Agent:** Mounts one of your autonomous LLM Agents mid-flow to analyze data.
-*   **RAG Query:** Specific agent that reads a piece of text and queries your enterprise knowledge base for specific answers.
+*   **AI Agent:** Mounts one of your autonomous LLM Agents mid-flow to analyze data. An agent with the knowledge-search tool bound to it can query your knowledge base as part of its run — there is no separate RAG node.
 
 ### Control & UI (The Breaks)
 *   **Requires Approval:** Freezes the entire workflow dead in its tracks. A human administrator must log in and click "Approve" before the next node executes. Perfect for large financial transactions.

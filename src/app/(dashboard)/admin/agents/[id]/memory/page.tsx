@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -13,10 +14,6 @@ import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
 type AgentMemory = Doc<"agentMemories">;
-type ReviewActionId =
-  | `memory:${Id<"agentMemoryCandidates">}`
-  | `suggestion:${Id<"agentImprovementSuggestions">}`
-  | `reflection:${Id<"agentRunReflections">}`;
 type ReviewInboxMode = "OPEN" | "REVIEWED" | "HIGH_RISK" | "ALL";
 type ReviewColumnKey = "memoryCandidates" | "improvementSuggestions" | "reflections";
 type ReviewReviewerFilter = "ALL" | "UNREVIEWED" | `reviewer:${Id<"users">}`;
@@ -377,13 +374,15 @@ export default function AgentMemoryPage() {
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
   const [pendingDelete, setPendingDelete] = useState<AgentMemory | null>(null);
-  const [activeDeletion, setActiveDeletion] = useState<Id<"agentMemories"> | null>(null);
-  const [activeReviewAction, setActiveReviewAction] = useState<ReviewActionId | null>(null);
+  const action = useAdminAction({ scope: "admin-agent-memory" });
+  // The delete modal shows its own failure, and the review banner behind it
+  // shows `action.error`, so they cannot share a runner without printing the
+  // same sentence twice.
+  const deleteAction = useAdminAction({ scope: "admin-agent-memory-delete" });
   const [reviewInboxMode, setReviewInboxMode] = useState<ReviewInboxMode>("OPEN");
   const [reviewerFilter, setReviewerFilter] = useState<ReviewReviewerFilter>("ALL");
   const [reviewVisibleCounts, setReviewVisibleCounts] = useState<Record<ReviewColumnKey, number>>(INITIAL_REVIEW_VISIBLE_COUNTS);
-  const [deleteError, setDeleteError] = useState("");
-  const [reviewError, setReviewError] = useState("");
+
   const [reviewNotice, setReviewNotice] = useState("");
   const reviewInbox = useQuery(api.agentMemoryCandidates.getReviewInboxForAgent, { agentId, mode: reviewInboxMode });
 
@@ -426,71 +425,53 @@ export default function AgentMemoryPage() {
   };
 
   const handleMemoryDecision = async (candidateId: Id<"agentMemoryCandidates">, decision: "APPROVED" | "REJECTED") => {
-    setActiveReviewAction(`memory:${candidateId}`);
-    setReviewError("");
     setReviewNotice("");
-    try {
-      await decideCandidate({
+    const outcome = await action.run(
+      () => decideCandidate({
         candidateId,
         decision,
         ...(decision === "REJECTED" ? { rejectionReason: "Rejected from the agent memory review inbox" } : {}),
-      });
+      }),
+      { key: `memory:${candidateId}`, fallbackMessage: "The memory candidate could not be reviewed.", suppressErrorToast: true },
+    );
+    if (outcome.ok) {
       setReviewNotice(decision === "APPROVED" ? "Memory candidate approved and applied." : "Memory candidate rejected.");
-    } catch (error) {
-      setReviewError(error instanceof Error ? error.message : "The memory candidate could not be reviewed.");
-    } finally {
-      setActiveReviewAction(null);
     }
   };
 
   const handleSuggestionDecision = async (suggestionId: Id<"agentImprovementSuggestions">, decision: "APPROVED" | "REJECTED") => {
-    setActiveReviewAction(`suggestion:${suggestionId}`);
-    setReviewError("");
     setReviewNotice("");
-    try {
-      await decideSuggestion({
+    const outcome = await action.run(
+      () => decideSuggestion({
         suggestionId,
         decision,
         apply: decision === "APPROVED",
         ...(decision === "REJECTED" ? { rejectionReason: "Rejected from the agent memory review inbox" } : {}),
-      });
+      }),
+      { key: `suggestion:${suggestionId}`, fallbackMessage: "The improvement suggestion could not be reviewed.", suppressErrorToast: true },
+    );
+    if (outcome.ok) {
       setReviewNotice(decision === "APPROVED" ? "Improvement suggestion approved and applied." : "Improvement suggestion rejected.");
-    } catch (error) {
-      setReviewError(error instanceof Error ? error.message : "The improvement suggestion could not be reviewed.");
-    } finally {
-      setActiveReviewAction(null);
     }
   };
 
   const handleCreateEvalFromReflection = async (reflectionId: Id<"agentRunReflections">, runId: Id<"agentRuns">) => {
-    setActiveReviewAction(`reflection:${reflectionId}`);
-    setReviewError("");
     setReviewNotice("");
-    try {
-      await createEvalFixture({ runId });
-      setReviewNotice("Eval fixture created from the reflection source run.");
-    } catch (error) {
-      setReviewError(error instanceof Error ? error.message : "The eval fixture could not be created.");
-    } finally {
-      setActiveReviewAction(null);
-    }
+    const outcome = await action.run(() => createEvalFixture({ runId }), {
+      key: `reflection:${reflectionId}`,
+      fallbackMessage: "The eval fixture could not be created.",
+      suppressErrorToast: true,
+    });
+    if (outcome.ok) setReviewNotice("Eval fixture created from the reflection source run.");
   };
 
   const handleDismissReflection = async (reflectionId: Id<"agentRunReflections">) => {
-    setActiveReviewAction(`reflection:${reflectionId}`);
-    setReviewError("");
     setReviewNotice("");
-    try {
-      await dismissReflection({
-        reflectionId,
-        reason: "Dismissed from the agent memory review inbox",
-      });
-      setReviewNotice("Reflection dismissed.");
-    } catch (error) {
-      setReviewError(error instanceof Error ? error.message : "The reflection could not be dismissed.");
-    } finally {
-      setActiveReviewAction(null);
-    }
+    const outcome = await action.run(
+      () => dismissReflection({ reflectionId, reason: "Dismissed from the agent memory review inbox" }),
+      { key: `reflection:${reflectionId}`, fallbackMessage: "The reflection could not be dismissed.", suppressErrorToast: true },
+    );
+    if (outcome.ok) setReviewNotice("Reflection dismissed.");
   };
 
   return (
@@ -572,7 +553,7 @@ export default function AgentMemoryPage() {
                   setReviewInboxMode(mode.value);
                   setReviewerFilter("ALL");
                   setReviewVisibleCounts({ ...INITIAL_REVIEW_VISIBLE_COUNTS });
-                  setReviewError("");
+                  action.clearError();
                   setReviewNotice("");
                 }}
                 className={`px-3 py-1.5 rounded-[8px] border text-[12px] font-semibold transition-colors ${
@@ -614,13 +595,13 @@ export default function AgentMemoryPage() {
             ))}
           </div>
 
-          {(reviewError || reviewNotice) && (
+          {(action.error || reviewNotice) && (
             <div className={`rounded-[8px] border px-3 py-2 text-[13px] ${
-              reviewError
+              action.error
                 ? "border-red-500/20 bg-red-500/10 text-red-400"
                 : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
             }`}>
-              {reviewError || reviewNotice}
+              {action.error || reviewNotice}
             </div>
           )}
 
@@ -665,16 +646,16 @@ export default function AgentMemoryPage() {
                         <button
                           type="button"
                           onClick={() => handleMemoryDecision(candidate.candidateId, "APPROVED")}
-                          disabled={activeReviewAction === `memory:${candidate.candidateId}`}
+                          disabled={action.isBusy(`memory:${candidate.candidateId}`)}
                           className="px-3 py-1.5 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
                         >
-                          {activeReviewAction === `memory:${candidate.candidateId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          {action.isBusy(`memory:${candidate.candidateId}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                           Approve
                         </button>
                         <button
                           type="button"
                           onClick={() => handleMemoryDecision(candidate.candidateId, "REJECTED")}
-                          disabled={activeReviewAction === `memory:${candidate.candidateId}`}
+                          disabled={action.isBusy(`memory:${candidate.candidateId}`)}
                           className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -728,16 +709,16 @@ export default function AgentMemoryPage() {
                         <button
                           type="button"
                           onClick={() => handleSuggestionDecision(suggestion.suggestionId, "APPROVED")}
-                          disabled={activeReviewAction === `suggestion:${suggestion.suggestionId}`}
+                          disabled={action.isBusy(`suggestion:${suggestion.suggestionId}`)}
                           className="px-3 py-1.5 rounded-[8px] border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
                         >
-                          {activeReviewAction === `suggestion:${suggestion.suggestionId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SlidersHorizontal className="w-3.5 h-3.5" />}
+                          {action.isBusy(`suggestion:${suggestion.suggestionId}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SlidersHorizontal className="w-3.5 h-3.5" />}
                           Apply
                         </button>
                         <button
                           type="button"
                           onClick={() => handleSuggestionDecision(suggestion.suggestionId, "REJECTED")}
-                          disabled={activeReviewAction === `suggestion:${suggestion.suggestionId}`}
+                          disabled={action.isBusy(`suggestion:${suggestion.suggestionId}`)}
                           className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -789,20 +770,20 @@ export default function AgentMemoryPage() {
                           <button
                             type="button"
                             onClick={() => handleCreateEvalFromReflection(reflection.reflectionId, reflection.sourceRun!.runId)}
-                            disabled={activeReviewAction === `reflection:${reflection.reflectionId}`}
+                            disabled={action.isBusy(`reflection:${reflection.reflectionId}`)}
                             className="px-3 py-1.5 rounded-[8px] border border-brand/30 bg-brand/10 text-brand text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
                           >
-                            {activeReviewAction === `reflection:${reflection.reflectionId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
+                            {action.isBusy(`reflection:${reflection.reflectionId}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
                             Create eval
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => handleDismissReflection(reflection.reflectionId)}
-                          disabled={activeReviewAction === `reflection:${reflection.reflectionId}`}
+                          disabled={action.isBusy(`reflection:${reflection.reflectionId}`)}
                           className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-50 flex items-center gap-2"
                         >
-                          {activeReviewAction === `reflection:${reflection.reflectionId}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveX className="w-3.5 h-3.5" />}
+                          {action.isBusy(`reflection:${reflection.reflectionId}`) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveX className="w-3.5 h-3.5" />}
                           Dismiss
                         </button>
                       </div>
@@ -864,14 +845,14 @@ export default function AgentMemoryPage() {
 
                     <button
                       onClick={() => {
-                        setDeleteError("");
+                        deleteAction.clearError();
                         setPendingDelete(memory);
                       }}
-                      disabled={activeDeletion === memory._id}
+                      disabled={deleteAction.isBusy(memory._id)}
                       className="p-2 rounded-md hover:bg-red-500/10 text-muted hover:text-red-400 transition-all disabled:opacity-50"
                       title="Delete memory"
                     >
-                      {activeDeletion === memory._id ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
+                      {deleteAction.isBusy(memory._id) ? <Loader2 className="w-4 h-4 animate-spin text-red-400" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
 
@@ -917,7 +898,7 @@ export default function AgentMemoryPage() {
 
       <SonaeModal
         isOpen={!!pendingDelete}
-        onClose={() => !activeDeletion && setPendingDelete(null)}
+        onClose={() => !deleteAction.isBusy() && setPendingDelete(null)}
         title="Delete memory"
         size="sm"
       >
@@ -925,40 +906,40 @@ export default function AgentMemoryPage() {
           <p className="text-[14px] text-secondary leading-relaxed">
             This removes the memory from future agent observations and records an audit event.
           </p>
-          {deleteError && (
+          {deleteAction.error && (
             <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span className="font-medium">{deleteError}</span>
+              <span className="font-medium">{deleteAction.error}</span>
             </div>
           )}
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={() => setPendingDelete(null)}
-              disabled={!!activeDeletion}
+              disabled={deleteAction.isBusy()}
               className="px-5 py-2.5 rounded-[8px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="button"
-              disabled={!!activeDeletion}
+              disabled={deleteAction.isBusy()}
               onClick={async () => {
                 if (!pendingDelete) return;
-                setActiveDeletion(pendingDelete._id);
-                setDeleteError("");
-                try {
-                  await deleteMemory({ memoryId: pendingDelete._id });
-                  setPendingDelete(null);
-                } catch (error) {
-                  setDeleteError(error instanceof Error ? error.message : "Failed to delete memory.");
-                } finally {
-                  setActiveDeletion(null);
-                }
+                const outcome = await deleteAction.run(
+                  () => deleteMemory({ memoryId: pendingDelete._id }),
+                  {
+                    key: pendingDelete._id,
+                    fallbackMessage: "Failed to delete memory.",
+                    suppressErrorToast: true,
+                  },
+                );
+                if (!outcome.ok) return;
+                setPendingDelete(null);
               }}
               className="px-5 py-2.5 rounded-[8px] bg-red-500 text-white text-[13px] font-medium hover:bg-red-600 transition-all disabled:opacity-50 flex items-center gap-2"
             >
-              {activeDeletion ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {deleteAction.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               Delete
             </button>
           </div>

@@ -19,9 +19,11 @@ import {
   buildAssistantSystemInstruction,
   buildUntrustedConversationHistory,
   buildUntrustedKnowledgeContext,
-  orderAssistantKnowledgeMatches,
+  rankAssistantKnowledgeMatches,
+  selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
 import { evaluateAssistantSafety } from "./aiSafetyPolicy";
+import { adminAction, tenantAction } from "./tenantFunctions";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
 const TRANSCRIPTION_AUDIO_MAX_BYTES = 10 * 1024 * 1024;
@@ -287,30 +289,24 @@ export const generateSonaeResponse = internalAction({
                     })
                 ]);
                 
-                const allChunks = orderAssistantKnowledgeMatches({
+                const allChunks = rankAssistantKnowledgeMatches({
                     globalMatches: globalChunks,
                     companyMatches: companyChunks,
                     threadMatches: threadChunks,
                 });
-                
+
                 if (allChunks.length > 0) {
                     const MAX_RAG_CHARS = 32000;
-                    const chunkTexts: string[] = [];
-                    let chunkTextLength = 0;
-
-                    for (const res of allChunks) {
-                       if (chunkTextLength >= MAX_RAG_CHARS) {
-                          break;
-                       }
-                       const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
-                       if (chunk && !chunk.agentId) {
-                          if (chunkTextLength + chunk.text.length > MAX_RAG_CHARS) {
-                             break;
-                          }
-                          chunkTexts.push(chunk.text);
-                          chunkTextLength += chunk.text.length;
-                       }
-                    }
+                    // Files uploaded into this conversation are usually the whole
+                    // reason the user is asking, so hold part of the budget for
+                    // them rather than letting a large global knowledge base
+                    // crowd them out on raw relevance.
+                    const chunkTexts = await selectKnowledgeChunksWithinBudget({
+                       ranked: allChunks,
+                       maxChars: MAX_RAG_CHARS,
+                       threadReserveRatio: 0.3,
+                       loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+                    });
 
                     if (chunkTexts.length > 0) {
                       ragContext = buildUntrustedKnowledgeContext({
@@ -419,13 +415,13 @@ User Prompt: ${args.content}`;
   },
 });
 
-export const transcribeAudio = action({
+export const transcribeAudio = tenantAction({
   args: {
     audioBase64: v.string(),
     mimeType: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireActionUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const { audioBase64, mimeType } = assertValidTranscriptionPayload(args);
     await ctx.runMutation(internal.aiActionRequests.reserve, {
       actorId: userId,
@@ -494,7 +490,7 @@ export const generateThreadTitle = internalAction({
   }
 });
 
-export const generateNodeConfig = action({
+export const generateNodeConfig = adminAction({
   args: {
     prompt: v.string(),
     nodeType: v.string(),
@@ -505,7 +501,7 @@ export const generateNodeConfig = action({
     }))
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireActionAdmin(ctx, "Unauthorized: Only administrators can configure workflow nodes.");
+    const { userId, user } = ctx;
     const { prompt, nodeType, nodesContext } = buildNodeConfigContext(args);
     await ctx.runMutation(internal.aiActionRequests.reserve, {
       actorId: userId,
@@ -541,7 +537,7 @@ Your job is to translate the user's plain-English intent into exact system paylo
 - The 'mapping' object must be a valid JSON representation (stringify it) of the required input mapping payload for the current node. Generate reasonable keys (like "text", "summary_data", "table_id") based on the implied nodeType.
 - CRITICAL DATABASE RULE: Never generate JSON keys that start with a dollar sign (e.g. "$in", "$eq", "$set"). Convex explicitly rejects '$' prefixes in document keys.
 - The 'template' object is a raw string layout if the node expects a raw string payload. You can inject variables directly into the text (e.g. "We received: {{nodes...}}").
-- If the nodeType is 'codeNode', the 'template' MUST be raw Javascript code (without markdown backticks) for a V8 sandboxed function. The script has access to the global 'nodes' variable (e.g., nodes['NODE-ID'].output). It MUST contain a valid return statement. Do not use JSON mapping syntax in JS. Let 'mapping' be empty.
+- If the nodeType is 'codeNode', the 'template' MUST be a data-shaping template, NOT executable code. This node performs {{...}} variable substitution only — there is no script interpreter, so any Javascript you emit would be returned verbatim as the node's output instead of running. Express the transform as a literal string or JSON structure containing {{nodes.<UPSTREAM_NODE_ID>.output.<FIELD_NAME>}} placeholders. Never emit statements, expressions, function definitions, or a return statement.
 - If the nodeType is 'agentNode', you MUST fully configure the agent's identity using the agent* variables. Set 'agentAllowInternet' to true if the prompt implies searching or getting live/current info.`,
           temperature: 0.1,
           responseMimeType: "application/json",

@@ -4,6 +4,7 @@ import { internalQuery, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { assertAdminCanAccessCompany, requireAdmin, requireSuperAdmin } from "./authz";
+import { adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 
 const SKILL_CATALOG_LIMIT = 250;
 const SKILL_BINDING_LIMIT = 100;
@@ -860,13 +861,12 @@ async function addMarkdownImportCatalogWarnings(ctx: Pick<QueryCtx, "db"> | Pick
   };
 }
 
-export const previewSkillMarkdownImport = mutation({
+export const previewSkillMarkdownImport = superAdminMutation({
   args: {
     markdown: v.string(),
     filename: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const draft = parseSkillMarkdown(args.markdown, args.filename);
     return await addMarkdownImportCatalogWarnings(ctx, draft);
   },
@@ -1080,15 +1080,13 @@ export async function refreshSkillBindingsAndEvalFixtures(ctx: Pick<MutationCtx,
   };
 }
 
-export const getPaginatedSkills = query({
+export const getPaginatedSkills = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
     status: v.optional(skillStatusValidator),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-
     const searchTerm = args.searchTerm?.trim();
     if (searchTerm) {
       const result = await ctx.db
@@ -1117,10 +1115,9 @@ export const getPaginatedSkills = query({
   },
 });
 
-export const getActiveSkills = query({
+export const getActiveSkills = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     return await ctx.db
       .query("agentSkills")
       .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
@@ -1129,10 +1126,9 @@ export const getActiveSkills = query({
   },
 });
 
-export const getSkillCatalogAnalytics = query({
+export const getSkillCatalogAnalytics = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const skills = await ctx.db
       .query("agentSkills")
       .withIndex("by_category_created")
@@ -1253,10 +1249,9 @@ export const getSkillCatalogAnalytics = query({
   },
 });
 
-export const getSkill = query({
+export const getSkill = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const skill = await ctx.db.get(args.skillId);
     if (!skill) return null;
     const latestVersion = await ctx.db
@@ -1269,10 +1264,9 @@ export const getSkill = query({
   },
 });
 
-export const exportSkillBundle = query({
+export const exportSkillBundle = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw new Error("Skill not found.");
     const latestVersion = await ctx.db
@@ -1289,10 +1283,9 @@ export const exportSkillBundle = query({
   },
 });
 
-export const getSkillLearningAnalytics = query({
+export const getSkillLearningAnalytics = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw new Error("Skill not found.");
 
@@ -1370,10 +1363,9 @@ export const getSkillLearningAnalytics = query({
   },
 });
 
-export const getBindingsForSkill = query({
+export const getBindingsForSkill = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw new Error("Skill not found.");
     const latestVersion = await ctx.db
@@ -1418,7 +1410,7 @@ export const getBindingsForSkill = query({
   },
 });
 
-export const createSkill = mutation({
+export const createSkill = superAdminMutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
@@ -1433,7 +1425,7 @@ export const createSkill = mutation({
     suggestedEvalFixturesJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const now = Date.now();
     const patch = buildSkillPatch({
       ...args,
@@ -1475,10 +1467,10 @@ export const createSkill = mutation({
   },
 });
 
-export const seedStarterSkills = mutation({
+export const seedStarterSkills = superAdminMutation({
   args: {},
   handler: async (ctx) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const now = Date.now();
     const existingStarterSkills = await ctx.db
       .query("agentSkills")
@@ -1548,7 +1540,7 @@ export const seedStarterSkills = mutation({
   },
 });
 
-export const updateSkill = mutation({
+export const updateSkill = superAdminMutation({
   args: {
     skillId: v.id("agentSkills"),
     name: v.optional(v.string()),
@@ -1564,7 +1556,7 @@ export const updateSkill = mutation({
     suggestedEvalFixturesJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const existing = await ctx.db.get(args.skillId);
     if (!existing) throw new Error("Skill not found.");
 
@@ -1596,13 +1588,13 @@ export const updateSkill = mutation({
   },
 });
 
-export const cloneSkill = mutation({
+export const cloneSkill = superAdminMutation({
   args: {
     skillId: v.id("agentSkills"),
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const source = await ctx.db.get(args.skillId);
     if (!source) throw new Error("Skill not found.");
     const now = Date.now();
@@ -1653,13 +1645,13 @@ export const cloneSkill = mutation({
   },
 });
 
-export const importSkillBundle = mutation({
+export const importSkillBundle = superAdminMutation({
   args: {
     bundleJson: v.string(),
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const patch = buildSkillPatchFromBundle(args.bundleJson, args.name);
     const now = Date.now();
     const skillId = await ctx.db.insert("agentSkills", {
@@ -1696,7 +1688,7 @@ export const importSkillBundle = mutation({
   },
 });
 
-export const importSkillMarkdown = mutation({
+export const importSkillMarkdown = superAdminMutation({
   args: {
     sourceFilename: v.optional(v.string()),
     sourceHash: v.optional(v.string()),
@@ -1710,7 +1702,7 @@ export const importSkillMarkdown = mutation({
     suggestedEvalFixturesJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const patch = buildSkillPatch({
       name: args.name,
       description: args.description,
@@ -1758,10 +1750,10 @@ export const importSkillMarkdown = mutation({
   },
 });
 
-export const archiveSkill = mutation({
+export const archiveSkill = superAdminMutation({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
     if (!skill) throw new Error("Skill not found.");
     const now = Date.now();
@@ -1781,10 +1773,10 @@ export const archiveSkill = mutation({
   },
 });
 
-export const getForAgent = query({
+export const getForAgent = adminQuery({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found.");
 
@@ -1824,13 +1816,13 @@ export const getForAgent = query({
   },
 });
 
-export const upgradeSkillBindingToLatest = mutation({
+export const upgradeSkillBindingToLatest = superAdminMutation({
   args: {
     bindingId: v.id("agentSkillBindings"),
     seedEvalFixtures: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
     if (!binding) throw new Error("Skill binding not found.");
     const skill = await ctx.db.get(binding.skillId);
@@ -1873,14 +1865,14 @@ export const upgradeSkillBindingToLatest = mutation({
   },
 });
 
-export const upgradeSkillBindingsForSkill = mutation({
+export const upgradeSkillBindingsForSkill = superAdminMutation({
   args: {
     skillId: v.id("agentSkills"),
     bindingIds: v.optional(v.array(v.id("agentSkillBindings"))),
     seedEvalFixtures: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
     if (!skill || skill.status !== "ACTIVE") throw new Error("Only active skills can be upgraded on agents.");
     const now = Date.now();
@@ -1945,7 +1937,7 @@ export const upgradeSkillBindingsForSkill = mutation({
   },
 });
 
-export const bindSkillToAgent = mutation({
+export const bindSkillToAgent = superAdminMutation({
   args: {
     agentId: v.id("agents"),
     skillId: v.id("agentSkills"),
@@ -1953,7 +1945,7 @@ export const bindSkillToAgent = mutation({
     seedEvalFixtures: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found.");
     const skill = await ctx.db.get(args.skillId);
@@ -2022,13 +2014,13 @@ export const bindSkillToAgent = mutation({
   },
 });
 
-export const setBindingEnabled = mutation({
+export const setBindingEnabled = superAdminMutation({
   args: {
     bindingId: v.id("agentSkillBindings"),
     isEnabled: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
     if (!binding) throw new Error("Skill binding not found.");
     const now = Date.now();
@@ -2053,10 +2045,10 @@ export const setBindingEnabled = mutation({
   },
 });
 
-export const unbindSkillFromAgent = mutation({
+export const unbindSkillFromAgent = superAdminMutation({
   args: { bindingId: v.id("agentSkillBindings") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
     if (!binding) throw new Error("Skill binding not found.");
     await ctx.db.delete(args.bindingId);

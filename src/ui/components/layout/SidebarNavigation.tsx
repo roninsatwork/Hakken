@@ -1,20 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  // template:remove:start arcade
   Gamepad2,
+  // template:remove:end
   LayoutDashboard,
   Building2,
+  // template:remove:start salesReports
   LineChart,
+  // template:remove:end
   ChevronDown,
   Sidebar,
+  // template:remove:start movement
   Globe,
+  // template:remove:end
   Bot,
   ShieldCheck,
   Settings,
   Workflow,
+  // template:remove:start properties
   Home,
+  // template:remove:end
   Wrench,
   Rocket
 } from "lucide-react";
@@ -28,6 +36,21 @@ import { useTheme } from "next-themes";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
+import {
+  isNavItemVisible,
+  resolveHiddenNavKeys,
+  type NavigationProfile,
+} from "@/src/lib/navigationVisibility";
+import { getWhiteLabelNavigationProfiles } from "@/convex/settingsService";
+
+/**
+ * Navigation keys hidden for this deployment.
+ *
+ * Held in context so `NavItem` and `SubNavItem` can exclude themselves. The
+ * alternative — wrapping all 29 call sites in a conditional — is the kind of
+ * thing that gets forgotten when someone adds the 30th.
+ */
+const HiddenNavKeysContext = createContext<Set<string>>(new Set());
 
 interface NavItemProps {
   icon: React.ElementType<{ className?: string }>;
@@ -39,9 +62,14 @@ interface NavItemProps {
   onClick?: () => void;
   children?: React.ReactNode;
   href?: string;
+  /** Stable identifier used by white-label navigation profiles. */
+  navKey?: string;
 }
 
-function SubNavItem({ label, isActive, onClick, href }: { label: string, isActive: boolean, onClick: () => void, href?: string }) {
+function SubNavItem({ label, isActive, onClick, href, navKey }: { label: string, isActive: boolean, onClick: () => void, href?: string, navKey?: string }) {
+  const hiddenNavKeys = useContext(HiddenNavKeysContext);
+  if (!isNavItemVisible(navKey, hiddenNavKeys)) return null;
+
   const content = (
     <>
       {isActive && (
@@ -75,7 +103,8 @@ function SubNavItem({ label, isActive, onClick, href }: { label: string, isActiv
   );
 }
 
-function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, onClick, children, href }: NavItemProps) {
+function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, onClick, children, href, navKey }: NavItemProps) {
+  const hiddenNavKeys = useContext(HiddenNavKeysContext);
   const content = (
     <>
       {isActive && (
@@ -124,6 +153,8 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
     );
   };
 
+  if (!isNavItemVisible(navKey, hiddenNavKeys)) return null;
+
   return (
     <div className="flex flex-col mb-0.5 relative">
       {renderClickable()}
@@ -171,16 +202,24 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/settings')) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
+  // template:remove:start properties
   if (pathname.startsWith('/app/properties')) return 'Properties';
+  // template:remove:end
+  // template:remove:start salesReports
   if (pathname.startsWith('/app/reports')) return 'Reports';
+  // template:remove:end
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
   if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
   if (pathname.startsWith('/app/settings/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/app/agents')) return 'Agents';
+  // template:remove:start arcade
   if (pathname.startsWith('/app/arcade/ronins-run')) return 'RoninsRun';
+  // template:remove:end
   if (pathname.startsWith('/app/ai/rules')) return 'AIRules';
+  // template:remove:start movement
   if (pathname.startsWith('/demos')) return 'Demos';
+  // template:remove:end
   return pathname.startsWith('/admin') ? 'Admin Dashboard' : '';
 }
 
@@ -205,11 +244,19 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
       pathname.startsWith('/admin/settings/scripts') ||
       pathname.startsWith('/admin/settings/system-health') ||
       pathname.startsWith('/admin/auth-diagnostics'),
+    // template:remove:start salesReports
     reports: false,
+    // template:remove:end
     organization: false,
+    // template:remove:start arcade
     arcade: false,
+    // template:remove:end
+    // template:remove:start properties
     properties: false,
+    // template:remove:end
+    // template:remove:start movement
     demos: false,
+    // template:remove:end
   };
 }
 
@@ -252,7 +299,20 @@ export default function SidebarNavigation() {
     setSectionOverrides(prev => ({ ...prev, [section]: !openSections[section] }));
   };
 
+  // White-label navigation profiles are static definitions, so this needs no
+  // extra query. With no profile selected nothing is hidden.
+  const hiddenNavKeys = useMemo(() => {
+    const profile = settings.navigationProfileKey
+      ? getWhiteLabelNavigationProfiles().find((candidate) => candidate.key === settings.navigationProfileKey)
+      : undefined;
+
+    return resolveHiddenNavKeys({
+      profile: (profile as NavigationProfile | undefined) ?? null,
+    });
+  }, [settings.navigationProfileKey]);
+
   return (
+    <HiddenNavKeysContext.Provider value={hiddenNavKeys}>
     <AnimatePresence mode="wait">
       {isSidebarOpen && (
         <motion.aside
@@ -307,13 +367,13 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={LayoutDashboard}
                       label={t('dashboard')}
-                      href="/admin"
+                      href="/admin" navKey="adminDashboard"
                       isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')}
                       onClick={() => setActiveItem('Admin Dashboard')}
                     />
 
                     {isSuperAdmin && (
-                      <NavItem
+                      <NavItem navKey="adminCompanies"
                         icon={Building2}
                         label={t('companies')}
                         isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
@@ -322,11 +382,11 @@ export default function SidebarNavigation() {
                         isOpen={openSections.companies}
                         onToggle={() => toggleSection('companies')}
                       >
-                        <SubNavItem label={t('manageCompanies')} href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
+                        <SubNavItem label={t('manageCompanies')} href="/admin/companies" navKey="adminCompanies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
                       </NavItem>
                     )}
 
-                    <NavItem
+                    <NavItem navKey="globalAi"
                       icon={Bot}
                       label={t('ai')}
                       isActive={activeItem === 'Artificial Intelligence' || pathname.startsWith('/admin/ai')}
@@ -335,11 +395,11 @@ export default function SidebarNavigation() {
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" isActive={pathname.startsWith('/admin/ai')} onClick={() => setActiveItem('Artificial Intelligence')} />
+                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" navKey="globalAi" isActive={pathname.startsWith('/admin/ai')} onClick={() => setActiveItem('Artificial Intelligence')} />
                     </NavItem>
 
                     {isSuperAdmin && (
-                      <NavItem
+                      <NavItem navKey="agents"
                         icon={Workflow}
                         label={t('agents')}
                         isActive={
@@ -355,11 +415,11 @@ export default function SidebarNavigation() {
                         isOpen={openSections.agents}
                         onToggle={() => toggleSection('agents')}
                       >
-                        <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
-                        <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
+                        <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
+                        <SubNavItem label={t('manageAgents')} href="/admin/agents" navKey="agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         
-                        <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
-                        <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
+                        <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" navKey="workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
+                        <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" navKey="schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
                       </NavItem>
                     )}
 
@@ -367,7 +427,7 @@ export default function SidebarNavigation() {
                       <NavItem
                         icon={Rocket}
                         label={t('launch')}
-                        href="/admin/app-kits"
+                        href="/admin/app-kits" navKey="appKits"
                         isActive={activeItem === 'App Kits' || pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')}
                         onClick={() => setActiveItem('App Kits')}
                       />
@@ -375,7 +435,7 @@ export default function SidebarNavigation() {
 
                     {isSuperAdmin && (
                       <>
-                        <NavItem
+                        <NavItem navKey="systemSettings"
                           icon={Settings}
                           label={t('settings')}
                           isActive={(pathname.startsWith('/admin/settings') &&
@@ -390,14 +450,14 @@ export default function SidebarNavigation() {
                           isOpen={openSections.settings}
                           onToggle={() => toggleSection('settings')}
                         >
-                          <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
-                          <SubNavItem label="Plans" href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
-                          <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
-                          <SubNavItem label={t('webhookDeliveries')} href="/admin/settings/webhook-deliveries" isActive={activeItem === 'Webhook Deliveries' || pathname.startsWith('/admin/settings/webhook-deliveries')} onClick={() => setActiveItem('Webhook Deliveries')} />
-                          <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
+                          <SubNavItem label={t('systemSettings')} href="/admin/settings" navKey="systemSettings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
+                          <SubNavItem label="Plans" href="/admin/settings/plans" navKey="plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
+                          <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" navKey="apiKeys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
+                          <SubNavItem label={t('webhookDeliveries')} href="/admin/settings/webhook-deliveries" navKey="webhookDeliveries" isActive={activeItem === 'Webhook Deliveries' || pathname.startsWith('/admin/settings/webhook-deliveries')} onClick={() => setActiveItem('Webhook Deliveries')} />
+                          <SubNavItem label={t('analytics')} href="/admin/settings/analytics" navKey="analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
                         </NavItem>
 
-                        <NavItem
+                        <NavItem navKey="maintenance"
                           icon={Wrench}
                           label={t('maintenance')}
                           isActive={activeItem === 'Maintenance' ||
@@ -416,14 +476,14 @@ export default function SidebarNavigation() {
                           isOpen={openSections.maintenance}
                           onToggle={() => toggleSection('maintenance')}
                         >
-                          <SubNavItem label={t('releaseCenter')} href="/admin/releases" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
-                          <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
-                          <SubNavItem label={t('systemHealth')} href="/admin/settings/system-health" isActive={activeItem === 'System Health' || pathname.startsWith('/admin/settings/system-health')} onClick={() => setActiveItem('System Health')} />
-                          <SubNavItem label={t('scripts')} href="/admin/settings/scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
-                          <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
+                          <SubNavItem label={t('releaseCenter')} href="/admin/releases" navKey="releaseCenter" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
+                          <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" navKey="runObservatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
+                          <SubNavItem label={t('systemHealth')} href="/admin/settings/system-health" navKey="systemHealth" isActive={activeItem === 'System Health' || pathname.startsWith('/admin/settings/system-health')} onClick={() => setActiveItem('System Health')} />
+                          <SubNavItem label={t('scripts')} href="/admin/settings/scripts" navKey="scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
+                          <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" navKey="diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>
 
-                        <NavItem
+                        <NavItem navKey="systemAdmins"
                           icon={ShieldCheck}
                           label={t('systemAdmins')}
                           isActive={activeItem === 'System Admins' || pathname.startsWith('/admin/super-admins')}
@@ -432,7 +492,7 @@ export default function SidebarNavigation() {
                           isOpen={openSections.superAdmins}
                           onToggle={() => toggleSection('superAdmins')}
                         >
-                          <SubNavItem label={t('systemAdmins')} href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
+                          <SubNavItem label={t('systemAdmins')} href="/admin/super-admins" navKey="systemAdmins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
                           <SubNavItem label={t('invitations')} href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
                         </NavItem>
                       </>
@@ -443,7 +503,7 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={LayoutDashboard}
                       label={t('dashboard')}
-                      href="/app"
+                      href="/app" navKey="appDashboard"
                       isActive={activeItem === 'Dashboard' || (pathname === '/app')}
                       onClick={() => setActiveItem('Dashboard')}
                     />
@@ -451,11 +511,12 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={Bot}
                       label={`Ask ${settings.platformName}`}
-                      href="/app/assistant"
+                      href="/app/assistant" navKey="assistant"
                       isActive={activeItem === 'Assistant' || pathname.startsWith('/app/assistant')}
                       onClick={() => setActiveItem('Assistant')}
                     />
 
+                    {/* template:remove:start salesReports */}
                     <NavItem
                       icon={LineChart}
                       label="Reports"
@@ -465,10 +526,12 @@ export default function SidebarNavigation() {
                       isOpen={openSections.reports}
                       onToggle={() => toggleSection('reports')}
                     >
-                      <SubNavItem label="Sales Report" href="/app/reports" isActive={activeItem === 'Reports'} onClick={() => setActiveItem('Reports')} />
+                      <SubNavItem label="Sales Report" href="/app/reports" navKey="reports" isActive={activeItem === 'Reports'} onClick={() => setActiveItem('Reports')} />
                     </NavItem>
+                    {/* template:remove:end */}
 
-                    <NavItem
+                    {/* template:remove:start properties */}
+                    <NavItem navKey="properties"
                       icon={Home}
                       label={t('properties')}
                       isActive={activeItem === 'Properties' || pathname.startsWith('/app/properties')}
@@ -481,7 +544,9 @@ export default function SidebarNavigation() {
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
                     </NavItem>
+                    {/* template:remove:end */}
 
+                    {/* template:remove:start movement */}
                     <NavItem
                       icon={Globe}
                       label="Posture Studio"
@@ -492,10 +557,11 @@ export default function SidebarNavigation() {
                       onToggle={() => toggleSection('demos')}
                     >
                       <SubNavItem label="Information" href="/demos/movements/information" isActive={pathname.startsWith('/demos/movements/information')} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Studio Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label="Studio Library" href="/demos/movements" navKey="postureStudio" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" navKey="replayAlignment" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
 
                     </NavItem>
+                    {/* template:remove:end */}
 
                     {!isSuperAdmin && user?.role === "ADMIN" && (
                       <NavItem
@@ -507,12 +573,13 @@ export default function SidebarNavigation() {
                         isOpen={openSections.organization}
                         onToggle={() => toggleSection('organization')}
                       >
-                        <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
-                        <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
-                        <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
+                        <SubNavItem label="Dashboard" href="/app/settings" navKey="organization" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
+                        <SubNavItem label="Team Members" href="/app/settings/team" navKey="organizationTeam" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
+                        <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" navKey="diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                       </NavItem>
                     )}
 
+                    {/* template:remove:start arcade */}
                     {settings.diagnosticRoutingEnabled && (
                       <NavItem
                         icon={Gamepad2}
@@ -523,9 +590,10 @@ export default function SidebarNavigation() {
                         isOpen={openSections.arcade}
                         onToggle={() => toggleSection('arcade')}
                       >
-                        <SubNavItem label="Ronin's Run" href="/app/arcade/ronins-run" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
+                        <SubNavItem label="Ronin's Run" href="/app/arcade/ronins-run" navKey="arcade" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
                       </NavItem>
                     )}
+                    {/* template:remove:end */}
 
                   </>
                 )}
@@ -557,5 +625,6 @@ export default function SidebarNavigation() {
         </motion.aside>
       )}
     </AnimatePresence>
+    </HiddenNavKeysContext.Provider>
   );
 }

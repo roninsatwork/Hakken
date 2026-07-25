@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { query } from "./_generated/server";
 import { requireAdmin, requireSuperAdmin } from "./authz";
+import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import {
   canReadCompanyThreads,
   getThreadUserSummary,
@@ -14,15 +15,13 @@ const CHAT_LOG_SEARCH_CANDIDATE_LIMIT = 500;
 const ADMIN_THREAD_MESSAGE_LIMIT = 500;
 
 // Secure API endpoint to fetch all threads across the platform with user data joined
-export const getOffsetPaginatedThreads = query({
+export const getOffsetPaginatedThreads = superAdminQuery({
   args: { 
     searchTerm: v.optional(v.string()),
     page: v.number(),
     pageSize: v.number()
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized: Top level clearance required.", "Unauthenticated Admin Request");
-
     // Fetch the raw threads
     const allThreads = await ctx.db
       .query("threads")
@@ -57,7 +56,7 @@ export const getOffsetPaginatedThreads = query({
   },
 });
 
-export const getOffsetPaginatedCompanyThreads = query({
+export const getOffsetPaginatedCompanyThreads = adminQuery({
   args: { 
     companyId: v.id("companies"), 
     searchTerm: v.optional(v.string()),
@@ -65,7 +64,7 @@ export const getOffsetPaginatedCompanyThreads = query({
     pageSize: v.number()
   },
   handler: async (ctx, args) => {
-    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated Request");
+    const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
       throw new Error("Unauthorized");
     }
@@ -102,14 +101,12 @@ export const getOffsetPaginatedCompanyThreads = query({
   },
 });
 
-export const getPaginatedThreads = query({
+export const getPaginatedThreads = superAdminQuery({
   args: {
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized: Top level clearance required.", "Unauthenticated Admin Request");
-
     const term = normalizeSearchTerm(args.searchTerm);
     if (term) {
       const recentThreads = await ctx.db
@@ -152,14 +149,14 @@ export const getPaginatedThreads = query({
   },
 });
 
-export const getPaginatedCompanyThreads = query({
+export const getPaginatedCompanyThreads = adminQuery({
   args: {
     companyId: v.id("companies"),
     searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated Request");
+    const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
       throw new Error("Unauthorized");
     }
@@ -206,13 +203,13 @@ export const getPaginatedCompanyThreads = query({
   },
 });
 
-export const getCompanyThreadById = query({
+export const getCompanyThreadById = adminQuery({
   args: {
     companyId: v.id("companies"),
     threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {
-    const { user: admin } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated Request");
+    const { user: admin } = ctx;
     if (!canReadCompanyThreads(admin, args.companyId)) {
       throw new Error("Unauthorized");
     }
@@ -231,10 +228,10 @@ export const getCompanyThreadById = query({
 });
 
 // Secure API endpoint to fetch the raw timeline for any specific thread ID
-export const getAdminThreadMessages = query({
+export const getAdminThreadMessages = adminQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
-    const { user: admin } = await requireAdmin(ctx, "Unauthorized: Cross-boundary access denied.", "Unauthenticated Admin Request");
+    const { user: admin } = ctx;
     const thread = await ctx.db.get(args.threadId);
     
     if (admin.role !== "SUPER_ADMIN" && (!thread?.companyId || !canReadCompanyThreads(admin, thread.companyId))) {

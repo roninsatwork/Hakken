@@ -10,6 +10,7 @@ The **[/docs](./docs/index.md)** folder is the documentation hub. It is organize
 - **[System Architecture](./docs/developer/architecture.md)**: Tech stack and system design.
 - **[Frontend Development](./docs/developer/frontend.md)**: Design system and Sonae Modal Protocol.
 - **[Backend & Data Layer](./docs/developer/backend.md)**: Convex and AI orchestration.
+- **[Tenancy Enforcement](./docs/developer/tenancy-enforcement.md)**: Required builders for client-callable Convex functions.
 - **[Deployment](./docs/developer/deployment.md)**: CI/CD and hosting.
 - **[Plans](./docs/plans/index.md)**: Active and completed implementation plans.
 - **[Operator Guides](./docs/operator/index.md)**: Internal release, packaging, and demo runbooks.
@@ -98,11 +99,14 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 
 ## 📜 Scripts
 
+`npm run help` lists the platform scripts, grouped. `npm run` shows all 132, of which 101 belong to the movement demo and are prefixed `movement:`.
+
 - `npm run dev`: Starts the Next.js development server.
 - `npm run convex:dev`: Starts the Convex development environment.
 - `npm run setup:validate`: Validates required setup, auth/provider readiness, and optional integration credentials without printing secret values.
 - `npm run check`: Runs lint, typecheck, and the Vitest suite.
-- `npm run lint:all`: Runs the full lint suite, including warning visibility.
+- `npm run lint:all`: Alias of `npm run lint`. Both show warnings; only errors fail the build.
+- `npm run coverage:check`: Enforces coverage thresholds for platform code (the movement demo is reported but not gated). Requires `npm run test:coverage` first.
 - `npm run build`: Builds the production application.
 - `npm run lint`: Runs ESLint for code quality checks.
 - `npm run typecheck`: Runs TypeScript without emitting files.

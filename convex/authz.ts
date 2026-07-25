@@ -1,6 +1,17 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { auth } from "./auth";
+
+/**
+ * Uses the standalone `getAuthUserId` rather than the local `auth` object,
+ * which is equivalent but avoids importing `./auth`.
+ *
+ * That import created a cycle: any module using these helpers pulled in
+ * `authz` -> `auth` -> `authUserProvisioning` -> back to the module. Convex
+ * loads modules at startup, so a participant in the cycle saw its imports as
+ * `undefined` and failed at load time rather than with a useful error.
+ * `actionAuth.ts` already took this approach.
+ */
 
 type AuthCtx = QueryCtx | MutationCtx;
 type UserRole = NonNullable<Doc<"users">["role"]>;
@@ -15,7 +26,7 @@ export type RoleCheckedUser = CurrentUser & {
 };
 
 export async function getCurrentUser(ctx: AuthCtx): Promise<CurrentUser | null> {
-  const userId = await auth.getUserId(ctx);
+  const userId = await getAuthUserId(ctx);
   if (!userId) return null;
 
   const user = await ctx.db.get(userId);

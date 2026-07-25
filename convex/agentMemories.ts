@@ -1,7 +1,8 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { internalMutation, internalQuery } from "./_generated/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 
 const MEMORY_SEARCH_LIMIT_DEFAULT = 5;
@@ -76,13 +77,13 @@ function getMemoryQualityScore(args: {
   return Math.min(Math.max(args.importance + successSignal * 0.35 - failureSignal * 0.45 - stalePenalty, 0), 1);
 }
 
-export const getForAgent = query({
+export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
 
@@ -105,12 +106,12 @@ export const getForAgent = query({
   },
 });
 
-export const deleteMemory = mutation({
+export const deleteMemory = adminMutation({
   args: {
     memoryId: v.id("agentMemories"),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);
     if (!memory || memory.isActive === false) throw new Error("Memory not found");
     assertAdminCanAccessCompany(user, memory.companyId);
@@ -141,12 +142,12 @@ export const deleteMemory = mutation({
   },
 });
 
-export const getQualityForAgent = query({
+export const getQualityForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
     if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");

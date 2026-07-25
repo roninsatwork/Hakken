@@ -1,5 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -87,7 +88,7 @@ describe("ApiKeysPage", () => {
   });
 
   it("renders API key inventory and creates a one-time secret", async () => {
-    render(<ApiKeysPage />);
+    renderWithProviders(<ApiKeysPage />);
 
     expect(screen.getByText("API Keys")).toBeInTheDocument();
     expect(screen.getByText("Production agent trigger")).toBeInTheDocument();
@@ -109,7 +110,7 @@ describe("ApiKeysPage", () => {
   });
 
   it("revokes an active API key with an in-app reason", async () => {
-    render(<ApiKeysPage />);
+    renderWithProviders(<ApiKeysPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
     fireEvent.change(screen.getByPlaceholderText("Rotated, leaked, no longer needed..."), {

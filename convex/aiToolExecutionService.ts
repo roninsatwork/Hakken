@@ -1,6 +1,27 @@
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { BUILT_IN_TOOL_CONNECTORS } from "./toolConnectorDefinitions";
+import {
+  UNCONFIGURED_EMAIL_ADDRESS,
+  buildEmailFromAddress,
+  resolveEnvFromAddress,
+} from "./emailBrandingService";
+import { sendResendEmail } from "./resendEmailService";
+import { resolveConnectorSecrets } from "./connectorSecretResolver";
+import {
+  HTTP_CONNECTOR_TIMEOUT_MS,
+  describeHttpConnectorResponse,
+  resolveHttpConnectorBody,
+  resolveHttpConnectorTarget,
+  truncateHttpConnectorBody,
+} from "./httpConnectorPolicy";
+import {
+  parseRecipients,
+  renderNotificationHtml,
+  resolveNotificationContent,
+  resolveNotificationRecipients,
+} from "./aiToolNotificationService";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -16,6 +37,15 @@ export type ToolHandlerExecutionInput = {
   userId?: Id<"users">;
   runId?: Id<"agentRuns">;
   toolCallId?: Id<"agentToolCalls">;
+  /**
+   * The catalogue row the agent invoked.
+   *
+   * Carried so a handler can find the connector it belongs to, and through that
+   * the secret references it was configured with. Looking the tool up by
+   * handler mapping instead would guess at which install was meant when a
+   * global and a tenant-specific one both exist.
+   */
+  toolId?: Id<"aiTools">;
   fallbackQuery?: string;
 };
 
@@ -281,15 +311,35 @@ export function assertCanExecuteTool(args: Parameters<typeof canExecuteTool>[0])
 
 type RegisteredToolHandler = (input: ToolHandlerExecutionInput) => Promise<unknown>;
 
+export const NOT_IMPLEMENTED_TOOL_STATUS = "not_implemented";
+
+/**
+ * The result of calling a connector that is declared but has no implementation.
+ *
+ * The payload has always said so. What did not was the *record*: this returns
+ * normally, so the runtime marked the call SUCCESS and the run log showed a
+ * green tick against a tool that did nothing. Someone reading that log — or the
+ * eval that grades it — had no way to tell a working connector from a declared
+ * one. `isNotImplementedToolResult` is how the runtime now tells them apart.
+ */
 function buildConnectorStubResult(input: ToolHandlerExecutionInput, connectorName: string) {
   return {
     ok: false,
-    status: "not_implemented",
+    status: NOT_IMPLEMENTED_TOOL_STATUS,
     connectorName,
     handlerMapping: input.handlerMapping,
     companyId: input.companyId,
     message: `${connectorName} connector execution is not implemented yet.`,
   };
+}
+
+/** Whether a handler result means "this connector does not exist yet". */
+export function isNotImplementedToolResult(value: unknown): boolean {
+  return (
+    value !== null
+    && typeof value === "object"
+    && (value as { status?: unknown }).status === NOT_IMPLEMENTED_TOOL_STATUS
+  );
 }
 
 const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
@@ -324,21 +374,243 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       idempotencyKey,
     });
   },
-  "workflow.task.create": async (input) => buildConnectorStubResult(input, "Sonae Workflow/Task"),
-  "http.request": async (input) => buildConnectorStubResult(input, "HTTP REST"),
-  "notification.send": async (input) => buildConnectorStubResult(input, "Email/Notification"),
-  "slack.message.send": async (input) => buildConnectorStubResult(input, "Slack"),
-  "google_drive.search": async (input) => buildConnectorStubResult(input, "Google Drive"),
+  "notification.send": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Notifications require a tenant context.");
+    }
+    if (!input.userId) {
+      throw new Error("Notifications require an authenticated actor.");
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      // Not a missing feature — a missing configuration. Saying so is the point:
+      // the alternative used elsewhere in this codebase is to log a simulated
+      // dispatch and report success, which would tell an agent it had notified
+      // someone when nothing was sent.
+      throw new Error("Email delivery is not configured for this deployment.");
+    }
+
+    const decision = resolveNotificationRecipients({
+      requested: parseRecipients(getStringToolArg(input.args, "to")),
+      tenantAddresses: await input.ctx.runQuery(
+        internal.aiToolNotificationTools.getTenantNotificationRecipients,
+        { companyId: input.companyId },
+      ),
+    });
+    if (!decision.allowed) throw new Error(decision.reason);
+
+    const content = resolveNotificationContent({
+      subject: getStringToolArg(input.args, "subject"),
+      body: getStringToolArg(input.args, "body"),
+    });
+    if (!content.ok) throw new Error(content.reason);
+
+    const fromAddress = buildEmailFromAddress({
+      envFromAddress: resolveEnvFromAddress(process.env),
+      settings: await input.ctx.runQuery(internal.settings.getEmailBranding, {}),
+    });
+    if (fromAddress.includes(UNCONFIGURED_EMAIL_ADDRESS)) {
+      // The placeholder sender exists so misconfigured deployments fail loudly
+      // rather than sending from someone else's domain. Sending to it would be
+      // an immediate bounce reported to the agent as a success.
+      throw new Error("No sender address is configured for this deployment.");
+    }
+
+    const dispatch = await sendResendEmail({
+      apiKey,
+      operation: "agentNotificationSend",
+      // Keyed on the tool call, so a resumed run that re-issues this call does
+      // not send the same message twice at the provider either.
+      idempotencyKey: input.toolCallId
+        ? `agent-notification:${input.toolCallId}`
+        : undefined,
+      payload: {
+        from: fromAddress,
+        to: decision.recipients,
+        subject: content.subject,
+        html: renderNotificationHtml(content.body),
+      },
+    });
+
+    await input.ctx.runMutation(internal.aiToolNotificationTools.recordNotificationDispatch, {
+      companyId: input.companyId,
+      actorId: input.userId,
+      agentId: input.agentId,
+      runId: input.runId,
+      toolCallId: input.toolCallId,
+      recipients: decision.recipients,
+      subject: content.subject,
+      dispatchId: typeof dispatch === "string" ? dispatch : undefined,
+    });
+
+    return {
+      delivered: true,
+      recipients: decision.recipients,
+      subject: content.subject,
+    };
+  },
+  "http.request": async (input) => {
+    if (!input.toolId) {
+      throw new Error("Outbound requests require a configured connector tool.");
+    }
+
+    // The base URL and credential come from the connector's configuration, not
+    // from the model. That is the whole safety story: the agent supplies a
+    // method and a path, so an injected "call this other host" has no field to
+    // express itself in.
+    const refs = await input.ctx.runQuery(
+      internal.aiToolNotificationTools.getConnectorSecretRefsForTool,
+      { toolId: input.toolId },
+    );
+    if (!refs || refs.length === 0) {
+      throw new Error("This connector has no configured credentials on this deployment.");
+    }
+
+    const secrets = resolveConnectorSecrets({ refs, env: process.env });
+    if (!secrets.ok) throw new Error(secrets.reason);
+
+    const baseUrl = secrets.values.base_url;
+    if (!baseUrl) throw new Error("This connector has no base URL configured.");
+
+    const target = resolveHttpConnectorTarget({
+      baseUrl,
+      path: getStringToolArg(input.args, "path"),
+      method: getStringToolArg(input.args, "method"),
+    });
+    if (!target.ok) throw new Error(target.reason);
+
+    const body = resolveHttpConnectorBody({
+      method: target.method,
+      bodyJson: getOptionalStringToolArg(input.args, "bodyJson"),
+    });
+    if (!body.ok) throw new Error(body.reason);
+
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (secrets.values.auth_header) headers.Authorization = secrets.values.auth_header;
+    if (body.body) headers["Content-Type"] = "application/json";
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), HTTP_CONNECTOR_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(target.url, {
+        method: target.method,
+        headers,
+        body: body.body,
+        // Never followed. A redirect would let the endpoint forward the request,
+        // and this connector's credential with it, somewhere the administrator
+        // never scoped.
+        redirect: "manual",
+        signal: controller.signal,
+      });
+    } catch (error) {
+      // The URL is safe to report — it is the administrator's own base plus the
+      // agent's path. The headers are not, and are never included.
+      throw new Error(
+        `The request to ${target.url} failed: `
+        + `${error instanceof Error ? error.message : "unknown transport error"}`,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    const contentLength = Number(response.headers.get("content-length"));
+    const check = describeHttpConnectorResponse({
+      status: response.status,
+      contentLength: Number.isFinite(contentLength) ? contentLength : undefined,
+    });
+    if (!check.ok) throw new Error(check.reason);
+
+    const raw = await response.text();
+    const { body: responseBody, truncated } = truncateHttpConnectorBody(raw);
+
+    return {
+      status: response.status,
+      // A non-2xx is information the agent should reason about, not a transport
+      // failure — a 404 means the record is not there, which is an answer.
+      ok: response.ok,
+      url: target.url,
+      body: responseBody,
+      truncated,
+    };
+  },
 };
 
 export function getRegisteredToolHandlerMappings() {
   return Object.keys(REGISTERED_TOOL_HANDLERS).sort();
 }
 
+/**
+ * The connector each declared handler mapping belongs to.
+ *
+ * Presence in this map is what separates "the catalogue advertises this and
+ * nobody has built it" from "something is misconfigured".
+ */
+const DECLARED_CONNECTOR_NAMES = new Map(
+  BUILT_IN_TOOL_CONNECTORS.flatMap((connector) =>
+    connector.toolDefinitions.map((tool) => [tool.handlerMapping, connector.name] as const)),
+);
+
+/**
+ * Whether a handler mapping can actually do anything.
+ *
+ * Derived from the registry, deliberately: the single source of truth for
+ * whether a connector works is whether an implementation exists. A list of
+ * "these ones are stubs" maintained alongside it would drift, and it is exactly
+ * that kind of drift — a catalogue describing capability the code does not have
+ * — this item exists to remove.
+ */
+export function isExecutableToolMapping(handlerMapping: string) {
+  return Boolean(REGISTERED_TOOL_HANDLERS[handlerMapping]);
+}
+
+/** Every handler mapping with a working implementation. */
+export function getExecutableToolMappings() {
+  return Object.keys(REGISTERED_TOOL_HANDLERS).sort();
+}
+
+/**
+ * Whether the platform can actually take a connector through an OAuth flow.
+ *
+ * It cannot. `buildOAuthAuthorizationUrl` produced a link to
+ * `/api/connectors/oauth/authorize`, a route that does not exist, so the admin
+ * "Connect" button led to a 404 — and the completion step accepted a token
+ * reference typed by hand, with no exchange, refresh or revocation behind it.
+ *
+ * Kept as a named check rather than deleting the surface, so that the day the
+ * route and provider credentials exist, this returns true and everything
+ * downstream re-enables itself. Until then the admin is told plainly instead of
+ * being sent somewhere broken.
+ *
+ * Turning this on requires all of: the authorize and callback routes, per
+ * provider client credentials, encrypted token storage, and refresh. Anything
+ * less re-creates the flow that looked real and was not.
+ */
+export function isConnectorOAuthAvailable() {
+  return false;
+}
+
+export const CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE =
+  "OAuth connections are not available on this deployment. No provider "
+  + "authorisation flow is configured, so a connector cannot be connected to an "
+  + "external account yet.";
+
 export async function executeRegisteredTool(args: ToolHandlerExecutionInput) {
   const handler = REGISTERED_TOOL_HANDLERS[args.handlerMapping];
+
   if (!handler) {
-    throw new Error("Unknown or unimplemented tool handler mapping.");
+    // A connector the catalogue advertises but nobody has built is a gap in the
+    // platform, not a fault in this run. Reporting it as an error made the two
+    // indistinguishable — a typo in a tool's configuration and an entire missing
+    // integration produced the same unhelpful line in the log.
+    const connectorName = DECLARED_CONNECTOR_NAMES.get(args.handlerMapping);
+    if (connectorName) {
+      return buildConnectorStubResult(args, connectorName);
+    }
+
+    throw new Error(`No tool handler is registered for '${args.handlerMapping}'.`);
   }
 
   return await handler(args);

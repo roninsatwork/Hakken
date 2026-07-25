@@ -1,8 +1,9 @@
-import { mutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { requireSuperAdmin } from "./authz";
+import { internal } from "./_generated/api";
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import { getRegisteredMigrationNames } from "./dataMigrations";
 import { rebuildGlobalInventoryRollupData } from "./inventoryRollups";
 import {
   getMaintenanceScriptDefinition,
@@ -25,7 +26,74 @@ async function executeMaintenanceScript(ctx: MutationCtx, scriptId: MaintenanceS
     };
   }
 
+  if (scriptId === "data-migrations-apply") {
+    return await startPendingDataMigrations(ctx);
+  }
+
   throw new Error("Unknown maintenance script");
+}
+
+/**
+ * Start every registered data migration that has not completed.
+ *
+ * Migrations run in pages via the scheduler, so this cannot report a finished
+ * result: it reports what it started and the state of the ledger at that
+ * moment. The script's run record therefore means "started successfully", not
+ * "finished" — the summary says so explicitly rather than implying completion.
+ */
+async function startPendingDataMigrations(ctx: MutationCtx): Promise<ScriptRunResult> {
+  const ledger = await ctx.db.query("dataMigrations").take(1000);
+  const ledgerByName = new Map(ledger.map((record) => [record.name, record]));
+
+  const started: string[] = [];
+  const alreadyComplete: string[] = [];
+  const inProgress: string[] = [];
+
+  for (const name of getRegisteredMigrationNames()) {
+    const record = ledgerByName.get(name);
+
+    if (record?.status === "COMPLETED") {
+      alreadyComplete.push(name);
+      continue;
+    }
+    if (record?.status === "RUNNING") {
+      // Already working through its pages; starting it again would reset it.
+      inProgress.push(name);
+      continue;
+    }
+
+    // Never run, or previously FAILED: (re)start it. Migrations are idempotent,
+    // so restarting a failed one re-examines already-migrated records safely.
+    await ctx.scheduler.runAfter(0, internal.dataMigrations.run, { name, force: true });
+    started.push(name);
+  }
+
+  const summaryParts: string[] = [];
+  if (started.length > 0) {
+    summaryParts.push(
+      `Started ${started.length} migration${started.length === 1 ? "" : "s"} (${started.join(", ")}). These continue in the background — re-run this script to see progress.`,
+    );
+  }
+  if (inProgress.length > 0) {
+    summaryParts.push(`${inProgress.length} already running and left alone.`);
+  }
+  if (alreadyComplete.length > 0) {
+    summaryParts.push(`${alreadyComplete.length} already complete.`);
+  }
+  if (summaryParts.length === 0) {
+    summaryParts.push("No data migrations are registered.");
+  }
+
+  return {
+    summary: summaryParts.join(" "),
+    metadata: {
+      started: started.join(", ") || "none",
+      alreadyRunning: inProgress.join(", ") || "none",
+      alreadyComplete: alreadyComplete.join(", ") || "none",
+      registeredCount: getRegisteredMigrationNames().length,
+      recordsUpdatedSoFar: ledger.reduce((total, record) => total + record.updated, 0),
+    },
+  };
 }
 
 function getActorLabel(user: Doc<"users">) {
@@ -40,11 +108,9 @@ async function getLatestRunForScript(ctx: Pick<QueryCtx, "db">, scriptId: string
     .first();
 }
 
-export const list = query({
+export const list = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
-
     return await Promise.all(
       maintenanceScriptDefinitions.map(async (script) => ({
         ...script,
@@ -54,11 +120,9 @@ export const list = query({
   },
 });
 
-export const get = query({
+export const get = superAdminQuery({
   args: { scriptId: v.string() },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
-
     const script = getMaintenanceScriptDefinition(args.scriptId);
     if (!script) return null;
 
@@ -76,10 +140,10 @@ export const get = query({
   },
 });
 
-export const run = mutation({
+export const run = superAdminMutation({
   args: { scriptId: v.string() },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
+    const { userId, user } = ctx;
     const script = getMaintenanceScriptDefinition(args.scriptId);
     if (!script) {
       throw new Error("Unknown maintenance script");

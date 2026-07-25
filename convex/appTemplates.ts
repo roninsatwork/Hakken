@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { requireSuperAdmin } from "./authz";
+
+import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import type { Id } from "./_generated/dataModel";
 import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import { buildGlobalAgentRecord } from "./agentService";
@@ -1439,18 +1439,16 @@ function createLaunchPlanPayload(template: AppTemplate, targetCompanyName?: stri
   };
 }
 
-export const getAppTemplateGallery = query({
+export const getAppTemplateGallery = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx);
     return getAppTemplates();
   },
 });
 
-export const getAppTemplateCatalogRegistry = query({
+export const getAppTemplateCatalogRegistry = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx);
     const records = await ctx.db.query("appTemplateCatalogItems").take(100);
     const recordsByTemplate = new Map(records.map((record) => [record.templateId, record]));
 
@@ -1469,10 +1467,10 @@ export const getAppTemplateCatalogRegistry = query({
   },
 });
 
-export const syncAppTemplateCatalogRegistry = mutation({
+export const syncAppTemplateCatalogRegistry = superAdminMutation({
   args: {},
   handler: async (ctx) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const now = Date.now();
     let createdCount = 0;
     let updatedCount = 0;
@@ -1523,7 +1521,7 @@ export const syncAppTemplateCatalogRegistry = mutation({
   },
 });
 
-export const updateAppTemplateCatalogItem = mutation({
+export const updateAppTemplateCatalogItem = superAdminMutation({
   args: {
     templateId: v.string(),
     lifecycleStatus: v.optional(v.union(v.literal("ACTIVE"), v.literal("NEEDS_REVIEW"), v.literal("ARCHIVED"))),
@@ -1531,7 +1529,7 @@ export const updateAppTemplateCatalogItem = mutation({
     editorialNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const template = getAppTemplateById(args.templateId);
     if (!template) throw new Error("App template not found.");
 
@@ -1575,10 +1573,9 @@ export const updateAppTemplateCatalogItem = mutation({
   },
 });
 
-export const getRecentLaunchPlans = query({
+export const getRecentLaunchPlans = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx);
     return await ctx.db
       .query("appLaunchPlans")
       .withIndex("by_createdAt")
@@ -1587,10 +1584,9 @@ export const getRecentLaunchPlans = query({
   },
 });
 
-export const getLaunchPlanDetails = query({
+export const getLaunchPlanDetails = superAdminQuery({
   args: { planId: v.id("appLaunchPlans") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx);
     const plan = await ctx.db.get(args.planId);
     if (!plan) return null;
 
@@ -1746,10 +1742,10 @@ export const getLaunchPlanDetails = query({
   },
 });
 
-export const archiveLaunchPlan = mutation({
+export const archiveLaunchPlan = superAdminMutation({
   args: { planId: v.id("appLaunchPlans") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const plan = await ctx.db.get(args.planId);
     if (!plan) throw new Error("Launch plan not found.");
     if (plan.status === "ARCHIVED") return args.planId;
@@ -1776,10 +1772,10 @@ export const archiveLaunchPlan = mutation({
   },
 });
 
-export const materializeLaunchPlan = mutation({
+export const materializeLaunchPlan = superAdminMutation({
   args: { planId: v.id("appLaunchPlans") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const plan = await ctx.db.get(args.planId);
     if (!plan) throw new Error("Launch plan not found.");
     if (plan.status === "ARCHIVED") throw new Error("Archived launch plans cannot create resources.");
@@ -1893,10 +1889,10 @@ export const materializeLaunchPlan = mutation({
   },
 });
 
-export const createWorkspaceForLaunchPlan = mutation({
+export const createWorkspaceForLaunchPlan = superAdminMutation({
   args: { planId: v.id("appLaunchPlans") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const plan = await ctx.db.get(args.planId);
     if (!plan) throw new Error("Launch plan not found.");
     if (plan.status === "ARCHIVED") throw new Error("Archived launch plans cannot create workspaces.");
@@ -1950,13 +1946,13 @@ export const createWorkspaceForLaunchPlan = mutation({
   },
 });
 
-export const linkWorkspaceToLaunchPlan = mutation({
+export const linkWorkspaceToLaunchPlan = superAdminMutation({
   args: {
     planId: v.id("appLaunchPlans"),
     companyId: v.id("companies"),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const [plan, company] = await Promise.all([
       ctx.db.get(args.planId),
       ctx.db.get(args.companyId),
@@ -1991,7 +1987,7 @@ export const linkWorkspaceToLaunchPlan = mutation({
   },
 });
 
-export const createLaunchPlan = mutation({
+export const createLaunchPlan = superAdminMutation({
   args: {
     templateId: v.string(),
     targetCompanyName: v.optional(v.string()),
@@ -2015,7 +2011,7 @@ export const createLaunchPlan = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
     const template = getAppTemplateById(args.templateId);
     if (!template) throw new Error("App template not found.");
 

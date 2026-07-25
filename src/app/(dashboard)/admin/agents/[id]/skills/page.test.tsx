@@ -1,5 +1,6 @@
 import type React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -136,7 +137,7 @@ describe("AgentSkillsPage", () => {
     upgradeSkillBinding.mockResolvedValue({ bindingId: "binding_risk", skillVersionId: "skill_version_3" });
     setBindingEnabled.mockResolvedValue("binding_risk");
 
-    render(<AgentSkillsPage />);
+    renderWithProviders(<AgentSkillsPage />);
 
     expect(screen.getByText("Attached Skill Catalog")).toBeInTheDocument();
     expect(screen.getByText("Available")).toBeInTheDocument();
@@ -192,7 +193,7 @@ describe("AgentSkillsPage", () => {
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
 
-    render(<AgentSkillsPage />);
+    renderWithProviders(<AgentSkillsPage />);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Add from Skill Center" })[0]);
 

@@ -18,8 +18,9 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { getActiveCompanyId, requireAdmin, requireSuperAdmin } from "./authz";
-import { buildEmailFromAddress } from "./emailBrandingService";
+import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
+import { adminQuery, superAdminQuery } from "./tenantFunctions";
 
 type SystemAgentId = "system_assistant";
 type SnapshotInteraction = {
@@ -988,22 +989,21 @@ export const getSystemHealth = internalQuery({
   },
 });
 
-export const getAnalyticsDataHealthForAdmin = query({
+export const getAnalyticsDataHealthForAdmin = superAdminQuery({
   args: {
     daysBack: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
     return await getAnalyticsDataHealthReport(ctx, args);
   },
 });
 
-export const getSystemHealthForAdmin = query({
+export const getSystemHealthForAdmin = adminQuery({
   args: {
     daysBack: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const current = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
+    const current = ctx;
     if (current.user.role === "SUPER_ADMIN") {
       return await getSystemHealthReport(ctx, { ...args, scope: { type: "platform" } });
     }
@@ -1435,7 +1435,7 @@ export const dispatchPlatformAlerts = internalAction({
 
     const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
     const fromAddress = buildEmailFromAddress({
-      envFromAddress: process.env.RESEND_FROM_EMAIL,
+      envFromAddress: resolveEnvFromAddress(process.env),
       fallbackName: "Sonae Operations",
       settings: emailBranding,
     });

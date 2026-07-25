@@ -23,6 +23,13 @@ const walkFiles = (dir: string, extensions: ReadonlySet<string>): string[] => {
 
 const relativePath = (filePath: string) => path.relative(repoRoot, filePath);
 const readRepoFile = (relativeFilePath: string) => fs.readFileSync(path.join(repoRoot, relativeFilePath), 'utf8');
+/**
+ * The source of one exported declaration, up to the next *exported* one.
+ *
+ * Module-private helpers in between are included, which is what the reachability
+ * guards below want: a query written in a private helper is still a query that
+ * export performs.
+ */
 const extractExportBody = (relativeFilePath: string, exportName: string) => {
   const contents = readRepoFile(relativeFilePath);
   const startNeedle = `export const ${exportName} =`;
@@ -36,6 +43,36 @@ const extractExportBody = (relativeFilePath: string, exportName: string) => {
   const nextExportMatch = /\nexport (?:const|async function|function) \w+/.exec(body.slice(startNeedle.length));
 
   return nextExportMatch ? body.slice(0, startNeedle.length + nextExportMatch.index) : body;
+};
+/**
+ * The source of one top-level declaration, exported or not, up to the next
+ * top-level declaration of any kind.
+ *
+ * Stricter than `extractExportBody` in both directions, and both properties
+ * matter for the agent runtime spine. It can see a module-private function — a
+ * safety helper is no less required for living in one — and it stops at the
+ * next declaration, so a check on one function cannot be satisfied by code that
+ * happens to sit below it.
+ */
+const extractDeclarationBody = (relativeFilePath: string, declarationName: string) => {
+  const contents = readRepoFile(relativeFilePath);
+  const startPattern = new RegExp(
+    `^(?:export )?(?:const ${declarationName}\\s*=|(?:async )?function ${declarationName}\\s*\\()`,
+    'm',
+  );
+  const startMatch = startPattern.exec(contents);
+
+  if (!startMatch) {
+    return '';
+  }
+
+  const bodyStart = startMatch.index;
+  const afterSignature = contents.slice(bodyStart + startMatch[0].length);
+  const nextDeclaration = /^(?:export )?(?:const|type|async function|function) \w+/m.exec(afterSignature);
+
+  return nextDeclaration
+    ? contents.slice(bodyStart, bodyStart + startMatch[0].length + nextDeclaration.index)
+    : contents.slice(bodyStart);
 };
 const queryBlocksForTable = (body: string, tableName: string) => {
   const queryPattern = new RegExp(`ctx\\.db\\s*\\.query\\("${tableName}"\\)`, 'g');
@@ -348,8 +385,7 @@ describe('Quality Drift Guardrails', () => {
   });
 
   test('Ask Sonae assistant runtimes keep the shared safety spine', () => {
-    const assistantBody = extractExportBody('convex/ai.ts', 'generateSonaeResponse');
-    const agentBody = extractExportBody('convex/agentRuntime.ts', 'runAgentObjective');
+    const assistantBody = extractDeclarationBody('convex/ai.ts', 'generateSonaeResponse');
 
     const assistantRequirements = [
       'evaluateAssistantSafety',
@@ -358,28 +394,63 @@ describe('Quality Drift Guardrails', () => {
       'buildUntrustedConversationHistory',
       'buildUntrustedKnowledgeContext',
     ];
-    const agentRequirements = [
-      'evaluateAssistantSafety',
-      'saveAssistantSafetyRefusal',
-      'buildAgentSystemInstruction',
-      'buildUntrustedKnowledgeContext',
-      'canExecuteTool',
-    ];
     const assistantMissing = assistantRequirements.filter((needle) => !assistantBody.includes(needle));
-    const agentMissing = agentRequirements.filter((needle) => !agentBody.includes(needle));
 
     expect(
       assistantMissing,
       `generateSonaeResponse must keep preflight refusal, prompt hierarchy, untrusted history, and untrusted RAG helpers:\n${assistantMissing.join('\n')}`
     ).toEqual([]);
-    expect(
-      agentMissing,
-      `runAgentObjective must keep preflight refusal, agent prompt hierarchy, untrusted RAG, and tool authorization helpers:\n${agentMissing.join('\n')}`
-    ).toEqual([]);
+
+    // The agent run is no longer one function. It starts in `runAgentObjective`
+    // or resumes in `continueAgentObjective`, both of which build their
+    // configuration through `buildLoopExecutionContext` and then enter the
+    // shared `executeObjectiveLoop`. Each part is pinned to the safety helper it
+    // owns, so a run cannot reach the model down a path that skipped one — in
+    // particular, a resumed run must not be a way around tool authorization.
+    const agentSpine: Array<{ declaration: string; requirements: string[] }> = [
+      {
+        declaration: 'runAgentObjective',
+        requirements: [
+          'evaluateAssistantSafety',
+          'saveAssistantSafetyRefusal',
+          'buildUntrustedKnowledgeContext',
+          'buildLoopExecutionContext',
+          'executeObjectiveLoop',
+        ],
+      },
+      {
+        declaration: 'continueAgentObjective',
+        requirements: ['buildLoopExecutionContext', 'executeObjectiveLoop'],
+      },
+      {
+        declaration: 'buildLoopExecutionContext',
+        requirements: ['buildAgentSystemInstruction'],
+      },
+      {
+        declaration: 'executeObjectiveLoop',
+        requirements: ['canExecuteTool'],
+      },
+    ];
+
+    for (const { declaration, requirements } of agentSpine) {
+      const body = extractDeclarationBody('convex/agentRuntime.ts', declaration);
+      expect(body, `${declaration} not found in convex/agentRuntime.ts`).not.toBe('');
+
+      const missing = requirements.filter((needle) => !body.includes(needle));
+      expect(
+        missing,
+        `${declaration} must keep the agent runtime safety spine:\n${missing.join('\n')}`
+      ).toEqual([]);
+    }
+
     expect(assistantBody).not.toContain('Previous Conversation History:');
     expect(assistantBody).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
-    expect(agentBody).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
-    expect(agentBody).not.toContain('You MUST refer to these when answering');
+
+    // Checked across the whole runtime, not one function: the unsafe framing
+    // these guard against would be just as harmful in the resumption path.
+    const agentRuntimeSource = readRepoFile('convex/agentRuntime.ts');
+    expect(agentRuntimeSource).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
+    expect(agentRuntimeSource).not.toContain('You MUST refer to these when answering');
   });
 
   test('admin AI rule forms keep prompt-injection warning panels', () => {
@@ -471,7 +542,11 @@ describe('Quality Drift Guardrails', () => {
     const workflow = readRepoFile('.github/workflows/deploy.yml');
     const deploymentDocs = readRepoFile('docs/developer/deployment.md');
     const requiredGateCommands = [
-      'npm audit --audit-level=high',
+      // Scoped to runtime deps: devDependencies are not in the deployed image,
+      // and the ESLint 9 toolchain transitively pins an unpatchable
+      // brace-expansion@1. See the comment in deploy.yml and the weekly
+      // security-audit workflow, which tracks the dev chain separately.
+      'npm audit --omit=dev --audit-level=high',
       'npm run lint',
       'npm run typecheck',
       'npm run test:run',
@@ -882,6 +957,11 @@ describe('Quality Drift Guardrails', () => {
     const allowedProviderSdkImportFiles = new Set([
       'convex/agentRuntime.ts',
       'convex/ai.ts',
+      // Adapters are where provider SDK usage belongs. `agentRuntime.ts` is
+      // still listed below as transitional: the objective loop now goes through
+      // the provider seam, but the explicit prompt-cache lifecycle is still
+      // Google-specific and has yet to move behind it.
+      'convex/googleAgentProvider.ts',
       'convex/googleProviderAdapter.ts',
       'convex/orchestrator.ts',
       'convex/salesReportActions.ts',

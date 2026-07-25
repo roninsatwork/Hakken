@@ -63,7 +63,13 @@
         "profile": "My Profile",
         "admin": "Admin Panel",
         "logout": "Logout",
-        "dashboard": "Dashboard"
+        "dashboard": "Dashboard",
+        "errorBoundary": {
+            "title": "This page could not be loaded",
+            "description": "Something went wrong while loading this section. The error has been logged. You can retry, and if it keeps happening please contact your administrator.",
+            "reference": "Reference: {digest}",
+            "retry": "Try again"
+        }
     },
     "landing": {
         "getStarted": "Get Started",
@@ -87,7 +93,7 @@
                 },
                 "knowledge": {
                     "value": "Private Data",
-                "label": "company knowledge, file uploads, sensitive information handling, and clear access rules"
+                    "label": "company knowledge, file uploads, sensitive information handling, and clear access rules"
                 },
                 "control": {
                     "value": "AI Safety",
@@ -95,7 +101,7 @@
                 },
                 "growth": {
                     "value": "Cost Control",
-                "label": "visibility by model, customer, user, message volume, usage limits, and running spend"
+                    "label": "visibility by model, customer, user, message volume, usage limits, and running spend"
                 }
             }
         },
@@ -881,24 +887,29 @@
                 "install": "Install",
                 "installing": "Installing...",
                 "sync": "Sync",
-                "test": "Test",
-                "testing": "Testing...",
+                "test": "Validate",
+                "testing": "Validating...",
                 "manage": "Manage",
-                "untested": "UNTESTED"
+                "untested": "UNVALIDATED",
+                "availability": {
+                    "unavailable": "NOT AVAILABLE",
+                    "partial": "{available} OF {total} AVAILABLE",
+                    "unavailableHelp": "This connector is a declaration only — nothing implements it yet. An agent that calls it will record the call as not implemented and will not perform the action."
+                }
             },
             "connectorDetails": {
                 "back": "Back to Connectors",
-                "untested": "UNTESTED",
+                "untested": "UNVALIDATED",
                 "active": "Active",
                 "disabled": "Disabled",
                 "save": "Save Changes",
                 "saving": "Saving...",
-                "test": "Test Connection",
-                "testing": "Testing...",
+                "test": "Validate Configuration",
+                "testing": "Validating...",
                 "noSecrets": "No secret references are required.",
                 "noTools": "This connector does not expose executable tools yet.",
                 "noGeneratedTools": "No generated tools are currently linked.",
-                "noTestLogs": "No connection tests have been recorded.",
+                "noTestLogs": "No configuration checks have been recorded.",
                 "noSecretRegistry": "No secret reference records have been synchronized.",
                 "required": "Required",
                 "optional": "Optional",
@@ -908,7 +919,7 @@
                     "oauth": "OAuth Connection",
                     "generatedTools": "Generated Tools",
                     "secretRegistry": "Secret Reference Registry",
-                    "testHistory": "Test History"
+                    "testHistory": "Validation History"
                 },
                 "fields": {
                     "authMode": "Auth Mode",

@@ -1,4 +1,30 @@
+/**
+ * Default budget for a run.
+ *
+ * Four steps and three tool calls was too tight for real work: an agent that
+ * looks something up, checks a second source and then answers had no room left.
+ * Ten steps and eight tool calls is in line with what agent loops normally
+ * need, and the £1 cost ceiling — not the step count — is what actually bounds
+ * spend, so this is not a licence to run away.
+ */
 export const DEFAULT_AGENT_OBJECTIVE_LIMITS = {
+  maxSteps: 10,
+  maxToolCalls: 8,
+  maxRuntimeMs: 5 * 60 * 1000,
+  maxInputTokens: 200000,
+  maxOutputTokens: 20000,
+  maxCostGBP: 1,
+} as const;
+
+/**
+ * Budget used when the model has no pricing configured.
+ *
+ * Cost is computed from rates on the model record; with none set it always
+ * evaluates to zero and the cost ceiling never fires. Step and tool counts are
+ * then the only thing bounding spend, so they stay at the original conservative
+ * values. Configure pricing on the model to unlock the fuller budget.
+ */
+export const UNPRICED_MODEL_OBJECTIVE_LIMITS = {
   maxSteps: 4,
   maxToolCalls: 3,
   maxRuntimeMs: 120000,
@@ -7,8 +33,118 @@ export const DEFAULT_AGENT_OBJECTIVE_LIMITS = {
   maxCostGBP: 1,
 } as const;
 
-type ToolCallStatus = "SUCCESS" | "FAILED" | "DENIED" | "CANCELLED";
+/**
+ * Hard platform ceilings.
+ *
+ * Per-agent limits let an agent be given more room than the default, but not
+ * unbounded room: a misconfigured agent must not be able to spend without
+ * limit or hold a Convex action open past its execution window. Anything above
+ * these is clamped down rather than rejected, so a bad number degrades to the
+ * maximum instead of failing the run.
+ */
+export const AGENT_OBJECTIVE_LIMIT_CEILINGS = {
+  maxSteps: 24,
+  maxToolCalls: 20,
+  // Convex actions have a ~10 minute ceiling; stop well inside it so the
+  // runtime ends the run itself rather than being killed mid-step.
+  maxRuntimeMs: 8 * 60 * 1000,
+  maxInputTokens: 1000000,
+  maxOutputTokens: 100000,
+  maxCostGBP: 20,
+} as const;
 
+export type AgentObjectiveLimits = {
+  maxSteps: number;
+  maxToolCalls: number;
+  maxRuntimeMs: number;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  maxCostGBP: number;
+};
+
+/** Per-agent overrides, as stored on the agent record. All optional. */
+export type AgentLimitOverrides = {
+  maxSteps?: number;
+  maxToolCalls?: number;
+  maxRuntimeMs?: number;
+  maxCostGBP?: number;
+};
+
+function clampLimit(value: number | undefined, fallback: number, ceiling: number) {
+  // Ignore anything that is not a usable positive number, including NaN and
+  // values arriving from older records.
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return fallback;
+  return Math.min(Math.floor(value), ceiling);
+}
+
+/**
+ * Whether spend can actually be measured for a model.
+ *
+ * `calculateModelCostGBP` multiplies token counts by the rates on the model
+ * record. When those rates are absent it returns 0, so the cost budget can
+ * never trigger — the run is effectively uncapped on spend, silently.
+ *
+ * This matters because the cost ceiling is what makes a generous step budget
+ * safe. Without it, step and tool counts are the only thing bounding spend.
+ */
+export function isModelCostMeasurable(
+  model: { standardInputCostBelow200k?: number; outputResponseCost?: number } | null | undefined,
+) {
+  const input = model?.standardInputCostBelow200k ?? 0;
+  const output = model?.outputResponseCost ?? 0;
+  return input > 0 || output > 0;
+}
+
+/**
+ * Resolve the limits a run should use.
+ *
+ * These were module constants, so every agent on the platform shared one
+ * budget — a trivial classifier and a deep research task got the same four
+ * steps. This takes the agent's own settings where present, falls back to the
+ * platform defaults, and clamps to the ceilings above.
+ *
+ * When the model has no pricing configured, spend cannot be measured, so the
+ * cost ceiling is not protecting anything. In that case the step and tool
+ * budgets are held at the conservative defaults however the agent is
+ * configured: they become the only backstop, so they must stay tight.
+ */
+export function resolveAgentObjectiveLimits(
+  overrides: AgentLimitOverrides | null | undefined,
+  options: { costMeasurable?: boolean } = {},
+): AgentObjectiveLimits {
+  if (options.costMeasurable === false) {
+    const capped = UNPRICED_MODEL_OBJECTIVE_LIMITS;
+    return {
+      ...capped,
+      // Honour a *lower* configured budget; never a higher one.
+      maxSteps: Math.min(clampLimit(overrides?.maxSteps, capped.maxSteps, capped.maxSteps), capped.maxSteps),
+      maxToolCalls: Math.min(clampLimit(overrides?.maxToolCalls, capped.maxToolCalls, capped.maxToolCalls), capped.maxToolCalls),
+      maxRuntimeMs: Math.min(clampLimit(overrides?.maxRuntimeMs, capped.maxRuntimeMs, capped.maxRuntimeMs), capped.maxRuntimeMs),
+    };
+  }
+
+  return {
+    maxSteps: clampLimit(overrides?.maxSteps, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxSteps, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps),
+    maxToolCalls: clampLimit(overrides?.maxToolCalls, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxToolCalls),
+    maxRuntimeMs: clampLimit(overrides?.maxRuntimeMs, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxRuntimeMs, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs),
+    maxInputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens,
+    maxOutputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxOutputTokens,
+    maxCostGBP: clampLimit(overrides?.maxCostGBP, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP),
+  };
+}
+
+type ToolCallStatus = "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED";
+
+/**
+ * How a tool outcome appears in the run's step timeline.
+ *
+ * `NOT_IMPLEMENTED` maps to FAILED rather than SKIPPED. SKIPPED would read as a
+ * deliberate decision not to run the tool, when in fact the agent asked for
+ * something the platform cannot do and the objective is that much further from
+ * being met. Recording that as anything softer than a failure is the same
+ * flattery as recording it as a success — the run genuinely did not do what it
+ * set out to. The precise reason stays on the tool call itself.
+ */
 export function getAgentStepStatusFromToolStatus(status: ToolCallStatus) {
   return status === "SUCCESS" ? "SUCCESS" : "FAILED";
 }
@@ -52,4 +188,45 @@ export function getTokenBudgetStopMessage() {
 
 export function getCostBudgetStopMessage(maxCostGBP: number) {
   return `Agent stopped after reaching the maximum cost limit of GBP ${maxCostGBP.toFixed(2)}.`;
+}
+
+export type ExecutedAgentToolCall = {
+  name: string;
+  args: Record<string, unknown>;
+  responsePayload: unknown;
+};
+
+/**
+ * Build the conversation turns recording a batch of tool calls and their results.
+ *
+ * A model turn may request several tool calls at once. The provider contract is
+ * that one model turn carrying N `functionCall` parts is answered by one
+ * function turn carrying the matching N `functionResponse` parts, in the same
+ * order.
+ *
+ * The runtime previously executed only `functionCalls[0]` and appended a single
+ * response, so whenever a model requested parallel calls the remaining ones
+ * were silently dropped and the transcript no longer matched what the model had
+ * asked for — a wrong answer rather than an error.
+ */
+export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
+  if (calls.length === 0) return [];
+
+  return [
+    {
+      role: "model",
+      parts: calls.map((call) => ({
+        functionCall: { name: call.name, args: call.args },
+      })),
+    },
+    {
+      role: "function",
+      parts: calls.map((call) => ({
+        functionResponse: {
+          name: call.name,
+          response: { name: call.name, content: call.responsePayload },
+        },
+      })),
+    },
+  ];
 }

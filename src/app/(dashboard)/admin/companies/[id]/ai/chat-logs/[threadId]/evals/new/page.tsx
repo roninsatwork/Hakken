@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { ClipboardCheck, Loader2, MessageSquareText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   AdminModalFormError,
@@ -85,48 +86,46 @@ export default function NewChatEvalPage() {
 
   const [evalForm, setEvalForm] = useState(DEFAULT_EVAL_FORM);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const [evalError, setEvalError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const action = useAdminAction({ scope: "admin-company-ai" });
 
-  useEffect(() => {
-    if (!thread || !messages || hasHydrated) return;
-    setEvalForm({
-      name: thread.title ? `${thread.title.slice(0, 90)} regression` : "Chat evidence regression",
-      category: thread.widgetId ? "WIDGET_READINESS" : "NO_HALLUCINATION",
-      severity: thread.widgetId ? "BLOCKER" : "WARNING",
-      targetSurface: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
-      prompt: latestUserMessage?.content ?? "",
-      expectedBehavior: selectedAssistantMessage
-        ? "Preserve the useful parts of the observed answer, stay grounded in approved company context, and avoid unsupported claims."
-        : "Answer should be grounded in approved company context and avoid unsupported claims.",
-      forbiddenClaimsJson: "",
-    });
-    setHasHydrated(true);
-  }, [hasHydrated, latestUserMessage, messages, selectedAssistantMessage, thread]);
+  // Hydrating during render rather than in an effect: React re-runs this
+  // component before committing, so the fields are populated in the same
+  // paint. In an effect the user sees an empty form first.
+  if (thread && messages && !hasHydrated) {
+      setEvalForm({
+        name: thread.title ? `${thread.title.slice(0, 90)} regression` : "Chat evidence regression",
+        category: thread.widgetId ? "WIDGET_READINESS" : "NO_HALLUCINATION",
+        severity: thread.widgetId ? "BLOCKER" : "WARNING",
+        targetSurface: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
+        prompt: latestUserMessage?.content ?? "",
+        expectedBehavior: selectedAssistantMessage
+          ? "Preserve the useful parts of the observed answer, stay grounded in approved company context, and avoid unsupported claims."
+          : "Answer should be grounded in approved company context and avoid unsupported claims.",
+        forbiddenClaimsJson: "",
+      });
+      setHasHydrated(true);
+  }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSubmitting(true);
-    setEvalError("");
-    try {
-      await createEvalCaseFromChat({
-        companyId,
-        threadId,
-        messageId: selectedAssistantMessage?._id,
-        name: evalForm.name,
-        category: evalForm.category,
-        severity: evalForm.severity,
-        targetSurface: evalForm.targetSurface,
-        prompt: evalForm.prompt,
-        expectedBehavior: evalForm.expectedBehavior,
-        forbiddenClaimsJson: evalForm.forbiddenClaimsJson || undefined,
-      });
-      router.push(backHref);
-    } catch (error) {
-      setEvalError(error instanceof Error ? error.message : "Eval case could not be created.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(() => createEvalCaseFromChat({
+          companyId,
+          threadId,
+          messageId: selectedAssistantMessage?._id,
+          name: evalForm.name,
+          category: evalForm.category,
+          severity: evalForm.severity,
+          targetSurface: evalForm.targetSurface,
+          prompt: evalForm.prompt,
+          expectedBehavior: evalForm.expectedBehavior,
+          forbiddenClaimsJson: evalForm.forbiddenClaimsJson || undefined,
+      }), {
+      fallbackMessage: "Eval case could not be created.",
+      // The form renders the message itself, so a toast would repeat it.
+      suppressErrorToast: true,
+    });
+    // The filled-in form stays on screen if the save failed.
+    if (outcome.ok) router.push(backHref);
   };
 
   if (thread === undefined || messages === undefined || !hasHydrated) {
@@ -175,7 +174,7 @@ export default function NewChatEvalPage() {
 
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{evalError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <AdminModalFormField label="Name">
             <input
               required
@@ -242,8 +241,8 @@ export default function NewChatEvalPage() {
           </AdminModalFormField>
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={isSubmitting ? "Creating..." : "Create eval"}
-            isSubmitting={isSubmitting}
+            submitLabel={action.isBusy() ? "Creating..." : "Create eval"}
+            isSubmitting={action.isBusy()}
           />
         </div>
       </form>

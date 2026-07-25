@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 
 const RECENT_DRIFT_LIMIT = 10;
@@ -32,7 +33,7 @@ type ReadinessArea = {
 type DriftSource = Doc<"companyAiDriftEvents">["sourceType"];
 
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+  const { user, userId } = await requireAdmin(ctx);
   const company = await ctx.db.get(companyId);
   if (!company) throw new Error("Company not found");
   assertAdminCanAccessCompany(user, companyId);
@@ -272,7 +273,7 @@ export async function resolveCompanyAiDriftEvents(ctx: Pick<MutationCtx, "db">, 
   return unresolvedEvents.length;
 }
 
-export const getReadinessSummary = query({
+export const getReadinessSummary = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -282,7 +283,7 @@ export const getReadinessSummary = query({
   },
 });
 
-export const getReadinessHistory = query({
+export const getReadinessHistory = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -296,7 +297,7 @@ export const getReadinessHistory = query({
   },
 });
 
-export const recordReadinessSnapshot = mutation({
+export const recordReadinessSnapshot = adminMutation({
   args: {
     companyId: v.id("companies"),
   },
@@ -325,7 +326,7 @@ export const recordReadinessSnapshot = mutation({
   },
 });
 
-export const resolveDriftEvents = mutation({
+export const resolveDriftEvents = adminMutation({
   args: {
     companyId: v.id("companies"),
     sourceType: v.optional(driftSourceValidator),

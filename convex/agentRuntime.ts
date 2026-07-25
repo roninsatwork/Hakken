@@ -1,6 +1,9 @@
 "use node";
 
 import { internalAction } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
+import type { AgentProviderAdapter, AgentToolDeclaration } from "./agentProviderTypes";
+import { getAgentProviderAdapter } from "./agentProviderRegistry";
 import { v } from "convex/values";
 import type { Content, FunctionDeclaration, GenerateContentConfig, Tool } from "@google/genai";
 import { internal } from "./_generated/api";
@@ -13,6 +16,7 @@ import {
   buildToolResultPayload,
   canExecuteTool,
   executeRegisteredTool,
+  isNotImplementedToolResult,
   normalizeAiRuntimeError,
   parseToolCallPayload,
   validateToolCallArgsAgainstSchema,
@@ -27,8 +31,29 @@ import {
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { shouldFlushStreamedText } from "./streamingService";
+import { calculateModelCostGBP as calculateCostGBP } from "./aiCostService";
+import {
+  EXPLICIT_CACHE_TTL_SECONDS,
+  estimatePromptTokens,
+  getPromptCacheStyle,
+  resolvePromptCacheSegments,
+  shouldCreateExplicitCache,
+} from "./promptCacheService";
+import {
+  AGENT_RUN_MAX_SEGMENTS,
+  getCancelledRunMessage,
+  isCheckpointStorable,
+  isRunStopRequested,
+  shouldCheckpointSegment,
+  trimConversationForCheckpoint,
+} from "./agentRunContinuationService";
 import {
   DEFAULT_AGENT_OBJECTIVE_LIMITS,
+  isModelCostMeasurable,
+  resolveAgentObjectiveLimits,
+  type ExecutedAgentToolCall,
+  buildToolInteractionTurns,
   getAgentStepStatusFromToolStatus,
   getCostBudgetStopMessage,
   getRuntimeBudgetStopMessage,
@@ -53,22 +78,46 @@ type RuntimeToolMetadata = {
     confirmationRequired: boolean;
 };
 
-function getToolConfirmationRequired(sideEffectLevel: ToolSideEffectLevel, configured?: boolean) {
+/**
+ * Whether a tool call has to be approved by a person before it runs.
+ *
+ * Anything that is not a plain read requires approval regardless of how the tool
+ * is configured. On top of that, an agent may be marked as requiring human
+ * approval outright, which puts every one of its calls — reads included —
+ * through the same gate.
+ *
+ * That agent-level flag existed on the record and in the admin UI but was never
+ * read by the runtime, so switching it on changed nothing. A control that
+ * appears to restrict an agent and does not is worse than no control.
+ */
+function getToolConfirmationRequired(
+    sideEffectLevel: ToolSideEffectLevel,
+    configured?: boolean,
+    agentRequiresApproval?: boolean,
+) {
+    if (agentRequiresApproval === true) return true;
     return sideEffectLevel === "READ" ? (configured ?? false) : true;
 }
 
+/**
+ * Cost of the model usage so far.
+ *
+ * Thin wrapper over the shared calculator, kept so the existing call sites read
+ * unchanged. `cachedInputTokens` is the part of the input the provider served
+ * from a cache; it is priced separately, which is the point of caching at all.
+ */
 function calculateModelCostGBP(args: {
     inputTokens: number;
     outputTokens: number;
+    cachedInputTokens?: number;
     config?: Doc<"aiModels">;
 }) {
-    const inRate = args.config
-        ? (args.inputTokens > 200000
-            ? (args.config.standardInputCostAbove200k || 0)
-            : (args.config.standardInputCostBelow200k || 0))
-        : 0;
-    const outRate = args.config ? (args.config.outputResponseCost || 0) : 0;
-    return (args.inputTokens / 1000000) * inRate + (args.outputTokens / 1000000) * outRate;
+    return calculateCostGBP({
+        inputTokens: args.inputTokens,
+        outputTokens: args.outputTokens,
+        cachedInputTokens: args.cachedInputTokens,
+        rates: args.config,
+    });
 }
 
 function isConfirmationRequiredDenial(reason?: string) {
@@ -128,6 +177,232 @@ function buildHistoricalReplaySystemPrompt(args: {
     return `${configuredPrompt}${skillInstruction}\n\n====================\nHISTORICAL ACTIVE AGENT RULES FROM THE REPLAYED VERSION SNAPSHOT:\n\n${compiledRules}`;
 }
 
+/**
+ * The reply being written token by token.
+ *
+ * Held in one mutable object so every exit path — success, budget stop,
+ * cancellation, provider failure, handover to a continuation — can reach the
+ * same row. A row left marked as streaming shows a caret against an answer that
+ * is never coming.
+ *
+ * `text` holds only the current model turn. A turn that requests tools may
+ * narrate first ("let me look that up"), and that narration is superseded by the
+ * next turn rather than accumulating, so what the reader ends up with matches
+ * the final answer.
+ */
+type StreamState = {
+  messageId: Id<"messages"> | undefined;
+  text: string;
+  flushedText: string;
+  lastFlushAt: number;
+};
+
+function createStreamState(messageId?: Id<"messages">): StreamState {
+  return { messageId, text: "", flushedText: "", lastFlushAt: 0 };
+}
+
+/**
+ * Counters that must survive a handover between action segments.
+ *
+ * Every budget is enforced against the whole run, not against the segment that
+ * happens to be executing, so these are carried in the checkpoint rather than
+ * being recomputed. A run that resets its tool count on resumption would have no
+ * effective tool limit at all.
+ */
+type ObjectiveLoopState = {
+  stepIndex: number;
+  loopIndex: number;
+  toolCallCount: number;
+  inTokens: number;
+  outTokens: number;
+  /** The share of `inTokens` the provider served from cache, priced separately. */
+  cachedInTokens: number;
+  segmentCount: number;
+  /**
+   * How many leading turns form the prompt prefix that never changes for the
+   * rest of the run. Zero disables caching for this run, which is what a trimmed
+   * transcript falls back to.
+   */
+  stablePrefixTurns: number;
+  /** Provider-side cache object holding that prefix, once one has been created. */
+  promptCacheName?: string;
+};
+
+/**
+ * Rebuild everything the objective loop needs that is derived from the database.
+ *
+ * Deliberately excludes the transcript. Retrieval, memory lookup and document
+ * parsing are expensive and non-deterministic, and their results are already
+ * baked into the stored conversation — so a continuation reloads the agent's
+ * configuration but never redoes its research. Repeating it would pay for the
+ * same embeddings twice and could ground the second half of a run in different
+ * knowledge from the first.
+ */
+async function buildLoopExecutionContext(ctx: ActionCtx, args: {
+  agentId: Id<"agents">;
+  threadId: Id<"threads">;
+}) {
+  const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
+  if (!agent) throw new Error("Agent not found.");
+
+  const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
+  if (!thread) throw new Error("Thread context missing");
+
+  const runtimeSkills = await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
+    agentId: args.agentId,
+    companyId: thread.companyId,
+  });
+
+  const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+    requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
+    companyId: thread.companyId,
+    useCase: "agent",
+  });
+  const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
+  const dynamicTools: FunctionDeclaration[] = [];
+  const toolMetadataByName = new Map<string, RuntimeToolMetadata>();
+
+  for (const junction of agentTools) {
+    const toolDef = await ctx.runQuery(internal.aiTools.getToolInternal, { id: junction.toolId });
+    if (toolDef?.isActive === false) continue;
+    const schemaStr = toolDef && "inputSchema" in toolDef && typeof toolDef.inputSchema === "string"
+      ? toolDef.inputSchema
+      : undefined;
+    if (toolDef && schemaStr) {
+      try {
+        const declaration = buildProviderToolDeclaration({
+          name: toolDef.name,
+          description: toolDef.description,
+          handlerMapping: toolDef.handlerMapping,
+          requiredRole: toolDef.requiredRole,
+          inputSchema: schemaStr,
+        });
+        dynamicTools.push(declaration as FunctionDeclaration);
+        const sideEffectLevel = (toolDef.sideEffectLevel || "READ") as ToolSideEffectLevel;
+        toolMetadataByName.set(declaration.name, {
+          toolId: toolDef._id,
+          requiredRole: toolDef.requiredRole,
+          handlerMapping: toolDef.handlerMapping,
+          inputSchema: schemaStr,
+          sideEffectLevel,
+          confirmationRequired: getToolConfirmationRequired(
+            sideEffectLevel,
+            toolDef.confirmationRequired,
+            agent.humanApprovalRequired,
+          ),
+        });
+      } catch (error) {
+        console.error("Failed to parse tool schema for:", toolDef.name, getErrorMessage(error));
+      }
+    }
+  }
+
+  const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt, runtimeSkills);
+  // Deterministic logic routing.
+  const temperature = 0.1;
+
+  // Neutral declarations: the adapter converts them to its provider's shape.
+  // Kept separately from any provider config because a prompt cache must be
+  // built from exactly the same declarations the request offers.
+  const toolDeclarations: AgentToolDeclaration[] = dynamicTools.map((tool) => ({
+    name: tool.name ?? "",
+    description: tool.description ?? "",
+    parametersJsonSchema: tool.parametersJsonSchema as Record<string, unknown> | undefined,
+  }));
+  const providerTools: Tool[] | undefined = dynamicTools.length > 0
+    ? [{ functionDeclarations: dynamicTools }]
+    : undefined;
+
+  // Fails here, naming the model, rather than deep inside a provider call.
+  const provider = getAgentProviderAdapter(modelConfig.providerKey);
+
+  const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
+  const modelDoc = new Map<string, Doc<"aiModels">>(allModelsRaw.map((m) => [m.modelId, m]))
+    .get(modelConfig.modelId);
+
+  // Per-agent budget, clamped to the platform ceilings. When the model has no
+  // pricing configured the cost ceiling can never fire, so the conservative
+  // step/tool budget applies instead — those counts are then the only thing
+  // bounding spend. See resolveAgentObjectiveLimits.
+  const limits = resolveAgentObjectiveLimits(agent, {
+    costMeasurable: isModelCostMeasurable(modelDoc),
+  });
+
+  return {
+    agent, thread, runtimeSkills, modelConfig, provider,
+    systemInstruction, temperature, toolDeclarations, providerTools,
+    toolMetadataByName, modelDoc, limits,
+  };
+}
+
+type LoopExecutionContext = Awaited<ReturnType<typeof buildLoopExecutionContext>>;
+
+/**
+ * Close out a run that failed with an unhandled exception.
+ *
+ * Shared by the initial action and every continuation, because a run can die in
+ * any segment and the reader must get the same treatment wherever it happened.
+ */
+async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
+  runId: Id<"agentRuns"> | undefined;
+  threadId: Id<"threads">;
+  agentId: Id<"agents">;
+  objective: string;
+  companyId?: Id<"companies">;
+  stream: StreamState;
+  promptCache?: { name?: string };
+  provider?: AgentProviderAdapter;
+  error: unknown;
+}) {
+  console.error("Agent Engine Error:", args.error);
+  const errorMessage = normalizeAiRuntimeError(args.error, "Agent execution failed.").error;
+
+  // The run is over, so the prefix it cached is storage nobody will read. The
+  // cache carries a TTL, so a failure to release it expires rather than leaks.
+  if (args.promptCache?.name && args.provider) {
+    const name = args.promptCache.name;
+    args.promptCache.name = undefined;
+    await args.provider.releasePromptCache?.(name);
+  }
+
+  await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+    agentId: args.agentId,
+    threadId: args.threadId,
+    interactionType: "ERROR",
+    promptContent: args.objective,
+    responseContent: errorMessage,
+    companyId: args.companyId,
+  });
+
+  if (args.runId) {
+    await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
+      runId: args.runId,
+      status: "FAILED",
+      error: errorMessage,
+    });
+    // The run is over, so its saved position is no longer something to resume
+    // from. Left behind, the sweeper would keep finding it.
+    await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId: args.runId });
+  }
+
+  const failureMessage = "Agent Execution Offline: Encountered an unhandled exception in the function calling runtime.";
+
+  // If text was already streaming, close that row instead of adding a second
+  // message: the reader would otherwise be left with a half-written answer
+  // marked as still typing, plus an error underneath it.
+  if (args.stream.messageId !== undefined) {
+    await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+      messageId: args.stream.messageId,
+      content: failureMessage,
+    });
+  } else {
+    await ctx.runMutation(internal.chat.saveAssistantMessage, {
+      threadId: args.threadId,
+      content: failureMessage,
+    });
+  }
+}
+
 export const runAgentObjective = internalAction({
   args: {
     threadId: v.id("threads"),
@@ -137,6 +412,13 @@ export const runAgentObjective = internalAction({
   },
   handler: async (ctx, args) => {
     let agentRunId: Id<"agentRuns"> | undefined;
+    let companyId: Id<"companies"> | undefined;
+    const stream = createStreamState();
+    const promptCache: { name?: string } = {};
+    // Hoisted so the failure handler can release a provider-side cache through
+    // the same adapter that created it.
+    let execution: LoopExecutionContext | undefined;
+
     const safetyDecision = evaluateAssistantSafety(args.content);
     if (!safetyDecision.allowed) {
         await ctx.runMutation(internal.chat.saveAssistantSafetyRefusal, {
@@ -151,26 +433,12 @@ export const runAgentObjective = internalAction({
     const ai = createVertexGenAIClient();
 
     try {
-        // 1. Fetch Agent Identity & System Prompt
-        const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
-        if (!agent) throw new Error("Agent not found.");
-
-        // 2. Fetch Conversation History 
-        const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
-        if (!thread) throw new Error("Thread context missing");
-        const runtimeSkills = await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
+        execution = await buildLoopExecutionContext(ctx, {
             agentId: args.agentId,
-            companyId: thread.companyId,
+            threadId: args.threadId,
         });
-
-        const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt, runtimeSkills);
-
-        const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-           requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
-           companyId: thread.companyId,
-           useCase: "agent",
-        });
-        const targetModel = getGoogleVertexProviderModelId(modelConfig, "agent tool runtime");
+        const { thread, runtimeSkills, modelConfig } = execution;
+        companyId = thread.companyId;
 
         agentRunId = await ctx.runMutation(internal.agentRuns.createRunInternal, {
             agentId: args.agentId,
@@ -277,44 +545,6 @@ export const runAgentObjective = internalAction({
             parts: [{ text: currentUserContent }]
         });
 
-        // 3. Fetch Assigned Connectors (Tools)
-        const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
-        
-        // Build the Tools Declaration block for @google/genai
-        const dynamicTools: FunctionDeclaration[] = [];
-        const toolMetadataByName = new Map<string, RuntimeToolMetadata>();
-        
-        for (const junction of agentTools) {
-             const toolDef = await ctx.runQuery(internal.aiTools.getToolInternal, { id: junction.toolId });
-             if (toolDef?.isActive === false) continue;
-             const schemaStr = toolDef && "inputSchema" in toolDef && typeof toolDef.inputSchema === "string"
-                 ? toolDef.inputSchema
-                 : undefined;
-             if (toolDef && schemaStr) {
-                 try {
-                     const declaration = buildProviderToolDeclaration({
-                         name: toolDef.name,
-                         description: toolDef.description,
-                         handlerMapping: toolDef.handlerMapping,
-                         requiredRole: toolDef.requiredRole,
-                         inputSchema: schemaStr,
-                     });
-                     dynamicTools.push(declaration as FunctionDeclaration);
-                     const sideEffectLevel = (toolDef.sideEffectLevel || "READ") as ToolSideEffectLevel;
-                     toolMetadataByName.set(declaration.name, {
-                         toolId: toolDef._id,
-                         requiredRole: toolDef.requiredRole,
-                         handlerMapping: toolDef.handlerMapping,
-                         inputSchema: schemaStr,
-                         sideEffectLevel,
-                         confirmationRequired: getToolConfirmationRequired(sideEffectLevel, toolDef.confirmationRequired),
-                     });
-                 } catch (error) {
-                     console.error("Failed to parse tool schema for:", toolDef.name, getErrorMessage(error));
-                 }
-             }
-        }
-
         // --- RAG VECTOR SEARCH PIPELINE (Agent Isolated) ---
         let ragContext = "";
         try {
@@ -370,7 +600,6 @@ export const runAgentObjective = internalAction({
             console.error("Agent RAG pipeline failed to execute", e);
         }
 
-        const finalSystemInstruction = systemInstruction;
         if (ragContext) {
              // Append to the final user message to prioritize context grounding over system instruction fading
              const finalMessage = conversationHistory[conversationHistory.length - 1];
@@ -380,61 +609,517 @@ export const runAgentObjective = internalAction({
              }
         }
 
-        const genConfig: GenerateContentConfig = {
-            systemInstruction: finalSystemInstruction,
-            temperature: 0.1, // Deterministic logic routing
-        };
+        await executeObjectiveLoop(ctx, {
+            runId,
+            agentId: args.agentId,
+            threadId: args.threadId,
+            objective: args.content,
+            execution,
+            conversationHistory,
+            stream,
+            promptCache,
+            state: {
+                stepIndex: preLoopStepIndex,
+                loopIndex: 0,
+                toolCallCount: 0,
+                inTokens: 0,
+                outTokens: 0,
+                cachedInTokens: 0,
+                segmentCount: 1,
+                // Everything assembled up to this point — history, the objective,
+                // retrieved knowledge — is what every later turn re-sends
+                // unchanged, so it is the run's cacheable prefix.
+                stablePrefixTurns: conversationHistory.length,
+            },
+            runStartedAt: Date.now(),
+        });
+    } catch (error: unknown) {
+        await finalizeObjectiveFailure(ctx, {
+            runId: agentRunId,
+            threadId: args.threadId,
+            agentId: args.agentId,
+            objective: args.content,
+            companyId,
+            stream,
+            promptCache,
+            provider: execution?.provider,
+            error,
+        });
+    }
+  },
+});
 
-        if (dynamicTools.length > 0) {
-            genConfig.tools = [{
-                functionDeclarations: dynamicTools
-            }];
-        }
+/**
+ * Pick a run back up in a fresh action.
+ *
+ * Scheduled by the loop itself when a segment has been working long enough that
+ * starting another model turn would risk overrunning the Convex action ceiling,
+ * and by the sweeper when a run has stopped moving. Either way the work already
+ * done is in the checkpoint, so this reloads the agent's configuration and the
+ * stored transcript and carries on from the next model turn.
+ *
+ * This mirrors `convex/workflowRuntime.ts`, where each node is its own scheduled
+ * action and the execution's place is kept in the database. That design was
+ * already in the repo and working; the agent runtime simply had not adopted it.
+ */
+export const continueAgentObjective = internalAction({
+  args: {
+    runId: v.id("agentRuns"),
+  },
+  handler: async (ctx, args) => {
+    const checkpoint = await ctx.runQuery(internal.agentRunCheckpoints.getCheckpointInternal, {
+      runId: args.runId,
+    });
+    if (!checkpoint || checkpoint.status !== "ACTIVE") return;
+    if (!checkpoint.threadId) {
+      // Only chat-triggered runs use this loop; anything else has no reply to
+      // write and nothing to resume into.
+      await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId: args.runId });
+      return;
+    }
 
-        const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
-        const modelMap = new Map<string, Doc<"aiModels">>(allModelsRaw.map((m) => [m.modelId, m]));
-        const config = modelMap.get(modelConfig.modelId);
+    const runState = await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, {
+      runId: args.runId,
+    });
+    // Cancelled, already concluded, or gone: resuming would execute tools nobody
+    // is waiting for and post an answer over a decision already taken.
+    if (!runState || isRunStopRequested(runState.status)) {
+      await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId: args.runId });
+      return;
+    }
 
-        // --- BOUNDED OBJECTIVE LOOP ---
+    const threadId = checkpoint.threadId;
+    const stream = createStreamState(checkpoint.streamMessageId);
+    const promptCache: { name?: string } = { name: checkpoint.promptCacheName };
+    let execution: LoopExecutionContext | undefined;
+
+    try {
+      if (checkpoint.segmentCount >= AGENT_RUN_MAX_SEGMENTS) {
+        throw new Error("Agent run exceeded the maximum number of continuation segments.");
+      }
+
+      execution = await buildLoopExecutionContext(ctx, {
+        agentId: checkpoint.agentId,
+        threadId,
+      });
+
+      const conversationHistory = JSON.parse(checkpoint.transcriptJson) as Content[];
+      if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
+        throw new Error("Agent run checkpoint holds no usable conversation transcript.");
+      }
+
+      await executeObjectiveLoop(ctx, {
+        runId: args.runId,
+        agentId: checkpoint.agentId,
+        threadId,
+        objective: runState.objective,
+        execution,
+        conversationHistory,
+        stream,
+        promptCache,
+        state: {
+          stepIndex: checkpoint.stepIndex,
+          loopIndex: checkpoint.loopIndex,
+          toolCallCount: checkpoint.toolCallCount,
+          inTokens: checkpoint.inputTokens,
+          outTokens: checkpoint.outputTokens,
+          cachedInTokens: 0,
+          segmentCount: checkpoint.segmentCount + 1,
+          stablePrefixTurns: checkpoint.stablePrefixTurns ?? 0,
+          // Reuse the cache the earlier segment built rather than paying to
+          // upload the same prefix again.
+          promptCacheName: checkpoint.promptCacheName,
+        },
+        // The whole run's clock, not this segment's. Budgets bound the run the
+        // user is waiting on; restarting the timer per segment would make
+        // `maxRuntimeMs` mean nothing.
+        runStartedAt: runState.startedAt,
+      });
+    } catch (error: unknown) {
+      await finalizeObjectiveFailure(ctx, {
+        runId: args.runId,
+        threadId,
+        agentId: checkpoint.agentId,
+        objective: runState.objective,
+        companyId: checkpoint.companyId,
+        stream,
+        promptCache,
+        provider: execution?.provider,
+        error,
+      });
+    }
+  },
+});
+
+/**
+ * The bounded objective loop: model turn, tool calls, repeat until an answer or
+ * a budget stops it.
+ *
+ * Extracted from the action that used to own it so a continuation can enter the
+ * same loop mid-run. Everything that varies between a fresh start and a
+ * resumption arrives in `state` and `conversationHistory`; the loop itself does
+ * not know or care which it is.
+ */
+async function executeObjectiveLoop(ctx: ActionCtx, params: {
+    runId: Id<"agentRuns">;
+    agentId: Id<"agents">;
+    threadId: Id<"threads">;
+    objective: string;
+    execution: LoopExecutionContext;
+    conversationHistory: Content[];
+    stream: StreamState;
+    /**
+     * The provider-side cache this run is using, if any.
+     *
+     * Held by the caller for the same reason the stream is: if the loop dies
+     * part-way, the caller's failure handler still has to release it. A cache
+     * left behind is billed storage for a conversation nobody is having.
+     */
+    promptCache: { name?: string };
+    state: ObjectiveLoopState;
+    runStartedAt: number;
+}) {
+        const { runId, threadId, objective, execution, conversationHistory, stream, state, runStartedAt } = params;
+        const agentId = params.agentId;
+        const { thread, modelConfig, provider, systemInstruction, temperature, toolDeclarations, providerTools, toolMetadataByName, limits } = execution;
+        const config = execution.modelDoc;
+        const companyId = thread.companyId;
+        const segmentStartedAt = Date.now();
+
         let assistantReply = "";
         let finalStepStatus: "SUCCESS" | "FAILED" = "SUCCESS";
-        let stepIndex = preLoopStepIndex;
-        let toolCallCount = 0;
-        let inTokens = 0;
-        let outTokens = 0;
-        const runStartedAt = Date.now();
+        let stepIndex = state.stepIndex;
+        let toolCallCount = state.toolCallCount;
+        let inTokens = state.inTokens;
+        let outTokens = state.outTokens;
+        let cachedInTokens = state.cachedInTokens;
+        let stablePrefixTurns = state.stablePrefixTurns;
+        const promptCache = params.promptCache;
+        promptCache.name = state.promptCacheName;
+        const cacheStyle = getPromptCacheStyle(modelConfig.providerKey);
 
-        for (let loopIndex = 0; loopIndex < DEFAULT_AGENT_OBJECTIVE_LIMITS.maxSteps; loopIndex += 1) {
-            const response = await generateVertexContentWithRetry(ai, {
-                model: targetModel,
-                contents: conversationHistory,
-                config: genConfig
-            }, {
-                operation: toolCallCount === 0 ? "agentGeneratePassOne" : "agentGenerateToolSynthesis",
+        /**
+         * Release the provider-side cache, if this run made one.
+         *
+         * Called on every terminal path. A cache that outlives its run is not a
+         * correctness problem — it carries a TTL — but it is billed storage for
+         * a conversation nobody is having any more.
+         */
+        const releasePromptCache = async () => {
+            if (!promptCache.name) return;
+            const name = promptCache.name;
+            promptCache.name = undefined;
+            await provider.releasePromptCache?.(name);
+        };
+
+        /**
+         * Save the run's position so another action can take over from here.
+         *
+         * Called after every completed model turn. The cost is one write per
+         * turn — trivial next to the model call that produced it — and it buys
+         * two things: a segment can hand over cleanly before the action ceiling,
+         * and a run that dies can be picked up rather than losing everything it
+         * had done.
+         */
+        const saveCheckpoint = async (checkpointStatus: "ACTIVE" | "AWAITING_APPROVAL", nextLoopIndex: number) => {
+            const { serialized, trimmed } = trimConversationForCheckpoint(conversationHistory);
+            if (!isCheckpointStorable(serialized)) {
+                // A single turn larger than the whole budget. Nothing can be
+                // stored, so the run stays live in this action and simply is not
+                // resumable — better than a write that throws and takes the run
+                // down with it.
+                console.warn("Agent run transcript too large to checkpoint", { runId });
+                return false;
+            }
+
+            await ctx.runMutation(internal.agentRunCheckpoints.saveCheckpointInternal, {
+                runId,
+                agentId,
+                companyId,
+                threadId,
+                status: checkpointStatus,
+                transcriptJson: serialized,
+                transcriptTrimmed: trimmed,
+                stepIndex,
+                loopIndex: nextLoopIndex,
+                toolCallCount,
+                inputTokens: inTokens,
+                outputTokens: outTokens,
+                streamMessageId: stream.messageId,
+                // A trimmed transcript no longer starts where the cached prefix
+                // did, so the cache describes a conversation this request is not
+                // having. Drop it and stop caching for the rest of the run
+                // rather than referencing a prefix that has moved.
+                stablePrefixTurns: trimmed ? 0 : stablePrefixTurns,
+                promptCacheName: trimmed ? undefined : promptCache.name,
+                segmentCount: state.segmentCount,
             });
 
-            const responseInputTokens = response.usageMetadata?.promptTokenCount || 0;
-            const responseOutputTokens = response.usageMetadata?.candidatesTokenCount || 0;
+            if (trimmed && promptCache.name) {
+                await releasePromptCache();
+                stablePrefixTurns = 0;
+            }
+            return true;
+        };
+
+        /**
+         * Has someone stopped this run while it was working?
+         *
+         * `cancelRun` writes CANCELLED to the row and returns — it cannot reach
+         * into an action already in flight. Without this check the loop carried
+         * on calling tools and posted its answer over a cancellation the
+         * operator had already been told was applied.
+         */
+        const readStopRequest = async () => {
+            const runState = await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, { runId });
+            if (!runState) return { stopped: true, message: getCancelledRunMessage() };
+            if (isRunStopRequested(runState.status)) {
+                return { stopped: true, message: getCancelledRunMessage(runState.finalOutput) };
+            }
+            return { stopped: false, message: "" };
+        };
+
+        /**
+         * Wind up a run that was stopped from outside.
+         *
+         * Deliberately does not touch the run's status: `cancelRun` has already
+         * written CANCELLED, the final step and the reason, and overwriting that
+         * would replace the operator's record with the runtime's. What is left
+         * is the part `cancelRun` could not do — closing the reply, so the
+         * reader stops waiting — and recording the spend incurred up to here.
+         */
+        const concludeStoppedRun = async (message: string) => {
+            await releasePromptCache();
+            await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId });
+            await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
+                runId,
+                inputTokens: inTokens,
+                outputTokens: outTokens,
+                costGBP: calculateModelCostGBP({
+                    inputTokens: inTokens,
+                    outputTokens: outTokens,
+                    cachedInputTokens: cachedInTokens,
+                    config,
+                }),
+                modelId: modelConfig.modelId,
+                providerKey: modelConfig.providerKey,
+                providerModelId: modelConfig.providerModelId,
+            });
+
+            if (stream.messageId !== undefined) {
+                await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+                    messageId: stream.messageId,
+                    content: message,
+                    inputTokens: inTokens,
+                    outputTokens: outTokens,
+                    modelUsed: modelConfig.modelId,
+                    providerKey: modelConfig.providerKey,
+                    providerModelId: modelConfig.providerModelId,
+                });
+                stream.messageId = undefined;
+            } else {
+                // Nothing streamed yet, so the thread's last message is the
+                // user's and the surface is showing a thinking indicator that
+                // would otherwise never clear.
+                await ctx.runMutation(internal.chat.saveAssistantMessage, {
+                    threadId,
+                    content: message,
+                    inputTokens: inTokens,
+                    outputTokens: outTokens,
+                    modelUsed: modelConfig.modelId,
+                    providerKey: modelConfig.providerKey,
+                    providerModelId: modelConfig.providerModelId,
+                });
+            }
+        };
+
+        /**
+         * Push the partial reply to the database, throttled.
+         *
+         * Convex queries are reactive, so a patch here is what makes the text
+         * appear for every subscribed client. Each patch is a real transaction
+         * fanned out to all of them, so `shouldFlushStreamedText` decides when a
+         * chunk is worth writing rather than writing per token.
+         */
+        const flushStream = async (isFinal: boolean) => {
+            const pendingChars = stream.text.length - stream.flushedText.length;
+            const now = Date.now();
+            if (!shouldFlushStreamedText({
+                pendingChars,
+                msSinceLastFlush: now - stream.lastFlushAt,
+                isFinal,
+            })) return;
+
+            if (stream.messageId === undefined) {
+                // Created on the first fragment, not at run start: the chat
+                // surfaces infer "thinking" from the last message being the
+                // user's, so an empty row up front would swap the thinking
+                // indicator for a blank bubble while the model warms up.
+                stream.messageId = await ctx.runMutation(internal.chat.startStreamingAssistantMessage, {
+                    threadId,
+                    content: stream.text,
+                    modelUsed: modelConfig.modelId,
+                    providerKey: modelConfig.providerKey,
+                    providerModelId: modelConfig.providerModelId,
+                });
+            } else {
+                await ctx.runMutation(internal.chat.appendStreamingAssistantMessage, {
+                    messageId: stream.messageId,
+                    content: stream.text,
+                });
+            }
+
+            stream.flushedText = stream.text;
+            stream.lastFlushAt = now;
+        };
+
+        let turnsThisSegment = 0;
+
+        for (let loopIndex = state.loopIndex; loopIndex < limits.maxSteps; loopIndex += 1) {
+            const stopRequest = await readStopRequest();
+            if (stopRequest.stopped) {
+                await concludeStoppedRun(stopRequest.message);
+                return;
+            }
+
+            // Hand over to a freshly scheduled action rather than starting a
+            // model turn this segment may not live long enough to finish. Only
+            // between turns: the transcript is consistent here and would not be
+            // mid-turn. Never on the first turn of a segment, or a run could
+            // bounce between segments without making progress.
+            if (turnsThisSegment > 0 && shouldCheckpointSegment({
+                segmentElapsedMs: Date.now() - segmentStartedAt,
+            })) {
+                if (await saveCheckpoint("ACTIVE", loopIndex)) {
+                    await ctx.scheduler.runAfter(0, internal.agentRuntime.continueAgentObjective, { runId });
+                    return;
+                }
+                // Not resumable, so carry on here and let the runtime budget
+                // stop the run rather than abandoning it.
+            }
+
+            turnsThisSegment += 1;
+
+            // Each turn's text replaces the last, so tool-call narration does not
+            // accumulate in front of the answer that follows it. `flushedText`
+            // resets with it: it records how much of *this* turn has been
+            // written, and leaving the previous turn's value behind would make
+            // the pending-character count negative and suppress every write.
+            stream.text = "";
+            stream.flushedText = "";
+
+            // The system instruction, the tool declarations and everything
+            // retrieved for this objective are re-sent on every turn. Once a run
+            // has shown it is the multi-turn kind, upload that prefix once and
+            // reference it instead. A run that answers in one or two turns never
+            // gets here, and so never pays for a cache it would not reuse.
+            if (shouldCreateExplicitCache({
+                style: cacheStyle,
+                estimatedPrefixTokens: stablePrefixTurns > 0
+                    ? estimatePromptTokens(
+                        JSON.stringify(conversationHistory.slice(0, stablePrefixTurns))
+                        + JSON.stringify(systemInstruction)
+                        + JSON.stringify(providerTools ?? []),
+                    )
+                    : 0,
+                completedTurns: loopIndex,
+                alreadyCached: promptCache.name !== undefined,
+            })) {
+                const segments = resolvePromptCacheSegments({
+                    turns: conversationHistory,
+                    stableTurnCount: stablePrefixTurns,
+                });
+                if (segments.stable.length > 0) {
+                    // Returns undefined on any failure — and on a provider that
+                    // does not cache this way at all — so the run simply pays
+                    // full price rather than stopping.
+                    promptCache.name = await provider.createPromptCache?.({
+                        model: modelConfig,
+                        systemInstruction,
+                        tools: toolDeclarations,
+                        turns: segments.stable,
+                        ttlSeconds: EXPLICIT_CACHE_TTL_SECONDS,
+                        label: `agent-run-${runId}`,
+                    });
+                    if (promptCache.name) stablePrefixTurns = segments.stable.length;
+                }
+            }
+
+            // The provider adapter owns everything provider-shaped from here:
+            // how the prefix is cached, how a tool request is represented, how
+            // the stream is framed. The loop only says what it wants and reads
+            // back a normalised answer.
+            const turnRequest = {
+                model: modelConfig,
+                systemInstruction,
+                turns: conversationHistory,
+                tools: toolDeclarations,
+                temperature,
+                cacheName: promptCache.name,
+                cachedPrefixTurns: stablePrefixTurns,
+            };
+            const onText = async (fragment: string) => {
+                stream.text += fragment;
+                await flushStream(false);
+            };
+
+            let response;
+            try {
+                response = await provider.streamTurn(turnRequest, {
+                    operation: toolCallCount === 0 ? "agentGeneratePassOne" : "agentGenerateToolSynthesis",
+                    onText,
+                });
+            } catch (error) {
+                // A cached request the provider will not accept must not end the
+                // run. Retry it once in full, but only while nothing has been
+                // shown to the reader — after that a retry would replay the
+                // answer from the start, which is the same rule the streaming
+                // retry policy follows.
+                if (!promptCache.name || stream.text.length > 0) throw error;
+
+                console.warn("Cached prompt request rejected; retrying without the cache", {
+                    runId,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+                await releasePromptCache();
+                stablePrefixTurns = 0;
+                stream.text = "";
+                stream.flushedText = "";
+
+                response = await provider.streamTurn({
+                    ...turnRequest,
+                    cacheName: undefined,
+                    cachedPrefixTurns: 0,
+                }, {
+                    operation: "agentGenerateUncachedRetry",
+                    onText,
+                });
+            }
+
+            const responseInputTokens = response.inputTokens;
+            const responseOutputTokens = response.outputTokens;
             inTokens += responseInputTokens;
             outTokens += responseOutputTokens;
+            cachedInTokens += response.cachedInputTokens;
             const estimatedCostGBP = calculateModelCostGBP({
                 inputTokens: inTokens,
                 outputTokens: outTokens,
+                cachedInputTokens: cachedInTokens,
                 config,
             });
 
-            const requestedToolCalls = response.functionCalls?.length ?? 0;
+            const requestedToolCalls = response.toolCalls.length;
             stepIndex += 1;
             await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                 runId,
-                agentId: args.agentId,
-                companyId: thread.companyId,
+                agentId: agentId,
+                companyId: companyId,
                 stepIndex,
                 kind: "MODEL",
                 status: "SUCCESS",
                 input: JSON.stringify({ loopIndex, completedToolCalls: toolCallCount }),
                 output: response.text || JSON.stringify({
-                    functionCalls: (response.functionCalls ?? []).map((call) => ({ name: call.name })),
+                    functionCalls: response.toolCalls.map((call: { name: string }) => ({ name: call.name })),
                 }),
                 modelId: modelConfig.modelId,
                 providerKey: modelConfig.providerKey,
@@ -443,16 +1128,11 @@ export const runAgentObjective = internalAction({
                 outputTokens: responseOutputTokens,
             });
 
-            if (requestedToolCalls === 0) {
-                assistantReply = response.text || "Execution completed with no readable text output.";
-                break;
-            }
-
             if (shouldStopForRuntimeBudget({
                 elapsedMs: Date.now() - runStartedAt,
-                maxRuntimeMs: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxRuntimeMs,
+                maxRuntimeMs: limits.maxRuntimeMs,
             })) {
-                assistantReply = getRuntimeBudgetStopMessage(DEFAULT_AGENT_OBJECTIVE_LIMITS.maxRuntimeMs);
+                assistantReply = getRuntimeBudgetStopMessage(limits.maxRuntimeMs);
                 finalStepStatus = "FAILED";
                 break;
             }
@@ -460,8 +1140,8 @@ export const runAgentObjective = internalAction({
             if (shouldStopForTokenBudget({
                 inputTokens: inTokens,
                 outputTokens: outTokens,
-                maxInputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens,
-                maxOutputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxOutputTokens,
+                maxInputTokens: limits.maxInputTokens,
+                maxOutputTokens: limits.maxOutputTokens,
             })) {
                 assistantReply = getTokenBudgetStopMessage();
                 finalStepStatus = "FAILED";
@@ -470,282 +1150,368 @@ export const runAgentObjective = internalAction({
 
             if (shouldStopForCostBudget({
                 costGBP: estimatedCostGBP,
-                maxCostGBP: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP,
+                maxCostGBP: limits.maxCostGBP,
             })) {
-                assistantReply = getCostBudgetStopMessage(DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP);
+                assistantReply = getCostBudgetStopMessage(limits.maxCostGBP);
                 finalStepStatus = "FAILED";
+                break;
+            }
+
+            if (requestedToolCalls === 0) {
+                assistantReply = response.text || "Execution completed with no readable text output.";
                 break;
             }
 
             if (shouldStopForToolBudget({
                 requestedToolCalls,
                 completedToolCalls: toolCallCount,
-                maxToolCalls: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls,
+                maxToolCalls: limits.maxToolCalls,
             })) {
-                assistantReply = getToolBudgetStopMessage(DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls);
+                assistantReply = getToolBudgetStopMessage(limits.maxToolCalls);
                 finalStepStatus = "FAILED";
                 break;
             }
 
-            const funcCall = response.functionCalls?.[0];
-            if (!funcCall) {
+            const funcCalls = response.toolCalls;
+            if (funcCalls.length === 0) {
                 assistantReply = "Execution completed with no readable text output.";
                 break;
             }
 
-            const toolCall = parseToolCallPayload({ name: funcCall.name, callArgs: funcCall.args });
-            const rawArgsString = JSON.stringify(toolCall.args);
-            const redactedArgsString = redactPII(rawArgsString, DEFAULT_PII_CONFIG);
-            console.log("Agent requested function call:", toolCall.name, redactedArgsString);
+            // A single model turn may request several tool calls. Execute each
+            // one, then answer them together in one function turn so the
+            // transcript matches what the model asked for.
+            const executedCalls: ExecutedAgentToolCall[] = [];
+            let toolBudgetStopMessage: string | undefined;
 
-            // Log Telemetry: Tool Dispatch
-            if (args.agentId) {
-               await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
-                   agentId: args.agentId,
-                   threadId: args.threadId,
-                   interactionType: `TOOL DISPATCH: ${toolCall.name}`,
-                   promptContent: args.content,
-                   responseContent: `{"functionCall": {"name": "${toolCall.name}", "args": ${redactedArgsString}}}`,
-                   companyId: thread.companyId
-               });
-            }
+            for (const funcCall of funcCalls) {
+                // Bound the batch: shouldStopForToolBudget only looks at completed
+                // calls, so a model requesting more calls than the remaining budget
+                // would otherwise overrun the limit within a single turn.
+                if (toolCallCount >= limits.maxToolCalls) {
+                    toolBudgetStopMessage = getToolBudgetStopMessage(limits.maxToolCalls);
+                    break;
+                }
 
-            const currentUser = thread.userId
-                ? await ctx.runQuery(internal.users.getUserInternal, { userId: thread.userId })
-                : null;
-            const toolMetadata = toolMetadataByName.get(toolCall.name);
-            const requiredRole = toolMetadata?.requiredRole ?? "SUPER_ADMIN";
-            const schemaValidation = validateToolCallArgsAgainstSchema({
-                schema: toolMetadata?.inputSchema,
-                callArgs: toolCall.args,
-            });
-            const accessDecision = canExecuteTool({
-                requiredRole,
-                userRole: currentUser?.role,
-                userCompanyId: currentUser?.companyId,
-                targetCompanyId: thread.companyId,
-                sideEffectLevel: toolMetadata?.sideEffectLevel,
-                confirmationRequired: toolMetadata?.confirmationRequired,
-            });
+                // Checked per tool, not once per turn. A batch can hold several
+                // calls and a cancellation arriving between them must stop the
+                // rest: these are the operations with real side effects, and
+                // "cancelled" has to mean nothing further ran.
+                const batchStopRequest = await readStopRequest();
+                if (batchStopRequest.stopped) {
+                    conversationHistory.push(...buildToolInteractionTurns(executedCalls));
+                    await concludeStoppedRun(batchStopRequest.message);
+                    return;
+                }
 
-            if (
-                schemaValidation.ok &&
-                toolMetadata &&
-                !accessDecision.allowed &&
-                isConfirmationRequiredDenial(accessDecision.reason)
-            ) {
+                const toolCall = parseToolCallPayload({ name: funcCall.name, callArgs: funcCall.args });
+                const rawArgsString = JSON.stringify(toolCall.args);
+                const redactedArgsString = redactPII(rawArgsString, DEFAULT_PII_CONFIG);
+                console.log("Agent requested function call:", toolCall.name, redactedArgsString);
+
+                // Log Telemetry: Tool Dispatch
+                if (agentId) {
+                   await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+                       agentId: agentId,
+                       threadId: threadId,
+                       interactionType: `TOOL DISPATCH: ${toolCall.name}`,
+                       promptContent: objective,
+                       responseContent: `{"functionCall": {"name": "${toolCall.name}", "args": ${redactedArgsString}}}`,
+                       companyId: companyId
+                   });
+                }
+
+                const currentUser = thread.userId
+                    ? await ctx.runQuery(internal.users.getUserInternal, { userId: thread.userId })
+                    : null;
+                const toolMetadata = toolMetadataByName.get(toolCall.name);
+                const requiredRole = toolMetadata?.requiredRole ?? "SUPER_ADMIN";
+                const schemaValidation = validateToolCallArgsAgainstSchema({
+                    schema: toolMetadata?.inputSchema,
+                    callArgs: toolCall.args,
+                });
+                const accessDecision = canExecuteTool({
+                    requiredRole,
+                    userRole: currentUser?.role,
+                    userCompanyId: currentUser?.companyId,
+                    targetCompanyId: companyId,
+                    sideEffectLevel: toolMetadata?.sideEffectLevel,
+                    confirmationRequired: toolMetadata?.confirmationRequired,
+                });
+
+                if (
+                    schemaValidation.ok &&
+                    toolMetadata &&
+                    !accessDecision.allowed &&
+                    isConfirmationRequiredDenial(accessDecision.reason)
+                ) {
+                    toolCallCount += 1;
+                    const approvalMessage = getApprovalRequiredMessage(toolCall.name);
+                    stepIndex += 1;
+                    const toolStepId = await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+                        runId,
+                        agentId: agentId,
+                        companyId: companyId,
+                        stepIndex,
+                        kind: "TOOL_CALL",
+                        status: "PENDING",
+                        input: redactedArgsString,
+                        output: approvalMessage,
+                    });
+
+                    const toolCallId = await ctx.runMutation(internal.agentRuns.insertToolCallInternal, {
+                        runId,
+                        stepId: toolStepId,
+                        agentId: agentId,
+                        toolId: toolMetadata.toolId,
+                        normalizedToolName: toolCall.name,
+                        handlerMapping: toolMetadata.handlerMapping,
+                        argumentsJson: rawArgsString,
+                        redactedArgumentsJson: redactedArgsString,
+                        status: "APPROVAL_REQUIRED",
+                        requiredRole,
+                        sideEffectLevel: toolMetadata.sideEffectLevel,
+                        confirmationRequired: true,
+                        companyId: companyId,
+                        userId: thread.userId,
+                    });
+
+                    stepIndex += 1;
+                    const approvalStepId = await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+                        runId,
+                        agentId: agentId,
+                        companyId: companyId,
+                        stepIndex,
+                        kind: "APPROVAL_REQUEST",
+                        status: "PENDING",
+                        input: redactedArgsString,
+                        output: approvalMessage,
+                    });
+
+                    await ctx.runMutation(internal.agentRuns.insertApprovalInternal, {
+                        runId,
+                        stepId: approvalStepId,
+                        toolCallId,
+                        agentId: agentId,
+                        companyId: companyId,
+                        requestedBy: thread.userId,
+                        status: "PENDING",
+                        message: approvalMessage,
+                        previewJson: JSON.stringify({
+                            tool: toolCall.name,
+                            handlerMapping: toolMetadata.handlerMapping,
+                            arguments: toolCall.args,
+                            sideEffectLevel: toolMetadata.sideEffectLevel,
+                        }),
+                    });
+
+                    const calculatedCost = calculateModelCostGBP({
+                        inputTokens: inTokens,
+                        outputTokens: outTokens,
+                        cachedInputTokens: cachedInTokens,
+                        config,
+                    });
+                    await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
+                        runId,
+                        inputTokens: inTokens,
+                        outputTokens: outTokens,
+                        costGBP: calculatedCost,
+                        modelId: modelConfig.modelId,
+                        providerKey: modelConfig.providerKey,
+                        providerModelId: modelConfig.providerModelId,
+                    });
+                    await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
+                        runId,
+                        status: "PENDING_APPROVAL",
+                        finalOutput: approvalMessage,
+                    });
+                    if (stream.messageId !== undefined) {
+                        // A turn that requests a tool often narrates first. That
+                        // half-sentence is on screen marked as typing, and the
+                        // run is now parked indefinitely waiting for a human, so
+                        // it has to be closed here rather than at the end of a
+                        // loop that is not going to reach its end.
+                        await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+                            messageId: stream.messageId,
+                            content: approvalMessage,
+                            inputTokens: inTokens,
+                            outputTokens: outTokens,
+                            modelUsed: modelConfig.modelId,
+                            providerKey: modelConfig.providerKey,
+                            providerModelId: modelConfig.providerModelId,
+                        });
+                        stream.messageId = undefined;
+                    } else {
+                        await ctx.runMutation(internal.chat.saveAssistantMessage, {
+                            threadId,
+                            content: approvalMessage,
+                            inputTokens: inTokens,
+                            outputTokens: outTokens,
+                            modelUsed: modelConfig.modelId,
+                            providerKey: modelConfig.providerKey,
+                            providerModelId: modelConfig.providerModelId,
+                        });
+                    }
+
+                    // Keep the results of any calls in this batch that ran
+                    // before the one needing approval. They were paid for and
+                    // the model asked for them; discarding them would make the
+                    // resumed run repeat the work.
+                    if (executedCalls.length > 0) {
+                        conversationHistory.push(...buildToolInteractionTurns(executedCalls));
+                    }
+
+                    // A person may take hours to decide, and a prompt cache
+                    // lives for minutes. Release it now rather than paying to
+                    // store a prefix that will have expired by the time anyone
+                    // looks; the resumed run rebuilds one if it runs long again.
+                    await releasePromptCache();
+
+                    // Park the run rather than discarding it. Marked
+                    // AWAITING_APPROVAL so the stalled-run sweeper leaves it
+                    // alone: a run waiting on a person is not a run that died.
+                    // The turn that requested the tool is finished, so the
+                    // resumed loop starts at the next one.
+                    await saveCheckpoint("AWAITING_APPROVAL", loopIndex + 1);
+                    return;
+                }
+
+                let toolStatus: "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED" = "FAILED";
+                let toolError: string | undefined;
+                let toolResponsePayload;
+
+                if (!schemaValidation.ok) {
+                    toolError = schemaValidation.errors.join(" ");
+                    toolResponsePayload = buildToolResultPayload({
+                        status: "error",
+                        error: toolError,
+                    });
+                } else if (!accessDecision.allowed) {
+                    toolStatus = "DENIED";
+                    toolError = accessDecision.reason;
+                    toolResponsePayload = buildToolFailureResult(new Error(accessDecision.reason));
+                } else if (!toolMetadata) {
+                    toolError = "Unknown tool requested by model.";
+                    toolResponsePayload = buildToolResultPayload({
+                        status: "error",
+                        error: toolError,
+                    });
+                } else {
+                    try {
+                        const result = await executeRegisteredTool({
+                            ctx,
+                            handlerMapping: toolMetadata.handlerMapping,
+                            args: toolCall.args,
+                            agentId: agentId,
+                            companyId: companyId,
+                            userId: thread.userId,
+                            runId,
+                            toolId: toolMetadata.toolId,
+                            fallbackQuery: objective,
+                        });
+                        // A declared connector with nothing behind it returns
+                        // normally, so without this check the run log recorded a
+                        // green tick against a call that did nothing at all.
+                        const notImplemented = isNotImplementedToolResult(result);
+                        toolStatus = notImplemented ? "NOT_IMPLEMENTED" : "SUCCESS";
+                        if (notImplemented) {
+                            toolError = "Connector is declared but has no implementation.";
+                        }
+                        toolResponsePayload = buildToolResultPayload({
+                            status: notImplemented ? "error" : "success",
+                            data: notImplemented ? undefined : result,
+                            // The model is told plainly, so it stops trying and
+                            // says so rather than reporting the job done.
+                            error: notImplemented
+                                ? `The ${toolCall.name} tool is not available on this platform. Do not retry it; tell the user this capability is not connected.`
+                                : undefined,
+                        });
+                    } catch (error: unknown) {
+                        toolError = getErrorMessage(error);
+                        toolResponsePayload = buildToolFailureResult(error);
+                    }
+                }
+
                 toolCallCount += 1;
-                const approvalMessage = getApprovalRequiredMessage(toolCall.name);
                 stepIndex += 1;
                 const toolStepId = await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                     runId,
-                    agentId: args.agentId,
-                    companyId: thread.companyId,
+                    agentId: agentId,
+                    companyId: companyId,
                     stepIndex,
                     kind: "TOOL_CALL",
-                    status: "PENDING",
+                    status: getAgentStepStatusFromToolStatus(toolStatus),
                     input: redactedArgsString,
-                    output: approvalMessage,
+                    output: JSON.stringify(toolResponsePayload),
+                    error: toolError,
                 });
 
-                const toolCallId = await ctx.runMutation(internal.agentRuns.insertToolCallInternal, {
+                await ctx.runMutation(internal.agentRuns.insertToolCallInternal, {
                     runId,
                     stepId: toolStepId,
-                    agentId: args.agentId,
-                    toolId: toolMetadata.toolId,
+                    agentId: agentId,
+                    toolId: toolMetadata?.toolId,
                     normalizedToolName: toolCall.name,
-                    handlerMapping: toolMetadata.handlerMapping,
+                    handlerMapping: toolMetadata?.handlerMapping ?? toolCall.name,
                     argumentsJson: rawArgsString,
                     redactedArgumentsJson: redactedArgsString,
-                    status: "APPROVAL_REQUIRED",
+                    resultJson: JSON.stringify(toolResponsePayload),
+                    status: toolStatus,
                     requiredRole,
-                    sideEffectLevel: toolMetadata.sideEffectLevel,
-                    confirmationRequired: true,
-                    companyId: thread.companyId,
+                    sideEffectLevel: toolMetadata?.sideEffectLevel ?? "READ",
+                    confirmationRequired: toolMetadata?.confirmationRequired ?? false,
+                    companyId: companyId,
                     userId: thread.userId,
+                    error: toolError,
                 });
 
                 stepIndex += 1;
-                const approvalStepId = await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+                await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                     runId,
-                    agentId: args.agentId,
-                    companyId: thread.companyId,
+                    agentId: agentId,
+                    companyId: companyId,
                     stepIndex,
-                    kind: "APPROVAL_REQUEST",
-                    status: "PENDING",
-                    input: redactedArgsString,
-                    output: approvalMessage,
-                });
-
-                await ctx.runMutation(internal.agentRuns.insertApprovalInternal, {
-                    runId,
-                    stepId: approvalStepId,
-                    toolCallId,
-                    agentId: args.agentId,
-                    companyId: thread.companyId,
-                    requestedBy: thread.userId,
-                    status: "PENDING",
-                    message: approvalMessage,
-                    previewJson: JSON.stringify({
-                        tool: toolCall.name,
-                        handlerMapping: toolMetadata.handlerMapping,
-                        arguments: toolCall.args,
-                        sideEffectLevel: toolMetadata.sideEffectLevel,
-                    }),
-                });
-
-                const calculatedCost = calculateModelCostGBP({
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    config,
-                });
-                await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
-                    runId,
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    costGBP: calculatedCost,
-                    modelId: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                });
-                await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
-                    runId,
-                    status: "PENDING_APPROVAL",
-                    finalOutput: approvalMessage,
-                });
-                await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                    threadId: args.threadId,
-                    content: approvalMessage,
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    modelUsed: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                });
-                return;
-            }
-
-            let toolStatus: "SUCCESS" | "FAILED" | "DENIED" | "CANCELLED" = "FAILED";
-            let toolError: string | undefined;
-            let toolResponsePayload;
-
-            if (!schemaValidation.ok) {
-                toolError = schemaValidation.errors.join(" ");
-                toolResponsePayload = buildToolResultPayload({
-                    status: "error",
+                    kind: "TOOL_RESULT",
+                    status: getAgentStepStatusFromToolStatus(toolStatus),
+                    input: toolCall.name,
+                    output: JSON.stringify(toolResponsePayload),
                     error: toolError,
                 });
-            } else if (!accessDecision.allowed) {
-                toolStatus = "DENIED";
-                toolError = accessDecision.reason;
-                toolResponsePayload = buildToolFailureResult(new Error(accessDecision.reason));
-            } else if (!toolMetadata) {
-                toolError = "Unknown tool requested by model.";
-                toolResponsePayload = buildToolResultPayload({
-                    status: "error",
-                    error: toolError,
+
+                executedCalls.push({
+                    name: toolCall.name,
+                    args: toolCall.args,
+                    responsePayload: toolResponsePayload,
                 });
-            } else {
-                try {
-                    const result = await executeRegisteredTool({
-                        ctx,
-                        handlerMapping: toolMetadata.handlerMapping,
-                        args: toolCall.args,
-                        agentId: args.agentId,
-                        companyId: thread.companyId,
-                        userId: thread.userId,
-                        runId,
-                        fallbackQuery: args.content,
-                    });
-                    toolStatus = "SUCCESS";
-                    toolResponsePayload = buildToolResultPayload({
-                        status: "success",
-                        data: result,
-                    });
-                } catch (error: unknown) {
-                    toolError = getErrorMessage(error);
-                    toolResponsePayload = buildToolFailureResult(error);
-                }
             }
 
-            toolCallCount += 1;
-            stepIndex += 1;
-            const toolStepId = await ctx.runMutation(internal.agentRuns.appendStepInternal, {
-                runId,
-                agentId: args.agentId,
-                companyId: thread.companyId,
-                stepIndex,
-                kind: "TOOL_CALL",
-                status: getAgentStepStatusFromToolStatus(toolStatus),
-                input: redactedArgsString,
-                output: JSON.stringify(toolResponsePayload),
-                error: toolError,
-            });
+            // Record the whole batch as one model turn plus one function turn,
+            // before any budget stop, so the transcript is never left with
+            // calls that have no matching response.
+            conversationHistory.push(...buildToolInteractionTurns(executedCalls));
 
-            await ctx.runMutation(internal.agentRuns.insertToolCallInternal, {
-                runId,
-                stepId: toolStepId,
-                agentId: args.agentId,
-                toolId: toolMetadata?.toolId,
-                normalizedToolName: toolCall.name,
-                handlerMapping: toolMetadata?.handlerMapping ?? toolCall.name,
-                argumentsJson: rawArgsString,
-                redactedArgumentsJson: redactedArgsString,
-                resultJson: JSON.stringify(toolResponsePayload),
-                status: toolStatus,
-                requiredRole,
-                sideEffectLevel: toolMetadata?.sideEffectLevel ?? "READ",
-                confirmationRequired: toolMetadata?.confirmationRequired ?? false,
-                companyId: thread.companyId,
-                userId: thread.userId,
-                error: toolError,
-            });
+            if (toolBudgetStopMessage) {
+                assistantReply = toolBudgetStopMessage;
+                finalStepStatus = "FAILED";
+                break;
+            }
 
-            stepIndex += 1;
-            await ctx.runMutation(internal.agentRuns.appendStepInternal, {
-                runId,
-                agentId: args.agentId,
-                companyId: thread.companyId,
-                stepIndex,
-                kind: "TOOL_RESULT",
-                status: getAgentStepStatusFromToolStatus(toolStatus),
-                input: toolCall.name,
-                output: JSON.stringify(toolResponsePayload),
-                error: toolError,
-            });
-
-            // Inject the Function Call and Function Response into the conversation history
-            conversationHistory.push({
-                role: "model",
-                parts: [{
-                    functionCall: {
-                        name: toolCall.name,
-                        args: toolCall.args
-                    }
-                }]
-            });
-            
-            conversationHistory.push({
-                role: "function",
-                parts: [{
-                    functionResponse: {
-                        name: toolCall.name,
-                        response: { name: toolCall.name, content: toolResponsePayload }
-                    }
-                }]
-            });
+            // Save after every completed turn, not only at a handover. This is
+            // what turns a killed action from total loss into a resumable run:
+            // the sweeper can only revive a run as far as its last checkpoint.
+            await saveCheckpoint("ACTIVE", loopIndex + 1);
         }
 
         if (!assistantReply) {
-            assistantReply = getToolBudgetStopMessage(DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls);
+            assistantReply = getToolBudgetStopMessage(limits.maxToolCalls);
             finalStepStatus = "FAILED";
         }
 
         stepIndex += 1;
         await ctx.runMutation(internal.agentRuns.appendStepInternal, {
             runId,
-            agentId: args.agentId,
-            companyId: thread.companyId,
+            agentId: agentId,
+            companyId: companyId,
             stepIndex,
             kind: "FINAL",
             status: finalStepStatus,
@@ -760,22 +1526,39 @@ export const runAgentObjective = internalAction({
         const calculatedCost = calculateModelCostGBP({
             inputTokens: inTokens,
             outputTokens: outTokens,
+            cachedInputTokens: cachedInTokens,
             config,
         });
 
-        // Write response back to DB
-        await ctx.runMutation(internal.chat.saveAssistantMessage, {
-            threadId: args.threadId,
-            content: assistantReply,
-            inputTokens: inTokens,
-            outputTokens: outTokens,
-            modelUsed: modelConfig.modelId,
-            providerKey: modelConfig.providerKey,
-            providerModelId: modelConfig.providerModelId
-        });
+        // Write response back to DB. When text was streamed the row already
+        // exists, so close it rather than inserting a duplicate reply. The final
+        // content is authoritative: a budget stop replaces whatever partial text
+        // the reader saw with the explanation of why the run ended.
+        if (stream.messageId !== undefined) {
+            await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+                messageId: stream.messageId,
+                content: assistantReply,
+                inputTokens: inTokens,
+                outputTokens: outTokens,
+                modelUsed: modelConfig.modelId,
+                providerKey: modelConfig.providerKey,
+                providerModelId: modelConfig.providerModelId,
+            });
+            stream.messageId = undefined;
+        } else {
+            await ctx.runMutation(internal.chat.saveAssistantMessage, {
+                threadId: threadId,
+                content: assistantReply,
+                inputTokens: inTokens,
+                outputTokens: outTokens,
+                modelUsed: modelConfig.modelId,
+                providerKey: modelConfig.providerKey,
+                providerModelId: modelConfig.providerModelId
+            });
+        }
 
         await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
-            runId: agentRunId,
+            runId,
             inputTokens: inTokens,
             outputTokens: outTokens,
             costGBP: calculatedCost,
@@ -785,70 +1568,45 @@ export const runAgentObjective = internalAction({
         });
 
         await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
-            runId: agentRunId,
+            runId,
             status: finalStepStatus,
             finalOutput: assistantReply,
         });
 
+        // The run is over: its saved position is no longer something to resume
+        // from, and leaving it would keep offering the run to the sweeper. The
+        // cached prefix goes with it — nobody will read that conversation again.
+        await releasePromptCache();
+        await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId });
+
         // Log Telemetry: Final Output
-        if (args.agentId) {
-            // Write the explicit execution log for non-tool synthesis
-            await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
-                agentId: args.agentId,
-                threadId: args.threadId,
-                interactionType: "LLM SYNTHESIS",
-                promptContent: args.content,
-                responseContent: assistantReply,
-                companyId: thread.companyId
-            });
-
-            if (thread.userId) {
-                await ctx.runMutation(internal.agentTransactions.insertTransactionInternal, {
-                    agentId: args.agentId,
-                    threadId: args.threadId,
-                    userId: thread.userId,
-                    companyId: thread.companyId,
-                    actionContext: "Sandbox Execution",
-                    modelUsed: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    costGBP: calculatedCost,
-                    status: finalStepStatus
-                });
-            }
-        }
-
-    } catch (error: unknown) {
-        console.error("Agent Engine Error:", error);
-        const errorMessage = normalizeAiRuntimeError(error, "Agent execution failed.").error;
-        
-        if (args.agentId) {
-             await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
-                 agentId: args.agentId,
-                 threadId: args.threadId,
-                 interactionType: "ERROR",
-                 promptContent: args.content,
-                 responseContent: errorMessage
-             });
-        }
-
-        if (agentRunId) {
-            await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
-                runId: agentRunId,
-                status: "FAILED",
-                error: errorMessage,
-            });
-        }
-
-        await ctx.runMutation(internal.chat.saveAssistantMessage, {
-            threadId: args.threadId,
-            content: "Agent Execution Offline: Encountered an unhandled exception in the function calling runtime."
+        // Write the explicit execution log for non-tool synthesis
+        await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+            agentId,
+            threadId,
+            interactionType: "LLM SYNTHESIS",
+            promptContent: objective,
+            responseContent: assistantReply,
+            companyId,
         });
-    }
-  },
-});
+
+        if (thread.userId) {
+            await ctx.runMutation(internal.agentTransactions.insertTransactionInternal, {
+                agentId,
+                threadId,
+                userId: thread.userId,
+                companyId,
+                actionContext: "Sandbox Execution",
+                modelUsed: modelConfig.modelId,
+                providerKey: modelConfig.providerKey,
+                providerModelId: modelConfig.providerModelId,
+                inputTokens: inTokens,
+                outputTokens: outTokens,
+                costGBP: calculatedCost,
+                status: finalStepStatus,
+            });
+        }
+}
 
 export const generateAgentResponse = internalAction({
   args: {
@@ -1312,6 +2070,46 @@ export const resumeApprovedToolCall = internalAction({
       finalOutput = `Approved tool call failed: ${error}`;
     }
 
+    // Put the call and its result into the conversation the model is having,
+    // then let the loop carry on. Without this the agent asked permission,
+    // watched the tool run, and never found out what it returned.
+    const checkpoint = await ctx.runQuery(internal.agentRunCheckpoints.getCheckpointInternal, {
+      runId: context.approval.runId,
+    });
+
+    if (checkpoint?.status === "AWAITING_APPROVAL" && checkpoint.threadId) {
+      let transcript: Content[] | undefined;
+      try {
+        const parsed = JSON.parse(checkpoint.transcriptJson) as unknown;
+        if (Array.isArray(parsed) && parsed.length > 0) transcript = parsed as Content[];
+      } catch {
+        transcript = undefined;
+      }
+
+      if (transcript) {
+        transcript.push(...buildToolInteractionTurns([{
+          name: context.toolCall.normalizedToolName,
+          args: parsedArgs,
+          responsePayload: resultPayload,
+        }]) as Content[]);
+
+        const { serialized } = trimConversationForCheckpoint(transcript);
+        if (isCheckpointStorable(serialized)) {
+          const resumed = await ctx.runMutation(internal.agentRuns.continueRunAfterApprovalInternal, {
+            approvalId: args.approvalId,
+            status,
+            resultJson: JSON.stringify(resultPayload),
+            transcriptJson: serialized,
+            error,
+          });
+          if (resumed) return;
+        }
+      }
+    }
+
+    // No transcript to resume into — a triggered run with no chat thread, or a
+    // conversation too large to have been checkpointed. Conclude the run and
+    // report the tool's outcome rather than leaving it open.
     const completion = await ctx.runMutation(internal.agentRuns.completeApprovalResumeInternal, {
       approvalId: args.approvalId,
       status,

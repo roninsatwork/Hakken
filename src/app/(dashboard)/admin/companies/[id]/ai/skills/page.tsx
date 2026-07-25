@@ -25,6 +25,7 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type CompanySkill = Doc<"companySkills">;
 type GlobalSkill = Doc<"agentSkills">;
@@ -106,14 +107,14 @@ export default function CompanyAiSkillsPage() {
   );
   const [bindingTarget, setBindingTarget] = useState<CompanySkill | null>(null);
   const [bindingForm, setBindingForm] = useState(DEFAULT_BINDING_FORM);
-  const [bindingError, setBindingError] = useState("");
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [globalSkillSearchTerm, setGlobalSkillSearchTerm] = useState("");
   const [selectedGlobalSkillId, setSelectedGlobalSkillId] = useState<Id<"agentSkills"> | null>(null);
-  const [importError, setImportError] = useState("");
   const [expandedSkillId, setExpandedSkillId] = useState<Id<"companySkills"> | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<CompanySkill | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // One runner is safe here because the two modals that render the failure
+  // inline are never open at once, and each clears it as it opens.
+  const action = useAdminAction({ scope: "admin-company-skills" });
 
   const filteredGlobalSkills = (importableGlobalSkills ?? []).filter((skill: GlobalSkill) => {
     const search = globalSkillSearchTerm.trim().toLowerCase();
@@ -135,56 +136,45 @@ export default function CompanyAiSkillsPage() {
   const handleSetBinding = async (event: FormEvent) => {
     event.preventDefault();
     if (!bindingTarget) return;
-    setIsSubmitting(true);
-    setBindingError("");
-    try {
-      await setBinding({
+    const outcome = await action.run(
+      () => setBinding({
         skillId: bindingTarget._id,
         surfaceType: bindingForm.surfaceType,
         surfaceId: bindingForm.surfaceId || undefined,
         isEnabled: bindingForm.isEnabled,
-      });
-      setExpandedSkillId(bindingTarget._id);
-      setBindingTarget(null);
-      setBindingForm(DEFAULT_BINDING_FORM);
-    } catch (error) {
-      setBindingError(error instanceof Error ? error.message : "Skill binding could not be saved.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      }),
+      { fallbackMessage: "Skill binding could not be saved.", suppressErrorToast: true },
+    );
+    if (!outcome.ok) return;
+    setExpandedSkillId(bindingTarget._id);
+    setBindingTarget(null);
+    setBindingForm(DEFAULT_BINDING_FORM);
   };
 
   const handleArchiveSkill = async () => {
     if (!archiveTarget) return;
-    setIsSubmitting(true);
-    try {
-      await archiveSkill({ skillId: archiveTarget._id });
-      if (expandedSkillId === archiveTarget._id) setExpandedSkillId(null);
-      setArchiveTarget(null);
-    } finally {
-      setIsSubmitting(false);
-    }
+    // The archive modal has nowhere to show a failure, so this one keeps its
+    // toast — before, a rejection left the modal open and said nothing.
+    const outcome = await action.run(() => archiveSkill({ skillId: archiveTarget._id }), {
+      fallbackMessage: "The skill could not be archived.",
+    });
+    if (!outcome.ok) return;
+    if (expandedSkillId === archiveTarget._id) setExpandedSkillId(null);
+    setArchiveTarget(null);
   };
 
   const handleImportGlobalSkill = async () => {
     if (!selectedGlobalSkill) return;
-    setIsSubmitting(true);
-    setImportError("");
-    try {
-      const result = await importGlobalSkill({
-        companyId,
-        skillId: selectedGlobalSkill._id,
-      });
-      setStatusFilter("ACTIVE");
-      setExpandedSkillId(result.skillId);
-      setIsImportOpen(false);
-      setGlobalSkillSearchTerm("");
-      setSelectedGlobalSkillId(null);
-    } catch (error) {
-      setImportError(error instanceof Error ? error.message : "Global skill could not be imported.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await action.run(
+      () => importGlobalSkill({ companyId, skillId: selectedGlobalSkill._id }),
+      { fallbackMessage: "Global skill could not be imported.", suppressErrorToast: true },
+    );
+    if (!outcome.ok) return;
+    setStatusFilter("ACTIVE");
+    setExpandedSkillId(outcome.data.skillId);
+    setIsImportOpen(false);
+    setGlobalSkillSearchTerm("");
+    setSelectedGlobalSkillId(null);
   };
 
   return (
@@ -205,7 +195,7 @@ export default function CompanyAiSkillsPage() {
               type="button"
               onClick={() => {
                 setIsImportOpen(true);
-                setImportError("");
+                action.clearError();
                 setGlobalSkillSearchTerm("");
                 setSelectedGlobalSkillId(null);
               }}
@@ -310,7 +300,7 @@ export default function CompanyAiSkillsPage() {
                         onClick={() => {
                           setBindingTarget(skill);
                           setBindingForm(DEFAULT_BINDING_FORM);
-                          setBindingError("");
+                          action.clearError();
                         }}
                         className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15"
                       >
@@ -375,7 +365,7 @@ export default function CompanyAiSkillsPage() {
 
       <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Add From Skill Center" size="lg">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{importError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <p className="text-[13px] leading-relaxed text-secondary">
             Add an approved central skill to this company. Create and edit skills only in Skill Center; use this screen for company availability, approvals, and bindings.
           </p>
@@ -453,10 +443,10 @@ export default function CompanyAiSkillsPage() {
                   <button
                     type="button"
                     onClick={handleImportGlobalSkill}
-                    disabled={isSubmitting}
+                    disabled={action.isBusy()}
                     className="inline-flex h-10 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
                   >
-                    {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Library className="h-3.5 w-3.5" />}
+                    {action.isBusy() ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Library className="h-3.5 w-3.5" />}
                     Add skill
                   </button>
                 </div>
@@ -472,7 +462,7 @@ export default function CompanyAiSkillsPage() {
 
       <SonaeModal isOpen={Boolean(bindingTarget)} onClose={() => setBindingTarget(null)} title="Bind Skill" size="md">
         <form onSubmit={handleSetBinding} className="flex flex-col gap-5">
-          <AdminModalFormError>{bindingError}</AdminModalFormError>
+          <AdminModalFormError>{action.error}</AdminModalFormError>
           <p className="text-[13px] leading-relaxed text-secondary">
             Bindings make a skill available to a surface. They do not grant connector permissions or bypass backend authorization.
           </p>
@@ -493,7 +483,7 @@ export default function CompanyAiSkillsPage() {
             />
             Enabled for this surface
           </label>
-          <AdminModalFormActions cancelLabel="Cancel" submitLabel={isSubmitting ? "Saving..." : "Save binding"} isSubmitting={isSubmitting} onCancel={() => setBindingTarget(null)} />
+          <AdminModalFormActions cancelLabel="Cancel" submitLabel={action.isBusy() ? "Saving..." : "Save binding"} isSubmitting={action.isBusy()} onCancel={() => setBindingTarget(null)} />
         </form>
       </SonaeModal>
 
@@ -504,11 +494,11 @@ export default function CompanyAiSkillsPage() {
             <p>Archiving disables enabled bindings and removes this skill from readiness scoring. Historical audit evidence remains.</p>
           </div>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button type="button" onClick={() => setArchiveTarget(null)} disabled={isSubmitting} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
+            <button type="button" onClick={() => setArchiveTarget(null)} disabled={action.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleArchiveSkill} disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+            <button type="button" onClick={handleArchiveSkill} disabled={action.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+              {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
               Archive
             </button>
           </div>

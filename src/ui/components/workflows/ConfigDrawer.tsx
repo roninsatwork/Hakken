@@ -947,7 +947,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                     type="text"
                     value={formData._emailConfig?.from || ''}
                     onChange={(e) => setFormData({ ...formData, _emailConfig: { ...formData._emailConfig, from: e.target.value } })}
-                    placeholder="e.g. Sonae Automations <hello@ronins.co.uk>"
+                    placeholder="e.g. Acme Automations <hello@example.com>"
                     className="flex-1 px-4 py-3 bg-background border border-border-dim rounded-[12px] text-foreground text-[13px] outline-none focus:border-brand/50 font-mono"
                  />
                  <span className="text-[10px] text-muted italic">Leave strictly blank to use global default dispatch address.</span>

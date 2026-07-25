@@ -1,0 +1,49 @@
+name: Weekly Security Audit
+
+# Catches new advisories on a schedule instead of discovering them when a
+# release is already blocked at the deploy gate.
+#
+# Two separate signals:
+#   - runtime dependencies: BLOCKING. Mirrors the deploy gate exactly, so this
+#     job failing means `main` cannot deploy.
+#   - full tree (incl. dev tooling): REPORTING ONLY. The ESLint 9 toolchain
+#     currently pins an unpatchable brace-expansion@1 (see deploy.yml). This
+#     surfaces the debt weekly without blocking, and should be promoted to
+#     blocking once eslint-plugin-react/jsx-a11y support ESLint 10.
+
+on:
+  schedule:
+    # Mondays 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit runtime dependencies (blocking)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit full dependency tree (reporting only)
+        if: always()
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
+      - name: Report outdated pinned overrides (reporting only)
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "Overrides pinned in package.json — re-check whether each is still needed:"
+          node -e "const o=require('./package.json').overrides||{};console.log(JSON.stringify(o,null,2))"

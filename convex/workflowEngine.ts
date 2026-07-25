@@ -11,8 +11,17 @@ import {
 } from "./utils/workflowTypes";
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
 
+/**
+ * Maximum items an iterator node may fan out to in a single execution.
+ * Each item becomes its own PENDING step and its own scheduled worker, so this
+ * bounds both database writes and scheduler pressure for one node.
+ */
+export const MAX_ITERATOR_FAN_OUT = 100;
+
 const allowedWorkflowTables = [
+  // template:remove:start properties
   "properties",
+  // template:remove:end
   "threads",
   "messages",
   "widgets",
@@ -21,8 +30,12 @@ const allowedWorkflowTables = [
   "aiRules",
   "agentLogs",
   "agentTransactions",
+  // template:remove:start arcade
   "arcadeScores",
+  // template:remove:end
+  // template:remove:start salesReports
   "salesReports",
+  // template:remove:end
 ] as const;
 
 type WorkflowDbTable = (typeof allowedWorkflowTables)[number];
@@ -94,6 +107,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
   const order = query.order;
 
   switch (args.tableName) {
+    // template:remove:start properties
     case "properties": {
       if (query.indexName === "by_company") {
         const companyId = getWorkflowCompanyFilter(query, args.isSuperAdmin ? undefined : args.workflowCompanyId);
@@ -119,6 +133,7 @@ async function executeIndexedSelect(ctx: MutationCtx, args: {
       }
       break;
     }
+    // template:remove:end
     case "companies": {
       if (!args.isSuperAdmin) break;
       if (query.indexName === "by_name") {
@@ -497,9 +512,19 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
         const nextNodeDef = nodes.find((node) => node.id === dId);
         
         let targetPayloads: WorkflowStatePayload[] = [currentPayload];
-        
+
         // Native Fan-Out for Iterator Nodes
         if (nodeDataObj._system?.isIterator && Array.isArray(nodeDataObj.items)) {
+           // Bound the fan-out explicitly. An iterator over an unbounded
+           // upstream result would otherwise schedule one worker per item with
+           // no ceiling. Fail loudly rather than silently truncating, so a
+           // workflow never reports SUCCESS having processed part of its input.
+           if (nodeDataObj.items.length > MAX_ITERATOR_FAN_OUT) {
+              throw new ConvexError(
+                `Iterator node ${args.nodeId} produced ${nodeDataObj.items.length} items, ` +
+                `exceeding the ${MAX_ITERATOR_FAN_OUT} item fan-out limit.`
+              );
+           }
            targetPayloads = nodeDataObj.items.map((item, i) => ({
                ...currentPayload,
                nodes: {
@@ -508,7 +533,7 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
                }
            }));
         }
-        
+
         for (const payload of targetPayloads) {
             await ctx.db.insert("workflowExecutionSteps", {
               executionId: args.executionId,
@@ -518,9 +543,14 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
               status: "PENDING",
               startedAt: Date.now(),
             });
-        }
 
-        readyToSchedule.push(dId);
+            // One scheduled worker per PENDING step. `executeNode` claims
+            // exactly one step via `claimNextPendingStep`, so scheduling the
+            // node once for an N-item fan-out ran only the first item and left
+            // the rest PENDING forever — which also kept the execution from
+            // ever reaching SUCCESS.
+            readyToSchedule.push(dId);
+        }
       }
     }
 

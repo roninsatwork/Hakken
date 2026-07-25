@@ -4,8 +4,16 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { assertAdminCanAccessCompany, getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser, requireSuperAdmin } from "./authz";
-import { normalizeToolExecutionPolicy, validateToolJsonSchemaString } from "./aiToolExecutionService";
+import {
+  CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE,
+  isConnectorOAuthAvailable,
+  isExecutableToolMapping,
+  normalizeToolExecutionPolicy,
+  validateToolJsonSchemaString,
+} from "./aiToolExecutionService";
 import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnectorDefinitions";
+import { assertSafeReferenceValue, assertSafeSecretRefs } from "./connectorSecretPolicy";
+import { adminMutation, adminQuery, publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 
 const TOOL_CATALOG_LIMIT = 250;
 const AGENT_TOOL_BINDING_LIMIT = 250;
@@ -57,28 +65,6 @@ function buildToolContractPatch(args: {
 
 function normalizeSecretRefKeys(secretRefs: string[] | undefined) {
   return Array.from(new Set((secretRefs ?? []).map((secretRef) => secretRef.trim()).filter(Boolean)));
-}
-
-function assertSafeSecretRefs(secretRefs: string[]) {
-  for (const secretRef of secretRefs) {
-    if (!/^[A-Za-z0-9_.:/-]{2,128}$/.test(secretRef)) {
-      throw new Error("Connector secret references must be opaque reference keys, not raw secret values.");
-    }
-
-    if (/^(sk-|xox[baprs]-|ghp_|-----BEGIN)/i.test(secretRef)) {
-      throw new Error("Connector secret references must not contain raw secret values.");
-    }
-  }
-}
-
-function assertSafeReferenceValue(value: string, label: string) {
-  if (!/^[A-Za-z0-9_.:/-]{2,160}$/.test(value)) {
-    throw new Error(`${label} must be an opaque reference key.`);
-  }
-
-  if (/^(sk-|xox[baprs]-|ghp_|ya29\.|-----BEGIN)/i.test(value)) {
-    throw new Error(`${label} must not contain a raw secret value.`);
-  }
 }
 
 function getEnabledToolMappings(definition: NonNullable<ReturnType<typeof getBuiltInToolConnector>>, requestedMappings: string[] | undefined) {
@@ -241,10 +227,25 @@ function buildOAuthAuthorizationUrl(args: { provider: string; connectorKey: stri
   return `/api/connectors/oauth/authorize?${params.toString()}`;
 }
 
-export const getConnectorMarketplace = query({
+/**
+ * Whether this connector can be taken through an OAuth flow today.
+ *
+ * Two things have to be true, and only the first was ever checked: the
+ * connector has to use OAuth, and the platform has to have somewhere to send
+ * the administrator. It did not — the authorize route does not exist — so
+ * starting a connection produced a link to a 404 and left the connector
+ * displaying "PENDING" for ever.
+ */
+function assertConnectorOAuthAvailable() {
+  if (!isConnectorOAuthAvailable()) {
+    throw new Error(CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE);
+  }
+}
+
+export const getConnectorMarketplace = adminQuery({
   args: {},
   handler: async (ctx) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const activeCompanyId = getActiveCompanyId(user);
     const installs = await ctx.db.query("toolConnectors").withIndex("by_createdAt").order("desc").take(CONNECTOR_INSTALL_LIMIT);
     const visibleInstalls = user.role === "SUPER_ADMIN"
@@ -257,15 +258,34 @@ export const getConnectorMarketplace = query({
         visibleInstalls.find((install) => install.key === definition.key && install.companyId === undefined) ??
         null;
 
+      // Availability is derived from the handler registry, never from the
+      // catalogue. The catalogue described 21 connectors while 2 could execute,
+      // so an admin could install one, assign it to an agent, and only discover
+      // it did nothing by reading a run log. The registry is the only thing that
+      // knows whether an implementation exists.
+      const toolDefinitions = definition.toolDefinitions.map((tool) => ({
+        ...tool,
+        isExecutable: isExecutableToolMapping(tool.handlerMapping),
+      }));
+      const executableToolCount = toolDefinitions.filter((tool) => tool.isExecutable).length;
+
       return {
         ...definition,
+        toolDefinitions,
         installation,
+        executableToolCount,
+        totalToolCount: toolDefinitions.length,
+        availability: executableToolCount === 0
+          ? "UNAVAILABLE" as const
+          : executableToolCount === toolDefinitions.length
+            ? "AVAILABLE" as const
+            : "PARTIAL" as const,
       };
     });
   },
 });
 
-export const installConnector = mutation({
+export const installConnector = superAdminMutation({
   args: {
     key: v.string(),
     companyId: v.optional(v.id("companies")),
@@ -275,11 +295,7 @@ export const installConnector = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(
-      ctx,
-      "Unauthorized: Only Super Admins can install connectors.",
-      "Unauthenticated request"
-    );
+    const { userId } = ctx;
     const definition = getBuiltInToolConnector(args.key);
     if (!definition) throw new Error("Connector definition not found.");
 
@@ -340,10 +356,10 @@ export const installConnector = mutation({
   },
 });
 
-export const getConnectorInstallDetails = query({
+export const getConnectorInstallDetails = adminQuery({
   args: { connectorId: v.id("toolConnectors") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
@@ -382,10 +398,10 @@ export const getConnectorInstallDetails = query({
   },
 });
 
-export const beginConnectorOAuth = mutation({
+export const beginConnectorOAuth = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
   handler: async (ctx, args) => {
-    const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
@@ -393,6 +409,7 @@ export const beginConnectorOAuth = mutation({
     const definition = getBuiltInToolConnector(connector.key);
     if (!definition) throw new Error("Connector definition not found.");
     if (definition.authMode !== "OAUTH") throw new Error("Connector does not use OAuth.");
+    assertConnectorOAuthAvailable();
 
     const now = Date.now();
     const state = buildOAuthState(connector._id, now);
@@ -432,7 +449,7 @@ export const beginConnectorOAuth = mutation({
   },
 });
 
-export const completeConnectorOAuth = mutation({
+export const completeConnectorOAuth = adminMutation({
   args: {
     connectorId: v.id("toolConnectors"),
     state: v.string(),
@@ -441,7 +458,7 @@ export const completeConnectorOAuth = mutation({
     scopes: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
@@ -449,6 +466,7 @@ export const completeConnectorOAuth = mutation({
     const definition = getBuiltInToolConnector(connector.key);
     if (!definition) throw new Error("Connector definition not found.");
     if (definition.authMode !== "OAUTH") throw new Error("Connector does not use OAuth.");
+    assertConnectorOAuthAvailable();
     assertSafeReferenceValue(args.accountRef, "OAuth account reference");
     assertSafeReferenceValue(args.tokenRef, "OAuth token reference");
 
@@ -491,10 +509,10 @@ export const completeConnectorOAuth = mutation({
   },
 });
 
-export const disconnectConnectorOAuth = mutation({
+export const disconnectConnectorOAuth = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
@@ -530,7 +548,7 @@ export const disconnectConnectorOAuth = mutation({
   },
 });
 
-export const updateConnectorInstall = mutation({
+export const updateConnectorInstall = adminMutation({
   args: {
     connectorId: v.id("toolConnectors"),
     configuredSecretRefs: v.optional(v.array(v.string())),
@@ -540,7 +558,7 @@ export const updateConnectorInstall = mutation({
     tenantAvailability: v.optional(v.union(v.literal("GLOBAL"), v.literal("TENANT_RESTRICTED"))),
   },
   handler: async (ctx, args) => {
-    const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
@@ -602,10 +620,23 @@ export const updateConnectorInstall = mutation({
   },
 });
 
-export const testConnectorConnection = mutation({
+/**
+ * Validate a connector's local configuration.
+ *
+ * This is a mutation, so it cannot make an outbound request — it never contacts
+ * the provider. It checks that the connector is enabled, that required secret
+ * *reference names* are present, and that any OAuth record is marked connected.
+ *
+ * It was previously named `testConnectorConnection` and reported "Connection
+ * test passed", which meant a connector whose OAuth had been "completed" with
+ * an arbitrary token reference reported a passing connection it had never made.
+ * Real reachability testing needs an action and belongs with the connector work
+ * in docs/plans/active/platform-hardening-plan.md (P3.5).
+ */
+export const validateConnectorConfiguration = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
   handler: async (ctx, args) => {
-    const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
@@ -628,7 +659,8 @@ export const testConnectorConnection = mutation({
       : oauthMissing
         ? "OAuth connection is not connected."
         : success
-          ? "Connection test passed."
+          // Deliberately not "connection test passed": nothing was contacted.
+          ? "Configuration valid — not yet verified against the provider."
           : `Missing secret references: ${missingSecretRefs.join(", ")}`;
     const diagnosticDetails = {
       authMode: connector.authMode,
@@ -671,7 +703,8 @@ export const testConnectorConnection = mutation({
 });
 
 // Fetch all registered AI system tools
-export const getTools = query({
+export const getTools = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
@@ -682,14 +715,12 @@ export const getTools = query({
   },
 });
 
-export const getPaginatedTools = query({
+export const getPaginatedTools = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-
     const searchTerm = args.searchTerm?.trim();
 
     return searchTerm
@@ -705,16 +736,14 @@ export const getPaginatedTools = query({
   },
 });
 
-export const getToolById = query({
+export const getToolById = tenantQuery({
   args: { id: v.id("aiTools") },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
-
     return await ctx.db.get(args.id);
   },
 });
 
-export const createTool = mutation({
+export const createTool = superAdminMutation({
   args: {
     name: v.string(),
     description: v.string(),
@@ -727,11 +756,7 @@ export const createTool = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(
-      ctx,
-      "Unauthorized: Only Super Admins can register system execution hooks.",
-      "Unauthenticated request"
-    );
+    const { userId } = ctx;
 
     const now = Date.now();
     const contract = buildToolContractPatch(args);
@@ -751,7 +776,7 @@ export const createTool = mutation({
   },
 });
 
-export const updateTool = mutation({
+export const updateTool = superAdminMutation({
   args: {
     id: v.id("aiTools"),
     name: v.string(),
@@ -765,12 +790,6 @@ export const updateTool = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System modification requires supreme permissions.",
-      "Unauthenticated request"
-    );
-
     const existing = await ctx.db.get(args.id);
     if (!existing) throw new Error("Tool not found.");
     const contract = buildToolContractPatch(args);
@@ -790,15 +809,9 @@ export const updateTool = mutation({
   },
 });
 
-export const deleteTool = mutation({
+export const deleteTool = superAdminMutation({
   args: { id: v.id("aiTools") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(
-      ctx,
-      "Unauthorized: Sonae architectural deletion prevented.",
-      "Unauthenticated request"
-    );
-
     // Must also cleanse all bindings to this tool in the junction table
     const bindings = await ctx.db
        .query("agentTools")
@@ -815,7 +828,8 @@ export const deleteTool = mutation({
 });
 
 // Fetch all tool bindings for a specific agent
-export const getAgentTools = query({
+export const getAgentTools = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
@@ -839,15 +853,13 @@ export const getAgentTools = query({
 });
 
 // Bind or unbind a global tool to an agent
-export const toggleAgentTool = mutation({
+export const toggleAgentTool = superAdminMutation({
   args: { 
     agentId: v.id("agents"), 
     toolId: v.id("aiTools"),
     action: v.union(v.literal("BIND"), v.literal("UNBIND"))
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated request");
-
     const existingBinding = await ctx.db
        .query("agentTools")
        .withIndex("by_agent", q => q.eq("agentId", args.agentId))

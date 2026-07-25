@@ -1,6 +1,7 @@
 import { mutation, query, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, requireAdmin, requireSuperAdmin } from "./authz";
+import { adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
 import {
   buildAnalyticsIdAuditMetadata,
   buildSystemConfigPatch,
@@ -14,7 +15,8 @@ import {
 } from "./systemService";
 
 // Public authenticated query for the Admin UI editor
-export const getSystemPrompt = query({
+export const getSystemPrompt = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
@@ -42,16 +44,12 @@ export const getInternalSystemPrompt = internalQuery({
   },
 });
 
-export const updateSystemPrompt = mutation({
+export const updateSystemPrompt = superAdminMutation({
   args: {
     prompt: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System Protocol modifications require Super Administrator clearance.",
-      "Target identity unauthenticated or session expired"
-    );
+    const { userId } = ctx;
 
     const existingConfig = await ctx.db
       .query("systemConfig")
@@ -98,7 +96,8 @@ export const updateSystemPrompt = mutation({
   },
 });
 
-export const getAnalyticsId = query({
+export const getAnalyticsId = publicQuery({
+  reason: "Analytics id is read by the client on every page, including before sign-in.",
   args: {},
   handler: async (ctx) => {
     /* intentionally public: required for frontend analytics mounting */
@@ -111,16 +110,12 @@ export const getAnalyticsId = query({
   },
 });
 
-export const updateAnalyticsId = mutation({
+export const updateAnalyticsId = superAdminMutation({
   args: {
     trackingId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(
-      ctx,
-      "Unauthorized: System Protocol modifications require Super Administrator clearance.",
-      "Target identity unauthenticated or session expired"
-    );
+    const { userId } = ctx;
 
     const existingConfig = await ctx.db
       .query("systemConfig")
@@ -168,11 +163,9 @@ export const updateAnalyticsId = mutation({
   },
 });
 
-export const getPiiConfig = query({
+export const getPiiConfig = adminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx, "Unauthorized", "Unauthorized");
-
     const config = await ctx.db
       .query("systemConfig")
       .withIndex("by_key", (q) => q.eq("key", PII_REDACTION_CONFIG_KEY))
@@ -182,12 +175,12 @@ export const getPiiConfig = query({
   },
 });
 
-export const updatePiiConfig = mutation({
+export const updatePiiConfig = superAdminMutation({
   args: {
     configStr: v.string(), // JSON string
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
+    const { userId } = ctx;
 
     const existingConfig = await ctx.db
       .query("systemConfig")

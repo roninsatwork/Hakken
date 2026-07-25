@@ -8,6 +8,7 @@ import {
   canExecuteTool,
   executeRegisteredTool,
   getRegisteredToolHandlerMappings,
+  isNotImplementedToolResult,
   normalizeToolFunctionName,
   normalizeToolExecutionPolicy,
   normalizeAiRuntimeError,
@@ -246,15 +247,16 @@ describe("ai tool execution service", () => {
     });
   });
 
-  test("exposes the allowlisted tool handler mappings", () => {
+  test("the registry lists only handlers that actually do something", () => {
+    // It used to include five stubs that returned a "not implemented" payload,
+    // so the registry could not be used to answer "does this connector work?".
+    // Everything unbuilt is now absent from it, which is what lets the
+    // marketplace derive availability instead of keeping a parallel list.
     expect(getRegisteredToolHandlerMappings()).toEqual([
       "company.overview.update",
-      "google_drive.search",
       "http.request",
       "knowledge.search",
       "notification.send",
-      "slack.message.send",
-      "workflow.task.create",
     ]);
   });
 
@@ -311,14 +313,35 @@ describe("ai tool execution service", () => {
     expect(runQuery).not.toHaveBeenCalled();
   });
 
-  test("fails closed for unimplemented tool handlers", async () => {
+  test("a handler mapping nothing declares is an error", async () => {
+    // Broken configuration — a typo, a hand-written tool row pointing nowhere.
+    // Distinct from a connector the catalogue advertises but nobody has built:
+    // one needs fixing, the other needs writing.
     await expect(
       executeRegisteredTool({
         ctx: { runQuery: vi.fn(), runMutation: vi.fn() },
         handlerMapping: "crm.lookup",
         args: {},
       })
-    ).rejects.toThrow("Unknown or unimplemented tool handler mapping.");
+    ).rejects.toThrow("No tool handler is registered for 'crm.lookup'.");
+  });
+
+  test("a declared connector with no implementation reports itself, without throwing", async () => {
+    // Reported rather than thrown so the runtime can record it as
+    // NOT_IMPLEMENTED and tell the model plainly, instead of it looking like a
+    // runtime fault the agent might sensibly retry.
+    const runQuery = vi.fn();
+    const runMutation = vi.fn();
+
+    const result = await executeRegisteredTool({
+      ctx: { runQuery, runMutation },
+      handlerMapping: "jira.issues.search",
+      args: { query: "open bugs" },
+    });
+
+    expect(isNotImplementedToolResult(result)).toBe(true);
+    expect(runQuery).not.toHaveBeenCalled();
+    expect(runMutation).not.toHaveBeenCalled();
   });
 
   test("external connector stubs fail safely without side effects", async () => {

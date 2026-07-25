@@ -111,7 +111,7 @@ describe("Agent Run Feedback", () => {
       "Unauthorized"
     );
     await expect(t.query(api.agentRunFeedback.getForRun, { runId: runAId, paginationOpts })).rejects.toThrow(
-      "Unauthenticated request"
+      "Unauthenticated"
     );
 
     const auditLogs = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());

@@ -1,7 +1,8 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 
 const FEEDBACK_COMMENT_LIMIT = 2000;
 const FEEDBACK_PAGE_LIMIT = 500;
@@ -46,7 +47,7 @@ function uniqueLabels(labels: Array<
   return Array.from(new Set(labels));
 }
 
-export const upsertForRun = mutation({
+export const upsertForRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
     rating: feedbackRatingValidator,
@@ -54,7 +55,7 @@ export const upsertForRun = mutation({
     comment: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -120,13 +121,13 @@ export const upsertForRun = mutation({
   },
 });
 
-export const getForRun = query({
+export const getForRun = adminQuery({
   args: {
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -139,12 +140,12 @@ export const getForRun = query({
   },
 });
 
-export const getMineForAgent = query({
+export const getMineForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }

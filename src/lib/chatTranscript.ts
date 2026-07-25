@@ -17,6 +17,12 @@ type BuildChatTranscriptArgs = {
   thread?: ChatTranscriptThread | null;
   messages: ChatTranscriptMessage[];
   userLabel: string;
+  /**
+   * Display name for the assistant. Required rather than defaulted, so a
+   * transcript can never be labelled with the platform's original product name
+   * on a deployment that has been rebranded.
+   */
+  assistantLabel: string;
 };
 
 function escapeHtml(value: string) {
@@ -49,7 +55,7 @@ export function formatMessageContentForTranscriptHtml(content: string) {
   return formattedHtml.replace(/(<li>[\s\S]*<\/li>)/, '<ul style="margin-top: 4px; margin-bottom: 4px; padding-left: 20px;">$1</ul>');
 }
 
-export function buildChatTranscript({ thread, messages, userLabel }: BuildChatTranscriptArgs) {
+export function buildChatTranscript({ thread, messages, userLabel, assistantLabel }: BuildChatTranscriptArgs) {
   const title = thread?.title || "Unknown";
   const dateStr = formatTranscriptDate(thread);
   let htmlContent = `<div style="font-family: Arial, sans-serif; max-width: 800px; line-height: 1.5; color: #333;">`;
@@ -73,7 +79,7 @@ export function buildChatTranscript({ thread, messages, userLabel }: BuildChatTr
 
   messages.forEach((msg) => {
     const isUser = msg.role === "user";
-    const senderName = isUser ? thread?.user?.name || userLabel : "Sonae";
+    const senderName = isUser ? thread?.user?.name || userLabel : assistantLabel;
     const time = formatTranscriptTime(msg._creationTime);
     const formattedHtml = formatMessageContentForTranscriptHtml(msg.content);
 

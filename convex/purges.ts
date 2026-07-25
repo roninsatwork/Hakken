@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { paginationOptsValidator } from "convex/server";
 import { getCurrentUser, requireSuperAdmin } from "./authz";
+import { publicQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import {
   calculateNextPurgeRun,
   calculatePurgeCutoffTimestamp,
@@ -15,11 +16,9 @@ import {
 
 const superAdminPurgeMessage = "Unauthorized: Super Administrator privileges required.";
 
-export const getPipelineConfig = query({
+export const getPipelineConfig = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, superAdminPurgeMessage);
-
     const config = await ctx.db
       .query("systemConfig")
       .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
@@ -29,12 +28,12 @@ export const getPipelineConfig = query({
   },
 });
 
-export const updatePipelineConfig = mutation({
+export const updatePipelineConfig = superAdminMutation({
   args: {
     configStr: v.string(), // JSON string representing the config
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireSuperAdmin(ctx, superAdminPurgeMessage);
+    const { userId, user } = ctx;
 
     const now = Date.now();
     const parsed = normalizePurgePipelineConfigForUpdate(args.configStr);
@@ -73,13 +72,11 @@ export const updatePipelineConfig = mutation({
   },
 });
 
-export const getPurgeHistoryPaginated = query({
+export const getPurgeHistoryPaginated = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, superAdminPurgeMessage, "Unauthenticated request");
-
     return await ctx.db
       .query("purgeHistory")
       .withIndex("by_started")
@@ -88,7 +85,8 @@ export const getPurgeHistoryPaginated = query({
   },
 });
 
-export const getRecentPurges = query({
+export const getRecentPurges = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
@@ -116,7 +114,7 @@ export const getRecentPurges = query({
   },
 });
 
-export const runManualPurge = mutation({
+export const runManualPurge = superAdminMutation({
   args: {
     pipelineKey: v.union(
       v.literal("agentLogs"),
@@ -127,7 +125,7 @@ export const runManualPurge = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireSuperAdmin(ctx, superAdminPurgeMessage, "Unauthenticated request");
+    const { userId, user } = ctx;
 
     const configDoc = await ctx.db
       .query("systemConfig")
@@ -448,12 +446,12 @@ export const dispatcher = internalMutation({
   },
 });
 
-export const cancelPurge = mutation({
+export const cancelPurge = superAdminMutation({
   args: {
     historyId: v.id("purgeHistory"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireSuperAdmin(ctx, superAdminPurgeMessage, "Unauthenticated request");
+    const { user } = ctx;
 
     const history = await ctx.db.get(args.historyId);
     if (!history) {

@@ -1,10 +1,11 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, getActiveCompanyId, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import type { AgentTemplate } from "./agentTemplates";
 
@@ -442,14 +443,14 @@ async function evaluateSmokeFixtureContract(ctx: MutationCtx, args: {
   };
 }
 
-export const createFromRun = mutation({
+export const createFromRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
     fixtureType: v.optional(evalFixtureTypeValidator),
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -596,7 +597,7 @@ export const createFromRun = mutation({
   },
 });
 
-export const createManual = mutation({
+export const createManual = adminMutation({
   args: {
     agentId: v.id("agents"),
     type: evalFixtureTypeValidator,
@@ -607,7 +608,7 @@ export const createManual = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
 
@@ -692,7 +693,7 @@ export const createManual = mutation({
   },
 });
 
-export const updateFixture = mutation({
+export const updateFixture = adminMutation({
   args: {
     fixtureId: v.id("agentEvalFixtures"),
     type: v.optional(evalFixtureTypeValidator),
@@ -703,7 +704,7 @@ export const updateFixture = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
     if (!fixture) throw new Error("Eval fixture not found");
     assertAdminCanAccessCompany(user, fixture.companyId);
@@ -761,12 +762,12 @@ export const updateFixture = mutation({
   },
 });
 
-export const archiveFixture = mutation({
+export const archiveFixture = adminMutation({
   args: {
     fixtureId: v.id("agentEvalFixtures"),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const fixture = await ctx.db.get(args.fixtureId);
     if (!fixture) throw new Error("Eval fixture not found");
     assertAdminCanAccessCompany(user, fixture.companyId);
@@ -985,14 +986,14 @@ async function createSmokeEvalRun(args: {
   };
 }
 
-export const runSmokeEval = mutation({
+export const runSmokeEval = adminMutation({
   args: {
     agentId: v.id("agents"),
     fixtureId: v.optional(v.id("agentEvalFixtures")),
     gradingMode: v.optional(smokeEvalGradingModeValidator),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
 
@@ -1022,7 +1023,7 @@ export const runSmokeEval = mutation({
   },
 });
 
-export const runEvalSuite = mutation({
+export const runEvalSuite = adminMutation({
   args: {
     agentId: v.id("agents"),
     fixtureIds: v.optional(v.array(v.id("agentEvalFixtures"))),
@@ -1031,7 +1032,7 @@ export const runEvalSuite = mutation({
     gradingMode: v.optional(smokeEvalGradingModeValidator),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
 
@@ -1150,12 +1151,12 @@ export const runEvalSuite = mutation({
   },
 });
 
-export const listSuitePresets = query({
+export const listSuitePresets = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -1173,12 +1174,12 @@ export const listSuitePresets = query({
   },
 });
 
-export const getReleaseCandidateComparison = query({
+export const getReleaseCandidateComparison = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -1343,7 +1344,7 @@ export const getReleaseCandidateComparison = query({
   },
 });
 
-export const saveSuitePreset = mutation({
+export const saveSuitePreset = adminMutation({
   args: {
     agentId: v.id("agents"),
     presetId: v.optional(v.id("agentEvalSuitePresets")),
@@ -1355,7 +1356,7 @@ export const saveSuitePreset = mutation({
     requiresModelGrading: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
 
@@ -1453,12 +1454,12 @@ export const saveSuitePreset = mutation({
   },
 });
 
-export const archiveSuitePreset = mutation({
+export const archiveSuitePreset = adminMutation({
   args: {
     presetId: v.id("agentEvalSuitePresets"),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const preset = await ctx.db.get(args.presetId);
     if (!preset) throw new Error("Eval suite preset not found.");
     assertAdminCanAccessCompany(user, preset.companyId);
@@ -1498,6 +1499,66 @@ export const archiveSuitePreset = mutation({
     });
 
     return args.presetId;
+  },
+});
+
+/**
+ * Open a throwaway conversation for an eval to run in.
+ *
+ * The graded answer has to come from the same code path a real conversation
+ * uses — tools, memories, skills, retrieval, budgets and all — and that path
+ * needs a thread. Marked EVAL so it stays out of the triggering admin's own
+ * conversation list.
+ *
+ * The user is carried over deliberately: tool authorisation is resolved from
+ * the thread's user, so an eval run under no user would be denied every tool the
+ * agent actually relies on and would grade an agent that cannot do its job.
+ */
+export const createEvalThreadInternal = internalMutation({
+  args: {
+    agentId: v.id("agents"),
+    companyId: v.optional(v.id("companies")),
+    userId: v.id("users"),
+    fixtureId: v.id("agentEvalFixtures"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db.insert("threads", {
+      userId: args.userId,
+      companyId: args.companyId,
+      agentId: args.agentId,
+      title: `Eval ${args.fixtureId}`,
+      purpose: "EVAL",
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+/** The agent's answer from an eval thread, and the run that produced it. */
+export const getEvalThreadOutcomeInternal = internalQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .order("desc")
+      .take(10);
+    const reply = messages.find((message) => message.role === "assistant");
+
+    const run = await ctx.db
+      .query("agentRuns")
+      .withIndex("by_thread_started", (q) => q.eq("threadId", args.threadId))
+      .order("desc")
+      .first();
+
+    return {
+      output: reply?.content ?? "",
+      runId: run?._id,
+      runStatus: run?.status,
+      inputTokens: run?.inputTokens ?? 0,
+      outputTokens: run?.outputTokens ?? 0,
+    };
   },
 });
 
@@ -1607,13 +1668,13 @@ export const completeModelGradedSmokeEvalInternal = internalMutation({
   },
 });
 
-export const getForRun = query({
+export const getForRun = adminQuery({
   args: {
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -1626,13 +1687,13 @@ export const getForRun = query({
   },
 });
 
-export const getSmokeEvalHistory = query({
+export const getSmokeEvalHistory = adminQuery({
   args: {
     agentId: v.id("agents"),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }
@@ -1715,12 +1776,12 @@ export const getSmokeEvalHistory = query({
   },
 });
 
-export const getRecentForAgent = query({
+export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }

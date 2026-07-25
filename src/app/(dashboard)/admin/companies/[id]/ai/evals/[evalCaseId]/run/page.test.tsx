@@ -1,5 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -83,7 +84,7 @@ describe("RunCompanyEvalPage", () => {
   it("records eval runs with skill evidence selected from active central skills available to the company", async () => {
     runCase.mockResolvedValue({ status: "PASSED", score: 1 });
 
-    render(<RunCompanyEvalPage />);
+    renderWithProviders(<RunCompanyEvalPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Answer produced by the company AI."), {
       target: { value: "The research update cites the selected source." },

@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { AlertTriangle, BrainCircuit, CheckCircle2, ExternalLink, Library, Loader2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type BindingRow = {
   binding: Doc<"agentSkillBindings">;
@@ -70,12 +71,11 @@ export default function AgentSkillsPage() {
   const setBindingEnabled = useMutation(api.agentSkills.setBindingEnabled);
   const unbindSkill = useMutation(api.agentSkills.unbindSkillFromAgent);
   const [seedEvalFixtures, setSeedEvalFixtures] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [skillSearchTerm, setSkillSearchTerm] = useState("");
   const [selectedSkillId, setSelectedSkillId] = useState<Id<"agentSkills"> | null>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<BindingRow | null>(null);
-  const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+  const action = useAdminAction({ scope: "admin-agent-skills" });
 
   const attachedSkillIds = useMemo(
     () => new Set((bindings ?? []).map((row) => row.skill._id)),
@@ -98,53 +98,42 @@ export default function AgentSkillsPage() {
   const smokeGapCount = (bindings ?? []).filter((row) => !row.evalCoverage.latestPassedRun).length;
   const isLoading = bindings === undefined || skills === undefined;
 
-  const runMutation = async (id: string, action: () => Promise<unknown>, successMessage: string) => {
-    setBusyId(id);
-    setFeedback(null);
-    try {
-      await action();
-      setFeedback({ tone: "success", message: successMessage });
-    } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "Skill update failed." });
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   const attach = async (skillId: Id<"agentSkills">) => {
-    await runMutation(
-      skillId,
-      () => bindSkill({ agentId, skillId, seedEvalFixtures }),
-      "Skill attached. The next agent version will include its current snapshot."
-    );
+    const outcome = await action.run(() => bindSkill({ agentId, skillId, seedEvalFixtures }), {
+      key: skillId,
+      successMessage: "Skill attached. The next agent version will include its current snapshot.",
+      fallbackMessage: "Skill update failed.",
+    });
+    if (!outcome.ok) return;
     setSelectedSkillId(null);
     setSkillSearchTerm("");
     setIsPickerOpen(false);
   };
 
   const toggle = async (binding: Doc<"agentSkillBindings">) => {
-    await runMutation(
-      binding._id,
-      () => setBindingEnabled({ bindingId: binding._id, isEnabled: !binding.isEnabled }),
-      binding.isEnabled ? "Skill disabled for this agent." : "Skill enabled for this agent."
-    );
+    await action.run(() => setBindingEnabled({ bindingId: binding._id, isEnabled: !binding.isEnabled }), {
+      key: binding._id,
+      successMessage: binding.isEnabled ? "Skill disabled for this agent." : "Skill enabled for this agent.",
+      fallbackMessage: "Skill update failed.",
+    });
   };
 
   const upgrade = async (binding: Doc<"agentSkillBindings">, latestVersionNumber: number | undefined) => {
-    await runMutation(
-      `upgrade:${binding._id}`,
-      () => upgradeSkillBinding({ bindingId: binding._id, seedEvalFixtures }),
-      `Skill upgraded${latestVersionNumber ? ` to v${latestVersionNumber}` : ""}. Run the skill smoke eval before activating high-risk changes.`
-    );
+    await action.run(() => upgradeSkillBinding({ bindingId: binding._id, seedEvalFixtures }), {
+      key: `upgrade:${binding._id}`,
+      successMessage: `Skill upgraded${latestVersionNumber ? ` to v${latestVersionNumber}` : ""}. Run the skill smoke eval before activating high-risk changes.`,
+      fallbackMessage: "Skill update failed.",
+    });
   };
 
   const confirmRemove = async () => {
     if (!removeTarget) return;
-    await runMutation(
-      removeTarget.binding._id,
-      () => unbindSkill({ bindingId: removeTarget.binding._id }),
-      "Skill detached from this agent."
-    );
+    const outcome = await action.run(() => unbindSkill({ bindingId: removeTarget.binding._id }), {
+      key: removeTarget.binding._id,
+      successMessage: "Skill detached from this agent.",
+      fallbackMessage: "Skill update failed.",
+    });
+    if (!outcome.ok) return;
     setRemoveTarget(null);
   };
 
@@ -209,15 +198,6 @@ export default function AgentSkillsPage() {
         </div>
       </header>
 
-      {feedback && (
-        <div className={`rounded-[8px] border p-3 text-[12px] ${
-          feedback.tone === "success"
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-            : "border-red-500/20 bg-red-500/10 text-red-300"
-        }`}>
-          {feedback.message}
-        </div>
-      )}
 
       <section className="overflow-hidden rounded-[8px] border border-border-dim bg-sidebar/30">
         <div className="flex flex-col gap-3 border-b border-border-dim px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
@@ -275,15 +255,15 @@ export default function AgentSkillsPage() {
                       <button
                         type="button"
                         onClick={() => toggle(row.binding)}
-                        disabled={busyId === row.binding._id}
+                        disabled={action.isBusy(row.binding._id)}
                         className="h-8 rounded-[8px] border border-border-dim px-3 text-[12px] text-secondary hover:text-foreground disabled:opacity-50"
                       >
-                        {busyId === row.binding._id ? "Saving..." : row.binding.isEnabled ? "Disable" : "Enable"}
+                        {action.isBusy(row.binding._id) ? "Saving..." : row.binding.isEnabled ? "Disable" : "Enable"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setRemoveTarget(row)}
-                        disabled={busyId === row.binding._id}
+                        disabled={action.isBusy(row.binding._id)}
                         className="flex h-8 items-center gap-2 rounded-[8px] border border-red-500/20 px-3 text-[12px] text-red-300 hover:bg-red-500/10 disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -300,10 +280,10 @@ export default function AgentSkillsPage() {
                       <button
                         type="button"
                         onClick={() => upgrade(row.binding, row.latestVersion?.versionNumber)}
-                        disabled={busyId === `upgrade:${row.binding._id}`}
+                        disabled={action.isBusy(`upgrade:${row.binding._id}`)}
                         className="h-8 px-3 rounded-[8px] border border-sky-400/30 bg-sky-400/10 text-[11px] font-semibold text-sky-100 hover:bg-sky-400/15 disabled:opacity-50 shrink-0"
                       >
-                        {busyId === `upgrade:${row.binding._id}` ? "Updating..." : `Update to v${row.latestVersion.versionNumber}`}
+                        {action.isBusy(`upgrade:${row.binding._id}`) ? "Updating..." : `Update to v${row.latestVersion.versionNumber}`}
                       </button>
                     </div>
                   )}
@@ -449,10 +429,10 @@ export default function AgentSkillsPage() {
                   <button
                     type="button"
                     onClick={() => attach(selectedSkill._id)}
-                    disabled={busyId === selectedSkill._id}
+                    disabled={action.isBusy(selectedSkill._id)}
                     className="h-10 px-4 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {busyId === selectedSkill._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    {action.isBusy(selectedSkill._id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                     Attach selected skill
                   </button>
                 </div>
@@ -478,7 +458,7 @@ export default function AgentSkillsPage() {
             <button
               type="button"
               onClick={confirmRemove}
-              disabled={!!removeTarget && busyId === removeTarget.binding._id}
+              disabled={!!removeTarget && action.isBusy(removeTarget.binding._id)}
               className="h-9 px-4 rounded-[8px] bg-red-500 text-white text-[12px] font-medium disabled:opacity-50"
             >
               Remove skill

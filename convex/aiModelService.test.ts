@@ -22,10 +22,22 @@ describe("aiModelService", () => {
     ])).toBe("active-default");
   });
 
-  test("falls back to the platform failsafe when no active default exists", () => {
+  test("prefers any enabled model over the compiled-in identifier", () => {
+    // The catalogue is the source of truth for what this deployment can call.
+    // Reaching past it to a compiled-in ID means running a model nobody
+    // configured — and one pinned to whatever generation was current when the
+    // constant was written, which fails as an opaque provider 404 rather than
+    // as "no model configured".
     expect(getDefaultModelId([
       model("disabled-default", false, true),
       model("active-secondary", true, false),
+    ])).toBe("active-secondary");
+  });
+
+  test("uses the compiled-in identifier only when nothing is enabled at all", () => {
+    expect(getDefaultModelId([
+      model("disabled-a", false, true),
+      model("disabled-b", false, false),
     ])).toBe(SYSTEM_FAILSAFE_MODEL_ID);
   });
 

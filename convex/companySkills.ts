@@ -1,8 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 
@@ -158,7 +159,7 @@ function buildSkillPatch(args: {
 }
 
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+  const { user, userId } = await requireAdmin(ctx);
   const company = await ctx.db.get(companyId);
   if (!company) throw new Error("Company not found");
   assertAdminCanAccessCompany(user, companyId);
@@ -183,7 +184,7 @@ function getSkillReadiness(skill: Doc<"companySkills">) {
   };
 }
 
-export const getSummary = query({
+export const getSummary = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -239,7 +240,7 @@ export const getSummary = query({
   },
 });
 
-export const getRuntimePreviewForCompany = query({
+export const getRuntimePreviewForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     limit: v.optional(v.number()),
@@ -273,7 +274,7 @@ export const getRuntimePreviewForCompany = query({
   },
 });
 
-export const getSkillsForCompany = query({
+export const getSkillsForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     status: v.optional(skillStatusValidator),
@@ -290,7 +291,7 @@ export const getSkillsForCompany = query({
   },
 });
 
-export const getImportableGlobalSkills = query({
+export const getImportableGlobalSkills = adminQuery({
   args: {
     companyId: v.id("companies"),
   },
@@ -319,7 +320,7 @@ export const getImportableGlobalSkills = query({
   },
 });
 
-export const getBindingsForSkill = query({
+export const getBindingsForSkill = adminQuery({
   args: {
     skillId: v.id("companySkills"),
   },
@@ -332,7 +333,7 @@ export const getBindingsForSkill = query({
   },
 });
 
-export const createSkill = mutation({
+export const createSkill = adminMutation({
   args: {
     companyId: v.id("companies"),
     name: v.string(),
@@ -354,7 +355,7 @@ export const createSkill = mutation({
   },
 });
 
-export const importGlobalSkill = mutation({
+export const importGlobalSkill = adminMutation({
   args: {
     companyId: v.id("companies"),
     skillId: v.id("agentSkills"),
@@ -489,7 +490,7 @@ export const importGlobalSkill = mutation({
   },
 });
 
-export const updateSkill = mutation({
+export const updateSkill = adminMutation({
   args: {
     skillId: v.id("companySkills"),
     name: v.optional(v.string()),
@@ -566,7 +567,7 @@ export const updateSkill = mutation({
   },
 });
 
-export const archiveSkill = mutation({
+export const archiveSkill = adminMutation({
   args: {
     skillId: v.id("companySkills"),
   },
@@ -610,7 +611,7 @@ export const archiveSkill = mutation({
   },
 });
 
-export const setBinding = mutation({
+export const setBinding = adminMutation({
   args: {
     skillId: v.id("companySkills"),
     surfaceType: skillSurfaceValidator,

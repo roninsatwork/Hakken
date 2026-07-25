@@ -8,6 +8,7 @@ import { validateSafeUrl } from "./utils/security";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { adminMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   assertCanAccessKnowledgeScope,
   buildKnowledgeChunkRecords,
@@ -398,22 +399,20 @@ async function requeueKnowledgeDocument(
   return nextStatus;
 }
 
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = adminMutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx, "Unauthorized to upload knowledge base documents.", "Unauthenticated request");
-
     return await ctx.storage.generateUploadUrl();
   },
 });
 
-export const getDocuments = query({
+export const getDocuments = tenantQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { user } = ctx;
     
     // Agent-isolated Knowledge Scope (Highest Priority)
     if (args.agentId) {
@@ -464,14 +463,14 @@ export const getDocuments = query({
   },
 });
 
-export const getPaginatedDocuments = query({
+export const getPaginatedDocuments = tenantQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { user } = ctx;
 
     if (args.agentId) {
       if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
@@ -524,13 +523,13 @@ export const getPaginatedDocuments = query({
   },
 });
 
-export const getWebsiteDocuments = query({
+export const getWebsiteDocuments = tenantQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { user } = ctx;
 
     if (args.agentId) {
       if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
@@ -584,7 +583,8 @@ export const getWebsiteDocuments = query({
   },
 });
 
-export const getQualitySummary = query({
+export const getQualitySummary = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -697,7 +697,7 @@ export const getQualitySummary = query({
   },
 });
 
-export const inspectDocument = query({
+export const inspectDocument = tenantQuery({
   args: {
     documentId: v.id("knowledgeDocuments"),
   },
@@ -766,7 +766,7 @@ export const inspectDocument = query({
   },
 });
 
-export const testRetrieval = query({
+export const testRetrieval = tenantQuery({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -829,7 +829,8 @@ export const testRetrieval = query({
   },
 });
 
-export const getThreadDocuments = query({
+export const getThreadDocuments = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
@@ -848,7 +849,7 @@ export const getThreadDocuments = query({
   }
 });
 
-export const saveDocument = mutation({
+export const saveDocument = tenantMutation({
   args: {
     storageId: v.id("_storage"),
     companyId: v.optional(v.id("companies")),
@@ -857,7 +858,7 @@ export const saveDocument = mutation({
     format: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
 
     await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
@@ -893,7 +894,7 @@ export const saveDocument = mutation({
   },
 });
 
-export const saveChatDocument = mutation({
+export const saveChatDocument = tenantMutation({
   args: {
     storageId: v.id("_storage"),
     threadId: v.id("threads"),
@@ -901,7 +902,7 @@ export const saveChatDocument = mutation({
     format: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId } = ctx;
 
     // Secure Gate: Prevent malicious injection by verifying thread ownership
     const thread = await ctx.db.get(args.threadId);
@@ -932,10 +933,10 @@ export const saveChatDocument = mutation({
   },
 });
 
-export const deleteDocument = mutation({
+export const deleteDocument = tenantMutation({
   args: { documentId: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
 
     const doc = await ctx.db.get(args.documentId);
     if (!doc) throw new Error("Document not found");
@@ -980,7 +981,7 @@ export const deleteDocument = mutation({
   }
 });
 
-export const retryDocumentIngestion = mutation({
+export const retryDocumentIngestion = tenantMutation({
   args: { documentId: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
     const document = await ctx.db.get(args.documentId);
@@ -1005,13 +1006,13 @@ export const retryDocumentIngestion = mutation({
   },
 });
 
-export const repairFlaggedDocuments = mutation({
+export const repairFlaggedDocuments = tenantMutation({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId } = ctx;
     const documents = await getRepairableKnowledgeDocumentsForScope(ctx, args);
     const activeEmbeddingModels = new Map<string, ActiveEmbeddingModel | null>();
     const getActiveEmbeddingModelForDocument = async (document: Doc<"knowledgeDocuments">) => {
@@ -1158,7 +1159,7 @@ export const getNextPendingUrlInternal = internalQuery({
   }
 });
 
-export const saveManualText = mutation({
+export const saveManualText = tenantMutation({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -1166,7 +1167,7 @@ export const saveManualText = mutation({
     textContent: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
@@ -1198,7 +1199,7 @@ export const saveManualText = mutation({
   },
 });
 
-export const queueWebsiteUrls = mutation({
+export const queueWebsiteUrls = tenantMutation({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
@@ -1206,7 +1207,7 @@ export const queueWebsiteUrls = mutation({
     forceRefresh: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { userId, user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
 
     const docIds = [];
@@ -1254,14 +1255,14 @@ export const queueWebsiteUrls = mutation({
   },
 });
 
-export const deleteWebsiteBulk = mutation({
+export const deleteWebsiteBulk = tenantMutation({
   args: {
     companyId: v.optional(v.id("companies")),
     agentId: v.optional(v.id("agents")),
     rootDomain: v.string(),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
+    const { user } = ctx;
     const scope = getWritableKnowledgeScope(user, args);
 
     const docs = scope.agentId

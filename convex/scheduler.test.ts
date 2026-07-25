@@ -3,6 +3,9 @@ import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
+// Error text standardised to "Unauthorized" when these moved to the shared
+// superAdmin builders. No client depends on the old wording, and a uniform
+// message avoids hinting at which subsystem rejected the caller.
 describe("Scheduler Authorization", () => {
   test("standard users cannot manage schedules but super admins can create one", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -31,7 +34,7 @@ describe("Scheduler Authorization", () => {
     const userClient = t.withIdentity({ subject: userId });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    await expect(userClient.query(api.scheduler.getSchedules)).rejects.toThrow("Unauthorized System Access");
+    await expect(userClient.query(api.scheduler.getSchedules)).rejects.toThrow("Unauthorized");
 
     await expect(
       userClient.mutation(api.scheduler.createSchedule, {
@@ -40,7 +43,7 @@ describe("Scheduler Authorization", () => {
         intervalStr: "daily",
         isActive: true,
       })
-    ).rejects.toThrow("Unauthorized System Access");
+    ).rejects.toThrow("Unauthorized");
 
     const scheduleId = await superAdminClient.mutation(api.scheduler.createSchedule, {
       name: "Daily Workflow",

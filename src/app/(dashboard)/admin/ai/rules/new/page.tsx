@@ -147,7 +147,7 @@ export default function NewRulePage() {
              <textarea
                value={instruction}
                onChange={(e) => setInstruction(e.target.value)}
-               placeholder="e.g. Inform the user that Sonae does not handle refunds, and explicitly tell them to route to support@ronins.co.uk..."
+               placeholder="e.g. Inform the user that we do not handle refunds, and explicitly tell them to route to support@example.com..."
                className="w-full h-full resize-none bg-transparent border border-border-dim rounded-[10px] p-5 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
                spellCheck={false}
              />

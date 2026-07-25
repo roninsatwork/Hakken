@@ -7,6 +7,7 @@ import { getAgentTemplateById } from "./agentTemplates";
 import { buildGlobalAgentRecord, buildCreateAgentFromTemplateAuditMetadata } from "./agentService";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { createCatalogSourceJson, getAppTemplateById, getAppTemplates } from "./appTemplates";
+import { publicMutation } from "./tenantFunctions";
 
 const DEMO_COMPANY_NAME = "Sonae Demo Company";
 const DEMO_SUPER_ADMIN_EMAIL = "demo-super-admin@sonae.test";
@@ -605,7 +606,8 @@ async function upsertAppTemplateCatalogRegistry(ctx: MutationCtx, userId: Id<"us
   };
 }
 
-export const seed = mutation({
+export const seed = publicMutation({
+  reason: "Local demo data seeder. Gated on LOCAL_DEMO_SEED_ENABLED and a shared secret; there is no signed-in user during first-run setup.",
   args: { secret: v.string() },
   handler: async (ctx, args) => {
     assertLocalDemoSeedEnabled(args.secret);

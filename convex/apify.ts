@@ -7,6 +7,7 @@ import { ApifyClient } from "apify-client";
 import { validateSafeUrl } from "./utils/security";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { tenantAction } from "./tenantFunctions";
 
 type ApifyRun = Doc<"apifyRuns">;
 
@@ -39,7 +40,7 @@ async function syncApifyRunStatus(runId: string) {
   return { client, run };
 }
 
-export const startRightmoveScrape = action({
+export const startRightmoveScrape = tenantAction({
   args: {
     listUrls: v.array(v.string()),
     maxProperties: v.number(),
@@ -160,7 +161,7 @@ export const fetchDatasetAndStore = internalAction({
   },
 });
 
-export const syncRunStatus = action({
+export const syncRunStatus = tenantAction({
   args: { runId: v.string() },
   handler: async (ctx, args) => {
     await requireApifyRunAccess(ctx, args.runId);
@@ -198,7 +199,7 @@ async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
   return "SUCCEEDED";
 }
 
-export const debugDatasetItem = action({
+export const debugDatasetItem = tenantAction({
   args: { runId: v.string() },
   handler: async (ctx, args) => {
     const { user } = await requireApifyRunAccess(ctx, args.runId);

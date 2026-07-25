@@ -11,6 +11,7 @@ describe("chat transcript helpers", () => {
         user: { name: "Anthony" },
       },
       userLabel: "Visitor",
+      assistantLabel: "Acme Copilot",
       messages: [
         { role: "user", content: "Hello", _creationTime: Date.UTC(2026, 4, 31, 16, 38) },
         { role: "assistant", content: "Hi there", _creationTime: Date.UTC(2026, 4, 31, 16, 39) },
@@ -20,7 +21,8 @@ describe("chat transcript helpers", () => {
     expect(transcript.textContent).toContain("Chat Log: Website enquiry");
     expect(transcript.textContent).toContain("Source: https://example.com");
     expect(transcript.textContent).toContain("Anthony:\nHello");
-    expect(transcript.textContent).toContain("Sonae:\nHi there");
+    // Uses the configured platform name, not a hardcoded product name.
+    expect(transcript.textContent).toContain("Acme Copilot:\nHi there");
   });
 
   test("builds escaped HTML transcript output", () => {
@@ -31,6 +33,7 @@ describe("chat transcript helpers", () => {
         user: { name: "Visitor <A>" },
       },
       userLabel: "Visitor",
+      assistantLabel: "Acme Copilot",
       messages: [
         { role: "user", content: "Use **bold** and <tags>", _creationTime: Date.UTC(2026, 4, 31, 16, 38) },
       ],

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {useState} from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { redirect, useParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useToast } from "@/src/context/ToastContext";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { ArrowLeft, Archive, BrainCircuit, CheckCircle2, Copy, Download, Lightbulb, Loader2, Save, UploadCloud, Users, Wrench } from "lucide-react";
 
@@ -72,22 +74,25 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
   const cloneSkill = useMutation(api.agentSkills.cloneSkill);
   const archiveSkill = useMutation(api.agentSkills.archiveSkill);
   const upgradeSkillBindings = useMutation(api.agentSkills.upgradeSkillBindingsForSkill);
-  const initializedIdRef = useRef<Id<"agentSkills"> | null>(null);
+  const [initializedId, setInitializedId] = useState<Id<"agentSkills"> | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isCloning, setIsCloning] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
-  const [upgradingId, setUpgradingId] = useState<string | null>(null);
+  // One key per page-level action so the three header buttons spin independently.
+  const SAVE_KEY = "save";
+  const CLONE_KEY = "clone";
+  const ARCHIVE_KEY = "archive";
+  const action = useAdminAction({ scope: "admin-agent-skill" });
+  const { showToast } = useToast();
   const [clonedSkillId, setClonedSkillId] = useState<Id<"agentSkills"> | null>(null);
-  const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const outdatedBindings = (rolloutBindings ?? []).filter((row) => row.hasAvailableUpdate);
   const currentBindings = (rolloutBindings ?? []).filter((row) => !row.hasAvailableUpdate);
   const currentValidatedBindings = currentBindings.filter((row) => row.evalCoverage.latestPassedRun);
   const currentNeedsSmokeBindings = currentBindings.filter((row) => !row.evalCoverage.latestPassedRun);
 
-  useEffect(() => {
-    if (!detail?.skill || initializedIdRef.current === detail.skill._id) return;
-    initializedIdRef.current = detail.skill._id;
+  // Seeding the form during render rather than in an effect: React re-runs this
+  // component before committing, so the fields are populated in the same paint.
+  // In an effect the user sees an empty form first and then it fills in.
+  if (detail?.skill && initializedId !== detail.skill._id) {
+    setInitializedId(detail.skill._id);
     setForm({
       name: detail.skill.name,
       description: detail.skill.description ?? "",
@@ -101,14 +106,11 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
       defaultRulesJson: formatJson(detail.skill.defaultRulesJson),
       suggestedEvalFixturesJson: formatJson(detail.skill.suggestedEvalFixturesJson, "[]"),
     });
-  }, [detail]);
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setIsSaving(true);
-    setFeedback(null);
-    try {
-      await updateSkill({
+    await action.run(() => updateSkill({
         skillId,
         name: form.name,
         description: form.description || undefined,
@@ -121,42 +123,31 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
         recommendedKnowledgeJson: form.recommendedKnowledgeJson || undefined,
         defaultRulesJson: form.defaultRulesJson || undefined,
         suggestedEvalFixturesJson: form.suggestedEvalFixturesJson,
-      });
-      setFeedback({ tone: "success", message: "Skill saved and version snapshot refreshed." });
-    } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "Skill could not be saved." });
-    } finally {
-      setIsSaving(false);
-    }
+      }), {
+      key: SAVE_KEY,
+      successMessage: "Skill saved and version snapshot refreshed.",
+      fallbackMessage: "Skill could not be saved.",
+    });
   };
 
   const archive = async () => {
-    setIsArchiving(true);
-    setFeedback(null);
-    try {
-      await archiveSkill({ skillId });
-      setForm((current) => ({ ...current, status: "ARCHIVED" }));
-      setFeedback({ tone: "success", message: "Skill archived. Existing historical bindings remain auditable." });
-    } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "Skill could not be archived." });
-    } finally {
-      setIsArchiving(false);
-    }
+    const outcome = await action.run(() => archiveSkill({ skillId }), {
+      key: ARCHIVE_KEY,
+      successMessage: "Skill archived. Existing historical bindings remain auditable.",
+      fallbackMessage: "Skill could not be archived.",
+    });
+    // The local status only moves once the server has accepted the change.
+    if (outcome.ok) setForm((current) => ({ ...current, status: "ARCHIVED" }));
   };
 
   const clone = async () => {
-    setIsCloning(true);
     setClonedSkillId(null);
-    setFeedback(null);
-    try {
-      const result = await cloneSkill({ skillId });
-      setClonedSkillId(result.skillId);
-      setFeedback({ tone: "success", message: "Skill cloned as a draft. Review it before attaching agents." });
-    } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "Skill could not be cloned." });
-    } finally {
-      setIsCloning(false);
-    }
+    const outcome = await action.run(() => cloneSkill({ skillId }), {
+      key: CLONE_KEY,
+      successMessage: "Skill cloned as a draft. Review it before attaching agents.",
+      fallbackMessage: "Skill could not be cloned.",
+    });
+    if (outcome.ok) setClonedSkillId(outcome.data.skillId);
   };
 
   const downloadBundle = () => {
@@ -174,23 +165,13 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
 
   const upgradeBindings = async (bindingIds?: Id<"agentSkillBindings">[]) => {
     const operationId = bindingIds && bindingIds.length === 1 ? bindingIds[0] : "all";
-    setUpgradingId(operationId);
-    setFeedback(null);
-    try {
-      const result = await upgradeSkillBindings({
-        skillId,
-        ...(bindingIds ? { bindingIds } : {}),
-        seedEvalFixtures: true,
-      });
-      setFeedback({
-        tone: "success",
-        message: `${result.upgradedCount} agent${result.upgradedCount === 1 ? "" : "s"} updated to the latest skill version.`,
-      });
-    } catch (error) {
-      setFeedback({ tone: "error", message: error instanceof Error ? error.message : "Skill bindings could not be upgraded." });
-    } finally {
-      setUpgradingId(null);
-    }
+    const outcome = await action.run(
+      () => upgradeSkillBindings({ skillId, ...(bindingIds ? { bindingIds } : {}), seedEvalFixtures: true }),
+      { key: operationId, fallbackMessage: "Skill bindings could not be upgraded." },
+    );
+    if (!outcome.ok) return;
+    const { upgradedCount } = outcome.data;
+    showToast(`${upgradedCount} agent${upgradedCount === 1 ? "" : "s"} updated to the latest skill version.`, "success");
   };
 
   if (detail === undefined) {
@@ -227,44 +208,41 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
           <button
             type="button"
             onClick={clone}
-            disabled={isCloning}
+            disabled={action.isBusy(CLONE_KEY)}
             className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground disabled:opacity-50 flex items-center gap-2"
           >
-            {isCloning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+            {action.isBusy(CLONE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
             Clone
           </button>
           <button
             type="button"
             onClick={archive}
-            disabled={isArchiving || form.status === "ARCHIVED"}
+            disabled={action.isBusy(ARCHIVE_KEY) || form.status === "ARCHIVED"}
             className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground disabled:opacity-50 flex items-center gap-2"
           >
-            {isArchiving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+            {action.isBusy(ARCHIVE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
             Archive
           </button>
           <button
             type="submit"
-            disabled={isSaving}
+            disabled={action.isBusy(SAVE_KEY)}
             className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {action.isBusy(SAVE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save skill
           </button>
         </div>
       </header>
 
-      {feedback && (
-        <div className={`rounded-[8px] border p-3 text-[12px] ${
-          feedback.tone === "success"
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-            : "border-red-500/20 bg-red-500/10 text-red-300"
-        }`}>
-          {feedback.message}
-          {clonedSkillId && (
-            <Link href={`${basePath}/${clonedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
-              Open clone
-            </Link>
-          )}
+
+      {/* The clone toast says it worked; this is the way through to it, which a
+          toast cannot carry. */}
+      {clonedSkillId && (
+        <div className="rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 p-3 text-[12px] text-emerald-300">
+          Cloned as a draft.
+          <Link href={`${basePath}/${clonedSkillId}`} className="ml-2 font-semibold underline underline-offset-2">
+            Open clone
+          </Link>
         </div>
       )}
 
@@ -378,10 +356,10 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
                   <button
                     type="button"
                     onClick={() => upgradeBindings()}
-                    disabled={upgradingId !== null}
+                    disabled={action.isBusy()}
                     className="h-9 px-3 rounded-[8px] border border-sky-500/20 bg-sky-500/10 text-[12px] font-semibold text-sky-200 hover:bg-sky-500/15 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {upgradingId === "all" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                    {action.isBusy("all") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
                     Update all outdated agents
                   </button>
                 )}
@@ -419,10 +397,10 @@ export function AgentSkillDetail({ basePath = "/admin/ai/skills" }: AgentSkillDe
                       <button
                         type="button"
                         onClick={() => upgradeBindings([row.binding._id])}
-                        disabled={upgradingId !== null}
+                        disabled={action.isBusy()}
                         className="self-end h-8 px-3 rounded-[8px] border border-border-dim bg-white/[0.03] text-[11px] text-secondary hover:text-foreground disabled:opacity-50"
                       >
-                        {upgradingId === row.binding._id ? "Updating..." : `Update to v${row.latestVersion?.versionNumber ?? 0}`}
+                        {action.isBusy(row.binding._id) ? "Updating..." : `Update to v${row.latestVersion?.versionNumber ?? 0}`}
                       </button>
                     )}
                   </div>

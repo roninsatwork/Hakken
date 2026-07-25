@@ -6,7 +6,8 @@ import {
   buildAssistantSystemInstruction,
   buildUntrustedConversationHistory,
   buildUntrustedKnowledgeContext,
-  orderAssistantKnowledgeMatches,
+  rankAssistantKnowledgeMatches,
+  selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
 
 describe("assistant prompt assembly", () => {
@@ -100,18 +101,120 @@ describe("assistant prompt assembly", () => {
     expect(instruction).toContain("Pause before risky side effects");
   });
 
-  test("orders main chat knowledge as global, then company, then thread", () => {
-    const orderedMatches = orderAssistantKnowledgeMatches({
-      globalMatches: ["global knowledge"],
-      companyMatches: ["company knowledge"],
-      threadMatches: ["thread knowledge"],
+  test("ranks main chat knowledge by relevance rather than by tier order", () => {
+    const ranked = rankAssistantKnowledgeMatches({
+      globalMatches: [{ _id: "global-weak", _score: 0.11 }],
+      companyMatches: [{ _id: "company-strong", _score: 0.88 }],
+      threadMatches: [{ _id: "thread-strong", _score: 0.95 }],
     });
 
-    expect(orderedMatches).toEqual([
-      "global knowledge",
-      "company knowledge",
-      "thread knowledge",
+    expect(ranked.map((entry) => entry.match._id)).toEqual([
+      "thread-strong",
+      "company-strong",
+      "global-weak",
     ]);
+  });
+
+  test("a barely relevant thread upload does not outrank a strong company match", () => {
+    // The tier preference is a tie-breaker, not an override.
+    const ranked = rankAssistantKnowledgeMatches({
+      globalMatches: [],
+      companyMatches: [{ _id: "company-strong", _score: 0.9 }],
+      threadMatches: [{ _id: "thread-weak", _score: 0.2 }],
+    });
+
+    expect(ranked[0].match._id).toBe("company-strong");
+  });
+
+  test("thread and company matches survive a large global knowledge base", () => {
+    // The regression this replaces: tiers were concatenated global-first and
+    // the caller truncates to a character budget, so with enough global chunks
+    // a just-uploaded file never reached the prompt at all.
+    const globalMatches = Array.from({ length: 60 }, (_, index) => ({
+      _id: `global-${index}`,
+      _score: 0.5,
+    }));
+
+    const ranked = rankAssistantKnowledgeMatches({
+      globalMatches,
+      companyMatches: [{ _id: "company-hit", _score: 0.7 }],
+      threadMatches: [{ _id: "thread-hit", _score: 0.72 }],
+    });
+
+    expect(ranked.slice(0, 2).map((entry) => entry.match._id)).toEqual([
+      "thread-hit",
+      "company-hit",
+    ]);
+  });
+
+  test("a thread upload still reaches the prompt when global chunks outscore it", async () => {
+    // The exact regression scenario: 40 global chunks at 1000 chars each fill
+    // the 32k budget outright, and every one of them scores higher than the
+    // file the user just uploaded.
+    const globalMatches = Array.from({ length: 40 }, (_, index) => ({
+      _id: `global-${index}`,
+      _score: 0.99,
+    }));
+
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: rankAssistantKnowledgeMatches({
+        globalMatches,
+        companyMatches: [],
+        threadMatches: [{ _id: "thread-upload", _score: 0.2 }],
+      }),
+      maxChars: 32000,
+      threadReserveRatio: 0.3,
+      loadChunk: async (id) => ({ text: `${id}:${"x".repeat(1000 - id.length - 1)}` }),
+    });
+
+    expect(selected.some((text) => text.startsWith("thread-upload:"))).toBe(true);
+    expect(selected.join("").length).toBeLessThanOrEqual(32000);
+  });
+
+  test("skips agent-scoped chunks and never double-counts the reserved pass", async () => {
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: rankAssistantKnowledgeMatches({
+        globalMatches: [{ _id: "global-agent", _score: 0.9 }],
+        companyMatches: [],
+        threadMatches: [{ _id: "thread-a", _score: 0.8 }],
+      }),
+      maxChars: 32000,
+      threadReserveRatio: 0.3,
+      loadChunk: async (id) =>
+        id === "global-agent"
+          ? { text: "agent-only knowledge", agentId: "agent_1" }
+          : { text: `${id} text` },
+    });
+
+    expect(selected).toEqual(["thread-a text"]);
+  });
+
+  test("respects the overall budget even with nothing to reserve", async () => {
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: rankAssistantKnowledgeMatches({
+        globalMatches: [
+          { _id: "a", _score: 0.9 },
+          { _id: "b", _score: 0.8 },
+        ],
+        companyMatches: [],
+        threadMatches: [],
+      }),
+      maxChars: 10,
+      threadReserveRatio: 0.3,
+      loadChunk: async () => ({ text: "12345678" }),
+    });
+
+    expect(selected).toEqual(["12345678"]);
+  });
+
+  test("equal scores fall back to thread, then company, then global", () => {
+    const ranked = rankAssistantKnowledgeMatches({
+      globalMatches: [{ _id: "global", _score: 0.5 }],
+      companyMatches: [{ _id: "company", _score: 0.5 }],
+      threadMatches: [{ _id: "thread", _score: 0.5 }],
+    });
+
+    expect(ranked.map((entry) => entry.tier)).toEqual(["thread", "company", "global"]);
   });
 
   test("wraps previous conversation turns as untrusted continuity context", () => {

@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/src/context/ToastContext";
 import { Activity, ArrowLeft, CheckCircle2, KeyRound, Loader2, Save, ShieldCheck, SlidersHorizontal, XCircle } from "lucide-react";
 
 type ConnectorDraft = {
@@ -56,11 +57,12 @@ function formatDiagnosticValue(value: unknown) {
 
 export default function ConnectorInstallPage({ params }: { params: Promise<{ id: Id<"toolConnectors"> }> }) {
   const t = useTranslations("admin.aiTools.connectorDetails");
+  const { showErrorToast } = useToast();
   const { id } = use(params);
   const details = useQuery(api.aiTools.getConnectorInstallDetails, { connectorId: id });
   const companyOptions = useQuery(api.companies.getCompanyOptions, details?.canManageTenantScope ? {} : "skip") || [];
   const updateConnectorInstall = useMutation(api.aiTools.updateConnectorInstall);
-  const testConnectorConnection = useMutation(api.aiTools.testConnectorConnection);
+  const validateConnectorConfiguration = useMutation(api.aiTools.validateConnectorConfiguration);
   const beginConnectorOAuth = useMutation(api.aiTools.beginConnectorOAuth);
   const completeConnectorOAuth = useMutation(api.aiTools.completeConnectorOAuth);
   const disconnectConnectorOAuth = useMutation(api.aiTools.disconnectConnectorOAuth);
@@ -120,7 +122,7 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
       });
       setDraft(null);
     } catch (error) {
-      console.error(error);
+      showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
       setIsSaving(false);
     }
@@ -130,9 +132,9 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
     if (isTesting) return;
     setIsTesting(true);
     try {
-      await testConnectorConnection({ connectorId: id });
+      await validateConnectorConfiguration({ connectorId: id });
     } catch (error) {
-      console.error(error);
+      showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
       setIsTesting(false);
     }
@@ -145,7 +147,7 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
       const result = await beginConnectorOAuth({ connectorId: id });
       setOauthState(result.state);
     } catch (error) {
-      console.error(error);
+      showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
       setIsAuthorizing(false);
     }
@@ -165,7 +167,7 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
       setOauthAccountRef("");
       setOauthTokenRef("");
     } catch (error) {
-      console.error(error);
+      showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
       setIsCompletingOAuth(false);
     }
@@ -177,7 +179,7 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
     try {
       await disconnectConnectorOAuth({ connectorId: id });
     } catch (error) {
-      console.error(error);
+      showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
       setIsAuthorizing(false);
     }

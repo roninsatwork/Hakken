@@ -139,4 +139,23 @@ describe("ai provider retry service", () => {
     expect(operation).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledTimes(1);
   });
+
+  test("does not retry once the caller says the operation is no longer repeatable", async () => {
+    // A streamed reply that has already shown text to a reader cannot be
+    // retried: the answer would restart and duplicate what they saw.
+    const sleep = vi.fn(async () => {});
+    const operation = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+
+    await expect(withProviderRetry({
+      providerName: "Google Vertex AI",
+      operation: "generateContentStream",
+      policy: { maxAttempts: 3, baseDelayMs: 10, maxDelayMs: 10, jitterRatio: 0, sleep },
+      shouldRetry: () => false,
+    }, operation)).rejects.toThrow("fetch failed");
+
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
 });

@@ -2,6 +2,7 @@ import { internalMutation, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
+import { publicMutation } from "./tenantFunctions";
 
 export const localTestRoleValidator = v.union(
   v.literal("super-admin"),
@@ -115,7 +116,8 @@ export const seedInternal = internalMutation({
   },
 });
 
-export const seed = mutation({
+export const seed = publicMutation({
+  reason: "Local sign-in helper for development. Gated on LOCAL_TEST_AUTH_ENABLED, refuses to run in production, and requires a shared secret.",
   args: { secret: v.string() },
   handler: async (ctx, args) => {
     return await seedLocalTestAuth(ctx, args.secret);

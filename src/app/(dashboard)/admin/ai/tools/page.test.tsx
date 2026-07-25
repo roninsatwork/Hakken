@@ -25,6 +25,8 @@ vi.mock("next-intl", () => ({
       title: "Connector Marketplace",
       subtitle: "Install governed connector definitions.",
       untested: "UNTESTED",
+      "availability.unavailable": "NOT AVAILABLE",
+      "availability.partial": `${values?.available ?? 0} OF ${values?.total ?? 0} AVAILABLE`,
     };
     return labels[key] ?? key;
   },
@@ -87,6 +89,37 @@ const marketplace = [
       installStatus: "INSTALLED",
       testStatus: "SUCCESS",
     },
+    executableToolCount: 1,
+    totalToolCount: 1,
+    availability: "AVAILABLE",
+  },
+  {
+    key: "slack",
+    name: "Slack",
+    description: "Send Slack messages.",
+    category: "CUSTOM",
+    authMode: "OAUTH",
+    requiredScopes: ["chat:write"],
+    requiredSecretRefs: [],
+    toolDefinitions: [],
+    installation: null,
+    executableToolCount: 0,
+    totalToolCount: 1,
+    availability: "UNAVAILABLE",
+  },
+  {
+    key: "jira",
+    name: "Jira",
+    description: "Search and comment on issues.",
+    category: "CUSTOM",
+    authMode: "OAUTH",
+    requiredScopes: ["read:jira-work"],
+    requiredSecretRefs: [],
+    toolDefinitions: [],
+    installation: null,
+    executableToolCount: 1,
+    totalToolCount: 2,
+    availability: "PARTIAL",
   },
 ];
 
@@ -156,5 +189,40 @@ describe("ConnectorsDashboard", () => {
     await waitFor(() => {
       expect(deleteTool).toHaveBeenCalledWith({ id: "tool_1" });
     });
+  });
+});
+
+describe("connector availability badges", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "Exhausted",
+      loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
+    vi.mocked(useQuery).mockReturnValue(marketplace as unknown as ReturnType<typeof useQuery>);
+    vi.mocked(useMutation).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useMutation>);
+  });
+
+  it("marks a connector with no working implementation", () => {
+    // 21 connectors were presented identically while 2 could execute. An admin
+    // could install one, assign it to an agent, and only find out it did nothing
+    // by reading a run log afterwards.
+    render(<ConnectorsDashboard />);
+
+    expect(screen.getByTestId("connector-availability-slack")).toHaveTextContent("NOT AVAILABLE");
+  });
+
+  it("says how much of a partly-built connector works", () => {
+    render(<ConnectorsDashboard />);
+
+    expect(screen.getByTestId("connector-availability-jira")).toHaveTextContent("1 OF 2 AVAILABLE");
+  });
+
+  it("leaves a fully working connector unbadged", () => {
+    // The badge has to mean something, so it must not appear on everything.
+    render(<ConnectorsDashboard />);
+
+    expect(screen.queryByTestId("connector-availability-sonae-knowledge")).not.toBeInTheDocument();
   });
 });

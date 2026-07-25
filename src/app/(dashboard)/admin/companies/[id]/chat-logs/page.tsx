@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   Search,
@@ -28,6 +29,7 @@ import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTel
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
 
 export default function CompanyChatLogsDashboard() {
+  const { platformName } = useSystemSettings();
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const aiChatLogsHref = `/admin/companies/${companyId}/ai/chat-logs`;
@@ -78,6 +80,7 @@ export default function CompanyChatLogsDashboard() {
       thread: activeThread,
       messages,
       userLabel: "Visitor",
+      assistantLabel: platformName,
     });
     
     try {

@@ -51,7 +51,7 @@ describe("Plans Authorization", () => {
       messageLimit: 1,
       priceGBP: 1,
       isActive: true,
-    })).rejects.toThrow("Unauthorized access. Super Admin role required.");
+    })).rejects.toThrow("Unauthorized");
 
     const foreignStatus = await adminBClient.query(api.plans.getCompanyPlanStatus, { companyId: companyAId });
     expect(foreignStatus).toBeNull();
@@ -103,7 +103,7 @@ describe("Plans Authorization", () => {
 
     const userClient = t.withIdentity({ subject: userId });
 
-    await expect(t.query(api.plans.getPlans, {})).rejects.toThrow("Unauthenticated request");
+    await expect(t.query(api.plans.getPlans, {})).rejects.toThrow("Unauthenticated");
     expect((await userClient.query(api.plans.getPlans, {})).map((plan) => plan._id)).toEqual([
       activePlanId,
       inactivePlanId,

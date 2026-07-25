@@ -9,6 +9,7 @@ import {
   requireSuperAdmin,
 } from "./authz";
 import { digestWidgetAccessToken } from "./chatService";
+import { allowsAnyDomain, isHostAllowed, parseHostFromUrl } from "./utils/widgetOriginPolicy";
 import {
   validateAdminImageMetadata,
   validateStoredUpload,
@@ -16,6 +17,7 @@ import {
 } from "./utils/uploadPolicy";
 import { DEFAULT_SETTINGS, isStorageLogoReference } from "./settingsService";
 import type { QueryCtx } from "./_generated/server";
+import { adminMutation, adminQuery, publicMutation, publicQuery, superAdminQuery } from "./tenantFunctions";
 
 async function getSystemWidgetBranding(ctx: QueryCtx) {
   const settings = await ctx.db.query("systemSettings").first();
@@ -34,10 +36,10 @@ async function getSystemWidgetBranding(ctx: QueryCtx) {
   };
 }
 
-export const getWidgetsByCompany = query({
+export const getWidgetsByCompany = adminQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized Access", "Unauthorized");
+    const { user } = ctx;
     assertAdminCanAccessCompany(user, args.companyId, "Unauthorized Access");
 
     return await ctx.db
@@ -47,10 +49,10 @@ export const getWidgetsByCompany = query({
   },
 });
 
-export const getPrimaryWidgetByCompany = query({
+export const getPrimaryWidgetByCompany = adminQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized Access", "Unauthorized");
+    const { user } = ctx;
     assertAdminCanAccessCompany(user, args.companyId, "Unauthorized Access");
 
     return await ctx.db
@@ -61,11 +63,9 @@ export const getPrimaryWidgetByCompany = query({
   },
 });
 
-export const getGlobalWidgets = query({
+export const getGlobalWidgets = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized Access", "Unauthorized");
-
     return await ctx.db
       .query("widgets")
       .withIndex("by_global", (q) => q.eq("isGlobal", true))
@@ -73,11 +73,9 @@ export const getGlobalWidgets = query({
   },
 });
 
-export const getPrimaryGlobalWidget = query({
+export const getPrimaryGlobalWidget = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized Access", "Unauthorized");
-
     return await ctx.db
       .query("widgets")
       .withIndex("by_global_created", (q) => q.eq("isGlobal", true))
@@ -86,7 +84,8 @@ export const getPrimaryGlobalWidget = query({
   },
 });
 
-export const getWidgetById = query({
+export const getWidgetById = publicQuery({
+  reason: "Widget iframes load their own theme and config before any visitor signs in.",
   args: { widgetId: v.id("widgets") },
   handler: async (ctx, args) => {
     // PUBLIC endpoint for the iframe (no auth required here to load config, but we omit sensitive data)
@@ -122,7 +121,7 @@ export const getWidgetById = query({
   },
 });
 
-export const saveWidget = mutation({
+export const saveWidget = adminMutation({
   args: {
     widgetId: v.optional(v.id("widgets")),
     companyId: v.optional(v.id("companies")),
@@ -143,7 +142,7 @@ export const saveWidget = mutation({
     isGlobal: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
+    const { userId, user } = ctx;
 
     if (user.role !== "SUPER_ADMIN") {
       if (args.isGlobal || !args.companyId) {
@@ -238,13 +237,13 @@ export const saveWidget = mutation({
   },
 });
 
-export const deleteWidget = mutation({
+export const deleteWidget = adminMutation({
   args: {
     widgetId: v.id("widgets"),
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthorized");
+    const { userId, user } = ctx;
 
     const widget = await ctx.db.get(args.widgetId);
     
@@ -272,7 +271,8 @@ export const deleteWidget = mutation({
   },
 });
 
-export const generateWidgetUploadUrl = mutation({
+export const generateWidgetUploadUrl = publicMutation({
+  reason: "Anonymous widget visitors attach files; validated against the widget upload policy.",
   args: { 
     widgetId: v.id("widgets"),
     threadId: v.id("threads"),
@@ -306,7 +306,8 @@ export const generateWidgetUploadUrl = mutation({
   },
 });
 
-export const finalizeWidgetUpload = mutation({
+export const finalizeWidgetUpload = publicMutation({
+  reason: "Completes an anonymous widget visitor's upload; validated against the widget upload policy.",
   args: {
     widgetId: v.id("widgets"),
     threadId: v.id("threads"),
@@ -332,7 +333,8 @@ export const finalizeWidgetUpload = mutation({
 });
 
 // Specialized thread creator for anonymous widget interactions
-export const createWidgetThread = mutation({
+export const createWidgetThread = publicMutation({
+  reason: "Anonymous site visitors start widget conversations; embedding is enforced by the per-widget frame-ancestors header in src/proxy.ts.",
   args: {
     widgetId: v.id("widgets"),
     sourceUrl: v.string(),
@@ -344,53 +346,22 @@ export const createWidgetThread = mutation({
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
 
-    // Zero-Trust Enforcer: Validate origin against allowed domains
-    let isAllowed = false;
-    
-    if (widget.allowedDomains && widget.allowedDomains.includes("*")) {
-        isAllowed = true;
-    } else if (widget.allowedDomains && widget.allowedDomains.length > 0) {
-        // Enforce strict absolute URL syntax (prevent tricks or path traversal)
-        if (!args.sourceUrl.startsWith("http://") && !args.sourceUrl.startsWith("https://")) {
-            await ctx.db.insert("auditLogs", {
-              actorId: widget.createdBy,
-              actionType: "BLOCKED_WIDGET_ACCESS",
-              entityId: args.widgetId.toString(),
-              entityType: "widgets",
-              companyId: widget.companyId,
-              timestamp: Date.now(),
-              metadata: JSON.stringify({ sourceUrl: args.sourceUrl, reason: "URL protocol must be http:// or https://" })
-            });
-            throw new Error("Unauthorized: Invalid source URL format. Protocol must be http:// or https://");
-        }
+    // `sourceUrl` is reported by code running inside the widget iframe, which
+    // means it is attacker-controlled: anyone can call this mutation directly
+    // with an approved-looking value. It is NOT the security boundary, despite
+    // what earlier comments here claimed.
+    //
+    // Embedding is actually enforced by the per-widget `frame-ancestors`
+    // header emitted in `src/proxy.ts`, which the browser evaluates against the
+    // real embedding page. The check below is a secondary sanity filter that
+    // rejects obvious misuse and produces audit signal; it shares
+    // `widgetOriginPolicy` with the middleware so the two cannot drift apart.
+    const reportedHost = parseHostFromUrl(args.sourceUrl);
+    const passesReportedOriginCheck = allowsAnyDomain(widget.allowedDomains)
+      ? true
+      : reportedHost !== null && isHostAllowed(reportedHost, widget.allowedDomains);
 
-        let parsedOrigin;
-        try {
-            const urlObj = new URL(args.sourceUrl);
-            if (urlObj.username || urlObj.password) {
-                throw new Error("URL contains credentials");
-            }
-            parsedOrigin = urlObj.hostname.toLowerCase();
-        } catch {
-            await ctx.db.insert("auditLogs", {
-              actorId: widget.createdBy,
-              actionType: "BLOCKED_WIDGET_ACCESS",
-              entityId: args.widgetId.toString(),
-              entityType: "widgets",
-              companyId: widget.companyId,
-              timestamp: Date.now(),
-              metadata: JSON.stringify({ sourceUrl: args.sourceUrl, reason: "URL contains credentials or invalid syntax" })
-            });
-            throw new Error("Unauthorized: Invalid source URL.");
-        }
-
-        isAllowed = widget.allowedDomains.some(domain => {
-            const normalizedDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-            return parsedOrigin === normalizedDomain || parsedOrigin.endsWith("." + normalizedDomain);
-        });
-    }
-
-    if (!isAllowed) {
+    if (!passesReportedOriginCheck) {
         await ctx.db.insert("auditLogs", {
           actorId: widget.createdBy,
           actionType: "BLOCKED_WIDGET_ACCESS",
@@ -398,7 +369,13 @@ export const createWidgetThread = mutation({
           entityType: "widgets",
           companyId: widget.companyId,
           timestamp: Date.now(),
-          metadata: JSON.stringify({ sourceUrl: args.sourceUrl, reason: "Domain origin is not whitelisted" })
+          metadata: JSON.stringify({
+            sourceUrl: args.sourceUrl,
+            reason: reportedHost === null
+              ? "Reported source URL was not an absolute http(s) URL without credentials"
+              : "Reported source host is not in the widget allowlist",
+            note: "Reported by the client and therefore untrusted; frame-ancestors is the enforced control.",
+          })
         });
         throw new Error("Unauthorized: Source origin is not authorized for this widget.");
     }

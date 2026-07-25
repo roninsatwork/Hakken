@@ -23,6 +23,7 @@ import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/Adm
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 type CompanyEvalRun = Doc<"companyEvalRuns">;
@@ -81,11 +82,13 @@ export default function CompanyAiEvalsPage() {
   );
 
   const [archiveTarget, setArchiveTarget] = useState<CompanyEvalCase | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [runningBatchMode, setRunningBatchMode] = useState<BatchMode | null>(null);
-  const [batchFeedback, setBatchFeedback] = useState("");
-  const [batchError, setBatchError] = useState("");
+  const [batchSummary, setBatchSummary] = useState("");
   const [expandedCaseId, setExpandedCaseId] = useState<Id<"companyEvalCases"> | null>(null);
+
+  // The batch banner sits on the page permanently, so archiving keeps its own
+  // runner — otherwise a failed archive would surface in the batch banner.
+  const batchAction = useAdminAction({ scope: "admin-company-evals-batch" });
+  const archiveAction = useAdminAction({ scope: "admin-company-evals-archive" });
 
   const activeRuns = useQuery(
     api.companyEvals.getRunsForCase,
@@ -94,37 +97,31 @@ export default function CompanyAiEvalsPage() {
 
   const handleArchiveCase = async () => {
     if (!archiveTarget) return;
-    setIsSubmitting(true);
-    try {
-      await archiveCase({ evalCaseId: archiveTarget._id });
-      if (expandedCaseId === archiveTarget._id) setExpandedCaseId(null);
-      setArchiveTarget(null);
-    } finally {
-      setIsSubmitting(false);
-    }
+    const outcome = await archiveAction.run(() => archiveCase({ evalCaseId: archiveTarget._id }), {
+      fallbackMessage: "The eval case could not be archived.",
+    });
+    if (!outcome.ok) return;
+    if (expandedCaseId === archiveTarget._id) setExpandedCaseId(null);
+    setArchiveTarget(null);
   };
 
   const handleRunBatch = async (mode: BatchMode) => {
-    setRunningBatchMode(mode);
-    setBatchFeedback("");
-    setBatchError("");
-    try {
-      const result = await runBatch({ companyId, mode });
-      if (result.selected === 0) {
-        setBatchFeedback("No evals needed a batch run. Everything active already has passing evidence.");
-        return;
-      }
-      setBatchFeedback(
-        `Ran ${result.selected} eval${result.selected === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.needsReview} need review.`
-      );
-    } catch (error) {
-      setBatchError(error instanceof Error ? error.message : "Eval batch could not be run.");
-    } finally {
-      setRunningBatchMode(null);
-    }
+    setBatchSummary("");
+    const outcome = await batchAction.run(() => runBatch({ companyId, mode }), {
+      key: `batch:${mode}`,
+      fallbackMessage: "Eval batch could not be run.",
+      suppressErrorToast: true,
+    });
+    if (!outcome.ok) return;
+    const result = outcome.data;
+    setBatchSummary(
+      result.selected === 0
+        ? "No evals needed a batch run. Everything active already has passing evidence."
+        : `Ran ${result.selected} eval${result.selected === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.needsReview} need review.`
+    );
   };
 
-  const isBatchRunning = runningBatchMode !== null;
+  const isBatchRunning = batchAction.isBusy();
   const hasActiveCases = (summary?.totalCases ?? 0) > 0;
 
   return (
@@ -170,13 +167,13 @@ export default function CompanyAiEvalsPage() {
         </div>
       </section>
 
-      {(batchFeedback || batchError) && (
+      {(batchSummary || batchAction.error) && (
         <section className={`rounded-[8px] border px-4 py-3 text-[13px] ${
-          batchError ? "border-red-500/20 bg-red-500/10 text-red-200" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+          batchAction.error ? "border-red-500/20 bg-red-500/10 text-red-200" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
         }`}>
           <div className="flex items-start gap-3">
-            {batchError ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
-            <p>{batchError || batchFeedback}</p>
+            {batchAction.error ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
+            <p>{batchAction.error || batchSummary}</p>
           </div>
         </section>
       )}
@@ -199,7 +196,7 @@ export default function CompanyAiEvalsPage() {
               disabled={isBatchRunning || !hasActiveCases || (summary?.failedOrNotRunCases ?? 0) === 0}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {runningBatchMode === "FAILED_OR_NOT_RUN" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              {batchAction.isBusy("batch:FAILED_OR_NOT_RUN") ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
               Run failed/not run
             </button>
             <button
@@ -208,7 +205,7 @@ export default function CompanyAiEvalsPage() {
               disabled={isBatchRunning || !hasActiveCases}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {runningBatchMode === "ALL" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {batchAction.isBusy("batch:ALL") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
               Run all
             </button>
             <Link
@@ -337,11 +334,11 @@ export default function CompanyAiEvalsPage() {
             This removes the eval case from active readiness scoring. Existing run evidence remains available in audit records.
           </p>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button type="button" onClick={() => setArchiveTarget(null)} disabled={isSubmitting} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
+            <button type="button" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleArchiveCase} disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+            <button type="button" onClick={handleArchiveCase} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+              {archiveAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
               Archive
             </button>
           </div>

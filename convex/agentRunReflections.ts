@@ -1,8 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+
 import type { Doc } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 
 const REFLECTION_DETAIL_LIMIT = 200;
 const REFLECTION_TEXT_LIMIT = 1200;
@@ -35,6 +36,10 @@ function getFailedStep(steps: Doc<"agentRunSteps">[]) {
 
 function getRelevantToolCall(toolCalls: Doc<"agentToolCalls">[]) {
   return toolCalls.find((toolCall) => toolCall.status === "FAILED")
+    // A missing connector is the most actionable thing a reflection can surface:
+    // it points at a capability gap rather than at the agent's reasoning, and
+    // no amount of prompt tuning will fix it.
+    || toolCalls.find((toolCall) => toolCall.status === "NOT_IMPLEMENTED")
     || toolCalls.find((toolCall) => toolCall.status === "DENIED")
     || toolCalls.find((toolCall) => toolCall.status === "CANCELLED")
     || toolCalls.find((toolCall) => toolCall.status === "APPROVAL_REQUIRED");
@@ -176,12 +181,12 @@ function getConfidence(category: ReflectionCategory) {
   return 0.85;
 }
 
-export const createForRun = mutation({
+export const createForRun = adminMutation({
   args: {
     runId: v.id("agentRuns"),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -310,13 +315,13 @@ export const createForRun = mutation({
   },
 });
 
-export const dismissReflection = mutation({
+export const dismissReflection = adminMutation({
   args: {
     reflectionId: v.id("agentRunReflections"),
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { userId, user } = ctx;
     const reflection = await ctx.db.get(args.reflectionId);
     if (!reflection) throw new Error("Reflection not found");
     assertAdminCanAccessCompany(user, reflection.companyId);
@@ -351,13 +356,13 @@ export const dismissReflection = mutation({
   },
 });
 
-export const getForRun = query({
+export const getForRun = adminQuery({
   args: {
     runId: v.id("agentRuns"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
@@ -370,12 +375,12 @@ export const getForRun = query({
   },
 });
 
-export const getRecentForAgent = query({
+export const getRecentForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
       throw new Error("Unauthorized");
     }

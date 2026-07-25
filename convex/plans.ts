@@ -11,12 +11,14 @@ import {
   getPlanStatusFromUser,
 } from "./planService";
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
+import { publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 
 const superAdminPlanMessage = "Unauthorized access. Super Admin role required.";
 const PLAN_CATALOG_LIMIT = 100;
 const BILLING_RESET_BATCH_SIZE = 500;
 
-export const getMyCompanyPlanStatus = query({
+export const getMyCompanyPlanStatus = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
   handler: async (ctx) => {
     const current = await getCurrentUser(ctx);
@@ -39,7 +41,8 @@ export const getMyCompanyPlanStatus = query({
   }
 });
 
-export const getCompanyPlanStatus = query({
+export const getCompanyPlanStatus = publicQuery({
+  reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
     const current = await getCurrentUser(ctx);
@@ -57,24 +60,20 @@ export const getCompanyPlanStatus = query({
   }
 });
 
-export const getPlans = query({
+export const getPlans = tenantQuery({
   args: {},
   handler: async (ctx) => {
     // Anyone authenticated can read available plans
-    await requireCurrentUser(ctx, "Unauthenticated request");
-
     return await ctx.db.query("plans").order("asc").take(PLAN_CATALOG_LIMIT);
   },
 });
 
-export const getPaginatedPlans = query({
+export const getPaginatedPlans = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
-
     const searchTerm = args.searchTerm?.trim();
 
     return searchTerm
@@ -90,11 +89,9 @@ export const getPaginatedPlans = query({
   },
 });
 
-export const getActivePlans = query({
+export const getActivePlans = tenantQuery({
   args: {},
   handler: async (ctx) => {
-    await requireCurrentUser(ctx, "Unauthenticated request");
-
     return await ctx.db
       .query("plans")
       .withIndex("by_active", (q) => q.eq("isActive", true))
@@ -103,7 +100,7 @@ export const getActivePlans = query({
   },
 });
 
-export const createPlan = mutation({
+export const createPlan = superAdminMutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
@@ -112,8 +109,6 @@ export const createPlan = mutation({
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
-
     const planId = await ctx.db.insert("plans", buildPlanRecord({
       name: args.name,
       description: args.description,
@@ -130,7 +125,7 @@ export const createPlan = mutation({
   },
 });
 
-export const updatePlan = mutation({
+export const updatePlan = superAdminMutation({
   args: {
     id: v.id("plans"),
     name: v.optional(v.string()),
@@ -140,8 +135,6 @@ export const updatePlan = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
-
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
     const plan = await ctx.db.get(id);
@@ -151,11 +144,9 @@ export const updatePlan = mutation({
   },
 });
 
-export const deletePlan = mutation({
+export const deletePlan = superAdminMutation({
   args: { id: v.id("plans") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, superAdminPlanMessage, "Unauthenticated request");
-
     // Ensure we don't delete plans strictly assigned to companies
     const companiesAssigned = await ctx.db
       .query("companies")

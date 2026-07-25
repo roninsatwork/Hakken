@@ -6,8 +6,9 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
-import { buildEmailFromAddress } from "./emailBrandingService";
+import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
+import { tenantAction } from "./tenantFunctions";
 import {
   buildActionRequest,
   buildActionResponseOutput,
@@ -110,7 +111,7 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
     nodeData: args.currentNodeData,
     globalStatePayload: args.globalStatePayload,
     defaultFromAddress: buildEmailFromAddress({
-      envFromAddress: process.env.RESEND_FROM_EMAIL,
+      envFromAddress: resolveEnvFromAddress(process.env),
       fallbackName: "Sonae Automations",
       settings: emailBranding,
     }),
@@ -349,7 +350,7 @@ export const executeNode = internalAction({
   },
 });
 
-export const resumeApprovalStep = action({
+export const resumeApprovalStep = tenantAction({
   args: {
     executionId: v.id("workflowExecutions"),
     nodeId: v.string(),
@@ -357,8 +358,6 @@ export const resumeApprovalStep = action({
     action: v.union(v.literal("APPROVED"), v.literal("REJECTED"))
   },
   handler: async (ctx, args) => {
-    await requireActionUser(ctx, "Unauthorized");
-
     if (args.action === "REJECTED") {
         await ctx.runMutation(internal.workflowEngine.failNodeStep, {
             executionId: args.executionId,

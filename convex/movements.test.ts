@@ -3,6 +3,10 @@ import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 
+// Auth moved from a manual getAuthUserId check inside each function to the
+// shared tenant builders, so an anonymous caller is now rejected before the
+// handler runs. The message is "Unauthenticated" rather than "Unauthorized",
+// which is also more accurate for a caller with no session at all.
 describe("Movements API Authentication Hardening", () => {
   test("Anonymous (unauthenticated) client is strictly rejected from all movements operations", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -20,17 +24,17 @@ describe("Movements API Authentication Hardening", () => {
     // 1. list query
     await expect(
       t.query(api.movements.list)
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
 
     // 2. paginated list query
     await expect(
       t.query(api.movements.getPaginated, { paginationOpts: { numItems: 15, cursor: null } })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
 
     // 3. get query
     await expect(
       t.query(api.movements.get, { id: movementId })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
 
     // 4. create mutation
     await expect(
@@ -39,17 +43,17 @@ describe("Movements API Authentication Hardening", () => {
         difficulty: "Intermediate",
         poseData: "[]"
       })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
 
     // 5. remove mutation
     await expect(
       t.mutation(api.movements.remove, { id: movementId })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
 
     // 6. generateUploadUrl mutation
     await expect(
       t.mutation(api.movements.generateUploadUrl)
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
 
     const storageId = await t.run(async (ctx) => {
       return await ctx.storage.store(new Blob(["test content"], { type: "text/plain" }));
@@ -58,7 +62,7 @@ describe("Movements API Authentication Hardening", () => {
     // 7. getFileUrl query
     await expect(
       t.query(api.movements.getFileUrl, { storageId })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow("Unauthenticated");
   });
 
   test("Authenticated USER can access movements operations successfully", async () => {

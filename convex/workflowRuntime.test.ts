@@ -187,6 +187,7 @@ describe("workflow runtime actions", () => {
     }
   });
 
+  // template:remove:start properties
   test("executeNode handles database, merge, and email nodes", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -315,6 +316,7 @@ describe("workflow runtime actions", () => {
       bodyPreview: "<p>Approved</p>",
     });
   });
+  // template:remove:end
 
   test("executeNode failure marks the claimed step and execution as failed", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));

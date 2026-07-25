@@ -18,6 +18,16 @@ import {
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 
+// Mirrors the list page's RiskBadge. This was previously hardcoded to the
+// emerald "low risk" styling, so a MEDIUM or HIGH risk script was presented as
+// safe on the very screen where it is run. Unknown values fall back to the
+// most cautious styling rather than the least.
+const RISK_BADGE_CLASSES: Record<string, string> = {
+  LOW: "bg-emerald-500/10 text-emerald-500",
+  MEDIUM: "bg-amber-500/10 text-amber-500",
+  HIGH: "bg-red-500/10 text-red-500",
+};
+
 function formatDate(timestamp?: number) {
   if (!timestamp) return "Never";
   return new Intl.DateTimeFormat("en-GB", {
@@ -122,7 +132,7 @@ export default function MaintenanceScriptDetailPage() {
           <p className="text-[13px] text-secondary tracking-wide max-w-2xl">{script.shortDescription}</p>
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <span className="px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">{script.category}</span>
-            <span className="px-2 py-1 rounded-[6px] text-[11px] font-medium bg-emerald-500/10 text-emerald-500">{script.riskLevel} risk</span>
+            <span className={`px-2 py-1 rounded-[6px] text-[11px] font-medium ${RISK_BADGE_CLASSES[script.riskLevel] ?? RISK_BADGE_CLASSES.HIGH}`}>{script.riskLevel} risk</span>
             <StatusBadge status={script.lastRun?.status} />
           </div>
         </div>

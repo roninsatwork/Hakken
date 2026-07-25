@@ -14,6 +14,8 @@ export const DEFAULT_SETTINGS = {
   logoUrlDark: undefined as string | undefined,
   emailSenderName: undefined as string | undefined,
   emailSenderAddress: undefined as string | undefined,
+  salesContactEmail: undefined as string | undefined,
+  navigationProfileKey: undefined as string | undefined,
 
   lightBg: undefined as string | undefined,
   lightFg: undefined as string | undefined,

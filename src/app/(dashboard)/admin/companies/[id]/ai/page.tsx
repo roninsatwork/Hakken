@@ -26,6 +26,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type ReadinessTone = "ready" | "review" | "blocked" | "planned";
 
@@ -279,8 +280,8 @@ export default function CompanyAiOverviewPage() {
   const baseHref = `/admin/companies/${companyId}`;
   const aiHref = `${baseHref}/ai`;
   const recordReadinessSnapshot = useMutation(api.companyReadiness.recordReadinessSnapshot);
-  const [isRecordingSnapshot, setIsRecordingSnapshot] = useState(false);
-  const [snapshotFeedback, setSnapshotFeedback] = useState("");
+  const [snapshotSummary, setSnapshotSummary] = useState("");
+  const action = useAdminAction({ scope: "admin-company-ai" });
 
   const company = useQuery(api.companies.getCompanyById, { id: companyId });
   const knowledgeSummary = useQuery(api.knowledge.getQualitySummary, { companyId });
@@ -622,16 +623,15 @@ export default function CompanyAiOverviewPage() {
   const quietItems = readinessItems.filter((item) => getHealthGroup(item) === "quiet");
 
   const handleRecordSnapshot = async () => {
-    setIsRecordingSnapshot(true);
-    setSnapshotFeedback("");
-    try {
-      const snapshot = await recordReadinessSnapshot({ companyId });
-      setSnapshotFeedback(`Snapshot recorded: ${getReadinessStateLabel(snapshot.state)} at ${formatPercent(snapshot.score)}.`);
-    } catch (error) {
-      setSnapshotFeedback(error instanceof Error ? error.message : "Readiness snapshot could not be recorded.");
-    } finally {
-      setIsRecordingSnapshot(false);
-    }
+    setSnapshotSummary("");
+    const outcome = await action.run(() => recordReadinessSnapshot({ companyId }), {
+      fallbackMessage: "Readiness snapshot could not be recorded.",
+      suppressErrorToast: true,
+    });
+    if (!outcome.ok) return;
+    setSnapshotSummary(
+      `Snapshot recorded: ${getReadinessStateLabel(outcome.data.state)} at ${formatPercent(outcome.data.score)}.`,
+    );
   };
 
   if (isLoading) {
@@ -825,16 +825,16 @@ export default function CompanyAiOverviewPage() {
             <button
               type="button"
               onClick={handleRecordSnapshot}
-              disabled={isRecordingSnapshot}
+              disabled={action.isBusy()}
               className="inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-brand/20 bg-brand/10 px-3 text-[12px] font-semibold text-brand transition-colors hover:bg-brand/15 disabled:opacity-50"
             >
-              {isRecordingSnapshot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ClipboardCheck className="h-3.5 w-3.5" />}
+              {action.isBusy() ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ClipboardCheck className="h-3.5 w-3.5" />}
               Snapshot
             </button>
           </div>
-          {snapshotFeedback && (
+          {(snapshotSummary || action.error) && (
             <div className="mt-3 rounded-[8px] border border-border-dim bg-background/50 px-3 py-2 text-[12px] text-secondary">
-              {snapshotFeedback}
+              {snapshotSummary || action.error}
             </div>
           )}
           <div className="mt-4 flex flex-col gap-2">

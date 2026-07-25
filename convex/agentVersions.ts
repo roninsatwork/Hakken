@@ -1,16 +1,17 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+
+import { adminMutation, adminQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 
-export const createSnapshot = mutation({
+export const createSnapshot = adminMutation({
   args: {
     agentId: v.id("agents"),
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
     let companyId = args.companyId;
@@ -28,13 +29,13 @@ export const createSnapshot = mutation({
   },
 });
 
-export const getForAgent = query({
+export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     if (user.role === "ADMIN") {
       if (!user.companyId) throw new Error("Unauthorized");
       return await ctx.db
@@ -54,12 +55,12 @@ export const getForAgent = query({
   },
 });
 
-export const getVersionDetail = query({
+export const getVersionDetail = adminQuery({
   args: {
     versionId: v.id("agentVersions"),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireAdmin(ctx, "Unauthorized", "Unauthenticated request");
+    const { user } = ctx;
     const version = await ctx.db.get(args.versionId);
     if (!version) return null;
     assertAdminCanAccessCompany(user, version.companyId);

@@ -34,9 +34,7 @@ describe("AI Tools Authorization", () => {
     const userClient = t.withIdentity({ subject: userId });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    await expect(userClient.mutation(api.aiTools.createTool, toolInput)).rejects.toThrow(
-      "Unauthorized: Only Super Admins can register system execution hooks."
-    );
+    await expect(userClient.mutation(api.aiTools.createTool, toolInput)).rejects.toThrow("Unauthorized");
 
     const toolId = await superAdminClient.mutation(api.aiTools.createTool, toolInput);
     const tool = await t.run(async (ctx) => await ctx.db.get(toolId));
@@ -101,7 +99,7 @@ describe("AI Tools Authorization", () => {
 
     const userClient = t.withIdentity({ subject: userId });
 
-    await expect(t.query(api.aiTools.getToolById, { id: toolId })).rejects.toThrow("Unauthenticated request");
+    await expect(t.query(api.aiTools.getToolById, { id: toolId })).rejects.toThrow("Unauthenticated");
     expect(await t.query(api.aiTools.getTools, {})).toEqual([]);
 
     const tools = await userClient.query(api.aiTools.getTools, {});
@@ -137,12 +135,10 @@ describe("AI Tools Authorization", () => {
     const superAdminClient = t.withIdentity({ subject: superAdminId });
     const adminClient = t.withIdentity({ subject: adminId });
 
-    await expect(adminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" })).rejects.toThrow(
-      "Unauthorized: Only Super Admins can install connectors."
-    );
+    await expect(adminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" })).rejects.toThrow("Unauthorized");
 
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" });
-    const connectionTest = await superAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId });
+    const connectionTest = await superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId });
     const { connector, tools } = await t.run(async (ctx) => ({
       connector: await ctx.db.get(connectorId),
       tools: await ctx.db
@@ -156,7 +152,8 @@ describe("AI Tools Authorization", () => {
 
     expect(connectionTest).toMatchObject({
       ok: true,
-      message: "Connection test passed.",
+      message: "Configuration valid — not yet verified against the provider.",
+      // Nothing was contacted: this asserts local configuration only.,
       missingSecretRefs: [],
     });
     expect(connector).toMatchObject({
@@ -182,7 +179,8 @@ describe("AI Tools Authorization", () => {
     expect(details.testLogs).toHaveLength(1);
     expect(details.testLogs[0]).toMatchObject({
       status: "SUCCESS",
-      message: "Connection test passed.",
+      message: "Configuration valid — not yet verified against the provider.",
+      // Nothing was contacted: this asserts local configuration only.,
     });
   });
 
@@ -198,7 +196,7 @@ describe("AI Tools Authorization", () => {
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "sonae-knowledge" });
-    await superAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId });
+    await superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId });
     await expect(
       superAdminClient.mutation(api.aiTools.updateConnectorInstall, {
         connectorId,
@@ -267,10 +265,10 @@ describe("AI Tools Authorization", () => {
       companyId,
     });
 
-    await expect(otherAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).rejects.toThrow(
+    await expect(otherAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })).rejects.toThrow(
       "Unauthorized"
     );
-    await expect(adminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).resolves.toMatchObject({
+    await expect(adminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })).resolves.toMatchObject({
       ok: true,
     });
 
@@ -309,7 +307,7 @@ describe("AI Tools Authorization", () => {
       tenantAvailability: "GLOBAL",
     });
 
-    await expect(adminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).rejects.toThrow("Unauthorized");
+    await expect(adminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })).rejects.toThrow("Unauthorized");
     await expect(
       superAdminClient.mutation(api.aiTools.updateConnectorInstall, {
         connectorId,
@@ -317,7 +315,7 @@ describe("AI Tools Authorization", () => {
         companyId,
       })
     ).resolves.toBe(connectorId);
-    await expect(adminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).resolves.toMatchObject({
+    await expect(adminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })).resolves.toMatchObject({
       ok: true,
     });
 
@@ -350,7 +348,7 @@ describe("AI Tools Authorization", () => {
     ).rejects.toThrow("Connector secret references must not contain raw secret values.");
 
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, { key: "http-rest" });
-    await expect(superAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).resolves.toMatchObject({
+    await expect(superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })).resolves.toMatchObject({
       ok: false,
       diagnosticCode: "MISSING_SECRET_REFS",
       missingSecretRefs: ["base_url", "auth_header"],
@@ -388,7 +386,7 @@ describe("AI Tools Authorization", () => {
         configuredSecretRefs: ["base_url", "auth_header"],
       })
     ).resolves.toBe(connectorId);
-    await expect(superAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).resolves.toMatchObject({
+    await expect(superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })).resolves.toMatchObject({
       ok: true,
       diagnosticCode: "OK",
       missingSecretRefs: [],
@@ -397,7 +395,10 @@ describe("AI Tools Authorization", () => {
     expect(configuredDetails.secretRefs.every((secretRef) => secretRef.status === "CONFIGURED")).toBe(true);
   });
 
-  test("OAuth connectors require a connected vault token reference before passing connection tests", async () => {
+  test("refuses to start an OAuth connection it cannot carry out", async () => {
+    // `beginConnectorOAuth` used to mint a link to /api/connectors/oauth/authorize
+    // — a route that does not exist — and mark the connector PENDING for ever.
+    // The administrator got a 404 and a connector stuck mid-flow.
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const superAdminId = await t.run(async (ctx) => {
@@ -412,65 +413,33 @@ describe("AI Tools Authorization", () => {
       key: "slack",
       tenantAvailability: "GLOBAL",
     });
-    await expect(superAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).resolves.toMatchObject({
+
+    await expect(
+      superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId })
+    ).rejects.toThrow("OAuth connections are not available on this deployment.");
+
+    // Completion is gated too. It can only finish a session that begin created,
+    // so leaving it open would offer a door into a room with no entrance.
+    await expect(
+      superAdminClient.mutation(api.aiTools.completeConnectorOAuth, {
+        connectorId,
+        state: "connector:fabricated:0",
+        accountRef: "workspace/acme",
+        tokenRef: "vault/slack/acme/bot",
+      })
+    ).rejects.toThrow("OAuth connections are not available on this deployment.");
+
+    // And nothing claims to be connected as a result.
+    await expect(
+      superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })
+    ).resolves.toMatchObject({
       ok: false,
-      message: "OAuth connection is not connected.",
       diagnosticCode: "OAUTH_NOT_CONNECTED",
     });
 
-    const oauthStart = await superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId });
-    expect(oauthStart.authorizationUrl).toContain("provider=slack");
-    expect(oauthStart.authorizationUrl).toContain("state=");
-    await expect(
-      superAdminClient.mutation(api.aiTools.completeConnectorOAuth, {
-        connectorId,
-        state: oauthStart.state,
-        accountRef: "workspace/acme",
-        tokenRef: "xoxb-raw-token",
-      })
-    ).rejects.toThrow("OAuth token reference must not contain a raw secret value.");
-    await expect(
-      superAdminClient.mutation(api.aiTools.completeConnectorOAuth, {
-        connectorId,
-        state: oauthStart.state,
-        accountRef: "workspace/acme",
-        tokenRef: "vault/slack/acme/bot",
-        scopes: ["channels:read"],
-      })
-    ).rejects.toThrow("OAuth connection is missing required scopes: chat:write");
-
-    await expect(
-      superAdminClient.mutation(api.aiTools.completeConnectorOAuth, {
-        connectorId,
-        state: oauthStart.state,
-        accountRef: "workspace/acme",
-        tokenRef: "vault/slack/acme/bot",
-      })
-    ).resolves.toBe(oauthStart.oauthConnectionId);
-    await expect(superAdminClient.mutation(api.aiTools.testConnectorConnection, { connectorId })).resolves.toMatchObject({
-      ok: true,
-      message: "Connection test passed.",
-      diagnosticCode: "OK",
-    });
-
-    const connectedDetails = await superAdminClient.query(api.aiTools.getConnectorInstallDetails, { connectorId });
-    expect(connectedDetails.tools.map((tool) => tool.handlerMapping)).toEqual(["slack.message.send"]);
-    expect(connectedDetails.connector).toMatchObject({
-      authConnectionStatus: "CONNECTED",
-      authAccountRef: "workspace/acme",
-      tokenRef: "vault/slack/acme/bot",
-      oauthScopes: ["channels:read", "chat:write"],
-    });
-    expect(connectedDetails.oauthConnection).toMatchObject({
-      status: "CONNECTED",
-      provider: "slack",
-      tokenRef: "vault/slack/acme/bot",
-    });
-
-    await expect(superAdminClient.mutation(api.aiTools.disconnectConnectorOAuth, { connectorId })).resolves.toBe(true);
-    const disconnectedDetails = await superAdminClient.query(api.aiTools.getConnectorInstallDetails, { connectorId });
-    expect(disconnectedDetails.connector.authConnectionStatus).toBe("NOT_CONNECTED");
-    expect(disconnectedDetails.oauthConnection?.status).toBe("DISCONNECTED");
+    const details = await superAdminClient.query(api.aiTools.getConnectorInstallDetails, { connectorId });
+    expect(details.connector.authConnectionStatus).not.toBe("CONNECTED");
+    expect(details.oauthConnection).toBeNull();
   });
 
   test("super admins can page and search tool inventory", async () => {
@@ -537,7 +506,7 @@ describe("AI Tools Authorization", () => {
         handlerMapping: "blocked.update",
         requiredRole: "ADMIN",
       })
-    ).rejects.toThrow("Unauthorized: System modification requires supreme permissions.");
+    ).rejects.toThrow("Unauthorized");
 
     await expect(
       superAdminClient.mutation(api.aiTools.updateTool, {
@@ -643,9 +612,7 @@ describe("AI Tools Authorization", () => {
       action: "BIND",
     });
 
-    await expect(userClient.mutation(api.aiTools.deleteTool, { id: toolId })).rejects.toThrow(
-      "Unauthorized: Sonae architectural deletion prevented."
-    );
+    await expect(userClient.mutation(api.aiTools.deleteTool, { id: toolId })).rejects.toThrow("Unauthorized");
     await expect(superAdminClient.mutation(api.aiTools.deleteTool, { id: toolId })).resolves.toBe(true);
 
     const { deletedTool, remainingBindings } = await t.run(async (ctx) => ({
@@ -655,5 +622,68 @@ describe("AI Tools Authorization", () => {
 
     expect(deletedTool).toBeNull();
     expect(remainingBindings).toEqual([]);
+  });
+});
+
+describe("connector marketplace honesty", () => {
+  async function seedAdmin(t: ReturnType<typeof convexTest>) {
+    const adminId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      return await ctx.db.insert("users", {
+        email: "admin@acme.test",
+        role: "ADMIN",
+        companyId,
+      });
+    });
+    return t.withIdentity({ subject: adminId });
+  }
+
+  test("reports availability from the handler registry, not the catalogue", async () => {
+    // The catalogue advertised 21 connectors while 2 could execute. Availability
+    // has to come from whether an implementation exists, because that is the
+    // only thing that decides whether a call does anything.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminClient = await seedAdmin(t);
+
+    const marketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
+    expect(marketplace.length).toBeGreaterThan(0);
+
+    const knowledge = marketplace.find((connector) => connector.key === "sonae-knowledge");
+    expect(knowledge?.availability).toBe("AVAILABLE");
+    expect(knowledge?.toolDefinitions.every((tool) => tool.isExecutable)).toBe(true);
+
+    // Something the catalogue declares with nothing behind it must say so.
+    const unavailable = marketplace.filter((connector) => connector.availability === "UNAVAILABLE");
+    expect(unavailable.length).toBeGreaterThan(0);
+    for (const connector of unavailable) {
+      expect(connector.executableToolCount).toBe(0);
+      expect(connector.toolDefinitions.every((tool) => !tool.isExecutable)).toBe(true);
+    }
+  });
+
+  test("counts are consistent with the per-tool flags", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminClient = await seedAdmin(t);
+
+    const marketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
+    for (const connector of marketplace) {
+      const executable = connector.toolDefinitions.filter((tool) => tool.isExecutable).length;
+      expect(connector.executableToolCount).toBe(executable);
+      expect(connector.totalToolCount).toBe(connector.toolDefinitions.length);
+      expect(connector.availability).toBe(
+        executable === 0 ? "UNAVAILABLE" : executable === connector.totalToolCount ? "AVAILABLE" : "PARTIAL",
+      );
+    }
+  });
+
+  test("does not claim every declared connector works", async () => {
+    // The specific failure this item exists to remove: a catalogue describing
+    // capability the code does not have.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminClient = await seedAdmin(t);
+
+    const marketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
+    const available = marketplace.filter((connector) => connector.availability === "AVAILABLE");
+    expect(available.length).toBeLessThan(marketplace.length);
   });
 });

@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { mutation, query, internalQuery, internalMutation, action, httpAction } from "./_generated/server";
+import { internalQuery, internalMutation, action, httpAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
-import { requireSuperAdmin } from "./authz";
+import { superAdminAction, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { requireActionSuperAdmin } from "./actionAuth";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
@@ -32,23 +32,19 @@ function workflowInputTooLargeResponse() {
   });
 }
 
-export const list = query({
+export const list = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
-
     return await ctx.db.query("workflows").order("desc").take(10000);
   },
 });
 
-export const getPaginatedWorkflows = query({
+export const getPaginatedWorkflows = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized: System level clearance required.", "Unauthenticated Admin Request");
-
     const searchTerm = args.searchTerm?.trim();
 
     return searchTerm
@@ -64,11 +60,9 @@ export const getPaginatedWorkflows = query({
   },
 });
 
-export const get = query({
+export const get = superAdminQuery({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw new Error("Workflow not found");
 
@@ -85,13 +79,13 @@ export const internalGet = internalQuery({
   },
 });
 
-export const createWorkflow = mutation({
+export const createWorkflow = superAdminMutation({
   args: { 
     name: v.string(), 
     description: v.optional(v.string()) 
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const newWorkflowId = await ctx.db.insert("workflows", {
       name: args.name,
@@ -118,7 +112,7 @@ export const createWorkflow = mutation({
   },
 });
 
-export const updateWorkflow = mutation({
+export const updateWorkflow = superAdminMutation({
   args: { 
     id: v.id("workflows"), 
     name: v.optional(v.string()),
@@ -129,7 +123,7 @@ export const updateWorkflow = mutation({
     edges: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const { id, ...updates } = args;
 
@@ -202,10 +196,10 @@ export const updateWorkflow = mutation({
   },
 });
 
-export const deleteWorkflow = mutation({
+export const deleteWorkflow = superAdminMutation({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     const workflow = await ctx.db.get(args.id);
 
@@ -224,13 +218,13 @@ export const deleteWorkflow = mutation({
   },
 });
 
-export const triggerManualRun = mutation({
+export const triggerManualRun = superAdminMutation({
   args: { 
     id: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"workflowExecutions">> => {
-    const { userId } = await requireSuperAdmin(ctx);
+    const { userId } = ctx;
 
     // 1. Create Execution Record
     const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
@@ -287,14 +281,12 @@ export const createPublicWorkflowRunInternal = internalMutation({
   },
 });
 
-export const runManualSync = action({
+export const runManualSync = superAdminAction({
   args: {
     workflowId: v.id("workflows"),
     initialInput: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<unknown> => {
-    await requireActionSuperAdmin(ctx, "Unauthorized", "Unauthenticated");
-
     // 1. Create execution record
     const executionId = await ctx.runMutation(api.workflows.triggerManualRun, {
       id: args.workflowId,
@@ -374,11 +366,9 @@ export const handleWebhook = httpAction(async (ctx, request) => {
   }
 });
 
-export const getWebhookSecret = query({
+export const getWebhookSecret = superAdminQuery({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
-
     const workflow = await ctx.db.get(args.id);
     if (!workflow) throw new Error("Workflow not found");
 

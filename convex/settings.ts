@@ -1,7 +1,11 @@
 import { internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { requireSuperAdmin } from "./authz";
+import {
+  publicQuery,
+  superAdminMutation,
+  superAdminQuery,
+} from "./tenantFunctions";
 import {
   buildWhiteLabelCustomDomainChecklist,
   buildWhiteLabelHandoffSummary,
@@ -19,7 +23,8 @@ import {
 import { buildEmailBranding } from "./emailBrandingService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
-export const get = query({
+export const get = publicQuery({
+  reason: "Branding and theme load on the login screen, before anyone is signed in.",
   args: {},
   handler: async (ctx) => {
     const settings = await ctx.db.query("systemSettings").first();
@@ -46,7 +51,7 @@ export const get = query({
   },
 });
 
-export const update = mutation({
+export const update = superAdminMutation({
   args: {
     platformName: v.optional(v.string()),
     currencySymbol: v.optional(v.string()),
@@ -89,7 +94,7 @@ export const update = mutation({
     diagnosticRoutingEnabled: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
+    const { userId } = ctx;
 
     const settings = await ctx.db.query("systemSettings").first();
     const patchObj = buildSettingsPatch(args);
@@ -132,10 +137,9 @@ export const getEmailBranding = internalQuery({
   },
 });
 
-export const getWhiteLabelReadiness = query({
+export const getWhiteLabelReadiness = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const settings = await ctx.db.query("systemSettings").first();
     const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
@@ -147,26 +151,23 @@ export const getWhiteLabelReadiness = query({
   },
 });
 
-export const getWhiteLabelModulePresets = query({
+export const getWhiteLabelModulePresets = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
     return getWhiteLabelModulePresetCatalog();
   },
 });
 
-export const getWhiteLabelNavigationProfiles = query({
+export const getWhiteLabelNavigationProfiles = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
     return getWhiteLabelNavigationProfileCatalog();
   },
 });
 
-export const getWhiteLabelCustomDomainChecklist = query({
+export const getWhiteLabelCustomDomainChecklist = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const settings = await ctx.db.query("systemSettings").first();
     const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
@@ -178,10 +179,9 @@ export const getWhiteLabelCustomDomainChecklist = query({
   },
 });
 
-export const getWhiteLabelHandoffSummary = query({
+export const getWhiteLabelHandoffSummary = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const settings = await ctx.db.query("systemSettings").first();
     const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
@@ -202,10 +202,9 @@ export const getWhiteLabelHandoffSummary = query({
   },
 });
 
-export const getWhiteLabelPackagingChecklist = query({
+export const getWhiteLabelPackagingChecklist = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthenticated Admin Request");
 
     const settings = await ctx.db.query("systemSettings").first();
     const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
@@ -235,9 +234,8 @@ export const getWhiteLabelPackagingChecklist = query({
   },
 });
 
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = superAdminMutation({
   handler: async (ctx) => {
-    await requireSuperAdmin(ctx, "Unauthorized", "Unauthorized");
 
     return await ctx.storage.generateUploadUrl();
   },

@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
+import { tenantMutation, tenantQuery } from "./tenantFunctions";
 
 const movementDifficultyValidator = v.union(
   v.literal("Beginner"),
@@ -85,7 +86,7 @@ function isInlinePoseData(value: string) {
   return trimmed.startsWith("[") || trimmed.startsWith("{");
 }
 
-export const list = query({
+export const list = tenantQuery({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
@@ -98,7 +99,7 @@ export const list = query({
   },
 });
 
-export const listReplayAlignmentRecordings = query({
+export const listReplayAlignmentRecordings = tenantQuery({
   args: {
     limit: v.optional(v.number()),
   },
@@ -128,7 +129,7 @@ export const listReplayAlignmentRecordings = query({
   },
 });
 
-export const getPaginated = query({
+export const getPaginated = tenantQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
@@ -162,7 +163,7 @@ export const getPaginated = query({
   },
 });
 
-export const get = query({
+export const get = tenantQuery({
   args: { id: v.id("movements") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -172,7 +173,7 @@ export const get = query({
   },
 });
 
-export const create = mutation({
+export const create = tenantMutation({
   args: {
     title: v.string(),
     difficulty: movementDifficultyValidator,
@@ -210,7 +211,7 @@ export const create = mutation({
   },
 });
 
-export const remove = mutation({
+export const remove = tenantMutation({
   args: { id: v.id("movements") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -231,7 +232,7 @@ export const remove = mutation({
   },
 });
 
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = tenantMutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
@@ -241,7 +242,7 @@ export const generateUploadUrl = mutation({
   },
 });
 
-export const getFileUrl = query({
+export const getFileUrl = tenantQuery({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -251,7 +252,7 @@ export const getFileUrl = query({
   },
 });
 
-export const saveDebugTrackingSession = mutation({
+export const saveDebugTrackingSession = tenantMutation({
   args: {
     movementId: v.id("movements"),
     trigger: movementDebugTriggerValidator,
@@ -288,7 +289,7 @@ export const saveDebugTrackingSession = mutation({
   },
 });
 
-export const listDebugTrackingSessions = query({
+export const listDebugTrackingSessions = tenantQuery({
   args: {
     movementId: v.optional(v.id("movements")),
     limit: v.optional(v.number()),
@@ -318,7 +319,7 @@ export const listDebugTrackingSessions = query({
   },
 });
 
-export const getDebugTrackingSession = query({
+export const getDebugTrackingSession = tenantQuery({
   args: {
     id: v.id("movementDebugSessions"),
   },
@@ -330,7 +331,7 @@ export const getDebugTrackingSession = query({
   },
 });
 
-export const getDebugTrackingSessions = query({
+export const getDebugTrackingSessions = tenantQuery({
   args: {
     ids: v.array(v.id("movementDebugSessions")),
   },
