@@ -18,6 +18,8 @@ const models = [
     friendlyName: "Chat",
     isEnabled: true,
     supportedUseCases: ["chat"],
+    standardInputCostBelow200k: 0.0000005,
+    outputResponseCost: 0.0000015,
   },
 ];
 
@@ -33,6 +35,10 @@ const defaults = {
   defaults: [
     {
       useCase: "chat",
+      default: { modelId: "chat-model" },
+    },
+    {
+      useCase: "router",
       default: null,
     },
   ],
@@ -69,6 +75,26 @@ describe("AIModelDefaultsPage", () => {
     clearGlobalModelDefault.mockResolvedValue(undefined);
   });
 
+
+  it("says what each job is, prices the choice, and flags only the unset rows", () => {
+    render(<AIModelDefaultsPage />);
+
+    // The internal key used to be printed under every label, saying the same
+    // word twice — once for a person and once for a machine.
+    expect(screen.queryByText("chat", { exact: true })).not.toBeInTheDocument();
+
+    // A reader has no way to know what "Router" is unless the screen says so.
+    expect(screen.getByText(/Deciding which model or skill should handle a request/)).toBeInTheDocument();
+    expect(screen.getByText("Ordinary conversations with people.")).toBeInTheDocument();
+
+    // Cost is the trade-off being made here, shown where it is made.
+    expect(screen.getByText("£0.50 in · £1.50 out per million")).toBeInTheDocument();
+
+    // "Configured" on every row carried no information. Only the exception does.
+    expect(screen.queryByText("Configured")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Not set")).toHaveLength(1);
+  });
+
   it("renders platform defaults without provider cards or catalogue filters", async () => {
     render(<AIModelDefaultsPage />);
 
@@ -77,7 +103,7 @@ describe("AIModelDefaultsPage", () => {
     expect(screen.queryByPlaceholderText("Search model names or IDs...")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sync" })).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "chat-model" } });
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "chat-model" } });
 
     await waitFor(() => {
       expect(setGlobalModelDefault).toHaveBeenCalledWith({ useCase: "chat", modelId: "chat-model" });

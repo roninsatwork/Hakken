@@ -23,6 +23,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import {
   formatModelTag,
+  formatTokenCost,
   getProviderDisplayName,
   MODEL_CAPABILITY_OPTIONS,
   MODEL_USE_CASE_OPTIONS,
@@ -205,19 +206,18 @@ export default function AIModelCataloguePage() {
           <tr className="border-b border-border-dim/50 bg-sidebar/40">
             <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[300px]">Model Name</th>
             <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[190px]">Provider</th>
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">Model ID</th>
+            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">Cost per million tokens</th>
             <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[230px]">Capabilities</th>
             <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[230px]">Use Cases</th>
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[150px] text-right">Status</th>
-            <th className="w-[180px] px-5 py-3.5"></th>
+            <th className="w-[240px] px-5 py-3.5"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={7} />
+            <AdminTableLoadingRow colSpan={6} />
           ) : models.length === 0 ? (
             <AdminTableEmptyRow
-              colSpan={7}
+              colSpan={6}
               icon={<Bot className="w-8 h-8 text-muted/30" />}
               label={t("empty.title")}
               action={
@@ -246,21 +246,26 @@ export default function AIModelCataloguePage() {
                       <Bot className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col">
-                      <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors flex items-center gap-2">
+                      <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors flex flex-wrap items-center gap-2">
                         {model.displayName}
                         {model.isDefault && (
                           <Star className="w-3 h-3 fill-brand text-brand" />
                         )}
                         {model.isEnabled && !isModelCostMeasurable(model) && (
                           <span
-                            title="No cost per token is set for this model, so spend cannot be measured and the cost cap can never stop a run. Agents using it are held to a reduced step and tool budget. Open the model to add its pricing."
                             className="inline-flex items-center gap-1 rounded-full border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#f59e0b]"
                           >
                             <AlertTriangle className="w-3 h-3" />
-                            No pricing
+                            Add its price
                           </span>
                         )}
                       </h3>
+                      <p className="text-[11px] font-mono text-muted mt-0.5">{model.providerModelId || model.modelId}</p>
+                      {model.isEnabled && !isModelCostMeasurable(model) && (
+                        <p className="text-[11px] leading-relaxed text-[#f59e0b] mt-1 max-w-[280px]">
+                          Without a price we cannot measure what this model spends, so agents using it are kept to a smaller budget. Open it to add one.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -270,23 +275,22 @@ export default function AIModelCataloguePage() {
                   </span>
                 </td>
                 <td className="px-5 py-4 align-middle">
-                  <p className="text-[12.5px] font-mono tracking-wide opacity-50">
-                    {model.providerModelId || model.modelId}
-                  </p>
+                  {/* What a model costs is the decision being made on this
+                      screen. It was not on it; the provider's internal model id
+                      had the column instead, and now sits under the name. */}
+                  {isModelCostMeasurable(model) ? (
+                    <p className="text-[12.5px] text-secondary">
+                      {formatTokenCost(model.standardInputCostBelow200k)} in · {formatTokenCost(model.outputResponseCost)} out
+                    </p>
+                  ) : (
+                    <p className="text-[12.5px] text-muted">Not set</p>
+                  )}
                 </td>
                 <td className="px-5 py-4 align-middle">
                   <ModelTagList values={model.capabilities} emptyLabel="Unclassified" />
                 </td>
                 <td className="px-5 py-4 align-middle">
                   <ModelTagList values={model.supportedUseCases} emptyLabel="Inherited" />
-                </td>
-                <td className="px-5 py-4 align-middle text-right border-r border-white/5">
-                  <span className={cn(
-                    "font-bold px-2 py-0.5 rounded-[4px] uppercase tracking-[0.1em] text-[10px] border inline-block",
-                    model.isEnabled ? "text-[#10b981] bg-[#10b981]/10 border-[#10b981]/20" : "text-muted bg-foreground/5 border-border-dim"
-                  )}>
-                    {model.isEnabled ? "Online" : "Offline"}
-                  </span>
                 </td>
                 <td className="px-5 py-4 align-middle text-right">
                   <div className="flex items-center justify-end gap-3 text-secondary">

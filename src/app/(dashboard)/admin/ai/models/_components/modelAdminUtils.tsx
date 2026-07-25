@@ -112,8 +112,13 @@ export function ModelTagList({
         </span>
       ))}
       {hiddenCount > 0 && (
-        <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
-          +{hiddenCount}
+        // "+6" told the reader six things existed and gave them no way to find
+        // out what. Naming them costs one attribute and answers the question.
+        <span
+          title={values.slice(limit).map(formatModelTag).join(", ")}
+          className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted cursor-help underline decoration-dotted underline-offset-2"
+        >
+          +{hiddenCount} more
         </span>
       )}
     </div>
@@ -145,4 +150,48 @@ export function ModelAdminHeader({
       {children}
     </div>
   );
+}
+
+/**
+ * A per-token price as money someone can compare.
+ *
+ * Prices are stored per token, which produces numbers like 0.0000003 — true,
+ * and useless for choosing between two models. Per million tokens is the unit
+ * every provider publishes and the only one at human scale.
+ */
+export function formatTokenCost(costPerToken: number | undefined) {
+  if (!costPerToken || costPerToken <= 0) return "—";
+  const perMillion = costPerToken * 1_000_000;
+  // Two decimals reads as money. Below a penny per million, two decimals would
+  // round every cheap model to £0.00 and hide the difference between them.
+  return perMillion >= 0.01
+    ? `£${perMillion.toFixed(2)}`
+    : `£${perMillion.toFixed(4)}`;
+}
+
+/**
+ * What each runtime job actually is, in a sentence.
+ *
+ * The defaults screen asked which model should handle "Router", "Title" and
+ * "Transcription" without ever saying what those are. Choosing between a cheap
+ * model and a clever one is a real decision, and it cannot be made by someone
+ * who does not know what the job is.
+ */
+export const MODEL_USE_CASE_DESCRIPTIONS: Record<string, string> = {
+  chat: "Ordinary conversations with people.",
+  "fast-chat": "Short replies where speed matters more than depth.",
+  reasoning: "Harder problems worth spending more time and money on.",
+  agent: "Agents working through a task on their own.",
+  workflow: "Steps inside an automated workflow.",
+  report: "Written summaries and reports.",
+  router: "Deciding which model or skill should handle a request. Runs on every message, so a cheap model here saves the most.",
+  title: "Naming a conversation from its first message. Trivial work — the cheapest model is the right one.",
+  transcription: "Turning speech into text.",
+  embedding: "Turning documents into something searchable. Only embedding models can do this.",
+  vision: "Reading images and screenshots.",
+  "tool-calling": "Deciding which tool to use and with what arguments.",
+};
+
+export function describeModelUseCase(useCase: string) {
+  return MODEL_USE_CASE_DESCRIPTIONS[useCase] ?? "";
 }

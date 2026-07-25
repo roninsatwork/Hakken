@@ -122,10 +122,12 @@ describe("AIModelCataloguePage", () => {
 
     render(<AIModelCataloguePage />);
 
-    const warnings = screen.getAllByText("No pricing");
+    const warnings = screen.getAllByText("Add its price");
     expect(warnings).toHaveLength(1);
     // The warning belongs to the unpriced, enabled model — not the priced one
     // and not one that is switched off and cannot be costing anything.
     expect(warnings[0].closest("tr")?.textContent).toContain("Unpriced Model");
+    // And the consequence is on the page rather than hidden in a tooltip.
+    expect(screen.getByText(/agents using it are kept to a smaller budget/i)).toBeInTheDocument();
   });
 });

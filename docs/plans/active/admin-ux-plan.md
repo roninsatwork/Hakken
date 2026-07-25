@@ -310,19 +310,37 @@ double negatives.
 
 | # | Item | Size | State |
 |---|---|---|---|
-| C1 | Model Catalogue | 0.5 | — |
-| C2 | Model Defaults | 0.5 | — |
+| C1 | Model Catalogue | 0.5 | **done** |
+| C2 | Model Defaults | 0.5 | **done** |
 
-**C1.** "No pricing" explains itself and its consequence — unpriced models are
-held to tighter budgets, which is why the warning exists. Chips stop hiding
-behind "+6". `ONLINE` and *Deactivate* stop sitting together pretending to be the
-same idea. Cost earns a column; the model ID gives one up.
+**C1 (done).** The `ONLINE` badge turned out not to mean "reachable" at all — it
+was `isEnabled`, the very same fact as the *Deactivate* button beside it, printed
+twice in adjacent columns. One of them went.
 
-**C2.** Each runtime job gets a sentence saying what it is, because *Router*,
-*Title* and *Transcription* mean nothing to a reader. The `CONFIGURED` pill that
-never changes goes, as does the repeated internal key under every label. A
-recommended set replaces ten identical dropdowns, with the cost consequence of a
-change visible where the change is made.
+Cost took the column the provider's internal model id had, shown per million
+tokens because that is the unit providers publish and the only one at human
+scale; the model id now sits under the name where a developer can still find it.
+The "no pricing" warning explained its consequence in a `title` attribute nobody
+hovers — it now says on the page that agents using an unpriced model are kept to
+a smaller budget, and the badge reads *Add its price* rather than naming a
+problem. Truncated chips say "+6 more" and name the hidden ones on hover.
+
+**C2 (done).** Every runtime job now carries a sentence saying what it is —
+"Router: deciding which model or skill should handle a request. Runs on every
+message, so a cheap model here saves the most." The internal key that printed
+the same word a second time under every label is gone.
+
+The `CONFIGURED` pill that appeared on all ten rows and never said anything else
+is replaced by the price of the chosen model, so the cost-versus-quality
+decision is visible at the point it is made; only *Not set* is still called out,
+because only the exception carries information.
+
+**Not done: the recommended set.** Offering "apply these ten" means asserting
+which model is right for each job, and that answer depends on the models a
+deployment actually has enabled and what they cost. Guessing it in code would be
+a confident recommendation with nothing behind it. The descriptions and the
+prices give a reader what they need to choose; a preset should wait until there
+is a real basis for one.
 
 ### Phase D — Settings (1 day)
 
