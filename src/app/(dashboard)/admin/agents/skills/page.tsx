@@ -11,6 +11,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BarChart3, BrainCircuit, FileText, Loader2, Plus, Search, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { formatDateTime } from "@/src/lib/dates";
 
 type SkillStatus = Doc<"agentSkills">["status"];
 type SkillRisk = Doc<"agentSkills">["riskLevel"];
@@ -461,10 +462,19 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
               Adoption, upgrade lag, and current smoke evidence across the reusable skill catalog.
             </p>
           </div>
-          {analytics === undefined && (
+          {analytics === undefined ? (
             <div className="text-[12px] text-muted flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Loading analytics
+            </div>
+          ) : (
+            // These counts are recomputed periodically rather than on every
+            // load, so the panel says when it last counted. Presenting a number
+            // of unknown age as live is the habit this whole pass is removing.
+            <div className="text-[12px] text-muted">
+              {analytics.computedAt
+                ? `Counted ${formatDateTime(analytics.computedAt)}${analytics.isPartial ? ` · first ${analytics.skillsCounted} skills` : ""}`
+                : "Not counted yet"}
             </div>
           )}
         </div>
@@ -573,14 +583,29 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         )}
       </div>
 
-      {status === "CanLoadMore" && (
-        <button
-          type="button"
-          onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-          className="self-center h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-hover transition-colors"
-        >
-          Load more
-        </button>
+      {/* How many of how many. The list previously showed a page and a "Load
+          more" button, so there was no way to tell a full catalogue from a
+          filtered one — or from a truncated one. The total comes from the
+          rollup, which is why it is described as counted rather than live. */}
+      {skills.length > 0 && (
+        <div className="self-center flex flex-col items-center gap-2">
+          <p className="text-[12px] text-muted">
+            {searchTerm.trim()
+              ? `Showing ${skills.length} matching skill${skills.length === 1 ? "" : "s"}`
+              : analytics?.computedAt
+                ? `Showing ${skills.length} of ${analytics.isPartial ? `${analytics.skillsCounted}+` : analytics.totals.skills} skills`
+                : `Showing ${skills.length} skill${skills.length === 1 ? "" : "s"}`}
+          </p>
+          {status === "CanLoadMore" && (
+            <button
+              type="button"
+              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
+              className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-hover transition-colors"
+            >
+              Load more
+            </button>
+          )}
+        </div>
       )}
 
       <SonaeModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="New agent skill" size="lg">

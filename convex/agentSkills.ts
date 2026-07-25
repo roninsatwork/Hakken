@@ -1094,14 +1094,17 @@ export const getPaginatedSkills = superAdminQuery({
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
     if (searchTerm) {
-      const result = await ctx.db
+      // The status narrows inside the index. This used to filter the page after
+      // it had been paginated, so asking for fifteen could return three — and
+      // there was no way for the reader to tell a filtered answer from the end
+      // of the results.
+      return await ctx.db
         .query("agentSkills")
-        .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+        .withSearchIndex("search_name", (q) => {
+          const search = q.search("name", searchTerm);
+          return args.status ? search.eq("status", args.status) : search;
+        })
         .paginate(args.paginationOpts);
-      return {
-        ...result,
-        page: args.status ? result.page.filter((skill) => skill.status === args.status) : result.page,
-      };
     }
 
     if (args.status) {

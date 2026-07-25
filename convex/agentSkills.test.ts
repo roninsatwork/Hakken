@@ -323,6 +323,53 @@ describe("agent skills", () => {
     expect(analytics.skillsCounted).toBe(250);
   });
 
+  test("searching with a status filter fills the page instead of thinning it after the fact", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+      const now = Date.now();
+      // 30 archived and 10 active, all matching the same search word. Paginated
+      // first and filtered afterwards, the opening page of 10 would be almost
+      // entirely archived and would return one or two actives — indistinguishable
+      // from "there are only two".
+      for (let index = 0; index < 30; index += 1) {
+        await ctx.db.insert("agentSkills", {
+          name: `Reconciliation Archived ${index}`,
+          category: "FINANCE",
+          status: "ARCHIVED",
+          riskLevel: "LOW",
+          instruction: "Retired.",
+          createdBy: adminId,
+          createdAt: now + index,
+          updatedAt: now + index,
+        });
+      }
+      for (let index = 0; index < 10; index += 1) {
+        await ctx.db.insert("agentSkills", {
+          name: `Reconciliation Live ${index}`,
+          category: "FINANCE",
+          status: "ACTIVE",
+          riskLevel: "LOW",
+          instruction: "Reconcile.",
+          createdBy: adminId,
+          createdAt: now + 100 + index,
+          updatedAt: now + 100 + index,
+        });
+      }
+      return adminId;
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const page = await client.query(api.agentSkills.getPaginatedSkills, {
+      paginationOpts: { numItems: 10, cursor: null },
+      searchTerm: "Reconciliation",
+      status: "ACTIVE",
+    });
+
+    expect(page.page).toHaveLength(10);
+    expect(page.page.every((skill) => skill.status === "ACTIVE")).toBe(true);
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

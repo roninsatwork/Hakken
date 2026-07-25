@@ -207,7 +207,7 @@ broken code before it is trusted.
 | A1 | Uncapped, searched, paged skill picker — server | 0.5 | **done** |
 | A2 | Wire the picker screen to it, with filters | 0.5 | **done** |
 | A3 | Health counts as a maintained rollup | 0.75 | **done** |
-| A4 | Fix search + status paging, and say "showing X of Y" | 0.25 | — |
+| A4 | Fix search + status paging, and say "showing X of Y" | 0.25 | **done** |
 
 **A1 (done).** `searchActiveSkills` searches and pages in the database and
 excludes already-attached skills. Proven at 261 skills.
@@ -246,10 +246,18 @@ Two properties the tests pin down, both confirmed to fail when removed:
   rollup reports `isPartial` and `skillsCounted`, so the screen can say what it
   actually counted.
 
-**A4.** Two smaller truths: the existing list filters a search page by status
-*after* paginating, so asking for 15 can return 3 with odd "load more"
-behaviour; and anywhere a bound genuinely remains, the screen reports the bound
-rather than presenting a truncation as the whole answer.
+**A4 (done).** The search-plus-status bug was worse than described. The status
+filter was applied to a page *after* it had been paginated, so a search whose
+first page happened to be all archived returned **nothing at all** — a catalogue
+with ten matching active skills answered "no results". The status now narrows
+inside the search index, which the `filterFields` added in A2 made possible.
+Proven with 30 archived and 10 active skills sharing a search word: the fix
+returns a full page of ten, the old code returned zero.
+
+The Skill Center list also now says what it is showing — "Showing 15 of 42
+skills" — and the health panel says when it last counted, or "Not counted yet"
+before the first rebuild. A page count with no total cannot distinguish a whole
+catalogue from a filtered one from a truncated one.
 
 ### Phase B — The skill lifecycle (1.5 days)
 
