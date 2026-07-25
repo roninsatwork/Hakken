@@ -1115,6 +1115,18 @@ export const getPaginatedSkills = superAdminQuery({
   },
 });
 
+/**
+ * Active skills, capped.
+ *
+ * Kept for callers that genuinely want a short list to render inline — the
+ * agent editor modal and the app-kit builder both show a handful. It stops at
+ * `SKILL_CATALOG_LIMIT`, so it must not be used anywhere the reader is expected
+ * to find a *specific* skill: past that many, the one they want may simply not
+ * be in the answer, and nothing about a truncated array says so.
+ *
+ * For choosing a skill, use `searchActiveSkills`, which pages and has no
+ * ceiling.
+ */
 export const getActiveSkills = superAdminQuery({
   args: {},
   handler: async (ctx) => {
@@ -1123,6 +1135,51 @@ export const getActiveSkills = superAdminQuery({
       .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
       .order("desc")
       .take(SKILL_CATALOG_LIMIT);
+  },
+});
+
+/**
+ * Active skills for a picker: searched and paged in the database, so the
+ * catalogue can grow without the caller ever seeing a ceiling.
+ *
+ * This replaces "fetch the first 250 and filter them in the browser", which
+ * failed in the way that is hardest to notice — at 300 skills the fifty the
+ * reader could not attach were not marked as missing, they were absent.
+ *
+ * `excludeSkillIds` carries the skills already attached to the agent. Filtering
+ * after the page is read means a page can come back short, which is why the
+ * caller is given `pageSize` worth of candidates and told whether more exist,
+ * rather than being left to infer it from a short page.
+ */
+export const searchActiveSkills = superAdminQuery({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+    excludeSkillIds: v.optional(v.array(v.id("agentSkills"))),
+  },
+  handler: async (ctx, args) => {
+    const searchTerm = args.searchTerm?.trim();
+    const excluded = new Set(args.excludeSkillIds ?? []);
+
+    const result = searchTerm
+      ? await ctx.db
+          .query("agentSkills")
+          .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("agentSkills")
+          .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
+          .order("desc")
+          .paginate(args.paginationOpts);
+
+    // The search index cannot filter by status, so active-only is applied here.
+    // Both paths therefore filter, and both can return a short page.
+    return {
+      ...result,
+      page: result.page.filter(
+        (skill) => skill.status === "ACTIVE" && !excluded.has(skill._id),
+      ),
+    };
   },
 });
 
@@ -1688,10 +1745,28 @@ export const importSkillBundle = superAdminMutation({
   },
 });
 
+/**
+ * Import a SKILL.md file, updating the skill it already produced rather than
+ * creating another one.
+ *
+ * The workflow this serves is: edit the file, upload it again. Before this,
+ * every upload inserted a new row, so an edited file produced "Data Enrichment"
+ * twice with nothing to say which was current — and the filename went to an
+ * audit log while the markdown itself was discarded.
+ *
+ * **Identity is the frontmatter name, not the filename.** By convention these
+ * files are all called `SKILL.md`, so matching on filename would collapse every
+ * skill into one.
+ *
+ * An archived skill is deliberately not matched. Someone archived it on
+ * purpose, and silently reviving it on the next upload would undo that
+ * decision without saying so; a new skill is created instead.
+ */
 export const importSkillMarkdown = superAdminMutation({
   args: {
     sourceFilename: v.optional(v.string()),
     sourceHash: v.optional(v.string()),
+    sourceMarkdown: v.optional(v.string()),
     name: v.string(),
     description: v.optional(v.string()),
     category: v.optional(v.string()),
@@ -1715,20 +1790,64 @@ export const importSkillMarkdown = superAdminMutation({
       suggestedEvalFixturesJson: args.suggestedEvalFixturesJson,
     });
     const now = Date.now();
-    const skillId = await ctx.db.insert("agentSkills", {
-      name: patch.name!,
-      description: patch.description,
-      category: patch.category!,
-      status: "DRAFT",
-      riskLevel: patch.riskLevel!,
-      instruction: patch.instruction!,
-      requiredToolMappingsJson: patch.requiredToolMappingsJson,
-      recommendedToolMappingsJson: patch.recommendedToolMappingsJson,
-      suggestedEvalFixturesJson: patch.suggestedEvalFixturesJson,
-      createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const sourceFields = {
+      sourceFilename: args.sourceFilename,
+      sourceHash: args.sourceHash,
+      sourceMarkdown: args.sourceMarkdown,
+    };
+
+    // Bounded rather than collected: the index pins this to one exact name, and
+    // only the first live match is used. A handful is plenty of room for
+    // archived namesakes without letting the read grow with the table.
+    const sameName = await ctx.db
+      .query("agentSkills")
+      .withIndex("by_name", (q) => q.eq("name", patch.name!))
+      .take(10);
+    const existing = sameName.find((skill) => skill.status !== "ARCHIVED");
+
+    let skillId: Id<"agentSkills">;
+    let outcome: "CREATED" | "UPDATED" | "UNCHANGED";
+
+    if (!existing) {
+      skillId = await ctx.db.insert("agentSkills", {
+        name: patch.name!,
+        description: patch.description,
+        category: patch.category!,
+        status: "DRAFT",
+        riskLevel: patch.riskLevel!,
+        instruction: patch.instruction!,
+        requiredToolMappingsJson: patch.requiredToolMappingsJson,
+        recommendedToolMappingsJson: patch.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: patch.suggestedEvalFixturesJson,
+        ...sourceFields,
+        createdBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      outcome = "CREATED";
+    } else if (args.sourceHash && existing.sourceHash === args.sourceHash) {
+      // Byte-identical to what produced this skill. Patching would touch
+      // updatedAt and tell the reader something changed when nothing did.
+      skillId = existing._id;
+      outcome = "UNCHANGED";
+    } else {
+      skillId = existing._id;
+      await ctx.db.patch(existing._id, {
+        description: patch.description,
+        category: patch.category!,
+        riskLevel: patch.riskLevel!,
+        instruction: patch.instruction!,
+        requiredToolMappingsJson: patch.requiredToolMappingsJson,
+        recommendedToolMappingsJson: patch.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: patch.suggestedEvalFixturesJson,
+        ...sourceFields,
+        updatedAt: now,
+        // `status` is deliberately absent: re-uploading a file must not quietly
+        // pull a live skill back to draft and stop the agents using it.
+      });
+      outcome = "UPDATED";
+    }
+
     const skillVersionId = await ensureAgentSkillVersionSnapshot(ctx, skillId);
     await ctx.db.insert("auditLogs", {
       actorId: userId,
@@ -1738,7 +1857,8 @@ export const importSkillMarkdown = superAdminMutation({
       timestamp: now,
       metadata: JSON.stringify({
         name: patch.name,
-        status: "DRAFT",
+        outcome,
+        status: existing?.status ?? "DRAFT",
         riskLevel: patch.riskLevel,
         category: patch.category,
         sourceFilename: args.sourceFilename,
@@ -1746,7 +1866,7 @@ export const importSkillMarkdown = superAdminMutation({
         skillVersionId,
       }),
     });
-    return { skillId, skillVersionId };
+    return { skillId, skillVersionId, outcome };
   },
 });
 

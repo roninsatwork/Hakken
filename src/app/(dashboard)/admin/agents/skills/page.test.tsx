@@ -196,7 +196,7 @@ describe("AgentSkillsCatalogPage", () => {
         suggestions: ["Add at least two starter eval fixtures before marking the skill production-ready."],
       },
     });
-    importSkillMarkdown.mockResolvedValue({ skillId: "skill_markdown", skillVersionId: "skill_markdown_version_1" });
+    importSkillMarkdown.mockResolvedValue({ skillId: "skill_markdown", skillVersionId: "skill_markdown_version_1", outcome: "CREATED" });
     const file = new File(["# Browser QA\n\nVerify browser workflows."], "SKILL.md", { type: "text/markdown" });
     Object.defineProperty(file, "text", {
       value: vi.fn().mockResolvedValue("# Browser QA\n\nVerify browser workflows."),
@@ -234,6 +234,9 @@ describe("AgentSkillsCatalogPage", () => {
       expect(importSkillMarkdown).toHaveBeenCalledWith({
         sourceFilename: "SKILL.md",
         sourceHash: "skillhash",
+        // The file itself now travels with the import, so the skill can show
+        // what was uploaded and a re-upload can be matched to it.
+        sourceMarkdown: "# Browser QA\n\nVerify browser workflows.",
         name: "Browser QA Review",
         description: "Verify browser workflows.",
         category: "QA",
@@ -244,7 +247,7 @@ describe("AgentSkillsCatalogPage", () => {
         suggestedEvalFixturesJson: "[]",
       });
     });
-    expect(await screen.findByText("SKILL.md imported as a draft.")).toBeInTheDocument();
+    expect(await screen.findByText("Added Browser QA Review as a draft skill.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open imported skill" })).toHaveAttribute("href", "/admin/ai/skills/skill_markdown");
   });
 

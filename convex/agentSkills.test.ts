@@ -5,6 +5,218 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 describe("agent skills", () => {
+  test("re-uploading an edited SKILL.md updates the skill it created instead of adding another", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const buildMarkdown = (instruction: string) => [
+      "---",
+      "name: Client Follow-up",
+      "description: Draft follow-up messages.",
+      "category: outreach",
+      "riskLevel: low",
+      "---",
+      "# Client Follow-up",
+      "",
+      "## Instructions",
+      "",
+      instruction,
+    ].join("\n");
+
+    const importFile = async (markdown: string) => {
+      const preview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+        filename: "SKILL.md",
+        markdown,
+      });
+      return await client.mutation(api.agentSkills.importSkillMarkdown, {
+        sourceFilename: preview.sourceFilename,
+        sourceHash: preview.sourceHash,
+        sourceMarkdown: markdown,
+        name: preview.name,
+        description: preview.description,
+        category: preview.category,
+        riskLevel: preview.riskLevel,
+        instruction: preview.instruction,
+        requiredToolMappingsJson: preview.requiredToolMappingsJson,
+        recommendedToolMappingsJson: preview.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: preview.suggestedEvalFixturesJson,
+      });
+    };
+
+    const first = await importFile(buildMarkdown("Send a short follow-up within two working days."));
+    expect(first.outcome).toBe("CREATED");
+
+    // The same bytes again: nothing to record, and no new version.
+    const unchanged = await importFile(buildMarkdown("Send a short follow-up within two working days."));
+    expect(unchanged.outcome).toBe("UNCHANGED");
+    expect(unchanged.skillId).toBe(first.skillId);
+    expect(unchanged.skillVersionId).toBe(first.skillVersionId);
+
+    // An edited file updates that same skill and earns a second version.
+    const edited = await importFile(buildMarkdown("Send a short follow-up within one working day."));
+    expect(edited.outcome).toBe("UPDATED");
+    expect(edited.skillId).toBe(first.skillId);
+    expect(edited.skillVersionId).not.toBe(first.skillVersionId);
+
+    const state = await t.run(async (ctx) => {
+      const skills = await ctx.db.query("agentSkills").collect();
+      const skill = await ctx.db.get(first.skillId);
+      const versions = await ctx.db
+        .query("agentSkillVersions")
+        .withIndex("by_skill_created", (q) => q.eq("skillId", first.skillId))
+        .collect();
+      return { skillCount: skills.length, skill, versionNumbers: versions.map((entry) => entry.versionNumber).sort() };
+    });
+
+    // The point of the whole change: one skill, not three.
+    expect(state.skillCount).toBe(1);
+    expect(state.versionNumbers).toEqual([1, 2]);
+    expect(state.skill?.instruction).toContain("one working day");
+    expect(state.skill?.sourceFilename).toBe("SKILL.md");
+    expect(state.skill?.sourceMarkdown).toContain("one working day");
+  });
+
+  test("re-uploading does not pull a live skill back to draft, and skips archived namesakes", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const markdown = (instruction: string) => [
+      "---",
+      "name: Risk Monitoring",
+      "riskLevel: low",
+      "---",
+      "# Risk Monitoring",
+      "",
+      "## Instructions",
+      "",
+      instruction,
+    ].join("\n");
+
+    const importFile = async (body: string) => {
+      const preview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+        filename: "SKILL.md",
+        markdown: markdown(body),
+      });
+      return await client.mutation(api.agentSkills.importSkillMarkdown, {
+        sourceFilename: preview.sourceFilename,
+        sourceHash: preview.sourceHash,
+        sourceMarkdown: markdown(body),
+        name: preview.name,
+        description: preview.description,
+        category: preview.category,
+        riskLevel: preview.riskLevel,
+        instruction: preview.instruction,
+        requiredToolMappingsJson: preview.requiredToolMappingsJson,
+        recommendedToolMappingsJson: preview.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: preview.suggestedEvalFixturesJson,
+      });
+    };
+
+    const created = await importFile("Escalate material changes with a severity and a reason.");
+    await t.run(async (ctx) => await ctx.db.patch(created.skillId, { status: "ACTIVE" }));
+
+    const updated = await importFile("Escalate material changes within one hour, with a severity.");
+    expect(updated.skillId).toBe(created.skillId);
+    // A live skill staying live is the whole point: agents keep working.
+    await expect(t.run(async (ctx) => (await ctx.db.get(created.skillId))?.status)).resolves.toBe("ACTIVE");
+
+    // Archiving is a decision; the next upload must not silently undo it.
+    await client.mutation(api.agentSkills.archiveSkill, { skillId: created.skillId });
+    const afterArchive = await importFile("Escalate material changes within one hour, with a severity.");
+    expect(afterArchive.outcome).toBe("CREATED");
+    expect(afterArchive.skillId).not.toBe(created.skillId);
+    await expect(t.run(async (ctx) => (await ctx.db.get(created.skillId))?.status)).resolves.toBe("ARCHIVED");
+  });
+
+  test("the skill picker pages past the catalogue ceiling instead of hiding skills", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+      const now = Date.now();
+      // Past SKILL_CATALOG_LIMIT (250): the old fetch-and-filter picker could
+      // not reach these at all, and said nothing about it.
+      for (let index = 0; index < 260; index += 1) {
+        await ctx.db.insert("agentSkills", {
+          name: `Skill ${String(index).padStart(3, "0")}`,
+          category: "GENERAL",
+          status: "ACTIVE",
+          riskLevel: "LOW",
+          instruction: "Do the thing.",
+          createdBy: adminId,
+          createdAt: now + index,
+          updatedAt: now + index,
+        });
+      }
+      // A distinctively named skill created last, so it sits well past the old
+      // 250 ceiling: the real question is whether search can still reach it.
+      await ctx.db.insert("agentSkills", {
+        name: "Invoice Reconciliation",
+        category: "FINANCE",
+        status: "ACTIVE",
+        riskLevel: "LOW",
+        instruction: "Reconcile invoices.",
+        createdBy: adminId,
+        createdAt: now + 500,
+        updatedAt: now + 500,
+      });
+      await ctx.db.insert("agentSkills", {
+        name: "Archived Helper",
+        category: "GENERAL",
+        status: "ARCHIVED",
+        riskLevel: "LOW",
+        instruction: "Retired.",
+        createdBy: adminId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return adminId;
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    let cursor: string | null = null;
+    let seen = 0;
+    let pages = 0;
+    do {
+      const result: { page: unknown[]; isDone: boolean; continueCursor: string } = await client.query(
+        api.agentSkills.searchActiveSkills,
+        { paginationOpts: { numItems: 50, cursor } },
+      );
+      seen += result.page.length;
+      pages += 1;
+      cursor = result.isDone ? null : result.continueCursor;
+    } while (cursor && pages < 20);
+
+    // Every active skill is reachable, and the archived one is not offered.
+    expect(seen).toBe(261);
+
+    const searched = await client.query(api.agentSkills.searchActiveSkills, {
+      paginationOpts: { numItems: 25, cursor: null },
+      searchTerm: "Invoice",
+    });
+    expect(searched.page.map((skill) => skill.name)).toContain("Invoice Reconciliation");
+
+    const skillIds = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("agentSkills")
+        .withIndex("by_status_created", (q) => q.eq("status", "ACTIVE"))
+        .take(2);
+      return rows.map((row) => row._id);
+    });
+    const excluded = await client.query(api.agentSkills.searchActiveSkills, {
+      paginationOpts: { numItems: 50, cursor: null },
+      excludeSkillIds: skillIds,
+    });
+    // Already-attached skills are not offered a second time.
+    expect(excluded.page.map((skill) => skill._id)).not.toContain(skillIds[0]);
+    expect(excluded.page.map((skill) => skill._id)).not.toContain(skillIds[1]);
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

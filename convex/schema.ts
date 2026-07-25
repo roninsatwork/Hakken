@@ -1001,12 +1001,28 @@ export default defineSchema({
     recommendedKnowledgeJson: v.optional(v.string()),
     defaultRulesJson: v.optional(v.string()),
     suggestedEvalFixturesJson: v.optional(v.string()),
+    // Where the skill came from, when it came from a SKILL.md file.
+    //
+    // Before these existed the filename was written to an audit log and the
+    // markdown was thrown away, so re-uploading an edited file created a second
+    // skill rather than a new version of the first, and nothing could show the
+    // reader what the file said. Optional because skills created in the admin
+    // UI, cloned, or seeded as starters have no file behind them.
+    sourceFilename: v.optional(v.string()),
+    /** Hash of the uploaded markdown, so an unchanged re-upload is a no-op. */
+    sourceHash: v.optional(v.string()),
+    /** The uploaded file verbatim: the source of truth the screens render. */
+    sourceMarkdown: v.optional(v.string()),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_status_created", ["status", "createdAt"])
     .index("by_category_created", ["category", "createdAt"])
+    // Re-uploading a SKILL.md must find the skill it already created. The file
+    // is usually named SKILL.md whatever it contains, so the frontmatter name
+    // is the identity, not the filename.
+    .index("by_name", ["name"])
     .searchIndex("search_name", { searchField: "name" }),
 
   agentSkillVersions: defineTable({

@@ -350,6 +350,9 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
     const outcome = await action.run(() => importSkillMarkdown({
         sourceFilename: markdownDraft.sourceFilename,
         sourceHash: markdownDraft.sourceHash,
+        // The file itself, kept so the skill page can show what was uploaded
+        // and hand the original back rather than a rebuilt approximation.
+        sourceMarkdown: markdownSourceText,
         name: markdownDraft.name,
         description: markdownDraft.description || undefined,
         category: markdownDraft.category,
@@ -364,7 +367,15 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
     setImportedSkillId(outcome.data.skillId);
     setIsMarkdownOpen(false);
     resetMarkdownImport();
-    setFeedback("SKILL.md imported as a draft.");
+    // Which of the three happened matters: "imported" on a re-upload would have
+    // the reader hunting for a second copy that was never created.
+    setFeedback(
+      outcome.data.outcome === "CREATED"
+        ? `Added ${markdownDraft.name} as a draft skill.`
+        : outcome.data.outcome === "UPDATED"
+          ? `Updated ${markdownDraft.name} from the file. Agents using it keep working until you roll them onto the new version.`
+          : `${markdownDraft.name} is already up to date — the file has not changed since the last upload.`,
+    );
   };
 
   return (
