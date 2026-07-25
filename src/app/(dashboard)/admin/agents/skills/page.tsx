@@ -237,6 +237,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
       .filter(Boolean)
     : [];
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<SkillStatus | "">("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   // Opened directly by the "Upload new version" button on a skill page, so
   // that action lands on the upload rather than on a list the reader then has
@@ -269,9 +270,13 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
     loadMore,
   } = usePaginatedQuery(
     api.agentSkills.getPaginatedSkills,
-    { searchTerm },
+    { searchTerm, ...(statusFilter ? { status: statusFilter } : {}) },
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
+  // Undefined while loading. Zero counted skills and an empty page means there
+  // is nothing to report on yet, so the panel stays away rather than showing
+  // five zeros to someone who has just arrived.
+  const hasSkills = analytics === undefined || analytics.totals.skills > 0 || skills.length > 0;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -406,7 +411,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
           >
             <FileText className="w-4 h-4" />
-            Import SKILL.md
+            Upload a skill file
           </button>
           <button
             type="button"
@@ -418,7 +423,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors"
           >
             <UploadCloud className="w-4 h-4 text-brand" />
-            Import bundle
+            Restore from backup
           </button>
           <button
             type="button"
@@ -427,7 +432,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors disabled:opacity-50"
           >
             {action.isBusy(SEED_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4 text-brand" />}
-            Seed starters
+            Add example skills
           </button>
           <button
             type="button"
@@ -435,7 +440,7 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
             className="h-10 px-4 rounded-[8px] border border-border-dim bg-card text-[13px] font-medium text-secondary flex items-center gap-2 hover:text-foreground transition-colors"
           >
             <Plus className="w-4 h-4 text-brand" />
-            New skill
+            Write one here
           </button>
         </div>
       </header>
@@ -455,15 +460,19 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         </div>
       )}
 
+      {/* Only shown once there is something to measure. Five large counters
+          all reading zero was the most prominent thing on an empty account, and
+          a panel that measures nothing reads as broken rather than as new. */}
+      {hasSkills && (
       <section className="border border-border-dim rounded-[8px] bg-card px-4 py-4 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <h2 className="text-[14px] font-semibold text-foreground flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-brand" />
-              Skill rollout health
+              How your skills are being used
             </h2>
             <p className="text-[12px] text-secondary mt-1">
-              Adoption, upgrade lag, and current smoke evidence across the reusable skill catalog.
+              Which agents have picked up your skills, and which of those need attention.
             </p>
           </div>
           {analytics === undefined ? (
@@ -485,10 +494,10 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
           {[
             { label: "Skills", value: analytics?.totals.skills },
-            { label: "Enabled agents", value: analytics?.totals.enabledBindings },
-            { label: "Outdated", value: analytics?.totals.outdatedBindings },
-            { label: "Validated", value: analytics?.totals.validatedBindings },
-            { label: "Needs smoke", value: analytics?.totals.needsSmokeBindings },
+            { label: "In use by agents", value: analytics?.totals.enabledBindings },
+            { label: "Out of date", value: analytics?.totals.outdatedBindings },
+            { label: "Tested", value: analytics?.totals.validatedBindings },
+            { label: "Untested", value: analytics?.totals.needsSmokeBindings },
           ].map((stat) => (
             <div key={stat.label} className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 min-w-0">
               <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{stat.label}</div>
@@ -536,15 +545,32 @@ export function AgentSkillsCatalog({ basePath = "/admin/ai/skills" }: AgentSkill
           </div>
         ) : null}
       </section>
+      )}
 
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-        <input
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search skills"
-          className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
-        />
+      {/* Search and status lead, because a catalogue of hundreds is navigated
+          rather than scanned. Both narrow in the database. */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search skills by name"
+            className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
+          />
+        </div>
+        <label className="sr-only" htmlFor="skill-status-filter">Filter by status</label>
+        <select
+          id="skill-status-filter"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value as SkillStatus | "")}
+          className="h-10 px-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-48"
+        >
+          <option value="">All statuses</option>
+          <option value="ACTIVE">Published</option>
+          <option value="DRAFT">Draft</option>
+          <option value="ARCHIVED">Archived</option>
+        </select>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

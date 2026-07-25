@@ -265,7 +265,7 @@ catalogue from a filtered one from a truncated one.
 |---|---|---|---|
 | B1 | Re-upload updates instead of duplicating | 0.5 | **done** |
 | B2 | Skill detail becomes a page you read | 0.5 | **done** |
-| B3 | Skill Center becomes search-first | 0.5 | — |
+| B3 | Skill Center becomes search-first | 0.5 | **done** |
 
 **B1 (done).** Uploading an edited `SKILL.md` updates the skill it created, as a
 new version, rather than adding a second one. The file is stored with the skill,
@@ -290,9 +290,21 @@ The `Clone` / `Export` / `Archive` actions stayed. So did the *Open clone* link,
 which is the one a previous refactor nearly dropped because no test covered it —
 it is covered now.
 
-**B3.** Uploading becomes the front door and is named in plain English. Search
-and filters lead; the health panel appears only once it has something to
-measure; cards say the next step, which is attaching the skill to an agent.
+**B3 (done).** The four competing buttons now say what they do rather than what
+they are: *Upload a skill file*, *Restore from backup*, *Add example skills*,
+*Write one here*. The orange primary is still the upload, which is now also the
+likeliest first action rather than the most technical one.
+
+Search and a status filter lead the page, both narrowing in the database. The
+health panel appears only once there is something to measure — five counters
+reading zero was the most prominent element on an empty account, and a panel
+measuring nothing reads as broken rather than as new.
+
+The counters themselves speak English: *In use by agents*, *Out of date*,
+*Tested*, *Untested*, under the heading "How your skills are being used". The
+green banner that read "No enabled skill bindings need upgrade or smoke
+validation" is on the list for the vocabulary pass with the rest of the
+double negatives.
 
 ### Phase C — Models (1 day)
 

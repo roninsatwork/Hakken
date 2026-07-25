@@ -149,11 +149,11 @@ describe("AgentSkillsCatalogPage", () => {
     render(<AgentSkillsCatalog />);
 
     expect(screen.getByText("Skill Center")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Import SKILL.md/ })).toBeInTheDocument();
-    expect(screen.getByText("Skill rollout health")).toBeInTheDocument();
-    expect(screen.getByText("Enabled agents")).toBeInTheDocument();
-    expect(screen.getByText("Outdated")).toBeInTheDocument();
-    expect(screen.getByText("Needs smoke")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Upload a skill file/ })).toBeInTheDocument();
+    expect(screen.getByText("How your skills are being used")).toBeInTheDocument();
+    expect(screen.getByText("In use by agents")).toBeInTheDocument();
+    expect(screen.getByText("Out of date")).toBeInTheDocument();
+    expect(screen.getByText("Untested")).toBeInTheDocument();
     expect(screen.getByText("2 outdated")).toBeInTheDocument();
     expect(screen.getByText("1 needs smoke")).toBeInTheDocument();
     expect(screen.getByText("Research Briefing")).toBeInTheDocument();
@@ -162,7 +162,7 @@ describe("AgentSkillsCatalogPage", () => {
     expect(screen.getByText("high risk")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
 
-    fireEvent.click(screen.getByRole("button", { name: /Seed starters/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Add example skills/ }));
     await waitFor(() => {
       expect(seedStarterSkills).toHaveBeenCalledWith({});
     });
@@ -176,6 +176,45 @@ describe("AgentSkillsCatalogPage", () => {
     render(<AgentSkillsCatalog basePath="/admin/ai/skills" />);
 
     expect(screen.getByRole("link", { name: /Research Briefing/ })).toHaveAttribute("href", "/admin/ai/skills/skill_research");
+  });
+
+  it("narrows by status in the database rather than sifting a fetched page", async () => {
+    render(<AgentSkillsCatalog />);
+
+    fireEvent.change(screen.getByLabelText("Filter by status"), { target: { value: "DRAFT" } });
+
+    await waitFor(() => {
+      expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toMatchObject({ status: "DRAFT" });
+    });
+  });
+
+  it("hides the health panel until it has something to measure", () => {
+    // Five counters reading zero was the most prominent thing on an empty
+    // account, and a panel that measures nothing reads as broken, not as new.
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [],
+      status: "Exhausted",
+      loadMore,
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
+    vi.mocked(useQuery).mockImplementation((...args) => {
+      const [queryFn] = args;
+      if (getFunctionName(queryFn) === "aiTools:getTools") {
+        return tools as unknown as ReturnType<typeof useQuery>;
+      }
+      return {
+        totals: { skills: 0, enabledBindings: 0, outdatedBindings: 0, validatedBindings: 0, needsSmokeBindings: 0 },
+        needsAttention: [],
+        computedAt: null,
+        skillsCounted: 0,
+        isPartial: false,
+      } as unknown as ReturnType<typeof useQuery>;
+    });
+
+    render(<AgentSkillsCatalog />);
+
+    expect(screen.queryByText("How your skills are being used")).not.toBeInTheDocument();
+    // The way in is still obvious.
+    expect(screen.getByRole("button", { name: /Upload a skill file/ })).toBeInTheDocument();
   });
 
   it("imports a SKILL.md file as a reviewed draft", async () => {
@@ -204,7 +243,7 @@ describe("AgentSkillsCatalogPage", () => {
 
     render(<AgentSkillsCatalog />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Import SKILL.md/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Upload a skill file/ }));
     fireEvent.change(screen.getByLabelText("SKILL.md file"), { target: { files: [file] } });
     expect(await screen.findByText("Selected file:")).toBeInTheDocument();
     const parseButton = screen.getByRole("button", { name: "Parse file" });
@@ -256,7 +295,7 @@ describe("AgentSkillsCatalogPage", () => {
 
     render(<AgentSkillsCatalog />);
 
-    fireEvent.click(screen.getByRole("button", { name: /New skill/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Write one here/ }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Client Follow-up" } });
     fireEvent.change(screen.getByLabelText("Category"), { target: { value: "COMMUNICATIONS" } });
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "ACTIVE" } });
@@ -299,7 +338,7 @@ describe("AgentSkillsCatalogPage", () => {
 
     render(<AgentSkillsCatalog />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Import bundle/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Restore from backup/ }));
     fireEvent.change(screen.getByLabelText("Bundle JSON"), { target: { value: bundleJson } });
     fireEvent.click(screen.getByRole("button", { name: "Import draft" }));
 
