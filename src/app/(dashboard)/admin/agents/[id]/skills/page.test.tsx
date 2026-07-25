@@ -107,6 +107,18 @@ const unattachedSkills = [
     createdAt: Date.UTC(2026, 5, 18),
     updatedAt: Date.UTC(2026, 5, 18),
   },
+  {
+    _id: "skill_research",
+    name: "Research Briefing",
+    description: "Turn a question into a sourced briefing.",
+    category: "STARTER",
+    status: "ACTIVE",
+    riskLevel: "MEDIUM",
+    instruction: "Cite every claim.",
+    createdBy: "user_1",
+    createdAt: Date.UTC(2026, 5, 18),
+    updatedAt: Date.UTC(2026, 5, 18),
+  },
 ];
 
 describe("AgentSkillsPage", () => {
@@ -138,61 +150,32 @@ describe("AgentSkillsPage", () => {
     });
   });
 
-  it("shows readiness, stale eval coverage, and attach actions", async () => {
+  it("lists the agent's skills in the standard table and adds a set at once", async () => {
     bindSkill.mockResolvedValue({ bindingId: "binding_followup" });
-    upgradeSkillBinding.mockResolvedValue({ bindingId: "binding_risk", skillVersionId: "skill_version_3" });
-    setBindingEnabled.mockResolvedValue("binding_risk");
 
     renderWithProviders(<AgentSkillsPage />);
 
-    expect(screen.getByText("Attached Skill Catalog")).toBeInTheDocument();
+    // The row is the skill and when it arrived. Readiness, eval coverage,
+    // version numbers and the enable/disable toggle were machinery that a
+    // reader could not act on.
     expect(screen.getByText("Risk Monitoring")).toBeInTheDocument();
-    expect(screen.getByText("New skill version available: v3. Review and upgrade this agent when ready.")).toBeInTheDocument();
-    expect(screen.getByText("1 required tool mapping(s) are missing.")).toBeInTheDocument();
-    expect(screen.getByText("1 skill fixture(s), smoke evidence is stale.")).toBeInTheDocument();
-    expect(screen.getByText("risk.monitor.feed")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Update to v3" }));
-    await waitFor(() => {
-      expect(upgradeSkillBinding).toHaveBeenCalledWith({
-        bindingId: "binding_risk",
-        seedEvalFixtures: true,
-      });
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
-    await waitFor(() => {
-      expect(setBindingEnabled).toHaveBeenCalledWith({ bindingId: "binding_risk", isEnabled: false });
-    });
+    expect(screen.queryByText("Attached Skill Catalog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Disable" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Update to v3/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add from Skill Center" }));
-    expect(screen.getByText("Add From Skill Center")).toBeInTheDocument();
-    expect(screen.getAllByText("Client Follow-up")).toHaveLength(2);
-    expect(screen.getByPlaceholderText("Search skills by name")).toBeInTheDocument();
-    expect(screen.getByText("Instruction preview")).toBeInTheDocument();
-    expect(screen.getByText("Use concrete next steps.")).toBeInTheDocument();
 
-    // Searching and filtering now happen in the database, so the assertion is
-    // that the page asks for them — not that it sifted a list it had already
-    // fetched, which is the behaviour that hid skills past the old 250 cap.
-    fireEvent.change(screen.getByPlaceholderText("Search skills by name"), { target: { value: "follow" } });
-    await waitFor(() => {
-      expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toMatchObject({ searchTerm: "follow" });
-    });
+    // Tick and add, rather than select-preview-attach one at a time.
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+    fireEvent.click(screen.getAllByRole("checkbox")[1]);
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 skills/ }));
 
-    fireEvent.change(screen.getByLabelText("Risk"), { target: { value: "LOW" } });
+    // Both of them, not just the first: the reader ticked a set.
     await waitFor(() => {
-      expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toMatchObject({ riskLevel: "LOW" });
+      expect(bindSkill).toHaveBeenCalledTimes(2);
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /Attach selected skill/ }));
-    await waitFor(() => {
-      expect(bindSkill).toHaveBeenCalledWith({
-        agentId: "agent_1",
-        skillId: "skill_followup",
-        seedEvalFixtures: true,
-      });
-    });
+    expect(bindSkill).toHaveBeenCalledWith({ agentId: "agent_1", skillId: "skill_followup", seedEvalFixtures: true });
+    expect(bindSkill).toHaveBeenCalledWith({ agentId: "agent_1", skillId: "skill_research", seedEvalFixtures: true });
   });
 
   it("links to Skill Center when no active central skills are available", () => {
@@ -210,7 +193,8 @@ describe("AgentSkillsPage", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Add from Skill Center" })[0]);
 
-    expect(screen.getByText("Every active skill is already attached to this agent.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
+    expect(screen.getByText("Every skill in the Skill Center is already attached to this agent.")).toBeInTheDocument();
+    // The way out of an empty picker is the Skill Center link in the header.
+    expect(screen.getAllByRole("link", { name: /Skill Center/ })[0]).toHaveAttribute("href", "/admin/ai/skills");
   });
 });

@@ -526,6 +526,87 @@ describe("agent skills", () => {
     expect(dropped?.status).toBe("ARCHIVED");
   });
 
+  test("re-uploading a file moves the agents using that skill onto it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const build = (instruction: string) => [
+      "---",
+      "name: Document Extraction",
+      "---",
+      "# Document Extraction",
+      "",
+      "## Instructions",
+      "",
+      instruction,
+    ].join("\n");
+
+    const upload = async (instruction: string) => {
+      const markdown = build(instruction);
+      const preview = await client.mutation(api.agentSkills.previewSkillMarkdownImport, {
+        filename: "SKILL.md",
+        markdown,
+      });
+      return await client.mutation(api.agentSkills.importSkillMarkdown, {
+        sourceFilename: preview.sourceFilename,
+        sourceHash: preview.sourceHash,
+        sourceMarkdown: markdown,
+        name: preview.name,
+        description: preview.description,
+        category: preview.category,
+        riskLevel: preview.riskLevel,
+        instruction: preview.instruction,
+        requiredToolMappingsJson: preview.requiredToolMappingsJson,
+        recommendedToolMappingsJson: preview.recommendedToolMappingsJson,
+        suggestedEvalFixturesJson: preview.suggestedEvalFixturesJson,
+      });
+    };
+
+    const created = await upload("Extract only facts supported by the source.");
+    await t.run(async (ctx) => await ctx.db.patch(created.skillId, { status: "ACTIVE" }));
+
+    const agentId = await t.run(async (ctx) => {
+      return await ctx.db.insert("agents", {
+        name: "Extractor",
+        modelId: "test-provider-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+    await client.mutation(api.agentSkills.bindSkillToAgent, { agentId, skillId: created.skillId });
+
+    const updated = await upload("Extract only facts supported by the source, and cite each one.");
+    expect(updated.outcome).toBe("UPDATED");
+    // The agent follows the file rather than waiting for someone to notice an
+    // "out of date" badge and press upgrade.
+    expect(updated.refreshedAgents).toBe(1);
+
+    const binding = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("agentSkillBindings")
+        .withIndex("by_skill_enabled", (q) => q.eq("skillId", created.skillId))
+        .collect();
+      const version = rows[0] ? await ctx.db.get(rows[0].skillVersionId) : null;
+      const allVersions = await ctx.db
+        .query("agentSkillVersions")
+        .withIndex("by_skill_created", (q) => q.eq("skillId", created.skillId))
+        .collect();
+      const latest = Math.max(...allVersions.map((entry) => entry.versionNumber));
+      return { count: rows.length, versionNumber: version?.versionNumber, latest, snapshot: version?.snapshotJson };
+    });
+
+    expect(binding.count).toBe(1);
+    // On the newest snapshot, whatever number that happens to be — attaching a
+    // skill snapshots too, so the count is not worth asserting.
+    expect(binding.versionNumber).toBe(binding.latest);
+    expect(binding.snapshot).toContain("cite each one");
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

@@ -1837,6 +1837,40 @@ export const importSkillBundle = superAdminMutation({
 });
 
 /**
+ * Move every agent using a skill onto the version just uploaded.
+ *
+ * An agent binding points at a version snapshot rather than at the skill, which
+ * is what stops a live agent's instructions changing underneath it. The cost is
+ * that a re-uploaded file reached the Skill Center and stopped: agents carried
+ * on with the old text until someone noticed an "out of date" badge and pressed
+ * upgrade.
+ *
+ * With the file as the single source of what a skill says, that is the wrong
+ * default. Uploading is now the deliberate act, so the agents follow it, and the
+ * snapshot stays underneath as the record of what each agent was actually
+ * given.
+ */
+async function rollAgentsOntoLatestSkillVersion(
+  ctx: Pick<MutationCtx, "db">,
+  skillId: Id<"agentSkills">,
+  latestVersionId: Id<"agentSkillVersions">,
+) {
+  const bindings = await ctx.db
+    .query("agentSkillBindings")
+    .withIndex("by_skill_enabled", (q) => q.eq("skillId", skillId))
+    .take(SKILL_BINDING_LIMIT);
+
+  const now = Date.now();
+  let moved = 0;
+  for (const binding of bindings) {
+    if (binding.skillVersionId === latestVersionId) continue;
+    await ctx.db.patch(binding._id, { skillVersionId: latestVersionId, updatedAt: now });
+    moved += 1;
+  }
+  return moved;
+}
+
+/**
  * Push a re-uploaded skill out to the companies that already took it.
  *
  * Adding a skill to a company copies its text rather than referencing it, so
@@ -1978,6 +2012,9 @@ export const importSkillMarkdown = superAdminMutation({
 
     const skillVersionId = await ensureAgentSkillVersionSnapshot(ctx, skillId);
     const refreshedCompanies = outcome === "UPDATED" ? await refreshCompanyCopiesOfSkill(ctx, skillId) : 0;
+    const refreshedAgents = outcome === "UPDATED"
+      ? await rollAgentsOntoLatestSkillVersion(ctx, skillId, skillVersionId)
+      : 0;
     await ctx.db.insert("auditLogs", {
       actorId: userId,
       actionType: "IMPORT_AGENT_SKILL_MARKDOWN",
@@ -1994,9 +2031,10 @@ export const importSkillMarkdown = superAdminMutation({
         sourceHash: args.sourceHash,
         skillVersionId,
         refreshedCompanies,
+        refreshedAgents,
       }),
     });
-    return { skillId, skillVersionId, outcome, refreshedCompanies };
+    return { skillId, skillVersionId, outcome, refreshedCompanies, refreshedAgents };
   },
 });
 
