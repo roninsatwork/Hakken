@@ -741,6 +741,58 @@ export const resolveModelForExecution = internalQuery({
   },
 });
 
+/**
+ * How each job would actually route for this company, by the runtime's own rules.
+ *
+ * The company AI screen used to answer this by counting `aiModelDefaults` rows
+ * against a hand-copied list of seven use cases and testing `isEnabled`. That
+ * was wrong three ways: the list omitted `fast-chat` and `transcription`, an
+ * enabled model behind a switched-off provider counted as working, and a job
+ * served by its `fallbackModelId` counted as broken.
+ *
+ * It also demanded an `embedding` default that nothing can create — the bulk
+ * path skips use cases the chosen model cannot serve, and no embedding model can
+ * be the platform chat default — for a job that runs perfectly well on
+ * `GOOGLE_VERTEX_EMBEDDING_MODEL_ID`. So the screen showed a permanent 6/7.
+ *
+ * Every job resolves to *something*: text jobs fall through to
+ * `SYSTEM_FAILSAFE_MODEL_ID` and embeddings to the Google failsafe. The only
+ * genuine fault is a company override that cannot run, because that silently
+ * falls back to the platform's choice rather than the one someone made here.
+ */
+export async function summariseCompanyModelRouting(ctx: QueryCtx, companyId: Id<"companies">) {
+  const disabledProviderKeys = await getDisabledProviderKeys(ctx);
+
+  const rows = await Promise.all(DEFAULT_MODEL_USE_CASES.map(async (useCase) => {
+    const companyRow = await ctx.db
+      .query("aiModelDefaults")
+      .withIndex("by_company_use_case", (q) => q.eq("companyId", companyId).eq("useCase", useCase))
+      .first();
+
+    if (!companyRow) return { useCase, isConfiguredHere: false, runsAsChosen: true };
+
+    // Mirrors `getUseCaseDefaultModel`: the primary, then the fallback behind it.
+    const companyModel = await getModelByStableId(ctx, companyRow.modelId);
+    if (isModelServable(companyModel, disabledProviderKeys)) {
+      return { useCase, isConfiguredHere: true, runsAsChosen: true };
+    }
+    const fallbackModel = companyRow.fallbackModelId
+      ? await getModelByStableId(ctx, companyRow.fallbackModelId)
+      : null;
+    return {
+      useCase,
+      isConfiguredHere: true,
+      runsAsChosen: isModelServable(fallbackModel, disabledProviderKeys),
+    };
+  }));
+
+  return {
+    totalUseCases: rows.length,
+    configuredHere: rows.filter((row) => row.isConfiguredHere).length,
+    brokenUseCases: rows.filter((row) => row.isConfiguredHere && !row.runsAsChosen).map((row) => row.useCase),
+  };
+}
+
 export const getCompanyModelDefaults = superAdminQuery({
   args: {
     companyId: v.id("companies"),

@@ -46,7 +46,7 @@ For a new agentic app or tenant:
 1. Read `AGENTS.md` for branch, verification, and frozen-demo rules.
 2. Run the local setup in `docs/developer/getting-started.md`.
 3. Follow `docs/developer/new-agentic-app-setup-checklist.md`.
-4. Choose or create an app kit or agent template using `convex/appTemplates.ts` and `convex/agentTemplates.ts`.
+4. Choose or create an agent template in `convex/agentTemplates.ts`.
 5. Configure model defaults in the AI Models admin surface.
 6. Install or create the required tools/connectors in the AI Tools admin surface.
 7. Create a draft agent from the guided builder.
@@ -55,7 +55,7 @@ For a new agentic app or tenant:
 10. Inspect durable runs and eval history before activation.
 11. Add product-specific code, data models, workflow, schedule, widget, webhook, or public API surface only after the agent behavior is tested.
 
-For a quick local demo, use `npm run demo:local:seed` after enabling `LOCAL_DEMO_SEED_ENABLED=1` and configuring `LOCAL_DEMO_SEED_SECRET` in Convex. The seeded demo creates a tenant, users, model defaults, starter knowledge, a knowledge search tool, a draft agent, starter eval fixtures, and sample app build plans without requiring production credentials.
+For a quick local demo, use `npm run demo:local:seed` after enabling `LOCAL_DEMO_SEED_ENABLED=1` and configuring `LOCAL_DEMO_SEED_SECRET` in Convex. The seeded demo creates a tenant, users, model defaults, starter knowledge, a knowledge search tool, a draft agent, and starter eval fixtures without requiring production credentials.
 
 ## Main Extension Points
 

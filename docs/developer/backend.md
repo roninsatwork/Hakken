@@ -29,7 +29,7 @@ If a path needs external state, use an action and write durable evidence through
 - Agents: agent definitions, tools, eval fixtures, run steps, tool calls, approvals, transactions, logs, reflections, memory candidates, memories, versions, releases, and improvement suggestions.
 - Workflows: `workflows`, `workflowExecutions`, `workflowExecutionSteps`, `schedules`, and schedule service helpers.
 - Integrations: `apiKeys`, `publicApiRequests`, `webhookDeliveries`, `toolConnectors`, connector secret refs, connector test logs, connector OAuth connection records, Apify runs, and maintenance script runs.
-- Product and support data: properties, sales reports, plans, analytics snapshots, arcade scores, movement demo rows, app launch plans, app template catalog items, audit logs, purge history, and `mockStorageMetadata` for upload-validation tests.
+- Product and support data: properties, sales reports, plans, analytics snapshots, arcade scores, movement demo rows, audit logs, purge history, and `mockStorageMetadata` for upload-validation tests.
 
 Do not add ad hoc string fields or JSON blobs when an existing typed schema path can represent the behavior. When JSON is necessary for graph or provider payloads, validate and bound it before execution.
 

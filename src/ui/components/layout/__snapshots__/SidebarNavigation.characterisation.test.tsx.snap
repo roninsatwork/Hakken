@@ -81,7 +81,6 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "authDiagnostics -> /admin/auth-diagnostics",
     "dashboard -> /admin",
     "invitations -> /admin/super-admins/invite",
-    "launch -> /admin/app-kits",
     "manageAgents -> /admin/agents",
     "manageCompanies -> /admin/companies",
     "manageGlobalAi -> /admin/ai",

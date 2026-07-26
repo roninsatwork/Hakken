@@ -190,8 +190,8 @@ describe("settings service helpers", () => {
       "operatorWorkspace",
     ]);
     expect(presets[0]).toMatchObject({
-      href: "/admin/app-kits",
-      linkLabelKey: "launch",
+      href: "/admin/agents",
+      linkLabelKey: "agents",
       readinessDependencies: ["identity", "logos", "brandColor", "diagnostics", "production"],
       visible: ["assistantWorkspace", "knowledgeSurfaces", "reportsOptional"],
     });

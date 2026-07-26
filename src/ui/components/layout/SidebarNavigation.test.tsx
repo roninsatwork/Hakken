@@ -88,7 +88,6 @@ const labels: Record<string, string> = {
   dashboard: "Dashboard",
   globalKnowledge: "Global Knowledge",
   invitations: "Invitations",
-  launch: "App Kits",
   maintenance: "Maintenance",
   manageAgents: "Manage Agents",
   manageAi: "Manage AI",
@@ -148,21 +147,6 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.getByRole("link", { name: "Manage Agents" })).toHaveAttribute("href", "/admin/agents");
     expect(screen.queryByRole("link", { name: "Agent Skills" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Workflow Logs" })).not.toBeInTheDocument();
-  });
-
-  it("places App Kits below Agents and above Settings", () => {
-    vi.mocked(usePathname).mockReturnValue("/admin/app-kits");
-
-    render(<SidebarNavigation />);
-
-    const agents = screen.getByRole("button", { name: "Agents" });
-    const appKits = screen.getByRole("link", { name: "App Kits" });
-    const settings = screen.getByRole("button", { name: "Settings" });
-
-    expect(appKits).toHaveAttribute("href", "/admin/app-kits");
-    expect(agents.compareDocumentPosition(appKits) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(appKits.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Manage Agents" })).not.toBeInTheDocument();
   });
 
   it("shows ship checks and run observatory in Maintenance instead of Agents", () => {

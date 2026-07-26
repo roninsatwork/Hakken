@@ -443,44 +443,6 @@ export default defineSchema({
     .index("by_status_created", ["status", "createdAt"])
     .index("by_created", ["createdAt"]),
 
-  appLaunchPlans: defineTable({
-    templateId: v.string(),
-    templateName: v.string(),
-    category: v.string(),
-    riskProfile: v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH")),
-    status: v.union(v.literal("DRAFT"), v.literal("MATERIALIZED"), v.literal("ARCHIVED")),
-    targetCompanyId: v.optional(v.id("companies")),
-    targetCompanyName: v.optional(v.string()),
-    notes: v.optional(v.string()),
-    planJson: v.string(),
-    createdResourceJson: v.optional(v.string()),
-    createdBy: v.id("users"),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_createdAt", ["createdAt"])
-    .index("by_status_created", ["status", "createdAt"])
-    .index("by_template_created", ["templateId", "createdAt"]),
-
-  appTemplateCatalogItems: defineTable({
-    templateId: v.string(),
-    templateName: v.string(),
-    category: v.string(),
-    riskProfile: v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH")),
-    lifecycleStatus: v.union(v.literal("ACTIVE"), v.literal("NEEDS_REVIEW"), v.literal("ARCHIVED")),
-    ownerEmail: v.optional(v.string()),
-    editorialNotes: v.optional(v.string()),
-    sourceJson: v.string(),
-    sourceUpdatedAt: v.number(),
-    lastSyncedAt: v.number(),
-    createdBy: v.id("users"),
-    updatedBy: v.id("users"),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_template", ["templateId"])
-    .index("by_lifecycle", ["lifecycleStatus", "updatedAt"]),
-
   authEvents: defineTable({
     email: v.string(),
     eventType: v.union(
@@ -1458,25 +1420,6 @@ export default defineSchema({
     .index("by_company_created", ["companyId", "createdAt"])
     .index("by_company_source_created", ["companyId", "sourceType", "createdAt"])
     .index("by_company_resolved_created", ["companyId", "resolvedAt", "createdAt"]),
-
-  companyReadinessSnapshots: defineTable({
-    companyId: v.id("companies"),
-    state: v.union(
-      v.literal("READY"),
-      v.literal("NEEDS_REVIEW"),
-      v.literal("NOT_READY"),
-      v.literal("DRIFTED")
-    ),
-    score: v.number(),
-    blockers: v.number(),
-    warnings: v.number(),
-    driftEventCount: v.number(),
-    evalPassRate: v.number(),
-    summaryJson: v.string(),
-    createdBy: v.optional(v.id("users")),
-    createdAt: v.number(),
-  })
-    .index("by_company_created", ["companyId", "createdAt"]),
 
   companyEvalCases: defineTable({
     companyId: v.id("companies"),

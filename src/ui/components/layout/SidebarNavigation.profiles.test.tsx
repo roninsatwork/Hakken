@@ -142,8 +142,9 @@ describe("white-label navigation profiles", () => {
 
   it("keeps items that no profile classifies", () => {
     // Deny-by-default would silently remove any newly added menu item.
+    // customerWorkspace never mentions agents in visible, owner or hide.
     renderSidebar("customerWorkspace");
 
-    expect(linkHrefs()).toContain("/admin/app-kits");
+    expect(sectionLabels()).toContain("agents");
   });
 });

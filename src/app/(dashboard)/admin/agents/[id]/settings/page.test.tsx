@@ -37,6 +37,9 @@ vi.mock("next-intl", () => ({
       if (key.includes("status.inactive")) return "Draft";
       if (key.includes("loading")) return "Loading...";
       if (values?.count !== undefined) return `${key} ${values.count}`;
+      // The model name is interpolated into the inherit option, so the mock has
+      // to carry it through or the test cannot see what the screen names.
+      if (values?.model !== undefined) return `${key} ${values.model}`;
       return key;
     };
   },
@@ -112,6 +115,156 @@ const latestRelease = {
   createdAt: Date.UTC(2026, 5, 16),
   approvedAt: Date.UTC(2026, 5, 16, 11),
 };
+
+const models = [
+  {
+    _id: "model_default",
+    modelId: "default-agent-model",
+    friendlyName: "Default Agent Model",
+    displayName: "Default Agent Model",
+    providerKey: "google",
+    isEnabled: true,
+    isDefault: true,
+    supportedUseCases: ["agent"],
+    standardInputCostBelow200k: 1.5,
+    outputResponseCost: 7.5,
+  },
+  {
+    _id: "model_claude",
+    modelId: "alt-agent-model",
+    friendlyName: "Alternate Model",
+    displayName: "Alternate Model",
+    providerKey: "anthropic",
+    isEnabled: true,
+    isDefault: false,
+    supportedUseCases: ["agent"],
+    standardInputCostBelow200k: 3,
+    outputResponseCost: 15,
+  },
+];
+
+const inheritedReadiness = {
+  status: "PASS",
+  source: "useCaseDefault",
+  useCase: "agent",
+  modelId: "default-agent-model",
+  inheritedModelId: "default-agent-model",
+};
+
+describe("AgentOverviewPage model selection", () => {
+  const mutationMock = vi.fn();
+  let agentFixture: unknown;
+  let readinessFixture: unknown;
+
+  const renderAgent = (
+    agentOverrides: Record<string, unknown>,
+    modelReadiness: Record<string, unknown> = inheritedReadiness,
+  ) => {
+    agentFixture = { ...agent, ...agentOverrides };
+    readinessFixture = { ...readiness, modelReadiness };
+    render(<AgentOverviewPage />);
+  };
+
+  const getModelSelect = () => screen.getByLabelText("sections.engine.model.label") as HTMLSelectElement;
+
+  const saveAndReadAgentUpdate = async () => {
+    fireEvent.click(screen.getByRole("button", { name: "sections.identity.saveButton" }));
+    await waitFor(() => {
+      expect(mutationMock).toHaveBeenCalled();
+    });
+    // One mock stands in for every mutation on this page, so the agent update is
+    // the call carrying the form's own fields.
+    const call = mutationMock.mock.calls
+      .map(([payload]) => payload as Record<string, unknown>)
+      .find((payload) => payload && "name" in payload);
+    return call!;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
+      const functionName = getFunctionName(queryFn);
+      if (functionName === "agents:get") return agentFixture as ReturnType<typeof useQuery>;
+      if (functionName === "agents:getAgentReadiness") return readinessFixture as ReturnType<typeof useQuery>;
+      if (functionName === "releases:getLatestReleaseForAgent") return null as ReturnType<typeof useQuery>;
+      if (functionName === "aiModels:getActiveModels") return models as unknown as ReturnType<typeof useQuery>;
+      return undefined as unknown as ReturnType<typeof useQuery>;
+    });
+    vi.mocked(useMutation).mockReturnValue(mutationMock as unknown as ReturnType<typeof useMutation>);
+    mutationMock.mockResolvedValue(undefined);
+  });
+
+  /**
+   * The fault this guards against.
+   *
+   * The runtime only applies an agent's own model when its mode is "override",
+   * so an agent with no stored mode follows the platform default. This form read
+   * that as "override" and filled the model box with whatever the platform
+   * default happened to be — then posted both on every save. Opening an older
+   * agent, changing its name and pressing Save pinned it to that model for good,
+   * silently, and it stopped following the platform default from then on.
+   */
+  it("follows the platform default when an agent has no stored mode, and saving does not pin it", async () => {
+    renderAgent({ modelSelectionMode: undefined });
+
+    expect(getModelSelect().value).toBe("");
+
+    const payload = await saveAndReadAgentUpdate();
+    expect(payload.modelSelectionMode).toBe("inherit");
+    expect(payload).not.toHaveProperty("modelId");
+  });
+
+  it("names the model that following the platform default would use", () => {
+    renderAgent({ modelSelectionMode: undefined });
+
+    // The old control greyed the model box out and said nothing about what would
+    // run instead, so the choice was made blind.
+    expect(
+      screen.getByRole("option", { name: /followDefaultNamed Default Agent Model/ })
+    ).toBeInTheDocument();
+    // And the cost of each alternative is on the option itself.
+    expect(screen.getByRole("option", { name: /Alternate Model · \$3\.00 in · \$15\.00 out/ })).toBeInTheDocument();
+  });
+
+  it("shows the model an overriding agent is pinned to, and still names the default behind it", () => {
+    renderAgent(
+      { modelSelectionMode: "override", modelId: "alt-agent-model" },
+      { ...inheritedReadiness, source: "override", modelId: "alt-agent-model" },
+    );
+
+    expect(getModelSelect().value).toBe("alt-agent-model");
+    expect(
+      screen.getByRole("option", { name: /followDefaultNamed Default Agent Model/ })
+    ).toBeInTheDocument();
+  });
+
+  it("saves an override when a model is chosen, and inherit when the default is chosen again", async () => {
+    renderAgent({ modelSelectionMode: undefined });
+
+    fireEvent.change(getModelSelect(), { target: { value: "alt-agent-model" } });
+    const overridePayload = await saveAndReadAgentUpdate();
+    expect(overridePayload.modelSelectionMode).toBe("override");
+    expect(overridePayload.modelId).toBe("alt-agent-model");
+
+    mutationMock.mockClear();
+    fireEvent.change(getModelSelect(), { target: { value: "" } });
+    const inheritPayload = await saveAndReadAgentUpdate();
+    expect(inheritPayload.modelSelectionMode).toBe("inherit");
+    expect(inheritPayload).not.toHaveProperty("modelId");
+  });
+
+  it("says when the model an agent is pinned to cannot run", () => {
+    renderAgent(
+      { modelSelectionMode: "override", modelId: "alt-agent-model" },
+      { ...inheritedReadiness, source: "override", status: "WARN", modelId: "alt-agent-model" },
+    );
+
+    // Readiness already knew this. It was computed and never shown beside the
+    // choice it is about.
+    expect(screen.getByText("sections.engine.model.unusable")).toBeInTheDocument();
+  });
+});
 
 describe("AgentOverviewPage release visibility", () => {
   const mutationMock = vi.fn();

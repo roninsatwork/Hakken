@@ -2,7 +2,7 @@
 
 Platform plans define subscription tiers, monthly message limits, pricing display values, company plan assignment, user overrides, and billing-period message counter resets. Read this before changing `convex/plans.ts`, `convex/planService.ts`, plan schema fields, company plan assignment, profile usage displays, or the plan catalog UI.
 
-For user and company management boundaries, see [Company And User Management](./company-user-management.md). For settings and white-label packaging, see [System Settings And Branding](./system-settings-and-branding.md). For launch handoff, see [App Kit And Launch Plan Implementation](./app-kit-launch-plan-implementation.md).
+For user and company management boundaries, see [Company And User Management](./company-user-management.md). For settings and white-label packaging, see [System Settings And Branding](./system-settings-and-branding.md).
 
 ## Product Surface
 

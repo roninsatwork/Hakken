@@ -130,7 +130,7 @@ const t = (key: string) => {
     "modulePresets.items.reportsOptional": "Reports only when needed",
     "modulePresets.items.runReleaseGate": "Run the release gate",
     "modulePresets.items.systemHealth": "System Health",
-    "modulePresets.links.launch": "Open App Kits",
+    "modulePresets.links.agents": "Open agents",
     "modulePresets.presets.knowledgeAssistant.summary": "A focused internal assistant backed by approved company knowledge and release gates.",
     "modulePresets.presets.knowledgeAssistant.title": "Knowledge Assistant",
     "modulePresets.sections.handoff": "Handoff checks",
@@ -261,8 +261,8 @@ describe("settings sections", () => {
         presets={[
           {
             key: "knowledgeAssistant",
-            href: "/admin/app-kits",
-            linkLabelKey: "launch",
+            href: "/admin/agents",
+            linkLabelKey: "agents",
             readinessDependencies: ["identity", "logos", "brandColor", "diagnostics", "production"],
             visible: ["assistantWorkspace", "knowledgeSurfaces", "reportsOptional"],
             owner: ["agentBuilderEvals", "modelDefaults", "systemHealth"],
@@ -276,7 +276,7 @@ describe("settings sections", () => {
     expect(screen.getByText("Knowledge Assistant")).toBeInTheDocument();
     expect(screen.getByText("Assistant workspace")).toBeInTheDocument();
     expect(screen.getByText("Run the release gate")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open App Kits/i })).toHaveAttribute("href", "/admin/app-kits");
+    expect(screen.getByRole("link", { name: /Open agents/i })).toHaveAttribute("href", "/admin/agents");
   });
 
   it("renders the white-label handoff summary", () => {

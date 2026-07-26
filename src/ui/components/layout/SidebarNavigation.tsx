@@ -23,8 +23,7 @@ import {
   // template:remove:start properties
   Home,
   // template:remove:end
-  Wrench,
-  Rocket
+  Wrench
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Image from "next/image";
@@ -181,7 +180,6 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
-  if (pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')) return 'App Kits';
   if (pathname.startsWith('/admin/releases')) return 'Release Center';
   if (pathname.startsWith('/admin/run-observatory')) return 'Run Observatory';
   if (pathname.startsWith('/admin/companies')) return 'Companies';
@@ -421,16 +419,6 @@ export default function SidebarNavigation() {
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" navKey="workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" navKey="schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
                       </NavItem>
-                    )}
-
-                    {isSuperAdmin && (
-                      <NavItem
-                        icon={Rocket}
-                        label={t('launch')}
-                        href="/admin/app-kits" navKey="appKits"
-                        isActive={activeItem === 'App Kits' || pathname.startsWith('/admin/app-kits') || pathname.startsWith('/admin/launch')}
-                        onClick={() => setActiveItem('App Kits')}
-                      />
                     )}
 
                     {isSuperAdmin && (

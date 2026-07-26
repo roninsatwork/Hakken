@@ -163,27 +163,15 @@ async function isProviderEnabledForReadiness(ctx: Pick<QueryCtx, "db">, provider
   return provider?.isEnabled !== false;
 }
 
-async function resolveAgentModelReadiness(ctx: Pick<QueryCtx, "db">, args: {
-  agent: {
-    modelId: string;
-    modelSelectionMode?: AgentModelSelectionMode;
-    workflowId?: Id<"workflows">;
-  };
-}) {
-  const useCase: AgentModelUseCase = args.agent.workflowId ? "workflow" : "agent";
-
-  if (args.agent.modelSelectionMode === "override") {
-    const overrideModel = await getModelByStableIdForReadiness(ctx, args.agent.modelId);
-    const providerEnabled = await isProviderEnabledForReadiness(ctx, overrideModel?.providerKey);
-    return {
-      status: overrideModel?.isEnabled && modelSupportsUseCase(overrideModel, useCase) && providerEnabled ? "PASS" as const : "WARN" as const,
-      source: "override" as const,
-      useCase,
-      modelId: args.agent.modelId,
-      providerKey: overrideModel?.providerKey,
-    };
-  }
-
+/**
+ * What an agent runs when it has no model of its own.
+ *
+ * Its own step, so it can be answered for an agent that *is* overriding. The
+ * settings screen offers "follow the platform default" as a choice and has to
+ * name what that would mean before it is chosen — which a resolution that
+ * stops at the override cannot say.
+ */
+async function resolveInheritedModelForUseCase(ctx: Pick<QueryCtx, "db">, useCase: AgentModelUseCase) {
   const defaultRow = await ctx.db
     .query("aiModelDefaults")
     .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", useCase))
@@ -192,9 +180,7 @@ async function resolveAgentModelReadiness(ctx: Pick<QueryCtx, "db">, args: {
   const configuredProviderEnabled = await isProviderEnabledForReadiness(ctx, configuredDefault?.providerKey);
   if (configuredDefault?.isEnabled && modelSupportsUseCase(configuredDefault, useCase) && configuredProviderEnabled) {
     return {
-      status: "PASS" as const,
       source: "useCaseDefault" as const,
-      useCase,
       modelId: configuredDefault.modelId,
       providerKey: configuredDefault.providerKey,
     };
@@ -206,9 +192,7 @@ async function resolveAgentModelReadiness(ctx: Pick<QueryCtx, "db">, args: {
   const fallbackProviderEnabled = await isProviderEnabledForReadiness(ctx, fallbackDefault?.providerKey);
   if (fallbackDefault?.isEnabled && modelSupportsUseCase(fallbackDefault, useCase) && fallbackProviderEnabled) {
     return {
-      status: "PASS" as const,
       source: "fallbackDefault" as const,
-      useCase,
       modelId: fallbackDefault.modelId,
       providerKey: fallbackDefault.providerKey,
     };
@@ -222,13 +206,50 @@ async function resolveAgentModelReadiness(ctx: Pick<QueryCtx, "db">, args: {
     const legacyProviderEnabled = await isProviderEnabledForReadiness(ctx, legacyModel.providerKey);
     if (legacyModel.isEnabled && modelSupportsUseCase(legacyModel, useCase) && legacyProviderEnabled) {
       return {
-        status: "PASS" as const,
         source: "legacyDefault" as const,
-        useCase,
         modelId: legacyModel.modelId,
         providerKey: legacyModel.providerKey,
       };
     }
+  }
+
+  return null;
+}
+
+async function resolveAgentModelReadiness(ctx: Pick<QueryCtx, "db">, args: {
+  agent: {
+    modelId: string;
+    modelSelectionMode?: AgentModelSelectionMode;
+    workflowId?: Id<"workflows">;
+  };
+}) {
+  const useCase: AgentModelUseCase = args.agent.workflowId ? "workflow" : "agent";
+  // Resolved either way, so `inheritedModelId` always answers "and what would
+  // happen if this agent stopped overriding?".
+  const inherited = await resolveInheritedModelForUseCase(ctx, useCase);
+
+  if (args.agent.modelSelectionMode === "override") {
+    const overrideModel = await getModelByStableIdForReadiness(ctx, args.agent.modelId);
+    const providerEnabled = await isProviderEnabledForReadiness(ctx, overrideModel?.providerKey);
+    return {
+      status: overrideModel?.isEnabled && modelSupportsUseCase(overrideModel, useCase) && providerEnabled ? "PASS" as const : "WARN" as const,
+      source: "override" as const,
+      useCase,
+      modelId: args.agent.modelId,
+      providerKey: overrideModel?.providerKey,
+      inheritedModelId: inherited?.modelId,
+    };
+  }
+
+  if (inherited) {
+    return {
+      status: "PASS" as const,
+      source: inherited.source,
+      useCase,
+      modelId: inherited.modelId,
+      providerKey: inherited.providerKey,
+      inheritedModelId: inherited.modelId,
+    };
   }
 
   return {
@@ -237,6 +258,7 @@ async function resolveAgentModelReadiness(ctx: Pick<QueryCtx, "db">, args: {
     useCase,
     modelId: args.agent.modelId,
     providerKey: undefined,
+    inheritedModelId: undefined,
   };
 }
 
@@ -699,6 +721,34 @@ export const list = superAdminQuery({
       .order("desc")
       .take(AGENT_CATALOG_LIMIT);
     return allAgents.filter(isGlobalAgent);
+  },
+});
+
+/**
+ * What an agent runs when it has not chosen a model, for the list screen.
+ *
+ * The list draws many rows at once, so it cannot ask per agent — it asks once
+ * and applies the answer to every inheriting row. Both jobs are returned
+ * because the search path of `getPaginatedAgents` does not filter workflow-backed
+ * agents out, and those resolve against the workflow default instead.
+ */
+export const getInheritedAgentModels = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const describe = async (inherited: Awaited<ReturnType<typeof resolveInheritedModelForUseCase>>) => {
+      if (!inherited) return null;
+      const model = await getModelByStableIdForReadiness(ctx, inherited.modelId);
+      return {
+        modelId: inherited.modelId,
+        providerKey: inherited.providerKey,
+        displayName: model?.friendlyName || model?.displayName || inherited.modelId,
+      };
+    };
+
+    return {
+      agent: await describe(await resolveInheritedModelForUseCase(ctx, "agent")),
+      workflow: await describe(await resolveInheritedModelForUseCase(ctx, "workflow")),
+    };
   },
 });
 

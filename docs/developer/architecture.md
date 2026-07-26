@@ -45,7 +45,7 @@ Tenant isolation is company-based. Most customer data carries `companyId`, while
 - agents and operations: `agents`, `agentRuns`, steps, tool calls, approvals, evals, memories, reflections, improvement suggestions, versions, transactions, logs, releases, skills, and skill bindings
 - workflows and schedules: `workflows`, `workflowExecutions`, `workflowExecutionSteps`, `schedules`
 - integrations and operations: `apiKeys`, `publicApiRequests`, `webhookDeliveries`, `toolConnectors`, connector secret refs, connector OAuth connection records, Apify runs, `maintenanceScriptRuns`, `auditLogs`, and purge history
-- product features: properties, sales reports, plans, inventory rollups, analytics snapshots, app launch plans, app template catalog data, arcade scores, and movement demo data
+- product features: properties, sales reports, plans, inventory rollups, analytics snapshots, arcade scores, and movement demo data
 
 Queries and mutations should stay fast and bounded. Provider calls, document extraction, webhook dispatch, email sending, Apify sync, and other external or expensive work belong in actions or scheduled internal actions.
 

@@ -329,7 +329,6 @@
         "admin": "Administration",
         "navigation": "Main Navigation",
         "dashboard": "Dashboard",
-        "launch": "App Kits",
         "companies": "Companies",
         "manageCompanies": "Manage Companies",
         "ai": "Artificial Intelligence",
@@ -996,6 +995,8 @@
                 "status": "Status",
                 "actions": "Actions",
                 "empty": "No agents found matching your query.",
+                "followsPlatformDefault": "Platform default · {model}",
+                "platformDefaultNotSet": "Platform default · none set",
                 "active": "Active",
                 "draft": "Draft",
                 "configure": "Configure Agent",
@@ -1133,14 +1134,14 @@
                             "title": "AI Model Settings",
                             "model": {
                                 "label": "Language Model",
-                                "modeLabel": "Model Source",
+                                "hint": "Leave this following the platform default unless this agent needs a model of its own.",
                                 "placeholder": "Select a model...",
                                 "systemDefault": "(System Default)",
                                 "legacy": "({id}) (Legacy)",
-                                "modes": {
-                                    "inherit": "Inherit platform default",
-                                    "override": "Override with model"
-                                }
+                                "followDefault": "Follow the platform default",
+                                "followDefaultNamed": "Follow the platform default — {model}",
+                                "followDefaultMissing": "Follow the platform default — none set",
+                                "unusable": "This model is not available, so this agent has nothing to run. Choose another, or follow the platform default."
                             },
                             "reasoning": {
                                 "label": "Reasoning Effort",
@@ -1698,7 +1699,7 @@
                     "handoff": "Handoff checks"
                 },
                 "links": {
-                    "launch": "Open App Kits",
+                    "agents": "Open agents",
                     "widget": "Open widget",
                     "health": "Open health"
                 },

@@ -329,7 +329,6 @@
         "admin": "Protocollo di Sistema",
         "navigation": "Navigazione Principale",
         "dashboard": "Dashboard",
-        "launch": "Kit App",
         "companies": "Aziende",
         "manageCompanies": "Gestisci Aziende",
         "ai": "Intelligenza Artificiale",
@@ -996,6 +995,8 @@
                 "status": "Stato",
                 "actions": "Azioni",
                 "empty": "Nessun agent trovato corrispondente alla ricerca.",
+                "followsPlatformDefault": "Default piattaforma · {model}",
+                "platformDefaultNotSet": "Default piattaforma · nessuno impostato",
                 "active": "Attivo",
                 "draft": "Bozza",
                 "configure": "Configura Agent",
@@ -1133,14 +1134,14 @@
                             "title": "Configurazione Motore Cognitivo",
                             "model": {
                                 "label": "Modello LLM Core",
-                                "modeLabel": "Origine Modello",
+                                "hint": "Lascia che segua il default della piattaforma, a meno che questo agente non abbia bisogno di un modello proprio.",
                                 "placeholder": "Seleziona unità di intelligenza...",
                                 "systemDefault": "(Default di Sistema)",
                                 "legacy": "({id}) (Legacy / Disabilitato)",
-                                "modes": {
-                                    "inherit": "Eredita default piattaforma",
-                                    "override": "Sovrascrivi con modello"
-                                }
+                                "followDefault": "Segui il default della piattaforma",
+                                "followDefaultNamed": "Segui il default della piattaforma — {model}",
+                                "followDefaultMissing": "Segui il default della piattaforma — nessuno impostato",
+                                "unusable": "Questo modello non è disponibile, quindi questo agente non ha nulla da eseguire. Scegline un altro, oppure segui il default della piattaforma."
                             },
                             "reasoning": {
                                 "label": "Intensità di Ragionamento",
@@ -1698,7 +1699,7 @@
                     "handoff": "Controlli handoff"
                 },
                 "links": {
-                    "launch": "Apri Kit App",
+                    "agents": "Apri agenti",
                     "widget": "Apri widget",
                     "health": "Apri health"
                 },

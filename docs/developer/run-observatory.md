@@ -2,7 +2,7 @@
 
 The run observatory is the sampled operations view for recent agent execution health. It aggregates run status, failure reasons, cost, tokens, latency, model usage, agent activity, tool risk, and recent run evidence so operators can spot release regressions and runtime incidents quickly.
 
-Read this before changing `agentRuns.getRunObservatory`, `/admin/run-observatory`, run telemetry fields, tool-call sampling, or company scoping. For release review context, see [Launch, Releases, And Observability](./launch-releases-and-observability.md) and [Agent Release Infrastructure](./agent-release-infrastructure.md).
+Read this before changing `agentRuns.getRunObservatory`, `/admin/run-observatory`, run telemetry fields, tool-call sampling, or company scoping. For release review context, see [Releases And Observability](./releases-and-observability.md) and [Agent Release Infrastructure](./agent-release-infrastructure.md).
 
 ## Product Surface
 

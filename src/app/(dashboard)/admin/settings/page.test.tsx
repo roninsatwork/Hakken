@@ -87,7 +87,7 @@ vi.mock("next-intl", () => ({
       "customDomain.summary.total": "Total",
       "customDomain.title": "Custom Domain Readiness",
       "modulePresets.links.health": "Open health",
-      "modulePresets.links.launch": "Open App Kits",
+      "modulePresets.links.agents": "Open agents",
       "modulePresets.links.widget": "Open widget",
       "modulePresets.items.agentBuilderEvals": "Agent builder and evals",
       "modulePresets.items.approvalsInbox": "Approvals inbox",
@@ -265,8 +265,8 @@ const whiteLabelReadiness = {
 const whiteLabelModulePresets = [
   {
     key: "knowledgeAssistant",
-    href: "/admin/app-kits",
-    linkLabelKey: "launch",
+    href: "/admin/agents",
+    linkLabelKey: "agents",
     readinessDependencies: ["identity", "logos", "brandColor", "diagnostics", "production"],
     visible: ["assistantWorkspace", "knowledgeSurfaces", "reportsOptional"],
     owner: ["agentBuilderEvals", "modelDefaults", "systemHealth"],

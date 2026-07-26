@@ -29,6 +29,10 @@ import {
   AdminSaveError,
 } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
+import {
+  formatModelDisplayName,
+  formatTokenCost,
+} from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
 
 type ReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 type ModelSelectionMode = "inherit" | "override";
@@ -244,6 +248,42 @@ export default function AgentOverviewPage() {
   const [releaseAction, setReleaseAction] = useState<string | null>(null);
   const [smokeEvalMode, setSmokeEvalMode] = useState<SmokeEvalMode | null>(null);
 
+  // What "follow the platform default" would actually mean, named before it is
+  // chosen rather than left as a greyed-out box. The server resolves it for this
+  // agent's own job — `workflow` for a workflow-backed agent, `agent` otherwise —
+  // including the fallbacks behind it.
+  const modelReadiness = readiness?.modelReadiness;
+  const inheritedModelId = modelReadiness?.inheritedModelId;
+  const inheritedModel = activeModels.find((model) => model.modelId === inheritedModelId);
+  const inheritOptionLabel = inheritedModelId
+    ? t("sections.engine.model.followDefaultNamed", {
+        model: inheritedModel ? formatModelDisplayName(inheritedModel) : inheritedModelId,
+      })
+    : readiness === undefined
+      ? t("sections.engine.model.followDefault")
+      : t("sections.engine.model.followDefaultMissing");
+
+  // An agent pinned to a model that is no longer offered still shows what it is
+  // pinned to, rather than appearing unset.
+  const isLegacyOverride = formData.modelSelectionMode === "override"
+    && Boolean(formData.modelId)
+    && activeModels.length > 0
+    && !activeModels.some((model) => model.modelId === formData.modelId);
+
+  // Only about the model that is actually saved: an unsaved change to this
+  // control has not been judged yet.
+  const isOverrideUnusable = modelReadiness?.source === "override"
+    && modelReadiness.status === "WARN"
+    && formData.modelSelectionMode === "override"
+    && formData.modelId === modelReadiness.modelId;
+
+  const describeModelPrice = (model: Doc<"aiModels">) => {
+    const input = formatTokenCost(model.standardInputCostBelow200k);
+    const output = formatTokenCost(model.outputResponseCost);
+    if (input === "—" && output === "—") return "";
+    return ` · ${input} in · ${output} out`;
+  };
+
   // Avatar Upload State
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -261,7 +301,13 @@ export default function AgentOverviewPage() {
       description: agent.description || "",
       avatar: agent.avatar || "",
       modelId: agent.modelId || defaultModelId,
-      modelSelectionMode: agent.modelSelectionMode || "override",
+      // An agent with no stored mode inherits — that is what the runtime does
+      // (`resolveAgentModelReadiness` only applies the agent's own model when the
+      // mode is "override"). Reading it as "override" here meant opening an older
+      // agent, changing its name, and saving pinned it to whatever the platform
+      // default happened to be at that moment. Nothing on screen said so, and it
+      // stopped following the platform default from then on.
+      modelSelectionMode: agent.modelSelectionMode ?? "inherit",
       thinkingMode: agent.thinkingMode || false,
       reasoningEffort: agent.reasoningEffort || "MEDIUM",
       allowInternetAccess: agent.allowInternetAccess || false,
@@ -511,39 +557,53 @@ export default function AgentOverviewPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* One control, not two.
+                Asking for a mode and then a model split one decision in half, and
+                the model box sat greyed out with no way to tell what would run
+                instead. The first option names it. */}
             <div className="flex flex-col gap-2 md:col-span-2 md:w-1/2">
-              <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.model.modeLabel")}</label>
+              <label
+                htmlFor="agent-model"
+                className="text-[11px] font-mono tracking-widest text-muted uppercase"
+              >
+                {t("sections.engine.model.label")}
+              </label>
               <select
-                value={formData.modelSelectionMode}
-                onChange={e => setFormData({ ...formData, modelSelectionMode: e.target.value as ModelSelectionMode })}
+                id="agent-model"
+                value={formData.modelSelectionMode === "inherit" ? "" : formData.modelId || ""}
+                onChange={e => {
+                  const nextModelId = e.target.value;
+                  setFormData({
+                    ...formData,
+                    modelSelectionMode: nextModelId ? "override" : "inherit",
+                    ...(nextModelId ? { modelId: nextModelId } : {}),
+                  });
+                }}
                 className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all focus:border-[#10b981]/50 appearance-none cursor-pointer"
               >
-                <option value="inherit">{t("sections.engine.model.modes.inherit")}</option>
-                <option value="override">{t("sections.engine.model.modes.override")}</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-2 md:col-span-2 md:w-1/2">
-              <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.model.label")}</label>
-              <select
-                value={formData.modelId || ''}
-                onChange={e => setFormData({ ...formData, modelId: e.target.value })}
-                disabled={formData.modelSelectionMode === "inherit"}
-                className="w-full px-4 py-3 bg-black/20 border border-border-dim rounded-[12px] text-[14px] text-foreground outline-none transition-all focus:border-[#10b981]/50 appearance-none cursor-pointer"
-              >
-                <option value="" disabled>{t("sections.engine.model.placeholder")}</option>
+                <option value="">{inheritOptionLabel}</option>
                 {activeModels.map((m) => (
                   <option key={m.modelId} value={m.modelId}>
-                    {m.friendlyName || m.displayName || m.modelId} {m.isDefault && t("sections.engine.model.systemDefault")}
+                    {formatModelDisplayName(m)}{describeModelPrice(m)}
                   </option>
                 ))}
 
-                {formData.modelId && activeModels.length > 0 && !activeModels.find(m => m.modelId === formData.modelId) && (
+                {isLegacyOverride && (
                   <option value={formData.modelId}>
-                    {formData.modelId} {t("sections.engine.model.legacy")}
+                    {t("sections.engine.model.legacy", { id: formData.modelId })}
                   </option>
                 )}
               </select>
+              <p className="text-[12px] leading-relaxed text-secondary">
+                {t("sections.engine.model.hint")}
+              </p>
+              {/* Readiness already knows when the chosen model cannot run. It was
+                  computed and never shown next to the choice it is about. */}
+              {isOverrideUnusable && (
+                <p className="text-[12px] leading-relaxed text-[#f59e0b]">
+                  {t("sections.engine.model.unusable")}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">

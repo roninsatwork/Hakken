@@ -20,8 +20,6 @@ Use the local demo seed when you need to show or test:
 - starter tenant knowledge
 - the `knowledge.search` AI tool
 - a draft demo agent with linked knowledge and eval fixtures
-- app template catalog registry rows
-- one materialized support-desk launch plan and one draft sales-research launch plan
 
 Do not use it for production setup, customer onboarding, migration, or support-data repair.
 
@@ -72,7 +70,7 @@ If the local Convex URL is not discoverable from `.env.local`, pass it explicitl
 LOCAL_DEMO_SEED_CONVEX_URL=http://127.0.0.1:3210 LOCAL_DEMO_SEED_SECRET=replace-with-local-secret npm run demo:local:seed
 ```
 
-The script prints created or updated state for the company, users, models, defaults, tool, agent, knowledge, eval fixtures, and launch plans.
+The script prints created or updated state for the company, users, models, defaults, tool, agent, knowledge, and eval fixtures.
 
 ## Seeded Records
 
@@ -104,12 +102,6 @@ Seeded agent foundation:
 - `knowledge.search` tool binding
 - active starter eval fixtures from the template
 
-Seeded app-kit and launch-plan state:
-
-- app template catalog registry rows synced from code-backed app templates
-- materialized `support-desk-ai` launch plan linked to the demo company and draft agent
-- draft `sales-research-copilot` launch plan for review-flow demos
-
 ## Post-Run Checks
 
 After the seed completes:
@@ -121,7 +113,6 @@ After the seed completes:
 5. Open the demo agent and confirm it is inactive.
 6. Confirm readiness shows linked knowledge, one tool binding, active eval fixtures, and a smoke-eval warning.
 7. Open knowledge management and confirm the demo handbook is ready.
-8. Open launch plans and confirm one materialized support-desk plan and one draft sales-research plan.
 
 Do not activate the demo agent until smoke evals are run and reviewed.
 
@@ -141,4 +132,4 @@ If the script cannot connect to Convex, confirm `npm run convex:dev` is running 
 
 The seed is designed for repeatable local use, not cleanup. Re-running it updates the deterministic demo records and only creates missing eval fixtures. If you need a clean demo database, reset the local Convex deployment rather than deleting individual records manually.
 
-Before using the seeded state in a customer-facing recording or rehearsal, replace or clearly explain fake records and local-only identities. The seeded users, handbook, launch-plan notes, and connector tasks are sample data.
+Before using the seeded state in a customer-facing recording or rehearsal, replace or clearly explain fake records and local-only identities. The seeded users, handbook, and connector tasks are sample data.

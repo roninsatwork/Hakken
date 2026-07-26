@@ -4,10 +4,10 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { summariseCompanyModelRouting } from "./aiModels";
 
-const RECENT_DRIFT_LIMIT = 10;
-const SNAPSHOT_LIMIT = 15;
 const READINESS_EVAL_LIMIT = 1000;
+const DRIFT_SCAN_LIMIT = 100;
 
 const driftSourceValidator = v.union(
   v.literal("KNOWLEDGE"),
@@ -19,16 +19,6 @@ const driftSourceValidator = v.union(
   v.literal("WIDGET"),
   v.literal("PROMPT")
 );
-
-type ReadinessState = "READY" | "NEEDS_REVIEW" | "NOT_READY" | "DRIFTED";
-type ReadinessAreaStatus = "PASS" | "WARN" | "BLOCK";
-
-type ReadinessArea = {
-  key: string;
-  label: string;
-  status: ReadinessAreaStatus;
-  detail: string;
-};
 
 type DriftSource = Doc<"companyAiDriftEvents">["sourceType"];
 
@@ -62,28 +52,84 @@ function hasStoredJson(value: string | undefined) {
   }
 }
 
-function scoreAreas(areas: ReadinessArea[]) {
-  if (areas.length === 0) return 0;
-  const score = areas.reduce((total, area) => {
-    if (area.status === "PASS") return total + 1;
-    if (area.status === "WARN") return total + 0.5;
-    return total;
-  }, 0);
-  return Math.round((score / areas.length) * 100);
+/**
+ * What this company has set up of its own, and whether any of it needs attention.
+ *
+ * The screen this replaces showed nine tiles and a percentage computed from five
+ * of them, so a company with no knowledge, no instructions, no widget and broken
+ * model routing could read 100%. Everything shown here is counted and everything
+ * counted is shown.
+ *
+ * The states are deliberately three, and only one of them is a problem. A
+ * company does not have to configure any of this — it inherits the platform's
+ * setup, and for most companies that is the right answer forever. So absence is
+ * `NOT_CONFIGURED`: informational, never a warning, never a blocker to launch.
+ * `NEEDS_ATTENTION` is reserved for something set *here* that does not work.
+ * The old screen counted absence as a gap, which is why a healthy workspace read
+ * 60%.
+ */
+type CompanyAiAreaState = "NEEDS_ATTENTION" | "SET_HERE" | "NOT_CONFIGURED";
+
+type CompanyAiArea = {
+  key: string;
+  label: string;
+  state: CompanyAiAreaState;
+  /** One plain sentence, written for a reader rather than assembled on the page. */
+  summary: string;
+  /** Only on NEEDS_ATTENTION: what to do about it. */
+  action?: string;
+  /** Path under the company, so the page composes the link. */
+  href: string;
+};
+
+const KNOWLEDGE_SCAN_LIMIT = 500;
+const RULE_SCAN_LIMIT = 200;
+const MEMORY_SCAN_LIMIT = 1000;
+
+/** A count that stopped early says so, rather than presenting a sample as a total. */
+function formatCount(value: number, limit: number) {
+  return value >= limit ? `${limit}+` : `${value}`;
 }
 
+function pluralise(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural;
+}
 
-async function buildReadinessSummary(ctx: QueryCtx, companyId: Id<"companies">) {
-  const [evalCases, unresolvedDriftEvents, activeSkills, enabledBindings, approvedMemories] = await Promise.all([
+async function buildCompanyAiAreas(ctx: QueryCtx, companyId: Id<"companies">, company: Doc<"companies">) {
+  const [
+    activeRules,
+    knowledgeDocuments,
+    routing,
+    widget,
+    approvedMemories,
+    proposedMemories,
+    activeSkills,
+    enabledBindings,
+    evalCases,
+    unresolvedDriftEvents,
+  ] = await Promise.all([
     ctx.db
-      .query("companyEvalCases")
-      .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "ACTIVE"))
-      .take(READINESS_EVAL_LIMIT),
+      .query("aiRules")
+      .withIndex("by_company_active", (q) => q.eq("companyId", companyId).eq("isActive", true))
+      .take(RULE_SCAN_LIMIT),
     ctx.db
-      .query("companyAiDriftEvents")
-      .withIndex("by_company_resolved_created", (q) => q.eq("companyId", companyId).eq("resolvedAt", undefined))
+      .query("knowledgeDocuments")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .take(KNOWLEDGE_SCAN_LIMIT),
+    summariseCompanyModelRouting(ctx, companyId),
+    ctx.db
+      .query("widgets")
+      .withIndex("by_company_created", (q) => q.eq("companyId", companyId))
       .order("desc")
-      .take(100),
+      .first(),
+    ctx.db
+      .query("companyMemories")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "APPROVED"))
+      .take(MEMORY_SCAN_LIMIT),
+    ctx.db
+      .query("companyMemoryCandidates")
+      .withIndex("by_company_status_created", (q) => q.eq("companyId", companyId).eq("status", "PROPOSED"))
+      .take(MEMORY_SCAN_LIMIT),
     ctx.db
       .query("companySkills")
       .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "ACTIVE"))
@@ -95,132 +141,194 @@ async function buildReadinessSummary(ctx: QueryCtx, companyId: Id<"companies">) 
         .take(1000)
     )),
     ctx.db
-      .query("companyMemories")
-      .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "APPROVED"))
-      .take(1000),
+      .query("companyEvalCases")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "ACTIVE"))
+      .take(READINESS_EVAL_LIMIT),
+    ctx.db
+      .query("companyAiDriftEvents")
+      .withIndex("by_company_resolved_created", (q) => q.eq("companyId", companyId).eq("resolvedAt", undefined))
+      .order("desc")
+      .take(DRIFT_SCAN_LIMIT),
   ]);
-  // Read from the rollup on each case. This used to take 1,000 runs and reduce them
-  // into a "latest run per case" map — the same reduction `companyEvals.getSummary`
-  // was doing separately, so one page load did it twice over 4,000 rows.
-  const passedRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "PASSED").length;
-  const failedRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
-  const needsReviewRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "NEEDS_REVIEW").length;
-  const blockerCases = evalCases.filter((evalCase) => evalCase.severity === "BLOCKER");
-  const blockerFailures = blockerCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
-  const blockerNotRun = blockerCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
-  const widgetBlockerCases = evalCases.filter((evalCase) => evalCase.severity === "BLOCKER" && evalCase.targetSurface === "WIDGET");
-  const widgetBlockerFailures = widgetBlockerCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
-  const widgetBlockerNotRun = widgetBlockerCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
-  const casesWithAResult = evalCases.filter((evalCase) => evalCase.lastRunStatus !== undefined).length;
+
+  const promptLength = company.systemPrompt?.trim().length ?? 0;
+  const failedDocuments = knowledgeDocuments.filter((document) => document.status === "failed").length;
+
   const activeSkillIds = new Set(activeSkills.map((skill) => skill._id));
   const flattenedBindings = enabledBindings.flat();
-  const boundActiveSkillIds = new Set(flattenedBindings.filter((binding) => activeSkillIds.has(binding.skillId)).map((binding) => binding.skillId));
-  const missingToolRequirementSkills = activeSkills.filter((skill) =>
-    boundActiveSkillIds.has(skill._id)
-    && skill.riskLevel !== "LOW"
-    && parseStoredStringArray(skill.requiredToolsJson).length === 0
+  const boundActiveSkillIds = new Set(
+    flattenedBindings.filter((binding) => activeSkillIds.has(binding.skillId)).map((binding) => binding.skillId)
   );
-  const highRiskMissingApproval = activeSkills.filter((skill) =>
+  const unsafeSkills = activeSkills.filter((skill) =>
     boundActiveSkillIds.has(skill._id)
-    && skill.riskLevel === "HIGH"
-    && !hasStoredJson(skill.approvalPolicyJson)
-  );
-  const readySkills = activeSkills.filter((skill) =>
-    boundActiveSkillIds.has(skill._id)
-    && (skill.riskLevel === "LOW" || parseStoredStringArray(skill.requiredToolsJson).length > 0)
-    && (skill.riskLevel !== "HIGH" || hasStoredJson(skill.approvalPolicyJson))
+    && ((skill.riskLevel !== "LOW" && parseStoredStringArray(skill.requiredToolsJson).length === 0)
+      || (skill.riskLevel === "HIGH" && !hasStoredJson(skill.approvalPolicyJson)))
   );
 
-  const areas: ReadinessArea[] = [
+  const blockerCases = evalCases.filter((evalCase) => evalCase.severity === "BLOCKER");
+  const blockerFailures = blockerCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
+  // Never run is not passed. The old pass rate divided by the cases that had a
+  // result, so one case run out of fifty displayed as 100%.
+  const neverRun = evalCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
+  const passedRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "PASSED").length;
+
+  const areas: CompanyAiArea[] = [
     {
-      key: "evals",
-      label: "Company evals",
-      status: blockerFailures > 0 ? "BLOCK" : evalCases.length === 0 || blockerNotRun > 0 || failedRuns > 0 || needsReviewRuns > 0 ? "WARN" : "PASS",
-      detail: `${passedRuns}/${evalCases.length} active evals have a passing latest run.`,
+      key: "knowledge",
+      label: "Knowledge",
+      href: "/ai/knowledge",
+      ...(failedDocuments > 0
+        ? {
+          state: "NEEDS_ATTENTION" as const,
+          summary: `${failedDocuments} ${pluralise(failedDocuments, "document", "documents")} failed to process, so ${pluralise(failedDocuments, "it is", "they are")} not searchable.`,
+          action: "Review the failed documents",
+        }
+        : knowledgeDocuments.length > 0
+          ? {
+            state: "SET_HERE" as const,
+            summary: `${formatCount(knowledgeDocuments.length, KNOWLEDGE_SCAN_LIMIT)} ${pluralise(knowledgeDocuments.length, "document", "documents")}, none failed.`,
+          }
+          : { state: "NOT_CONFIGURED" as const, summary: "No documents added." }),
+    },
+    {
+      key: "widget",
+      label: "Widget",
+      href: "/widget",
+      ...(widget
+        ? {
+          state: "SET_HERE" as const,
+          summary: widget.isActive
+            ? `Live${widget.allowedDomains?.length ? ` on ${widget.allowedDomains.join(", ")}` : ""}.`
+            : "Set up but switched off.",
+        }
+        : { state: "NOT_CONFIGURED" as const, summary: "No widget for this company." }),
+    },
+    {
+      key: "instructions",
+      label: "Instructions",
+      href: "/ai/prompt",
+      ...(promptLength > 0 || activeRules.length > 0
+        ? {
+          state: "SET_HERE" as const,
+          summary: promptLength > 0 && activeRules.length > 0
+            ? `Own instructions, and ${activeRules.length} active ${pluralise(activeRules.length, "rule", "rules")}.`
+            : promptLength > 0
+              ? "Own instructions, no extra rules."
+              : `${activeRules.length} active ${pluralise(activeRules.length, "rule", "rules")}, no extra instructions.`,
+        }
+        : { state: "NOT_CONFIGURED" as const, summary: "Uses the platform instructions." }),
+    },
+    {
+      key: "modelRouting",
+      label: "Model routing",
+      href: "/ai/models",
+      ...(routing.brokenUseCases.length > 0
+        ? {
+          state: "NEEDS_ATTENTION" as const,
+          summary: `${routing.brokenUseCases.length} ${pluralise(routing.brokenUseCases.length, "job points", "jobs point")} at a model that cannot run, so the platform's model is used instead.`,
+          action: "Choose a model that works",
+        }
+        : routing.configuredHere > 0
+          ? {
+            state: "SET_HERE" as const,
+            summary: `${routing.configuredHere} of ${routing.totalUseCases} jobs use a model chosen here.`,
+          }
+          : {
+            state: "NOT_CONFIGURED" as const,
+            summary: `All ${routing.totalUseCases} jobs use the platform's model.`,
+          }),
+    },
+    {
+      key: "memory",
+      label: "Memory",
+      href: "/ai/memory",
+      ...(approvedMemories.length > 0
+        ? {
+          state: "SET_HERE" as const,
+          summary: `${approvedMemories.length} ${pluralise(approvedMemories.length, "memory", "memories")} in use${proposedMemories.length > 0 ? `, ${proposedMemories.length} waiting for review` : ""}.`,
+        }
+        : {
+          state: "NOT_CONFIGURED" as const,
+          summary: proposedMemories.length > 0
+            ? `Nothing remembered yet, ${proposedMemories.length} waiting for review.`
+            : "Nothing remembered yet.",
+        }),
+    },
+    {
+      key: "skills",
+      label: "Skills",
+      href: "/ai/skills",
+      ...(unsafeSkills.length > 0
+        ? {
+          state: "NEEDS_ATTENTION" as const,
+          summary: `${unsafeSkills.length} switched-on ${pluralise(unsafeSkills.length, "skill is", "skills are")} missing the tools or approval ${pluralise(unsafeSkills.length, "it needs", "they need")}.`,
+          action: "Finish setting them up",
+        }
+        : boundActiveSkillIds.size > 0
+          ? {
+            state: "SET_HERE" as const,
+            summary: `${boundActiveSkillIds.size} ${pluralise(boundActiveSkillIds.size, "skill", "skills")} switched on.`,
+          }
+          : { state: "NOT_CONFIGURED" as const, summary: "None switched on." }),
+    },
+    {
+      key: "checks",
+      label: "Checks",
+      href: "/ai/evals",
+      ...(blockerFailures > 0
+        ? {
+          state: "NEEDS_ATTENTION" as const,
+          summary: `${blockerFailures} must-pass ${pluralise(blockerFailures, "check is", "checks are")} failing.`,
+          action: "Fix the failing checks",
+        }
+        : evalCases.length > 0
+          ? {
+            state: "SET_HERE" as const,
+            summary: neverRun > 0
+              ? `${evalCases.length} ${pluralise(evalCases.length, "check", "checks")}, ${passedRuns} passing, ${neverRun} never run.`
+              : `${evalCases.length} ${pluralise(evalCases.length, "check", "checks")}, ${passedRuns} passing.`,
+          }
+          : { state: "NOT_CONFIGURED" as const, summary: "No checks written for this company." }),
     },
     {
       key: "drift",
       label: "Drift",
-      status: unresolvedDriftEvents.length > 0 ? "WARN" : "PASS",
-      detail: `${unresolvedDriftEvents.length} unresolved drift event${unresolvedDriftEvents.length === 1 ? "" : "s"}.`,
-    },
-    {
-      key: "skills",
-      label: "Company skills",
-      status: missingToolRequirementSkills.length > 0 || highRiskMissingApproval.length > 0
-        ? "BLOCK"
-        : activeSkills.length === 0 || boundActiveSkillIds.size === 0 || readySkills.length < boundActiveSkillIds.size
-          ? "WARN"
-          : "PASS",
-      detail: `${readySkills.length}/${boundActiveSkillIds.size} bound active skills are ready.`,
-    },
-    {
-      key: "memory",
-      label: "Company memory",
-      status: approvedMemories.length > 0 ? "PASS" : "WARN",
-      detail: `${approvedMemories.length} approved memor${approvedMemories.length === 1 ? "y" : "ies"} available.`,
-    },
-    {
-      key: "widgetGate",
-      // No widget must-pass evals used to read PASS, so the gate guarding the
-      // public widget reported passing precisely when nothing had been checked.
-      // An empty gate is an unproven gate.
-      label: "Widget gate",
-      status: widgetBlockerFailures > 0
-        ? "BLOCK"
-        : widgetBlockerCases.length === 0 || widgetBlockerNotRun > 0 ? "WARN" : "PASS",
-      detail: widgetBlockerCases.length > 0
-        ? `${widgetBlockerCases.length - widgetBlockerNotRun - widgetBlockerFailures}/${widgetBlockerCases.length} widget blocker evals are passing.`
-        : "No widget blocker evals defined yet, so nothing has been proven.",
+      href: "/ai/evals",
+      ...(unresolvedDriftEvents.length > 0
+        ? {
+          state: "NEEDS_ATTENTION" as const,
+          summary: `${formatCount(unresolvedDriftEvents.length, DRIFT_SCAN_LIMIT)} ${pluralise(unresolvedDriftEvents.length, "change has", "changes have")} been made since the checks last ran.`,
+          action: "Run the checks again",
+        }
+        : evalCases.length > 0
+          ? { state: "SET_HERE" as const, summary: "No changes since the checks last ran." }
+          : { state: "NOT_CONFIGURED" as const, summary: "Nothing to track until there are checks." }),
     },
   ];
 
-  const blockers = areas.filter((area) => area.status === "BLOCK").length;
-  const warnings = areas.filter((area) => area.status === "WARN").length;
-  const state: ReadinessState = blockers > 0
-    ? "NOT_READY"
-    : unresolvedDriftEvents.length > 0
-      ? "DRIFTED"
-      : warnings > 0
-        ? "NEEDS_REVIEW"
-        : "READY";
-
-  return {
-    state,
-    score: scoreAreas(areas),
-    blockers,
-    warnings,
-    areas,
-    drift: {
-      unresolvedCount: unresolvedDriftEvents.length,
-      recentEvents: unresolvedDriftEvents.slice(0, RECENT_DRIFT_LIMIT),
-    },
-    evals: {
-      totalCases: evalCases.length,
-      latestRuns: casesWithAResult,
-      passedRuns,
-      failedRuns,
-      needsReviewRuns,
-      blockerFailures,
-      blockerNotRun,
-      passRate: casesWithAResult > 0 ? passedRuns / casesWithAResult : 0,
-    },
-    skills: {
-      activeSkills: activeSkills.length,
-      enabledBindings: flattenedBindings.length,
-      boundActiveSkills: boundActiveSkillIds.size,
-      readySkills: readySkills.length,
-      missingToolRequirementSkills: missingToolRequirementSkills.length,
-      highRiskMissingApproval: highRiskMissingApproval.length,
-    },
-    widgetGate: {
-      status: widgetBlockerFailures > 0 ? "BLOCKED" as const : widgetBlockerNotRun > 0 ? "NEEDS_REVIEW" as const : "PASSING" as const,
-      blockerCases: widgetBlockerCases.length,
-      blockerFailures: widgetBlockerFailures,
-      blockerNotRun: widgetBlockerNotRun,
-    },
-  };
+  return areas;
 }
+
+export const getCompanyAiReadiness = adminQuery({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const { company } = await requireCompanyAccess(ctx, args.companyId);
+    const areas = await buildCompanyAiAreas(ctx, args.companyId, company);
+    const needsAttention = areas.filter((area) => area.state === "NEEDS_ATTENTION");
+
+    return {
+      companyName: company.name,
+      // Derived from the list above, so the headline and the table cannot
+      // disagree — which is exactly what the old screen did.
+      state: needsAttention.length > 0 ? ("NEEDS_ATTENTION" as const) : ("READY" as const),
+      needsAttentionCount: needsAttention.length,
+      configuredCount: areas.filter((area) => area.state === "SET_HERE").length,
+      areas,
+    };
+  },
+});
 
 export async function recordCompanyAiDriftEvent(ctx: Pick<MutationCtx, "db">, args: {
   companyId: Id<"companies">;
@@ -265,59 +373,6 @@ export async function resolveCompanyAiDriftEvents(ctx: Pick<MutationCtx, "db">, 
 
   return unresolvedEvents.length;
 }
-
-export const getReadinessSummary = adminQuery({
-  args: {
-    companyId: v.id("companies"),
-  },
-  handler: async (ctx, args) => {
-    await requireCompanyAccess(ctx, args.companyId);
-    return await buildReadinessSummary(ctx, args.companyId);
-  },
-});
-
-export const getReadinessHistory = adminQuery({
-  args: {
-    companyId: v.id("companies"),
-  },
-  handler: async (ctx, args) => {
-    await requireCompanyAccess(ctx, args.companyId);
-    return await ctx.db
-      .query("companyReadinessSnapshots")
-      .withIndex("by_company_created", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .take(SNAPSHOT_LIMIT);
-  },
-});
-
-export const recordReadinessSnapshot = adminMutation({
-  args: {
-    companyId: v.id("companies"),
-  },
-  handler: async (ctx, args) => {
-    const { userId } = await requireCompanyAccess(ctx, args.companyId);
-    const summary = await buildReadinessSummary(ctx, args.companyId);
-    const snapshotId = await ctx.db.insert("companyReadinessSnapshots", {
-      companyId: args.companyId,
-      state: summary.state,
-      score: summary.score,
-      blockers: summary.blockers,
-      warnings: summary.warnings,
-      driftEventCount: summary.drift.unresolvedCount,
-      evalPassRate: summary.evals.passRate,
-      summaryJson: JSON.stringify({
-        areas: summary.areas,
-        evals: summary.evals,
-        skills: summary.skills,
-        widgetGate: summary.widgetGate,
-      }),
-      createdBy: userId,
-      createdAt: Date.now(),
-    });
-
-    return { snapshotId, state: summary.state, score: summary.score };
-  },
-});
 
 export const resolveDriftEvents = adminMutation({
   args: {

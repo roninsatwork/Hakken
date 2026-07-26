@@ -2,7 +2,7 @@
 
 Agent release infrastructure is the implementation behind Developer Ship Checks. It turns a ready draft global agent into a reviewed release candidate, stores the exact agent version being reviewed, records approval and activation evidence, supports scheduled activation, and provides rollback to the previous live snapshot when one exists.
 
-Read this before changing release readiness, release lifecycle mutations, scheduled activation, snapshot comparison, or rollback behavior. For the operator workflow, see [Developer Ship Checks Operator Guide](../operator/developer-ship-checks-operator-guide.md). For the broader launch area, see [Launch, Releases, And Observability](./launch-releases-and-observability.md).
+Read this before changing release readiness, release lifecycle mutations, scheduled activation, snapshot comparison, or rollback behavior. For the operator workflow, see [Developer Ship Checks Operator Guide](../operator/developer-ship-checks-operator-guide.md). For the broader release area, see [Releases And Observability](./releases-and-observability.md).
 
 ## Product Surface
 

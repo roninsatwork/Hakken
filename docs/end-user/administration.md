@@ -4,7 +4,7 @@
 
 The administration area is the control centre for running Sonae. It is where authorized operators manage companies, users, invitations, AI settings, models, knowledge, agents, workflows, plans, analytics, maintenance tools, and platform settings. The main admin area is reached at `/admin`, and the sidebar changes to an admin navigation structure when you are in that area.
 
-This guide describes the administration experience that is currently implemented at a high level. Specialized admin areas such as AI administration, agents, workflow automation, launch and releases, and platform operations settings now have dedicated guides. Treat this page as the starting point for understanding who can access admin, what the main groups are, and what happens when administrators manage users, companies, invitations, impersonation, and platform settings.
+This guide describes the administration experience that is currently implemented at a high level. Specialized admin areas such as AI administration, agents, workflow automation, releases and observability, and platform operations settings now have dedicated guides. Treat this page as the starting point for understanding who can access admin, what the main groups are, and what happens when administrators manage users, companies, invitations, impersonation, and platform settings.
 
 ## Who Can Access It
 
@@ -14,7 +14,7 @@ Sonae uses three roles: `USER`, `ADMIN`, and `SUPER_ADMIN`. A standard user can 
 
 ## Admin Navigation
 
-When a super admin opens `/admin`, the sidebar shows platform administration groups. The dashboard item opens the global admin overview. App kit and launch areas are grouped under the launch entry. Companies opens company management and company detail screens. AI contains costs, chat logs, rules, system prompt, global knowledge, widget, and model configuration. Agents contains approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks, run observatory, system health, scripts, and auth diagnostics. Settings contains system settings, plans, API keys, webhook deliveries, and analytics. System admins contains super-admin management and super-admin invitations.
+When a super admin opens `/admin`, the sidebar shows platform administration groups. The dashboard item opens the global admin overview. Companies opens company management and company detail screens. AI contains costs, chat logs, rules, system prompt, global knowledge, widget, and model configuration. Agents contains approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks, run observatory, system health, scripts, and auth diagnostics. Settings contains system settings, plans, API keys, webhook deliveries, and analytics. System admins contains super-admin management and super-admin invitations.
 
 The normal application sidebar remains different. In `/app`, users see dashboard, assistant, reports, properties, the temporary posture demo, and for company admins an organization section. Diagnostic arcade routes only appear when diagnostic routing is enabled. This distinction matters because customers should not expect every admin function to be available from the regular user dashboard.
 
@@ -66,7 +66,7 @@ Changes to model and prompt configuration can affect users immediately. Test wit
 
 The agents group contains advanced operational tools: approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks and run observatory. These areas are for configuring and observing automated or agentic behavior. They are more powerful than normal assistant chat because they can involve tools, approvals, schedules, logs, releases, and runtime steps.
 
-Use approvals and logs to understand what automated systems have done or are waiting to do. Use workflow schedules when a workflow should run on a recurring timetable. Use connectors to define external tool access. These areas should be handled by operators who understand the customer workflow and the consequences of automation. See the dedicated agent, AI administration, workflow automation, and launch operations guides before handing these controls to non-technical customer admins.
+Use approvals and logs to understand what automated systems have done or are waiting to do. Use workflow schedules when a workflow should run on a recurring timetable. Use connectors to define external tool access. These areas should be handled by operators who understand the customer workflow and the consequences of automation. See the dedicated agent, AI administration, workflow automation, and release operations guides before handing these controls to non-technical customer admins.
 
 ## Settings and Maintenance
 

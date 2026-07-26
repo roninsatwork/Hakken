@@ -4,8 +4,24 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
+import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import {
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import {
+  describeModelUseCase,
+  formatModelDisplayName,
+  formatModelTag,
+  formatTokenCost,
+  getProviderDisplayName,
+  modelSupportsUseCase,
+} from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
+import { cn } from "@/src/ui/lib/utils";
 import { useMutation, useQuery } from "convex/react";
-import { Cpu, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
+import { Cpu, Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -31,22 +47,6 @@ type ModelDefaultRow = {
   } | null;
 };
 
-function formatUseCase(value: string) {
-  return value
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function getModelLabel(model: Pick<Doc<"aiModels">, "friendlyName" | "displayName" | "modelId" | "providerKey">) {
-  const provider = model.providerKey ? `${model.providerKey} / ` : "";
-  return `${provider}${model.friendlyName || model.displayName || model.modelId}`;
-}
-
-function supportsUseCase(model: Pick<Doc<"aiModels">, "supportedUseCases">, useCase: string) {
-  return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
-}
-
 export default function CompanyModelDefaultsPage() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
@@ -58,6 +58,7 @@ export default function CompanyModelDefaultsPage() {
   // catalogue and filter here, which held up at twenty models and would not at
   // four hundred.
   const modelsData = useQuery(api.aiModels.getActiveModels, {}) as Doc<"aiModels">[] | undefined;
+  const providersData = useQuery(api.aiModels.getProviders);
   const setCompanyDefault = useMutation(api.aiModels.setCompanyModelDefault);
   const clearCompanyDefault = useMutation(api.aiModels.clearCompanyModelDefault);
 
@@ -65,141 +66,231 @@ export default function CompanyModelDefaultsPage() {
     () => (modelsData ?? []).filter((model) => model.isEnabled),
     [modelsData]
   );
+  const providerNameByKey = useMemo(
+    () => new Map((providersData ?? []).map((provider) => [provider.providerKey, provider.displayName])),
+    [providersData]
+  );
 
   const [savingUseCase, setSavingUseCase] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saveError, setSaveError] = useState("");
+
+  const rows = defaultsData?.defaults ?? [];
+  const isLoading = defaultsData === undefined || modelsData === undefined || providersData === undefined;
+
+  /**
+   * A model's name as a person would write it, from whatever the row carries.
+   *
+   * The summary the query returns holds `displayName` but not `friendlyName`, so
+   * the catalogue entry is preferred where there is one. This column used to
+   * print the provider key and the raw model id under every row, which is
+   * the internal key restated.
+   */
+  const describeModel = (modelId: string, fallback: DefaultModelSummary | null) => {
+    const model = (modelsData ?? []).find((entry) => entry.modelId === modelId);
+    return formatModelDisplayName(model ?? fallback ?? { modelId });
+  };
+
+  /** The price of whichever model this row will actually use, so the trade-off is visible. */
+  const describeCost = (modelId: string) => {
+    const model = (modelsData ?? []).find((entry) => entry.modelId === modelId);
+    if (!model) return "No price set";
+    const input = formatTokenCost(model.standardInputCostBelow200k);
+    const output = formatTokenCost(model.outputResponseCost);
+    if (input === "—" && output === "—") return "No price set";
+    // The unit is said once, above the table, rather than nine times down one edge.
+    return `${input} in · ${output} out`;
+  };
 
   const handleChange = async (useCase: string, nextModelId: string) => {
     setSavingUseCase(useCase);
-    setMessage(null);
+    setSaveError("");
     try {
       if (nextModelId) {
         await setCompanyDefault({ companyId, useCase, modelId: nextModelId });
       } else {
         await clearCompanyDefault({ companyId, useCase });
       }
-      setMessage({ type: "success", text: "Company model defaults updated." });
-      setTimeout(() => setMessage(null), 2500);
     } catch (error) {
-      setMessage({ type: "error", text: getErrorMessage(error, "Failed to update model default.") });
+      console.error(error);
+      setSaveError(
+        `Failed to update the ${formatModelTag(useCase)} model: ${getErrorMessage(error, String(error))}`
+      );
     } finally {
       setSavingUseCase(null);
     }
   };
 
-  if (!defaultsData || !modelsData) {
-    return (
-      <div className="flex min-h-[360px] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-brand" />
-      </div>
-    );
-  }
-
   return (
     <div className="flex w-full flex-col gap-6 pb-10">
-      <header className="flex flex-col gap-2">
-        <h2 className="flex items-center gap-3 text-xl font-bold tracking-tight text-foreground">
-          <Cpu className="h-5 w-5 text-brand" />
-          Company AI Model Defaults
-        </h2>
-        <p className="max-w-3xl text-[14px] leading-relaxed text-secondary">
-          Set optional company-specific model defaults by use case. Rows left on inherit will use the platform default.
-        </p>
-      </header>
+      <AdminPageHeader
+        icon={<Cpu className="h-6 w-6 text-brand" />}
+        title="Company AI Model Defaults"
+        description="Which model this company uses for each kind of work."
+      />
 
-      {message && (
-        <div className={`rounded-[12px] border px-4 py-3 text-[13px] font-medium ${
-          message.type === "success"
-            ? "border-brand/20 bg-brand/10 text-brand"
-            : "border-red-500/20 bg-red-500/10 text-red-400"
-        }`}>
-          {message.text}
-        </div>
-      )}
+      <AdminSaveError>{saveError}</AdminSaveError>
 
-      <div className="overflow-hidden rounded-[20px] border border-border-dim bg-sidebar/30 shadow-sm">
-        <div className="grid grid-cols-[180px_1fr_1fr_80px] gap-4 border-b border-border-dim bg-foreground/[0.03] px-5 py-4 text-[11px] font-mono uppercase tracking-widest text-muted min-w-[900px]">
-          <span>Use Case</span>
-          <span>Platform Default</span>
-          <span>Company Override</span>
-          <span className="text-right">Status</span>
-        </div>
+      <p className="text-[13px] text-secondary">
+        Every row follows the platform default unless this company is given its own model. An agent
+        or a workflow can still override any of these. Prices are per million tokens.
+      </p>
 
-        <div className="min-w-[900px] divide-y divide-border-dim/70">
-          {defaultsData.defaults.map((row) => {
-            // Same rule as the platform Defaults screen: a company can only
-            // override a job with a model whose provider can actually do it.
-            const candidates = activeModels.filter((model) =>
-              supportsUseCase(model, row.useCase)
-              && canProviderServeUseCase(model.providerKey, row.useCase)
-            );
-            const providerLimit = describeUseCaseProviderLimit(row.useCase);
-            const isSaving = savingUseCase === row.useCase;
+      {/* The standard admin table, as the platform Defaults screen and the Model
+          Catalogue use. This was a hand-rolled grid with its own header styling
+          and a spinner that blanked the whole page before anything drew. */}
+      <AdminTableShell minWidthClassName="min-w-[920px]">
+        <thead>
+          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+            <th className="w-[32%] px-4 py-3 font-medium">Job</th>
+            <th className="w-[22%] px-4 py-3 font-medium">Platform default</th>
+            <th className="w-[30%] px-4 py-3 font-medium">This company</th>
+            <th className="w-[16%] px-4 py-3 text-right font-medium">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {isLoading ? (
+            <AdminTableLoadingRow colSpan={4} />
+          ) : rows.length === 0 ? (
+            <AdminTableEmptyRow
+              colSpan={4}
+              icon={<Cpu className="h-8 w-8 text-muted/30" />}
+              label="No jobs to configure yet"
+            />
+          ) : (
+            rows.map((row) => {
+              // Same rule as the platform Defaults screen: a company can only
+              // override a job with a model whose provider can actually do it.
+              const candidates = activeModels.filter((model) =>
+                modelSupportsUseCase(model, row.useCase)
+                && canProviderServeUseCase(model.providerKey, row.useCase)
+              );
+              const providerLimit = describeUseCaseProviderLimit(row.useCase);
+              const isSaving = savingUseCase === row.useCase;
 
-            return (
-              <div key={row.useCase} className="grid grid-cols-[180px_1fr_1fr_80px] items-center gap-4 px-5 py-4">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[13px] font-semibold text-foreground">{formatUseCase(row.useCase)}</span>
-                  {providerLimit && (
-                    <span className="text-[11px] leading-relaxed text-muted">{providerLimit}</span>
-                  )}
-                </div>
+              /**
+               * An override can point at a model this row would not offer — a
+               * model switched off, or a provider narrowed by a later sync.
+               *
+               * When that happens the dropdown's value matches no option, so a
+               * browser silently displays the *first* one — "Follow the platform
+               * default" — while the row is still overridden. The screen
+               * contradicted itself, and touching the dropdown at all fired a
+               * change with an empty value and destroyed the setting.
+               *
+               * So the model that is actually set is always an option, named and
+               * marked with why it is not running.
+               *
+               * The name comes from the row's own summary rather than the model
+               * list, because the commonest way to stand a row up is to switch
+               * the model off — and a switched-off model is not in that list at
+               * all. Reading it from there would have left this fix covering
+               * only the rarer case.
+               */
+              const selectedModelId = row.companyDefault?.modelId ?? "";
+              const isStranded = Boolean(selectedModelId)
+                && !candidates.some((model) => model.modelId === selectedModelId);
+              const strandedModel = isStranded
+                ? (modelsData ?? []).find((model) => model.modelId === selectedModelId)
+                  ?? row.companyDefault?.model
+                  ?? { modelId: selectedModelId }
+                : undefined;
+              // A model that is switched off is not the same as one that cannot
+              // do the work, and telling someone the wrong one sends them to the
+              // wrong screen to fix it.
+              const strandedReason = row.companyDefault?.model?.isEnabled === false
+                ? "is switched off"
+                : "cannot do this job";
 
-                <div className="flex flex-col gap-1">
-                  <span className="text-[13px] font-medium text-foreground">
-                    {row.globalDefault?.model?.displayName || row.globalDefault?.modelId || "No platform default"}
-                  </span>
-                  <span className="text-[11px] text-muted">
-                    {row.globalDefault?.providerKey || "inherit"} {row.globalDefault?.modelId ? ` / ${row.globalDefault.modelId}` : ""}
-                  </span>
-                </div>
+              // What this company will actually run: its own choice where it has
+              // one, otherwise the platform's. A stranded override runs neither,
+              // so the price belongs to the platform default it falls through to.
+              const effectiveModelId = (isStranded ? undefined : row.companyDefault?.modelId)
+                ?? row.globalDefault?.modelId
+                ?? "";
 
-                <div className="flex items-center gap-2">
-                  <select
-                    value={row.companyDefault?.modelId || ""}
-                    disabled={isSaving}
-                    onChange={(event) => handleChange(row.useCase, event.target.value)}
-                    className="min-w-0 flex-1 rounded-[12px] border border-border-dim bg-background/60 px-3 py-2.5 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60"
-                  >
-                    <option value="">Inherit platform default</option>
-                    {candidates.map((model) => (
-                      <option key={model.modelId} value={model.modelId}>
-                        {getModelLabel(model)}
-                      </option>
-                    ))}
-                  </select>
-                  {row.companyDefault && (
-                    <button
-                      type="button"
-                      onClick={() => handleChange(row.useCase, "")}
-                      disabled={isSaving}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-border-dim text-secondary transition-colors hover:border-brand/40 hover:text-foreground disabled:opacity-60"
-                      title="Clear company override"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex justify-end">
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-brand" />
-                  ) : (
-                    <div className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-mono uppercase tracking-widest ${
-                      row.companyDefault
-                        ? "border-brand/20 bg-brand/10 text-brand"
-                        : "border-border-dim bg-foreground/5 text-muted"
-                    }`}>
-                      <ShieldCheck className="h-3 w-3" />
-                      {row.companyDefault ? "Override" : "Inherited"}
+              return (
+                <tr key={row.useCase} className="border-b border-border-dim/50">
+                  <td className="px-4 py-3 align-top">
+                    <div className="text-[13px] font-semibold text-foreground">
+                      {formatModelTag(row.useCase)}
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+                    {/* What the job is, in a sentence. The rows used to read
+                        "Router", "Title", "Transcription" with nothing to say
+                        what any of them were. */}
+                    <div className="mt-0.5 text-[12px] leading-relaxed text-secondary">
+                      {describeModelUseCase(row.useCase)}
+                    </div>
+                    {providerLimit && (
+                      <div className="mt-1 text-[11px] leading-relaxed text-muted">{providerLimit}</div>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3 align-top">
+                    {row.globalDefault ? (
+                      <>
+                        <div className="text-[13px] text-foreground">
+                          {describeModel(row.globalDefault.modelId, row.globalDefault.model)}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-muted">
+                          {getProviderDisplayName(row.globalDefault.providerKey, providerNameByKey)}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-[13px] text-[#f59e0b]">Not set</span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3 align-top">
+                    <select
+                      value={selectedModelId}
+                      disabled={isSaving}
+                      aria-label={`${formatModelTag(row.useCase)} model for this company`}
+                      onChange={(event) => handleChange(row.useCase, event.target.value)}
+                      className={cn(
+                        "h-9 w-full min-w-0 rounded-[8px] border bg-card px-3 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
+                        isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
+                      )}
+                    >
+                      {/* Also the way to clear an override. There used to be a
+                          second control beside this one doing the same thing. */}
+                      <option value="">Follow the platform default</option>
+                      {strandedModel && (
+                        <option value={strandedModel.modelId}>
+                          {formatModelDisplayName(strandedModel)} — {strandedReason}
+                        </option>
+                      )}
+                      {candidates.map((model) => (
+                        <option key={model.modelId} value={model.modelId}>
+                          {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                        </option>
+                      ))}
+                    </select>
+                    {isStranded && (
+                      <div className="mt-1 text-[11px] leading-relaxed text-[#f59e0b]">
+                        This model {strandedReason}, so the work falls back to the platform
+                        default. Choose another, or follow the platform default.
+                      </div>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3 text-right align-top">
+                    {isSaving ? (
+                      <Loader2 className="inline-block h-4 w-4 animate-spin text-brand" />
+                    ) : effectiveModelId ? (
+                      <span className="text-[12px] text-secondary">{describeCost(effectiveModelId)}</span>
+                    ) : (
+                      // Only the exception is worth saying. A pill reading
+                      // "Inherited" on every row cost attention and carried no
+                      // information the dropdown beside it did not already give.
+                      <span className="text-[12px] text-[#f59e0b]">Not set</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </AdminTableShell>
     </div>
   );
 }

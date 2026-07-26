@@ -1,8 +1,8 @@
 # Release Review And Run Observatory
 
-Release review and the run observatory help operators decide whether an agent is ready to go live and whether recent agent runs are healthy after launch. Use these screens after configuring agents, changing tools or model defaults, materializing launch-plan resources, approving a release candidate, or investigating production behavior.
+Release review and the run observatory help operators decide whether an agent is ready to go live and whether recent agent runs are healthy after launch. Use these screens after configuring agents, changing tools or model defaults, approving a release candidate, or investigating production behavior.
 
-For app kit preparation work, see [App Kit Launch Plans](./app-kit-launch-plans.md). For agent setup tasks, see [Agent Setup And Configuration](./agent-setup-and-configuration.md). For run-level investigation, see [Agent Operations And Review](./agent-operations-and-review.md).
+For the wider release area, see [Releases And Observability](./releases-and-observability.md). For agent setup tasks, see [Agent Setup And Configuration](./agent-setup-and-configuration.md). For run-level investigation, see [Agent Operations And Review](./agent-operations-and-review.md).
 
 ## Where To Find It
 
@@ -55,7 +55,7 @@ Approving a candidate records sign-off but does not necessarily make the agent l
 
 Activation windows can restrict when a candidate may be activated. If the window has not opened, wait. If the window has expired, cancel or create a replacement candidate after reviewing scope.
 
-Do not approve or activate just because a launch plan materialized resources. Release review is the point where eval evidence, readiness, rollback plan, and operator ownership are checked.
+Do not approve or activate just because draft resources exist. Release review is the point where eval evidence, readiness, rollback plan, and operator ownership are checked.
 
 ## Rollback
 
@@ -96,7 +96,6 @@ Use the observatory after:
 - changing model defaults
 - enabling or editing tools
 - changing prompts, rules, schemas, or skills
-- materializing launch plan resources
 - resolving an incident
 - noticing cost or latency changes
 

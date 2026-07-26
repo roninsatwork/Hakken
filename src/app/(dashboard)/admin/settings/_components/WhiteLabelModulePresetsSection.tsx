@@ -10,7 +10,7 @@ type PresetKey = "knowledgeAssistant" | "supportWidget" | "operatorWorkspace";
 export type WhiteLabelModulePreset = {
   key: PresetKey;
   href: string;
-  linkLabelKey: "launch" | "widget" | "health";
+  linkLabelKey: "agents" | "widget" | "health";
   readinessDependencies: Array<"identity" | "logos" | "brandColor" | "diagnostics" | "widget" | "email" | "production">;
   visible: string[];
   owner: string[];
@@ -25,8 +25,8 @@ type WhiteLabelModulePresetsSectionProps = {
 const fallbackPresets: WhiteLabelModulePreset[] = [
   {
     key: "knowledgeAssistant",
-    href: "/admin/app-kits",
-    linkLabelKey: "launch",
+    href: "/admin/agents",
+    linkLabelKey: "agents",
     readinessDependencies: ["identity", "logos", "brandColor", "diagnostics", "production"],
     visible: ["assistantWorkspace", "knowledgeSurfaces", "reportsOptional"],
     owner: ["agentBuilderEvals", "modelDefaults", "systemHealth"],

@@ -1214,8 +1214,9 @@ is where a scaffold stops saving time and starts producing code people fight.
 Adding a domain entity today touches 8–10 files, two of which
 (`SidebarNavigation.tsx`, `messages/*.json`) are shared choke points every
 feature must edit. There is no generator — `scripts/` holds five files, none of
-them scaffolding, and `convex/appTemplates.ts` (2,056 lines) seeds *database
-rows*, not code.
+them scaffolding. The one oversized Convex module this note originally pointed
+at seeded *database rows*, not code, and has since been deleted along with the
+feature it belonged to.
 
 Build `scripts/generate-entity.mjs` emitting: schema table + indexes, tenant-safe
 Convex CRUD, an `AdminTable`-based page, i18n keys in both locales, and a test

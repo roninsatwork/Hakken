@@ -14,7 +14,7 @@ Read this before changing `convex/settingsService.ts`, `convex/settings.ts`, `sr
 - `src/app/(dashboard)/admin/settings/_components/WhiteLabelCustomDomainChecklistSection.tsx` renders domain, widget allowlist, sender-domain, DNS, redirect, and tenant-routing evidence.
 - `src/app/(dashboard)/admin/settings/_components/WhiteLabelPackagingChecklistSection.tsx` renders the generated checklist and copies its markdown through the clipboard API.
 
-These panels are planning and handoff surfaces. They do not hide routes, modify authorization, configure DNS, verify TLS, validate production hosting, or make an app kit live.
+These panels are planning and handoff surfaces. They do not hide routes, modify authorization, configure DNS, verify TLS, validate production hosting, or make a packaged app live.
 
 ## Backend Entry Points
 

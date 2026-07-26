@@ -39,21 +39,18 @@ For the System Options workflow, use `docs/operator/white-label-packaging-operat
 - Confirm apex, www, and legacy-route redirect behavior.
 - Confirm any custom domain maps to the correct tenant before runtime navigation hiding.
 
-## 4. App Kits And Build Plans
+## 4. Starter Agents
 
-- Pick the closest starter app kit in `convex/appTemplates.ts`.
-- Update or add template metadata for:
-  - agents
-  - starter prompts
-  - suggested connectors
+- Pick the closest agent archetype in `convex/agentTemplates.ts`, or add one for the vertical.
+- Build each starter agent from the guided builder and configure:
+  - starter prompt
+  - suggested connectors and bound tools
   - knowledge scopes
   - workflows and schedules
   - eval fixtures
   - release-gate expectations
-  - developer follow-up items
-  - implementation code pointers
 - Keep created resources draft or inactive until a developer/operator review is complete.
-- Confirm build-plan handoff tasks name the files and product decisions still required.
+- Record the handoff tasks that name the files and product decisions still required.
 
 ## 5. Knowledge And Demo Data
 

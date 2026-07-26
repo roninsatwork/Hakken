@@ -170,7 +170,7 @@ Use `docs/operator/vertical-app-packaging-checklist.md` when turning Sonae into 
 Packaging should happen in this order:
 
 1. Configure product identity through system settings and locale dictionaries.
-2. Choose or extend an app kit in `convex/appTemplates.ts`.
+2. Choose or extend an agent archetype in `convex/agentTemplates.ts` and build the starter agents from the guided builder.
 3. Replace demo knowledge and seed data with clearly marked vertical-specific sample data.
 4. Configure auth, providers, connectors, and model defaults outside source control.
 5. Run `npm run setup:validate` locally and `npm run setup:validate -- --profile=production` for production handoff.

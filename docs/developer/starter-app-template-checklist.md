@@ -1,48 +1,31 @@
 # Starter App Template Checklist
 
-Use this checklist when designing or reviewing a reusable Sonae app kit template. It is for a vertical or functional starter application, not just a single agent prompt.
+Use this checklist when designing or reviewing a reusable Sonae starter application. It is for a vertical or functional starter application, not just a single agent prompt.
 
-For the implementation details behind catalog sync, launch plans, workspace linking, and draft resource materialization, read [App Kit And Launch Plan Implementation](./app-kit-launch-plan-implementation.md).
+For how the pieces fit together across the platform, read [Agentic Starter Framework Overview](./agentic-starter-framework-overview.md) and [New Agentic App Setup Checklist](./new-agentic-app-setup-checklist.md).
 
 ## Implementation Source Of Truth
 
-Code-backed app kits live in `convex/appTemplates.ts`.
+The code-backed starting point is the agent archetype list in `convex/agentTemplates.ts`. Everything else in a starter application — workspace setup, connectors, knowledge, workflows, publish surfaces — is configured explicitly through the admin surfaces rather than generated from a template record.
 
-Every durable template should be represented in `APP_TEMPLATES` with:
+Each archetype in `AGENT_TEMPLATES` carries:
 
 - stable `id`
-- `category`
-- `name`
-- `tagline`
+- `name` and `agentName`
 - `description`
-- `riskProfile`
-- `primaryUsers`
-- `recommendedConnectorKeys`
-- planned `agents`
-- planned `knowledgeScopes`
-- planned `workflows`
-- planned `evalFixtures`
-- planned `dashboardCards`
-- `publishTargets`
-- `readinessChecks`
+- `systemPrompt`
+- `temperature`, `reasoningEffort`, and `triggerType`
+- `humanApprovalRequired`
+- `recommendedToolMappings`
+- `suggestedEvalFixtures`
 
-`withDeveloperGuidance` enriches templates with `developerFollowUps`, `extensionPoints`, and `implementationPointers`. Add template-specific guidance when the default follow-ups are too generic. Implementation pointers must name real repo paths, not aspirational files.
+Keep an archetype id stable once it is exposed, because created agents record the archetype they came from in audit metadata.
 
-## Catalog And Lifecycle
-
-The static template list is not the only operator-facing state. The persistent registry in `appTemplateCatalogItems` stores lifecycle status, owner, editorial notes, source JSON, sync timestamps, and updater metadata.
-
-When adding or changing a template:
-
-- keep the template id stable after it is exposed
-- run or use the catalog sync flow so registry source snapshots can update
-- do not overwrite editorial owner, notes, or lifecycle status during sync
-- use lifecycle `NEEDS_REVIEW` when a template's source changed but the operating owner has not reviewed it
-- archive a template instead of deleting it when operators may still need historical launch-plan context
+Use the rest of this checklist as the design record for a starter application: it captures the tenant setup, agents, knowledge, tools, workflows, evals, and surfaces that a developer or operator must configure and verify by hand.
 
 ## Tenant Setup
 
-A complete app kit should describe the tenant setup needed before it can be useful:
+A complete starter application should describe the tenant setup needed before it can be useful:
 
 - target company or workspace assumptions
 - expected first admin or operating owner
@@ -52,7 +35,7 @@ A complete app kit should describe the tenant setup needed before it can be usef
 - invite policy notes
 - production credential and secret ownership
 
-Launch plans may create or link a company workspace, but that only creates the tenant shell. It does not invite users, assign a billing plan, upload knowledge, configure model defaults, activate agents, publish widgets, or complete release review.
+Creating a company record only creates the tenant shell. It does not invite users, assign a billing plan, upload knowledge, configure model defaults, activate agents, publish widgets, or complete release review.
 
 ## Agents
 
@@ -68,7 +51,7 @@ For each planned agent, define:
 - schedules, webhooks, workflow entry points, or manual launch expectations
 - activation readiness expectations
 
-Map each template to an agent archetype in `APP_TEMPLATE_AGENT_ARCHETYPE` when the default internal-knowledge archetype is not correct. Materialized launch-plan agents intentionally start inactive, inherit model selection, use the selected archetype prompt, require human approval, and use manual trigger mode.
+Pick the archetype in `convex/agentTemplates.ts` that matches the intended behavior, or add a new one when none fits. Agents created from the builder intentionally start inactive, inherit model selection, use the selected archetype prompt, and follow the archetype's approval and trigger defaults.
 
 ## Knowledge
 
@@ -115,7 +98,7 @@ For each planned workflow, define:
 - schedule cadence when recurring
 - whether the workflow should ever be exposed by webhook
 
-Launch-plan materialization creates inactive manual workflows with empty graph arrays and a review-oriented description. It does not create active workflow graphs, connector actions, or customer-facing workflow surfaces automatically.
+Workflows are built explicitly in the workflow builder. Start them inactive and manual, and do not expose connector actions or customer-facing workflow surfaces until the graph has been run and reviewed.
 
 ## Evals And Release Evidence
 
@@ -142,7 +125,7 @@ Each fixture should include:
 - source evidence
 - tags
 
-High-risk templates should include model-graded or release-gate evidence before activation. Materialized fixtures are smoke evidence for draft resources, not proof that the final customer workflow is ready.
+High-risk starter applications should include model-graded or release-gate evidence before activation. Seeded archetype fixtures are smoke evidence for draft resources, not proof that the final customer workflow is ready.
 
 ## Publish Targets And Surfaces
 
@@ -174,7 +157,7 @@ Before activating a template-created agent or workflow:
 
 ## Documentation To Ship With A Template
 
-Every durable app kit should have enough documentation for the next operator or developer to understand:
+Every durable starter application should have enough documentation for the next operator or developer to understand:
 
 - what the template does
 - what it intentionally does not do

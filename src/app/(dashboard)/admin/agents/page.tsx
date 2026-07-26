@@ -79,6 +79,29 @@ export default function AgentsPage() {
   const createAgentFromTemplate = useMutation(api.agents.createAgentFromTemplate);
   const deleteAgent = useMutation(api.agents.deleteAgent);
   const templates = useQuery(api.agents.getAgentTemplatesForCreation) || [];
+  // Asked once for the whole page, not once per row.
+  const inheritedModels = useQuery(api.agents.getInheritedAgentModels);
+
+  /**
+   * What this agent actually runs.
+   *
+   * This column used to print the agent's stored `modelId` regardless of whether
+   * the agent uses it. The runtime only applies an agent's own model when its
+   * mode is "override", so every inheriting agent was listed against a leftover
+   * value — naming a model it never touches.
+   */
+  const describeAgentModel = (agent: { modelId: string; modelSelectionMode?: string; workflowId?: string }) => {
+    if (agent.modelSelectionMode === "override") {
+      const ownModel = activeModels.find((model) => model.modelId === agent.modelId);
+      return ownModel?.friendlyName || ownModel?.displayName || agent.modelId;
+    }
+
+    const inherited = agent.workflowId ? inheritedModels?.workflow : inheritedModels?.agent;
+    if (!inheritedModels) return "";
+    return inherited
+      ? t('table.followsPlatformDefault', { model: inherited.displayName })
+      : t('table.platformDefaultNotSet');
+  };
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -277,8 +300,11 @@ export default function AgentsPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 lowercase">
-                              {activeModels.find((m) => m.modelId === agent.modelId)?.friendlyName || activeModels.find((m) => m.modelId === agent.modelId)?.displayName || agent.modelId}
+                            {/* Not lowercased: a published model name such as
+                                "MoonshotAI: Kimi K3" is not the platform's to
+                                restyle, and the label is now a phrase. */}
+                            <span className="text-[10px] font-mono tracking-widest text-foreground/80">
+                              {describeAgentModel(agent)}
                             </span>
                           </div>
                         </td>

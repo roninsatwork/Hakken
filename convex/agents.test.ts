@@ -557,6 +557,85 @@ describe("OWASP: Broken Access Control - Agents", () => {
     });
   });
 
+  /**
+   * The settings screen offers "follow the platform default" as a choice and has
+   * to name what that would mean *before* it is chosen — including for an agent
+   * that is currently overriding. The old resolution stopped at the override and
+   * never looked the default up, so the screen could not say.
+   */
+  test("agent readiness names the inherited model, including for an overriding agent", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      })
+    );
+    const client = t.withIdentity({ subject: adminId });
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", {
+        modelId: "platform-agent-model",
+        displayName: "Platform Agent Model",
+        providerKey: "google",
+        providerModelId: "platform-agent-model",
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: 0,
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "pinned-agent-model",
+        displayName: "Pinned Agent Model",
+        providerKey: "google",
+        providerModelId: "pinned-agent-model",
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: 0,
+      });
+      await ctx.db.insert("aiModelDefaults", {
+        scope: "global",
+        useCase: "agent",
+        modelId: "platform-agent-model",
+        providerKey: "google",
+        updatedAt: Date.now(),
+      });
+    });
+
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Inheriting Agent",
+      description: "Follows the platform default.",
+    });
+
+    const inheriting = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(inheriting).toMatchObject({
+      modelReadiness: {
+        status: "PASS",
+        source: "useCaseDefault",
+        modelId: "platform-agent-model",
+        inheritedModelId: "platform-agent-model",
+      },
+    });
+
+    await client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      modelSelectionMode: "override",
+      modelId: "pinned-agent-model",
+    });
+
+    const overriding = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(overriding).toMatchObject({
+      modelReadiness: {
+        source: "override",
+        modelId: "pinned-agent-model",
+        // What it would go back to, answered while it is overriding.
+        inheritedModelId: "platform-agent-model",
+      },
+    });
+  });
+
   test("failed smoke eval contracts do not unlock draft activation", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

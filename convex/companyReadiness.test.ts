@@ -82,14 +82,22 @@ describe("Company AI readiness", () => {
       forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
     });
 
+    const areaByKey = async (client: typeof adminAClient) => {
+      const readiness = await client.query(api.companyReadiness.getCompanyAiReadiness, { companyId: companyAId });
+      return {
+        readiness,
+        area: (key: string) => readiness.areas.find((entry) => entry.key === key),
+      };
+    };
+
     await expect(
-      adminBClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId })
+      adminBClient.query(api.companyReadiness.getCompanyAiReadiness, { companyId: companyAId })
     ).rejects.toThrow("Unauthorized");
 
-    const driftedSummary = await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId });
-    expect(driftedSummary.state).toBe("DRIFTED");
-    expect(driftedSummary.drift.unresolvedCount).toBeGreaterThanOrEqual(4);
-    expect(driftedSummary.areas).toContainEqual(expect.objectContaining({ key: "drift", status: "WARN" }));
+    const drifted = await areaByKey(adminAClient);
+    expect(drifted.readiness.state).toBe("NEEDS_ATTENTION");
+    expect(drifted.area("drift")?.state).toBe("NEEDS_ATTENTION");
+    expect(drifted.area("drift")?.summary).toContain("since the checks last ran");
 
     // One passing must-pass case is not company-wide evidence, so the backlog
     // stays put until the other one passes too.
@@ -100,9 +108,7 @@ describe("Company AI readiness", () => {
     });
     expect(firstRun).toMatchObject({ status: "PASSED" });
     expect(firstRun.resolvedDriftCount).toBe(0);
-    expect(
-      (await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId })).state
-    ).toBe("DRIFTED");
+    expect((await areaByKey(adminAClient)).area("drift")?.state).toBe("NEEDS_ATTENTION");
 
     const passingRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
       userId: adminAId,
@@ -112,31 +118,21 @@ describe("Company AI readiness", () => {
     expect(passingRun).toMatchObject({ status: "PASSED" });
     expect(passingRun.resolvedDriftCount).toBeGreaterThanOrEqual(4);
 
-    const readySummary = await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId });
-    expect(readySummary).toMatchObject({
-      state: "READY",
-      score: 100,
-      blockers: 0,
-      warnings: 0,
-    });
-    expect(readySummary.drift.unresolvedCount).toBe(0);
+    const ready = await areaByKey(adminAClient);
+    expect(ready.readiness.state).toBe("READY");
+    expect(ready.readiness.needsAttentionCount).toBe(0);
+    expect(ready.area("drift")?.state).toBe("SET_HERE");
 
-    const snapshot = await adminAClient.mutation(api.companyReadiness.recordReadinessSnapshot, { companyId: companyAId });
-    expect(snapshot).toMatchObject({ state: "READY", score: 100 });
-    const history = await adminAClient.query(api.companyReadiness.getReadinessHistory, { companyId: companyAId });
-    expect(history).toHaveLength(1);
-    expect(history[0]).toMatchObject({ state: "READY", score: 100 });
-
+    // A high-risk skill switched on with its approval policy removed is a real
+    // fault in something set here, so it is the one thing that needs attention.
     await adminAClient.mutation(api.companySkills.updateSkill, {
       skillId,
       approvalPolicyJson: "",
     });
-    const blockedSummary = await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId });
-    expect(blockedSummary.state).toBe("NOT_READY");
-    expect(blockedSummary.skills).toMatchObject({
-      missingToolRequirementSkills: 0,
-      highRiskMissingApproval: 1,
-    });
+    const unsafe = await areaByKey(adminAClient);
+    expect(unsafe.readiness.state).toBe("NEEDS_ATTENTION");
+    expect(unsafe.area("skills")?.state).toBe("NEEDS_ATTENTION");
+    expect(unsafe.area("skills")?.summary).toContain("missing the tools or approval");
   });
 
   test("widget blocker eval failures block company readiness", async () => {
@@ -176,13 +172,112 @@ describe("Company AI readiness", () => {
     });
     expect(failedRun).toMatchObject({ status: "FAILED" });
 
-    const summary = await adminClient.query(api.companyReadiness.getReadinessSummary, { companyId });
-    expect(summary.state).toBe("NOT_READY");
-    expect(summary.widgetGate).toMatchObject({
-      status: "BLOCKED",
-      blockerCases: 1,
-      blockerFailures: 1,
+    const readiness = await adminClient.query(api.companyReadiness.getCompanyAiReadiness, { companyId });
+    expect(readiness.state).toBe("NEEDS_ATTENTION");
+    expect(readiness.areas).toContainEqual(expect.objectContaining({
+      key: "checks",
+      state: "NEEDS_ATTENTION",
+      summary: "1 must-pass check is failing.",
+    }));
+  });
+
+  /**
+   * A company does not have to configure any of this — it inherits the
+   * platform's setup. The screen this replaces counted every empty area as a
+   * gap, so a workspace that was working perfectly read 60% and was told to fix
+   * things that were never missing.
+   */
+  test("a company that has configured nothing is ready, not incomplete", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Inheriting Co", createdAt: Date.now() });
+      return {
+        companyId,
+        adminId: await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId }),
+      };
     });
-    expect(summary.areas).toContainEqual(expect.objectContaining({ key: "widgetGate", status: "BLOCK" }));
+
+    const readiness = await t
+      .withIdentity({ subject: adminId })
+      .query(api.companyReadiness.getCompanyAiReadiness, { companyId });
+
+    expect(readiness.state).toBe("READY");
+    expect(readiness.needsAttentionCount).toBe(0);
+    expect(readiness.areas.every((area) => area.state === "NOT_CONFIGURED")).toBe(true);
+
+    // Every job routes — text jobs to the platform failsafe and embeddings to the
+    // Google failsafe — so an unconfigured company is not a routing fault. The
+    // old check demanded an `embedding` default that nothing can create and
+    // showed a permanent 6/7 as a result.
+    const routing = readiness.areas.find((area) => area.key === "modelRouting");
+    expect(routing?.state).toBe("NOT_CONFIGURED");
+    // All nine jobs, not the seven the old hand-copied list checked — it omitted
+    // fast-chat and transcription entirely.
+    expect(routing?.summary).toBe("All 9 jobs use the platform's model.");
+  });
+
+  test("a company model that cannot run needs attention, and one saved by its fallback does not", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Routing Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+
+      await ctx.db.insert("aiProviders", {
+        providerKey: "switched-off",
+        displayName: "Switched Off",
+        isEnabled: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const model = (providerKey: string, modelId: string) => ({
+        modelId,
+        displayName: modelId,
+        providerKey,
+        providerModelId: modelId,
+        isEnabled: true,
+        isDefault: false,
+        supportedUseCases: ["chat", "report"],
+        lastSyncedAt: 0,
+      });
+      await ctx.db.insert("aiModels", model("switched-off", "stranded-model"));
+      await ctx.db.insert("aiModels", model("google", "working-model"));
+
+      // Chat is pointed at a model whose provider is switched off, with nothing
+      // behind it — the runtime silently uses the platform's model instead.
+      await ctx.db.insert("aiModelDefaults", {
+        scope: "company",
+        companyId,
+        useCase: "chat",
+        modelId: "stranded-model",
+        providerKey: "switched-off",
+        updatedAt: Date.now(),
+      });
+      // Report is pointed at the same dead model but has a working fallback, so
+      // it runs as chosen. The old check called this broken.
+      await ctx.db.insert("aiModelDefaults", {
+        scope: "company",
+        companyId,
+        useCase: "report",
+        modelId: "stranded-model",
+        fallbackModelId: "working-model",
+        providerKey: "switched-off",
+        updatedAt: Date.now(),
+      });
+
+      return { adminId, companyId };
+    });
+
+    const readiness = await t
+      .withIdentity({ subject: adminId })
+      .query(api.companyReadiness.getCompanyAiReadiness, { companyId });
+
+    const routing = readiness.areas.find((area) => area.key === "modelRouting");
+    expect(routing?.state).toBe("NEEDS_ATTENTION");
+    // One, not two: the fallback-served job is not a fault.
+    expect(routing?.summary).toContain("1 job points at a model that cannot run");
+    expect(readiness.state).toBe("NEEDS_ATTENTION");
+    expect(readiness.needsAttentionCount).toBe(1);
   });
 });

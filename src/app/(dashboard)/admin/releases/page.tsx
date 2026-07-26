@@ -461,7 +461,7 @@ export default function ReleaseCenterPage() {
         {overview.agents.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-[14px] font-medium text-foreground">No agents yet.</p>
-            <p className="text-[12px] text-secondary mt-1">Create agents from App Kits or the agent builder to start ship-check tracking.</p>
+            <p className="text-[12px] text-secondary mt-1">Create agents from the agent builder to start ship-check tracking.</p>
           </div>
         ) : (
           <div className="divide-y divide-border-dim">

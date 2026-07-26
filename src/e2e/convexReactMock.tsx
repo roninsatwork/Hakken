@@ -501,13 +501,35 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   }
   if (path === "aiModels:getCompanyModelDefaults") {
     const primaryModel = models[0];
+    // Every row used to come back following the platform default, so no e2e path
+    // ever reached the two states that matter on this screen: a company with its
+    // own model, and one left pointing at a model that has since been switched
+    // off. The second is what the screen must name rather than silently hide.
+    const overriddenModel = models[1];
+    const disabledModel = models.find((model) => !model.isEnabled)!;
+    const companyOverrides: Record<string, typeof primaryModel> = {
+      chat: overriddenModel,
+      report: disabledModel,
+    };
 
     return {
       companyId,
       useCases: modelDefaultUseCases,
       defaults: modelDefaultUseCases.map((useCase) => ({
         useCase,
-        companyDefault: null,
+        companyDefault: companyOverrides[useCase]
+          ? {
+              modelId: companyOverrides[useCase].modelId,
+              providerKey: companyOverrides[useCase].providerKey,
+              model: {
+                modelId: companyOverrides[useCase].modelId,
+                providerKey: companyOverrides[useCase].providerKey,
+                providerModelId: companyOverrides[useCase].providerModelId,
+                displayName: companyOverrides[useCase].displayName,
+                isEnabled: companyOverrides[useCase].isEnabled,
+              },
+            }
+          : null,
         globalDefault: {
           _id: `default_${useCase}`,
           modelId: primaryModel.modelId,

@@ -94,7 +94,7 @@ export type WhiteLabelModulePresetKey = "knowledgeAssistant" | "supportWidget" |
 export type WhiteLabelModulePreset = {
   key: WhiteLabelModulePresetKey;
   href: string;
-  linkLabelKey: "launch" | "widget" | "health";
+  linkLabelKey: "agents" | "widget" | "health";
   readinessDependencies: Array<WhiteLabelReadinessItem["key"]>;
   visible: string[];
   owner: string[];
@@ -248,8 +248,8 @@ export function getWhiteLabelModulePresets(): WhiteLabelModulePreset[] {
   return [
     {
       key: "knowledgeAssistant",
-      href: "/admin/app-kits",
-      linkLabelKey: "launch",
+      href: "/admin/agents",
+      linkLabelKey: "agents",
       readinessDependencies: ["identity", "logos", "brandColor", "diagnostics", "production"],
       visible: ["assistantWorkspace", "knowledgeSurfaces", "reportsOptional"],
       owner: ["agentBuilderEvals", "modelDefaults", "systemHealth"],
