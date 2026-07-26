@@ -69,6 +69,7 @@ function formatProviderName(providerKey: string) {
   if (providerKey === "google") return "Google Vertex AI";
   if (providerKey === "openai") return "OpenAI";
   if (providerKey === "anthropic") return "Anthropic";
+  if (providerKey === "openrouter") return "OpenRouter";
   if (providerKey === "unknown") return "Unknown / Legacy";
   return providerKey;
 }

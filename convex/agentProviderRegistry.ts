@@ -1,8 +1,9 @@
 "use node";
 
-import { ANTHROPIC_PROVIDER_KEY, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { ANTHROPIC_PROVIDER_KEY, GOOGLE_VERTEX_PROVIDER_KEY, OPENROUTER_PROVIDER_KEY } from "./aiModelService";
 import { createAnthropicAgentProvider } from "./anthropicAgentProvider";
 import { createGoogleAgentProvider } from "./googleAgentProvider";
+import { createOpenRouterAgentProvider } from "./openrouterAgentProvider";
 import type { AgentProviderAdapter } from "./agentProviderTypes";
 
 /**
@@ -24,6 +25,8 @@ export function getAgentProviderAdapter(providerKey: string): AgentProviderAdapt
       return createGoogleAgentProvider();
     case ANTHROPIC_PROVIDER_KEY:
       return createAnthropicAgentProvider();
+    case OPENROUTER_PROVIDER_KEY:
+      return createOpenRouterAgentProvider();
     default:
       throw new Error(
         `The agent runtime cannot run models from provider '${providerKey}'. `
@@ -34,5 +37,7 @@ export function getAgentProviderAdapter(providerKey: string): AgentProviderAdapt
 
 /** Whether an agent can run on this provider at all. */
 export function isAgentCapableProvider(providerKey: string | undefined) {
-  return providerKey === GOOGLE_VERTEX_PROVIDER_KEY || providerKey === ANTHROPIC_PROVIDER_KEY;
+  return providerKey === GOOGLE_VERTEX_PROVIDER_KEY
+    || providerKey === ANTHROPIC_PROVIDER_KEY
+    || providerKey === OPENROUTER_PROVIDER_KEY;
 }

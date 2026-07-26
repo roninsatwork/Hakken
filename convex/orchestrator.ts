@@ -2,12 +2,10 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { Type, Schema } from "@google/genai";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { requireActionUser } from "./actionAuth";
-import { getGoogleVertexProviderModelId } from "./aiModelService";
-import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
+import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { tenantAction } from "./tenantFunctions";
 
 export const routeAgentIntent = tenantAction({
@@ -28,24 +26,25 @@ export const routeAgentIntent = tenantAction({
             return { matchedAgentId: null, confidence: 0 };
         }
 
-        const ai = createVertexGenAIClient();
-
         // Build the routing context
         let contextBlock = "Available Sonae Agents:\n\n";
         agents.forEach((agent: Doc<"agents">) => {
             contextBlock += `[ID: ${agent._id}]\nName: ${agent.name}\nDescription: ${agent.description || 'No description provided'}\nSystem Rules: ${agent.systemPrompt || 'None'}\n\n`;
         });
 
-        // Set up forcing schema for strict JSON parsing
-        const responseSchema: Schema = {
-            type: Type.OBJECT,
+        // Plain JSON Schema rather than Vertex's `Schema` type. Routing runs on
+        // every message, so it is the job most worth putting on a cheap model —
+        // and it could not move to one while the request was written in one
+        // provider's vocabulary.
+        const responseSchema = {
+            type: "object",
             properties: {
                 matchedAgentId: {
-                    type: Type.STRING,
+                    type: "string",
                     description: "The ID of the custom Agent that perfectly matches the user's intent. Must map exactly to one of the IDs provided. If NO agent is a strong fit, return an empty string.",
                 },
                 confidence: {
-                    type: Type.NUMBER,
+                    type: "number",
                     description: "Confidence rating from 0.0 to 1.0 of the match. Return 0 if no agent matches.",
                 }
             },
@@ -70,22 +69,11 @@ Output your intent alignment as JSON.
             companyId: user.companyId,
             useCase: "router",
         });
-        const defaultModel = getGoogleVertexProviderModelId(modelConfig, "intent routing");
-        
-        const response = await generateVertexContentWithRetry(ai, {
-             model: defaultModel,
-             contents: routingPrompt,
-             config: {
-                 responseMimeType: "application/json",
-                 responseSchema: responseSchema,
-                 temperature: 0.1, // Near deterministic
-             }
-        }, {
-             operation: "routeAgentIntent",
-             retryPolicy: {
-                 maxAttempts: 3,
-                 maxDelayMs: 10000,
-             },
+        const response = await generateTextWithResolvedModel({
+             model: modelConfig,
+             contents: [{ type: "text", text: routingPrompt }],
+             temperature: 0.1, // Near deterministic
+             jsonSchema: responseSchema,
         });
 
         const jsonStr = response.text;

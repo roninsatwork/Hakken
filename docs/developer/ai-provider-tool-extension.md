@@ -64,17 +64,68 @@ Google Vertex catalog sync currently seeds a curated production model list inste
 
 OpenAI catalog sync first tries to read the live `/v1/models` catalogue. If live sync fails, it can seed a curated text-generation catalogue and mark provider health as degraded or error depending on the failure. The curated OpenAI model list is a model-administration convenience; it does not prove every seeded model can execute under the current API key until the provider connection and selected runtime path are tested.
 
-Anthropic catalog sync reads the live model catalogue and stores text-generation rows from the response. Unlike OpenAI sync, it does not currently have a curated fallback catalogue.
+Anthropic catalog sync reads the live model catalogue and stores text-generation rows from the response. No provider carries a fallback catalogue: a hardcoded list decides what exists, goes stale without saying so, and turns a failed sync into one that looks successful. A sync that cannot reach its provider throws and marks the provider unhealthy.
 
-Provider connection tests update provider health through `internalUpdateProviderHealth`. A successful test marks the provider healthy, sets `syncStatus` to `connection-ok`, and currently enables the provider. A failed test records an error status and `connection-error` message without proving any model default is safe to use.
+Provider connection tests update provider health through `internalUpdateProviderHealth`. A successful test marks the provider healthy and sets `syncStatus` to `connection-ok`. It does **not** enable the provider: a button that reads as a read-only check must not change what the platform runs, and enabling is one click away on the same screen. A failed test records an error status and `connection-error` message without proving any model default is safe to use.
 
 When adding another provider:
 
-1. Add provider metadata and sync behavior in the model administration path.
-2. Add an adapter service for the provider client and retry/logging behavior.
-3. Keep runtime actions provider-neutral until they cross into the adapter.
-4. Pass provider-neutral prompts, content, generation config, and tool declarations into the adapter.
-5. Preserve `providerKey` in analytics and cost attribution so dashboards can distinguish configured providers from legacy or unknown calls.
+This list was rewritten from what adding OpenRouter actually required. The
+previous version described the shape of the work but not where it lives, so
+following it would have missed the two registry switches and the four
+display-name chains in the front end — each of which fails quietly rather than
+loudly.
+
+**Backend**
+
+1. `convex/aiModelService.ts` — add the provider key constant.
+2. **New** `convex/<provider>ProviderService.ts` — env type, config builder that
+   throws on missing credentials, response extractor, adapter factory, and a
+   catalogue listing function. Build it on `requestProviderJson`, which is
+   provider-neutral. Accept `env` and `fetchImpl` as arguments so tests can drive
+   it without a network.
+3. `convex/aiProviderRegistry.ts` — add the case to `getProviderAdapter`.
+4. `convex/aiModels.ts` — add to `PROVIDER_DISPLAY_NAMES` **and**
+   `PLATFORM_PROVIDER_KEYS`.
+5. `convex/aiModelsActions.ts` — display name, a `sync<Provider>Models` action,
+   and a branch in `testProviderConnection`.
+6. `.env.example` and `scripts/validate-setup.mjs` — declare and validate the
+   credential.
+
+**Front end**
+
+7. `modelAdminUtils.tsx` — extend `SyncProviderKey` and `isSyncProviderKey`. The
+   sync dispatch map on the Providers screen is typed against that union, so the
+   compiler will refuse to build until the sync action is wired up. That is
+   deliberate: it used to be an if/else chain whose final `else` silently synced
+   Anthropic.
+8. Four display-name chains: `admin/page.tsx`, `app/settings/page.tsx`,
+   `admin/companies/[id]/page.tsx`, and `AICostDistributionCharts.tsx`.
+
+**To run agents, not just chat**
+
+9. **New** `convex/<provider>AgentProvider.ts` implementing
+   `AgentProviderAdapter` — streaming, tool calls, and the normalised outcome the
+   objective loop switches on. Keep the transcript translation and stream
+   accumulation in a separate service of pure functions so they can be tested
+   without a network call.
+10. `convex/agentProviderRegistry.ts` — the case **and**
+    `isAgentCapableProvider`.
+11. `convex/aiModelService.ts` — add the provider to `AGENT_CAPABLE_PROVIDER_KEYS`,
+    or the model pickers will not offer it for agent and workflow jobs.
+
+**Throughout**
+
+- Keep runtime actions provider-neutral until they cross into the adapter, and
+  pass neutral prompts, content, generation config and tool declarations in.
+- Structured output travels as `jsonSchema` on the request, in plain JSON Schema.
+  Every adapter maps it to its own vocabulary; a provider that cannot do it must
+  say so rather than silently returning prose.
+- Preserve `providerKey` in analytics and cost attribution so dashboards can
+  distinguish configured providers from legacy or unknown calls.
+- Prices are stored **per million tokens**. A provider quoting per token converts
+  once, in its sync, with a test pinning the result against
+  `calculateModelCostGBP`.
 
 New runtime work should avoid constructing provider SDK clients directly inside product features, agent runtime code, workflow runtime code, or one-off actions. Existing Vertex-specific paths are documented implementation debt; when they are touched, prefer moving them toward model resolution plus adapter helpers instead of spreading more direct SDK calls.
 

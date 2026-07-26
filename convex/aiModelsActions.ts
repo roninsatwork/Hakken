@@ -8,9 +8,11 @@ import {
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
+  OPENROUTER_PROVIDER_KEY,
 } from "./aiModelService";
 import { listAnthropicModels } from "./anthropicProviderService";
 import { listOpenAIModels } from "./openaiProviderService";
+import { listOpenRouterModels } from "./openrouterProviderService";
 import { buildVertexProviderConfig, createVertexGenAIClient, listVertexModels } from "./vertexProviderService";
 import { superAdminAction } from "./tenantFunctions";
 
@@ -22,6 +24,7 @@ function getProviderDisplayName(providerKey: string) {
   if (providerKey === GOOGLE_VERTEX_PROVIDER_KEY) return "Google Vertex AI";
   if (providerKey === OPENAI_PROVIDER_KEY) return "OpenAI";
   if (providerKey === ANTHROPIC_PROVIDER_KEY) return "Anthropic";
+  if (providerKey === OPENROUTER_PROVIDER_KEY) return "OpenRouter";
   return providerKey;
 }
 
@@ -99,7 +102,13 @@ async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
       // uses, so capabilities are derived from the model id — again a rule
       // rather than a list of models to maintain.
       capabilities: isEmbedding ? ["embeddings"] : getTextGenerationCapabilities(model.modelId),
-      supportedUseCases: isEmbedding ? [EMBEDDING_MODEL_USE_CASE] : getTextGenerationUseCases(model.modelId),
+      // Vertex text models also take audio and images, which the generic
+      // text-generation list does not claim. The hardcoded catalogue this
+      // replaced said so; dropping it meant no model could be chosen to turn
+      // speech into text, and that row became unsettable.
+      supportedUseCases: isEmbedding
+        ? [EMBEDDING_MODEL_USE_CASE]
+        : [...getTextGenerationUseCases(model.modelId), "transcription", "vision"],
       // Vertex leaves these unset on the listing. Passing undefined through
       // would clear whatever a model already had, so they are only sent when
       // Vertex actually reports them.
@@ -172,6 +181,62 @@ async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
   return formattedModels;
 }
 
+/**
+ * The OpenRouter catalogue, with its prices.
+ *
+ * OpenRouter is the only provider of ours that reports price, context length and
+ * modalities per model, so this is the one sync that leaves nothing for an admin
+ * to type in. Capabilities come from what OpenRouter says rather than from the
+ * shape of the model id — the id-based guess used elsewhere would tag every
+ * model in the `openai/` namespace as a reasoning model, because it starts
+ * with "o".
+ *
+ * Every model it publishes is synced. Filtering here would be a hardcoded list
+ * in a different coat; models arrive switched off, and the catalogue's search
+ * and paging are what make a large list navigable.
+ */
+async function syncOpenRouterModelCatalogue(ctx: ActionCtx) {
+  const listed = await listOpenRouterModels();
+
+  if (listed.length === 0) {
+    throw new Error("OpenRouter returned no models.");
+  }
+
+  const formattedModels = listed.map((model) => ({
+    modelId: model.modelId,
+    providerModelId: model.modelId,
+    displayName: model.displayName,
+    description: model.description,
+    capabilities: model.capabilities,
+    supportedUseCases: model.supportedUseCases,
+    ...(model.contextWindowTokens ? { contextWindowTokens: model.contextWindowTokens } : {}),
+    ...(model.maxOutputTokens ? { maxOutputTokens: model.maxOutputTokens } : {}),
+    ...(model.inputCostPerMillion !== undefined ? { standardInputCostBelow200k: model.inputCostPerMillion } : {}),
+    // OpenRouter has no long-context price tier, so the same rate serves both.
+    ...(model.inputCostPerMillion !== undefined ? { standardInputCostAbove200k: model.inputCostPerMillion } : {}),
+    ...(model.outputCostPerMillion !== undefined ? { outputResponseCost: model.outputCostPerMillion } : {}),
+  }));
+
+  await ctx.runMutation(internal.aiModels.internalBatchUpsert, {
+    providerKey: OPENROUTER_PROVIDER_KEY,
+    providerDisplayName: "OpenRouter",
+    models: formattedModels,
+  });
+
+  const pricedCount = formattedModels.filter((model) => model.standardInputCostBelow200k !== undefined).length;
+  await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, {
+    providerKey: OPENROUTER_PROVIDER_KEY,
+    displayName: "OpenRouter",
+    status: "healthy",
+    syncStatus: "catalog-synced",
+    settings: JSON.stringify({
+      lastHealthMessage: `Listed ${formattedModels.length} models from OpenRouter, ${pricedCount} with prices.`,
+    }),
+  });
+
+  return formattedModels;
+}
+
 async function syncAnthropicModelCatalogue(ctx: ActionCtx) {
   const models = await listAnthropicModels();
   const formattedModels = models.map((model) => ({
@@ -214,6 +279,17 @@ export const syncOpenAIModels = superAdminAction({
   },
 });
 
+export const syncOpenRouterModels = superAdminAction({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      return await syncOpenRouterModelCatalogue(ctx);
+    } catch (e: unknown) {
+      throw new Error(`Failed to sync OpenRouter models: ${getErrorMessage(e)}`);
+    }
+  },
+});
+
 export const syncAnthropicModels = superAdminAction({
   args: {},
   handler: async (ctx) => {
@@ -247,6 +323,10 @@ export const testProviderConnection = superAdminAction({
       let detail = "";
 
       if (args.providerKey === GOOGLE_VERTEX_PROVIDER_KEY) {
+        // This used to build the credentials object and stop there, then report
+        // "healthy" — so the badge meant "the environment variables parse" for
+        // Vertex and "the API answered" for the other two. Same word, two very
+        // different promises. It now calls Vertex, as the others call theirs.
         const config = buildVertexProviderConfig({
           env: {
             GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
@@ -255,12 +335,16 @@ export const testProviderConnection = superAdminAction({
             GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
           },
         });
-        detail = `Credentials configured for ${config.project}/${config.location}.`;
+        const models = await listVertexModels(createVertexGenAIClient());
+        detail = `Connection ok. ${models.length.toLocaleString()} models visible in ${config.project}/${config.location}.`;
       } else if (args.providerKey === OPENAI_PROVIDER_KEY) {
         const models = await listOpenAIModels();
         detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
       } else if (args.providerKey === ANTHROPIC_PROVIDER_KEY) {
         const models = await listAnthropicModels();
+        detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
+      } else if (args.providerKey === OPENROUTER_PROVIDER_KEY) {
+        const models = await listOpenRouterModels();
         detail = `Connection ok. ${models.length.toLocaleString()} models visible.`;
       } else {
         throw new Error(`Unsupported provider '${args.providerKey}'.`);
@@ -272,7 +356,9 @@ export const testProviderConnection = superAdminAction({
         status: "healthy",
         syncStatus: "connection-ok",
         settings: JSON.stringify({ lastHealthMessage: detail }),
-        isEnabled: true,
+        // Testing a connection used to switch the provider on. A button that
+        // reads as a read-only check must not change what the platform runs;
+        // enabling is the toggle's job and it is one click away.
       });
 
       return { ok: true, providerKey: args.providerKey, message: detail };

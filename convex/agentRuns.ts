@@ -1596,6 +1596,13 @@ export const updateRunStatusInternal = internalMutation({
     });
     if (isTerminalRunStatus(args.status)) {
       await updateMemoryUsageOutcomeForRun(ctx, args.runId, args.status);
+      // Offer what this run taught, without waiting for someone to press a
+      // button on the run list — which is why the queue was always empty.
+      // Scheduled rather than awaited: a suggestion is worth having, but never
+      // at the cost of the run failing to record that it finished.
+      await ctx.scheduler.runAfter(0, internal.agentMemoryCandidates.generateForRunInternal, {
+        runId: args.runId,
+      });
     }
   },
 });

@@ -1,6 +1,6 @@
 # Movement Studio VrmAvatar Inventory
 
-Phase 4 audit note for `docs/plans/active/movement-studio-best-practice-architecture-plan.md`.
+Phase 4 audit note for the retired `docs/plans/completed/movement-studio-best-practice-architecture-plan.md`.
 
 Scope: `src/app/(dashboard)/demos/movements/[id]/play/_components/VrmAvatar.tsx`.
 

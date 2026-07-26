@@ -42,8 +42,10 @@ const defaults = {
       default: { modelId: "chat-model" },
     },
     {
+      // Set to a model that cannot do this job — the state "Apply to every job"
+      // used to create, and that a later sync can also produce.
       useCase: "router",
-      default: null,
+      default: { modelId: "chat-model" },
     },
   ],
 };
@@ -67,7 +69,9 @@ describe("AIModelDefaultsPage", () => {
     vi.mocked(useQuery).mockImplementation((...args: Parameters<typeof useQuery>) => {
       const queryFn = args[0];
       const path = getConvexPath(queryFn);
-      if (path.includes("getModels")) return models as unknown as ReturnType<typeof useQuery>;
+      // The screen now asks for models that can actually be chosen, rather than
+      // reading the whole catalogue and filtering in the browser.
+      if (path.includes("getActiveModels")) return models as unknown as ReturnType<typeof useQuery>;
       if (path.includes("getProviders")) return providers as unknown as ReturnType<typeof useQuery>;
       return defaults as unknown as ReturnType<typeof useQuery>;
     });
@@ -95,11 +99,16 @@ describe("AIModelDefaultsPage", () => {
     expect(screen.getByText("Ordinary conversations with people.")).toBeInTheDocument();
 
     // Cost is the trade-off being made here, shown where it is made.
-    expect(screen.getByText("$0.50 in · $1.50 out per million")).toBeInTheDocument();
+    // The unit is stated once in the panel header rather than on all ten rows.
+    // Both fixture rows point at the same model, so both show its price.
+    expect(screen.getAllByText("$0.50 in · $1.50 out")).toHaveLength(2);
+    expect(screen.getByText(/Prices are per million tokens/)).toBeInTheDocument();
 
     // "Configured" on every row carried no information. Only the exception does.
     expect(screen.queryByText("Configured")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Not set")).toHaveLength(1);
+    // Both fixture rows now carry a default — the Router one deliberately set to
+    // a model that cannot do the job — so nothing is unset.
+    expect(screen.queryByText("Not set")).not.toBeInTheDocument();
   });
 
   it("renders platform defaults without provider cards or catalogue filters", async () => {
@@ -118,6 +127,27 @@ describe("AIModelDefaultsPage", () => {
   });
 
   /**
+   * A default set to a model this row cannot offer must still be visible.
+   *
+   * "Apply to every job" used to write all ten rows without checking, and a
+   * sync can narrow a model's supported jobs later. Either way the dropdown's
+   * value then matched no option, so the browser displayed the *first* one —
+   * "No platform default" — beside a price for the default that did exist. The
+   * screen contradicted itself, and touching the row fired a change with an
+   * empty value and cleared the setting.
+   */
+  it("shows a default the row would not otherwise offer, and says it cannot do the job", () => {
+    render(<AIModelDefaultsPage />);
+
+    // The fixture's chat model supports chat only, and the Router row has it set.
+    const routerSelect = screen.getAllByRole("combobox")[1];
+    expect((routerSelect as HTMLSelectElement).value).toBe("chat-model");
+
+    expect(screen.getByRole("option", { name: /cannot do this job/i })).toBeInTheDocument();
+    expect(screen.getByText(/the work falls through to whatever is set below it/i)).toBeInTheDocument();
+  });
+
+  /**
    * Reassigning every job is a real decision, so it asks.
    *
    * This action arrived here from a hover-revealed *Make Default* button on a
@@ -130,15 +160,18 @@ describe("AIModelDefaultsPage", () => {
 
     const everyJobSelect = screen.getAllByRole("combobox").at(-1)!;
     fireEvent.change(everyJobSelect, { target: { value: "model_1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply to every job" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     // Nothing has been written yet — the click opened a confirmation.
     expect(setDefaultModel).not.toHaveBeenCalled();
-    expect(screen.getByText(/replacing the choices currently set/i)).toBeInTheDocument();
-    // And it names the rows it is about to overwrite.
-    expect(screen.getByText(/Chat, Router\./)).toBeInTheDocument();
+    expect(screen.getByText(/will take over/i)).toBeInTheDocument();
+    // The fixture model supports chat only, so the dialog must say it takes one
+    // of the two rows and names the one it cannot do — rather than claiming
+    // "every job" and quietly skipping it.
+    expect(screen.getByText(/take over 1 of the 2 jobs/i)).toBeInTheDocument();
+    expect(screen.getByText(/It cannot do Router/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Apply to every job" }).at(-1)!);
+    fireEvent.click(screen.getByRole("button", { name: "Apply to every job" }));
 
     await waitFor(() => {
       expect(setDefaultModel).toHaveBeenCalledWith({ modelId: "model_1" });

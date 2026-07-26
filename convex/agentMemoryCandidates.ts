@@ -1,11 +1,12 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import type { MutationCtx } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { resolveAgentApplyMode } from "./utils/memoryApplication";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const CANDIDATE_LIMIT = 200;
@@ -554,11 +555,16 @@ async function applyCandidateMemory(ctx: Pick<MutationCtx, "db">, args: {
   now: number;
 }) {
   const normalizedContent = validateMemoryContent(args.candidate.content);
+  // Stamped on the way in so a memory that arrives by approval behaves the same
+  // as one typed by hand. Without this the suggestion queue would keep writing
+  // rows the runtime had to guess about.
+  const applyMode = resolveAgentApplyMode(args.candidate);
   const memoryId = await ctx.db.insert("agentMemories", {
     agentId: args.candidate.agentId,
     companyId: args.candidate.companyId,
     sourceRunId: args.candidate.sourceRunId,
     kind: args.candidate.kind,
+    applyMode,
     content: normalizedContent,
     normalizedContent: normalizedContent.toLowerCase(),
     importance: clampScore(args.candidate.confidence, 0.5),
@@ -595,16 +601,21 @@ async function applyCandidateMemory(ctx: Pick<MutationCtx, "db">, args: {
   return memoryId;
 }
 
-export const generateForRun = adminMutation({
-  args: {
-    runId: v.id("agentRuns"),
-    autoApplyLowRisk: v.optional(v.boolean()),
-  },
-  handler: async (ctx, args) => {
-    const { userId, user } = ctx;
+/**
+ * Derive memory suggestions from what a run actually did.
+ *
+ * Shared by the admin button and by the automatic pass at the end of a run.
+ * `userId` is absent for the automatic pass: the platform proposed it, and
+ * naming an admin who was not involved would be a lie the audit trail repeats.
+ */
+async function generateCandidatesForRun(ctx: MutationCtx, args: {
+  runId: Id<"agentRuns">;
+  userId?: Id<"users">;
+  autoApplyLowRisk?: boolean;
+}) {
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
-    assertAdminCanAccessCompany(user, run.companyId);
+    const userId = args.userId;
 
     const [reflections, feedback, existingCandidates, steps, toolCalls, approvals] = await Promise.all([
       ctx.db
@@ -639,7 +650,27 @@ export const generateForRun = adminMutation({
         .take(CANDIDATE_LIMIT),
     ]);
 
-    const existingByContent = new Set(existingCandidates.map((candidate) => candidate.normalizedContent));
+    // Dedupe across the whole agent, not just this run. The old set was built
+    // from candidates attached to this one run, so the same wording derived
+    // from a later run arrived as a fresh suggestion every time — survivable
+    // while a person had to click, and not once this runs on its own.
+    const [agentCandidates, agentMemories] = await Promise.all([
+      ctx.db
+        .query("agentMemoryCandidates")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", run.agentId).eq("status", "PROPOSED"))
+        .take(CANDIDATE_LIMIT),
+      ctx.db
+        .query("agentMemories")
+        .withIndex("by_agent_active_updated", (q) => q.eq("agentId", run.agentId).eq("isActive", true))
+        .take(CANDIDATE_LIMIT),
+    ]);
+
+    const existingByContent = new Set([
+      ...existingCandidates.map((candidate) => candidate.normalizedContent),
+      ...agentCandidates.map((candidate) => candidate.normalizedContent),
+      // Already known: proposing what the agent has been told is noise.
+      ...agentMemories.map((memory) => memory.normalizedContent),
+    ]);
     const drafts = getCandidateDrafts({ run, reflections, feedback });
     const runtimeSkillRecords = getRuntimeSkillRecordsFromSteps(steps);
     const now = Date.now();
@@ -650,6 +681,18 @@ export const generateForRun = adminMutation({
       const normalizedContent = validateMemoryContent(draft.content);
       const normalizedKey = normalizedContent.toLowerCase();
       if (existingByContent.has(normalizedKey)) continue;
+
+      // Turned down before. The company side has always refused to re-propose
+      // rejected wording; without it here, an automatic pass would offer the
+      // same suggestion after every run until someone gave in.
+      const rejected = await ctx.db
+        .query("agentMemoryCandidates")
+        .withIndex("by_agent_rejected_fingerprint", (q) =>
+          q.eq("agentId", run.agentId).eq("rejectedFingerprint", normalizedKey)
+        )
+        .first();
+      if (rejected) continue;
+
       existingByContent.add(normalizedKey);
       const skillAttribution = await getSkillAttributionForDraft(ctx, {
         draft,
@@ -682,7 +725,9 @@ export const generateForRun = adminMutation({
       });
       createdIds.push(candidateId);
 
-      await ctx.db.insert("auditLogs", {
+      // Only when a person asked. An audit row needs an actor, and inventing
+      // one for a scheduled pass would put a name against something nobody did.
+      if (userId) await ctx.db.insert("auditLogs", {
         actorId: userId,
         actionType: "CREATE_AGENT_MEMORY_CANDIDATE",
         entityId: candidateId,
@@ -701,16 +746,58 @@ export const generateForRun = adminMutation({
       });
 
       const candidate = await ctx.db.get(candidateId);
-      if (candidate && args.autoApplyLowRisk === true && shouldAutoApply(candidate)) {
+      // Auto-apply still needs a person to have asked for it: nothing reaches
+      // an agent's memory off the back of a scheduled pass alone.
+      if (candidate && userId && args.autoApplyLowRisk === true && shouldAutoApply(candidate)) {
         const memoryId = await applyCandidateMemory(ctx, { candidate, userId, now });
         appliedIds.push(memoryId);
       }
     }
 
-    return {
-      createdIds,
-      appliedIds,
-    };
+    return { createdIds, appliedIds };
+}
+
+export const generateForRun = adminMutation({
+  args: {
+    runId: v.id("agentRuns"),
+    autoApplyLowRisk: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, user } = ctx;
+    const run = await ctx.db.get(args.runId);
+    if (!run) throw new Error("Run not found");
+    assertAdminCanAccessCompany(user, run.companyId);
+
+    return await generateCandidatesForRun(ctx, {
+      runId: args.runId,
+      userId,
+      autoApplyLowRisk: args.autoApplyLowRisk,
+    });
+  },
+});
+
+/**
+ * The same pass, run automatically when a run finishes.
+ *
+ * These suggestions were only ever produced when an admin opened the run list
+ * and pressed a button, so in practice the queue stayed empty and the learning
+ * loop never closed. Nothing here applies anything — every suggestion still
+ * waits for a person.
+ */
+export const generateForRunInternal = internalMutation({
+  args: {
+    runId: v.id("agentRuns"),
+  },
+  handler: async (ctx, args) => {
+    try {
+      return await generateCandidatesForRun(ctx, { runId: args.runId });
+    } catch (error) {
+      // A run that has already finished must not be failed by its own
+      // post-processing; an unsafe or oversized draft is a reason to skip the
+      // suggestion, not to lose the run.
+      console.error("Agent memory suggestion pass failed:", error);
+      return { createdIds: [], appliedIds: [] };
+    }
   },
 });
 
@@ -736,6 +823,8 @@ export const decideCandidate = adminMutation({
         reviewedBy: userId,
         reviewedAt: now,
         rejectionReason: args.rejectionReason,
+        // Recorded so the automatic pass cannot offer the same wording again.
+        rejectedFingerprint: candidate.normalizedContent,
         updatedAt: now,
       });
       await ctx.db.insert("auditLogs", {

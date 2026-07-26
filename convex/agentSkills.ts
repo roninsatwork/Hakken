@@ -10,18 +10,7 @@ import {
   getAgentSkillRollup,
   replaceAgentSkillRollup,
 } from "./utils/agentSkillRollupService";
-
-/**
- * How many skills one agent may carry.
- *
- * A skill is not a setting, it is text added to every message the agent sends:
- * it costs money on each one, slows the reply, and spreads the model's
- * attention thinner. Two is a deliberate constraint rather than a technical
- * one, and it is enforced when a skill is attached rather than applied quietly
- * at runtime — a rule that only shows up as behaviour nobody can see is the
- * same fault as a silent cap.
- */
-export const MAX_SKILLS_PER_AGENT = 2;
+import { MAX_SKILLS_PER_AGENT } from "./utils/skillLimits";
 
 const SKILL_CATALOG_LIMIT = 250;
 const SKILL_BINDING_LIMIT = 100;

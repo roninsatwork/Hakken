@@ -140,6 +140,7 @@ if (hasResendAuth && !hasSenderAddress) {
 const hasGoogleVertex = validateProviderGroup("Google Vertex AI", ["GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"]);
 const hasOpenAI = ["OPENAI_API_KEY", "OPEN_AI_API_KEY", "OPENAI_KEY"].some(hasValue);
 const hasAnthropic = hasValue("ANTHROPIC_API_KEY");
+const hasOpenRouter = hasValue("OPENROUTER_API_KEY");
 
 if (hasValue("GOOGLE_PRIVATE_KEY") && !env.GOOGLE_PRIVATE_KEY.includes("\\n") && !env.GOOGLE_PRIVATE_KEY.includes("BEGIN PRIVATE KEY")) {
   warnings.push("GOOGLE_PRIVATE_KEY: value does not look like a service-account private key.");
@@ -147,12 +148,13 @@ if (hasValue("GOOGLE_PRIVATE_KEY") && !env.GOOGLE_PRIVATE_KEY.includes("\\n") &&
 
 if (hasOpenAI) passes.push("OpenAI: configured");
 if (hasAnthropic) passes.push("Anthropic: configured");
+if (hasOpenRouter) passes.push("OpenRouter: configured");
 
 if (profile === "production") {
-  if (!hasGoogleVertex && !hasOpenAI && !hasAnthropic) {
+  if (!hasGoogleVertex && !hasOpenAI && !hasAnthropic && !hasOpenRouter) {
     failures.push("AI provider: configure at least one runtime provider credential group.");
   }
-} else if (!hasGoogleVertex && !hasOpenAI && !hasAnthropic) {
+} else if (!hasGoogleVertex && !hasOpenAI && !hasAnthropic && !hasOpenRouter) {
   warnings.push("AI provider: no runtime provider credentials found. Contract tests and local demo seeding can still run without live model calls.");
 }
 

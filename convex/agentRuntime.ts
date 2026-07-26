@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { AgentProviderAdapter, AgentToolDeclaration } from "./agentProviderTypes";
 import { getAgentProviderAdapter } from "./agentProviderRegistry";
+import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { v } from "convex/values";
 import type { Content, FunctionDeclaration, GenerateContentConfig, Tool } from "@google/genai";
 import { internal } from "./_generated/api";
@@ -297,7 +298,21 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     }
   }
 
-  const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt, runtimeSkills);
+  // The agent's own always-on memories, plus the company's. The company's were
+  // read nowhere on this path, so giving a company a memory did nothing on any
+  // widget with an agent attached.
+  const [agentAlwaysMemories, companyAlwaysMemories] = await Promise.all([
+    ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
+    thread.companyId
+      ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: thread.companyId })
+      : Promise.resolve([]),
+  ]);
+  const alwaysMemories = [
+    ...companyAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
+    ...agentAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
+  ];
+
+  const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt, runtimeSkills, alwaysMemories);
   // Deterministic logic routing.
   const temperature = 0.1;
 
@@ -316,9 +331,13 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   // Fails here, naming the model, rather than deep inside a provider call.
   const provider = getAgentProviderAdapter(modelConfig.providerKey);
 
-  const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
-  const modelDoc = new Map<string, Doc<"aiModels">>(allModelsRaw.map((m) => [m.modelId, m]))
-    .get(modelConfig.modelId);
+  // One indexed lookup. This used to read the whole catalogue and build a Map
+  // to find a single row, on every context build.
+  // `?? undefined` because the rest of the runtime treats "no record" as
+  // undefined; a query cannot return undefined, so it answers with null.
+  const modelDoc = await ctx.runQuery(internal.aiModels.getModelByIdInternal, {
+    modelId: modelConfig.modelId,
+  }) ?? undefined;
 
   // Per-agent budget, clamped to the platform ceilings. When the model has no
   // pricing configured the cost ceiling can never fire, so the conservative
@@ -531,13 +550,29 @@ export const runAgentObjective = internalAction({
                 kind: "OBSERVE",
                 status: "SUCCESS",
                 input: args.content,
-                output: JSON.stringify({ memories: memoryMatches.map((memory) => ({ id: memory.id, kind: memory.kind, score: memory.score })) }),
+                output: JSON.stringify({ memories: memoryMatches.map((memory) => ({ id: memory.id, applyMode: memory.applyMode, score: memory.score })) }),
             });
             currentUserContent += buildUntrustedKnowledgeContext({
                 sourceLabel: "agent memory",
                 chunks: memoryMatches.map((memory) => memory.content),
                 maxChars: 6000,
             });
+        }
+
+        // The company's when-relevant memories, which this path never read.
+        if (thread.companyId) {
+            const companyMemories = await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+                companyId: thread.companyId,
+                queryText: args.content,
+                limit: 5,
+            });
+            if (companyMemories.relevant.length > 0) {
+                currentUserContent += buildUntrustedKnowledgeContext({
+                    sourceLabel: "company memory",
+                    chunks: companyMemories.relevant.map((memory) => `${memory.title}: ${memory.content}`),
+                    maxChars: 6000,
+                });
+            }
         }
 
         conversationHistory.push({
@@ -1643,7 +1678,6 @@ export const runTriggeredAgentObjective = internalAction({
   handler: async (ctx, args): Promise<{ output: string; runId: Id<"agentRuns"> }> => {
     let runId = args.runId;
     const safetyDecision = evaluateAssistantSafety(args.objective);
-    const ai = createVertexGenAIClient();
 
     try {
       const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
@@ -1671,7 +1705,6 @@ export const runTriggeredAgentObjective = internalAction({
         companyId: args.companyId,
         useCase: args.triggerType === "WORKFLOW" ? "workflow" : "agent",
       });
-      const targetModel = getGoogleVertexProviderModelId(modelConfig, "triggered agent execution");
 
       if (!runId) {
         runId = await ctx.runMutation(internal.agentRuns.createRunInternal, {
@@ -1870,7 +1903,7 @@ export const runTriggeredAgentObjective = internalAction({
           kind: "OBSERVE",
           status: "SUCCESS",
           input: args.objective,
-          output: JSON.stringify({ memories: memoryMatches.map((memory) => ({ id: memory.id, kind: memory.kind, score: memory.score })) }),
+          output: JSON.stringify({ memories: memoryMatches.map((memory) => ({ id: memory.id, applyMode: memory.applyMode, score: memory.score })) }),
         });
         objectiveContent += buildUntrustedKnowledgeContext({
           sourceLabel: "agent memory",
@@ -1878,6 +1911,23 @@ export const runTriggeredAgentObjective = internalAction({
           maxChars: 6000,
         });
       }
+
+      // The company's when-relevant memories, which this path never read.
+      if (args.companyId) {
+        const companyMemories = await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+          companyId: args.companyId,
+          queryText: args.objective,
+          limit: 5,
+        });
+        if (companyMemories.relevant.length > 0) {
+          objectiveContent += buildUntrustedKnowledgeContext({
+            sourceLabel: "company memory",
+            chunks: companyMemories.relevant.map((memory) => `${memory.title}: ${memory.content}`),
+            maxChars: 6000,
+          });
+        }
+      }
+
       const runtimeSkills = replayExecutionContext
         ? []
         : await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
@@ -1907,29 +1957,38 @@ export const runTriggeredAgentObjective = internalAction({
         });
       }
 
-      const response = await generateVertexContentWithRetry(ai, {
-        model: targetModel,
-        contents: [{
-          role: "user",
-          parts: [{ text: objectiveContent }],
-        }] satisfies Content[],
-        config: {
-          systemInstruction: buildAgentSystemInstruction(executionSystemPrompt, runtimeSkills),
-          temperature: executionTemperature,
-        },
-      }, {
-        operation: "triggeredAgentGenerate",
+      // Always-on memories: the agent's own, and the company's — which this
+      // path, like the chat path, never read.
+      const [triggeredAgentAlways, triggeredCompanyAlways] = await Promise.all([
+        ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
+        args.companyId
+          ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: args.companyId })
+          : Promise.resolve([]),
+      ]);
+      const triggeredAlwaysMemories = [
+        ...triggeredCompanyAlways.map((memory) => ({ title: memory.title, content: memory.content })),
+        ...triggeredAgentAlways.map((memory) => ({ title: memory.title, content: memory.content })),
+      ];
+
+      // Plain text in, plain text out, so this goes through the registry and
+      // runs on whichever provider the model belongs to.
+      const response = await generateTextWithResolvedModel({
+        model: modelConfig,
+        systemInstruction: buildAgentSystemInstruction(executionSystemPrompt, runtimeSkills, triggeredAlwaysMemories),
+        contents: [{ type: "text", text: objectiveContent }],
+        temperature: executionTemperature,
       });
 
       const output = response.text || "Execution completed with no readable text output.";
-      const inputTokens = response.usageMetadata?.promptTokenCount || 0;
-      const outputTokens = response.usageMetadata?.candidatesTokenCount || 0;
-      const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
-      const modelMap = new Map<string, Doc<"aiModels">>(allModelsRaw.map((m) => [m.modelId, m]));
+      const inputTokens = response.inputTokens || 0;
+      const outputTokens = response.outputTokens || 0;
+      const runModel = await ctx.runQuery(internal.aiModels.getModelByIdInternal, {
+        modelId: modelConfig.modelId,
+      });
       const costGBP = calculateModelCostGBP({
         inputTokens,
         outputTokens,
-        config: modelMap.get(modelConfig.modelId),
+        config: runModel ?? undefined,
       });
 
       await ctx.runMutation(internal.agentRuns.appendStepInternal, {
@@ -2142,15 +2201,18 @@ export const executeAgentNode = internalAction({
        requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
        useCase: "workflow",
     });
-    const targetModel = getGoogleVertexProviderModelId(modelConfig, "workflow agent execution");
-
     const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
-    
-    // Check if tools or internet access are enabled
+
+    // Google Search grounding is a capability only Vertex offers, so an agent
+    // that wants the internet still needs a Vertex model — and now says so in
+    // those terms rather than claiming the whole runtime requires one.
     const tools: Tool[] = [];
     if (agent.allowInternetAccess) {
         tools.push({ googleSearch: {} });
     }
+    const targetModel = tools.length > 0
+        ? getGoogleVertexProviderModelId(modelConfig, "internet access for a workflow agent")
+        : modelConfig.providerModelId;
     
     const config: GenerateContentConfig = {
         systemInstruction: systemInstruction,
@@ -2175,15 +2237,46 @@ export const executeAgentNode = internalAction({
         safeInput = safeInput.substring(0, 10000) + "\n\n... [TRUNCATED DUE TO SIZE LIMITS]";
     }
 
-    const response = await generateVertexContentWithRetry(ai, {
-        model: targetModel,
-        contents: `Input Data:\n${safeInput}`,
-        config: config
-    }, {
-        operation: "workflowAgentNodeGenerate",
-    });
+    // Grounded runs stay on Vertex because that is where the search tool lives;
+    // everything else goes through the registry and can run on any provider.
+    //
+    // Both branches are narrowed to the same shape here rather than returning a
+    // union. A union return made this handler's inferred type circular, which
+    // Convex reports as "implicitly has type any" several files away — a
+    // confusing failure for a purely cosmetic saving.
+    const generated: { text: string; inputTokens: number; outputTokens: number } = tools.length > 0
+        ? await (async () => {
+            const vertexResponse = await generateVertexContentWithRetry(ai, {
+                model: targetModel,
+                contents: `Input Data:\n${safeInput}`,
+                config: config
+            }, {
+                operation: "workflowAgentNodeGenerate",
+            });
+            return {
+                text: vertexResponse.text || "",
+                inputTokens: vertexResponse.usageMetadata?.promptTokenCount || 0,
+                outputTokens: vertexResponse.usageMetadata?.candidatesTokenCount || 0,
+            };
+        })()
+        : await (async () => {
+            const registryResponse = await generateTextWithResolvedModel({
+                model: modelConfig,
+                systemInstruction,
+                contents: [{ type: "text", text: `Input Data:\n${safeInput}` }],
+                temperature: agent.temperature !== undefined ? agent.temperature : 0.1,
+                ...(config.responseJsonSchema
+                    ? { jsonSchema: config.responseJsonSchema as Record<string, unknown> }
+                    : {}),
+            });
+            return {
+                text: registryResponse.text || "",
+                inputTokens: registryResponse.inputTokens || 0,
+                outputTokens: registryResponse.outputTokens || 0,
+            };
+        })();
 
-    const output = response.text || "{}";
+    const output = generated.text || "{}";
 
     // Log Execution for Observability
     await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
@@ -2196,8 +2289,8 @@ export const executeAgentNode = internalAction({
     return {
         output,
         usage: {
-            inputTokens: response.usageMetadata?.promptTokenCount || 0,
-            outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+            inputTokens: generated.inputTokens,
+            outputTokens: generated.outputTokens,
         }
     };
   },

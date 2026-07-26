@@ -8,9 +8,9 @@ Implementation started on 2026-07-02 after the user asked to build this out. Thi
 
 Related docs:
 
-- [Agent Skills Development Plan](../active/agent-skills-development-plan.md)
+- [Agent Skills Development Plan](./agent-skills-development-plan.md)
 - [Agent Skill Authoring Guide](../../developer/agent-skill-authoring-guide.md)
-- [Global AI Navigation Consolidation Plan](../active/global-ai-navigation-consolidation-plan.md)
+- [Global AI Navigation Consolidation Plan](./global-ai-navigation-consolidation-plan.md)
 
 Index keywords: SKILL.md import, agent skills, central skill library, skill upload, skill picker, agent capability catalog, reusable skills, skill governance, skill validation, skill bindings.
 

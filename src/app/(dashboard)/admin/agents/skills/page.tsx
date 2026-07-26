@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { redirect, useSearchParams } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -17,13 +17,14 @@ import {
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
+import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
 }
 
 
-export function AgentSkillsCatalog() {
+export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
   const importSkillMarkdown = useMutation(api.agentSkills.importSkillMarkdown);
   const deleteSkill = useMutation(api.agentSkills.deleteSkill);
@@ -192,7 +193,7 @@ export function AgentSkillsCatalog() {
   const pageSkills = skills.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
   const isFiltered = Boolean(searchTerm.trim());
   const knownTotal = !isFiltered && analytics?.computedAt && !analytics.isPartial
-    ? analytics.totals.skills
+    ? analytics.totals?.skills ?? skills.length
     : skills.length;
   const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
 
@@ -206,35 +207,39 @@ export function AgentSkillsCatalog() {
   // Undefined while loading. Zero counted skills and an empty page means there
   // is nothing to report on yet, so the panel stays away rather than showing
   // five zeros to someone who has just arrived.
-  const hasSkills = analytics === undefined || analytics.totals.skills > 0 || skills.length > 0;
+  // Guarded on the shape rather than only on "still loading": a rollup document
+  // that has not been written yet, or a response of an unexpected shape, would
+  // otherwise take the whole screen down rather than showing an empty panel.
+  const hasSkills = analytics === undefined || (analytics.totals?.skills ?? 0) > 0 || skills.length > 0;
 
   return (
     <div className="flex flex-col gap-5 h-full pb-12">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[24px] font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <BrainCircuit className="w-6 h-6 text-brand" />
-            Skill Center
-          </h1>
-          <p className="text-[13px] text-secondary mt-1 max-w-3xl">
-            Reusable instructions you can attach to any agent. Upload a SKILL.md file and it becomes available here.
-          </p>
-        </div>
-        {/* One action, because there is one way skills arrive: a SKILL.md
-            file. The other three were equal-weight buttons for paths almost
-            nobody takes; they are still here, below, at the size they deserve. */}
-        <button
-          type="button"
-          onClick={() => {
-            setIsMarkdownOpen(true);
-            setFeedback("");
-          }}
-          className="h-10 shrink-0 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
-        >
-          <FileText className="w-4 h-4" />
-          Add new skill
-        </button>
-      </header>
+      {/* The shared admin header, so this page's title sits where every other
+          title in this section sits. It had its own copy of the same markup,
+          which is how it ended up a different size with no dividing rule. */}
+      <AdminPageHeader
+        divider
+        icon={<BrainCircuit className="w-6 h-6 text-brand" />}
+        title="Skill Center"
+        description="Reusable instructions you can attach to any agent. Upload a SKILL.md file and it becomes available here."
+        action={
+          // One action, because there is one way skills arrive: a SKILL.md file.
+          <button
+            type="button"
+            onClick={() => {
+              setIsMarkdownOpen(true);
+              setFeedback("");
+            }}
+            className="h-10 shrink-0 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            <FileText className="w-4 h-4" />
+            Add new skill
+          </button>
+        }
+      />
+      {/* Below the title, as on every other page in this section. It used to be
+          rendered above it by the route that wraps this component. */}
+      {nav}
 
       {(feedback || error) && (
         <div className={`rounded-[8px] border p-3 text-[12px] ${
@@ -280,11 +285,11 @@ export function AgentSkillsCatalog() {
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
           {[
-            { label: "Skills", value: analytics?.totals.skills },
-            { label: "In use by agents", value: analytics?.totals.enabledBindings },
-            { label: "Out of date", value: analytics?.totals.outdatedBindings },
-            { label: "Tested", value: analytics?.totals.validatedBindings },
-            { label: "Untested", value: analytics?.totals.needsSmokeBindings },
+            { label: "Skills", value: analytics?.totals?.skills },
+            { label: "In use by agents", value: analytics?.totals?.enabledBindings },
+            { label: "Out of date", value: analytics?.totals?.outdatedBindings },
+            { label: "Tested", value: analytics?.totals?.validatedBindings },
+            { label: "Untested", value: analytics?.totals?.needsSmokeBindings },
           ].map((stat) => (
             <div key={stat.label} className="rounded-[8px] border border-border-dim bg-black/15 px-3 py-2 min-w-0">
               <div className="text-[10px] uppercase tracking-widest font-mono text-muted truncate">{stat.label}</div>

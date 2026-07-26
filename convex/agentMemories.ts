@@ -1,24 +1,40 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import type { Doc, Id } from "./_generated/dataModel";
+import {
+  MAX_ALWAYS_MEMORIES,
+  resolveAgentApplyMode,
+  type MemoryApplyMode,
+} from "./utils/memoryApplication";
+import { buildMemorySearchQuery, rankScore } from "./utils/memoryRetrieval";
 
 const MEMORY_SEARCH_LIMIT_DEFAULT = 5;
 const MEMORY_SEARCH_LIMIT_MAX = 10;
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const MEMORY_USAGE_LIMIT = 1000;
 
-const memoryKindValidator = v.union(
-  v.literal("FACT"),
-  v.literal("PREFERENCE"),
-  v.literal("SUMMARY"),
-  v.literal("INSTRUCTION")
+const applyModeValidator = v.union(
+  v.literal("ALWAYS"),
+  v.literal("WHEN_RELEVANT")
 );
 
+/**
+ * Tidy a memory's body without flattening it: runs of spaces and tabs collapse,
+ * line breaks are what the writer meant.
+ */
 function normalizeMemoryContent(content: string) {
-  return content.trim().replace(/\s+/g, " ");
+  return content
+    .replace(/\r\n/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .trim();
 }
 
 function validateMemoryContent(content: string) {
@@ -34,21 +50,6 @@ function validateMemoryContent(content: string) {
   }
 
   return normalizedContent;
-}
-
-function getSearchTerms(queryText: string) {
-  return queryText
-    .toLowerCase()
-    .split(/\s+/)
-    .map((term) => term.replace(/[^a-z0-9]/g, ""))
-    .filter((term) => term.length >= 3)
-    .slice(0, 8);
-}
-
-function scoreMemory(content: string, terms: string[]) {
-  if (terms.length === 0) return 0;
-  const normalized = content.toLowerCase();
-  return terms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0);
 }
 
 function getMemoryLimit(limit: number | undefined) {
@@ -80,19 +81,40 @@ function getMemoryQualityScore(args: {
 export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
+    /** False lists what has been removed, which had nowhere to be seen before. */
+    isActive: v.optional(v.boolean()),
+    searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");
+    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
 
-    if (user.role === "ADMIN") {
-      if (!user.companyId) throw new Error("Unauthorized");
+    const isActive = args.isActive ?? true;
+    const companyId = user.role === "ADMIN" ? user.companyId : undefined;
+
+    // Narrowed in the database rather than in the browser, so an agent with a
+    // long list can still be searched past the first page.
+    const searchTerm = args.searchTerm?.trim().toLowerCase();
+    if (searchTerm) {
+      return await ctx.db
+        .query("agentMemories")
+        .withSearchIndex("search_content", (q) => {
+          const search = q.search("normalizedContent", searchTerm)
+            .eq("agentId", args.agentId)
+            .eq("isActive", isActive);
+          return companyId ? search.eq("companyId", companyId) : search;
+        })
+        .paginate(args.paginationOpts);
+    }
+
+    if (companyId) {
       return await ctx.db
         .query("agentMemories")
         .withIndex("by_agent_company_active_updated", (q) =>
-          q.eq("agentId", args.agentId).eq("companyId", user.companyId).eq("isActive", true)
+          q.eq("agentId", args.agentId).eq("companyId", companyId).eq("isActive", isActive)
         )
         .order("desc")
         .paginate(args.paginationOpts);
@@ -100,7 +122,7 @@ export const getForAgent = adminQuery({
 
     return await ctx.db
       .query("agentMemories")
-      .withIndex("by_agent_active_updated", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
+      .withIndex("by_agent_active_updated", (q) => q.eq("agentId", args.agentId).eq("isActive", isActive))
       .order("desc")
       .paginate(args.paginationOpts);
   },
@@ -211,6 +233,66 @@ export const getQualityForAgent = adminQuery({
   },
 });
 
+function toRuntimeAgentMemory(memory: Doc<"agentMemories">, score: number) {
+  return {
+    id: memory._id,
+    title: memory.content.slice(0, 80),
+    content: memory.content,
+    applyMode: resolveAgentApplyMode(memory),
+    importance: memory.importance,
+    score,
+    updatedAt: memory.updatedAt,
+  };
+}
+
+/**
+ * The agent's ALWAYS memories.
+ *
+ * Two reads for the same reason as the company side: `applyMode` is optional,
+ * so a row written before the backfill carries no value and an index equality
+ * would skip it. The unstamped bucket is classified by its old kind and empties
+ * out once the migration has run.
+ */
+export const getAlwaysMemoriesInternal = internalQuery({
+  args: {
+    agentId: v.id("agents"),
+  },
+  handler: async (ctx, args) => {
+    const [stamped, unstamped] = await Promise.all([
+      ctx.db
+        .query("agentMemories")
+        .withIndex("by_agent_active_applymode_updated", (q) =>
+          q.eq("agentId", args.agentId).eq("isActive", true).eq("applyMode", "ALWAYS")
+        )
+        .order("desc")
+        .take(MAX_ALWAYS_MEMORIES),
+      ctx.db
+        .query("agentMemories")
+        .withIndex("by_agent_active_applymode_updated", (q) =>
+          q.eq("agentId", args.agentId).eq("isActive", true).eq("applyMode", undefined)
+        )
+        .order("desc")
+        .take(MAX_ALWAYS_MEMORIES),
+    ]);
+
+    const memories = [
+      ...stamped,
+      ...unstamped.filter((memory) => resolveAgentApplyMode(memory) === "ALWAYS"),
+    ].slice(0, MAX_ALWAYS_MEMORIES);
+
+    return memories.map((memory, index) => toRuntimeAgentMemory(memory, rankScore(index, memories.length)));
+  },
+});
+
+/**
+ * The WHEN_RELEVANT memories matching this message.
+ *
+ * This used to read the newest hundred rows, count substring hits, then add the
+ * memory's importance to that count *before* filtering on `score > 0` — and
+ * since importance defaults to 0.5, the filter passed everything. It always
+ * returned five memories whether or not any of them had anything to do with the
+ * question. The full-text index does the selecting now.
+ */
 export const searchMemoryInternal = internalQuery({
   args: {
     agentId: v.id("agents"),
@@ -219,40 +301,26 @@ export const searchMemoryInternal = internalQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const terms = getSearchTerms(args.queryText);
     const limit = getMemoryLimit(args.limit);
-    if (terms.length === 0) return [];
+    const searchQuery = buildMemorySearchQuery(args.queryText);
+    if (searchQuery.length === 0) return [];
 
-    const memories = args.companyId
-      ? await ctx.db
-          .query("agentMemories")
-          .withIndex("by_agent_company_active_updated", (q) =>
-            q.eq("agentId", args.agentId).eq("companyId", args.companyId).eq("isActive", true)
-          )
-          .order("desc")
-          .take(100)
-      : await ctx.db
-          .query("agentMemories")
-          .withIndex("by_agent_active_updated", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
-          .order("desc")
-          .take(100);
+    const matches = await ctx.db
+      .query("agentMemories")
+      .withSearchIndex("search_content", (q) => {
+        const search = q.search("normalizedContent", searchQuery)
+          .eq("agentId", args.agentId)
+          .eq("isActive", true);
+        return args.companyId ? search.eq("companyId", args.companyId) : search;
+      })
+      // Room to drop the ALWAYS matches, which the system instruction already
+      // carries and which would otherwise reach the model twice.
+      .take(limit * 2);
 
-    return memories
-      .map((memory) => ({
-        memory,
-        score: scoreMemory(memory.normalizedContent, terms) + memory.importance,
-      }))
-      .filter((entry) => entry.score > 0)
-      .sort((a, b) => b.score - a.score)
+    return matches
+      .filter((memory) => resolveAgentApplyMode(memory) === "WHEN_RELEVANT")
       .slice(0, limit)
-      .map((entry) => ({
-        id: entry.memory._id,
-        kind: entry.memory.kind,
-        content: entry.memory.content,
-        importance: entry.memory.importance,
-        score: entry.score,
-        updatedAt: entry.memory.updatedAt,
-      }));
+      .map((memory, index, kept) => toRuntimeAgentMemory(memory, rankScore(index, kept.length)));
   },
 });
 
@@ -298,54 +366,218 @@ export const recordUsageInternal = internalMutation({
   },
 });
 
-export const writeMemoryInternal = internalMutation({
+/**
+ * The kind column is kept on the row for the audit trail but no longer decides
+ * anything. Deriving it from the mode keeps it truthful rather than arbitrary.
+ */
+function kindForApplyMode(applyMode: MemoryApplyMode) {
+  return applyMode === "ALWAYS" ? "INSTRUCTION" as const : "FACT" as const;
+}
+
+/**
+ * Insert an agent memory.
+ *
+ * Shared by the admin form and by the path that applies an approved suggestion,
+ * so both write the same shape. This replaces `writeMemoryInternal`, an
+ * internalMutation that nothing but its own tests ever called.
+ */
+export async function insertAgentMemory(ctx: MutationCtx, args: {
+  agentId: Id<"agents">;
+  companyId?: Id<"companies">;
+  userId?: Id<"users">;
+  sourceRunId?: Id<"agentRuns">;
+  sourceThreadId?: Id<"threads">;
+  applyMode: MemoryApplyMode;
+  content: string;
+  importance?: number;
+  createdBy?: Id<"users">;
+}) {
+  const normalizedContent = validateMemoryContent(args.content);
+  const now = Date.now();
+  const memoryId = await ctx.db.insert("agentMemories", {
+    agentId: args.agentId,
+    companyId: args.companyId,
+    userId: args.userId,
+    sourceRunId: args.sourceRunId,
+    sourceThreadId: args.sourceThreadId,
+    kind: kindForApplyMode(args.applyMode),
+    applyMode: args.applyMode,
+    content: normalizedContent,
+    normalizedContent: normalizedContent.toLowerCase(),
+    importance: clampImportance(args.importance),
+    isActive: true,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: args.createdBy,
+  });
+
+  if (args.createdBy) {
+    await ctx.db.insert("auditLogs", {
+      actorId: args.createdBy,
+      actionType: "WRITE_AGENT_MEMORY",
+      entityId: memoryId,
+      entityType: "agentMemories",
+      companyId: args.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        agentId: args.agentId,
+        sourceRunId: args.sourceRunId,
+        applyMode: args.applyMode,
+        contentLength: normalizedContent.length,
+      }),
+    });
+  }
+
+  return memoryId;
+}
+
+/**
+ * Refuse the sixth ALWAYS memory rather than accepting it and quietly not
+ * applying it — the same rule, and the same reason, as the company side.
+ */
+export async function assertAgentAlwaysCapacity(
+  ctx: MutationCtx,
+  agentId: Id<"agents">,
+  applyMode: MemoryApplyMode,
+  excludeMemoryId?: Id<"agentMemories">,
+) {
+  if (applyMode !== "ALWAYS") return;
+
+  const [stamped, unstamped] = await Promise.all([
+    ctx.db
+      .query("agentMemories")
+      .withIndex("by_agent_active_applymode_updated", (q) =>
+        q.eq("agentId", agentId).eq("isActive", true).eq("applyMode", "ALWAYS")
+      )
+      .take(MAX_ALWAYS_MEMORIES + 1),
+    ctx.db
+      .query("agentMemories")
+      .withIndex("by_agent_active_applymode_updated", (q) =>
+        q.eq("agentId", agentId).eq("isActive", true).eq("applyMode", undefined)
+      )
+      .take(MAX_ALWAYS_MEMORIES + 1),
+  ]);
+
+  const existing = [...stamped, ...unstamped.filter((memory) => resolveAgentApplyMode(memory) === "ALWAYS")]
+    .filter((memory) => memory._id !== excludeMemoryId);
+
+  if (existing.length >= MAX_ALWAYS_MEMORIES) {
+    throw new Error(
+      `An agent can have ${MAX_ALWAYS_MEMORIES} memories set to Always. Change one to "When relevant" before adding another.`,
+    );
+  }
+}
+
+/**
+ * Add a memory to an agent by hand.
+ *
+ * Agent memory had no create or update path at all: every memory arrived by
+ * approving a suggestion generated from a run, so there was no way to simply
+ * tell an agent something.
+ */
+export const createMemory = adminMutation({
   args: {
     agentId: v.id("agents"),
-    companyId: v.optional(v.id("companies")),
-    userId: v.optional(v.id("users")),
-    sourceRunId: v.optional(v.id("agentRuns")),
-    sourceThreadId: v.optional(v.id("threads")),
-    kind: memoryKindValidator,
     content: v.string(),
-    importance: v.optional(v.number()),
-    createdBy: v.optional(v.id("users")),
+    applyMode: applyModeValidator,
   },
   handler: async (ctx, args) => {
+    const { userId, user } = ctx;
+    const agent = await ctx.db.get(args.agentId);
+    if (!agent) throw new Error("Agent not found");
+    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
+    await assertAgentAlwaysCapacity(ctx, args.agentId, args.applyMode);
+
+    return await insertAgentMemory(ctx, {
+      agentId: args.agentId,
+      // An admin's memory belongs to their company; a super admin writing on an
+      // agent directly leaves it unscoped, as the runtime already allows.
+      companyId: user.role === "ADMIN" ? user.companyId : undefined,
+      applyMode: args.applyMode,
+      content: args.content,
+      createdBy: userId,
+    });
+  },
+});
+
+export const updateMemory = adminMutation({
+  args: {
+    memoryId: v.id("agentMemories"),
+    content: v.string(),
+    applyMode: applyModeValidator,
+  },
+  handler: async (ctx, args) => {
+    const { userId, user } = ctx;
+    const memory = await ctx.db.get(args.memoryId);
+    if (!memory || memory.isActive === false) throw new Error("Memory not found");
+    assertAdminCanAccessCompany(user, memory.companyId);
+    await assertAgentAlwaysCapacity(ctx, memory.agentId, args.applyMode, args.memoryId);
+
     const normalizedContent = validateMemoryContent(args.content);
     const now = Date.now();
-    const memoryId = await ctx.db.insert("agentMemories", {
-      agentId: args.agentId,
-      companyId: args.companyId,
-      userId: args.userId,
-      sourceRunId: args.sourceRunId,
-      sourceThreadId: args.sourceThreadId,
-      kind: args.kind,
+    await ctx.db.patch(args.memoryId, {
       content: normalizedContent,
       normalizedContent: normalizedContent.toLowerCase(),
-      importance: clampImportance(args.importance),
-      isActive: true,
-      createdAt: now,
+      kind: kindForApplyMode(args.applyMode),
+      applyMode: args.applyMode,
       updatedAt: now,
-      createdBy: args.createdBy,
     });
 
-    if (args.createdBy) {
-      await ctx.db.insert("auditLogs", {
-        actorId: args.createdBy,
-        actionType: "WRITE_AGENT_MEMORY",
-        entityId: memoryId,
-        entityType: "agentMemories",
-        companyId: args.companyId,
-        timestamp: now,
-        metadata: JSON.stringify({
-          agentId: args.agentId,
-          sourceRunId: args.sourceRunId,
-          kind: args.kind,
-          contentLength: normalizedContent.length,
-        }),
-      });
-    }
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "UPDATE_AGENT_MEMORY",
+      entityId: args.memoryId,
+      entityType: "agentMemories",
+      companyId: memory.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        agentId: memory.agentId,
+        applyMode: args.applyMode,
+        contentLength: normalizedContent.length,
+      }),
+    });
 
-    return memoryId;
+    return true;
+  },
+});
+
+/**
+ * Put a removed memory back. Removal was one-way and removed memories were
+ * invisible, so the only recovery was to retype them.
+ */
+export const restoreMemory = adminMutation({
+  args: {
+    memoryId: v.id("agentMemories"),
+  },
+  handler: async (ctx, args) => {
+    const { userId, user } = ctx;
+    const memory = await ctx.db.get(args.memoryId);
+    if (!memory) throw new Error("Memory not found");
+    if (memory.isActive !== false) throw new Error("This memory is already in use.");
+    assertAdminCanAccessCompany(user, memory.companyId);
+    await assertAgentAlwaysCapacity(ctx, memory.agentId, resolveAgentApplyMode(memory), args.memoryId);
+
+    const now = Date.now();
+    await ctx.db.patch(args.memoryId, {
+      isActive: true,
+      deletedAt: undefined,
+      deletedBy: undefined,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "RESTORE_AGENT_MEMORY",
+      entityId: args.memoryId,
+      entityType: "agentMemories",
+      companyId: memory.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        agentId: memory.agentId,
+        contentLength: memory.content.length,
+      }),
+    });
+
+    return true;
   },
 });

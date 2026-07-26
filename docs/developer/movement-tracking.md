@@ -6,7 +6,8 @@ Related documents:
 
 - [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md) describes the product surface, routes, storage model, and verification commands.
 - [Movement Demo Retargeting Approach](./movement-demo-retargeting-approach.md) records the intended direction if avatar body motion is explicitly reopened.
-- [Posture Studio Skeleton Observability Plan](../plans/active/posture-studio-skeleton-observability-plan.md) defines the next diagnostic layer for classifying raw tracking, normalized skeleton, retargeting, and avatar failures without repeated manual testing.
+- [Movement Definitive Plan](../plans/active/movement-definitive-plan.md) is the current source of truth for movement work.
+- [Posture Studio Skeleton Observability Plan](../plans/completed/posture-studio-skeleton-observability-plan.md) is retired background for classifying raw tracking, normalized skeleton, retargeting, and avatar failures.
 
 ## Implemented Surface
 

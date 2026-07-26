@@ -131,6 +131,35 @@ export default defineSchema({
     .index("by_provider_key", ["providerKey"])
     .index("by_enabled", ["isEnabled"]),
 
+  /**
+   * Counts for the model catalogue and the providers table.
+   *
+   * The pager needs a total and the providers screen wants "15 models, 4 on" per
+   * row. Counting cannot be indexed away — an index finds rows, it does not
+   * total them — and counting on every page load is the fan-out that had to be
+   * removed from the Skill Center.
+   *
+   * Unlike the skills rollup this one is **recomputed on write rather than on a
+   * schedule**, because models change only when an admin syncs a provider or
+   * toggles a model. Recomputing costs one pass over the catalogue at those
+   * moments and makes drift impossible, which is worth more than the saving from
+   * keeping deltas correct across four separate write paths.
+   */
+  aiModelRollups: defineTable({
+    /** One document. A fixed key so it can be found without scanning. */
+    rollupKey: v.string(),
+    totalModels: v.number(),
+    enabledModels: v.number(),
+    byProvider: v.array(v.object({
+      providerKey: v.string(),
+      total: v.number(),
+      enabled: v.number(),
+    })),
+    computedAt: v.number(),
+    /** True when the walk hit its ceiling, so the screen never presents a truncated count as a total. */
+    isPartial: v.boolean(),
+  }).index("by_rollup_key", ["rollupKey"]),
+
   aiModelDefaults: defineTable({
     scope: v.union(v.literal("global"), v.literal("company")),
     companyId: v.optional(v.id("companies")),
@@ -142,7 +171,11 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   })
     .index("by_scope_use_case", ["scope", "useCase"])
-    .index("by_company_use_case", ["companyId", "useCase"]),
+    .index("by_company_use_case", ["companyId", "useCase"])
+    // Answers "what is this provider currently handling?" before someone
+    // switches it off. Without it that question means reading every default row
+    // in the deployment, which grows with the number of companies.
+    .index("by_provider", ["providerKey"]),
 
   /**
    * Pre-computed counts for the Skill Center health panel.
@@ -858,6 +891,11 @@ export default defineSchema({
       v.literal("SUMMARY"),
       v.literal("INSTRUCTION")
     ),
+    /** Carried onto the memory when the suggestion is applied. */
+    applyMode: v.optional(v.union(
+      v.literal("ALWAYS"),
+      v.literal("WHEN_RELEVANT")
+    )),
     content: v.string(),
     normalizedContent: v.string(),
     confidence: v.number(),
@@ -875,8 +913,19 @@ export default defineSchema({
     reviewedBy: v.optional(v.id("users")),
     reviewedAt: v.optional(v.number()),
     rejectionReason: v.optional(v.string()),
+    /**
+     * Set when a suggestion is turned down, so the same wording is not proposed
+     * again. The company side has had this since the start; the agent side did
+     * not, which was survivable only while nothing proposed automatically.
+     */
+    rejectedFingerprint: v.optional(v.string()),
     appliedMemoryId: v.optional(v.id("agentMemories")),
-    createdBy: v.id("users"),
+    /**
+     * Absent when the platform proposed it at the end of a run rather than an
+     * admin asking for suggestions. On approval the memory records whoever
+     * accepted it.
+     */
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -885,7 +934,8 @@ export default defineSchema({
     .index("by_skill_status_created", ["sourceSkillId", "status", "createdAt"])
     .index("by_agent_status_created", ["agentId", "status", "createdAt"])
     .index("by_company_status_created", ["companyId", "status", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"]),
+    .index("by_status_created", ["status", "createdAt"])
+    .index("by_agent_rejected_fingerprint", ["agentId", "rejectedFingerprint"]),
 
   agentEvalFixtures: defineTable({
     agentId: v.id("agents"),
@@ -1113,12 +1163,25 @@ export default defineSchema({
     userId: v.optional(v.id("users")),
     sourceRunId: v.optional(v.id("agentRuns")),
     sourceThreadId: v.optional(v.id("threads")),
+    /**
+     * Retained for existing rows and for the audit trail. Nothing reads it:
+     * applyMode below is what decides when a memory reaches the model.
+     */
     kind: v.union(
       v.literal("FACT"),
       v.literal("PREFERENCE"),
       v.literal("SUMMARY"),
       v.literal("INSTRUCTION")
     ),
+    /**
+     * When this memory reaches the model. ALWAYS is added to the system
+     * instruction on every message; WHEN_RELEVANT is looked up per message.
+     * Optional so existing rows stay valid — absent reads as WHEN_RELEVANT.
+     */
+    applyMode: v.optional(v.union(
+      v.literal("ALWAYS"),
+      v.literal("WHEN_RELEVANT")
+    )),
     content: v.string(),
     normalizedContent: v.string(),
     importance: v.number(),
@@ -1132,6 +1195,7 @@ export default defineSchema({
     .index("by_agent_active_updated", ["agentId", "isActive", "updatedAt"])
     .index("by_company_active_updated", ["companyId", "isActive", "updatedAt"])
     .index("by_agent_company_active_updated", ["agentId", "companyId", "isActive", "updatedAt"])
+    .index("by_agent_active_applymode_updated", ["agentId", "isActive", "applyMode", "updatedAt"])
     .index("by_source_run", ["sourceRunId"])
     .searchIndex("search_content", {
       searchField: "normalizedContent",
@@ -1164,7 +1228,20 @@ export default defineSchema({
     title: v.string(),
     content: v.string(),
     normalizedContent: v.string(),
+    /**
+     * Retained for existing rows and for the audit trail. Nothing reads it:
+     * applyMode below is what decides when a memory reaches the model.
+     */
     category: v.string(),
+    /**
+     * When this memory reaches the model. ALWAYS is added to the system
+     * instruction on every message; WHEN_RELEVANT is looked up per message.
+     * Optional so existing rows stay valid — absent reads as WHEN_RELEVANT.
+     */
+    applyMode: v.optional(v.union(
+      v.literal("ALWAYS"),
+      v.literal("WHEN_RELEVANT")
+    )),
     status: v.union(
       v.literal("APPROVED"),
       v.literal("ARCHIVED")
@@ -1194,7 +1271,12 @@ export default defineSchema({
     .index("by_company_updated", ["companyId", "updatedAt"])
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
     .index("by_company_category_status", ["companyId", "category", "status"])
-    .index("by_company_rejected_fingerprint", ["companyId", "rejectedFingerprint"]),
+    .index("by_company_status_applymode_updated", ["companyId", "status", "applyMode", "updatedAt"])
+    .index("by_company_rejected_fingerprint", ["companyId", "rejectedFingerprint"])
+    .searchIndex("search_content", {
+      searchField: "normalizedContent",
+      filterFields: ["companyId", "status"],
+    }),
 
   companyMemoryCandidates: defineTable({
     companyId: v.id("companies"),
@@ -1202,6 +1284,11 @@ export default defineSchema({
     content: v.string(),
     normalizedContent: v.string(),
     category: v.string(),
+    /** Carried onto the memory when the suggestion is approved. */
+    applyMode: v.optional(v.union(
+      v.literal("ALWAYS"),
+      v.literal("WHEN_RELEVANT")
+    )),
     sourceType: v.union(
       v.literal("MANUAL"),
       v.literal("CHAT"),
@@ -1220,7 +1307,12 @@ export default defineSchema({
       v.literal("REJECTED")
     ),
     rejectedFingerprint: v.optional(v.string()),
-    createdBy: v.id("users"),
+    /**
+     * Absent when the platform proposed it rather than a person. Naming an
+     * admin who was not involved would be a lie the audit trail then repeats;
+     * on approval the memory records whoever accepted it.
+     */
+    createdBy: v.optional(v.id("users")),
     reviewedBy: v.optional(v.id("users")),
     reviewedAt: v.optional(v.number()),
     rejectionReason: v.optional(v.string()),
@@ -1245,6 +1337,25 @@ export default defineSchema({
     .index("by_memory_used", ["memoryId", "usedAt"])
     .index("by_company_used", ["companyId", "usedAt"])
     .index("by_thread_used", ["threadId", "usedAt"]),
+
+  /**
+   * Where the memory-suggestion sweep got to for each company.
+   *
+   * One row per company, so a sweep reads only the messages that have arrived
+   * since it last looked. Without this the sweep would re-read the same
+   * conversations every few hours and pay a model for the same answer.
+   */
+  companyMemorySweeps: defineTable({
+    companyId: v.id("companies"),
+    /** Messages at or before this point have already been considered. */
+    lastSweptAt: v.number(),
+    lastRunAt: v.number(),
+    /** What the last sweep did, so the operator can see it working. */
+    lastMessagesRead: v.number(),
+    lastSuggested: v.number(),
+    lastSkippedReason: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_company", ["companyId"]),
 
   companySkills: defineTable({
     companyId: v.id("companies"),
@@ -1879,6 +1990,20 @@ export default defineSchema({
     cachedInputCostAbove200k: v.optional(v.number()),
     outputResponseCost: v.optional(v.number()),
     outputReasoningCost: v.optional(v.number()),
+    /**
+     * Everything a reader might type, in one field.
+     *
+     * The catalogue used to search two indexes — one over `displayName`, one
+     * over `modelId` — and merge the results in memory. Two paginated queries
+     * cannot be merged into one page without reading both in full, which is why
+     * that query took the whole catalogue and sliced it in the browser's stead.
+     *
+     * One field means one index, which means the page can genuinely come from
+     * the database. It holds the friendly name, the display name, the stable id
+     * and the provider's own id, and is rebuilt by `buildModelSearchText`
+     * wherever a model is written.
+     */
+    searchText: v.optional(v.string()),
   })
     .index("by_model_id", ["modelId"])
     .index("by_provider", ["providerKey"])
@@ -1886,8 +2011,14 @@ export default defineSchema({
     .index("by_provider_enabled", ["providerKey", "isEnabled"])
     .index("by_enabled", ["isEnabled"])
     .index("by_default", ["isDefault"])
-    .searchIndex("search_display_name", { searchField: "displayName" })
-    .searchIndex("search_model_id", { searchField: "modelId" }),
+    // `filterFields` is the point: without them a filter is applied after the
+    // search has already paged, so a search whose first page is entirely
+    // inactive returns nothing at all. That exact fault was found and fixed in
+    // the Skill Center; this is the same shape.
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["providerKey", "isEnabled"],
+    }),
 
   workflowExecutionSteps: defineTable({
     executionId: v.id("workflowExecutions"),

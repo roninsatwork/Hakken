@@ -53,7 +53,7 @@ describe("Company learning loop", () => {
         threadId,
         messageId: assistantMessageId,
         content: "Enterprise includes onboarding support.",
-        category: "SALES",
+        applyMode: "WHEN_RELEVANT",
       })
     ).rejects.toThrow("Unauthorized");
 
@@ -63,7 +63,7 @@ describe("Company learning loop", () => {
       messageId: assistantMessageId,
       title: "Enterprise onboarding",
       content: "Enterprise includes onboarding support.",
-      category: "SALES",
+      applyMode: "WHEN_RELEVANT",
       reason: "Repeated useful answer from company chat.",
       confidence: 0.82,
     });
@@ -147,7 +147,7 @@ describe("Company learning loop", () => {
         companyId: companyAId,
         threadId: threadBId,
         content: "Do not cross tenants.",
-        category: "BOUNDARY",
+        applyMode: "WHEN_RELEVANT",
       })
     ).rejects.toThrow("Thread not found for this company.");
 
@@ -213,7 +213,8 @@ describe("Company learning loop", () => {
         title: "Enterprise onboarding",
         content: "Enterprise includes onboarding support.",
         normalizedContent: "enterprise includes onboarding support.",
-        category: "SALES",
+        category: "OTHER",
+        applyMode: "WHEN_RELEVANT",
         sourceType: "CHAT",
         confidence: 0.85,
         status: "PROPOSED",

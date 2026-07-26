@@ -21,7 +21,8 @@ is governed by [Movement Definitive Plan](./movement-definitive-plan.md).
 - Work on branch `dev`. Read `AGENTS.md` before starting.
 - Do not commit or push without Anthony asking.
 - `sonae.ronins.co.uk` is an OLD deployment. Test on `localhost:3000`.
-- Node 22.13.0 for trusted checks.
+- Node 24.18.0 for trusted checks; `verify:env` enforces the checked-in Node
+  and direct dependency baseline before local commands run.
 - Every item below carries an acceptance test. "It looks right" is not acceptance
   for platform work; a failing-then-passing test is.
 
@@ -667,11 +668,10 @@ better than the previous behaviour, which discarded the whole batch. Sequencing
 multiple approvals within a single turn is not worth the complexity until a real
 agent needs it.
 
-**Note for whoever runs the gate next:** `npm run test:run` and `npm run build`
-are blocked by `verify:env` unless Node is 22.13.x. This machine has Node 23.10,
-which is an end-of-life odd release, so it is not an upgrade. Moving the project
-to the current LTS is tracked separately; it touches `.nvmrc`, the `Dockerfile`
-and three workflows, so it should not ride along with unrelated work.
+**Historical note:** when this phase first ran, `npm run test:run` and
+`npm run build` were blocked by `verify:env` unless Node was 22.13.x. The repo
+has since moved to Node 24.18.0 / npm 11, and the checked-in `verify:env` gate
+is now the current source of truth for the local baseline.
 
 ### P3.4 — Prompt caching — DONE 2026-07-25
 

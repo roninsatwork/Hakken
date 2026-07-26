@@ -11,6 +11,9 @@ type AnthropicMessagesPayload = {
   content?: Array<{
     type?: string;
     text?: string;
+    /** Present on `tool_use` blocks, which is how structured output arrives. */
+    name?: string;
+    input?: unknown;
   }>;
   usage?: {
     input_tokens?: number;
@@ -49,6 +52,25 @@ export function extractAnthropicResponseText(payload: AnthropicMessagesPayload) 
     .trim() ?? "";
 }
 
+/**
+ * Structured output, the way Anthropic supports it.
+ *
+ * The Messages API has no `response_format`. The documented technique is to
+ * offer a single tool whose input schema *is* the shape you want and force the
+ * model to call it, then read the arguments it passed. Asking politely for JSON
+ * in the prompt is the alternative, and it fails silently when the model wraps
+ * the answer in prose.
+ */
+const STRUCTURED_RESPONSE_TOOL = "structured_response";
+
+export function extractAnthropicStructuredJson(payload: AnthropicMessagesPayload) {
+  const toolUse = payload.content?.find(
+    (part) => part.type === "tool_use" && part.name === STRUCTURED_RESPONSE_TOOL,
+  );
+  if (!toolUse || toolUse.input === undefined) return "";
+  return JSON.stringify(toolUse.input);
+}
+
 export function createAnthropicProviderAdapter(args: {
   env?: AnthropicProviderEnv;
   fetchImpl?: ProviderFetch;
@@ -85,11 +107,23 @@ export function createAnthropicProviderAdapter(args: {
             system: request.systemInstruction,
             temperature: request.temperature,
             messages: [{ role: "user", content: input }],
+            ...(request.jsonSchema
+              ? {
+                  tools: [{
+                    name: STRUCTURED_RESPONSE_TOOL,
+                    description: "Return the answer in the required structure.",
+                    input_schema: request.jsonSchema,
+                  }],
+                  tool_choice: { type: "tool", name: STRUCTURED_RESPONSE_TOOL },
+                }
+              : {}),
           }),
         },
       }) as AnthropicMessagesPayload;
       return {
-        text: extractAnthropicResponseText(payload),
+        text: request.jsonSchema
+          ? extractAnthropicStructuredJson(payload)
+          : extractAnthropicResponseText(payload),
         inputTokens: payload.usage?.input_tokens,
         outputTokens: payload.usage?.output_tokens,
       };

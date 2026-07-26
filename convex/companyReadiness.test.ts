@@ -41,7 +41,7 @@ describe("Company AI readiness", () => {
     await adminAClient.mutation(api.companyMemories.createMemory, {
       companyId: companyAId,
       content: "Enterprise proposals should mention implementation support before price.",
-      category: "SALES",
+      applyMode: "WHEN_RELEVANT",
       sourceType: "MANUAL",
     });
     const addedSkill = await adminAClient.mutation(api.companySkills.importGlobalSkill, {
@@ -131,7 +131,7 @@ describe("Company AI readiness", () => {
     await adminClient.mutation(api.companyMemories.createMemory, {
       companyId,
       content: "Public widget must not invent enterprise pricing.",
-      category: "BOUNDARY",
+      applyMode: "ALWAYS",
       sourceType: "MANUAL",
     });
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {

@@ -7,6 +7,7 @@ import { internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
+import { MAX_SKILLS_PER_COMPANY } from "./utils/skillLimits";
 
 const TEXT_MAX_CHARS = 8000;
 const DESCRIPTION_MAX_CHARS = 1200;
@@ -358,12 +359,6 @@ export const searchImportableGlobalSkills = adminQuery({
     };
   },
 });
-
-/**
- * How many skills one company may carry. See MAX_SKILLS_PER_AGENT for why two:
- * a skill is text on every message, not a setting.
- */
-export const MAX_SKILLS_PER_COMPANY = 2;
 
 /**
  * The skills a company's own AI should follow — company chat and the widget.

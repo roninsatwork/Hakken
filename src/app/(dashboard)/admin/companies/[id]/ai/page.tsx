@@ -407,7 +407,7 @@ export default function CompanyAiOverviewPage() {
       },
       {
         title: "Memory",
-        description: `${memorySummary?.approved.toLocaleString() ?? "..."} approved memor${memorySummary?.approved === 1 ? "y" : "ies"}, ${memorySummary?.proposed.toLocaleString() ?? "..."} candidate${memorySummary?.proposed === 1 ? "" : "s"} waiting for review. Company and widget chat runtime evidence is enabled.`,
+        description: `${memorySummary?.approved.toLocaleString() ?? "..."} memor${memorySummary?.approved === 1 ? "y" : "ies"}, ${memorySummary?.alwaysCount.toLocaleString() ?? "..."} applied to every answer. ${memorySummary?.proposed.toLocaleString() ?? "..."} suggestion${memorySummary?.proposed === 1 ? "" : "s"} waiting for review.`,
         href: `${aiHref}/memory`,
         action: "Open memory",
         tone: (memorySummary?.approved ?? 0) > 0

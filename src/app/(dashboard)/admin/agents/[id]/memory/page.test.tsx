@@ -89,20 +89,44 @@ const reviewInbox = {
   reflections: [],
 };
 
+const memories = [
+  {
+    _id: "memory_always",
+    agentId: "agent_1",
+    kind: "INSTRUCTION",
+    applyMode: "ALWAYS",
+    content: "Never promise a delivery date.",
+    normalizedContent: "never promise a delivery date.",
+    importance: 0.5,
+    isActive: true,
+    createdAt: Date.UTC(2026, 5, 18, 9),
+    updatedAt: Date.UTC(2026, 5, 18, 9),
+  },
+  {
+    _id: "memory_relevant",
+    agentId: "agent_1",
+    kind: "FACT",
+    applyMode: "WHEN_RELEVANT",
+    content: "Returns are accepted within 30 days.",
+    normalizedContent: "returns are accepted within 30 days.",
+    importance: 0.5,
+    isActive: true,
+    createdAt: Date.UTC(2026, 5, 18, 9),
+    updatedAt: Date.UTC(2026, 5, 18, 9),
+  },
+];
+
 describe("AgentMemoryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePaginatedQuery).mockReturnValue({
-      results: [],
+      results: memories,
       status: "Exhausted",
       loadMore: vi.fn(),
     } as unknown as ReturnType<typeof usePaginatedQuery>);
     vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
       void args;
       const functionName = getFunctionName(queryFn);
-      if (functionName === "agentMemories:getQualityForAgent") {
-        return [] as unknown as ReturnType<typeof useQuery>;
-      }
       if (functionName === "agentMemoryCandidates:getReviewInboxForAgent") {
         return reviewInbox as unknown as ReturnType<typeof useQuery>;
       }
@@ -111,17 +135,32 @@ describe("AgentMemoryPage", () => {
     vi.mocked(useMutation).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useMutation>);
   });
 
-  it("renders learning review guidance before inbox actions", () => {
+  it("says of each memory whether it always applies", () => {
     render(<AgentMemoryPage />);
 
-    expect(screen.getByText("Learning review inbox")).toBeInTheDocument();
-    expect(screen.getByText("High-risk learning requires review")).toBeInTheDocument();
-    expect(screen.getByText("1 high-risk learning item should be reviewed before routine memory approvals.")).toBeInTheDocument();
-    expect(screen.getByText("Open High risk mode, inspect source runs, and approve only changes with clear evidence.")).toBeInTheDocument();
-    expect(screen.getByText("Add escalation summary guidance")).toBeInTheDocument();
+    expect(screen.getByText("Never promise a delivery date.")).toBeInTheDocument();
+    expect(screen.getByText("Always")).toBeInTheDocument();
+    expect(screen.getByText("Returns are accepted within 30 days.")).toBeInTheDocument();
+    expect(screen.getByText("When relevant")).toBeInTheDocument();
+  });
+
+  it("keeps the evidence behind a suggestion reachable", () => {
+    render(<AgentMemoryPage />);
+
     expect(screen.getByText("Escalation summaries should include owner, blocker, and next action.")).toBeInTheDocument();
+    expect(screen.getByText("Add escalation summary guidance")).toBeInTheDocument();
     expect(screen.getByText("Skill attribution")).toBeInTheDocument();
     expect(screen.getByText("Escalation Workflow")).toBeInTheDocument();
-    expect(screen.getByText("Operations: failed tool overlap: client.escalations.read")).toBeInTheDocument();
+    expect(screen.getByText("failed tool overlap: client.escalations.read")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open run detail/ })).toHaveAttribute(
+      "href",
+      "/admin/agents/agent_1/runs?runId=run_1",
+    );
+  });
+
+  it("offers a way to add a memory by hand, which this screen never had", () => {
+    render(<AgentMemoryPage />);
+
+    expect(screen.getByRole("button", { name: "Add memory" })).toBeInTheDocument();
   });
 });

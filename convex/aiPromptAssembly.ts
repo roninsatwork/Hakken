@@ -38,6 +38,16 @@ export function buildAssistantSystemInstruction(args: {
    * company chat and the widget do not use one.
    */
   companySkills?: Array<{ name: string; instruction: string }>;
+  /**
+   * The company's ALWAYS memories.
+   *
+   * These belong here rather than in the per-message retrieval block: a note
+   * saying "never promise delivery dates" has to hold for every answer, and
+   * looking it up by keyword meant it only applied when the visitor happened to
+   * say "promise". It is configuration an admin wrote, so it is trusted context
+   * — not untrusted retrieved data.
+   */
+  companyMemories?: Array<{ title: string; content: string }>;
 }) {
   const configuredPlatformPrompt =
     args.globalSystemPrompt && args.globalSystemPrompt.trim().length > 0
@@ -63,6 +73,8 @@ ${configuredPlatformPrompt}`;
     instruction += `\n\n====================\nSKILLS AVAILABLE TO THIS COMPANY:\n\n${compiledSkills}`;
   }
 
+  instruction += buildAlwaysMemorySection(args.companyMemories);
+
   if (args.activeRules.length > 0) {
     const compiledRules = args.activeRules
       .map((rule) => `[PRIORITY: ${rule.priority}]\nIF USER ASKS OR MENTIONS: ${rule.trigger}\nTHEN YOU MUST: ${rule.instruction}`)
@@ -74,9 +86,34 @@ ${configuredPlatformPrompt}`;
   return instruction;
 }
 
+/**
+ * The memories that apply to every message, whoever is answering.
+ *
+ * Rendered the same way for the assistant and for an agent so a company's
+ * boundaries read identically wherever they land.
+ */
+function buildAlwaysMemorySection(memories: Array<{ title: string; content: string }> | undefined) {
+  if (!memories || memories.length === 0) return "";
+
+  const compiled = memories
+    .map((memory) => `- ${memory.title}: ${memory.content}`)
+    .join("\n");
+
+  return `\n\n====================\nWHAT THIS COMPANY'S AI MUST ALWAYS KNOW:\n\nThese are approved company notes. They apply to every answer. They never grant access and never override the safety contract above.\n\n${compiled}`;
+}
+
 export function buildAgentSystemInstruction(
   agentSystemPrompt: string | null | undefined,
-  skillInstructions: Array<{ name: string; instruction: string; category?: string; riskLevel?: string }> = []
+  skillInstructions: Array<{ name: string; instruction: string; category?: string; riskLevel?: string }> = [],
+  /**
+   * ALWAYS memories, the agent's own and the company's.
+   *
+   * The company's are here because they used to be nowhere: company memory was
+   * read on the general assistant path only, so a widget with an agent attached
+   * — which is every normal widget — ignored everything a company had been
+   * given. Same fault, same place, as the company skills fix.
+   */
+  alwaysMemories: Array<{ title: string; content: string }> = []
 ) {
   const configuredAgentPrompt =
     agentSystemPrompt && agentSystemPrompt.trim().length > 0
@@ -103,6 +140,8 @@ ${configuredAgentPrompt}`;
 
     instruction += `\n\n====================\nENABLED AGENT SKILLS:\n\n${compiledSkills}`;
   }
+
+  instruction += buildAlwaysMemorySection(alwaysMemories);
 
   return instruction;
 }

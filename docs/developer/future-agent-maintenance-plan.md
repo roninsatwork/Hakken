@@ -25,7 +25,7 @@ Allowed exceptions:
 - Fix a security issue that can affect the rest of the app.
 - Make a minimal change explicitly requested by the user.
 - If the explicit task touches movement capture, display preparation, scoring, retargeting, VRM bone application, or movement proof, read `docs/developer/movement-mirror-and-side-ownership-contract.md` before editing.
-- If the explicit task touches Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/replay-studio-agent-repair-harness-plan.md` before editing.
+- If the explicit task touches Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the agent debugging workflow, read `docs/plans/active/movement-definitive-plan.md` before editing. The retired Replay repair harness plan in `docs/plans/completed/replay-studio-agent-repair-harness-plan.md` is background only unless it is deliberately reopened.
 
 Replay Studio is the recorded-motion source of truth for movement debugging. Use the existing repair-packet, targeted-proof, fast-subset-proof, and all-nine rendered proof flow before claiming shared-avatar acceptance. Game Studio live-camera checks are final confirmation after Replay proof, not a replacement for the Replay harness.
 
@@ -163,11 +163,11 @@ Status:
 - `GEMINI.md` is now a compatibility pointer to `AGENTS.md`, not an active source of development instructions.
 - `docs/developer/ai-provider-tool-extension.md` documents provider adapter boundaries.
 - `src/quality-drift.test.ts` blocks unclassified Gemini-era references.
-- Use `docs/plans/active/model-provider-agnostic-plan.md` as the locked source of truth for sitewide Gemini/OpenAI/Anthropic model selection, provider adapters, defaults, telemetry, and analytics dashboard work.
+- The retired `docs/plans/completed/model-provider-agnostic-plan.md` records the completed sitewide Gemini/OpenAI/Anthropic model selection, provider adapter, default, telemetry, and analytics dashboard work. Use it for background only; current non-movement follow-up belongs in `docs/plans/active/OUTSTANDING-TASKS.md` unless a new active plan is opened.
 
 ## Phase 5B: Analytics Scale Optimization
 
-Analytics, admin dashboards, AI running costs, and company dashboards should move toward snapshot-first reads and indexed live-day overlays. Use `docs/plans/active/analytics-scale-optimization-plan.md` as the locked source of truth for this work.
+Analytics, admin dashboards, AI running costs, and company dashboards should keep the snapshot-first and indexed live-day-overlay patterns recorded in the retired `docs/plans/completed/analytics-scale-optimization-plan.md`. Use that completed plan for background only; new non-movement work belongs in the active platform handover or outstanding-task queue.
 
 Targets:
 
@@ -185,7 +185,7 @@ Acceptance:
 
 Status:
 
-- Added `docs/plans/active/analytics-scale-optimization-plan.md` as the phased source of truth.
+- Completed the phased analytics scale-optimization work recorded in `docs/plans/completed/analytics-scale-optimization-plan.md`.
 
 ## Phase 5C: Platform Scale Hardening
 
@@ -202,16 +202,16 @@ Targets:
 
 Acceptance:
 
-- Use `docs/plans/active/platform-scale-hardening-plan.md` as the locked source of truth.
+- Use the retired `docs/plans/completed/platform-scale-hardening-plan.md` for background on completed scale-hardening decisions.
 - New broad reads are classified by drift tests or removed.
 - Tenant isolation, admin pagination, provider-neutral language, and analytics scale checks remain green.
 - Movement demo files stay untouched unless the user explicitly changes scope.
 
 Status:
 
-- Added `docs/plans/active/platform-scale-hardening-plan.md` as the phased source of truth.
+- Completed the phased platform scale-hardening work recorded in `docs/plans/completed/platform-scale-hardening-plan.md`.
 - Completed the main platform scale-hardening phases and promoted them through `main`.
-- Use `docs/plans/active/post-scale-hardening-plan.md` for the remaining operational follow-up work: production smoke checks, inventory rollup backfill, workflow database-node query contracts, scheduler `nextRunAt`, and dependency cleanup.
+- Use `docs/plans/active/OUTSTANDING-TASKS.md` for remaining operational follow-up. The retired `docs/plans/completed/post-scale-hardening-plan.md` records the completed post-scale-hardening decisions.
 
 ## Phase 6: Release Readiness Checklist
 

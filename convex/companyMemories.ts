@@ -7,6 +7,12 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
+import {
+  MAX_ALWAYS_MEMORIES,
+  resolveCompanyApplyMode,
+  type MemoryApplyMode,
+} from "./utils/memoryApplication";
+import { buildMemorySearchQuery, rankScore } from "./utils/memoryRetrieval";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const MEMORY_TITLE_MAX_CHARS = 120;
@@ -14,15 +20,17 @@ const DEFAULT_CONFIDENCE = 0.8;
 const RUNTIME_MEMORY_LIMIT_DEFAULT = 5;
 const RUNTIME_MEMORY_LIMIT_MAX = 8;
 
-const memoryCategoryValidator = v.union(
-  v.literal("FACT"),
-  v.literal("PREFERENCE"),
-  v.literal("POSITIONING"),
-  v.literal("TONE"),
-  v.literal("BOUNDARY"),
-  v.literal("SALES"),
-  v.literal("SUPPORT"),
-  v.literal("OTHER")
+/**
+ * The category column is retained on the row for the audit trail, but a memory
+ * is no longer described by one: the only thing that changes its behaviour is
+ * applyMode. New rows record this so the column is never silently wrong about
+ * something a person chose.
+ */
+const RETAINED_CATEGORY = "OTHER";
+
+const applyModeValidator = v.union(
+  v.literal("ALWAYS"),
+  v.literal("WHEN_RELEVANT")
 );
 
 const memorySourceTypeValidator = v.union(
@@ -50,8 +58,27 @@ function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
+/**
+ * Tidy a memory's body without flattening it.
+ *
+ * This used to run the title's normaliser, which collapses every run of
+ * whitespace into a single space — so a memory written as a list of opening
+ * hours was stored as one paragraph. Runs of spaces and tabs are still
+ * collapsed; line breaks are what the writer meant.
+ */
+function normalizeMultilineText(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .trim();
+}
+
 function normalizeContent(content: string) {
-  const normalizedContent = normalizeText(content);
+  const normalizedContent = normalizeMultilineText(content);
   if (normalizedContent.length === 0) throw new Error("Memory content cannot be empty.");
   if (normalizedContent.length > MEMORY_CONTENT_MAX_CHARS) {
     throw new Error(`Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
@@ -77,22 +104,6 @@ function normalizeTitle(title: string | undefined, content: string) {
 function clampConfidence(value: number | undefined) {
   if (!Number.isFinite(value ?? DEFAULT_CONFIDENCE)) return DEFAULT_CONFIDENCE;
   return Math.min(Math.max(value ?? DEFAULT_CONFIDENCE, 0), 1);
-}
-
-function getSearchTerms(queryText: string) {
-  return queryText
-    .toLowerCase()
-    .split(/\s+/)
-    .map((term) => term.replace(/[^a-z0-9]/g, ""))
-    .filter((term) => term.length >= 3)
-    .slice(0, 10);
-}
-
-function scoreMemory(memory: Pick<Doc<"companyMemories">, "title" | "content" | "category" | "confidence">, terms: string[]) {
-  if (terms.length === 0) return 0;
-  const searchable = `${memory.title} ${memory.content} ${memory.category}`.toLowerCase();
-  const termScore = terms.reduce((score, term) => score + (searchable.includes(term) ? 1 : 0), 0);
-  return termScore + memory.confidence * 0.25;
 }
 
 function getRuntimeMemoryLimit(limit: number | undefined) {
@@ -122,7 +133,9 @@ async function assertNoRejectedCandidateMatch(ctx: QueryCtx | MutationCtx, compa
     .first();
 
   if (rejectedCandidate) {
-    throw new Error("Memory candidate matches a previously rejected company memory.");
+    // Worded for whoever hit it. The old message said "memory candidate" on a
+    // form that had never used the word.
+    throw new Error("This was suggested before and turned down, so it cannot be added again. Reword it if it should apply now.");
   }
 }
 
@@ -137,17 +150,15 @@ export const getSummary = adminQuery({
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
-    const [approved, archived, proposed, rejected] = await Promise.all([
+    // Two reads, not four. The archived and rejected totals were counted on
+    // every page load for two numbers that appeared on screen and led nowhere;
+    // the memory screen lists archived memories directly now, and nothing shows
+    // a rejected count at all.
+    const [approved, proposed] = await Promise.all([
       ctx.db
         .query("companyMemories")
         .withIndex("by_company_status_updated", (q) =>
           q.eq("companyId", args.companyId).eq("status", "APPROVED")
-        )
-        .take(1000),
-      ctx.db
-        .query("companyMemories")
-        .withIndex("by_company_status_updated", (q) =>
-          q.eq("companyId", args.companyId).eq("status", "ARCHIVED")
         )
         .take(1000),
       ctx.db
@@ -156,19 +167,12 @@ export const getSummary = adminQuery({
           q.eq("companyId", args.companyId).eq("status", "PROPOSED")
         )
         .take(1000),
-      ctx.db
-        .query("companyMemoryCandidates")
-        .withIndex("by_company_status_created", (q) =>
-          q.eq("companyId", args.companyId).eq("status", "REJECTED")
-        )
-        .take(1000),
     ]);
 
     return {
       approved: approved.length,
-      archived: archived.length,
       proposed: proposed.length,
-      rejected: rejected.length,
+      alwaysCount: approved.filter((memory) => resolveCompanyApplyMode(memory) === "ALWAYS").length,
       totalUsageCount: approved.reduce((total, memory) => total + memory.usageCount, 0),
     };
   },
@@ -205,6 +209,68 @@ export const getMemoryById = adminQuery({
   },
 });
 
+function toRuntimeMemory(memory: Doc<"companyMemories">, score: number) {
+  return {
+    memoryId: memory._id,
+    title: memory.title,
+    content: memory.content,
+    applyMode: resolveCompanyApplyMode(memory),
+    confidence: memory.confidence,
+    score,
+    updatedAt: memory.updatedAt,
+  };
+}
+
+export type RuntimeCompanyMemory = ReturnType<typeof toRuntimeMemory>;
+
+/**
+ * Everything the company's AI should be told about this message.
+ *
+ * `always` is not a search result — those memories go into the system
+ * instruction on every message, which is the whole point of the mode. Only
+ * `relevant` is looked up, and it now uses the full-text index rather than
+ * scoring the newest hundred rows by substring.
+ */
+/**
+ * The company's ALWAYS memories.
+ *
+ * Two reads rather than one because `applyMode` is optional: a row written
+ * before the backfill has no value, and an index equality on "ALWAYS" would
+ * skip it. Reading the unstamped bucket separately and classifying it by its
+ * old category means memory keeps working during the deploy instead of going
+ * quiet until the migration finishes. The second read costs nothing once the
+ * bucket is empty.
+ */
+async function readAlwaysMemories(ctx: QueryCtx, companyId: Id<"companies">) {
+  const [stamped, unstamped] = await Promise.all([
+    ctx.db
+      .query("companyMemories")
+      .withIndex("by_company_status_applymode_updated", (q) =>
+        q.eq("companyId", companyId).eq("status", "APPROVED").eq("applyMode", "ALWAYS")
+      )
+      .order("desc")
+      .take(MAX_ALWAYS_MEMORIES),
+    ctx.db
+      .query("companyMemories")
+      .withIndex("by_company_status_applymode_updated", (q) =>
+        q.eq("companyId", companyId).eq("status", "APPROVED").eq("applyMode", undefined)
+      )
+      .order("desc")
+      .take(MAX_ALWAYS_MEMORIES),
+  ]);
+
+  return [...stamped, ...unstamped.filter((memory) => resolveCompanyApplyMode(memory) === "ALWAYS")]
+    .slice(0, MAX_ALWAYS_MEMORIES);
+}
+
+/**
+ * Everything the company's AI should be told about this message.
+ *
+ * `always` is not a search result — those memories go into the system
+ * instruction on every message, which is the whole point of the mode. Only
+ * `relevant` is looked up, and it now uses the full-text index rather than
+ * scoring the newest hundred rows by substring.
+ */
 export const getRuntimeMemoriesInternal = internalQuery({
   args: {
     companyId: v.id("companies"),
@@ -212,35 +278,52 @@ export const getRuntimeMemoriesInternal = internalQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const terms = getSearchTerms(args.queryText);
-    if (terms.length === 0) return [];
-
     const limit = getRuntimeMemoryLimit(args.limit);
-    const memories = await ctx.db
-      .query("companyMemories")
-      .withIndex("by_company_status_updated", (q) =>
-        q.eq("companyId", args.companyId).eq("status", "APPROVED")
-      )
-      .order("desc")
-      .take(100);
+    const alwaysMemories = await readAlwaysMemories(ctx, args.companyId);
 
-    return memories
-      .map((memory) => ({
-        memory,
-        score: scoreMemory(memory, terms),
-      }))
-      .filter((entry) => entry.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map((entry) => ({
-        memoryId: entry.memory._id,
-        title: entry.memory.title,
-        content: entry.memory.content,
-        category: entry.memory.category,
-        confidence: entry.memory.confidence,
-        score: entry.score,
-        updatedAt: entry.memory.updatedAt,
-      }));
+    const searchQuery = buildMemorySearchQuery(args.queryText);
+    // A message with nothing searchable in it ("hi", "thanks") is not an error
+    // and no longer returns nothing at all — the always list above still stands.
+    const searchMatches = searchQuery.length === 0
+      ? []
+      : await ctx.db
+        .query("companyMemories")
+        .withSearchIndex("search_content", (q) =>
+          q.search("normalizedContent", searchQuery)
+            .eq("companyId", args.companyId)
+            .eq("status", "APPROVED")
+        )
+        // Room to drop the ALWAYS matches, which are already in the system
+        // instruction and would otherwise be sent to the model twice.
+        .take(limit * 2);
+
+    const relevantMemories = searchMatches
+      .filter((memory) => resolveCompanyApplyMode(memory) === "WHEN_RELEVANT")
+      .slice(0, limit);
+
+    return {
+      always: alwaysMemories.map((memory, index) =>
+        toRuntimeMemory(memory, rankScore(index, alwaysMemories.length))),
+      relevant: relevantMemories.map((memory, index) =>
+        toRuntimeMemory(memory, rankScore(index, relevantMemories.length))),
+    };
+  },
+});
+
+/**
+ * The company's ALWAYS memories on their own, for the agent path.
+ *
+ * An agent run builds its system instruction well before it has a message to
+ * search with, and giving a company a memory has to work on a widget that
+ * happens to have an agent attached — which is every normal widget.
+ */
+export const getAlwaysMemoriesInternal = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const memories = await readAlwaysMemories(ctx, args.companyId);
+    return memories.map((memory, index) => toRuntimeMemory(memory, rankScore(index, memories.length)));
   },
 });
 
@@ -285,10 +368,25 @@ export const getForCompany = adminQuery({
   args: {
     companyId: v.id("companies"),
     status: v.optional(memoryStatusValidator),
+    searchTerm: v.optional(v.string()),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
+
+    // Narrowed in the database rather than in the browser, so a company with a
+    // long list can still find a memory on page nine.
+    const searchTerm = args.searchTerm?.trim().toLowerCase();
+    if (searchTerm) {
+      const status = args.status;
+      return await ctx.db
+        .query("companyMemories")
+        .withSearchIndex("search_content", (q) => {
+          const search = q.search("normalizedContent", searchTerm).eq("companyId", args.companyId);
+          return status ? search.eq("status", status) : search;
+        })
+        .paginate(args.paginationOpts);
+    }
 
     if (args.status) {
       return await ctx.db
@@ -335,19 +433,41 @@ export const getCandidatesForCompany = adminQuery({
   },
 });
 
+/**
+ * Refuse the sixth ALWAYS memory rather than accepting it and quietly not
+ * applying it. A rule that only shows up as behaviour nobody can see is the
+ * same fault as a silent cap.
+ */
+async function assertAlwaysCapacity(
+  ctx: MutationCtx,
+  companyId: Id<"companies">,
+  applyMode: MemoryApplyMode,
+  excludeMemoryId?: Id<"companyMemories">,
+) {
+  if (applyMode !== "ALWAYS") return;
+
+  const existing = await readAlwaysMemories(ctx, companyId);
+  const others = existing.filter((memory) => memory._id !== excludeMemoryId);
+  if (others.length >= MAX_ALWAYS_MEMORIES) {
+    throw new Error(
+      `A company can have ${MAX_ALWAYS_MEMORIES} memories set to Always. Change one to "When relevant" before adding another.`,
+    );
+  }
+}
+
 export const createMemory = adminMutation({
   args: {
     companyId: v.id("companies"),
     title: v.optional(v.string()),
     content: v.string(),
-    category: memoryCategoryValidator,
-    confidence: v.optional(v.number()),
+    applyMode: applyModeValidator,
     sourceType: v.optional(memorySourceTypeValidator),
     sourceIdsJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     await assertNoRejectedCandidateMatch(ctx, args.companyId, args.content);
+    await assertAlwaysCapacity(ctx, args.companyId, args.applyMode);
 
     const content = normalizeContent(args.content);
     const title = normalizeTitle(args.title, content);
@@ -357,9 +477,10 @@ export const createMemory = adminMutation({
       title,
       content,
       normalizedContent: content.toLowerCase(),
-      category: args.category,
+      category: RETAINED_CATEGORY,
+      applyMode: args.applyMode,
       status: "APPROVED",
-      confidence: clampConfidence(args.confidence),
+      confidence: clampConfidence(undefined),
       sourceType: args.sourceType ?? "MANUAL",
       sourceIdsJson: args.sourceIdsJson,
       createdBy: userId,
@@ -377,7 +498,7 @@ export const createMemory = adminMutation({
       entityType: "companyMemories",
       companyId: args.companyId,
       timestamp: now,
-      metadata: buildAuditMetadata({ category: args.category, contentLength: content.length }),
+      metadata: buildAuditMetadata({ applyMode: args.applyMode, contentLength: content.length }),
     });
     await recordCompanyAiDriftEvent(ctx, {
       companyId: args.companyId,
@@ -398,8 +519,7 @@ export const updateMemory = adminMutation({
     memoryId: v.id("companyMemories"),
     title: v.string(),
     content: v.string(),
-    category: memoryCategoryValidator,
-    confidence: v.optional(v.number()),
+    applyMode: applyModeValidator,
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
@@ -407,6 +527,9 @@ export const updateMemory = adminMutation({
     const { userId } = await requireCompanyAccess(ctx, existing.companyId);
     if (existing.status !== "APPROVED") throw new Error("Only approved company memories can be edited.");
     await assertNoRejectedCandidateMatch(ctx, existing.companyId, args.content);
+    // Excluded from its own count, so re-saving an Always memory is not blocked
+    // by the memory being saved.
+    await assertAlwaysCapacity(ctx, existing.companyId, args.applyMode, args.memoryId);
 
     const content = normalizeContent(args.content);
     const title = normalizeTitle(args.title, content);
@@ -415,8 +538,7 @@ export const updateMemory = adminMutation({
       title,
       content,
       normalizedContent: content.toLowerCase(),
-      category: args.category,
-      confidence: clampConfidence(args.confidence),
+      applyMode: args.applyMode,
       updatedAt: now,
     });
 
@@ -427,7 +549,7 @@ export const updateMemory = adminMutation({
       entityType: "companyMemories",
       companyId: existing.companyId,
       timestamp: now,
-      metadata: buildAuditMetadata({ category: args.category, contentLength: content.length }),
+      metadata: buildAuditMetadata({ applyMode: args.applyMode, contentLength: content.length }),
     });
     await recordCompanyAiDriftEvent(ctx, {
       companyId: existing.companyId,
@@ -449,7 +571,10 @@ export const archiveMemory = adminMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing || existing.status === "ARCHIVED") throw new Error("Memory not found");
+    if (!existing) throw new Error("Memory not found");
+    // Saying "Memory not found" about a memory that plainly exists sends the
+    // reader looking for the wrong problem.
+    if (existing.status === "ARCHIVED") throw new Error("This memory has already been removed.");
     const { userId } = await requireCompanyAccess(ctx, existing.companyId);
     const now = Date.now();
 
@@ -467,7 +592,7 @@ export const archiveMemory = adminMutation({
       entityType: "companyMemories",
       companyId: existing.companyId,
       timestamp: now,
-      metadata: buildAuditMetadata({ category: existing.category, contentLength: existing.content.length }),
+      metadata: buildAuditMetadata({ applyMode: resolveCompanyApplyMode(existing), contentLength: existing.content.length }),
     });
     await recordCompanyAiDriftEvent(ctx, {
       companyId: existing.companyId,
@@ -483,12 +608,64 @@ export const archiveMemory = adminMutation({
   },
 });
 
+/**
+ * Put a removed memory back.
+ *
+ * Removing was one-way and archived memories had nowhere to be seen, so the
+ * only recovery was to retype the memory. The screen now lists them, which
+ * means it needs a way back.
+ */
+export const restoreMemory = adminMutation({
+  args: {
+    memoryId: v.id("companyMemories"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) throw new Error("Memory not found");
+    if (existing.status !== "ARCHIVED") throw new Error("This memory is already in use.");
+    const { userId } = await requireCompanyAccess(ctx, existing.companyId);
+    const applyMode = resolveCompanyApplyMode(existing);
+    await assertAlwaysCapacity(ctx, existing.companyId, applyMode, args.memoryId);
+    const now = Date.now();
+
+    await ctx.db.patch(args.memoryId, {
+      status: "APPROVED",
+      approvedBy: userId,
+      approvedAt: now,
+      archivedBy: undefined,
+      archivedAt: undefined,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "RESTORE_COMPANY_MEMORY",
+      entityId: args.memoryId,
+      entityType: "companyMemories",
+      companyId: existing.companyId,
+      timestamp: now,
+      metadata: buildAuditMetadata({ applyMode, contentLength: existing.content.length }),
+    });
+    await recordCompanyAiDriftEvent(ctx, {
+      companyId: existing.companyId,
+      sourceType: "MEMORY",
+      sourceId: args.memoryId,
+      reason: "Company memory was restored.",
+      affectedEvalCategories: ["MEMORY_USAGE", "NO_HALLUCINATION", "WIDGET_READINESS"],
+      createdBy: userId,
+      createdAt: now,
+    });
+
+    return true;
+  },
+});
+
 export const createCandidate = adminMutation({
   args: {
     companyId: v.id("companies"),
     title: v.optional(v.string()),
     content: v.string(),
-    category: memoryCategoryValidator,
+    applyMode: applyModeValidator,
     sourceType: v.optional(memorySourceTypeValidator),
     sourceIdsJson: v.optional(v.string()),
     reason: v.optional(v.string()),
@@ -506,7 +683,8 @@ export const createCandidate = adminMutation({
       title,
       content,
       normalizedContent: content.toLowerCase(),
-      category: args.category,
+      category: RETAINED_CATEGORY,
+      applyMode: args.applyMode,
       sourceType: args.sourceType ?? "MANUAL",
       sourceIdsJson: args.sourceIdsJson,
       reason: args.reason,
@@ -524,7 +702,7 @@ export const createCandidate = adminMutation({
       entityType: "companyMemoryCandidates",
       companyId: args.companyId,
       timestamp: now,
-      metadata: buildAuditMetadata({ category: args.category, contentLength: content.length }),
+      metadata: buildAuditMetadata({ applyMode: args.applyMode, contentLength: content.length }),
     });
 
     return candidateId;
@@ -542,6 +720,9 @@ export const approveCandidate = adminMutation({
     if (candidate.status !== "PROPOSED") throw new Error("Memory candidate has already been reviewed.");
     await assertNoRejectedCandidateMatch(ctx, candidate.companyId, candidate.content);
 
+    const applyMode = resolveCompanyApplyMode(candidate);
+    await assertAlwaysCapacity(ctx, candidate.companyId, applyMode);
+
     const now = Date.now();
     const memoryId = await ctx.db.insert("companyMemories", {
       companyId: candidate.companyId,
@@ -549,11 +730,14 @@ export const approveCandidate = adminMutation({
       content: candidate.content,
       normalizedContent: candidate.normalizedContent,
       category: candidate.category,
+      applyMode,
       status: "APPROVED",
       confidence: candidate.confidence,
       sourceType: candidate.sourceType,
       sourceIdsJson: candidate.sourceIdsJson,
-      createdBy: candidate.createdBy,
+      // A suggestion the platform made has no author, so the person who
+      // accepted it is who put it into memory.
+      createdBy: candidate.createdBy ?? userId,
       approvedBy: userId,
       createdAt: now,
       updatedAt: now,

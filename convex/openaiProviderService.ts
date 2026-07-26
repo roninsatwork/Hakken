@@ -104,6 +104,18 @@ export function createOpenAIProviderAdapter(args: {
               : input,
             temperature: request.temperature,
             max_output_tokens: request.maxOutputTokens,
+            ...(request.jsonSchema
+              ? {
+                  text: {
+                    format: {
+                      type: "json_schema",
+                      name: "response",
+                      strict: false,
+                      schema: request.jsonSchema,
+                    },
+                  },
+                }
+              : {}),
           }),
         },
       }) as OpenAIResponsesPayload;

@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { MAX_ALWAYS_MEMORIES } from "./utils/memoryApplication";
 
 const paginationOpts = { numItems: 10, cursor: null };
 
@@ -33,15 +34,14 @@ describe("Company Memories", () => {
       companyId: companyAId,
       title: "Weekly summary tone",
       content: "Facilities weekly summaries should be concise and list open blockers first.",
-      category: "PREFERENCE",
-      confidence: 0.9,
+      applyMode: "ALWAYS",
     });
 
     await adminBClient.mutation(api.companyMemories.createMemory, {
       companyId: companyBId,
       title: "Finance variance",
       content: "Finance updates should include quarterly variance before commentary.",
-      category: "FACT",
+      applyMode: "WHEN_RELEVANT",
     });
 
     const adminAPage = await adminAClient.query(api.companyMemories.getForCompany, {
@@ -62,8 +62,7 @@ describe("Company Memories", () => {
       memoryId: memoryAId,
       title: "Facilities summary tone",
       content: "Facilities weekly summaries should be concise, include owners, and list open blockers first.",
-      category: "PREFERENCE",
-      confidence: 0.85,
+      applyMode: "ALWAYS",
     });
     await adminAClient.mutation(api.companyMemories.archiveMemory, { memoryId: memoryAId });
 
@@ -117,7 +116,7 @@ describe("Company Memories", () => {
       companyId: companyAId,
       title: "Public boundary",
       content: "Public widget answers should avoid quoting private customer names.",
-      category: "BOUNDARY",
+      applyMode: "ALWAYS",
       sourceType: "CHAT",
       reason: "Repeated support chat pattern.",
       confidence: 0.72,
@@ -138,7 +137,7 @@ describe("Company Memories", () => {
     });
     expect(approvedMemory).toMatchObject({
       title: "Public boundary",
-      category: "BOUNDARY",
+      applyMode: "ALWAYS",
       sourceType: "CHAT",
       approvedBy: adminAId,
     });
@@ -146,7 +145,7 @@ describe("Company Memories", () => {
     const rejectedCandidateId = await adminAClient.mutation(api.companyMemories.createCandidate, {
       companyId: companyAId,
       content: "Always describe pricing as negotiable even when a plan is fixed.",
-      category: "SALES",
+      applyMode: "WHEN_RELEVANT",
       reason: "Weak suggestion from a draft transcript.",
     });
     await adminAClient.mutation(api.companyMemories.rejectCandidate, {
@@ -158,16 +157,15 @@ describe("Company Memories", () => {
       adminAClient.mutation(api.companyMemories.createCandidate, {
         companyId: companyAId,
         content: "Always   describe pricing as negotiable even when a plan is fixed.",
-        category: "SALES",
+        applyMode: "WHEN_RELEVANT",
       })
-    ).rejects.toThrow("previously rejected");
+    ).rejects.toThrow("turned down");
 
     const summary = await adminAClient.query(api.companyMemories.getSummary, { companyId: companyAId });
     expect(summary).toMatchObject({
       approved: 1,
-      archived: 0,
+      alwaysCount: 1,
       proposed: 0,
-      rejected: 1,
     });
   });
 
@@ -202,6 +200,7 @@ describe("Company Memories", () => {
         content: "Facilities opening updates should include blockers and responsible owners.",
         normalizedContent: "facilities opening updates should include blockers and responsible owners.",
         category: "PREFERENCE",
+        applyMode: "WHEN_RELEVANT",
         status: "APPROVED",
         confidence: 0.9,
         sourceType: "MANUAL",
@@ -218,6 +217,7 @@ describe("Company Memories", () => {
         content: "Facilities opening updates should use the archived old format.",
         normalizedContent: "facilities opening updates should use the archived old format.",
         category: "PREFERENCE",
+        applyMode: "WHEN_RELEVANT",
         status: "ARCHIVED",
         confidence: 1,
         sourceType: "MANUAL",
@@ -232,6 +232,7 @@ describe("Company Memories", () => {
         content: "Facilities opening updates belong to a different company.",
         normalizedContent: "facilities opening updates belong to a different company.",
         category: "FACT",
+        applyMode: "WHEN_RELEVANT",
         status: "APPROVED",
         confidence: 1,
         sourceType: "MANUAL",
@@ -251,10 +252,10 @@ describe("Company Memories", () => {
       queryText: "How should facilities opening updates mention blockers?",
     });
 
-    expect(matches.map((match) => match.memoryId)).toEqual([approvedMemoryId]);
-    expect(matches[0]).toMatchObject({
+    expect(matches.relevant.map((match) => match.memoryId)).toEqual([approvedMemoryId]);
+    expect(matches.relevant[0]).toMatchObject({
       title: "Facilities summary style",
-      category: "PREFERENCE",
+      applyMode: "WHEN_RELEVANT",
     });
 
     await t.mutation(internal.companyMemories.recordRuntimeUsageInternal, {
@@ -263,7 +264,7 @@ describe("Company Memories", () => {
       messageId,
       queryText: "How should facilities opening updates mention blockers?",
       memories: [
-        { memoryId: approvedMemoryId, score: matches[0].score },
+        { memoryId: approvedMemoryId, score: matches.relevant[0].score },
         { memoryId: archivedMemoryId, score: 99 },
       ],
     });
@@ -294,5 +295,173 @@ describe("Company Memories", () => {
     });
     expect(companyBId).not.toBe(companyAId);
     expect(userAId).toBeTruthy();
+  });
+
+  test("an Always memory reaches the model even when the message shares no words with it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Boundary Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      return { companyId, adminId };
+    });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    await adminClient.mutation(api.companyMemories.createMemory, {
+      companyId,
+      title: "No delivery dates",
+      content: "Never promise a delivery date over chat.",
+      applyMode: "ALWAYS",
+    });
+    await adminClient.mutation(api.companyMemories.createMemory, {
+      companyId,
+      title: "Returns window",
+      content: "Returns are accepted within 30 days of purchase.",
+      applyMode: "WHEN_RELEVANT",
+    });
+
+    // Nothing here overlaps either memory. Under the old keyword scoring the
+    // boundary either dropped out or survived only by accident.
+    const unrelated = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "Can someone help me reset my password?",
+    });
+    expect(unrelated.always.map((memory) => memory.title)).toEqual(["No delivery dates"]);
+    expect(unrelated.relevant).toEqual([]);
+
+    // A message with no searchable word at all was previously a dead end that
+    // returned nothing, boundaries included.
+    const greeting = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "hi",
+    });
+    expect(greeting.always.map((memory) => memory.title)).toEqual(["No delivery dates"]);
+
+    // And the when-relevant memory does arrive when it is actually relevant.
+    const onTopic = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "What is your returns policy?",
+    });
+    expect(onTopic.relevant.map((memory) => memory.title)).toEqual(["Returns window"]);
+  });
+
+  test("the sixth Always memory is refused, and says why", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Capped Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      return { companyId, adminId };
+    });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    for (let index = 0; index < MAX_ALWAYS_MEMORIES; index += 1) {
+      await adminClient.mutation(api.companyMemories.createMemory, {
+        companyId,
+        title: `Always ${index}`,
+        content: `Always rule number ${index}.`,
+        applyMode: "ALWAYS",
+      });
+    }
+
+    await expect(
+      adminClient.mutation(api.companyMemories.createMemory, {
+        companyId,
+        title: "One too many",
+        content: "This one does not fit.",
+        applyMode: "ALWAYS",
+      }),
+    ).rejects.toThrow(`can have ${MAX_ALWAYS_MEMORIES} memories set to Always`);
+
+    // The cap is on Always only — when-relevant memory is uncapped.
+    await expect(
+      adminClient.mutation(api.companyMemories.createMemory, {
+        companyId,
+        title: "Looked up",
+        content: "This one is only used when it comes up.",
+        applyMode: "WHEN_RELEVANT",
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  test("a removed memory stops applying and can be put back", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, adminId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Restore Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      return { companyId, adminId };
+    });
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    const memoryId = await adminClient.mutation(api.companyMemories.createMemory, {
+      companyId,
+      title: "Tone",
+      content: "Write plainly and never use jargon.",
+      applyMode: "ALWAYS",
+    });
+
+    await adminClient.mutation(api.companyMemories.archiveMemory, { memoryId });
+    const afterRemoval = await t.query(internal.companyMemories.getAlwaysMemoriesInternal, { companyId });
+    expect(afterRemoval).toEqual([]);
+
+    // The old message claimed the memory did not exist, which sent the reader
+    // looking for the wrong problem.
+    await expect(
+      adminClient.mutation(api.companyMemories.archiveMemory, { memoryId }),
+    ).rejects.toThrow("already been removed");
+
+    await adminClient.mutation(api.companyMemories.restoreMemory, { memoryId });
+    const afterRestore = await t.query(internal.companyMemories.getAlwaysMemoriesInternal, { companyId });
+    expect(afterRestore.map((memory) => memory.title)).toEqual(["Tone"]);
+  });
+
+  test("a memory written before applyMode existed still behaves as its old category said", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Legacy Co", createdAt: now });
+      const userId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      for (const [title, category] of [["Old tone note", "TONE"], ["Old fact", "FACT"]] as const) {
+        await ctx.db.insert("companyMemories", {
+          companyId,
+          title,
+          content: `${title} body.`,
+          normalizedContent: `${title.toLowerCase()} body.`,
+          category,
+          // Deliberately unstamped: this is a row the backfill has not reached.
+          status: "APPROVED",
+          confidence: 0.8,
+          sourceType: "MANUAL",
+          createdBy: userId,
+          approvedBy: userId,
+          createdAt: now,
+          updatedAt: now,
+          approvedAt: now,
+          usageCount: 0,
+        });
+      }
+      return { companyId };
+    });
+
+    const always = await t.query(internal.companyMemories.getAlwaysMemoriesInternal, { companyId });
+    expect(always.map((memory) => memory.title)).toEqual(["Old tone note"]);
+
+    // The runner schedules its batches, so the batch is invoked directly here
+    // rather than depending on the test scheduler draining.
+    const { migrationId } = await t.mutation(internal.dataMigrations.run, {
+      name: "2026-07-26-company-memory-apply-mode",
+    });
+    await t.mutation(internal.dataMigrations.processBatch, { migrationId, batchSize: 200 });
+
+    const stamped = await t.run(async (ctx) => await ctx.db
+      .query("companyMemories")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+      .collect());
+    expect(stamped.map((memory) => [memory.title, memory.applyMode]).sort()).toEqual([
+      ["Old fact", "WHEN_RELEVANT"],
+      ["Old tone note", "ALWAYS"],
+    ]);
   });
 });

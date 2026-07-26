@@ -1,6 +1,7 @@
 "use node";
 
-import { ANTHROPIC_PROVIDER_KEY, GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY } from "./aiModelService";
+import { ANTHROPIC_PROVIDER_KEY, GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY, OPENROUTER_PROVIDER_KEY } from "./aiModelService";
+import { createOpenRouterProviderAdapter } from "./openrouterProviderService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter, ResolvedAiModelConfig } from "./aiRuntimeTypes";
 import { createAnthropicProviderAdapter } from "./anthropicProviderService";
 import { createGoogleProviderAdapter } from "./googleProviderAdapter";
@@ -14,6 +15,8 @@ export function getProviderAdapter(providerKey: string): AiProviderAdapter {
       return createOpenAIProviderAdapter();
     case ANTHROPIC_PROVIDER_KEY:
       return createAnthropicProviderAdapter();
+    case OPENROUTER_PROVIDER_KEY:
+      return createOpenRouterProviderAdapter();
     default:
       throw new Error(`AI provider '${providerKey}' is not supported by the runtime registry.`);
   }

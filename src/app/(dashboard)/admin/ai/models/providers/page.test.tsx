@@ -19,9 +19,28 @@ const providers = [
     status: "healthy",
     lastHealthCheckAt: 1_788_000_000_000,
     lastSyncedAt: 1_788_000_100_000,
-    settings: JSON.stringify({ lastHealthMessage: "Connected" }),
+    // What a real test writes back, rather than a word that collides with the
+    // status column.
+    settings: JSON.stringify({ lastHealthMessage: "Connection ok. 122 models visible." }),
   },
 ];
+
+// From the rollup: how many models this provider gives you and how many are on.
+const modelCounts = {
+  totalModels: 15,
+  enabledModels: 4,
+  byProvider: [{ providerKey: "openai", total: 15, enabled: 4 }],
+  computedAt: 1_788_000_000_000,
+  isPartial: false,
+};
+
+// What the provider being switched off is currently handling. The screen has to
+// say this before it acts, because disabling now genuinely stops that work.
+const providerUsage = {
+  globalUseCases: ["chat", "title"],
+  companyCount: 2,
+  isPartial: false,
+};
 
 function getConvexPath(functionReference: unknown) {
   try {
@@ -41,7 +60,16 @@ describe("AIModelProvidersPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockReturnValue(providers);
+    vi.mocked(useQuery).mockImplementation((...args: Parameters<typeof useQuery>) => {
+      const path = getConvexPath(args[0]);
+      if (path.includes("getProviderDefaultUsage")) {
+        return providerUsage as unknown as ReturnType<typeof useQuery>;
+      }
+      if (path.includes("getModelCounts")) {
+        return modelCounts as unknown as ReturnType<typeof useQuery>;
+      }
+      return providers as unknown as ReturnType<typeof useQuery>;
+    });
     vi.mocked(useAction).mockImplementation((actionFn: unknown) => {
       const path = getConvexPath(actionFn);
       if (path.includes("syncGoogleModels")) return syncGoogleModels as unknown as ReturnType<typeof useAction>;
@@ -62,7 +90,15 @@ describe("AIModelProvidersPage", () => {
 
     expect(screen.getByText("AI Providers")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
+    // Plain words rather than the stored status. "Healthy" meant two different
+    // things depending on the provider until the test was made real.
     expect(screen.getByText("Connected")).toBeInTheDocument();
+    // The last sync message is not printed under the provider name. It is on
+    // the row as hover text, and a failed test still reports in the banner.
+    expect(screen.queryByText("Connection ok. 122 models visible.")).not.toBeInTheDocument();
+    // The number the screen exists to answer, which was not on it before.
+    expect(screen.getByText(/15/)).toBeInTheDocument();
+    expect(screen.getByText(/4 on/)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search model names or IDs...")).not.toBeInTheDocument();
     expect(screen.queryByText("Platform Defaults")).not.toBeInTheDocument();
 
@@ -76,7 +112,27 @@ describe("AIModelProvidersPage", () => {
       expect(testProviderConnection).toHaveBeenCalledWith({ providerKey: "openai" });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+    // Disabling has its own test below: it now asks first, so it no longer
+    // writes on one click.
+  });
+
+  /**
+   * Disabling a provider now stops its models serving, so it can take a
+   * company's agents offline. It asks first, and names what it is about to
+   * stop — while enabling, which is harmless, still happens on one click.
+   */
+  it("asks before switching a provider off, and says what that stops", async () => {
+    render(<AIModelProvidersPage />);
+
+    fireEvent.click(screen.getByRole("switch", { name: "Disable OpenAI" }));
+
+    // Nothing written yet — the click opened a confirmation.
+    expect(setProviderEnabled).not.toHaveBeenCalled();
+    expect(screen.getByText(/stops that work/i)).toBeInTheDocument();
+    expect(screen.getByText(/Platform jobs: Chat, Title\./)).toBeInTheDocument();
+    expect(screen.getByText(/Also chosen by 2 companies\./)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch it off" }));
     await waitFor(() => {
       expect(setProviderEnabled).toHaveBeenCalledWith({ providerKey: "openai", isEnabled: false });
     });

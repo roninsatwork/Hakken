@@ -42,6 +42,18 @@ crons.interval(
   {}
 );
 
+// Read what customers actually asked and propose durable notes for review.
+// Six hours rather than continuously: a memory worth keeping is still worth
+// keeping later, and every sweep costs a model call per company. The sweep
+// only reads messages that arrived since it last looked, so a quiet company
+// costs nothing, and it stops proposing once a company's queue is backed up.
+crons.interval(
+  "company-memory-suggestion-sweep",
+  { hours: 6 },
+  internal.companyMemorySuggestionActions.sweepDispatcher,
+  {}
+);
+
 // Run hourly dispatcher to evaluate auto-purge schedule
 crons.hourly(
   "audit-log-purge-dispatcher",

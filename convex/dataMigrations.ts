@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { superAdminQuery } from "./tenantFunctions";
+import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
 
 /**
  * Data migrations and backfills.
@@ -71,6 +72,56 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       if (!thread?.companyId) continue;
 
       await ctx.db.patch(log._id, { companyId: thread.companyId });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /**
+   * Stamps `applyMode` onto every company memory.
+   *
+   * Company memory had eight categories and none of them changed what the model
+   * saw. Two of them were really saying "this should apply to every answer" —
+   * tone and boundary — and those were the ones the old keyword lookup was
+   * least likely to surface. This records that distinction as the field the
+   * runtime now reads.
+   */
+  "2026-07-26-company-memory-apply-mode": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("companyMemories").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const memory of page.page) {
+      if (memory.applyMode !== undefined) continue;
+      await ctx.db.patch(memory._id, { applyMode: companyCategoryToApplyMode(memory.category) });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /**
+   * The same for agent memory, whose four kinds carried the same unused
+   * distinction: INSTRUCTION and PREFERENCE described how the agent should
+   * behave throughout, FACT and SUMMARY described something to look up.
+   */
+  "2026-07-26-agent-memory-apply-mode": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("agentMemories").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const memory of page.page) {
+      if (memory.applyMode !== undefined) continue;
+      await ctx.db.patch(memory._id, { applyMode: agentKindToApplyMode(memory.kind) });
       updated += 1;
     }
 

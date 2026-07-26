@@ -15,7 +15,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { MAX_SKILLS_PER_AGENT } from "@/convex/agentSkills";
+import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
 
 /** One screenful of candidates; "load more" fetches the next. */
 const PICKER_PAGE_SIZE = 20;

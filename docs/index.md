@@ -28,13 +28,21 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 ## Coverage Note
 
-The latest implementation audit refreshed central plan coverage and the movement/replay handoff notes. Future documentation upkeep should still treat broad guides and newly changed implementation areas as active audit targets, because coverage can drift as routes, Convex modules, workflows, scripts, and operator procedures change.
+The latest implementation audit refreshed plan coverage and repaired stale plan
+links in developer handoff material. Future documentation upkeep should still
+treat broad guides and newly changed implementation areas as active audit
+targets, because coverage can drift as routes, Convex modules, workflows,
+scripts, and operator procedures change.
 
 ### Plans
 
 - [Plans Index](./plans/index.md)
-- [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single active plan and source of truth for current work.
-- Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). All previous plans were retired on 2026-07-20 to start fresh; they are historical reference only.
+- [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.
+- [Platform Hardening Plan](./plans/active/platform-hardening-plan.md) — the platform hardening record for non-movement platform correctness, security, operational envelope, agent runtime, and reusability.
+- [Admin UI/UX Plan](./plans/active/admin-ux-plan.md) — active admin usability plan for the model catalogue, Skill Center, skill detail, model defaults, system options, API keys, and related admin screens.
+- [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
+- [Handover](./plans/active/HANDOVER.md) — current platform-hardening handover state and verification context.
+- Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
 
 ### Developer
 
@@ -51,6 +59,7 @@ The latest implementation audit refreshed central plan coverage and the movement
 - [Data Retention And Purges](./developer/data-retention-and-purges.md)
 - [Email Branding](./developer/email-branding.md)
 - [Route Protection And Authentication](./developer/route-protection-and-authentication.md)
+- [Tenancy Enforcement](./developer/tenancy-enforcement.md)
 - [Shared Admin UI](./developer/shared-admin-ui.md)
 - [AI Administration](./developer/ai-administration.md)
 - [AI Rules And Prompts](./developer/ai-rules-and-prompts.md)

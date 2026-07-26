@@ -24,17 +24,6 @@ type LearningSuggestion = {
   target: SuggestionTarget;
 };
 
-const memoryCategoryValidator = v.union(
-  v.literal("FACT"),
-  v.literal("PREFERENCE"),
-  v.literal("POSITIONING"),
-  v.literal("TONE"),
-  v.literal("BOUNDARY"),
-  v.literal("SALES"),
-  v.literal("SUPPORT"),
-  v.literal("OTHER")
-);
-
 const evalCategoryValidator = v.union(
   v.literal("KNOWLEDGE_RETRIEVAL"),
   v.literal("MEMORY_USAGE"),
@@ -397,7 +386,7 @@ export const createMemoryCandidateFromChat = adminMutation({
     messageId: v.optional(v.id("messages")),
     title: v.optional(v.string()),
     content: v.string(),
-    category: memoryCategoryValidator,
+    applyMode: v.union(v.literal("ALWAYS"), v.literal("WHEN_RELEVANT")),
     reason: v.optional(v.string()),
     confidence: v.optional(v.number()),
   },
@@ -412,7 +401,10 @@ export const createMemoryCandidateFromChat = adminMutation({
       title,
       content,
       normalizedContent: content.toLowerCase(),
-      category: args.category,
+      // The category column is retained for the audit trail only; applyMode is
+      // what decides when the memory reaches the model.
+      category: "OTHER",
+      applyMode: args.applyMode,
       sourceType: thread.widgetId ? "WIDGET" : "CHAT",
       sourceIdsJson: buildSourceIdsJson(args),
       reason: normalizeOptionalText(args.reason, TEXT_MAX_CHARS),
@@ -430,7 +422,7 @@ export const createMemoryCandidateFromChat = adminMutation({
       entityType: "companyMemoryCandidates",
       companyId: args.companyId,
       timestamp: now,
-      metadata: JSON.stringify({ threadId: args.threadId, messageId: args.messageId, category: args.category }),
+      metadata: JSON.stringify({ threadId: args.threadId, messageId: args.messageId, applyMode: args.applyMode }),
     });
 
     return candidateId;

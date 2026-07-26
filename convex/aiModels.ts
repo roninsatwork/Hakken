@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { requireCurrentUser, requireSuperAdmin } from "./authz";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -13,21 +14,43 @@ import {
   GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
+  OPENROUTER_PROVIDER_KEY,
+  buildModelSearchText,
+  canProviderServeUseCase,
+  describeUseCaseProviderLimit,
   getProviderQualifiedModelId,
   isGoogleVertexModelId,
   resolveExecutionModel,
 } from "./aiModelService";
 
-const MODEL_CATALOG_LIMIT = 500;
+/**
+ * How many models a full-catalogue read will take.
+ *
+ * The catalogue *list* no longer uses this — it pages in the database. What
+ * remains are the reads that genuinely need every row: the counts rollup, the
+ * search-text backfill, and the enabled-model queries behind the pickers.
+ *
+ * Raised from 500 when OpenRouter arrived. One gateway provider alone publishes
+ * around 345 models, which took a deployment that had 107 to roughly 452 — close
+ * enough to the old ceiling that a second gateway would have crossed it. Past
+ * this limit the rollup reports `isPartial` rather than presenting a truncated
+ * count as a total.
+ */
+const MODEL_CATALOG_LIMIT = 2000;
 const MODEL_SEARCH_LIMIT = 250;
 const DEFAULT_MODEL_LIMIT = 10;
+/** Providers are a handful, not a catalogue. One read covers every one of them. */
+const PROVIDER_LIMIT = 50;
+/** Enough default rows to describe what a provider serves without scanning them all. */
+const PROVIDER_USAGE_LIMIT = 200;
 const GOOGLE_VERTEX_DISPLAY_NAME = "Google Vertex AI";
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   [GOOGLE_VERTEX_PROVIDER_KEY]: GOOGLE_VERTEX_DISPLAY_NAME,
   [OPENAI_PROVIDER_KEY]: "OpenAI",
   [ANTHROPIC_PROVIDER_KEY]: "Anthropic",
+  [OPENROUTER_PROVIDER_KEY]: "OpenRouter",
 };
-const PLATFORM_PROVIDER_KEYS = [GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY, ANTHROPIC_PROVIDER_KEY];
+const PLATFORM_PROVIDER_KEYS = [GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY, ANTHROPIC_PROVIDER_KEY, OPENROUTER_PROVIDER_KEY];
 
 type AiModelDefaultUseCase = (typeof DEFAULT_MODEL_USE_CASES)[number];
 
@@ -67,7 +90,7 @@ export const getActiveModels = tenantQuery({
       ctx.db
         .query("aiProviders")
         .withIndex("by_enabled", (q) => q.eq("isEnabled", false))
-        .take(50),
+        .take(PROVIDER_LIMIT),
     ]);
     const disabledProviderKeys = new Set(disabledProviders.map((provider) => provider.providerKey));
     let models = withInferredProviders(rawModels)
@@ -90,91 +113,152 @@ export const getActiveModels = tenantQuery({
   },
 });
 
-export const getOffsetPaginatedModels = superAdminQuery({
+/**
+ * A page of the catalogue, produced by the database.
+ *
+ * The previous version read up to 500 rows, then filtered, sorted and sliced
+ * the page in memory. With three providers publishing a handful of models each
+ * that was invisible. OpenRouter publishes hundreds, at which point every
+ * keystroke in the search box dragged the whole catalogue into the query and the
+ * 500 cap began truncating without saying so.
+ *
+ * Now every narrowing happens in an index:
+ *
+ * - a search term goes to `search_text`, with the provider and status applied as
+ *   *filter fields* so they narrow inside the index rather than after it;
+ * - otherwise `by_provider_enabled`, `by_provider` or `by_enabled` is chosen by
+ *   which filters are set.
+ *
+ * Ordering is the index's own, not a sort over the whole catalogue. Floating the
+ * default row to the top was a nicety that cost a full scan, and the Default
+ * column now answers that question on every row anyway.
+ */
+export const getPaginatedModels = superAdminQuery({
   args: {
     searchTerm: v.optional(v.string()),
     statusFilter: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
     providerFilter: v.optional(v.string()),
-    page: v.number(),
-    pageSize: v.number(),
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     const term = normalizeSearchTerm(args.searchTerm);
     const statusEnabled = args.statusFilter === undefined ? undefined : args.statusFilter === "active";
     const providerFilter = args.providerFilter && args.providerFilter !== "all" ? args.providerFilter : undefined;
-    let models: Doc<"aiModels">[] = [];
 
     if (term) {
-      const [displayNameMatches, modelIdMatches] = await Promise.all([
-        ctx.db
-          .query("aiModels")
-          .withSearchIndex("search_display_name", (q) => q.search("displayName", term))
-          .take(MODEL_SEARCH_LIMIT),
-        ctx.db
-          .query("aiModels")
-          .withSearchIndex("search_model_id", (q) => q.search("modelId", term))
-          .take(MODEL_SEARCH_LIMIT),
-      ]);
-      models = Array.from(new Map([...displayNameMatches, ...modelIdMatches].map((model) => [model._id, model])).values());
-    } else if (providerFilter === GOOGLE_VERTEX_PROVIDER_KEY && statusEnabled !== undefined) {
-      models = await ctx.db
+      const page = await ctx.db
         .query("aiModels")
-        .withIndex("by_enabled", (q) => q.eq("isEnabled", statusEnabled))
-        .take(MODEL_CATALOG_LIMIT);
-    } else if (providerFilter === GOOGLE_VERTEX_PROVIDER_KEY) {
-      models = await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT);
-    } else if (providerFilter && statusEnabled !== undefined) {
-      models = await ctx.db
+        .withSearchIndex("search_text", (q) => {
+          let search = q.search("searchText", term);
+          if (providerFilter) search = search.eq("providerKey", providerFilter);
+          if (statusEnabled !== undefined) search = search.eq("isEnabled", statusEnabled);
+          return search;
+        })
+        .paginate(args.paginationOpts);
+
+      return { ...page, page: withInferredProviders(page.page) };
+    }
+
+    if (providerFilter && statusEnabled !== undefined) {
+      const page = await ctx.db
         .query("aiModels")
         .withIndex("by_provider_enabled", (q) => q.eq("providerKey", providerFilter).eq("isEnabled", statusEnabled))
-        .take(MODEL_CATALOG_LIMIT);
-    } else if (providerFilter) {
-      models = await ctx.db
-        .query("aiModels")
-        .withIndex("by_provider", (q) => q.eq("providerKey", providerFilter))
-        .take(MODEL_CATALOG_LIMIT);
-    } else if (statusEnabled !== undefined) {
-      models = await ctx.db
-        .query("aiModels")
-        .withIndex("by_enabled", (q) => q.eq("isEnabled", statusEnabled))
-        .take(MODEL_CATALOG_LIMIT);
-    } else {
-      models = await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT);
-    }
-
-    models = withInferredProviders(models);
-
-    if (term) {
-      models = models.filter((m) =>
-        includesSearchTerm(m.displayName, term) ||
-        includesSearchTerm(m.modelId, term) ||
-        includesSearchTerm(m.providerModelId, term)
-      );
-    }
-
-    if (args.statusFilter) {
-      models = models.filter((m) => m.isEnabled === (args.statusFilter === "active"));
+        .paginate(args.paginationOpts);
+      return { ...page, page: withInferredProviders(page.page) };
     }
 
     if (providerFilter) {
-      models = models.filter((m) => m.providerKey === providerFilter);
+      const page = await ctx.db
+        .query("aiModels")
+        .withIndex("by_provider", (q) => q.eq("providerKey", providerFilter))
+        .paginate(args.paginationOpts);
+      return { ...page, page: withInferredProviders(page.page) };
     }
 
-    models.sort((a, b) => {
-      if (a.isDefault && !b.isDefault) return -1;
-      if (!a.isDefault && b.isDefault) return 1;
-      if (a.isEnabled && !b.isEnabled) return -1;
-      if (!a.isEnabled && b.isEnabled) return 1;
-      return 0;
-    });
+    if (statusEnabled !== undefined) {
+      const page = await ctx.db
+        .query("aiModels")
+        .withIndex("by_enabled", (q) => q.eq("isEnabled", statusEnabled))
+        .paginate(args.paginationOpts);
+      return { ...page, page: withInferredProviders(page.page) };
+    }
 
-    const page = paginateItems(models, args.page, args.pageSize);
+    const page = await ctx.db.query("aiModels").order("asc").paginate(args.paginationOpts);
+    return { ...page, page: withInferredProviders(page.page) };
+  },
+});
+
+const MODEL_ROLLUP_KEY = "aiModels";
+
+/**
+ * Recount the catalogue and store the answer.
+ *
+ * Called from every path that can change what is in the catalogue or whether it
+ * is switched on. One pass over the models is the price; it is paid when an
+ * admin syncs or toggles, never when someone opens a screen.
+ */
+async function recomputeModelRollup(ctx: MutationCtx) {
+  const models = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
+  const byProviderKey = new Map<string, { total: number; enabled: number }>();
+
+  for (const model of models) {
+    // Legacy rows carry no provider key and are treated as Google everywhere
+    // else, so they are counted that way here too rather than under "".
+    const providerKey = model.providerKey
+      ?? (isGoogleVertexModelId(model.modelId) ? GOOGLE_VERTEX_PROVIDER_KEY : "unknown");
+    const counts = byProviderKey.get(providerKey) ?? { total: 0, enabled: 0 };
+    counts.total += 1;
+    if (model.isEnabled) counts.enabled += 1;
+    byProviderKey.set(providerKey, counts);
+  }
+
+  const rollup = {
+    rollupKey: MODEL_ROLLUP_KEY,
+    totalModels: models.length,
+    enabledModels: models.filter((model) => model.isEnabled).length,
+    byProvider: Array.from(byProviderKey.entries()).map(([providerKey, counts]) => ({
+      providerKey,
+      total: counts.total,
+      enabled: counts.enabled,
+    })),
+    computedAt: Date.now(),
+    isPartial: models.length >= MODEL_CATALOG_LIMIT,
+  };
+
+  const existing = await ctx.db
+    .query("aiModelRollups")
+    .withIndex("by_rollup_key", (q) => q.eq("rollupKey", MODEL_ROLLUP_KEY))
+    .first();
+
+  if (existing) await ctx.db.patch(existing._id, rollup);
+  else await ctx.db.insert("aiModelRollups", rollup);
+}
+
+/**
+ * The counts, read as a single document.
+ *
+ * `computedAt` and `isPartial` travel with them so a screen can say how old the
+ * answer is and whether it covers the whole catalogue. A number presented as
+ * live truth when it is neither is the habit these rollups exist to break.
+ */
+export const getModelCounts = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rollup = await ctx.db
+      .query("aiModelRollups")
+      .withIndex("by_rollup_key", (q) => q.eq("rollupKey", MODEL_ROLLUP_KEY))
+      .first();
+
+    if (!rollup) {
+      return { totalModels: 0, enabledModels: 0, byProvider: [], computedAt: null, isPartial: false };
+    }
 
     return {
-      data: page.data,
-      totalCount: page.totalCount,
-      totalPages: page.totalPages,
-      page: args.page,
+      totalModels: rollup.totalModels,
+      enabledModels: rollup.enabledModels,
+      byProvider: rollup.byProvider,
+      computedAt: rollup.computedAt,
+      isPartial: rollup.isPartial,
     };
   },
 });
@@ -182,7 +266,7 @@ export const getOffsetPaginatedModels = superAdminQuery({
 export const getProviders = superAdminQuery({
   args: {},
   handler: async (ctx) => {
-    const providers = await ctx.db.query("aiProviders").withIndex("by_provider_key").take(50);
+    const providers = await ctx.db.query("aiProviders").withIndex("by_provider_key").take(PROVIDER_LIMIT);
     const providersByKey = new Map(providers.map((provider) => [provider.providerKey, provider]));
     const mergedProviders = PLATFORM_PROVIDER_KEYS.map((providerKey) => {
       const existingProvider = providersByKey.get(providerKey);
@@ -297,6 +381,17 @@ async function assertModelCanBeDefaultForUseCase(ctx: MutationCtx, args: { model
     throw new Error(`Selected AI model does not support the ${args.useCase} use case.`);
   }
 
+  // Two capabilities are genuinely Google-only, and two jobs need a provider
+  // with an agent adapter. Checked here as well as on the screen, because a
+  // picker that offers only valid choices and a runtime that accepts anything
+  // is one API call away from the failure this is meant to prevent.
+  if (!canProviderServeUseCase(model.providerKey, args.useCase)) {
+    const reason = describeUseCaseProviderLimit(args.useCase);
+    throw new Error(
+      `Selected AI model's provider cannot handle the ${args.useCase} job.${reason ? ` ${reason}` : ""}`,
+    );
+  }
+
   if (model.providerKey) {
     const provider = await ctx.db
       .query("aiProviders")
@@ -322,6 +417,45 @@ function summarizeDefaultModel(model: Doc<"aiModels"> | null) {
     isEnabled: resolved.isEnabled,
   };
 }
+
+/**
+ * What a provider is currently handling, asked before it is switched off.
+ *
+ * Disabling a provider now genuinely stops its models serving, which is the
+ * point — but it means the toggle can silently take a company's agents offline.
+ * The screen asks first, and this is what it needs in order to say what is about
+ * to stop.
+ *
+ * Read through `by_provider` rather than by scanning every default row, because
+ * company-scoped defaults grow with the number of companies.
+ */
+export const getProviderDefaultUsage = superAdminQuery({
+  args: {
+    providerKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const defaults = await ctx.db
+      .query("aiModelDefaults")
+      .withIndex("by_provider", (q) => q.eq("providerKey", args.providerKey))
+      .take(PROVIDER_USAGE_LIMIT);
+
+    const globalUseCases = defaults
+      .filter((row) => row.scope === "global")
+      .map((row) => row.useCase);
+    const companyIds = new Set(
+      defaults
+        .filter((row) => row.scope === "company" && row.companyId)
+        .map((row) => row.companyId as Id<"companies">),
+    );
+
+    return {
+      globalUseCases,
+      companyCount: companyIds.size,
+      // The screen must not present a truncated read as the whole picture.
+      isPartial: defaults.length >= PROVIDER_USAGE_LIMIT,
+    };
+  },
+});
 
 export const setProviderEnabled = superAdminMutation({
   args: {
@@ -481,9 +615,17 @@ export const internalUpdateProviderHealth = internalMutation({
   },
 });
 
+/**
+ * The model chosen for this job, at the most specific scope that has one.
+ *
+ * Every tier now asks whether the model is *servable* rather than merely
+ * enabled, so a default sitting on a switched-off provider falls through to the
+ * next tier instead of running.
+ */
 async function getUseCaseDefaultModel(
   ctx: QueryCtx,
-  args: { companyId?: Id<"companies">; useCase?: string }
+  args: { companyId?: Id<"companies">; useCase?: string },
+  disabledProviderKeys: Set<string>,
 ) {
   if (!args.useCase) return null;
 
@@ -493,11 +635,11 @@ async function getUseCaseDefaultModel(
       .withIndex("by_company_use_case", (q) => q.eq("companyId", args.companyId).eq("useCase", args.useCase as string))
       .first();
     const companyModel = companyDefault ? await getModelByStableId(ctx, companyDefault.modelId) : null;
-    if (companyModel?.isEnabled) return companyModel;
+    if (isModelServable(companyModel, disabledProviderKeys)) return companyModel;
 
     if (companyDefault?.fallbackModelId) {
       const fallbackModel = await getModelByStableId(ctx, companyDefault.fallbackModelId);
-      if (fallbackModel?.isEnabled) return fallbackModel;
+      if (isModelServable(fallbackModel, disabledProviderKeys)) return fallbackModel;
     }
   }
 
@@ -506,22 +648,58 @@ async function getUseCaseDefaultModel(
     .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", args.useCase as string))
     .first();
   const globalModel = globalDefault ? await getModelByStableId(ctx, globalDefault.modelId) : null;
-  if (globalModel?.isEnabled) return globalModel;
+  if (isModelServable(globalModel, disabledProviderKeys)) return globalModel;
 
   if (globalDefault?.fallbackModelId) {
     const fallbackModel = await getModelByStableId(ctx, globalDefault.fallbackModelId);
-    if (fallbackModel?.isEnabled) return fallbackModel;
+    if (isModelServable(fallbackModel, disabledProviderKeys)) return fallbackModel;
   }
 
   return null;
+}
+
+/**
+ * The providers this deployment has switched off.
+ *
+ * Read from the `by_enabled` index rather than scanned, and shaped as a set so
+ * the callers below stay O(1) per model. `getActiveModels` has always used this
+ * rule to decide what appears in a picker; until now the runtime did not.
+ */
+async function getDisabledProviderKeys(ctx: QueryCtx) {
+  const disabledProviders = await ctx.db
+    .query("aiProviders")
+    .withIndex("by_enabled", (q) => q.eq("isEnabled", false))
+    .take(PROVIDER_LIMIT);
+  return new Set(disabledProviders.map((provider) => provider.providerKey));
+}
+
+/**
+ * Whether the runtime may actually call this model.
+ *
+ * Being enabled is not enough: a model on a provider someone has switched off
+ * must not run. Disabling a provider used to hide its models from every picker
+ * and block new defaults while leaving *existing* defaults running on it, so the
+ * button stated an outcome the system did not deliver.
+ *
+ * A model with no provider key at all is a legacy row that predates provider
+ * tracking; those are treated as Google, matching `withInferredProviders` and
+ * the rule `getActiveModels` already applies.
+ */
+function isModelServable(
+  model: { isEnabled?: boolean; providerKey?: string } | null | undefined,
+  disabledProviderKeys: Set<string>,
+) {
+  if (!model?.isEnabled) return false;
+  return !model.providerKey || !disabledProviderKeys.has(model.providerKey);
 }
 
 async function resolveModelConfig(
   ctx: QueryCtx,
   args: { requestedModelId?: string; companyId?: Id<"companies">; useCase?: string }
 ) {
+  const disabledProviderKeys = await getDisabledProviderKeys(ctx);
   const requestedModel = args.requestedModelId ? await getModelByStableId(ctx, args.requestedModelId) : null;
-  const useCaseDefault = await getUseCaseDefaultModel(ctx, args);
+  const useCaseDefault = await getUseCaseDefaultModel(ctx, args, disabledProviderKeys);
 
   const defaultModels = await ctx.db
     .query("aiModels")
@@ -530,10 +708,12 @@ async function resolveModelConfig(
 
   return resolveExecutionModel({
     requestedModelId: args.requestedModelId,
-    requestedModel,
+    // Filtered here rather than inside `resolveExecutionModel`, which is a pure
+    // function over model records and has no way to know what a provider is.
+    requestedModel: isModelServable(requestedModel, disabledProviderKeys) ? requestedModel : null,
     defaultModels: useCaseDefault
       ? [{ ...withInferredProvider(useCaseDefault), isDefault: true }]
-      : withInferredProviders(defaultModels),
+      : withInferredProviders(defaultModels).filter((model) => isModelServable(model, disabledProviderKeys)),
   });
 }
 
@@ -710,10 +890,13 @@ export const resolveEmbeddingModelConfigForExecution = internalQuery({
     companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
+    // Embeddings go through the same servability rule as everything else: a
+    // configured embedding model on a switched-off provider falls through to the
+    // failsafe rather than being called.
     const embeddingDefault = await getUseCaseDefaultModel(ctx, {
       companyId: args.companyId,
       useCase: EMBEDDING_MODEL_USE_CASE,
-    });
+    }, await getDisabledProviderKeys(ctx));
 
     if (embeddingDefault) {
       const resolved = withInferredProvider(embeddingDefault);
@@ -765,6 +948,7 @@ export const toggleModelEnforcement = superAdminMutation({
       }
     }
     await ctx.db.patch(args.modelId, { isEnabled: args.isEnabled });
+    await recomputeModelRollup(ctx);
 
     const targetModel = await ctx.db.get(args.modelId);
     await ctx.db.insert("auditLogs", {
@@ -795,11 +979,24 @@ export const setDefaultModel = superAdminMutation({
     }
 
     await ctx.db.patch(args.modelId, { isDefault: true, isEnabled: true });
+    await recomputeModelRollup(ctx);
 
     const newDefault = await ctx.db.get(args.modelId);
+    const skippedUseCases: string[] = [];
     if (newDefault) {
       const now = Date.now();
       for (const useCase of DEFAULT_MODEL_USE_CASES) {
+        // This loop used to write every job without asking whether the model
+        // could do it, so the bulk action created exactly the state the
+        // per-row path rejects. The screen then showed "No platform default"
+        // beside a price for the default that did exist — and touching the row
+        // cleared it.
+        const canServe = modelSupportsUseCase(newDefault, useCase)
+          && canProviderServeUseCase(newDefault.providerKey, useCase);
+        if (!canServe) {
+          skippedUseCases.push(useCase);
+          continue;
+        }
         const existingDefault = await ctx.db
           .query("aiModelDefaults")
           .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", useCase))
@@ -831,8 +1028,12 @@ export const setDefaultModel = superAdminMutation({
       entityType: "systemConfig",
       entityId: "SYSTEM_MODELS",
       timestamp: Date.now(),
-      metadata: JSON.stringify({ model: newDefault?.modelId })
+      metadata: JSON.stringify({ model: newDefault?.modelId, skippedUseCases })
     });
+
+    // Reported rather than silently done, so the screen can say which jobs this
+    // model could not take over instead of leaving the reader to notice.
+    return { appliedUseCases: DEFAULT_MODEL_USE_CASES.length - skippedUseCases.length, skippedUseCases };
   },
 });
 
@@ -851,6 +1052,12 @@ export const internalBatchUpsert = internalMutation({
         supportedUseCases: v.optional(v.array(v.string())),
         contextWindowTokens: v.optional(v.number()),
         maxOutputTokens: v.optional(v.number()),
+        // Only OpenRouter reports prices; the others leave these unset and an
+        // admin types them in. Sending them through the sync is what makes those
+        // models arrive costed rather than throttled for want of a rate.
+        standardInputCostBelow200k: v.optional(v.number()),
+        standardInputCostAbove200k: v.optional(v.number()),
+        outputResponseCost: v.optional(v.number()),
       })
     ),
   },
@@ -888,7 +1095,13 @@ export const internalBatchUpsert = internalMutation({
 
     for (const incomingModel of args.models) {
       const providerModelId = incomingModel.providerModelId ?? incomingModel.modelId;
-      const stableModelId = incomingModel.modelId.includes(":")
+      // A colon used to mean "already provider-qualified". That held while every
+      // provider's own ids were colon-free — and stops holding the moment a
+      // provider publishes ids like `vendor/model:variant`, which would be
+      // stored unqualified and could collide in `by_model_id` with another
+      // provider's row. The question was always "is this already prefixed with
+      // *this* provider", so that is what it now asks.
+      const stableModelId = incomingModel.modelId.startsWith(`${providerKey}:`)
         ? incomingModel.modelId
         : providerKey === GOOGLE_VERTEX_PROVIDER_KEY
           ? incomingModel.modelId
@@ -903,11 +1116,31 @@ export const internalBatchUpsert = internalMutation({
           providerKey,
           providerModelId,
           displayName: incomingModel.displayName,
+          // Rebuilt on every write, because a stale search field is a model the
+          // reader cannot find and has no way to know is missing.
+          searchText: buildModelSearchText({
+            friendlyName: existing.friendlyName,
+            displayName: incomingModel.displayName,
+            modelId: stableModelId,
+            providerModelId,
+          }),
           description: incomingModel.description,
           capabilities: incomingModel.capabilities,
           supportedUseCases: incomingModel.supportedUseCases,
           contextWindowTokens: incomingModel.contextWindowTokens,
           maxOutputTokens: incomingModel.maxOutputTokens,
+          // A provider that reports prices keeps them current. One that does not
+          // must not blank out what an admin typed in, so these are only written
+          // when the sync actually supplied them.
+          ...(incomingModel.standardInputCostBelow200k !== undefined
+            ? { standardInputCostBelow200k: incomingModel.standardInputCostBelow200k }
+            : {}),
+          ...(incomingModel.standardInputCostAbove200k !== undefined
+            ? { standardInputCostAbove200k: incomingModel.standardInputCostAbove200k }
+            : {}),
+          ...(incomingModel.outputResponseCost !== undefined
+            ? { outputResponseCost: incomingModel.outputResponseCost }
+            : {}),
           status: "available",
           lastSyncedAt: now,
         });
@@ -917,6 +1150,11 @@ export const internalBatchUpsert = internalMutation({
           providerKey,
           providerModelId,
           displayName: incomingModel.displayName,
+          searchText: buildModelSearchText({
+            displayName: incomingModel.displayName,
+            modelId: stableModelId,
+            providerModelId,
+          }),
           description: incomingModel.description,
           isEnabled: false,
           isDefault: false,
@@ -925,6 +1163,9 @@ export const internalBatchUpsert = internalMutation({
           supportedUseCases: incomingModel.supportedUseCases,
           contextWindowTokens: incomingModel.contextWindowTokens,
           maxOutputTokens: incomingModel.maxOutputTokens,
+          standardInputCostBelow200k: incomingModel.standardInputCostBelow200k,
+          standardInputCostAbove200k: incomingModel.standardInputCostAbove200k,
+          outputResponseCost: incomingModel.outputResponseCost,
           inputTokenUnit: "token",
           outputTokenUnit: "token",
           currency: "USD",
@@ -934,6 +1175,9 @@ export const internalBatchUpsert = internalMutation({
         });
       }
     }
+
+    // Once, after the whole batch, rather than once per model.
+    await recomputeModelRollup(ctx);
 
     const activeDefault = await ctx.db
       .query("aiModels")
@@ -966,6 +1210,31 @@ export const internalBatchUpsert = internalMutation({
       }
     }
     return true;
+  },
+});
+
+/**
+ * Give existing rows a search field.
+ *
+ * `searchText` is maintained on write, but rows that predate it have none — and
+ * a model with no search text is invisible to the catalogue search while looking
+ * perfectly normal in the list. Run once after deploying; safe to run again.
+ */
+export const backfillModelSearchText = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const models = await ctx.db.query("aiModels").take(MODEL_CATALOG_LIMIT);
+    let updatedCount = 0;
+
+    for (const model of models) {
+      const searchText = buildModelSearchText(model);
+      if (model.searchText === searchText) continue;
+      await ctx.db.patch(model._id, { searchText });
+      updatedCount += 1;
+    }
+
+    await recomputeModelRollup(ctx);
+    return { updatedCount, isPartial: models.length >= MODEL_CATALOG_LIMIT };
   },
 });
 
@@ -1017,7 +1286,22 @@ export const updatePricingConfig = superAdminMutation({
     const { userId } = ctx;
 
     const { modelId, ...fields } = args;
-    await ctx.db.patch(modelId, fields);
+    const existing = await ctx.db.get(modelId);
+    await ctx.db.patch(modelId, {
+      ...fields,
+      // The friendly name is the one a reader chose, so it is the one they are
+      // most likely to search for.
+      ...(existing
+        ? {
+            searchText: buildModelSearchText({
+              friendlyName: fields.friendlyName ?? existing.friendlyName,
+              displayName: existing.displayName,
+              modelId: existing.modelId,
+              providerModelId: existing.providerModelId,
+            }),
+          }
+        : {}),
+    });
 
     const targetModel = await ctx.db.get(modelId);
     await ctx.db.insert("auditLogs", {
@@ -1028,6 +1312,42 @@ export const updatePricingConfig = superAdminMutation({
       timestamp: Date.now(),
       metadata: JSON.stringify({ model: targetModel?.modelId, fields })
     });
+  },
+});
+
+/**
+ * One model's record, found by its stable id.
+ *
+ * Three runtime paths wanted a single model in order to price a call, and each
+ * read the *whole catalogue* and built a Map to find it. That cost one document
+ * per model in the deployment, per call — invisible at twenty models and a real
+ * read on every agent step once a gateway provider adds hundreds.
+ *
+ * `by_model_id` answers the same question in one lookup.
+ */
+export const getModelByIdInternal = internalQuery({
+  args: { modelId: v.string() },
+  handler: async (ctx, args) => {
+    const model = await getModelByStableId(ctx, args.modelId);
+    return model ? withInferredProvider(model) : null;
+  },
+});
+
+/**
+ * The model ids this deployment has switched on.
+ *
+ * Returns ids rather than whole documents: the only caller needs a list to pick
+ * a grader from, and shipping every field of every model to do that is the same
+ * waste in a different shape.
+ */
+export const getEnabledModelIdsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const models = await ctx.db
+      .query("aiModels")
+      .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+      .take(MODEL_CATALOG_LIMIT);
+    return models.map((model) => model.modelId);
   },
 });
 

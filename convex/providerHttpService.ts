@@ -7,6 +7,44 @@ import {
 
 export type ProviderFetch = typeof fetch;
 
+/**
+ * Split an SSE chunk into the JSON payloads it carries.
+ *
+ * Every streaming provider frames its stream the same way — `data:` lines,
+ * blank-line separators, and a terminating `[DONE]` sentinel — so the framing
+ * belongs here rather than in each adapter. `anthropicStreamService` predates
+ * this helper and carries its own copy; it can adopt this one whenever that path
+ * is next touched.
+ *
+ * The trailing partial line is handed back rather than parsed, because a chunk
+ * boundary lands mid-line often enough that parsing it would drop frames.
+ */
+export function parseProviderSseChunk(chunk: string, buffer: string) {
+  const combined = buffer + chunk;
+  const lines = combined.split("\n");
+  const remainder = lines.pop() ?? "";
+
+  const payloads: unknown[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+
+    const payload = trimmed.slice("data:".length).trim();
+    if (payload.length === 0 || payload === "[DONE]") continue;
+
+    try {
+      payloads.push(JSON.parse(payload));
+    } catch {
+      // A frame that will not parse is skipped rather than failing the run.
+      // Aborting a half-delivered answer over one malformed frame is worse for
+      // the reader than a missing fragment.
+      continue;
+    }
+  }
+
+  return { payloads, remainder };
+}
+
 export function assertTextOnlyContents(contents: Array<{ type: string }>, providerName: string) {
   const unsupported = contents.find((part) => part.type !== "text");
   if (unsupported) {

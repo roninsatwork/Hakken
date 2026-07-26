@@ -7,21 +7,32 @@ import { Cpu, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import {
+  AdminTableEmptyRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { getErrorMessage } from "@/src/lib/errors";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
+import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
+import { cn } from "@/src/ui/lib/utils";
 import {
   describeModelUseCase,
+  formatModelDisplayName,
   formatModelTag,
   formatTokenCost,
   getProviderDisplayName,
   modelSupportsUseCase,
-  ModelAdminHeader,
   type GlobalDefaultRow,
 } from "../_components/modelAdminUtils";
 
 export default function AIModelDefaultsPage() {
-  const allModelsResult = useQuery(api.aiModels.getModels);
+  // Only models that can actually be chosen — enabled, and on a provider that is
+  // switched on. The unfiltered catalogue read that used to be here is what made
+  // this screen a four-hundred-item dropdown once a large provider synced.
+  const allModelsResult = useQuery(api.aiModels.getActiveModels, {});
   const providersResult = useQuery(api.aiModels.getProviders);
   const globalDefaultsResult = useQuery(api.aiModels.getGlobalModelDefaults);
   const setGlobalModelDefault = useMutation(api.aiModels.setGlobalModelDefault);
@@ -49,11 +60,26 @@ export default function AIModelDefaultsPage() {
     const input = formatTokenCost(model.standardInputCostBelow200k);
     const output = formatTokenCost(model.outputResponseCost);
     if (input === "—" && output === "—") return "No price set";
-    return `${input} in · ${output} out per million`;
+    // The unit is said once, in the panel header. Printing "per million" on all
+    // ten rows was the same three words ten times down one edge.
+    return `${input} in · ${output} out`;
   };
 
   const enabledModels = allModels.filter((model) => model.isEnabled);
   const everyJobModel = enabledModels.find((model) => model._id === everyJobModelId);
+
+  // Which of the jobs on this screen the chosen model can actually take over.
+  // Said before the action runs rather than discovered afterwards — "every job"
+  // was never true for most models, and the rows it could not take were left
+  // pointing at whatever was there before.
+  const everyJobSplit = everyJobModel
+    ? globalDefaults.reduce<{ can: string[]; cannot: string[] }>((split, row) => {
+        const canServe = modelSupportsUseCase(everyJobModel, row.useCase)
+          && canProviderServeUseCase(everyJobModel.providerKey, row.useCase);
+        split[canServe ? "can" : "cannot"].push(row.useCase);
+        return split;
+      }, { can: [], cannot: [] })
+    : { can: [], cannot: [] };
 
   /**
    * Point every job at one model.
@@ -98,99 +124,160 @@ export default function AIModelDefaultsPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full h-full pb-12">
-      <ModelAdminHeader
+      <AdminPageHeader
+        divider
         icon={<Cpu className="w-6 h-6 text-brand" />}
         title="Model Defaults"
-        subtitle="Which model handles each kind of work, unless something more specific says otherwise."
+        description="Which model handles each kind of work, unless something more specific says otherwise."
       />
       <AiWorkspaceNav />
       <AdminSaveError>{defaultsError}</AdminSaveError>
 
-      <section className="overflow-hidden rounded-[16px] border border-border-dim bg-card/40 shadow-sm backdrop-blur-xl">
-        <div className="border-b border-border-dim px-5 py-4">
-          <h2 className="text-[14px] font-bold text-foreground">Platform Defaults</h2>
-          <p className="mt-1 text-[12px] text-secondary">
-            The model Sonae reaches for when nothing more specific has been chosen. A company, an agent or a workflow can override any of these.
-          </p>
-        </div>
-        <div className="divide-y divide-border-dim/70">
+      <p className="text-[13px] text-secondary">
+        The model Sonae reaches for when nothing more specific has been chosen. A company, an agent
+        or a workflow can override any of these. Prices are per million tokens.
+      </p>
+
+      {/* The standard admin table, as the Model Catalogue and AI Providers use.
+          This screen was nine tall rows of label, paragraph, full-width dropdown
+          and a floating price — every row a different height, and nothing lining
+          up down the page. */}
+      <AdminTableShell minWidthClassName="min-w-[860px]">
+        <thead>
+          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+            <th className="px-4 py-3 font-medium w-[38%]">Job</th>
+            <th className="px-4 py-3 font-medium w-[42%]">Model</th>
+            <th className="px-4 py-3 font-medium w-[20%] text-right">Price</th>
+          </tr>
+        </thead>
+        <tbody>
           {isLoading ? (
-            <div className="px-5 py-16 flex justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-brand" />
-            </div>
+            <AdminTableLoadingRow colSpan={3} />
           ) : globalDefaults.length === 0 ? (
-            <div className="px-5 py-6 text-[13px] text-muted">No default rows loaded yet.</div>
+            <AdminTableEmptyRow
+              colSpan={3}
+              icon={<Cpu className="w-8 h-8 text-muted/30" />}
+              label="No jobs to configure yet"
+            />
           ) : (
             globalDefaults.map((row) => {
-              const candidates = allModels.filter((model) => model.isEnabled && modelSupportsUseCase(model, row.useCase));
+              // Only models that can actually do this job. The screen used to
+              // offer every enabled model for every row, so a reader could pick
+              // one that would fail at run time — and find out only when the
+              // work did not happen.
+              const candidates = allModels.filter((model) =>
+                model.isEnabled
+                && modelSupportsUseCase(model, row.useCase)
+                && canProviderServeUseCase(model.providerKey, row.useCase)
+              );
+              const providerLimit = describeUseCaseProviderLimit(row.useCase);
+
+              /**
+               * A default can be set to a model this row would not offer —
+               * "Apply to every job" wrote every row without checking, and a
+               * model's supported jobs can be narrowed by a later sync.
+               *
+               * When that happens the dropdown's value matches no option, so a
+               * browser silently displays the *first* one — "No platform
+               * default" — beside a price for the default that does exist. The
+               * screen contradicted itself, and touching the dropdown at all
+               * fired a change with an empty value and cleared the setting.
+               *
+               * So the model that is actually set is always an option, named and
+               * marked as unable to do the job.
+               */
+              const selectedModelId = row.default?.modelId ?? "";
+              const isStranded = Boolean(selectedModelId)
+                && !candidates.some((model) => model.modelId === selectedModelId);
+              const strandedModel = isStranded
+                ? allModels.find((model) => model.modelId === selectedModelId)
+                : undefined;
               const isSaving = savingDefaultUseCase === row.useCase;
 
               return (
-                <div key={row.useCase} className="grid grid-cols-1 gap-3 px-5 py-4 md:grid-cols-[260px_1fr_140px] md:items-start">
-                  <div>
-                    <p className="text-[13px] font-semibold text-foreground">{formatModelTag(row.useCase)}</p>
+                <tr key={row.useCase} className="border-b border-border-dim/50">
+                  <td className="px-4 py-3 align-top">
+                    <div className="text-[13px] font-semibold text-foreground">{formatModelTag(row.useCase)}</div>
                     {/* What the job is, in a sentence. The internal key used to
-                        sit here instead, printing the same word twice — once
-                        for a person and once for a machine. */}
-                    <p className="text-[12px] leading-relaxed text-secondary mt-1">{describeModelUseCase(row.useCase)}</p>
-                  </div>
-                  <select
-                    value={row.default?.modelId || ""}
-                    disabled={isSaving}
-                    onChange={(event) => setPlatformDefault(row.useCase, event.target.value)}
-                    className="min-w-0 rounded-[12px] border border-border-dim bg-background/60 px-3 py-2.5 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60"
-                  >
-                    <option value="">No platform default</option>
-                    {candidates.map((model) => (
-                      <option key={model.modelId} value={model.modelId}>
-                        {getProviderDisplayName(model.providerKey, providerNameByKey)} / {model.friendlyName || model.displayName || model.modelId}
-                      </option>
-                    ))}
-                  </select>
-                  {/* A badge reading "Configured" on every row costs attention
-                      and carries no information. Only the exception is worth
-                      saying, and the cost of the choice is worth showing where
-                      the choice is made. */}
-                  <div className="flex justify-start md:justify-end md:pt-2">
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-brand" />
-                    ) : row.default ? (
-                      <span className="text-[11px] text-muted text-right">
-                        {selectedCost(row.default.modelId)}
-                      </span>
-                    ) : (
-                      <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-amber-400">
-                        Not set
-                      </span>
+                        sit here instead, printing the same word twice — once for
+                        a person and once for a machine. */}
+                    <div className="text-[12px] leading-relaxed text-secondary mt-0.5">
+                      {describeModelUseCase(row.useCase)}
+                    </div>
+                    {/* A short list with no explanation reads as a bug; a short
+                        list with a reason reads as a constraint. */}
+                    {providerLimit && (
+                      <div className="text-[11px] leading-relaxed text-muted mt-1">{providerLimit}</div>
                     )}
-                  </div>
-                </div>
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <select
+                      value={selectedModelId}
+                      disabled={isSaving}
+                      onChange={(event) => setPlatformDefault(row.useCase, event.target.value)}
+                      className={cn(
+                        "w-full min-w-0 rounded-[8px] border bg-card px-3 h-9 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
+                        isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
+                      )}
+                    >
+                      <option value="">No platform default</option>
+                      {strandedModel && (
+                        <option value={strandedModel.modelId}>
+                          {formatModelDisplayName(strandedModel)} — cannot do this job
+                        </option>
+                      )}
+                      {candidates.map((model) => (
+                        <option key={model.modelId} value={model.modelId}>
+                          {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                        </option>
+                      ))}
+                    </select>
+                    {isStranded && (
+                      <div className="text-[11px] leading-relaxed text-[#f59e0b] mt-1">
+                        This model cannot do this job, so the work falls through to whatever is set
+                        below it. Choose another, or clear it.
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 align-top text-right">
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-brand inline-block" />
+                    ) : row.default ? (
+                      <span className="text-[12px] text-secondary">{selectedCost(row.default.modelId)}</span>
+                    ) : (
+                      // Only the exception is worth saying. A badge reading
+                      // "Configured" on every row cost attention and carried no
+                      // information.
+                      <span className="text-[12px] text-[#f59e0b]">Not set</span>
+                    )}
+                  </td>
+                </tr>
               );
             })
           )}
-        </div>
+        </tbody>
+      </AdminTableShell>
 
-        {/* Bulk assignment lives here rather than on a catalogue row, and it
-            names what it overwrites. */}
-        {globalDefaults.length > 0 && (
-        <div className="border-t border-border-dim px-5 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {/* Bulk assignment lives here rather than on a catalogue row, and it names
+          what it overwrites. */}
+      {globalDefaults.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-[8px] border border-border-dim bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-[13px] font-semibold text-foreground">Use one model for every job</h3>
-            <p className="mt-1 text-[12px] text-secondary">
-              Sets all {globalDefaults.length} rows above at once. Useful when setting up; it will
-              replace every choice you have made here.
+            <p className="mt-0.5 text-[12px] text-secondary">
+              Sets every row above that the model can handle. It will replace those choices.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <select
               value={everyJobModelId}
               onChange={(event) => setEveryJobModelId(event.target.value)}
-              className="min-w-0 rounded-[12px] border border-border-dim bg-background/60 px-3 py-2.5 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 sm:w-[280px]"
+              className="h-9 min-w-0 rounded-[8px] border border-border-dim bg-background/60 px-3 text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-[260px]"
             >
               <option value="">Choose a model</option>
               {enabledModels.map((model) => (
                 <option key={model._id} value={model._id}>
-                  {getProviderDisplayName(model.providerKey, providerNameByKey)} / {model.friendlyName || model.displayName || model.modelId}
+                  {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
                 </option>
               ))}
             </select>
@@ -198,14 +285,13 @@ export default function AIModelDefaultsPage() {
               type="button"
               disabled={!everyJobModel}
               onClick={() => setIsEveryJobConfirmOpen(true)}
-              className="h-10 shrink-0 rounded-[8px] border border-border-dim px-4 text-[13px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
+              className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
             >
-              Apply to every job
+              Apply
             </button>
           </div>
         </div>
-        )}
-      </section>
+      )}
 
       <SonaeModal
         isOpen={isEveryJobConfirmOpen}
@@ -215,19 +301,25 @@ export default function AIModelDefaultsPage() {
       >
         <div className="flex flex-col gap-5 px-1 pb-2">
           <p className="text-[13px] leading-relaxed text-secondary">
-            Every job above will be handled by{" "}
             <span className="font-semibold text-foreground">
-              {everyJobModel?.friendlyName || everyJobModel?.displayName || everyJobModel?.modelId}
-            </span>
-            , replacing the choices currently set:
+              {everyJobModel ? formatModelDisplayName(everyJobModel) : ""}
+            </span>{" "}
+            will take over {everyJobSplit.can.length} of the {globalDefaults.length} jobs above,
+            replacing what is set for each:
           </p>
           <p className="text-[12px] leading-relaxed text-muted">
-            {globalDefaults.map((row) => formatModelTag(row.useCase)).join(", ")}.
+            {everyJobSplit.can.map(formatModelTag).join(", ")}.
           </p>
-          <p className="text-[12px] leading-relaxed text-secondary">
-            Turning documents into something searchable needs an embedding model, so check that
-            this one can do that job before applying it to all of them.
-          </p>
+          {everyJobSplit.cannot.length > 0 && (
+            // Named rather than silently skipped. "Apply to every job" used to
+            // write all ten rows without checking, which is how a model ended up
+            // set for a job it cannot do.
+            <p className="text-[12px] leading-relaxed text-[#f59e0b]">
+              It cannot do {everyJobSplit.cannot.map(formatModelTag).join(", ")}, so
+              {everyJobSplit.cannot.length === 1 ? " that row is" : " those rows are"} left as
+              {everyJobSplit.cannot.length === 1 ? " it is" : " they are"}.
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <button
               type="button"

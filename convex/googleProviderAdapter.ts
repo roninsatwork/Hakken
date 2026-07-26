@@ -50,6 +50,14 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
         const thinkingLevel = parseGoogleThinkingLevel(request.thinkingLevel);
         if (thinkingLevel) config.thinkingConfig = { thinkingLevel };
       }
+      if (request.jsonSchema) {
+        // Vertex takes JSON Schema directly here; the SDK's `Schema` type is a
+        // typed view over the same shape, which is why the call sites that
+        // built one by hand could be moved to plain schemas without changing
+        // what the model receives.
+        config.responseMimeType = "application/json";
+        config.responseSchema = request.jsonSchema as GenerateContentConfig["responseSchema"];
+      }
 
       const response = await generateVertexContentWithRetry(ai, {
         model: request.model.providerModelId,

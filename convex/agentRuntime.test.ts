@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -144,6 +144,24 @@ function toolCallResponse(calls: Array<{ name: string; args?: Record<string, unk
 
 const makeTest = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type TestConvex = ReturnType<typeof makeTest>;
+
+/**
+ * Pay the one-off cost before the clock starts on any single test.
+ *
+ * `convexTest` loads the whole deployment's module graph the first time an
+ * instance is built, so whichever test ran first absorbed it: measured here,
+ * that first test took 835ms while every other test in the file took under
+ * 50ms. Under a full parallel suite the same initialisation stretched past the
+ * five-second default and failed the test — intermittently, and always the
+ * first one, which reads like a broken assertion rather than a cold start.
+ *
+ * Warming it in a hook with its own generous budget keeps the per-test limit
+ * meaningful: a test that now exceeds five seconds is genuinely slow, rather
+ * than unlucky in the running order.
+ */
+beforeAll(async () => {
+  await makeTest().run(async () => {});
+}, 60_000);
 
 /**
  * Seed the minimum an agent run needs: a tenant, a user, an enabled model, an

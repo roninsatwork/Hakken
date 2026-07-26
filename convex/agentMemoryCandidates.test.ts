@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 const paginationOpts = { numItems: 10, cursor: null };
@@ -393,5 +394,142 @@ describe("Agent Memory Candidates", () => {
       "APPLY_AGENT_MEMORY_CANDIDATE",
       "REJECT_AGENT_MEMORY_CANDIDATE",
     ]);
+  });
+
+  test("a finished run proposes on its own, and stops repeating itself", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { agentId, companyId, adminId, firstRunId, secondRunId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Loop Co", createdAt: now });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Looping Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Two separate runs that each earn the same templated suggestion.
+      const runIds = [] as Id<"agentRuns">[];
+      for (const objective of ["Summarize pipeline risk", "Summarize pipeline risk"]) {
+        const runId = await ctx.db.insert("agentRuns", {
+          agentId,
+          companyId,
+          userId: adminId,
+          triggerType: "CHAT",
+          objective,
+          status: "SUCCESS",
+          finalOutput: "Done.",
+          startedAt: now,
+          completedAt: now,
+          updatedAt: now,
+        });
+        await ctx.db.insert("agentRunFeedback", {
+          runId,
+          agentId,
+          companyId,
+          userId: adminId,
+          rating: "POSITIVE",
+          labels: ["GOOD_ANSWER"],
+          createdAt: now,
+          updatedAt: now,
+        });
+        runIds.push(runId);
+      }
+
+      return { agentId, companyId, adminId, firstRunId: runIds[0], secondRunId: runIds[1] };
+    });
+    void companyId;
+    void adminId;
+
+    // No admin pressed anything: this is the pass that runs when a run ends.
+    const first = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: firstRunId });
+    expect(first.createdIds).toHaveLength(1);
+    expect(first.appliedIds).toEqual([]);
+
+    const proposed = await t.run(async (ctx) => await ctx.db
+      .query("agentMemoryCandidates")
+      .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+      .collect());
+    expect(proposed).toHaveLength(1);
+    // Proposed by the platform, so no admin is named as its author.
+    expect(proposed[0].createdBy).toBeUndefined();
+
+    // A second run wording it identically must not queue it twice. Dedupe used
+    // to be scoped to a single run, so this produced a duplicate every time.
+    const second = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: secondRunId });
+    expect(second.createdIds).toEqual([]);
+  });
+
+  test("a suggestion turned down once is not proposed by the next run", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { agentId, adminId, firstRunId, secondRunId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Reject Co", createdAt: now });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Rejecting Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const runIds = [] as Id<"agentRuns">[];
+      for (let index = 0; index < 2; index += 1) {
+        const runId = await ctx.db.insert("agentRuns", {
+          agentId,
+          companyId,
+          userId: adminId,
+          triggerType: "CHAT",
+          objective: "Summarize pipeline risk",
+          status: "SUCCESS",
+          finalOutput: "Done.",
+          startedAt: now,
+          completedAt: now,
+          updatedAt: now,
+        });
+        await ctx.db.insert("agentRunFeedback", {
+          runId,
+          agentId,
+          companyId,
+          userId: adminId,
+          rating: "POSITIVE",
+          labels: ["GOOD_ANSWER"],
+          createdAt: now,
+          updatedAt: now,
+        });
+        runIds.push(runId);
+      }
+
+      return { agentId, adminId, firstRunId: runIds[0], secondRunId: runIds[1] };
+    });
+
+    const first = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: firstRunId });
+    const candidateId = first.createdIds[0];
+    expect(candidateId).toBeDefined();
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    await adminClient.mutation(api.agentMemoryCandidates.decideCandidate, {
+      candidateId,
+      decision: "REJECTED",
+      rejectionReason: "Not worth remembering.",
+    });
+
+    // Without a fingerprint the automatic pass would offer this again after
+    // every single run until someone gave in and approved it.
+    const second = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: secondRunId });
+    expect(second.createdIds).toEqual([]);
+
+    const stillProposed = await t.run(async (ctx) => await ctx.db
+      .query("agentMemoryCandidates")
+      .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+      .collect());
+    expect(stillProposed).toEqual([]);
   });
 });

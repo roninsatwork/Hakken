@@ -4,11 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { getGoogleVertexProviderModelId } from "./aiModelService";
-import {
-  createVertexGenAIClient,
-  generateVertexContentWithRetry,
-} from "./vertexProviderService";
+import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import {
   buildGradingPrompt,
@@ -57,8 +53,6 @@ export const gradeSmokeEvalWithModel = internalAction({
       providerKey = modelConfig.providerKey;
       providerModelId = modelConfig.providerModelId;
 
-      const ai = createVertexGenAIClient();
-
       // Run the objective through the real runtime rather than calling the
       // provider directly. The previous version sent the system prompt and the
       // objective and nothing else — no tools, memories, skills, retrieval,
@@ -87,12 +81,10 @@ export const gradeSmokeEvalWithModel = internalAction({
       // marking its own homework favours its own output, and a model that has
       // just confidently asserted something wrong is the least likely thing to
       // notice — so the grade measured self-consistency, not correctness.
-      const enabledModels = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {});
+      const enabledModelIds = await ctx.runQuery(internal.aiModels.getEnabledModelIdsInternal, {});
       const grader = selectGraderModel({
         targetModelId: modelConfig.modelId,
-        enabledModelIds: enabledModels
-          .filter((model) => model.isEnabled)
-          .map((model) => model.modelId),
+        enabledModelIds,
       });
       const graderConfig = grader.independent
         ? await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
@@ -102,23 +94,21 @@ export const gradeSmokeEvalWithModel = internalAction({
         })
         : modelConfig;
 
-      const gradingResponse = await generateVertexContentWithRetry(ai, {
-        model: getGoogleVertexProviderModelId(graderConfig, "agent smoke eval grading"),
+      // Through the registry, so a grader on any provider can grade. Grading
+      // independently means grading with a *different* model than the one under
+      // test, which was impossible to guarantee while every grade had to run on
+      // Vertex.
+      const gradingResponse = await generateTextWithResolvedModel({
+        model: graderConfig,
         contents: [{
-          role: "user",
-          parts: [{
-            text: buildGradingPrompt({
-              objective: context.fixture.objective,
-              expectedFinalOutputRubric: context.fixture.expectedFinalOutputRubric,
-              modelOutput,
-            }),
-          }],
+          type: "text",
+          text: buildGradingPrompt({
+            objective: context.fixture.objective,
+            expectedFinalOutputRubric: context.fixture.expectedFinalOutputRubric,
+            modelOutput,
+          }),
         }],
-        config: {
-          temperature: 0,
-        },
-      }, {
-        operation: "agentSmokeEvalGrade",
+        temperature: 0,
       });
       const gradingOutput = gradingResponse.text || "";
       const grade = parseGradeVerdict(gradingOutput);
@@ -149,8 +139,8 @@ export const gradeSmokeEvalWithModel = internalAction({
         providerModelId,
         // The agent's own spend is already recorded against its run; this adds
         // what the grading pass cost on top.
-        inputTokens: outcome.inputTokens + (gradingResponse.usageMetadata?.promptTokenCount || 0),
-        outputTokens: outcome.outputTokens + (gradingResponse.usageMetadata?.candidatesTokenCount || 0),
+        inputTokens: outcome.inputTokens + (gradingResponse.inputTokens || 0),
+        outputTokens: outcome.outputTokens + (gradingResponse.outputTokens || 0),
       });
     } catch (error: unknown) {
       const errorMessage = normalizeAiRuntimeError(error, "Model-graded smoke eval failed.").error;

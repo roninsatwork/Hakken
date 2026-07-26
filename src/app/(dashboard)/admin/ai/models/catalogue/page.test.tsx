@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import AIModelCataloguePage from "./page";
 
 vi.mock("next/navigation", () => ({
@@ -26,22 +26,29 @@ vi.mock("@/src/hooks/useDebounce", () => ({
   default: (value: string) => value,
 }));
 
+// The catalogue pages in the database now, so the screen drives
+// `usePaginatedQuery` rather than passing a page number to a query.
+function mockPaginatedModels(results: unknown[] = []) {
+  vi.mocked(usePaginatedQuery).mockReturnValue({
+    results,
+    status: "Exhausted",
+    isLoading: false,
+    loadMore: vi.fn(),
+  } as unknown as ReturnType<typeof usePaginatedQuery>);
+}
+
 describe("AIModelCataloguePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockReturnValue({
-      data: [],
-      totalCount: 0,
-      totalPages: 1,
-      page: 1,
-    });
+    mockPaginatedModels();
+    vi.mocked(useQuery).mockReturnValue(undefined);
     vi.mocked(useMutation).mockReturnValue(vi.fn().mockResolvedValue({}) as unknown as ReturnType<typeof useMutation>);
   });
 
   function latestModelQueryArgs() {
-    return vi.mocked(useQuery).mock.calls
-      .map((call) => call[1])
-      .findLast((args) => args && typeof args === "object" && "page" in args);
+    return vi.mocked(usePaginatedQuery).mock.calls.map((call) => call[1]).at(-1) as
+      | Record<string, unknown>
+      | undefined;
   }
 
   it("defaults to the active Convex query filter", () => {
@@ -51,7 +58,6 @@ describe("AIModelCataloguePage", () => {
       searchTerm: "",
       statusFilter: "active",
       providerFilter: "all",
-      page: 1,
     });
   });
 
@@ -59,16 +65,10 @@ describe("AIModelCataloguePage", () => {
     render(<AIModelCataloguePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Active" }));
-    expect(latestModelQueryArgs()).toMatchObject({
-      statusFilter: "active",
-      page: 1,
-    });
+    expect(latestModelQueryArgs()).toMatchObject({ statusFilter: "active" });
 
     fireEvent.click(screen.getByRole("button", { name: "Inactive" }));
-    expect(latestModelQueryArgs()).toMatchObject({
-      statusFilter: "inactive",
-      page: 1,
-    });
+    expect(latestModelQueryArgs()).toMatchObject({ statusFilter: "inactive" });
     expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
   });
 
@@ -102,10 +102,8 @@ describe("AIModelCataloguePage", () => {
       { _id: "m2", modelId: "free", providerModelId: "free", displayName: "Unpriced Model",
         providerKey: "google", isEnabled: true, isDefault: false },
     ];
-    vi.mocked(useQuery).mockImplementation(((_query: unknown, args: unknown) =>
-      args && typeof args === "object" && "page" in args
-        ? { data: models, totalCount: models.length, totalPages: 1, page: 1 }
-        : { defaults: [] }) as unknown as typeof useQuery);
+    mockPaginatedModels(models);
+    vi.mocked(useQuery).mockReturnValue({ defaults: [] } as unknown as ReturnType<typeof useQuery>);
 
     render(<AIModelCataloguePage />);
 
@@ -146,10 +144,8 @@ describe("AIModelCataloguePage", () => {
         { useCase: "router", default: null },
       ],
     };
-    vi.mocked(useQuery).mockImplementation(((_query: unknown, args: unknown) =>
-      args && typeof args === "object" && "page" in args
-        ? { data: models, totalCount: models.length, totalPages: 1, page: 1 }
-        : globalDefaults) as unknown as typeof useQuery);
+    mockPaginatedModels(models);
+    vi.mocked(useQuery).mockReturnValue(globalDefaults as unknown as ReturnType<typeof useQuery>);
 
     render(<AIModelCataloguePage />);
 
@@ -176,10 +172,8 @@ describe("AIModelCataloguePage", () => {
       { _id: "m1", modelId: "some-model", providerModelId: "some-model", displayName: "Some Model",
         providerKey: "google", isEnabled: true, isDefault: false, standardInputCostBelow200k: 1 },
     ];
-    vi.mocked(useQuery).mockImplementation(((_query: unknown, args: unknown) =>
-      args && typeof args === "object" && "page" in args
-        ? { data: models, totalCount: models.length, totalPages: 1, page: 1 }
-        : { defaults: [] }) as unknown as typeof useQuery);
+    mockPaginatedModels(models);
+    vi.mocked(useQuery).mockReturnValue({ defaults: [] } as unknown as ReturnType<typeof useQuery>);
 
     render(<AIModelCataloguePage />);
 

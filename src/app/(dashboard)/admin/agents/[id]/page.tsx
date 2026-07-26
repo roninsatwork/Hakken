@@ -23,7 +23,7 @@ export default function AgentDashboard() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
-  const activeModels = (useQuery(api.aiModels.getModels) || []) as Doc<"aiModels">[];
+  const activeModels = (useQuery(api.aiModels.getActiveModels, {}) || []) as Doc<"aiModels">[];
 
   const stats = useQuery(api.agentTransactions.getStatsForAgent, { agentId });
 

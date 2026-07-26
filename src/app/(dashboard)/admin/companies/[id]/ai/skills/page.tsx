@@ -23,7 +23,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { MAX_SKILLS_PER_COMPANY } from "@/convex/companySkills";
+import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
 
 type CompanySkill = Doc<"companySkills">;
 type GlobalSkill = Doc<"agentSkills">;

@@ -14,9 +14,8 @@ follow-fidelity rule below (0.1 per body segment) AND Anthony seeing it look rig
 
 **Environment / rules:**
 - Work on branch `dev`. Current HEAD: `4ffa204c6`. Everything below is committed and pushed.
-- Node 22.13.0 for trusted checks. If `npx -p node@22.13.0` can't reach the network, cached Node is at
-  `/Users/ants/.npm/_npx/1bd81ab945294a66/node_modules/node/bin` — prefix commands with
-  `PATH=/Users/ants/.npm/_npx/1bd81ab945294a66/node_modules/node/bin:$PATH`.
+- Node 24.18.0 for trusted checks. Use the checked-in `.nvmrc` / `.node-version`
+  and run `npm ci`; `npm run verify:env` enforces the current local baseline.
 - **sonae.ronins.co.uk is an OLD deployment** — always test on `localhost:3000`. See [[check-which-environment-anthony-sees]].
 - Never delete recordings/videos. Do not commit/push without Anthony asking (he has been approving each commit).
 - Read AGENTS.md.

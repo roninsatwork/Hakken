@@ -14,15 +14,27 @@ import {
   getSafeCompanyAiReturnTo,
 } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiFormPage";
 import {
-  CompanyMemoryFormFields,
-  type CompanyMemoryFormData,
-} from "@/src/app/(dashboard)/admin/companies/[id]/ai/memory/_components/CompanyMemoryFormFields";
+  MemoryApplyModeChoice,
+  MemoryContentField,
+  type MemoryApplyMode,
+} from "@/src/app/(dashboard)/admin/_components/MemoryFields";
+import {
+  AdminModalFormField,
+  adminModalInputClassName,
+  adminModalTextareaClassName,
+} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 
-const DEFAULT_FORM: CompanyMemoryFormData = {
+type ChatMemoryFormData = {
+  title: string;
+  content: string;
+  applyMode: MemoryApplyMode;
+  reason: string;
+};
+
+const DEFAULT_FORM: ChatMemoryFormData = {
   title: "",
   content: "",
-  category: "OTHER",
-  confidence: "0.7",
+  applyMode: "WHEN_RELEVANT",
   reason: "",
 };
 
@@ -57,9 +69,8 @@ export default function NewChatMemoryCandidatePage() {
       setFormData({
         title: thread.title ? `${thread.title.slice(0, 70)} memory` : "",
         content: selectedMessage.content,
-        category: "OTHER",
-        reason: `Candidate created from chat thread ${threadId}.`,
-        confidence: "0.7",
+        applyMode: "WHEN_RELEVANT",
+        reason: `Suggested from chat thread ${threadId}.`,
       });
       setHasHydrated(true);
   }
@@ -72,9 +83,8 @@ export default function NewChatMemoryCandidatePage() {
           messageId: selectedMessage?._id,
           title: formData.title || undefined,
           content: formData.content,
-          category: formData.category,
+          applyMode: formData.applyMode,
           reason: formData.reason || undefined,
-          confidence: Number(formData.confidence),
       }), {
       fallbackMessage: "Memory candidate could not be created.",
       // The form renders the message itself, so a toast would repeat it.
@@ -96,8 +106,8 @@ export default function NewChatMemoryCandidatePage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <CompanyAiFormPageHeader
         backHref={backHref}
-        title="Create Memory Candidate"
-        description="Turn selected chat evidence into a governed memory candidate without losing the source context."
+        title="Suggest a memory"
+        description="Turn something said in this conversation into a memory, for review on the Memory screen."
         icon={<BrainCircuit className="h-6 w-6 text-brand" />}
       />
 
@@ -121,10 +131,34 @@ export default function NewChatMemoryCandidatePage() {
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
           <AdminModalFormError>{action.error}</AdminModalFormError>
-          <CompanyMemoryFormFields formData={formData} setFormData={setFormData} showReason titleHint="Optional" />
+          <AdminModalFormField label="Title" hint="Optional">
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))}
+              className={adminModalInputClassName}
+              placeholder="No delivery dates over chat"
+            />
+          </AdminModalFormField>
+          <MemoryContentField
+            value={formData.content}
+            onChange={(content) => setFormData((current) => ({ ...current, content }))}
+          />
+          <MemoryApplyModeChoice
+            value={formData.applyMode}
+            onChange={(applyMode) => setFormData((current) => ({ ...current, applyMode }))}
+          />
+          <AdminModalFormField label="Why?" hint="Optional review note">
+            <textarea
+              value={formData.reason}
+              onChange={(event) => setFormData((current) => ({ ...current, reason: event.target.value }))}
+              className={adminModalTextareaClassName}
+              placeholder="Why should this become durable memory?"
+            />
+          </AdminModalFormField>
           <CompanyAiFormActions
             backHref={backHref}
-            submitLabel={action.isBusy() ? "Creating..." : "Create candidate"}
+            submitLabel={action.isBusy() ? "Saving..." : "Suggest memory"}
             isSubmitting={action.isBusy()}
           />
         </div>

@@ -610,6 +610,19 @@ reach Vertex fails and writes nothing.
   prose in a SKU description, with no structured model id to join on. Too brittle
   to depend on, which is what the Pricing column is for.
 
+### Moved out: the AI Providers screen
+
+Anthony asked for the Providers screen next, plus OpenRouter across the whole
+app. Reviewing it showed the screen's faults are mostly backend — a test that
+never calls the network, a disable that does not disable, and a catalogue query
+that is not actually paginated in the database. That work, and everything about
+provider resolution at run time, now lives in
+[openrouter-and-model-scale-plan.md](./openrouter-and-model-scale-plan.md).
+
+Two items raised below moved with it: **disabling a provider does not stop its
+models running** (Phase J), and **a stale default can outlive its own
+eligibility** (Phase P).
+
 ### Raised, not fixed
 
 Found while tracing E3, all outside these two phases and none of them

@@ -3,10 +3,8 @@
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Type, Schema } from "@google/genai";
 import { Doc } from "./_generated/dataModel";
-import { getGoogleVertexProviderModelId } from "./aiModelService";
-import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
+import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Unknown error during AI Generation";
 
@@ -49,88 +47,88 @@ export const generateReport = internalAction({
         throw new Error("Could not extract any CSV data from the knowledge base.");
     }
 
-    // 4. Initialize the configured Vertex client for the currently Google-specific report schema flow.
-    const ai = createVertexGenAIClient();
     const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
       requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
       companyId: args.companyId,
       useCase: "report",
     });
-    const targetModel = getGoogleVertexProviderModelId(modelConfig, "sales report generation");
 
     // 5. Define the Response Schema mapped exactly to our salesReports Convex Schema
-    const responseSchema: Schema = {
-      type: Type.OBJECT,
+    // Plain JSON Schema rather than Vertex's `Schema` type: identical shape and
+    // identical field descriptions, in the vocabulary every provider accepts.
+    // This schema was the only reason report generation could not leave Vertex.
+    const responseSchema = {
+      type: "object",
       properties: {
-        headline: { type: Type.STRING, description: "A punchy bold headline of the biggest news" },
-        executiveSummary: { type: Type.STRING, description: "Executive summary paragraph" },
+        headline: { type: "string", description: "A punchy bold headline of the biggest news" },
+        executiveSummary: { type: "string", description: "Executive summary paragraph" },
         kpis: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            totalPipeline: { type: Type.NUMBER },
-            totalPipelineChange: { type: Type.STRING, description: "String indicating delta or change e.g. '+£340k'" },
-            weightedPipeline: { type: Type.NUMBER },
-            weightedPipelineChange: { type: Type.STRING, description: "String indicating delta or change" },
-            openDeals: { type: Type.NUMBER },
-            openDealsChange: { type: Type.STRING, description: "String indicating delta or change e.g. '+3'" },
-            winRatePct: { type: Type.NUMBER, description: "Win rate from 0-100" },
-            winRatePctChange: { type: Type.STRING, description: "String indicating delta e.g. '▲ from 24%'" },
-            avgDealSize: { type: Type.NUMBER },
-            avgDealSizeChange: { type: Type.STRING, description: "String indicating delta" },
-            avgSalesCycleDays: { type: Type.NUMBER },
-            avgSalesCycleDaysChange: { type: Type.STRING, description: "String indicating delta e.g. '▼ from 71'" }
+            totalPipeline: { type: "number" },
+            totalPipelineChange: { type: "string", description: "String indicating delta or change e.g. '+£340k'" },
+            weightedPipeline: { type: "number" },
+            weightedPipelineChange: { type: "string", description: "String indicating delta or change" },
+            openDeals: { type: "number" },
+            openDealsChange: { type: "string", description: "String indicating delta or change e.g. '+3'" },
+            winRatePct: { type: "number", description: "Win rate from 0-100" },
+            winRatePctChange: { type: "string", description: "String indicating delta e.g. '▲ from 24%'" },
+            avgDealSize: { type: "number" },
+            avgDealSizeChange: { type: "string", description: "String indicating delta" },
+            avgSalesCycleDays: { type: "number" },
+            avgSalesCycleDaysChange: { type: "string", description: "String indicating delta e.g. '▼ from 71'" }
           },
           required: ["totalPipeline", "weightedPipeline", "openDeals", "winRatePct", "avgDealSize", "avgSalesCycleDays"]
         },
         closingWindows: {
-            type: Type.ARRAY,
-            items: { type: Type.OBJECT, properties: { window: { type: Type.STRING }, deals: { type: Type.NUMBER }, totalValue: { type: Type.NUMBER }, weightedValue: { type: Type.NUMBER } }, required: ["window", "deals", "totalValue", "weightedValue"] }
+            type: "array",
+            items: { type: "object", properties: { window: { type: "string" }, deals: { type: "number" }, totalValue: { type: "number" }, weightedValue: { type: "number" } }, required: ["window", "deals", "totalValue", "weightedValue"] }
         },
         topDeals: {
-            type: Type.ARRAY,
-            items: { type: Type.OBJECT, properties: { dealName: { type: Type.STRING }, rep: { type: Type.STRING }, value: { type: Type.NUMBER }, probability: { type: Type.NUMBER }, status: { type: Type.STRING } }, required: ["dealName", "rep", "value", "probability", "status"] }
+            type: "array",
+            items: { type: "object", properties: { dealName: { type: "string" }, rep: { type: "string" }, value: { type: "number" }, probability: { type: "number" }, status: { type: "string" } }, required: ["dealName", "rep", "value", "probability", "status"] }
         },
         chartData: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            funnel: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stage: { type: Type.STRING }, value: { type: Type.NUMBER }, count: { type: Type.NUMBER } }, required: ["stage", "value", "count"] } },
-            timeline: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { month: { type: Type.STRING }, expectedValue: { type: Type.NUMBER } }, required: ["month", "expectedValue"] } },
-            sources: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { source: { type: Type.STRING }, winRate: { type: Type.NUMBER }, count: { type: Type.NUMBER } }, required: ["source", "winRate", "count"] } }
+            funnel: { type: "array", items: { type: "object", properties: { stage: { type: "string" }, value: { type: "number" }, count: { type: "number" } }, required: ["stage", "value", "count"] } },
+            timeline: { type: "array", items: { type: "object", properties: { month: { type: "string" }, expectedValue: { type: "number" } }, required: ["month", "expectedValue"] } },
+            sources: { type: "array", items: { type: "object", properties: { source: { type: "string" }, winRate: { type: "number" }, count: { type: "number" } }, required: ["source", "winRate", "count"] } }
           },
           required: ["funnel", "timeline", "sources"]
         },
         pipelineHealth: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            byStage: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stage: { type: Type.STRING }, value: { type: Type.NUMBER }, valueFormatted: { type: Type.STRING, description: "e.g. '£780k (12 deals)'" }, barChart: { type: Type.STRING, description: "Text-based bar chart like ████░░░░░░░░░░░░░░░░" }, observation: { type: Type.STRING } }, required: ["stage", "value", "barChart", "observation"] } },
-            byRep: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { rep: { type: Type.STRING }, valPct: { type: Type.NUMBER }, valueFormatted: { type: Type.STRING, description: "e.g. '£420k (32%)'" }, barChart: { type: Type.STRING, description: "Text-based bar chart like ████░░░░░░░░░░░░░░░░" }, observation: { type: Type.STRING } }, required: ["rep", "valPct", "barChart", "observation"] } }
+            byStage: { type: "array", items: { type: "object", properties: { stage: { type: "string" }, value: { type: "number" }, valueFormatted: { type: "string", description: "e.g. '£780k (12 deals)'" }, barChart: { type: "string", description: "Text-based bar chart like ████░░░░░░░░░░░░░░░░" }, observation: { type: "string" } }, required: ["stage", "value", "barChart", "observation"] } },
+            byRep: { type: "array", items: { type: "object", properties: { rep: { type: "string" }, valPct: { type: "number" }, valueFormatted: { type: "string", description: "e.g. '£420k (32%)'" }, barChart: { type: "string", description: "Text-based bar chart like ████░░░░░░░░░░░░░░░░" }, observation: { type: "string" } }, required: ["rep", "valPct", "barChart", "observation"] } }
           },
           required: ["byStage", "byRep"]
         },
         riskRadar: {
-          type: Type.OBJECT,
+          type: "object",
           properties: {
-            critical: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { dealName: { type: Type.STRING }, rep: { type: Type.STRING }, value: { type: Type.NUMBER }, reason: { type: Type.STRING }, recommendation: { type: Type.STRING } }, required: ["dealName", "rep", "value", "reason", "recommendation"] } },
-            atRisk: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { dealName: { type: Type.STRING }, rep: { type: Type.STRING }, value: { type: Type.NUMBER }, reason: { type: Type.STRING }, recommendation: { type: Type.STRING } }, required: ["dealName", "rep", "value", "reason", "recommendation"] } },
-            quiet: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { dealName: { type: Type.STRING }, rep: { type: Type.STRING }, value: { type: Type.NUMBER }, reason: { type: Type.STRING }, recommendation: { type: Type.STRING } }, required: ["dealName", "rep", "value", "reason", "recommendation"] } }
+            critical: { type: "array", items: { type: "object", properties: { dealName: { type: "string" }, rep: { type: "string" }, value: { type: "number" }, reason: { type: "string" }, recommendation: { type: "string" } }, required: ["dealName", "rep", "value", "reason", "recommendation"] } },
+            atRisk: { type: "array", items: { type: "object", properties: { dealName: { type: "string" }, rep: { type: "string" }, value: { type: "number" }, reason: { type: "string" }, recommendation: { type: "string" } }, required: ["dealName", "rep", "value", "reason", "recommendation"] } },
+            quiet: { type: "array", items: { type: "object", properties: { dealName: { type: "string" }, rep: { type: "string" }, value: { type: "number" }, reason: { type: "string" }, recommendation: { type: "string" } }, required: ["dealName", "rep", "value", "reason", "recommendation"] } }
           },
           required: ["critical", "atRisk", "quiet"]
         },
         teamSpotlight: {
-            type: Type.OBJECT,
-            properties: { 
-               momentum: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { rep: { type: Type.STRING }, summary: { type: Type.STRING } }, required: ["rep", "summary"] }, description: "Array of reps demonstrating positive momentum" }, 
-               supportNeeded: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { rep: { type: Type.STRING }, summary: { type: Type.STRING } }, required: ["rep", "summary"] }, description: "Array of reps needing coaching or support" } 
+            type: "object",
+            properties: {
+               momentum: { type: "array", items: { type: "object", properties: { rep: { type: "string" }, summary: { type: "string" } }, required: ["rep", "summary"] }, description: "Array of reps demonstrating positive momentum" },
+               supportNeeded: { type: "array", items: { type: "object", properties: { rep: { type: "string" }, summary: { type: "string" } }, required: ["rep", "summary"] }, description: "Array of reps needing coaching or support" }
             },
             required: ["momentum", "supportNeeded"]
         },
         patterns: {
-            type: Type.ARRAY,
-            items: { type: Type.OBJECT, properties: { pattern: { type: Type.STRING }, observation: { type: Type.STRING } }, required: ["pattern", "observation"] }
+            type: "array",
+            items: { type: "object", properties: { pattern: { type: "string" }, observation: { type: "string" } }, required: ["pattern", "observation"] }
         },
         priorities: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
+            type: "array",
+            items: { type: "string" }
         }
       },
       required: ["headline", "executiveSummary", "kpis", "closingWindows", "topDeals", "chartData", "pipelineHealth", "riskRadar", "teamSpotlight", "patterns", "priorities"]
@@ -217,19 +215,11 @@ Total length: 600-900 words. Never pad.
     });
 
     try {
-        const modelResponse = await generateVertexContentWithRetry(ai, {
-            model: targetModel,
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: responseSchema,
-                temperature: 0.2 // Low temp for analytical accuracy
-            }
-        }, {
-            operation: "salesReportGenerate",
-            retryPolicy: {
-                maxAttempts: 5,
-            },
+        const modelResponse = await generateTextWithResolvedModel({
+            model: modelConfig,
+            contents: [{ type: "text", text: prompt }],
+            temperature: 0.2, // Low temp for analytical accuracy
+            jsonSchema: responseSchema,
         });
 
         const jsonText = modelResponse.text;
@@ -247,12 +237,12 @@ Total length: 600-900 words. Never pad.
         const reportData = JSON.parse(jsonText);
 
         // Record Telemetry and Cost Analytics
-        const inTokens = modelResponse.usageMetadata?.promptTokenCount || 0;
-        const outTokens = modelResponse.usageMetadata?.candidatesTokenCount || 0;
+        const inTokens = modelResponse.inputTokens || 0;
+        const outTokens = modelResponse.outputTokens || 0;
         
-        const allModelsRaw = await ctx.runQuery(internal.aiModels.getAllModelsInternal, {}) as Doc<"aiModels">[];
-        const modelMap = new Map(allModelsRaw.map((model) => [model.modelId, model]));
-        const config = modelMap.get(modelConfig.modelId);
+        const config = await ctx.runQuery(internal.aiModels.getModelByIdInternal, {
+          modelId: modelConfig.modelId,
+        });
         
         const inRate = config ? (inTokens > 200000 ? (config.standardInputCostAbove200k || 0) : (config.standardInputCostBelow200k || 0)) : 0;
         const outRate = config ? (config.outputResponseCost || 0) : 0;

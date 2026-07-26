@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import type { GenerateContentConfig } from "@google/genai";
 import { internal } from "./_generated/api";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import {
   createVertexGenAIClient,
   embedVertexContentWithRetry,
@@ -124,27 +125,51 @@ export const executeSwarmObjective = internalAction({
               companyId: tenantContext.companyId ?? undefined,
               useCase: "workflow",
            });
-           const targetModel = getGoogleVertexProviderModelId(modelConfig, "swarm workflow execution");
            finalModelConfig = modelConfig;
-           
+
            let safePayload = memoryPayload;
            if (safePayload.length > 10000) {
                safePayload = safePayload.substring(0, 10000) + "\n\n... [TRUNCATED DUE TO SIZE LIMITS]";
            }
 
-           const response = await generateVertexContentWithRetry(ai, {
-              model: targetModel,
-              contents: safePayload,
-              config
-           }, {
-              operation: "swarmMicroAgentGenerate",
-           });
+           // A Sourcing agent asks for Google Search grounding, which only
+           // Vertex offers, so those stay where the capability lives. Every
+           // other swarm agent goes through the registry.
+           const needsGoogleSearch = Boolean(config.tools?.length);
+           const generated: { text: string; inputTokens: number; outputTokens: number } = needsGoogleSearch
+             ? await (async () => {
+                 const vertexResponse = await generateVertexContentWithRetry(ai, {
+                    model: getGoogleVertexProviderModelId(modelConfig, "internet access for a swarm agent"),
+                    contents: safePayload,
+                    config
+                 }, {
+                    operation: "swarmMicroAgentGenerate",
+                 });
+                 return {
+                   text: vertexResponse.text || "",
+                   inputTokens: vertexResponse.usageMetadata?.promptTokenCount || 0,
+                   outputTokens: vertexResponse.usageMetadata?.candidatesTokenCount || 0,
+                 };
+               })()
+             : await (async () => {
+                 const registryResponse = await generateTextWithResolvedModel({
+                    model: modelConfig,
+                    systemInstruction: agent.systemPrompt || undefined,
+                    contents: [{ type: "text", text: safePayload }],
+                    temperature: 0.1,
+                 });
+                 return {
+                   text: registryResponse.text || "",
+                   inputTokens: registryResponse.inputTokens || 0,
+                   outputTokens: registryResponse.outputTokens || 0,
+                 };
+               })();
 
-           const output = response.text || "No actionable data recovered.";
-           lastOutput = output; 
+           const output = generated.text || "No actionable data recovered.";
+           lastOutput = output;
 
-           totalInTokens += response.usageMetadata?.promptTokenCount || 0;
-           totalOutTokens += response.usageMetadata?.candidatesTokenCount || 0;
+           totalInTokens += generated.inputTokens;
+           totalOutTokens += generated.outputTokens;
            
            await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
                agentId: agent._id,

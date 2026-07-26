@@ -41,7 +41,7 @@ type RuntimeCompanyMemory = {
   memoryId: Id<"companyMemories">;
   title: string;
   content: string;
-  category: string;
+  applyMode: "ALWAYS" | "WHEN_RELEVANT";
   confidence: number;
   score: number;
 };
@@ -140,7 +140,7 @@ function buildCompanyMemoryContext(memories: RuntimeCompanyMemory[]) {
 
   const rows = memories.map((memory, index) => {
     const content = memory.content.length > 700 ? `${memory.content.slice(0, 697)}...` : memory.content;
-    return `${index + 1}. [${memory.category}] ${memory.title}: ${content}`;
+    return `${index + 1}. ${memory.title}: ${content}`;
   });
 
   return `
@@ -157,7 +157,7 @@ function buildCompanyMemoryEvidence(memories: RuntimeCompanyMemory[]) {
     memories: memories.map((memory) => ({
       memoryId: memory.memoryId,
       title: memory.title,
-      category: memory.category,
+      applyMode: memory.applyMode,
       confidence: memory.confidence,
       score: memory.score,
     })),
@@ -228,31 +228,37 @@ export const generateSonaeResponse = internalAction({
         });
 
         // Dynamically extract the live Administrator protocol rulebook
-        const [customPrompt, customRules, company, companySkills] = await Promise.all([
+        const [customPrompt, customRules, company, companySkills, companyMemories] = await Promise.all([
             ctx.runQuery(internal.system.getInternalSystemPrompt),
             ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId }),
             thread?.companyId ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: thread.companyId }) : Promise.resolve(null),
             thread?.companyId
                 ? ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId: thread.companyId })
                 : Promise.resolve(null),
+            thread?.companyId
+                ? ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+                    companyId: thread.companyId,
+                    queryText: args.content,
+                    limit: 5,
+                })
+                : Promise.resolve(null),
         ]);
+
+        const alwaysMemories = companyMemories?.always ?? [];
+        const relevantMemories = companyMemories?.relevant ?? [];
 
         const activeSystemInstruction = buildAssistantSystemInstruction({
             globalSystemPrompt: customPrompt,
             companySystemPrompt: company?.systemPrompt,
             activeRules: customRules ?? [],
             companySkills: companySkills?.skills ?? [],
+            // Always memories are configuration, so they sit in the system
+            // instruction; only the looked-up ones go in the per-message block.
+            companyMemories: alwaysMemories,
         });
 
-        const companyMemories = thread?.companyId
-            ? await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
-                companyId: thread.companyId,
-                queryText: args.content,
-                limit: 5,
-            })
-            : [];
-        const companyMemoryContext = buildCompanyMemoryContext(companyMemories);
-        const companyMemoryEvidenceJson = buildCompanyMemoryEvidence(companyMemories);
+        const companyMemoryContext = buildCompanyMemoryContext(relevantMemories);
+        const companyMemoryEvidenceJson = buildCompanyMemoryEvidence([...alwaysMemories, ...relevantMemories]);
 
         // --- RAG VECTOR SEARCH PIPELINE ---
         let ragContext = "";
@@ -395,13 +401,17 @@ User Prompt: ${args.content}`;
             companyMemoryEvidenceJson,
         });
 
-        if (thread?.companyId && companyMemories.length > 0) {
+        // Both lists count as used: an always memory reached the model just as
+        // surely as a looked-up one, and the screen's "uses" column would
+        // otherwise read zero for exactly the memories that apply most.
+        const usedMemories = [...alwaysMemories, ...relevantMemories];
+        if (thread?.companyId && usedMemories.length > 0) {
             await ctx.runMutation(internal.companyMemories.recordRuntimeUsageInternal, {
                 companyId: thread.companyId,
                 threadId: args.threadId,
                 messageId,
                 queryText: args.content,
-                memories: companyMemories.map((memory) => ({
+                memories: usedMemories.map((memory) => ({
                     memoryId: memory.memoryId,
                     score: memory.score,
                 })),
@@ -515,19 +525,15 @@ export const generateNodeConfig = adminAction({
       maxRequests: NODE_CONFIG_RATE_LIMIT_MAX_REQUESTS,
     });
 
-    const ai = createVertexGenAIClient();
-
     try {
       const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
         useCase: "workflow",
       });
-      const providerModelId = getGoogleVertexProviderModelId(modelConfig, "workflow validation");
-      
-      const response = await generateVertexContentWithRetry(ai, {
-        model: providerModelId,
-        contents: `User Prompt: "${prompt}"`,
-        config: {
-          systemInstruction: `You are Sonae's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.
+      const response = await generateTextWithResolvedModel({
+        model: modelConfig,
+        contents: [{ type: "text", text: `User Prompt: "${prompt}"` }],
+        temperature: 0.1,
+        systemInstruction: `You are Sonae's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.
 The user wants to configure an isolated logic node of type: ${nodeType}.
 
 Available upstream node context in the graph (You MUST use these explicit IDs when mathematically binding variables):
@@ -543,24 +549,21 @@ Your job is to translate the user's plain-English intent into exact system paylo
 - The 'template' object is a raw string layout if the node expects a raw string payload. You can inject variables directly into the text (e.g. "We received: {{nodes...}}").
 - If the nodeType is 'codeNode', the 'template' MUST be a data-shaping template, NOT executable code. This node performs {{...}} variable substitution only — there is no script interpreter, so any Javascript you emit would be returned verbatim as the node's output instead of running. Express the transform as a literal string or JSON structure containing {{nodes.<UPSTREAM_NODE_ID>.output.<FIELD_NAME>}} placeholders. Never emit statements, expressions, function definitions, or a return statement.
 - If the nodeType is 'agentNode', you MUST fully configure the agent's identity using the agent* variables. Set 'agentAllowInternet' to true if the prompt implies searching or getting live/current info.`,
-          temperature: 0.1,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              mapping: { type: Type.STRING, description: "A valid JSON string representing the exact JSON Data mapping to apply, usually containing mathematical {{nodes...}} variable injections." },
-              template: { type: Type.STRING, description: "Raw block string layout/template, if applicable." },
-              agentName: { type: Type.STRING, description: "A concise name for the agent (only if nodeType is agentNode)." },
-              agentSystemPrompt: { type: Type.STRING, description: "The core system instructions/directives for the AI agent (only if nodeType is agentNode)." },
-              agentInputFields: { type: Type.STRING, description: "Comma separated expected variables for the input schema, e.g. 'url, data' (only if nodeType is agentNode)." },
-              agentOutputFields: { type: Type.STRING, description: "Comma separated expected variables for the output schema, e.g. 'summary, classification' (only if nodeType is agentNode)." },
-              agentAllowInternet: { type: Type.BOOLEAN, description: "Set to true if the agent's task requires searching the live internet (only if nodeType is agentNode)." }
-            },
-            required: ["mapping", "template"]
-          }
-        }
-      }, {
-        operation: "generateNodeConfig",
+        // Plain JSON Schema rather than Vertex's `Schema` type — the same shape,
+        // in the vocabulary every provider understands.
+        jsonSchema: {
+          type: "object",
+          properties: {
+            mapping: { type: "string", description: "A valid JSON string representing the exact JSON Data mapping to apply, usually containing mathematical {{nodes...}} variable injections." },
+            template: { type: "string", description: "Raw block string layout/template, if applicable." },
+            agentName: { type: "string", description: "A concise name for the agent (only if nodeType is agentNode)." },
+            agentSystemPrompt: { type: "string", description: "The core system instructions/directives for the AI agent (only if nodeType is agentNode)." },
+            agentInputFields: { type: "string", description: "Comma separated expected variables for the input schema, e.g. 'url, data' (only if nodeType is agentNode)." },
+            agentOutputFields: { type: "string", description: "Comma separated expected variables for the output schema, e.g. 'summary, classification' (only if nodeType is agentNode)." },
+            agentAllowInternet: { type: "boolean", description: "Set to true if the agent's task requires searching the live internet (only if nodeType is agentNode)." }
+          },
+          required: ["mapping", "template"]
+        },
       });
 
       if (!response.text) {

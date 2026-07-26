@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export type ModelStatusFilter = "active" | "inactive";
-export type SyncProviderKey = "google" | "openai" | "anthropic";
+export type SyncProviderKey = "google" | "openai" | "anthropic" | "openrouter";
 
 export type GlobalDefaultRow = {
   useCase: string;
@@ -53,8 +53,44 @@ export function formatModelTag(value: string) {
     .join(" ");
 }
 
+/**
+ * A model's name, as a person would write it.
+ *
+ * Screens were showing raw ids: a dropdown printed the provider's own
+ * identifier while the catalogue showed a readable name for the same model. The
+ * provider syncs titleize on the way in, but rows written before that fix still
+ * hold the raw id, and a screen should not depend on when someone last pressed
+ * Sync.
+ *
+ * The fallback only fires when the stored name still *looks* like an id: no
+ * spaces, and punctuation where words would be. A published name such as
+ * "MoonshotAI: Kimi K3" has spaces and is left exactly as it is.
+ */
+export function formatModelDisplayName(model: {
+  friendlyName?: string;
+  displayName?: string;
+  modelId?: string;
+}) {
+  const friendly = model.friendlyName?.trim();
+  if (friendly) return friendly;
+
+  const displayName = model.displayName?.trim();
+  const candidate = displayName || model.modelId?.trim() || "";
+  if (!candidate) return "";
+
+  const looksLikeAnId = !candidate.includes(" ") && /[-_/:.]/.test(candidate);
+  if (!looksLikeAnId) return candidate;
+
+  return candidate
+    .split("/").at(-1)!
+    .replace(/[:_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function isSyncProviderKey(value: string): value is SyncProviderKey {
-  return value === "google" || value === "openai" || value === "anthropic";
+  return value === "google" || value === "openai" || value === "anthropic" || value === "openrouter";
 }
 
 export function getProviderHealthMessage(settings?: string) {
@@ -65,6 +101,31 @@ export function getProviderHealthMessage(settings?: string) {
   } catch {
     return "";
   }
+}
+
+/**
+ * Whether this platform can reach the provider, in words.
+ *
+ * The screen used to print the stored status verbatim — "healthy", "unknown",
+ * "degraded" — as a coloured badge. Those are the database's words, not a
+ * reader's, and "healthy" in particular meant two different things: the API
+ * answered for two providers, and the environment variables parsed for the
+ * third. That second meaning is gone; this is the first.
+ */
+export function describeProviderStatus(isEnabled: boolean, status?: string) {
+  if (!isEnabled) return "Off";
+  if (status === "healthy") return "Connected";
+  if (status === "error") return "Not connected";
+  if (status === "degraded") return "Connected, with problems";
+  return "Not checked yet";
+}
+
+export function describeProviderStatusTone(isEnabled: boolean, status?: string) {
+  if (!isEnabled) return "text-muted";
+  if (status === "healthy") return "text-[#10b981]";
+  if (status === "error") return "text-red-400";
+  if (status === "degraded") return "text-[#f59e0b]";
+  return "text-muted";
 }
 
 export function formatProviderDate(value?: number) {

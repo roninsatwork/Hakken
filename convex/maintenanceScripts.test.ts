@@ -155,7 +155,10 @@ describe("maintenance scripts", () => {
       const result = await superAdminClient.mutation(api.maintenanceScripts.run, {
         scriptId: "data-migrations-apply",
       });
-      expect(result.summary).toMatch(/Started 1 migration/);
+      // Named rather than counted: the count changes every time a migration is
+      // registered, which would fail this test for an unrelated reason.
+      expect(result.summary).toMatch(/^Started \d+ migration/);
+      expect(result.summary).toContain("2026-07-25-swarm-logs-company-id");
       expect(result.summary).toMatch(/background/i);
 
       await t.finishAllScheduledFunctions(vi.runAllTimers);
@@ -236,7 +239,8 @@ describe("maintenance scripts", () => {
       const result = await superAdminClient.mutation(api.maintenanceScripts.run, {
         scriptId: "data-migrations-apply",
       });
-      expect(result.summary).toMatch(/Started 1 migration/);
+      expect(result.summary).toMatch(/^Started \d+ migration/);
+      expect(result.summary).toContain("2026-07-25-swarm-logs-company-id");
 
       await t.finishAllScheduledFunctions(vi.runAllTimers);
 

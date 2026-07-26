@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bot, List, RefreshCw, Search } from "lucide-react";
@@ -17,6 +17,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import useDebounce from "@/src/hooks/useDebounce";
 import { isModelCostMeasurable } from "@/convex/agentRuntimeService";
 import { cn } from "@/src/ui/lib/utils";
@@ -25,7 +26,6 @@ import {
   buildDefaultJobsByModelId,
   formatModelTag,
   getProviderDisplayName,
-  ModelAdminHeader,
   type ModelStatusFilter,
 } from "../_components/modelAdminUtils";
 
@@ -42,23 +42,49 @@ export default function AIModelCataloguePage() {
   const [modelError, setModelError] = useState("");
   const pageSize = ADMIN_PAGE_SIZE;
 
-  const modelsData = useQuery(api.aiModels.getOffsetPaginatedModels, {
-    searchTerm: debouncedSearch,
-    statusFilter,
-    providerFilter,
-    page,
-    pageSize,
-  });
+  /**
+   * A page at a time, out of what the database has actually returned.
+   *
+   * The query used to read up to 500 models and slice the page here. It now
+   * pages in the database, so this holds only what has been fetched — and the
+   * numbered pager pulls the next page in when the reader steps past the end.
+   */
+  const {
+    results: fetchedModels,
+    status: paginationStatus,
+    loadMore,
+  } = usePaginatedQuery(
+    api.aiModels.getPaginatedModels,
+    { searchTerm: debouncedSearch, statusFilter, providerFilter },
+    { initialNumItems: pageSize }
+  );
+  // The pager wants a total, and a total means counting the catalogue on every
+  // view — which is what the rollup exists to avoid. While a search or provider
+  // filter is on, no rollup can know the answer, so the pager stops claiming one.
+  const counts = useQuery(api.aiModels.getModelCounts);
   const providersResult = useQuery(api.aiModels.getProviders);
   const providers = Array.isArray(providersResult) ? providersResult : [];
   // What each model is actually doing, rather than which one carries the legacy
   // flag. Ten rows, unaffected by the page or the filters.
   const globalDefaultsResult = useQuery(api.aiModels.getGlobalModelDefaults);
   const defaultJobsByModelId = buildDefaultJobsByModelId(globalDefaultsResult);
-  const isLoading = modelsData === undefined;
-  const models = modelsData?.data || [];
-  const totalCount = modelsData?.totalCount || 0;
-  const totalPages = modelsData?.totalPages || 1;
+  const isLoading = paginationStatus === "LoadingFirstPage";
+  const pageStart = (page - 1) * pageSize;
+  const models = fetchedModels.slice(pageStart, pageStart + pageSize);
+  const isFiltered = Boolean(debouncedSearch.trim()) || providerFilter !== "all";
+  const knownTotal = !isFiltered && counts?.computedAt && !counts.isPartial
+    ? (statusFilter === "active" ? counts.enabledModels : counts.totalModels - counts.enabledModels)
+    : fetchedModels.length;
+  const totalCount = knownTotal;
+  const totalPages = Math.max(1, Math.ceil(knownTotal / pageSize));
+
+  // Stepping past what has been fetched pulls the next page in first.
+  const goToPage = (next: number) => {
+    setPage(next);
+    if (fetchedModels.length < next * pageSize && paginationStatus === "CanLoadMore") {
+      loadMore(pageSize);
+    }
+  };
   const providerNameByKey = new Map(providers.map((provider) => [provider.providerKey, provider.displayName]));
 
   const handleSearchChange = (value: string) => {
@@ -88,10 +114,11 @@ export default function AIModelCataloguePage() {
 
   return (
     <div className="flex flex-col gap-5 w-full h-full pb-12">
-      <ModelAdminHeader
+      <AdminPageHeader
+        divider
         icon={<List className="w-6 h-6 text-brand" />}
         title="Model Catalogue"
-        subtitle="Which models this platform has, and which of them are switched on."
+        description="Which models this platform has, and which of them are switched on."
       />
       <AiWorkspaceNav />
       <AdminSaveError>{modelError}</AdminSaveError>
@@ -154,11 +181,14 @@ export default function AIModelCataloguePage() {
             totalPages={totalPages}
             totalCount={totalCount}
             pageSize={pageSize}
-            isLoading={isLoading}
-            onPageChange={setPage}
+            isLoading={paginationStatus === "LoadingMore"}
+            onPageChange={goToPage}
             labels={{
               empty: "No models found",
-              showing: (start, end, total) => `Showing ${start}-${end} of ${total} models`,
+              showing: (start, end, total) =>
+                isFiltered
+                  ? `Showing ${start}-${end} of ${total} matching`
+                  : `Showing ${start}-${end} of ${total} models`,
             }}
           />
         }

@@ -3,6 +3,7 @@
 import { getErrorMessage } from "@/src/lib/errors";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { useMutation, useQuery } from "convex/react";
 import { Cpu, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -53,7 +54,10 @@ export default function CompanyModelDefaultsPage() {
   const defaultsData = useQuery(api.aiModels.getCompanyModelDefaults, { companyId }) as {
     defaults: ModelDefaultRow[];
   } | undefined;
-  const modelsData = useQuery(api.aiModels.getModels) as Doc<"aiModels">[] | undefined;
+  // Enabled models, narrowed in the database. This used to read the whole
+  // catalogue and filter here, which held up at twenty models and would not at
+  // four hundred.
+  const modelsData = useQuery(api.aiModels.getActiveModels, {}) as Doc<"aiModels">[] | undefined;
   const setCompanyDefault = useMutation(api.aiModels.setCompanyModelDefault);
   const clearCompanyDefault = useMutation(api.aiModels.clearCompanyModelDefault);
 
@@ -123,14 +127,22 @@ export default function CompanyModelDefaultsPage() {
 
         <div className="min-w-[900px] divide-y divide-border-dim/70">
           {defaultsData.defaults.map((row) => {
-            const candidates = activeModels.filter((model) => supportsUseCase(model, row.useCase));
+            // Same rule as the platform Defaults screen: a company can only
+            // override a job with a model whose provider can actually do it.
+            const candidates = activeModels.filter((model) =>
+              supportsUseCase(model, row.useCase)
+              && canProviderServeUseCase(model.providerKey, row.useCase)
+            );
+            const providerLimit = describeUseCaseProviderLimit(row.useCase);
             const isSaving = savingUseCase === row.useCase;
 
             return (
               <div key={row.useCase} className="grid grid-cols-[180px_1fr_1fr_80px] items-center gap-4 px-5 py-4">
                 <div className="flex flex-col gap-1">
                   <span className="text-[13px] font-semibold text-foreground">{formatUseCase(row.useCase)}</span>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted">{row.useCase}</span>
+                  {providerLimit && (
+                    <span className="text-[11px] leading-relaxed text-muted">{providerLimit}</span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1">

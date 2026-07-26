@@ -101,6 +101,43 @@ describe("assistant prompt assembly", () => {
     expect(instruction).toContain("Pause before risky side effects");
   });
 
+  test("always-on memories are trusted configuration, not retrieved data", () => {
+    const instruction = buildAssistantSystemInstruction({
+      globalSystemPrompt: "Platform prompt.",
+      companySystemPrompt: "Company prompt.",
+      activeRules: [],
+      companyMemories: [
+        { title: "No delivery dates", content: "Never promise a delivery date over chat." },
+      ],
+    });
+
+    expect(instruction).toContain("WHAT THIS COMPANY'S AI MUST ALWAYS KNOW");
+    expect(instruction).toContain("No delivery dates: Never promise a delivery date over chat.");
+    // It sits in the system instruction rather than the untrusted context block,
+    // because an admin wrote it — but it still cannot widen what the AI may do.
+    expect(instruction).toContain("never override the safety contract");
+  });
+
+  test("an agent is given the company's always-on memories as well as its own", () => {
+    const instruction = buildAgentSystemInstruction("Base agent instruction.", [], [
+      { title: "Company boundary", content: "Never promise a delivery date." },
+      { title: "Agent habit", content: "Prefer the shortest correct answer." },
+    ]);
+
+    // This path read no company memory at all, so a widget with an agent
+    // attached ignored everything the company had been given.
+    expect(instruction).toContain("Company boundary: Never promise a delivery date.");
+    expect(instruction).toContain("Agent habit: Prefer the shortest correct answer.");
+    expect(instruction.indexOf("CONFIGURED AGENT BEHAVIOR")).toBeLessThan(
+      instruction.indexOf("WHAT THIS COMPANY'S AI MUST ALWAYS KNOW")
+    );
+  });
+
+  test("no always-on memories adds no section at all", () => {
+    expect(buildAgentSystemInstruction("Base agent instruction.", [], []))
+      .not.toContain("MUST ALWAYS KNOW");
+  });
+
   test("ranks main chat knowledge by relevance rather than by tier order", () => {
     const ranked = rankAssistantKnowledgeMatches({
       globalMatches: [{ _id: "global-weak", _score: 0.11 }],

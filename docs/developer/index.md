@@ -19,6 +19,7 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Data Retention And Purges](./data-retention-and-purges.md)
 - [Email Branding](./email-branding.md)
 - [Route Protection And Authentication](./route-protection-and-authentication.md)
+- [Tenancy Enforcement](./tenancy-enforcement.md)
 - [Shared Admin UI](./shared-admin-ui.md)
 - [AI Administration](./ai-administration.md)
 - [AI Rules And Prompts](./ai-rules-and-prompts.md)
@@ -68,7 +69,7 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 
 **Required mirror methodology:** read [Movement Mirror And Side-Ownership Contract](./movement-mirror-and-side-ownership-contract.md) before any work involving left/right landmarks, instructor or player display preparation, scoring correspondence, retargeting, head/spine direction, hands, face, root motion, or avatar proof. Instructor motion preserves anatomical side, the human player imitates with the opposite side, and the player avatar reverses the player so both rendered avatars perform the same anatomical movement.
 
-**Required Replay Studio repair harness:** read [Replay Studio Agent Repair Harness Plan](../plans/active/replay-studio-agent-repair-harness-plan.md) before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, or the movement agent debugging workflow. Also read [Replay Lab Visual Acceptance Tightening Plan](../plans/active/replay-lab-visual-acceptance-tightening-plan.md) before changing rendered fidelity thresholds, head/spine/arm acceptance, neutral/standing continuity, or manual Replay seeking. Replay Studio owns recorded-motion diagnosis; targeted and fast-subset proof can guide repairs, but only a current all-nine bundle that passes the strengthened fidelity contract can certify global shared-avatar acceptance. Game Studio live-camera checks are final confirmation after Replay proof, not the primary debugging loop.
+**Required Replay Studio context:** read the active [Movement Definitive Plan](../plans/active/movement-definitive-plan.md) before changing Replay Studio diagnosis, proof artifacts, avatar-follow gates, rendered fidelity thresholds, or the movement agent debugging workflow. Historical background lives in [Replay Studio Agent Repair Harness Plan](../plans/completed/replay-studio-agent-repair-harness-plan.md) and [Replay Lab Visual Acceptance Tightening Plan](../plans/completed/replay-lab-visual-acceptance-tightening-plan.md); use those for context only unless they are deliberately reopened. Replay Studio owns recorded-motion diagnosis, and Game Studio live-camera checks are final confirmation after Replay proof, not the primary debugging loop.
 
 - [Movement Tracking](./movement-tracking.md)
 - [Movement Demo Client Recovery Plan](./movement-demo-client-recovery-plan.md)
