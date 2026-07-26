@@ -16,6 +16,7 @@ import {
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
   buildModelSearchText,
+  canGenerateText,
   canProviderServeUseCase,
   describeUseCaseProviderLimit,
   getProviderQualifiedModelId,
@@ -1348,6 +1349,26 @@ export const getEnabledModelIdsInternal = internalQuery({
       .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
       .take(MODEL_CATALOG_LIMIT);
     return models.map((model) => model.modelId);
+  },
+});
+
+/**
+ * Enabled models that can actually produce text.
+ *
+ * The graders pick a model from this pool. They used to read every enabled model,
+ * which on a deployment with an enabled embedding model meant grading with
+ * `text-embedding-004` — a provider NOT_FOUND that `parseGradeVerdict` correctly
+ * turned into a failure, so every model-graded eval failed for a reason that had
+ * nothing to do with the answer.
+ */
+export const getEnabledTextModelIdsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const models = await ctx.db
+      .query("aiModels")
+      .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+      .take(MODEL_CATALOG_LIMIT);
+    return models.filter((model) => canGenerateText(model)).map((model) => model.modelId);
   },
 });
 

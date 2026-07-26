@@ -230,6 +230,33 @@ export function getExecutionModelPool(models: AiModelSelection[]) {
   return enabledModelIds.length > 0 ? enabledModelIds : [SYSTEM_FAILSAFE_MODEL_ID];
 }
 
+/**
+ * Whether a model can be asked to produce text.
+ *
+ * An embedding model cannot, and asking one to is a provider 404 rather than a
+ * graceful refusal. This existed as an assumption in the eval graders, which chose
+ * "any other enabled model" — so on a deployment where an embedding model happened
+ * to sort first, every model-graded eval failed with a NOT_FOUND that read as a
+ * legitimate grading failure.
+ *
+ * Phrased as an exclusion of embedding-only models rather than a requirement for a
+ * `text` capability, because much of the catalogue has no capability metadata at
+ * all and requiring it would empty the pool.
+ */
+export function canGenerateText(model: {
+  capabilities?: string[];
+  supportedUseCases?: string[];
+}) {
+  const capabilities = model.capabilities ?? [];
+  const useCases = model.supportedUseCases ?? [];
+
+  if (capabilities.includes("text")) return true;
+  if (capabilities.includes("embeddings")) return false;
+  if (useCases.includes(EMBEDDING_MODEL_USE_CASE) && !useCases.includes("chat")) return false;
+
+  return true;
+}
+
 export function getProviderQualifiedModelId(providerKey: string, providerModelId: string) {
   return `${providerKey}:${providerModelId}`;
 }

@@ -81,7 +81,12 @@ export const gradeSmokeEvalWithModel = internalAction({
       // marking its own homework favours its own output, and a model that has
       // just confidently asserted something wrong is the least likely thing to
       // notice — so the grade measured self-consistency, not correctness.
-      const enabledModelIds = await ctx.runQuery(internal.aiModels.getEnabledModelIdsInternal, {});
+      // Text-capable only. Reading every enabled model meant that on a deployment
+      // with an enabled embedding model the grader could be `text-embedding-004`,
+      // which answers a generate-text call with a provider NOT_FOUND — and
+      // `parseGradeVerdict` fails closed, so every model-graded eval failed for a
+      // reason that had nothing to do with the agent.
+      const enabledModelIds = await ctx.runQuery(internal.aiModels.getEnabledTextModelIdsInternal, {});
       const grader = selectGraderModel({
         targetModelId: modelConfig.modelId,
         enabledModelIds,
