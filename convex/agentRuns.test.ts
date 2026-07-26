@@ -560,7 +560,7 @@ describe("Agent Runs", () => {
     })).resolves.toBeNull();
   });
 
-  test("the approval queue and its decisions are super-admin only", async () => {
+  test("the approval queue is super-admin only, and every decision is audited", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const {
@@ -671,7 +671,7 @@ describe("Agent Runs", () => {
         argumentsJson: "{}",
         status: "APPROVAL_REQUIRED",
         requiredRole: "ADMIN",
-        sideEffectLevel: "EXTERNAL",
+        sideEffectLevel: "READ",
         confirmationRequired: true,
         companyId: companyBId,
         userId: adminBId,
@@ -776,6 +776,23 @@ describe("Agent Runs", () => {
     expect(rejectedState.run?.refusedToolCallsJson).toContain("external_sync");
     expect(await superAdminClient.query(api.agentRuns.getPendingApprovalCount, {}))
       .toEqual({ count: 0, atLimit: false });
+
+    // Approving a tool call is exactly the event an audit log exists for, and this
+    // used to write none — while `cancelRun` next door always did. The test that
+    // covered this was even titled "and audited" and asserted the absence.
+    const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
+    const decisions = audit.filter((entry) => entry.entityType === "agentRunApprovals");
+    expect(decisions.map((entry) => entry.actionType).sort())
+      .toEqual(["AGENT_APPROVAL_APPROVED", "AGENT_APPROVAL_REJECTED"]);
+    expect(decisions.every((entry) => entry.actorId === superAdminId)).toBe(true);
+    // The side-effect level is on the row, because a reader most wants to know
+    // whether what was waved through was a lookup or a deletion.
+    const approvedEntry = decisions.find((entry) => entry.actionType === "AGENT_APPROVAL_APPROVED");
+    expect(JSON.parse(approvedEntry!.metadata!)).toMatchObject({
+      runId: runAId,
+      sideEffectLevel: "READ",
+      reason: "Looks safe",
+    });
   });
 
   test("an approval nobody answers expires, and its whole run stops", async () => {

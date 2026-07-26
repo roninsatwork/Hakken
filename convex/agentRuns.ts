@@ -1307,6 +1307,29 @@ export const decideApproval = superAdminMutation({
       ...(args.decisionReason !== undefined ? { decisionReason: args.decisionReason } : {}),
     });
 
+    // Approving a tool call is exactly the event an audit log exists for, and this
+    // wrote none. `cancelRun` next door has always written one. Recorded before the
+    // branch below, so an approval, a refusal and a cancellation are all traceable
+    // through one path rather than three.
+    const decidedToolCall = approval.toolCallId ? await ctx.db.get(approval.toolCallId) : null;
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: `AGENT_APPROVAL_${args.decision}`,
+      entityType: "agentRunApprovals",
+      entityId: args.approvalId,
+      ...(run.companyId ? { companyId: run.companyId } : {}),
+      metadata: JSON.stringify({
+        runId: approval.runId,
+        agentId: approval.agentId,
+        tool: decidedToolCall?.normalizedToolName,
+        // The thing a reader of the log most wants to know: was this a lookup or a
+        // deletion.
+        sideEffectLevel: decidedToolCall?.sideEffectLevel,
+        reason: args.decisionReason,
+      }),
+      timestamp: now,
+    });
+
     if (args.decision === "APPROVED") {
       if (approval.toolCallId) {
         await ctx.db.patch(approval.toolCallId, {
