@@ -231,6 +231,76 @@ export function getCostBudgetStopMessage(maxCostGBP: number) {
   return `Agent stopped after reaching the maximum cost limit of GBP ${maxCostGBP.toFixed(2)}.`;
 }
 
+/**
+ * A stable identity for "this tool with these arguments".
+ *
+ * Used to recognise a call a person has already refused. Object keys are sorted
+ * because two requests for the same thing must produce the same key — otherwise a
+ * model that re-serialises its arguments differently would slip past the check and
+ * the reviewer would be asked again.
+ */
+export function buildRefusedToolCallKey(toolName: string, argumentsJson: string) {
+  const stable = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(stable);
+    if (value !== null && typeof value === "object") {
+      return Object.keys(value as Record<string, unknown>)
+        .sort()
+        .reduce<Record<string, unknown>>((acc, key) => {
+          acc[key] = stable((value as Record<string, unknown>)[key]);
+          return acc;
+        }, {});
+    }
+    return value;
+  };
+
+  let normalizedArgs: string;
+  try {
+    normalizedArgs = JSON.stringify(stable(JSON.parse(argumentsJson) as unknown));
+  } catch {
+    // Unreadable arguments still get a key, so an identical unreadable retry is
+    // still recognised rather than being waved through.
+    normalizedArgs = argumentsJson;
+  }
+
+  return `${toolName}:${normalizedArgs}`;
+}
+
+export function parseRefusedToolCalls(refusedToolCallsJson: string | undefined): string[] {
+  if (!refusedToolCallsJson) return [];
+  try {
+    const parsed = JSON.parse(refusedToolCallsJson) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Capped, because the list rides along on the run document. */
+const REFUSED_TOOL_CALL_LIMIT = 50;
+
+export function appendRefusedToolCall(refusedToolCallsJson: string | undefined, key: string) {
+  const existing = parseRefusedToolCalls(refusedToolCallsJson);
+  if (existing.includes(key)) return JSON.stringify(existing);
+  return JSON.stringify([...existing, key].slice(-REFUSED_TOOL_CALL_LIMIT));
+}
+
+/**
+ * What the model is told when a person refuses a call.
+ *
+ * A rejection used to end the run outright with the model told nothing, so from
+ * the agent's side the conversation stopped mid-thought and the objective — often
+ * most of the way done — was thrown away. Telling it plainly lets it find another
+ * route, and carrying the reviewer's own words through is the most useful thing
+ * that can reach it. That reason was stored and read by nothing.
+ */
+export function getRefusedToolCallMessage(toolName: string, reason?: string) {
+  const base = `A person reviewed this request and refused it. Do not call ${toolName} with these arguments again.`;
+  const explanation = reason?.trim()
+    ? ` Reason given: ${reason.trim()}`
+    : "";
+  return `${base}${explanation} Find another way to complete the objective, or explain to the user what you cannot do.`;
+}
+
 export type ExecutedAgentToolCall = {
   name: string;
   args: Record<string, unknown>;

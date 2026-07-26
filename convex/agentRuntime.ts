@@ -52,7 +52,10 @@ import {
 } from "./agentRunContinuationService";
 import {
   DEFAULT_AGENT_OBJECTIVE_LIMITS,
+  buildRefusedToolCallKey,
+  getRefusedToolCallMessage,
   isModelCostMeasurable,
+  parseRefusedToolCalls,
   resolveAgentObjectiveLimits,
   type ExecutedAgentToolCall,
   buildToolInteractionTurns,
@@ -79,6 +82,90 @@ type RuntimeToolMetadata = {
     sideEffectLevel: ToolSideEffectLevel;
     confirmationRequired: boolean;
 };
+
+type BatchSettlement = {
+    settled: boolean;
+    stepIndex: number;
+    batchCalls: Array<{ name: string; argumentsJson: string; resultJson?: string }>;
+};
+
+/**
+ * Answer the model for a whole turn, or leave the run parked.
+ *
+ * Shared by every path that settles an approval — approved, refused, and expired —
+ * because the rule is the same for all three and getting it right once matters more
+ * than reading naturally three times. While anything in the batch is still waiting
+ * on a person, nothing is appended: a model turn requesting N calls must be answered
+ * by one turn carrying N results, and a partial answer is the fault this avoids.
+ */
+async function settleBatchAndContinue(ctx: ActionCtx, args: {
+    approvalId: Id<"agentRunApprovals">;
+    runId: Id<"agentRuns">;
+    settlement: BatchSettlement;
+    status: "SUCCESS" | "FAILED";
+    finalOutput: string;
+    error?: string;
+}) {
+    if (!args.settlement.settled) return;
+
+    // Put the whole turn into the conversation the model is having, then let the
+    // loop carry on. Without this the agent asked permission, watched the tool
+    // run, and never found out what it returned.
+    const checkpoint = await ctx.runQuery(internal.agentRunCheckpoints.getCheckpointInternal, {
+        runId: args.runId,
+    });
+
+    if (checkpoint?.status === "AWAITING_APPROVAL" && checkpoint.threadId) {
+        let transcript: Content[] | undefined;
+        try {
+            const parsed = JSON.parse(checkpoint.transcriptJson) as unknown;
+            if (Array.isArray(parsed) && parsed.length > 0) transcript = parsed as Content[];
+        } catch {
+            transcript = undefined;
+        }
+
+        if (transcript) {
+            // One model turn declaring every call of that turn, one function turn
+            // answering all of them, in the order the model asked. Built from the
+            // tool call rows rather than from this one approval, because the calls
+            // that ran without needing approval have been waiting on their rows
+            // since the run parked.
+            const batchTurns = buildToolInteractionTurns(args.settlement.batchCalls.map((call) => ({
+                name: call.name,
+                args: parseToolArguments(call.argumentsJson),
+                responsePayload: parseToolResult(call.resultJson),
+            })));
+            transcript.push(...batchTurns as Content[]);
+
+            const { serialized } = trimConversationForCheckpoint(transcript);
+            if (isCheckpointStorable(serialized)) {
+                const resumed = await ctx.runMutation(internal.agentRuns.continueRunAfterApprovalInternal, {
+                    approvalId: args.approvalId,
+                    transcriptJson: serialized,
+                    stepIndex: args.settlement.stepIndex,
+                });
+                if (resumed) return;
+            }
+        }
+    }
+
+    // No transcript to resume into — a triggered run with no chat thread, or a
+    // conversation too large to have been checkpointed. Conclude the run and
+    // report the outcome rather than leaving it open.
+    const completion = await ctx.runMutation(internal.agentRuns.completeApprovalResumeInternal, {
+        approvalId: args.approvalId,
+        status: args.status,
+        finalOutput: args.finalOutput,
+        error: args.error,
+    });
+
+    if (completion.threadId) {
+        await ctx.runMutation(internal.chat.saveAssistantMessage, {
+            threadId: completion.threadId,
+            content: completion.finalOutput,
+        });
+    }
+}
 
 /**
  * A stored tool call's arguments, as the provider expects them.
@@ -970,6 +1057,14 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             return { stopped: false, message: "" };
         };
 
+        // Read once for this action rather than per call. A refusal is written by a
+        // person while the run is parked, so the list cannot change while this
+        // action is in flight; a resumed run enters here again and re-reads it.
+        const refusedToolCalls = parseRefusedToolCalls(
+            (await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, { runId }))
+                ?.refusedToolCallsJson,
+        );
+
         /**
          * Wind up a run that was stopped from outside.
          *
@@ -1345,7 +1440,17 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     autonomous: execution.agent.autonomousToolExecution === true,
                 });
 
+                // Already refused, so do not ask again. A refusal is fed back to the
+                // model rather than ending the run, and a model that still wants to
+                // send that email will ask again — queueing a second approval for a
+                // decision a person has already made burns the reviewer's attention
+                // rather than the token budget. Answered inline with the same
+                // refusal instead.
+                const refusedKey = buildRefusedToolCallKey(toolCall.name, rawArgsString);
+                const wasRefused = refusedToolCalls.includes(refusedKey);
+
                 if (
+                    !wasRefused &&
                     schemaValidation.ok &&
                     toolMetadata &&
                     !accessDecision.allowed &&
@@ -1424,7 +1529,14 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 let toolError: string | undefined;
                 let toolResponsePayload;
 
-                if (!schemaValidation.ok) {
+                if (wasRefused) {
+                    toolStatus = "DENIED";
+                    toolError = getRefusedToolCallMessage(toolCall.name);
+                    toolResponsePayload = buildToolResultPayload({
+                        status: "error",
+                        error: toolError,
+                    });
+                } else if (!schemaValidation.ok) {
                     toolError = schemaValidation.errors.join(" ");
                     toolResponsePayload = buildToolResultPayload({
                         status: "error",
@@ -2219,68 +2331,50 @@ export const resumeApprovedToolCall = internalAction({
       error,
     });
 
-    // Something in this batch is still waiting on a person. Leave the run parked:
-    // the model asked for these calls together and has to be answered together,
-    // so appending a partial answer now is exactly the fault this avoids.
-    if (!settlement.settled) return;
-
-    // Put the whole turn into the conversation the model is having, then let the
-    // loop carry on. Without this the agent asked permission, watched the tool
-    // run, and never found out what it returned.
-    const checkpoint = await ctx.runQuery(internal.agentRunCheckpoints.getCheckpointInternal, {
-      runId: context.approval.runId,
-    });
-
-    if (checkpoint?.status === "AWAITING_APPROVAL" && checkpoint.threadId) {
-      let transcript: Content[] | undefined;
-      try {
-        const parsed = JSON.parse(checkpoint.transcriptJson) as unknown;
-        if (Array.isArray(parsed) && parsed.length > 0) transcript = parsed as Content[];
-      } catch {
-        transcript = undefined;
-      }
-
-      if (transcript) {
-        // One model turn declaring every call of that turn, one function turn
-        // answering all of them, in the order the model asked. Built from the tool
-        // call rows rather than from this one approval, because the calls that ran
-        // without needing approval have been waiting on their rows since the run
-        // parked.
-        const batchTurns = buildToolInteractionTurns(settlement.batchCalls.map((call) => ({
-          name: call.name,
-          args: parseToolArguments(call.argumentsJson),
-          responsePayload: parseToolResult(call.resultJson),
-        })));
-        transcript.push(...batchTurns as Content[]);
-
-        const { serialized } = trimConversationForCheckpoint(transcript);
-        if (isCheckpointStorable(serialized)) {
-          const resumed = await ctx.runMutation(internal.agentRuns.continueRunAfterApprovalInternal, {
-            approvalId: args.approvalId,
-            transcriptJson: serialized,
-            stepIndex: settlement.stepIndex,
-          });
-          if (resumed) return;
-        }
-      }
-    }
-
-    // No transcript to resume into — a triggered run with no chat thread, or a
-    // conversation too large to have been checkpointed. Conclude the run and
-    // report the tool's outcome rather than leaving it open.
-    const completion = await ctx.runMutation(internal.agentRuns.completeApprovalResumeInternal, {
+    await settleBatchAndContinue(ctx, {
       approvalId: args.approvalId,
+      runId: context.approval.runId,
+      settlement,
       status,
       finalOutput,
       error,
     });
+  },
+});
 
-    if (completion.threadId) {
-      await ctx.runMutation(internal.chat.saveAssistantMessage, {
-        threadId: completion.threadId,
-        content: completion.finalOutput,
-      });
-    }
+/**
+ * Resume a run whose approval was refused.
+ *
+ * The refusal is already recorded by `decideApproval`, including the result the
+ * model will see, so there is no tool to run here. All that remains is the same
+ * settle-or-wait decision an approval goes through: the model asked for this
+ * turn's calls together and has to be answered together.
+ */
+export const resumeAfterRefusedToolCall = internalAction({
+  args: {
+    approvalId: v.id("agentRunApprovals"),
+  },
+  handler: async (ctx, args) => {
+    const context = await ctx.runQuery(internal.agentRuns.getApprovalResumeContextInternal, {
+      approvalId: args.approvalId,
+    });
+    if (!context?.approval || !context.run) return;
+    if (context.approval.status !== "REJECTED") return;
+
+    const settlement = await ctx.runQuery(internal.agentRuns.getSettlementAfterDecisionInternal, {
+      approvalId: args.approvalId,
+    });
+    if (!settlement) return;
+
+    await settleBatchAndContinue(ctx, {
+      approvalId: args.approvalId,
+      runId: context.approval.runId,
+      settlement,
+      status: "FAILED",
+      finalOutput: context.approval.decisionReason
+        ? `Tool call refused: ${context.approval.decisionReason}`
+        : "Tool call refused by a reviewer.",
+    });
   },
 });
 

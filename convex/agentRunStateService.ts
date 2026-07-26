@@ -15,8 +15,9 @@ export const AGENT_RUN_MEMORY_USAGE_LIMIT = 500;
 export type TerminalRunStatus = "SUCCESS" | "FAILED" | "CANCELLED";
 
 /** The next free step index for a run, so appended steps stay ordered and unique. */
+/** Reads only, so a query may ask as well as a mutation. */
 export async function getNextStepIndex(
-  ctx: Pick<MutationCtx, "db">,
+  ctx: { db: Pick<MutationCtx["db"], "query"> },
   runId: Id<"agentRuns">,
 ) {
   const latestStep = await ctx.db

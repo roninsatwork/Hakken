@@ -7,6 +7,11 @@ import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { getNextStepIndex, updateMemoryUsageOutcomeForRun } from "./agentRunStateService";
+import {
+  appendRefusedToolCall,
+  buildRefusedToolCallKey,
+  getRefusedToolCallMessage,
+} from "./agentRuntimeService";
 
 const AGENT_RUN_DETAIL_LIMIT = 500;
 const AGENT_RUN_ANALYTICS_LIMIT = 500;
@@ -720,6 +725,7 @@ export const getRunExecutionStateInternal = internalQuery({
       threadId: run.threadId,
       companyId: run.companyId,
       userId: run.userId,
+      refusedToolCallsJson: run.refusedToolCallsJson,
     };
   },
 });
@@ -1317,9 +1323,80 @@ export const decideApproval = superAdminMutation({
       return true;
     }
 
+    // A rejection tells the agent; it no longer kills the run.
+    //
+    // Rejecting used to set the run FAILED with the model told nothing, so from
+    // the agent's side the conversation stopped mid-thought and an objective that
+    // was often nearly done was thrown away. A reviewer who means "not that way,
+    // but do carry on" now has a button for it. Stopping a run outright is
+    // `cancelRun`, and CANCELLED here keeps its old meaning, so the three
+    // decisions are finally three different things.
+    if (args.decision === "REJECTED") {
+      const toolCall = approval.toolCallId ? await ctx.db.get(approval.toolCallId) : null;
+      const refusalMessage = getRefusedToolCallMessage(
+        toolCall?.normalizedToolName ?? "this tool",
+        args.decisionReason,
+      );
+      const refusalResult = JSON.stringify({ status: "error", error: refusalMessage });
+
+      if (approval.toolCallId) {
+        await ctx.db.patch(approval.toolCallId, {
+          status: "DENIED",
+          resultJson: refusalResult,
+          completedAt: now,
+          error: refusalMessage,
+        });
+      }
+
+      const refusalStepIndex = await getNextStepIndex(ctx, approval.runId);
+      await ctx.db.insert("agentRunSteps", {
+        runId: approval.runId,
+        agentId: approval.agentId,
+        companyId: approval.companyId,
+        stepIndex: refusalStepIndex,
+        kind: "TOOL_RESULT",
+        status: "FAILED",
+        output: refusalResult,
+        startedAt: now,
+        completedAt: now,
+        error: refusalMessage,
+      });
+
+      // Remember what was refused, so the model cannot ask again for the same
+      // thing and put the same decision back in front of the reviewer.
+      if (toolCall) {
+        await ctx.db.patch(approval.runId, {
+          refusedToolCallsJson: appendRefusedToolCall(
+            run.refusedToolCallsJson,
+            buildRefusedToolCallKey(toolCall.normalizedToolName, toolCall.argumentsJson),
+          ),
+          updatedAt: now,
+        });
+      }
+
+      // Same settle-or-wait rule as an approval: the model asked for this turn's
+      // calls together and has to be answered together, so the run only moves
+      // when every one of them has an answer.
+      const stillPending = await ctx.db
+        .query("agentRunApprovals")
+        .withIndex("by_run_requested", (q) => q.eq("runId", approval.runId))
+        .filter((q) => q.eq(q.field("status"), "PENDING"))
+        .take(AGENT_RUN_DETAIL_LIMIT);
+
+      if (stillPending.length === 0) {
+        await ctx.db.patch(approval.runId, { status: "RUNNING", updatedAt: now });
+      }
+
+      await ctx.scheduler.runAfter(0, internal.agentRuntime.resumeAfterRefusedToolCall, {
+        approvalId: args.approvalId,
+      });
+
+      return true;
+    }
+
     const finalOutput = getApprovalFinalOutput(args.decision, args.decisionReason);
-    const runStatus = args.decision === "CANCELLED" ? "CANCELLED" : "FAILED";
-    const toolStatus = args.decision === "CANCELLED" ? "CANCELLED" : "DENIED";
+    const runStatus = "CANCELLED" as const;
+    const toolStatus = "CANCELLED" as const;
     const nextStepIndex = await getNextStepIndex(ctx, approval.runId);
 
     if (approval.toolCallId) {
@@ -1336,20 +1413,18 @@ export const decideApproval = superAdminMutation({
       companyId: approval.companyId,
       stepIndex: nextStepIndex,
       kind: "FINAL",
-      status: runStatus === "CANCELLED" ? "SKIPPED" : "FAILED",
+      status: "SKIPPED",
       output: finalOutput,
       startedAt: now,
       completedAt: now,
-      error: runStatus === "FAILED" ? finalOutput : undefined,
     });
 
     await ctx.db.patch(approval.runId, {
       status: runStatus,
       updatedAt: now,
       completedAt: now,
-      ...(runStatus === "CANCELLED" ? { cancelledAt: now } : {}),
+      cancelledAt: now,
       finalOutput,
-      ...(runStatus === "FAILED" ? { error: finalOutput } : {}),
     });
     await updateMemoryUsageOutcomeForRun(ctx, approval.runId, runStatus);
 
@@ -1890,6 +1965,51 @@ export const recordApprovedToolResultInternal = internalMutation({
     return {
       settled: true as const,
       stepIndex: resultStepIndex,
+      batchCalls: batch.map((call) => ({
+        name: call.normalizedToolName,
+        argumentsJson: call.argumentsJson,
+        resultJson: call.resultJson,
+      })),
+    };
+  },
+});
+
+/**
+ * The same settle-or-wait answer as `recordApprovedToolResultInternal`, without
+ * writing anything.
+ *
+ * A refusal has already been recorded by `decideApproval`, so the resume only
+ * needs to know whether the batch is complete and, if it is, what the whole turn
+ * looked like.
+ */
+export const getSettlementAfterDecisionInternal = internalQuery({
+  args: { approvalId: v.id("agentRunApprovals") },
+  handler: async (ctx, args) => {
+    const approval = await ctx.db.get(args.approvalId);
+    if (!approval) return null;
+
+    const stillPending = await ctx.db
+      .query("agentRunApprovals")
+      .withIndex("by_run_requested", (q) => q.eq("runId", approval.runId))
+      .filter((q) => q.eq(q.field("status"), "PENDING"))
+      .take(AGENT_RUN_DETAIL_LIMIT);
+    const stepIndex = await getNextStepIndex(ctx, approval.runId);
+    if (stillPending.length > 0) {
+      return { settled: false as const, batchCalls: [], stepIndex };
+    }
+
+    const toolCall = approval.toolCallId ? await ctx.db.get(approval.toolCallId) : null;
+    const batch = toolCall?.turnIndex === undefined
+      ? (toolCall ? [toolCall] : [])
+      : await ctx.db
+          .query("agentToolCalls")
+          .withIndex("by_run_turn", (q) =>
+            q.eq("runId", approval.runId).eq("turnIndex", toolCall.turnIndex))
+          .take(AGENT_RUN_DETAIL_LIMIT);
+
+    return {
+      settled: true as const,
+      stepIndex,
       batchCalls: batch.map((call) => ({
         name: call.normalizedToolName,
         argumentsJson: call.argumentsJson,

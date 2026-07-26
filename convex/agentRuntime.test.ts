@@ -1286,7 +1286,13 @@ describe("human-in-the-loop approval", () => {
     expect(await checkpoints(t)).toHaveLength(0);
   });
 
-  test("rejecting ends the run and leaves nothing to resume", async () => {
+  /**
+   * Rejecting used to set the run FAILED with the model told nothing, so from the
+   * agent's side the conversation stopped mid-thought and an objective that was
+   * often nearly done was thrown away. A reviewer who means "not that way, but do
+   * carry on" now has a button for it, and `cancelRun` is what stops a run.
+   */
+  test("rejecting tells the agent and lets it carry on", async () => {
     const t = makeTest();
     const { approval } = await runUntilApprovalRequested(t);
 
@@ -1294,16 +1300,82 @@ describe("human-in-the-loop approval", () => {
     await reviewer.mutation(api.agentRuns.decideApproval, {
       approvalId: approval!._id,
       decision: "REJECTED",
-      decisionReason: "Not appropriate.",
+      decisionReason: "Customer data stays put.",
     });
     await t.finishAllScheduledFunctions(vi.runAllTimers);
 
-    const { run } = await runSteps(t);
-    expect(run?.status).toBe("FAILED");
-    expect(generateMock).toHaveBeenCalledTimes(1);
-    // A rejected run parks in AWAITING_APPROVAL, which the sweeper ignores by
-    // design, so nothing else would ever clear this.
+    // The loop went back to the model, which is the whole point.
+    expect(generateMock).toHaveBeenCalledTimes(2);
+
+    const transcript = generateMock.mock.calls[1]?.[1] as {
+      contents: Array<{ role?: string; parts?: Array<Record<string, unknown>> }>;
+    };
+    const functionTurn = transcript.contents.find((turn) => turn.role === "function");
+    expect(JSON.stringify(functionTurn)).toContain("refused it");
+    // The reviewer's own words reach the model. They were stored and read by
+    // nothing before this.
+    expect(JSON.stringify(functionTurn)).toContain("Customer data stays put.");
+
+    const { run, toolCalls } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+    expect(toolCalls[0].status).toBe("DENIED");
     expect(await checkpoints(t)).toHaveLength(0);
+  });
+
+  test("a refused call cannot be re-requested, so the reviewer is asked once", async () => {
+    // Without this a model that still wants to do the thing asks again, queues a
+    // second approval, and burns the reviewer's attention rather than the token
+    // budget.
+    const t = makeTest();
+    const { approval } = await runUntilApprovalRequested(t);
+
+    const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
+    // On resume the model asks for exactly the same thing again, then gives up.
+    generateMock
+      .mockReset()
+      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValue(textResponse("Understood, I cannot look that up."));
+
+    await reviewer.mutation(api.agentRuns.decideApproval, {
+      approvalId: approval!._id,
+      decision: "REJECTED",
+      decisionReason: "No.",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
+    expect(approvals).toHaveLength(1);
+
+    const { run, toolCalls } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+    // Two calls: the one that was refused, and the retry answered inline with the
+    // same refusal rather than queued.
+    expect(toolCalls).toHaveLength(2);
+    expect(toolCalls.every((call) => call.status === "DENIED")).toBe(true);
+  });
+
+  test("the same tool with different arguments is a new decision", async () => {
+    const t = makeTest();
+    const { approval } = await runUntilApprovalRequested(t);
+
+    const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
+    generateMock
+      .mockReset()
+      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "cancellations" } }]))
+      .mockResolvedValue(textResponse("Waiting on approval."));
+
+    await reviewer.mutation(api.agentRuns.decideApproval, {
+      approvalId: approval!._id,
+      decision: "REJECTED",
+      decisionReason: "Not that one.",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    // A different question is a different question. Refusing one must not silently
+    // refuse everything that tool could ever be asked.
+    const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
+    expect(approvals).toHaveLength(2);
+    expect(approvals.filter((entry) => entry.status === "PENDING")).toHaveLength(1);
   });
 });
 

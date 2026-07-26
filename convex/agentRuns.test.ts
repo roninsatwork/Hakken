@@ -759,18 +759,21 @@ describe("Agent Runs", () => {
       approval: await ctx.db.get(approvalBId),
       run: await ctx.db.get(runBId),
       steps: await ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", runBId)).collect(),
+      toolCalls: await ctx.db.query("agentToolCalls").withIndex("by_run_started", (q) => q.eq("runId", runBId)).collect(),
     }));
     expect(rejectedState.approval).toMatchObject({ status: "REJECTED", reviewedBy: superAdminId });
-    expect(rejectedState.run).toMatchObject({
-      status: "FAILED",
-      finalOutput: "Agent approval rejected: Not approved",
-      error: "Agent approval rejected: Not approved",
-    });
-    expect(rejectedState.steps.at(-1)).toMatchObject({
-      kind: "FINAL",
-      status: "FAILED",
-      output: "Agent approval rejected: Not approved",
-    });
+    // A rejection is told to the agent rather than ending the run: the reviewer
+    // means "not that way", and the objective may be most of the way done.
+    // Stopping a run outright is `cancelRun`.
+    expect(rejectedState.run?.status).not.toBe("FAILED");
+    expect(rejectedState.run?.completedAt).toBeUndefined();
+    // The refusal is recorded as the call's result, which is what the model reads.
+    expect(rejectedState.toolCalls.at(-1)).toMatchObject({ status: "DENIED" });
+    expect(rejectedState.toolCalls.at(-1)?.resultJson).toContain("refused it");
+    expect(rejectedState.steps.at(-1)).toMatchObject({ kind: "TOOL_RESULT", status: "FAILED" });
+    // And it is remembered, so the model cannot put the same decision back in
+    // front of the reviewer.
+    expect(rejectedState.run?.refusedToolCallsJson).toContain("external_sync");
     expect(await superAdminClient.query(api.agentRuns.getPendingApprovalCount, {}))
       .toEqual({ count: 0, atLimit: false });
   });

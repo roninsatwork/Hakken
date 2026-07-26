@@ -676,7 +676,43 @@ Tests in `convex/agentRuntime.test.ts`:
 - results come back in request order, not decision order, when the second row is
   approved first
 
-### Phase 3 — A rejection tells the agent instead of killing the run
+### Phase 3 — A rejection tells the agent instead of killing the run — **DONE**
+
+Built as planned. Notes from the build:
+
+- **The settle-or-wait branch is now genuinely shared.** Extracted as
+  `settleBatchAndContinue` in `convex/agentRuntime.ts`, used by the approve path and
+  the new `resumeAfterRefusedToolCall`, and ready for Phase 4's expiry. The rule is
+  identical for all three and getting it right once matters more than reading
+  naturally three times.
+- **A refusal is recorded by the mutation, resumed by an action.** `decideApproval`
+  writes the refusal — tool call `DENIED`, the refusal as its `resultJson`, a
+  `TOOL_RESULT` step, and the key appended to `refusedToolCallsJson` — then schedules
+  the action, because transcript assembly lives in the action layer. Read-only
+  `getSettlementAfterDecisionInternal` gives the action the same settled/batch answer
+  the approve path gets from its recorder.
+- **The refused key sorts object keys.** Two requests for the same thing must produce
+  the same key, or a model that re-serialises its arguments differently walks straight
+  past the check and the reviewer is asked again.
+- **`CANCELLED` keeps its old meaning** — end the run — so the branch that used to
+  serve both decisions now serves only that one, and its dead `runStatus`/`toolStatus`
+  ternaries are gone.
+
+**A process note worth recording.** While proving a guard I ran
+`git checkout convex/agentRuntimeService.ts` to undo a temporary edit, which also
+discarded the uncommitted Phase 3 helpers in that file. Caught immediately by the
+typecheck, and restored. The lesson is the obvious one: revert an experiment from a
+scratch copy, never with `git checkout` on a file holding uncommitted work.
+
+Tests: three new, plus two rewritten to the new contract rather than deleted, so the
+change of meaning is pinned where the old one was. Guards proved by reverting three
+ways — ignoring the refused list, dropping the reviewer's reason, and restoring
+rejection-ends-the-run — each failing the tests that cover it.
+
+Verified: `lint:all` (0 errors), `check` (3214 tests, three consecutive clean runs),
+`build`, `git diff --check` clean.
+
+**Original plan text follows.**
 
 Built on Phase 2's settle-or-wait branch. It replaces a tested path, so the
 existing reject tests change deliberately rather than incidentally.

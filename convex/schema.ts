@@ -557,6 +557,12 @@ export default defineSchema({
     updatedAt: v.number(),
     error: v.optional(v.string()),
     finalOutput: v.optional(v.string()),
+    // Calls a person has refused during this run, as tool-plus-arguments keys.
+    // A refusal is now fed back to the model rather than ending the run, so
+    // without this a model that still wants to send that email asks again, queues
+    // another approval, and burns the reviewer's attention in a loop. Lives on the
+    // run because it is read and written only by that run and dies with it.
+    refusedToolCallsJson: v.optional(v.string()),
     replayOfRunId: v.optional(v.id("agentRuns")),
     replayMode: v.optional(v.union(
       v.literal("CURRENT_ACTIVE"),
