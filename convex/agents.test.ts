@@ -1508,4 +1508,76 @@ describe("OWASP: Broken Access Control - Agents", () => {
       modelSelectionMode: "inherit",
     });
   });
+
+  test("autonomy and the run budget round-trip, and the budget is clamped on the way in", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, agentId } = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", {
+        email: "budget-admin@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Budget Agent",
+        modelId: "default-agent-model",
+        modelSelectionMode: "inherit",
+        thinkingMode: false,
+        isActive: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { adminId, agentId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const readAgent = async () => await t.run(async (ctx) => ctx.db.get(agentId));
+
+    // Neither field is set on a fresh agent: it is gated and runs on the platform
+    // budget, which is what every agent did before these became settable.
+    const before = await readAgent();
+    expect(before?.autonomousToolExecution).toBeUndefined();
+    expect(before?.maxCostGBP).toBeUndefined();
+
+    await client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      autonomousToolExecution: true,
+      maxSteps: 12,
+      maxToolCalls: 6,
+      maxRuntimeMs: 6 * 60 * 1000,
+      maxCostGBP: 0.5,
+    });
+
+    expect(await readAgent()).toMatchObject({
+      autonomousToolExecution: true,
+      maxSteps: 12,
+      maxToolCalls: 6,
+      maxRuntimeMs: 6 * 60 * 1000,
+      // Not floored to zero. A budget of £0 is one no run can start under.
+      maxCostGBP: 0.5,
+    });
+
+    // Above the ceiling is stored clamped, so the record cannot claim a budget the
+    // runtime will silently overrule.
+    await client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      maxSteps: 5_000,
+      maxCostGBP: 9_999,
+    });
+    expect(await readAgent()).toMatchObject({ maxSteps: 24, maxCostGBP: 20 });
+
+    // Zero is how a cleared box arrives, and it has to restore the default rather
+    // than store a limit of nothing.
+    await client.mutation(api.agents.updateAgent, {
+      id: agentId,
+      maxSteps: 0,
+      maxCostGBP: 0,
+    });
+    const cleared = await readAgent();
+    expect(cleared?.maxSteps).toBeUndefined();
+    expect(cleared?.maxCostGBP).toBeUndefined();
+    // Untouched fields survive a save that did not mention them.
+    expect(cleared?.maxToolCalls).toBe(6);
+    expect(cleared?.autonomousToolExecution).toBe(true);
+  });
 });

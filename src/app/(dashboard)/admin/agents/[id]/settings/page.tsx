@@ -101,6 +101,13 @@ type AgentSettingsFormData = {
   reasoningEffort: ReasoningEffort;
   allowInternetAccess: boolean;
   isActive: boolean;
+  /** Inverted for display: the switch reads as the safe state being on. */
+  requireHumanApproval: boolean;
+  /** Blank means inherit the platform default. Held as text so a box can be empty. */
+  maxSteps: string;
+  maxToolCalls: string;
+  maxRuntimeMinutes: string;
+  maxCostGBP: string;
   storageId?: Id<"_storage">;
 };
 
@@ -114,9 +121,33 @@ const emptyFormData: AgentSettingsFormData = {
   reasoningEffort: "MEDIUM",
   allowInternetAccess: false,
   isActive: true,
+  requireHumanApproval: true,
+  maxSteps: "",
+  maxToolCalls: "",
+  maxRuntimeMinutes: "",
+  maxCostGBP: "",
 };
 
 const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
+
+/**
+ * Mirrors of the runtime's platform defaults and ceilings.
+ *
+ * Named on screen beside each box so a blank field says what it will do and a
+ * typed one can be judged against the ceiling it will be clamped to. Duplicated
+ * rather than imported because these live in a Convex module; the drift guard in
+ * `quality-drift.test.ts` pins them to the runtime values.
+ */
+const AGENT_LIMIT_DEFAULTS = { maxSteps: 10, maxToolCalls: 8, maxRuntimeMinutes: 5, maxCostGBP: 1 } as const;
+const AGENT_LIMIT_CEILINGS = { maxSteps: 24, maxToolCalls: 20, maxRuntimeMinutes: 8, maxCostGBP: 20 } as const;
+
+/** Empty, zero and nonsense all mean "inherit the default", matching the server. */
+function parseLimitInput(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
 
 function getActivationWindowState(release: Pick<LatestAgentRelease, "activationWindowStart" | "activationWindowEnd">) {
   const now = Date.now();
@@ -312,6 +343,14 @@ export default function AgentOverviewPage() {
       reasoningEffort: agent.reasoningEffort || "MEDIUM",
       allowInternetAccess: agent.allowInternetAccess || false,
       isActive: agent.isActive ?? true,
+      // Absent means gated, exactly as the runtime reads it. Only an explicit
+      // true makes an agent autonomous, so an agent that predates the setting
+      // shows the switch on.
+      requireHumanApproval: agent.autonomousToolExecution !== true,
+      maxSteps: agent.maxSteps ? String(agent.maxSteps) : "",
+      maxToolCalls: agent.maxToolCalls ? String(agent.maxToolCalls) : "",
+      maxRuntimeMinutes: agent.maxRuntimeMs ? String(Math.round(agent.maxRuntimeMs / 60000)) : "",
+      maxCostGBP: agent.maxCostGBP ? String(agent.maxCostGBP) : "",
       storageId: undefined,
     });
   }, [agent, activeModelsData, defaultModelId]);
@@ -338,6 +377,14 @@ export default function AgentOverviewPage() {
         reasoningEffort: formData.reasoningEffort,
         allowInternetAccess: formData.allowInternetAccess,
         isActive: formData.isActive,
+        autonomousToolExecution: !formData.requireHumanApproval,
+        // Zero rather than omitted, because an omitted argument means "leave the
+        // stored value alone" and a cleared box has to mean "go back to the
+        // platform default". The server turns anything unusable into a removal.
+        maxSteps: parseLimitInput(formData.maxSteps) ?? 0,
+        maxToolCalls: parseLimitInput(formData.maxToolCalls) ?? 0,
+        maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
+        maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
         storageId: formData.storageId
       });
       setFormData((prev) => ({ ...prev, storageId: undefined }));
@@ -642,6 +689,71 @@ export default function AgentOverviewPage() {
                 </button>
               </div>
               <p className="text-[10px] text-muted">{t("sections.engine.internet.hint")}</p>
+            </div>
+
+            <div className="flex flex-col gap-2 md:col-span-2 pt-4 border-t border-border-dim/50">
+              <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.approval.label")}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 h-[46px]">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, requireHumanApproval: true })}
+                  className={`flex items-center justify-center gap-2 rounded-[12px] text-[13px] font-medium border transition-all h-full ${formData.requireHumanApproval ? "bg-green-500/20 border-green-500/30 text-green-500" : "bg-black/20 border-border-dim text-secondary hover:text-foreground"}`}
+                >
+                  <ClipboardCheck className="w-4 h-4" /> {t("sections.engine.approval.required")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, requireHumanApproval: false })}
+                  className={`flex items-center justify-center gap-2 rounded-[12px] text-[13px] font-medium border transition-all h-full ${!formData.requireHumanApproval ? "bg-[#f59e0b]/20 border-[#f59e0b]/30 text-[#f59e0b]" : "bg-black/20 border-border-dim text-secondary hover:text-foreground"}`}
+                >
+                  <Rocket className="w-4 h-4" /> {t("sections.engine.approval.autonomous")}
+                </button>
+              </div>
+              <p className="text-[10px] text-muted">
+                {formData.requireHumanApproval
+                  ? t("sections.engine.approval.hintRequired")
+                  : t("sections.engine.approval.hintAutonomous")}
+              </p>
+            </div>
+
+            {/* The budget is what remains when approval is off, so it sits directly
+                below the switch that turns approval off. Blank inherits. */}
+            <div className="flex flex-col gap-3 md:col-span-2 pt-4 border-t border-border-dim/50">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-mono tracking-widest text-muted uppercase">{t("sections.engine.budget.label")}</label>
+                <p className="text-[10px] text-muted">{t("sections.engine.budget.hint")}</p>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {([
+                  { key: "maxSteps", limit: "maxSteps" },
+                  { key: "maxToolCalls", limit: "maxToolCalls" },
+                  { key: "maxRuntimeMinutes", limit: "maxRuntimeMinutes" },
+                  { key: "maxCostGBP", limit: "maxCostGBP" },
+                ] as const).map(({ key, limit }) => (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
+                      {t(`sections.engine.budget.fields.${key}`)}
+                    </label>
+                    <input
+                      id={`agent-limit-${key}`}
+                      type="number"
+                      min={0}
+                      step={key === "maxCostGBP" ? "0.01" : "1"}
+                      max={AGENT_LIMIT_CEILINGS[limit]}
+                      value={formData[key]}
+                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                      placeholder={String(AGENT_LIMIT_DEFAULTS[limit])}
+                      className="w-full h-[42px] rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground placeholder:text-muted focus:border-brand/40 focus:outline-none"
+                    />
+                    <p className="text-[10px] text-muted">
+                      {t("sections.engine.budget.inherits", {
+                        value: AGENT_LIMIT_DEFAULTS[limit],
+                        ceiling: AGENT_LIMIT_CEILINGS[limit],
+                      })}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2 pt-4 border-t border-border-dim/50">

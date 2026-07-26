@@ -70,11 +70,47 @@ export type AgentLimitOverrides = {
   maxCostGBP?: number;
 };
 
-function clampLimit(value: number | undefined, fallback: number, ceiling: number) {
+function clampLimit(
+  value: number | undefined,
+  fallback: number,
+  ceiling: number,
+  options: { integer?: boolean } = {},
+) {
   // Ignore anything that is not a usable positive number, including NaN and
   // values arriving from older records.
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return fallback;
-  return Math.min(Math.floor(value), ceiling);
+  const bounded = Math.min(value, ceiling);
+  // Counts and milliseconds are whole numbers; money is not. Flooring a cost
+  // limit turned every budget under £1 into £0, which is a budget no run can
+  // start under. Harmless while these fields were unreachable; a foot-gun the
+  // moment they appear on a screen.
+  return options.integer === false ? bounded : Math.floor(bounded);
+}
+
+/** The per-agent limits an admin may override, and the ceiling for each. */
+export const AGENT_LIMIT_OVERRIDE_FIELDS = ["maxSteps", "maxToolCalls", "maxRuntimeMs", "maxCostGBP"] as const;
+
+export type AgentLimitOverrideField = (typeof AGENT_LIMIT_OVERRIDE_FIELDS)[number];
+
+/**
+ * Clamp one override on the way in, so the stored record says what will run.
+ *
+ * Read-time clamping in `resolveAgentObjectiveLimits` already protects the run,
+ * but a record holding 500 while the run uses 24 makes the settings screen lie.
+ *
+ * `undefined` means inherit the platform default, and anything unusable — zero,
+ * negative, NaN — resolves to that rather than being rejected. A cleared box and
+ * a nonsense number should both mean "use the default", which is what read-time
+ * clamping already does with them.
+ */
+export function clampAgentLimitOverride(
+  field: AgentLimitOverrideField,
+  value: number | undefined,
+): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined;
+  const ceiling = AGENT_OBJECTIVE_LIMIT_CEILINGS[field];
+  const bounded = Math.min(value, ceiling);
+  return field === "maxCostGBP" ? bounded : Math.floor(bounded);
 }
 
 /**
@@ -129,7 +165,12 @@ export function resolveAgentObjectiveLimits(
     maxRuntimeMs: clampLimit(overrides?.maxRuntimeMs, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxRuntimeMs, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs),
     maxInputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens,
     maxOutputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxOutputTokens,
-    maxCostGBP: clampLimit(overrides?.maxCostGBP, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP),
+    maxCostGBP: clampLimit(
+      overrides?.maxCostGBP,
+      DEFAULT_AGENT_OBJECTIVE_LIMITS.maxCostGBP,
+      AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
+      { integer: false },
+    ),
   };
 }
 

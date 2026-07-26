@@ -266,6 +266,131 @@ describe("AgentOverviewPage model selection", () => {
   });
 });
 
+describe("AgentOverviewPage approval and run budget", () => {
+  const mutationMock = vi.fn();
+  let agentFixture: unknown;
+
+  const renderAgent = (agentOverrides: Record<string, unknown> = {}) => {
+    agentFixture = { ...agent, ...agentOverrides };
+    render(<AgentOverviewPage />);
+  };
+
+  const save = async () => {
+    fireEvent.click(screen.getByRole("button", { name: "sections.identity.saveButton" }));
+    await waitFor(() => {
+      expect(mutationMock).toHaveBeenCalled();
+    });
+    return mutationMock.mock.calls
+      .map(([payload]) => payload as Record<string, unknown>)
+      .find((payload) => payload && "name" in payload)!;
+  };
+
+  const limitInput = (field: string) =>
+    screen.getByLabelText(`sections.engine.budget.fields.${field}`) as HTMLInputElement;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+      void args;
+      const functionName = getFunctionName(queryFn);
+      if (functionName === "agents:get") return agentFixture as ReturnType<typeof useQuery>;
+      if (functionName === "agents:getAgentReadiness") {
+        return { ...readiness, modelReadiness: inheritedReadiness } as ReturnType<typeof useQuery>;
+      }
+      if (functionName === "releases:getLatestReleaseForAgent") return null as ReturnType<typeof useQuery>;
+      if (functionName === "aiModels:getActiveModels") return models as unknown as ReturnType<typeof useQuery>;
+      return undefined as unknown as ReturnType<typeof useQuery>;
+    });
+    vi.mocked(useMutation).mockReturnValue(mutationMock as unknown as ReturnType<typeof useMutation>);
+    mutationMock.mockResolvedValue(undefined);
+  });
+
+  /**
+   * The polarity guard, on screen.
+   *
+   * `humanApprovalRequired` is written false on every agent at creation, so if
+   * autonomy were ever read from a field that defaults to false, every agent on
+   * the platform would render as autonomous and save as autonomous. Absent has to
+   * read as approval required.
+   */
+  it("shows approval as required for an agent with no autonomy setting, and saves it that way", async () => {
+    renderAgent({ autonomousToolExecution: undefined });
+
+    expect(screen.getByText("sections.engine.approval.hintRequired")).toBeInTheDocument();
+
+    const payload = await save();
+    expect(payload.autonomousToolExecution).toBe(false);
+  });
+
+  it("saves autonomy when the agent is switched to run autonomously", async () => {
+    renderAgent();
+
+    fireEvent.click(screen.getByRole("button", { name: "sections.engine.approval.autonomous" }));
+    // The consequence is spelled out where the choice is made, not left implied.
+    expect(screen.getByText("sections.engine.approval.hintAutonomous")).toBeInTheDocument();
+
+    const payload = await save();
+    expect(payload.autonomousToolExecution).toBe(true);
+  });
+
+  it("keeps an already-autonomous agent autonomous when an unrelated field is saved", async () => {
+    renderAgent({ autonomousToolExecution: true });
+
+    expect(screen.getByText("sections.engine.approval.hintAutonomous")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("sections.engine.model.label"), {
+      target: { value: "alt-agent-model" },
+    });
+    const payload = await save();
+    expect(payload.autonomousToolExecution).toBe(true);
+  });
+
+  it("leaves the budget boxes empty when an agent has no overrides, and sends zero to mean inherit", async () => {
+    renderAgent();
+
+    expect(limitInput("maxSteps").value).toBe("");
+    expect(limitInput("maxCostGBP").value).toBe("");
+    // The placeholder names what a blank box will actually do.
+    expect(limitInput("maxSteps").placeholder).toBe("10");
+    expect(limitInput("maxCostGBP").placeholder).toBe("1");
+
+    const payload = await save();
+    // Zero rather than omitted: an omitted argument means "leave the stored value
+    // alone", so a cleared box could never restore the platform default.
+    expect(payload.maxSteps).toBe(0);
+    expect(payload.maxToolCalls).toBe(0);
+    expect(payload.maxRuntimeMs).toBe(0);
+    expect(payload.maxCostGBP).toBe(0);
+  });
+
+  it("shows stored overrides, runtime in minutes, and saves runtime back in milliseconds", async () => {
+    renderAgent({ maxSteps: 20, maxToolCalls: 15, maxRuntimeMs: 6 * 60 * 1000, maxCostGBP: 2.5 });
+
+    expect(limitInput("maxSteps").value).toBe("20");
+    expect(limitInput("maxToolCalls").value).toBe("15");
+    // Minutes on screen. Asking an operator to type 360000 would be hostile.
+    expect(limitInput("maxRuntimeMinutes").value).toBe("6");
+    expect(limitInput("maxCostGBP").value).toBe("2.5");
+
+    const payload = await save();
+    expect(payload.maxSteps).toBe(20);
+    expect(payload.maxRuntimeMs).toBe(6 * 60 * 1000);
+    // A sub-pound budget survives as a decimal rather than being floored to zero.
+    expect(payload.maxCostGBP).toBe(2.5);
+  });
+
+  it("sends a cleared box as zero so the platform default comes back", async () => {
+    renderAgent({ maxSteps: 20, maxCostGBP: 2.5 });
+
+    fireEvent.change(limitInput("maxSteps"), { target: { value: "" } });
+    fireEvent.change(limitInput("maxCostGBP"), { target: { value: "0.5" } });
+
+    const payload = await save();
+    expect(payload.maxSteps).toBe(0);
+    expect(payload.maxCostGBP).toBe(0.5);
+  });
+});
+
 describe("AgentOverviewPage release visibility", () => {
   const mutationMock = vi.fn();
 

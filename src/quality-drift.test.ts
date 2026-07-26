@@ -352,6 +352,65 @@ describe('Quality Drift Guardrails', () => {
     ).toEqual([]);
   });
 
+  test('the agent budget figures on screen match the runtime constants', () => {
+    // The settings screen names the platform default and the ceiling beside each
+    // budget box, so a blank field says what it will do and a typed one can be
+    // judged. Those numbers are duplicated because the real ones live in a Convex
+    // module. If the runtime raises a ceiling and the screen keeps quoting the old
+    // one, the screen is lying about what it will accept.
+    const runtime = readRepoFile('convex/agentRuntimeService.ts');
+    const screen = readRepoFile('src/app/(dashboard)/admin/agents/[id]/settings/page.tsx');
+
+    const readRuntimeBlock = (name: string) => {
+      const match = runtime.match(new RegExp(`export const ${name} = \\{([\\s\\S]*?)\\} as const;`));
+      if (!match) throw new Error(`${name} not found in convex/agentRuntimeService.ts`);
+      return match[1];
+    };
+    const readNumber = (block: string, field: string) => {
+      // Terminates on a comma, a brace, or the end of the captured block, so the
+      // last entry of an inline object literal is read the same as one in a
+      // multi-line block.
+      const match = block.match(new RegExp(`${field}:\\s*([0-9][0-9*\\s]*?)\\s*(?:[,}]|$)`));
+      if (!match) throw new Error(`${field} not found`);
+      // Handles the runtime's `5 * 60 * 1000` style as well as a plain number.
+      return match[1].split('*').reduce((total, part) => total * Number(part.trim()), 1);
+    };
+    const readScreenBlock = (name: string) => {
+      const match = screen.match(new RegExp(`const ${name} = \\{([\\s\\S]*?)\\} as const;`));
+      if (!match) throw new Error(`${name} not found on the settings screen`);
+      return match[1];
+    };
+
+    const runtimeDefaults = readRuntimeBlock('DEFAULT_AGENT_OBJECTIVE_LIMITS');
+    const runtimeCeilings = readRuntimeBlock('AGENT_OBJECTIVE_LIMIT_CEILINGS');
+    const screenDefaults = readScreenBlock('AGENT_LIMIT_DEFAULTS');
+    const screenCeilings = readScreenBlock('AGENT_LIMIT_CEILINGS');
+
+    expect({
+      maxSteps: readNumber(screenDefaults, 'maxSteps'),
+      maxToolCalls: readNumber(screenDefaults, 'maxToolCalls'),
+      maxRuntimeMinutes: readNumber(screenDefaults, 'maxRuntimeMinutes'),
+      maxCostGBP: readNumber(screenDefaults, 'maxCostGBP'),
+    }, 'Agent budget defaults on the settings screen drifted from the runtime').toEqual({
+      maxSteps: readNumber(runtimeDefaults, 'maxSteps'),
+      maxToolCalls: readNumber(runtimeDefaults, 'maxToolCalls'),
+      maxRuntimeMinutes: readNumber(runtimeDefaults, 'maxRuntimeMs') / 60000,
+      maxCostGBP: readNumber(runtimeDefaults, 'maxCostGBP'),
+    });
+
+    expect({
+      maxSteps: readNumber(screenCeilings, 'maxSteps'),
+      maxToolCalls: readNumber(screenCeilings, 'maxToolCalls'),
+      maxRuntimeMinutes: readNumber(screenCeilings, 'maxRuntimeMinutes'),
+      maxCostGBP: readNumber(screenCeilings, 'maxCostGBP'),
+    }, 'Agent budget ceilings on the settings screen drifted from the runtime').toEqual({
+      maxSteps: readNumber(runtimeCeilings, 'maxSteps'),
+      maxToolCalls: readNumber(runtimeCeilings, 'maxToolCalls'),
+      maxRuntimeMinutes: readNumber(runtimeCeilings, 'maxRuntimeMs') / 60000,
+      maxCostGBP: readNumber(runtimeCeilings, 'maxCostGBP'),
+    });
+  });
+
   test('admin list pages keep using shared table primitives after cleanup', () => {
     const pages = [
       'src/app/(dashboard)/admin/agents/page.tsx',

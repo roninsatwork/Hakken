@@ -18,6 +18,7 @@ import {
   buildUpdateAgentAuditMetadata,
   isGlobalAgent,
 } from "./agentService";
+import { AGENT_LIMIT_OVERRIDE_FIELDS, clampAgentLimitOverride } from "./agentRuntimeService";
 import { getAgentTemplateById, getAgentTemplates } from "./agentTemplates";
 import { seedFixturesForTemplate } from "./agentEvalFixtures";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
@@ -943,6 +944,10 @@ export const updateAgent = superAdminMutation({
     temperature: v.optional(v.number()),
     humanApprovalRequired: v.optional(v.boolean()),
     autonomousToolExecution: v.optional(v.boolean()),
+    maxSteps: v.optional(v.number()),
+    maxToolCalls: v.optional(v.number()),
+    maxRuntimeMs: v.optional(v.number()),
+    maxCostGBP: v.optional(v.number()),
     inputSchema: v.optional(v.string()),
     outputSchema: v.optional(v.string()),
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),
@@ -959,6 +964,16 @@ export const updateAgent = superAdminMutation({
     if (!existingAgent) throw new Error("Agent not found");
     const useCase: AgentModelUseCase = existingAgent.workflowId ? "workflow" : "agent";
     const modelSelectionMode: AgentModelSelectionMode | undefined = updates.modelSelectionMode;
+    // Clamp the run budget on the way in, so the stored record says what will
+    // actually run rather than holding a number the runtime silently overrides.
+    // A field that was sent but is unusable — a cleared box arrives as 0 — becomes
+    // undefined, which Convex patches as a removal, restoring the platform
+    // default. A field that was not sent at all is left alone.
+    for (const field of AGENT_LIMIT_OVERRIDE_FIELDS) {
+      if (field in updates) {
+        updates[field] = clampAgentLimitOverride(field, updates[field]);
+      }
+    }
     if (updates.releaseGateTags !== undefined) {
       updates.releaseGateTags = normalizeReleaseGateTags(updates.releaseGateTags);
     }

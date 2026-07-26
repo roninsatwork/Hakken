@@ -723,7 +723,53 @@ Tests in `convex/agentRuns.test.ts` plus a new service unit test:
 - a row whose run already reached a terminal state is skipped, not expired
 - `decideApproval` on an expired row throws
 
-### Phase 5 — The controls on agent settings: the toggle, and the limits behind it
+### Phase 5 — The controls on agent settings: the toggle, and the limits behind it — **DONE**
+
+**A second latent bug, found the same way as Phase 1's.** `clampLimit` ran
+`Math.floor` over every limit including `maxCostGBP`, so a budget of £0.50 became
+**£0** — a budget no run can start under, because the first cost check has already
+met it. Harmless while these fields were unreachable; a foot-gun the moment they
+appear on a screen. Counts and milliseconds are still floored; money is not.
+
+Deviations from the plan as written, all deliberate:
+
+- **Runtime is entered in minutes, not milliseconds.** Asking an operator to type
+  `300000` would be hostile. Converted on save and on load.
+- **A cleared box sends `0`, not an omitted argument.** An omitted argument means
+  "leave the stored value alone", so clearing a field could never have restored the
+  platform default. The server turns anything unusable — `0`, negative, `NaN` —
+  into `undefined`, which Convex patches as a removal.
+- **The budget is clamped on write as well as on read.** Read-time clamping already
+  protected the run, but a record holding `500` while the run used `24` would make
+  the screen lie about what applies.
+- **The budget went into the version snapshot's `policy` section** rather than a new
+  section of its own, so it is covered by the existing `policyHash` without a new
+  schema column. It belongs there in any case: once an agent is autonomous, these
+  four are the only thing bounding it. Release restore runs them back through the
+  same clamp, so a rollback to a snapshot taken before the ceilings tightened cannot
+  reinstate a budget above them.
+- **The screen's copies of the defaults and ceilings are pinned by a new drift
+  guard** in `src/quality-drift.test.ts`. They have to be duplicated because the real
+  ones live in a Convex module, and a screen quoting a stale ceiling is a screen
+  lying about what it will accept.
+
+Tests: six on the settings screen, one round-trip through `updateAgent`, and four on
+the clamp. Guards proved by reverting four ways — flipping the screen's polarity,
+removing the write-clamp, restoring the floor on cost, and drifting a ceiling — each
+failing the test that covers it.
+
+Verified: `lint:all` (0 errors), `check` (429 files, 3192 tests), `build`,
+`git diff --check` clean. **Browser-verified** on the running dev server: the control
+renders with "Require approval" selected by default, switching to autonomous turns it
+amber and swaps the hint to the consequence, all four budget boxes carry the right
+placeholder, ceiling and step (£ to two decimals), four columns on desktop, no
+horizontal overflow at mobile width, console clean. Nothing was saved against live
+data — the control was returned to its original state.
+
+Noted, not fixed: at 375px the admin sidebar does not collapse, so every screen in
+this area is squashed. Pre-existing and platform-wide, not introduced here.
+
+**Original plan text follows.**
 
 `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx`, in the Engine section
 (`:554`), following the two-button pattern already used by Internet Access

@@ -4,6 +4,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { isGlobalAgent } from "./agentService";
+import { AGENT_LIMIT_OVERRIDE_FIELDS, clampAgentLimitOverride } from "./agentRuntimeService";
 import { buildAgentReadiness } from "./agents";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 
@@ -110,6 +111,10 @@ type AgentSnapshot = {
   policy?: {
     humanApprovalRequired?: boolean;
     autonomousToolExecution?: boolean;
+    maxSteps?: number;
+    maxToolCalls?: number;
+    maxRuntimeMs?: number;
+    maxCostGBP?: number;
     allowInternetAccess?: boolean;
     triggerType?: string;
   };
@@ -306,6 +311,12 @@ function buildAgentRestorePatch(snapshot: AgentSnapshot, now: number): AgentPatc
   if (snapshot.policy) {
     if (typeof snapshot.policy.humanApprovalRequired === "boolean") patch.humanApprovalRequired = snapshot.policy.humanApprovalRequired;
     if (typeof snapshot.policy.autonomousToolExecution === "boolean") patch.autonomousToolExecution = snapshot.policy.autonomousToolExecution;
+    // Restored through the same clamp as a live edit, so a rollback to a snapshot
+    // taken before the ceilings tightened cannot reinstate a budget above them.
+    for (const field of AGENT_LIMIT_OVERRIDE_FIELDS) {
+      const stored = snapshot.policy[field];
+      if (typeof stored === "number") patch[field] = clampAgentLimitOverride(field, stored);
+    }
     if (typeof snapshot.policy.allowInternetAccess === "boolean") patch.allowInternetAccess = snapshot.policy.allowInternetAccess;
     patch.triggerType = parseTriggerType(snapshot.policy.triggerType);
   }
@@ -373,6 +384,9 @@ function summarizePolicy(policy?: AgentSnapshot["policy"]) {
       : policy.humanApprovalRequired ? "approval required" : "approval not required",
     policy.allowInternetAccess ? "internet allowed" : "internet blocked",
     policy.triggerType || "manual trigger",
+    // The spend ceiling is the one budget figure worth reading in a release
+    // diff: on an autonomous agent it is the last thing bounding a run.
+    policy.maxCostGBP === undefined ? "default budget" : `£${policy.maxCostGBP} budget`,
   ].join(" / ");
 }
 

@@ -1158,6 +1158,24 @@
                                 "offline": "Disabled",
                                 "liveSearch": "Enabled"
                             },
+                            "approval": {
+                                "label": "Human Approval",
+                                "required": "Require approval",
+                                "autonomous": "Run autonomously",
+                                "hintRequired": "The agent stops and waits for a person before it writes, sends, or calls anything outside the platform.",
+                                "hintAutonomous": "The agent completes writes, sends and deletions on its own, with nobody asked. What bounds it is the tools you give it and the run budget below."
+                            },
+                            "budget": {
+                                "label": "Run Budget",
+                                "hint": "The limit on a single run. This is what stops an autonomous agent, so it matters most when approval is off. Leave a box empty to use the platform default.",
+                                "inherits": "Default {value} · most {ceiling}",
+                                "fields": {
+                                    "maxSteps": "Steps",
+                                    "maxToolCalls": "Tool calls",
+                                    "maxRuntimeMinutes": "Minutes",
+                                    "maxCostGBP": "Spend (£)"
+                                }
+                            },
                             "status": {
                                 "label": "Status",
                                 "active": "Active",

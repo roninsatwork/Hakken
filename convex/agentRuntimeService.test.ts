@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
+  AGENT_LIMIT_OVERRIDE_FIELDS,
   AGENT_OBJECTIVE_LIMIT_CEILINGS,
   DEFAULT_AGENT_OBJECTIVE_LIMITS,
   UNPRICED_MODEL_OBJECTIVE_LIMITS,
+  clampAgentLimitOverride,
   isModelCostMeasurable,
   resolveAgentObjectiveLimits,
   buildToolInteractionTurns,
@@ -216,6 +218,52 @@ describe("agentRuntimeService", () => {
 
     test("floors fractional values so a limit is always a whole count", () => {
       expect(resolveAgentObjectiveLimits({ maxSteps: 7.9 }).maxSteps).toBe(7);
+    });
+
+    test("does not floor the cost limit, because money is not a count", () => {
+      // Flooring turned every budget under £1 into £0 — a budget no run can start
+      // under, since the first cost check would already have met it. Harmless
+      // while these fields were unreachable, a foot-gun the moment they appear on
+      // a screen.
+      expect(resolveAgentObjectiveLimits({ maxCostGBP: 0.5 }).maxCostGBP).toBe(0.5);
+      expect(resolveAgentObjectiveLimits({ maxCostGBP: 2.75 }).maxCostGBP).toBe(2.75);
+    });
+
+    describe("clamping an override on the way in", () => {
+      test("keeps a usable value, flooring counts and preserving pennies", () => {
+        expect(clampAgentLimitOverride("maxSteps", 12)).toBe(12);
+        expect(clampAgentLimitOverride("maxSteps", 12.7)).toBe(12);
+        expect(clampAgentLimitOverride("maxCostGBP", 0.5)).toBe(0.5);
+      });
+
+      test("clamps above the ceiling rather than storing a number the runtime will override", () => {
+        // Without this the record could hold 500 while the run used 24, so the
+        // settings screen would be showing a figure that never applies.
+        expect(clampAgentLimitOverride("maxSteps", 500)).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps);
+        expect(clampAgentLimitOverride("maxCostGBP", 5_000)).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP);
+        expect(clampAgentLimitOverride("maxRuntimeMs", 60 * 60 * 1000))
+          .toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs);
+      });
+
+      test("treats a cleared box and a nonsense number alike as inherit", () => {
+        // The screen sends 0 for an empty field, and undefined is patched as a
+        // removal, so the platform default comes back.
+        for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, undefined]) {
+          expect(clampAgentLimitOverride("maxSteps", bad)).toBeUndefined();
+          expect(clampAgentLimitOverride("maxCostGBP", bad)).toBeUndefined();
+        }
+      });
+
+      test("every override field is covered", () => {
+        // A new budget field added to the schema and forgotten here would be
+        // stored unclamped.
+        expect([...AGENT_LIMIT_OVERRIDE_FIELDS]).toEqual([
+          "maxSteps",
+          "maxToolCalls",
+          "maxRuntimeMs",
+          "maxCostGBP",
+        ]);
+      });
     });
   });
 });

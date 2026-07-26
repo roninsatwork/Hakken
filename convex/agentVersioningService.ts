@@ -170,6 +170,13 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     // autonomy on, or off, behind the operator's back would be a worse fault
     // than the one autonomy was added to fix.
     autonomousToolExecution: agent.autonomousToolExecution,
+    // The run budget lives here rather than in its own section so it is covered
+    // by the existing policy hash. It belongs with policy in any case: once an
+    // agent is autonomous these four are the only thing bounding what it does.
+    maxSteps: agent.maxSteps,
+    maxToolCalls: agent.maxToolCalls,
+    maxRuntimeMs: agent.maxRuntimeMs,
+    maxCostGBP: agent.maxCostGBP,
     allowInternetAccess: agent.allowInternetAccess,
     triggerType: agent.triggerType,
   };

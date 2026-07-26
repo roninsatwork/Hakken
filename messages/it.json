@@ -1158,6 +1158,24 @@
                                 "offline": "Solo Offline",
                                 "liveSearch": "Ricerca Live"
                             },
+                            "approval": {
+                                "label": "Approvazione Umana",
+                                "required": "Richiedi approvazione",
+                                "autonomous": "Esecuzione autonoma",
+                                "hintRequired": "L'agente si ferma e attende una persona prima di scrivere, inviare o chiamare qualcosa fuori dalla piattaforma.",
+                                "hintAutonomous": "L'agente completa scritture, invii ed eliminazioni da solo, senza chiedere a nessuno. Lo limitano gli strumenti che gli assegni e il budget di esecuzione qui sotto."
+                            },
+                            "budget": {
+                                "label": "Budget di Esecuzione",
+                                "hint": "Il limite per una singola esecuzione. È ciò che ferma un agente autonomo, quindi conta soprattutto quando l'approvazione è disattivata. Lascia un campo vuoto per usare il valore predefinito della piattaforma.",
+                                "inherits": "Predefinito {value} · massimo {ceiling}",
+                                "fields": {
+                                    "maxSteps": "Passaggi",
+                                    "maxToolCalls": "Chiamate strumenti",
+                                    "maxRuntimeMinutes": "Minuti",
+                                    "maxCostGBP": "Spesa (£)"
+                                }
+                            },
                             "status": {
                                 "label": "Stato di Distribuzione",
                                 "active": "Flotta Attiva",
