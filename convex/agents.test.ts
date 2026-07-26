@@ -1034,7 +1034,6 @@ describe("OWASP: Broken Access Control - Agents", () => {
       builderIntent: {
         objective: "Triage support tickets before activation.",
         audience: "Support admins",
-        approvalPolicy: "template",
         modelBehavior: "balanced",
         knowledgePlan: "template",
         toolPlan: "template",
@@ -1101,7 +1100,6 @@ describe("OWASP: Broken Access Control - Agents", () => {
       builderIntent: {
         objective: "Triage support tickets before activation.",
         audience: "Support admins",
-        approvalPolicy: "template",
         modelBehavior: "balanced",
         knowledgePlan: "template",
         toolPlan: "template",

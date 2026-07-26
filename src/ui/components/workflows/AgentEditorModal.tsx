@@ -22,7 +22,6 @@ type AgentEditorFormData = {
   thinkingMode: boolean;
   reasoningEffort: ReasoningEffort;
   allowInternetAccess: boolean;
-  humanApprovalRequired: boolean;
   temperature: number | string;
   _inputMapping: string;
   _inputTemplate: string;
@@ -95,7 +94,6 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
     thinkingMode: false,
     reasoningEffort: "MEDIUM",
     allowInternetAccess: false,
-    humanApprovalRequired: false,
     temperature: 1.0,
     _inputMapping: "",
     _inputTemplate: "",
@@ -127,7 +125,6 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         thinkingMode: agent.thinkingMode || false,
         reasoningEffort: agent.reasoningEffort || "MEDIUM",
         allowInternetAccess: agent.allowInternetAccess || false,
-        humanApprovalRequired: agent.humanApprovalRequired || false,
         temperature: agent.temperature ?? 1.0,
         _inputMapping: typeof node.data?._inputMapping === 'object' ? JSON.stringify(node.data._inputMapping, null, 2) : node.data?._inputMapping || "",
         _inputTemplate: node.data?._inputTemplate || "",
@@ -230,7 +227,6 @@ export function AgentEditorModal({ node, allNodes = [], edges = [], onClose, onU
         thinkingMode: formData.thinkingMode,
         reasoningEffort: formData.reasoningEffort,
         allowInternetAccess: formData.allowInternetAccess,
-        humanApprovalRequired: formData.humanApprovalRequired,
         temperature: parseFloat(String(formData.temperature)),
       });
 

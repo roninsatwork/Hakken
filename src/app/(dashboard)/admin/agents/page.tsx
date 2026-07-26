@@ -53,7 +53,6 @@ type BuilderStep = typeof BUILDER_STEPS[number];
 type BuilderForm = {
   objective: string;
   audience: string;
-  approvalPolicy: "template" | "always" | "read-only";
   modelBehavior: "balanced" | "fast" | "careful";
   knowledgePlan: "template" | "later";
   toolPlan: "template" | "later";
@@ -63,7 +62,6 @@ type BuilderForm = {
 const defaultBuilderForm: BuilderForm = {
   objective: "",
   audience: "",
-  approvalPolicy: "template",
   modelBehavior: "balanced",
   knowledgePlan: "template",
   toolPlan: "template",
@@ -146,7 +144,6 @@ export default function AgentsPage() {
   const builderIntent = {
     objective: builderForm.objective.trim(),
     audience: builderForm.audience.trim(),
-    approvalPolicy: builderForm.approvalPolicy,
     modelBehavior: builderForm.modelBehavior,
     knowledgePlan: builderForm.knowledgePlan,
     toolPlan: builderForm.toolPlan,
@@ -452,22 +449,6 @@ export default function AgentsPage() {
 
           {currentBuilderStep === "policy" && (
             <div className="grid gap-4">
-              <AdminModalFormField label={t('builder.approvalPolicy')}>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(["template", "always", "read-only"] as const).map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setBuilderForm({ ...builderForm, approvalPolicy: value })}
-                      className={`rounded-[10px] border px-3 py-3 text-left text-[12px] transition-colors ${
-                        builderForm.approvalPolicy === value ? "border-brand bg-brand/10 text-foreground" : "border-border-dim bg-foreground/[0.03] text-secondary"
-                      }`}
-                    >
-                      {t(`builder.approval.${value}`)}
-                    </button>
-                  ))}
-                </div>
-              </AdminModalFormField>
               <AdminModalFormField label={t('builder.modelBehavior')}>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {(["balanced", "fast", "careful"] as const).map((value) => (

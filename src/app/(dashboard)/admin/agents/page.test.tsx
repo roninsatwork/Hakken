@@ -126,4 +126,5 @@ describe("AgentsPage model column", () => {
 
     expect(screen.getByText("Pinned Agent Model")).toBeInTheDocument();
   });
+
 });

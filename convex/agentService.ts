@@ -80,10 +80,18 @@ export function buildCreateAgentAuditMetadata(name: string) {
   return JSON.stringify({ name, scope: "global" });
 }
 
+/**
+ * `approvalPolicy` is gone from here.
+ *
+ * The agent builder offered a template/always/read-only choice that was serialised
+ * into this metadata and read by nothing — choosing "always require approval" never
+ * made an agent require approval. The real control lives on agent settings, where a
+ * single switch writes `autonomousToolExecution` and the runtime reads it. Existing
+ * audit rows keep their stored copy; nothing reads it back.
+ */
 export type AgentBuilderIntentAuditMetadata = {
   objective?: string;
   audience?: string;
-  approvalPolicy?: string;
   modelBehavior?: string;
   knowledgePlan?: string;
   toolPlan?: string;
@@ -97,7 +105,6 @@ function normalizeBuilderIntentAuditMetadata(intent?: AgentBuilderIntentAuditMet
   return {
     ...(intent.objective ? { objective: intent.objective.slice(0, 500) } : {}),
     ...(intent.audience ? { audience: intent.audience.slice(0, 160) } : {}),
-    ...(intent.approvalPolicy ? { approvalPolicy: intent.approvalPolicy } : {}),
     ...(intent.modelBehavior ? { modelBehavior: intent.modelBehavior } : {}),
     ...(intent.knowledgePlan ? { knowledgePlan: intent.knowledgePlan } : {}),
     ...(intent.toolPlan ? { toolPlan: intent.toolPlan } : {}),

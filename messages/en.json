@@ -1104,7 +1104,6 @@
                 "objectivePlaceholder": "Describe the job this agent should reliably complete.",
                 "audience": "Audience",
                 "audiencePlaceholder": "e.g. Support admins, sales managers, internal operators",
-                "approvalPolicy": "Approval Policy",
                 "modelBehavior": "Model Behavior",
                 "useTemplateKnowledge": "Use template-recommended knowledge plan",
                 "useTemplateTools": "Use template-recommended tools/connectors",
@@ -1114,11 +1113,6 @@
                     "mission": "Mission",
                     "policy": "Policy",
                     "readiness": "Readiness"
-                },
-                "approval": {
-                    "template": "Use template defaults",
-                    "always": "Require approvals",
-                    "read-only": "Read-only tools first"
                 },
                 "behavior": {
                     "balanced": "Balanced",

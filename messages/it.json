@@ -1104,7 +1104,6 @@
                 "objectivePlaceholder": "Descrivi il lavoro che questo agent deve completare in modo affidabile.",
                 "audience": "Pubblico",
                 "audiencePlaceholder": "es. Admin supporto, responsabili vendite, operatori interni",
-                "approvalPolicy": "Policy Approvazioni",
                 "modelBehavior": "Comportamento Modello",
                 "useTemplateKnowledge": "Usa il piano conoscenza consigliato dal template",
                 "useTemplateTools": "Usa tool/connettori consigliati dal template",
@@ -1114,11 +1113,6 @@
                     "mission": "Missione",
                     "policy": "Policy",
                     "readiness": "Prontezza"
-                },
-                "approval": {
-                    "template": "Usa default template",
-                    "always": "Richiedi approvazioni",
-                    "read-only": "Prima tool solo lettura"
                 },
                 "behavior": {
                     "balanced": "Bilanciato",

@@ -352,6 +352,37 @@ describe('Quality Drift Guardrails', () => {
     ).toEqual([]);
   });
 
+  test('no screen offers an approval policy the runtime does not read', () => {
+    // The agent builder had an "Approval Policy" choice of template / always /
+    // read-only. The value was serialised into audit metadata and read by nothing:
+    // choosing "always require approval" never made an agent require approval. The
+    // real control is the single switch on agent settings that writes
+    // `autonomousToolExecution`, which the runtime does read.
+    //
+    // Pinned here rather than in a page test on purpose. The obvious page test —
+    // render the agents page and assert the field is absent — passes whether or not
+    // the field exists, because the builder modal is not open when the page renders.
+    // A test that cannot fail is worse than no test.
+    // `approvalPolicy` is dead everywhere. `humanApprovalRequired` is a real
+    // stored field the runtime does read — it escalates the gate to reads as well —
+    // so it is only an offender in the editor modal, which carried it in form state
+    // and posted it on save while rendering no input for it.
+    const offenders = [
+      ...[
+        'src/app/(dashboard)/admin/agents/page.tsx',
+        'src/ui/components/workflows/AgentEditorModal.tsx',
+        'convex/agentService.ts',
+      ].filter((filePath) => /approvalPolicy\s*[:=]/.test(readRepoFile(filePath))),
+      ...['src/ui/components/workflows/AgentEditorModal.tsx']
+        .filter((filePath) => /humanApprovalRequired\s*[:=]/.test(readRepoFile(filePath))),
+    ];
+
+    expect(
+      offenders,
+      `A control the runtime ignores is worse than no control. Approval belongs to the switch on agent settings:\n${offenders.join('\n')}`
+    ).toEqual([]);
+  });
+
   test('the agent budget figures on screen match the runtime constants', () => {
     // The settings screen names the platform default and the ceiling beside each
     // budget box, so a blank field says what it will do and a typed one can be
