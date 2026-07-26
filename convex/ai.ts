@@ -228,16 +228,20 @@ export const generateSonaeResponse = internalAction({
         });
 
         // Dynamically extract the live Administrator protocol rulebook
-        const [customPrompt, customRules, company] = await Promise.all([
+        const [customPrompt, customRules, company, companySkills] = await Promise.all([
             ctx.runQuery(internal.system.getInternalSystemPrompt),
             ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId }),
-            thread?.companyId ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: thread.companyId }) : Promise.resolve(null)
+            thread?.companyId ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: thread.companyId }) : Promise.resolve(null),
+            thread?.companyId
+                ? ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId: thread.companyId })
+                : Promise.resolve(null),
         ]);
-        
+
         const activeSystemInstruction = buildAssistantSystemInstruction({
             globalSystemPrompt: customPrompt,
             companySystemPrompt: company?.systemPrompt,
             activeRules: customRules ?? [],
+            companySkills: companySkills?.skills ?? [],
         });
 
         const companyMemories = thread?.companyId

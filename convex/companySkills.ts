@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
@@ -355,6 +356,56 @@ export const searchImportableGlobalSkills = adminQuery({
       ...result,
       page: result.page.filter((skill) => !alreadyTaken.has(skill._id)),
     };
+  },
+});
+
+/**
+ * The skills a company's own AI should follow — company chat and the widget.
+ *
+ * Until now nothing read these. A company could be given a skill and it changed
+ * two dashboards and nothing else, because the only path from a skill to a
+ * model ran through an agent. This is that missing path.
+ *
+ * **Resolved through the link, not the copy.** A company row carries a
+ * `sourceAgentSkillId`; where it does, the instruction is read from the central
+ * skill so the uploaded file is the single source of what the skill says. The
+ * copied columns are left for rows that have no source — skills written
+ * directly against a company — and are otherwise ignored.
+ *
+ * **Capped, and deliberately low.** Every skill here is text added to every
+ * message the company's AI answers: it costs money on each one, slows the
+ * reply, and dilutes the model's attention. A limit that bites is better than
+ * one that never does, so the cap is small and the caller is told when it was
+ * reached rather than being handed a silently shortened list.
+ */
+export const RUNTIME_COMPANY_SKILL_LIMIT = 8;
+
+export const getRuntimeCompanySkillsInternal = internalQuery({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("companySkills")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .order("desc")
+      .take(RUNTIME_COMPANY_SKILL_LIMIT + 1);
+
+    const withinLimit = rows.slice(0, RUNTIME_COMPANY_SKILL_LIMIT);
+    const skills = [];
+
+    for (const row of withinLimit) {
+      const central = row.sourceAgentSkillId ? await ctx.db.get(row.sourceAgentSkillId) : null;
+      // A central skill that has been archived or deleted stops applying, even
+      // though the company row still points at it.
+      if (row.sourceAgentSkillId && (!central || central.status !== "ACTIVE")) continue;
+      skills.push({
+        name: central?.name ?? row.name,
+        instruction: central?.instruction ?? row.instruction,
+        category: central?.category ?? row.category,
+        riskLevel: central?.riskLevel ?? row.riskLevel,
+      });
+    }
+
+    return { skills, isCapped: rows.length > RUNTIME_COMPANY_SKILL_LIMIT };
   },
 });
 

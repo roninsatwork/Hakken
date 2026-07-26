@@ -1870,42 +1870,6 @@ async function rollAgentsOntoLatestSkillVersion(
   return moved;
 }
 
-/**
- * Push a re-uploaded skill out to the companies that already took it.
- *
- * Adding a skill to a company copies its text rather than referencing it, so
- * without this a new upload changed the Skill Center and left every company on
- * the old wording — silently, and with nothing on screen to show they had
- * drifted apart. The file is meant to be the single source of what a skill
- * says, which only holds if the copies follow it.
- *
- * Archived company copies are left alone: someone removed that skill from that
- * company deliberately, and refreshing it would quietly bring it back.
- */
-async function refreshCompanyCopiesOfSkill(ctx: Pick<MutationCtx, "db">, skillId: Id<"agentSkills">) {
-  const skill = await ctx.db.get(skillId);
-  if (!skill) return 0;
-
-  const copies = await ctx.db
-    .query("companySkills")
-    .withIndex("by_source_skill", (q) => q.eq("sourceAgentSkillId", skillId))
-    .take(SKILL_BINDING_LIMIT);
-
-  let refreshed = 0;
-  const now = Date.now();
-  for (const copy of copies) {
-    if (copy.status === "ARCHIVED") continue;
-    await ctx.db.patch(copy._id, {
-      name: skill.name,
-      description: skill.description,
-      instruction: skill.instruction,
-      requiredToolsJson: skill.requiredToolMappingsJson,
-      updatedAt: now,
-    });
-    refreshed += 1;
-  }
-  return refreshed;
-}
 
 /**
  * Import a SKILL.md file, updating the skill it already produced rather than
@@ -2011,7 +1975,6 @@ export const importSkillMarkdown = superAdminMutation({
     }
 
     const skillVersionId = await ensureAgentSkillVersionSnapshot(ctx, skillId);
-    const refreshedCompanies = outcome === "UPDATED" ? await refreshCompanyCopiesOfSkill(ctx, skillId) : 0;
     const refreshedAgents = outcome === "UPDATED"
       ? await rollAgentsOntoLatestSkillVersion(ctx, skillId, skillVersionId)
       : 0;
@@ -2030,11 +1993,10 @@ export const importSkillMarkdown = superAdminMutation({
         sourceFilename: args.sourceFilename,
         sourceHash: args.sourceHash,
         skillVersionId,
-        refreshedCompanies,
         refreshedAgents,
       }),
     });
-    return { skillId, skillVersionId, outcome, refreshedCompanies, refreshedAgents };
+    return { skillId, skillVersionId, outcome, refreshedAgents };
   },
 });
 

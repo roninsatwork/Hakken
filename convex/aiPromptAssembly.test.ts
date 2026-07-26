@@ -297,4 +297,28 @@ describe("assistant prompt assembly", () => {
     expect(context).toContain("[TRUNCATED TO FIT CONTEXT BUDGET]");
     expect(context).not.toContain("b".repeat(500));
   });
+
+  test("a company's skills reach its own assistant, which is the path that did not exist", () => {
+    const withSkills = buildAssistantSystemInstruction({
+      globalSystemPrompt: "Platform prompt.",
+      companySystemPrompt: "Company prompt.",
+      activeRules: [],
+      companySkills: [
+        { name: "Client Follow-up", instruction: "Follow up within one working day." },
+      ],
+    });
+
+    expect(withSkills).toContain("SKILLS AVAILABLE TO THIS COMPANY");
+    expect(withSkills).toContain("Client Follow-up");
+    expect(withSkills).toContain("Follow up within one working day.");
+
+    // A company with no skills gets no empty heading.
+    const withoutSkills = buildAssistantSystemInstruction({
+      globalSystemPrompt: "Platform prompt.",
+      companySystemPrompt: "Company prompt.",
+      activeRules: [],
+      companySkills: [],
+    });
+    expect(withoutSkills).not.toContain("SKILLS AVAILABLE TO THIS COMPANY");
+  });
 });

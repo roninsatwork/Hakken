@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
@@ -444,7 +444,7 @@ describe("agent skills", () => {
     expect(after.audit?.metadata).toContain("Temporary Skill");
   });
 
-  test("re-uploading a file updates the companies that already took the skill", async () => {
+  test("a company follows the central skill because it links to it, not because anything syncs", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
@@ -486,44 +486,36 @@ describe("agent skills", () => {
     const created = await upload("Follow up within two working days.");
     await t.run(async (ctx) => await ctx.db.patch(created.skillId, { status: "ACTIVE" }));
 
-    // Two companies take it, and one of them later drops it.
-    const companyIds = await t.run(async (ctx) => {
-      const now = Date.now();
-      const keep = await ctx.db.insert("companies", { name: "Keeps It", createdAt: now });
-      const drop = await ctx.db.insert("companies", { name: "Dropped It", createdAt: now });
-      for (const [companyId, status] of [[keep, "ACTIVE"], [drop, "ARCHIVED"]] as const) {
-        await ctx.db.insert("companySkills", {
-          companyId,
-          sourceAgentSkillId: created.skillId,
-          name: "Client Follow-up",
-          category: "IMPORTED",
-          status,
-          riskLevel: "LOW",
-          instruction: "Follow up within two working days.",
-          createdBy: adminId,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
-      return { keep, drop };
+    const companyId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Linked Co", createdAt: Date.now() });
+      // The company row deliberately keeps stale text of its own. Nothing should
+      // read it while the link is intact.
+      await ctx.db.insert("companySkills", {
+        companyId,
+        sourceAgentSkillId: created.skillId,
+        name: "Stale name",
+        category: "IMPORTED",
+        status: "ACTIVE",
+        riskLevel: "LOW",
+        instruction: "Stale instruction that must never reach a model.",
+        createdBy: adminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return companyId;
     });
 
-    const updated = await upload("Follow up within one working day.");
-    expect(updated.outcome).toBe("UPDATED");
-    // The company that still has it is told; the one that dropped it is not.
-    expect(updated.refreshedCompanies).toBe(1);
+    await upload("Follow up within one working day.");
 
-    const copies = await t.run(async (ctx) => {
-      const rows = await ctx.db.query("companySkills").collect();
-      return rows.map((row) => ({ companyId: row.companyId, status: row.status, instruction: row.instruction }));
+    const runtime = await t.run(async (ctx) => {
+      return await ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId });
     });
 
-    const live = copies.find((row) => row.companyId === companyIds.keep);
-    const dropped = copies.find((row) => row.companyId === companyIds.drop);
-    expect(live?.instruction).toContain("one working day");
-    // Archived means someone removed it on purpose; a re-upload must not revive it.
-    expect(dropped?.instruction).toContain("two working days");
-    expect(dropped?.status).toBe("ARCHIVED");
+    // The company's AI reads the file, not the row beside it, and no sync ran.
+    expect(runtime.skills).toHaveLength(1);
+    expect(runtime.skills[0].name).toBe("Client Follow-up");
+    expect(runtime.skills[0].instruction).toContain("one working day");
+    expect(runtime.skills[0].instruction).not.toContain("Stale");
   });
 
   test("re-uploading a file moves the agents using that skill onto it", async () => {

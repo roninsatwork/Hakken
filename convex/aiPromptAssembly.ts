@@ -30,6 +30,14 @@ export function buildAssistantSystemInstruction(args: {
   globalSystemPrompt: string | null | undefined;
   companySystemPrompt: string | null | undefined;
   activeRules: AssistantRule[];
+  /**
+   * Skills the company has been given.
+   *
+   * This parameter did not exist, which is why giving a company a skill changed
+   * nothing: the only path from a skill to a model ran through an agent, and
+   * company chat and the widget do not use one.
+   */
+  companySkills?: Array<{ name: string; instruction: string }>;
 }) {
   const configuredPlatformPrompt =
     args.globalSystemPrompt && args.globalSystemPrompt.trim().length > 0
@@ -45,6 +53,14 @@ ${configuredPlatformPrompt}`;
 
   if (args.companySystemPrompt && args.companySystemPrompt.trim().length > 0) {
     instruction += `\n\n====================\nTENANT (COMPANY) SPECIFIC BEHAVIORAL INSTRUCTIONS:\n\n${args.companySystemPrompt}`;
+  }
+
+  if (args.companySkills && args.companySkills.length > 0) {
+    const compiledSkills = args.companySkills
+      .map((skill) => `[SKILL: ${skill.name}]\n${skill.instruction}`)
+      .join("\n\n---\n\n");
+
+    instruction += `\n\n====================\nSKILLS AVAILABLE TO THIS COMPANY:\n\n${compiledSkills}`;
   }
 
   if (args.activeRules.length > 0) {
