@@ -935,7 +935,22 @@ Tests, extending `.../agents/[id]/settings/page.test.tsx` and
 - an override of zero or a negative number is ignored and the default applies
 - an agent with no overrides still resolves to the module defaults at runtime
 
-### Phase 6 — Delete the control that lies
+### Phase 6 — Delete the control that lies — **DONE**
+
+Both controls removed: the builder's dead Approval Policy choice, and the editor
+modal's `humanApprovalRequired`, which sat in form state and posted on every save
+while rendering no input.
+
+**A correction mid-build worth recording.** The plan called for a page test asserting
+the policy step no longer renders. It was written, it passed — and it also passed
+with the control put back, because the builder modal is not open when the page
+renders. A test that cannot fail is worse than no test. Deleted, and replaced with a
+structural pin in `src/quality-drift.test.ts` that was checked both ways. Narrowed
+once too: the first version also forbade `humanApprovalRequired` in `agentService.ts`,
+where it is legitimate — the runtime does read that field, to escalate the gate to
+reads as well.
+
+**Original plan text follows.**
 
 1. Remove the Approval Policy field from
    `src/app/(dashboard)/admin/agents/page.tsx:455-469`, the `approvalPolicy` key
@@ -1125,7 +1140,17 @@ New `.../agents/approvals/page.test.tsx`:
 - the empty state renders
 - the header count comes from the count query, not the loaded rows
 
-### Phase 9 — Audit the decision
+### Phase 9 — Audit the decision — **DONE**
+
+Written before the approve/refuse/cancel branch, so all three outcomes are traceable
+through one path rather than three that could drift. The metadata carries the tool
+name and its side-effect level, because what a reader of the log most wants to know is
+whether what was waved through was a lookup or a deletion.
+
+The existing test titled "…and audited" asserted the absence of a row; it now asserts
+the row and is titled for what it checks. Guard proved by removing the insert.
+
+**Original plan text follows.**
 
 `convex/agentRuns.ts:1221` — `decideApproval` inserts an `auditLogs` row on every
 outcome, copying the shape at `:1475-1486`: actor, agent, company, tool name,
