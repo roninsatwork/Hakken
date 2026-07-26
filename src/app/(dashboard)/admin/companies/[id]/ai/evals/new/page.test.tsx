@@ -111,6 +111,8 @@ describe("NewCompanyEvalPage", () => {
         expectedBehavior: "Says pricing is not published and offers a handover.",
         forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
         requiredSkillsJson: undefined,
+        // Asked once unless the reader opts into repeat sampling under Advanced.
+        sampleCount: 1,
       });
     });
     expect(push).toHaveBeenCalledWith("/admin/companies/company123/ai/evals");

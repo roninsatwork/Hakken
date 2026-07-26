@@ -1537,6 +1537,15 @@ export default defineSchema({
     // When that result landed. With this on the row, the checks list needs no run
     // query at all: the case carries everything the table shows.
     lastRunAt: v.optional(v.number()),
+    /*
+     * How many times to ask, per run. Absent means once.
+     *
+     * A single sample of a non-deterministic system is weak evidence. A check that
+     * passes two times in three is a check that fails one conversation in three, and
+     * one ask cannot tell those apart. Opt-in rather than default, because each extra
+     * sample is another two provider calls and real money.
+     */
+    sampleCount: v.optional(v.number()),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),

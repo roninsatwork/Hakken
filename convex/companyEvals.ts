@@ -23,6 +23,8 @@ const BATCH_CASE_LIMIT = 100;
 // The summary counts every active case, so it needs a bound. Past this it reports
 // `isPartial` rather than presenting a sample as a total.
 const SUMMARY_CASE_LIMIT = 2000;
+/** More than this is a runaway, not a confidence interval. */
+const MAX_SAMPLE_COUNT = 5;
 // A check with more results than this has a runaway runner behind it, not a history
 // worth keeping. Deleting in one transaction keeps the check and its results
 // consistent.
@@ -105,6 +107,12 @@ type EvidencePayload = {
   memoryIds?: unknown;
   skillIds?: unknown;
 };
+
+/** Clamped server-side, so a hand-crafted request cannot queue fifty provider calls. */
+function normalizeSampleCount(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(Math.max(Math.round(value), 1), MAX_SAMPLE_COUNT);
+}
 
 function normalizeText(value: string, label: string, maxChars: number) {
   const normalized = value.trim().replace(/\s+/g, " ");
@@ -485,6 +493,7 @@ export const createCase = adminMutation({
     requiredMemoriesJson: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
     forbiddenClaimsJson: v.optional(v.string()),
+    sampleCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
@@ -510,6 +519,7 @@ export const createCase = adminMutation({
       prompt: normalizeText(args.prompt, "Prompt", PROMPT_MAX_CHARS),
       ...jsonFields,
       expectedBehavior: normalizeText(args.expectedBehavior, "Expected behavior", EXPECTED_BEHAVIOR_MAX_CHARS),
+      ...(args.sampleCount !== undefined ? { sampleCount: normalizeSampleCount(args.sampleCount) } : {}),
       status: "ACTIVE",
       createdBy: userId,
       createdAt: now,
@@ -558,6 +568,7 @@ export const updateCase = adminMutation({
     expectedBehavior: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
     forbiddenClaimsJson: v.optional(v.string()),
+    sampleCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
@@ -584,6 +595,7 @@ export const updateCase = adminMutation({
         : {}),
       ...(args.forbiddenClaimsJson !== undefined ? { forbiddenClaimsJson } : {}),
       ...(args.requiredSkillsJson !== undefined ? { requiredSkillsJson } : {}),
+      ...(args.sampleCount !== undefined ? { sampleCount: normalizeSampleCount(args.sampleCount) } : {}),
       // The check has changed, so what it last scored is no longer about this check.
       lastRunId: undefined,
       lastRunStatus: undefined,
@@ -835,8 +847,13 @@ export const getBatchEstimate = adminQuery({
 
     return {
       selectedCount: selectable.length,
-      // Two calls per check: the assistant answers, then a second model grades.
-      providerCallCount: selectable.length * 2,
+      // Two calls per sample: the assistant answers, then a second model grades. A
+      // check set to ask more than once costs that many times over, so the estimate
+      // has to price what will happen rather than what usually happens.
+      providerCallCount: selectable.reduce(
+        (total, evalCase) => total + Math.min(Math.max(Math.round(evalCase.sampleCount ?? 1), 1), 5) * 2,
+        0,
+      ),
       isCapped: activeCases.length > BATCH_CASE_LIMIT,
       cap: BATCH_CASE_LIMIT,
     };
@@ -887,6 +904,7 @@ export const recordGradedRunInternal = internalMutation({
     answerFailed: v.optional(v.boolean()),
     resolvedModelId: v.optional(v.string()),
     tokenUsageJson: v.optional(v.string()),
+    costJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
@@ -903,6 +921,7 @@ export const recordGradedRunInternal = internalMutation({
       answerFailed: args.answerFailed,
       resolvedModelId: args.resolvedModelId,
       tokenUsageJson: args.tokenUsageJson,
+      costJson: args.costJson,
       userId: args.userId,
     });
   },

@@ -382,6 +382,51 @@ describe("Company Evals", () => {
     expect(failed.deterministicResults[0]).toMatchObject({ label: "Answer quality", passed: false });
   });
 
+  // Repeat sampling is opt-in and clamped server-side, so a hand-crafted request
+  // cannot queue fifty provider calls, and the estimate prices what will actually
+  // happen rather than assuming one ask per check.
+  test("repeat sampling is clamped, and the batch estimate prices it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Sampling Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "sampling-admin@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+
+      return { adminId, companyId };
+    });
+
+    const adminClient = t.withIdentity({ subject: adminId });
+    const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
+      companyId,
+      name: "Asked three times",
+      category: "NO_HALLUCINATION",
+      severity: "BLOCKER",
+      targetSurface: "COMPANY_CHAT",
+      prompt: "What does it cost?",
+      expectedBehavior: "Never quotes a figure.",
+      sampleCount: 3,
+    });
+
+    // Two provider calls per sample: the assistant answers, a second model grades.
+    const estimate = await adminClient.query(api.companyEvals.getBatchEstimate, {
+      companyId,
+      mode: "FAILED_OR_NOT_RUN",
+    });
+    expect(estimate).toMatchObject({ selectedCount: 1, providerCallCount: 6 });
+
+    // Well past the ceiling, and clamped rather than rejected: the reader asked for
+    // more confidence, not for a runaway.
+    await adminClient.mutation(api.companyEvals.updateCase, { evalCaseId, sampleCount: 50 });
+    expect(await t.run(async (ctx) => (await ctx.db.get(evalCaseId))?.sampleCount)).toBe(5);
+
+    await adminClient.mutation(api.companyEvals.updateCase, { evalCaseId, sampleCount: 0 });
+    expect(await t.run(async (ctx) => (await ctx.db.get(evalCaseId))?.sampleCount)).toBe(1);
+  });
+
   // The grader must be told it did not write the answer, and must be asked for a
   // shape the parser can reject. An unreadable grade fails rather than passing.
   test("the grading prompt disowns the answer and demands strict JSON", () => {

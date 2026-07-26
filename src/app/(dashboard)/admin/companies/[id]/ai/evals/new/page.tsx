@@ -49,6 +49,7 @@ const DEFAULT_FORM = {
   expectedBehavior: "",
   targetSurface: "COMPANY_CHAT" as EvalTargetSurface,
   mustPass: true,
+  sampleCount: 1,
 };
 
 export default function NewCompanyEvalPage() {
@@ -97,6 +98,7 @@ export default function NewCompanyEvalPage() {
       // Built from the tag list, so nobody types JSON.
       forbiddenClaimsJson: bannedPhrases.length > 0 ? JSON.stringify(bannedPhrases) : undefined,
       requiredSkillsJson: requiredSkillIds.length > 0 ? JSON.stringify(requiredSkillIds) : undefined,
+      sampleCount: form.sampleCount,
     }), {
       fallbackMessage: "The check could not be created.",
       // The form renders the message itself, so a toast would repeat it.
@@ -228,6 +230,20 @@ export default function NewCompanyEvalPage() {
               Advanced
             </summary>
             <div className="mt-4">
+              <AdminModalFormField
+                label="Ask this more than once"
+                hint="Optional. A check that passes two times in three is a check that fails one conversation in three. Each extra ask costs another two AI calls."
+              >
+                <select
+                  className={adminModalInputClassName}
+                  value={String(form.sampleCount)}
+                  onChange={(event) => setForm((current) => ({ ...current, sampleCount: Number(event.target.value) }))}
+                >
+                  <option value="1">Ask once</option>
+                  <option value="3">Ask 3 times — all must pass</option>
+                  <option value="5">Ask 5 times — all must pass</option>
+                </select>
+              </AdminModalFormField>
               <AdminModalFormField
                 label="The answer must use these skills"
                 hint={`${requiredSkillIds.length} selected. Leave empty unless you are testing that a particular skill gets used.`}

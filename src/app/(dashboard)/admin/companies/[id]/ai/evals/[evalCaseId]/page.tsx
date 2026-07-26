@@ -49,6 +49,36 @@ function parseResults(run: CompanyEvalRun | undefined): RunResult[] {
   }
 }
 
+/**
+ * What the run cost, if the models behind it are priced.
+ *
+ * Zero and "not priced" are different facts, so an unpriced run says nothing rather
+ * than claiming it was free.
+ */
+function formatRunCost(run: CompanyEvalRun | undefined) {
+  if (!run?.costJson) return null;
+  try {
+    const parsed = JSON.parse(run.costJson) as { totalGBP?: unknown };
+    if (typeof parsed.totalGBP !== "number" || !Number.isFinite(parsed.totalGBP) || parsed.totalGBP <= 0) return null;
+    // Sub-penny runs are the norm here, so pence with two decimals reads better than
+    // a string of zeros after a pound sign.
+    const pence = parsed.totalGBP * 100;
+    return pence < 1 ? `${pence.toFixed(2)}p` : `£${parsed.totalGBP.toFixed(2)}`;
+  } catch {
+    return null;
+  }
+}
+
+function parseSampleCount(run: CompanyEvalRun | undefined) {
+  if (!run?.tokenUsageJson) return 1;
+  try {
+    const parsed = JSON.parse(run.tokenUsageJson) as { samples?: unknown };
+    return typeof parsed.samples === "number" && parsed.samples > 0 ? parsed.samples : 1;
+  } catch {
+    return 1;
+  }
+}
+
 function parseEvidenceCounts(run: CompanyEvalRun | undefined) {
   if (!run?.evidenceJson) return { documents: 0, memories: 0, skills: 0 };
   try {
@@ -84,6 +114,8 @@ export default function CompanyEvalCaseDetailPage() {
   const results = parseResults(latestRun);
   const evidence = parseEvidenceCounts(latestRun);
   const result = describeResult(latestRun?.status);
+  const runCost = formatRunCost(latestRun);
+  const sampleCount = parseSampleCount(latestRun);
 
   if (evalCase === undefined) {
     return (
@@ -160,6 +192,8 @@ export default function CompanyEvalCaseDetailPage() {
           <p className="mt-4 text-[12px] text-secondary">
             Used {evidence.documents} document{evidence.documents === 1 ? "" : "s"}, {evidence.memories} memor{evidence.memories === 1 ? "y" : "ies"} and {evidence.skills} skill{evidence.skills === 1 ? "" : "s"}
             {latestRun.resolvedModelId ? ` · answered by ${latestRun.resolvedModelId}` : ""}
+            {sampleCount > 1 ? ` · asked ${sampleCount} times` : ""}
+            {runCost ? ` · cost ${runCost}` : ""}
           </p>
         )}
       </section>
