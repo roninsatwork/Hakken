@@ -65,9 +65,13 @@ interface NavItemProps {
   navKey?: string;
 }
 
-function SubNavItem({ label, isActive, onClick, href, navKey }: { label: string, isActive: boolean, onClick: () => void, href?: string, navKey?: string }) {
+function SubNavItem({ label, isActive, onClick, href, navKey, badge, badgeAtLimit }: { label: string, isActive: boolean, onClick: () => void, href?: string, navKey?: string, badge?: number, badgeAtLimit?: boolean }) {
   const hiddenNavKeys = useContext(HiddenNavKeysContext);
   if (!isNavItemVisible(navKey, hiddenNavKeys)) return null;
+
+  // Absent at zero rather than a grey "0". A badge that is always there stops
+  // being read, and the whole point of this one is that it means something.
+  const showBadge = typeof badge === "number" && badge > 0;
 
   const content = (
     <>
@@ -78,7 +82,17 @@ function SubNavItem({ label, isActive, onClick, href, navKey }: { label: string,
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
         />
       )}
-      <span className="relative z-10">{label}</span>
+      <span className="relative z-10 flex items-center justify-between gap-2">
+        <span className="truncate">{label}</span>
+        {showBadge && (
+          <span
+            aria-label={`${badge}${badgeAtLimit ? "+" : ""} waiting`}
+            className="shrink-0 min-w-[18px] px-1.5 py-0.5 rounded-full bg-[#f59e0b]/20 border border-[#f59e0b]/30 text-[#f59e0b] text-[10px] font-semibold leading-none text-center tabular-nums"
+          >
+            {badge}{badgeAtLimit ? "+" : ""}
+          </span>
+        )}
+      </span>
     </>
   );
 
@@ -280,6 +294,14 @@ export default function SidebarNavigation() {
     api.companies.getCompanyById,
     user?.impersonatingCompanyId ? { id: user.impersonatingCompanyId } : "skip"
   );
+  // A run parked on an approval waits indefinitely and nothing else on the
+  // platform says so: the only other mention is a system-health tile that stays
+  // at zero for the first thirty minutes. Skipped unless this is an admin area
+  // super admin, because the query is super-admin only and the page is too.
+  const pendingApprovals = useQuery(
+    api.agentRuns.getPendingApprovalCount,
+    isAdmin && isSuperAdmin ? {} : "skip"
+  );
 
   const handleExitImpersonation = async () => {
     await impersonateCompany({ companyId: undefined });
@@ -413,7 +435,7 @@ export default function SidebarNavigation() {
                         isOpen={openSections.agents}
                         onToggle={() => toggleSection('agents')}
                       >
-                        <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} />
+                        <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
                         <SubNavItem label={t('manageAgents')} href="/admin/agents" navKey="agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" navKey="workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />

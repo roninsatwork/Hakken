@@ -1185,6 +1185,22 @@ describe("human-in-the-loop approval", () => {
     vi.useRealTimers();
   });
 
+  /**
+   * The reviewer, who is not the person the run belongs to.
+   *
+   * Approvals are super-admin only: the run's own thread user is a company
+   * operator, and the decision is taken on their behalf. Worth being explicit
+   * about, because the approved tool executes as the *reviewer*, not the
+   * requester.
+   */
+  async function seedApprovalReviewer(t: TestConvex) {
+    return await t.run(async (ctx) => await ctx.db.insert("users", {
+      email: "reviewer@sonae.test",
+      role: "SUPER_ADMIN",
+      createdAt: Date.now(),
+    }));
+  }
+
   /** Park a run on an approval request and hand back what is needed to decide it. */
   async function runUntilApprovalRequested(t: TestConvex) {
     const seeded = await seedAgentRun(t);
@@ -1244,11 +1260,11 @@ describe("human-in-the-loop approval", () => {
     // finished. The model never saw the result, so an agent that asked
     // permission to look something up could not use what it found.
     const t = makeTest();
-    const { approval, userId } = await runUntilApprovalRequested(t);
+    const { approval } = await runUntilApprovalRequested(t);
     expect(generateMock).toHaveBeenCalledTimes(1);
 
-    const admin = t.withIdentity({ subject: userId });
-    await admin.mutation(api.agentRuns.decideApproval, {
+    const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
+    await reviewer.mutation(api.agentRuns.decideApproval, {
       approvalId: approval!._id,
       decision: "APPROVED",
     });
@@ -1272,10 +1288,10 @@ describe("human-in-the-loop approval", () => {
 
   test("rejecting ends the run and leaves nothing to resume", async () => {
     const t = makeTest();
-    const { approval, userId } = await runUntilApprovalRequested(t);
+    const { approval } = await runUntilApprovalRequested(t);
 
-    const admin = t.withIdentity({ subject: userId });
-    await admin.mutation(api.agentRuns.decideApproval, {
+    const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
+    await reviewer.mutation(api.agentRuns.decideApproval, {
       approvalId: approval!._id,
       decision: "REJECTED",
       decisionReason: "Not appropriate.",

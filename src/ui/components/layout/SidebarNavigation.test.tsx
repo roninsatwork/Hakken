@@ -18,6 +18,7 @@ vi.mock("convex/react", () => ({
 
 vi.mock("@/convex/_generated/api", () => ({
   api: {
+    agentRuns: { getPendingApprovalCount: "agentRuns:getPendingApprovalCount" },
     companies: { getCompanyById: "companies:getCompanyById" },
     users: { getMe: "users:getMe", impersonateCompany: "users:impersonateCompany" },
   },
@@ -172,6 +173,72 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: "Running Costs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Chat Logs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "System Prompt" })).not.toBeInTheDocument();
+  });
+
+  /**
+   * A run parked on an approval waits indefinitely, and until this badge existed
+   * nothing on the platform said so: the only other mention was a system-health
+   * tile that stays at zero for the first thirty minutes.
+   */
+  it("shows a count on Agent Approvals when runs are waiting", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    useQueryMock.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
+      if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 3, atLimit: false };
+      return undefined;
+    });
+
+    render(<SidebarNavigation />);
+
+    const link = screen.getByRole("link", { name: /Agent Approvals/ });
+    expect(link).toHaveAttribute("href", "/admin/agents/approvals");
+    expect(link).toHaveTextContent("3");
+    expect(screen.getByLabelText("3 waiting")).toBeInTheDocument();
+  });
+
+  it("hides the count when nothing is waiting", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    useQueryMock.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
+      if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 0, atLimit: false };
+      return undefined;
+    });
+
+    render(<SidebarNavigation />);
+
+    // A badge that is always there stops being read.
+    expect(screen.getByRole("link", { name: /Agent Approvals/ })).not.toHaveTextContent("0");
+    expect(screen.queryByLabelText(/waiting/)).not.toBeInTheDocument();
+  });
+
+  it("marks the count as approximate once the counting limit is reached", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    useQueryMock.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
+      if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 99, atLimit: true };
+      return undefined;
+    });
+
+    render(<SidebarNavigation />);
+
+    // Counting cannot be indexed away, so the badge says it stopped counting
+    // rather than claiming a precise 99.
+    expect(screen.getByLabelText("99+ waiting")).toBeInTheDocument();
+  });
+
+  it("does not ask for the count as a company admin, who cannot reach the queue", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    useQueryMock.mockImplementation((queryRef: unknown) => (
+      queryRef === "users:getMe" ? { role: "ADMIN" } : undefined
+    ));
+
+    render(<SidebarNavigation />);
+
+    // The query is super-admin only. Asking anyway would throw on every admin
+    // page load for a company admin.
+    const countCalls = useQueryMock.mock.calls.filter(([ref]) => ref === "agentRuns:getPendingApprovalCount");
+    expect(countCalls.every(([, args]) => args === "skip")).toBe(true);
+    expect(screen.queryByRole("link", { name: /Agent Approvals/ })).not.toBeInTheDocument();
   });
 
   // template:remove:start movement

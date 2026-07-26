@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { getNextStepIndex, updateMemoryUsageOutcomeForRun } from "./agentRunStateService";
@@ -12,6 +12,8 @@ const AGENT_RUN_DETAIL_LIMIT = 500;
 const AGENT_RUN_ANALYTICS_LIMIT = 500;
 const RUN_OBSERVATORY_LIMIT = 120;
 const RUN_OBSERVATORY_TOOL_LIMIT = 300;
+/** Counting cannot be indexed away, so the badge stops here and says it did. */
+const PENDING_APPROVAL_COUNT_LIMIT = 99;
 const PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH = 4000;
 
 const agentRunStatusValidator = v.union(
@@ -1175,33 +1177,36 @@ export const getRunObservatory = adminQuery({
   },
 });
 
-export const getPendingApprovals = adminQuery({
+/**
+ * The approval queue, super-admin only.
+ *
+ * This used to be an `adminQuery` with a company-scoped branch, so a company
+ * ADMIN was authorised over the public API. The nav has always hidden the page
+ * from them, which made it a live permission with no screen behind it — the same
+ * shape of fault as the workflow resume hole. Approvals are an operation run on a
+ * client's behalf, so the API now says that.
+ *
+ * The consequence is deliberate and worth knowing: a client's own admin cannot
+ * unstick their own agent. That is why the count badge and the expiry sweep are
+ * not optional extras.
+ */
+export const getPendingApprovals = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
-    const { user } = ctx;
-    if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
-    }
+    const approvalsPage = await ctx.db
+      .query("agentRunApprovals")
+      .withIndex("by_status_requested", (q) => q.eq("status", "PENDING"))
+      .order("desc")
+      .paginate(args.paginationOpts);
 
-    const baseQuery = user.role === "SUPER_ADMIN"
-      ? ctx.db
-          .query("agentRunApprovals")
-          .withIndex("by_status_requested", (q) => q.eq("status", "PENDING"))
-      : ctx.db
-          .query("agentRunApprovals")
-          .withIndex("by_company_status_requested", (q) => q.eq("companyId", user.companyId).eq("status", "PENDING"));
-
-    const approvalsPage = await baseQuery.order("desc").paginate(args.paginationOpts);
     const page = await Promise.all(approvalsPage.page.map(async (approval) => {
       const [run, toolCall, agent] = await Promise.all([
         ctx.db.get(approval.runId),
         approval.toolCallId ? ctx.db.get(approval.toolCallId) : null,
         ctx.db.get(approval.agentId),
       ]);
-
-      if (run) assertAdminCanAccessCompany(user, run.companyId);
 
       return {
         approval,
@@ -1218,21 +1223,46 @@ export const getPendingApprovals = adminQuery({
   },
 });
 
-export const decideApproval = adminMutation({
+/**
+ * How many runs are waiting on a person, for the nav badge.
+ *
+ * Counts every pending approval rather than only the stale ones. The 30-minute
+ * `PENDING_APPROVAL_THRESHOLD_MINUTES` in `analyticsCron` is right for an alert
+ * digest and wrong for the thing telling you a run is waiting: for the first half
+ * hour that signal reads zero, which is exactly when someone could still act on it.
+ */
+export const getPendingApprovalCount = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("agentRunApprovals")
+      .withIndex("by_status_requested", (q) => q.eq("status", "PENDING"))
+      .take(PENDING_APPROVAL_COUNT_LIMIT);
+
+    return {
+      count: pending.length,
+      // So the badge can read "99+" rather than claiming a precise number it did
+      // not finish counting.
+      atLimit: pending.length === PENDING_APPROVAL_COUNT_LIMIT,
+    };
+  },
+});
+
+/** Super-admin only, for the same reason as `getPendingApprovals` above. */
+export const decideApproval = superAdminMutation({
   args: {
     approvalId: v.id("agentRunApprovals"),
     decision: v.union(v.literal("APPROVED"), v.literal("REJECTED"), v.literal("CANCELLED")),
     decisionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, user } = ctx;
+    const { userId } = ctx;
     const approval = await ctx.db.get(args.approvalId);
     if (!approval) throw new Error("Approval not found");
     if (approval.status !== "PENDING") throw new Error("Approval has already been reviewed");
 
     const run = await ctx.db.get(approval.runId);
     if (!run) throw new Error("Run not found");
-    assertAdminCanAccessCompany(user, run.companyId);
 
     const now = Date.now();
     await ctx.db.patch(args.approvalId, {

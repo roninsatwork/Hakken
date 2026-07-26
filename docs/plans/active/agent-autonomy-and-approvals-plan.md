@@ -837,7 +837,39 @@ Tests, extending `.../agents/[id]/settings/page.test.tsx` and
 Test: `src/app/(dashboard)/admin/agents/page.test.tsx` asserts the policy step no
 longer renders, and the create call carries no `approvalPolicy`.
 
-### Phase 7 — Make a parked run visible, and lock it to super admin
+### Phase 7 — Make a parked run visible, and lock it to super admin — **DONE**
+
+Built as planned. Three things the build settled that the plan had left open:
+
+- **The count stops at 99 and says so.** Counting cannot be indexed away in Convex,
+  so the query `take`s a bounded page and returns `{ count, atLimit }`. The badge
+  reads "99+" rather than claiming a precise number it did not finish counting. The
+  repo already accepts this constraint elsewhere — the skill rollup moved to a cron
+  for the same reason.
+- **The badge is skipped, not just hidden, for a company admin.** The query is
+  super-admin only, so asking anyway would throw on every admin page load. Passing
+  `"skip"` is the fix, and there is a test asserting the query is never issued.
+- **The approved tool now always executes as a super admin.**
+  `resumeApprovedToolCall` runs the tool as `approval.reviewedBy`, and the reviewer
+  can now only be a super admin, so `canExecuteTool` no longer applies a tenant
+  boundary to an approved call. This is the intended effect of the decision — a
+  super admin can reach every tenant by design — but it is a real widening and
+  should not be discovered later. Two runtime tests were decided by the run's own
+  company operator and are now decided by a separate seeded reviewer, which is also
+  the more honest fixture.
+
+Tests: the tenant-scoping assertions were rewritten as refusals — a company admin is
+refused by `getPendingApprovals`, `getPendingApprovalCount` and `decideApproval` —
+plus four sidebar tests covering the count, its absence at zero, the "99+" state, and
+the skipped query.
+
+Verified: `lint:all` (0 errors), `check` (429 files, 3196 tests), `build`,
+`git diff --check` clean. Browser-checked on the running dev server: the nav link
+renders with no badge against a deployment with nothing pending, which is the
+absent-at-zero case. The non-zero states are covered by tests rather than by creating
+approvals against live data.
+
+**Original plan text follows.**
 
 1. `getPendingApprovals` (`convex/agentRuns.ts:1178`) and `decideApproval` (`:1221`)
    move to `superAdminQuery` / `superAdminMutation`. The ADMIN branch reading
@@ -874,35 +906,48 @@ primitives.
 2. `AdminTableShell` with `AdminTableHeaderRow` / `AdminTableHeaderCell`,
    `AdminTableLoadingRow`, `AdminTableEmptyRow`, and `AdminLoadMoreFooter` nested
    inside the shell where it belongs.
-3. Columns: Tool, Agent, Run, Requested, Actions. `sideEffectLevel` becomes a pill
+3. **`AdminSearchBar`, searching server-side.** The rest of the standard set is a
+   straight swap; search is not, because there is nothing on an `agentRunApprovals`
+   row worth searching. What a reviewer would type is an agent name or a tool name,
+   and both live on joined records.
+
+   Client-side filtering of the loaded page is the wrong answer: it would filter 15
+   of an unknown number of rows and read as "no matches" when there are matches on
+   page two. So: add `searchText` to `agentRunApprovals`, populated at insert from
+   the agent name and the normalized tool name, with a `searchIndex` alongside the
+   existing indexes. `getPendingApprovals` takes an optional term and uses the
+   search index when one is given, the `by_status_requested` index when it is not —
+   the same shape as `getPaginatedAgents`. Denormalising is cheap here because the
+   row is written once, by the runtime, and never updated.
+4. Columns: Tool, Agent, Run, Requested, Actions. `sideEffectLevel` becomes a pill
    on the Tool cell — it is the single most important thing on the row, because it
    is the difference between a lookup and a deletion.
-4. The raw `_id` in mono (`:101`) goes. It is an internal key on display.
-5. Actions use `AdminRowActions` / `AdminRowIconButton`. Reject and Cancel go
+5. The raw `_id` in mono (`:101`) goes. It is an internal key on display.
+6. Actions use `AdminRowActions` / `AdminRowIconButton`. Reject and Cancel go
    through `AdminConfirmationModal` — both end a run irreversibly and today are
    one unguarded click.
-6. The `previewJson` block keeps its `<pre>`, moved into an expandable row so the
+7. The `previewJson` block keeps its `<pre>`, moved into an expandable row so the
    table stays scannable. This is the payload the decision is actually made on;
    it does not get summarised away.
-7. The Run cell links to `/admin/agents/{agentId}/runs` — the timeline, with the
+8. The Run cell links to `/admin/agents/{agentId}/runs` — the timeline, with the
    `linkedApprovals` chips (`admin/agents/[id]/runs/page.tsx:1177-1180`) and the
    approvals evidence section (`:1234-1256`) already built. Keep the agent link
    as a second, separately labelled link.
-8. **Rows from the same turn are grouped and labelled.** After Phase 2 a single
+9. **Rows from the same turn are grouped and labelled.** After Phase 2 a single
    turn can produce several rows, and three separate rows that will all live or
    die together must not read as three independent decisions. Rows sharing a run
    and `turnIndex` sit together under one heading that states the rule plainly:
    the run continues only when all of them are approved, and rejecting any one
    ends it. `getPendingApprovals` returns `turnIndex` and the group's size for
    this.
-9. A row remaining after its sibling was approved shows that it is the one being
+10. A row remaining after its sibling was approved shows that it is the one being
    waited on. This is the state a reviewer will actually meet — approve the first
    of two, and the screen has to explain why nothing happened.
-10. Add `EXPIRED` to wherever approval status is rendered on the run timeline
+11. Add `EXPIRED` to wherever approval status is rendered on the run timeline
     (`admin/agents/[id]/runs/page.tsx:1234-1256`) with wording that says nobody
     answered in time, distinct from a rejection. Expired rows never appear in the
     queue itself, which only reads PENDING.
-11. Full i18n through `messages/en.json` and `messages/it.json` under
+12. Full i18n through `messages/en.json` and `messages/it.json` under
     `admin.agents.approvals`.
 
 Then close the hole that let this stand: add the page to the drift guard list at

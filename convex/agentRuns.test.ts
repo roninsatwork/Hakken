@@ -560,7 +560,7 @@ describe("Agent Runs", () => {
     })).resolves.toBeNull();
   });
 
-  test("pending approval list and decisions are tenant-scoped and audited", async () => {
+  test("the approval queue and its decisions are super-admin only", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const {
@@ -696,21 +696,39 @@ describe("Agent Runs", () => {
     const adminBClient = t.withIdentity({ subject: adminBId });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    const adminAPending = await adminAClient.query(api.agentRuns.getPendingApprovals, { paginationOpts });
-    expect(adminAPending.page.map((entry) => entry.approval._id)).toEqual([approvalAId]);
-
-    const superAdminPending = await superAdminClient.query(api.agentRuns.getPendingApprovals, { paginationOpts });
-    expect(superAdminPending.page.map((entry) => entry.approval._id)).toEqual([approvalBId, approvalAId]);
-
+    // A company admin used to be authorised here, with a company-scoped branch,
+    // while the nav hid the page from them — a live permission with no screen
+    // behind it. Approvals are run on a client's behalf, so the API says so.
+    await expect(
+      adminAClient.query(api.agentRuns.getPendingApprovals, { paginationOpts })
+    ).rejects.toThrow();
+    await expect(
+      adminAClient.query(api.agentRuns.getPendingApprovalCount, {})
+    ).rejects.toThrow();
+    await expect(
+      adminAClient.mutation(api.agentRuns.decideApproval, {
+        approvalId: approvalAId,
+        decision: "APPROVED",
+        decisionReason: "Own tenant",
+      })
+    ).rejects.toThrow();
     await expect(
       adminBClient.mutation(api.agentRuns.decideApproval, {
         approvalId: approvalAId,
         decision: "REJECTED",
         decisionReason: "Wrong tenant",
       })
-    ).rejects.toThrow("Unauthorized");
+    ).rejects.toThrow();
 
-    await adminAClient.mutation(api.agentRuns.decideApproval, {
+    const superAdminPending = await superAdminClient.query(api.agentRuns.getPendingApprovals, { paginationOpts });
+    expect(superAdminPending.page.map((entry) => entry.approval._id)).toEqual([approvalBId, approvalAId]);
+
+    // The badge counts across companies, and counts everything pending rather
+    // than only what has gone stale.
+    expect(await superAdminClient.query(api.agentRuns.getPendingApprovalCount, {}))
+      .toEqual({ count: 2, atLimit: false });
+
+    await superAdminClient.mutation(api.agentRuns.decideApproval, {
       approvalId: approvalAId,
       decision: "APPROVED",
       decisionReason: "Looks safe",
@@ -721,12 +739,17 @@ describe("Agent Runs", () => {
       toolCall: await ctx.db.get(toolCallAId),
       run: await ctx.db.get(runAId),
     }));
-    expect(approvedState.approval).toMatchObject({ status: "APPROVED", reviewedBy: adminAId });
+    expect(approvedState.approval).toMatchObject({ status: "APPROVED", reviewedBy: superAdminId });
     expect(approvedState.toolCall).toMatchObject({ status: "PENDING" });
     expect(approvedState.toolCall?.confirmationGrantedAt).toEqual(expect.any(Number));
     expect(approvedState.run).toMatchObject({ status: "RUNNING" });
 
-    await adminBClient.mutation(api.agentRuns.decideApproval, {
+    // Deciding one takes it out of the count, which is what makes the badge
+    // trustworthy enough to act on.
+    expect(await superAdminClient.query(api.agentRuns.getPendingApprovalCount, {}))
+      .toEqual({ count: 1, atLimit: false });
+
+    await superAdminClient.mutation(api.agentRuns.decideApproval, {
       approvalId: approvalBId,
       decision: "REJECTED",
       decisionReason: "Not approved",
@@ -737,7 +760,7 @@ describe("Agent Runs", () => {
       run: await ctx.db.get(runBId),
       steps: await ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", runBId)).collect(),
     }));
-    expect(rejectedState.approval).toMatchObject({ status: "REJECTED", reviewedBy: adminBId });
+    expect(rejectedState.approval).toMatchObject({ status: "REJECTED", reviewedBy: superAdminId });
     expect(rejectedState.run).toMatchObject({
       status: "FAILED",
       finalOutput: "Agent approval rejected: Not approved",
@@ -748,6 +771,8 @@ describe("Agent Runs", () => {
       status: "FAILED",
       output: "Agent approval rejected: Not approved",
     });
+    expect(await superAdminClient.query(api.agentRuns.getPendingApprovalCount, {}))
+      .toEqual({ count: 0, atLimit: false });
   });
 
   test("run analytics summarize cost, reliability, tools, approvals, and tenant scope", async () => {
