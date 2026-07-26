@@ -427,7 +427,7 @@ labelled honestly but should read as *not tested* once the statuses are reworked
 **Done when** no combination of clicks turns a readiness light green, or a
 counter positive, without a real model answer behind it.
 
-### Phase 1 — Delete the fields nothing needs — DATA CLEARED 2026-07-26
+### Phase 1 — Delete the fields nothing needs — DONE 2026-07-26
 
 Everything in *What gets deleted* above, with a data migration for existing
 rows and the tests updated. Done before the new engine so nothing downstream has
@@ -681,15 +681,26 @@ grader could be an embedding model, which had been silently failing every model-
 agent eval; and the retired `text-embedding-004` meant the assistant had stopped
 reading its own documents entirely, swallowed by a catch, with no sign anywhere.
 
-**Still outstanding, deliberately:**
+**Closed since.** All six retired fields are out of the schema, with the
+`by_company_category_status` index that only existed to filter on one of them.
+`category` took three steps rather than two, being a required union. Agent checks got
+repeat sampling and a cost figure, so both surfaces have both. The chat-log promotion
+form — the last one still asking for a category, a severity, a surface and raw JSON —
+now matches the other two.
 
-- Five retired fields remain declared in `schema.ts` and `category` remains required.
-  Removing them needs the migration to have run on production first, or the deploy is
-  refused. The note is on the lines themselves.
-- Production still has the retired embedding model, so its assistant is still
-  answering without its knowledge base. That needs a deploy and two migration runs.
-- Agent checks have no repeat sampling or cost figure; both were done on the company
-  side only.
+**Still outstanding:**
+
+- **A deployment whose rows still carry the retired fields cannot accept this schema**,
+  and the migrations that would clear them have been removed along with the fields
+  they referenced. Recovering means deploying the commit before the removal, running
+  both migrations, then deploying forward. Taken deliberately on 2026-07-26 after
+  Anthony confirmed nothing real was live.
+- **Any non-dev deployment still has the retired embedding model**, so its assistant
+  answers without its knowledge base until the embedding migration runs and the
+  knowledge base is re-embedded there.
+- `scripts/movement-debug/diagnose-replay-studio.test.mjs` writes fixtures to fixed
+  repo paths rather than a temp directory, so it cannot run in parallel with itself.
+  Filed separately; found while stress-testing the test-timeout fix.
 
 ## Acceptance rules
 
