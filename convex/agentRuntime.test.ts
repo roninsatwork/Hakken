@@ -1307,6 +1307,235 @@ describe("human-in-the-loop approval", () => {
   });
 });
 
+describe("a batch of approvals", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * A write tool and a read tool, both real handlers so the calls actually
+   * execute. Declaration names come from `handlerMapping`, so these are
+   * `company_overview_update` and `knowledge_search`.
+   */
+  async function bindTwoTools(
+    t: TestConvex,
+    agentId: Id<"agents">,
+    userId: Id<"users">,
+    options: { gateTheRead: boolean },
+  ) {
+    await t.run(async (ctx) => {
+      const schema = JSON.stringify({
+        type: "object",
+        properties: { overview: { type: "string" }, query: { type: "string" } },
+      });
+      const writeToolId = await ctx.db.insert("aiTools", {
+        name: "Update Company Overview",
+        description: "Write the company overview.",
+        handlerMapping: "company.overview.update",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: schema,
+        isActive: true,
+        version: 1,
+        createdAt: Date.now(),
+        createdBy: userId,
+      });
+      const readToolId = await ctx.db.insert("aiTools", {
+        name: "Knowledge Search",
+        description: "Search knowledge.",
+        handlerMapping: "knowledge.search",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        // A read only gates when its own tool says so, which is how a batch can
+        // be made to hold two approvals.
+        confirmationRequired: options.gateTheRead,
+        inputSchema: schema,
+        isActive: true,
+        version: 1,
+        createdAt: Date.now(),
+        createdBy: userId,
+      });
+      await ctx.db.insert("agentTools", { agentId, toolId: writeToolId, assignedAt: Date.now() });
+      await ctx.db.insert("agentTools", { agentId, toolId: readToolId, assignedAt: Date.now() });
+    });
+  }
+
+  /** One model turn asking for both tools at once. */
+  async function runRequestingBothTools(t: TestConvex, options: { gateTheRead: boolean }) {
+    const seeded = await seedAgentRun(t);
+    await bindTwoTools(t, seeded.agentId, seeded.userId, options);
+
+    generateMock
+      .mockResolvedValueOnce(toolCallResponse([
+        { name: "company_overview_update", args: { overview: "Renewals focus" } },
+        { name: "knowledge_search", args: { query: "refunds" } },
+      ]))
+      .mockResolvedValue(textResponse("Both done."));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId: seeded.threadId,
+      agentId: seeded.agentId,
+      content: "Update the overview and check the refund window.",
+    });
+
+    const approvals = await t.run(async (ctx) =>
+      (await ctx.db.query("agentRunApprovals").collect())
+        .sort((left, right) => left.requestedAt - right.requestedAt));
+    const reviewerId = await t.run(async (ctx) => await ctx.db.insert("users", {
+      email: "reviewer@sonae.test",
+      role: "SUPER_ADMIN",
+      createdAt: Date.now(),
+    }));
+
+    return { ...seeded, approvals, reviewer: t.withIdentity({ subject: reviewerId }) };
+  }
+
+  /** The turns of the last transcript sent to the model. */
+  function lastTranscript() {
+    const call = generateMock.mock.calls.at(-1)?.[1] as {
+      contents: Array<{ role?: string; parts?: Array<Record<string, unknown>> }>;
+    };
+    return call.contents;
+  }
+
+  test("every gated call in one turn is queued, not just the first", async () => {
+    // The guard. The loop used to park and return on the first call needing
+    // approval, discarding the rest of the batch — the model had to notice they
+    // were missing and ask again.
+    const t = makeTest();
+    const { approvals } = await runRequestingBothTools(t, { gateTheRead: true });
+
+    expect(approvals).toHaveLength(2);
+    expect(approvals.every((approval) => approval.status === "PENDING")).toBe(true);
+
+    const { run, toolCalls } = await runSteps(t);
+    expect(run?.status).toBe("PENDING_APPROVAL");
+    expect(toolCalls).toHaveLength(2);
+    expect(toolCalls.every((call) => call.status === "APPROVAL_REQUIRED")).toBe(true);
+    // Both belong to the same model turn, which is what lets the batch be
+    // reassembled when the last one is decided.
+    expect(new Set(toolCalls.map((call) => call.turnIndex)).size).toBe(1);
+  });
+
+  test("deciding one of two leaves the run parked and answers the model with nothing", async () => {
+    const t = makeTest();
+    const { approvals, reviewer } = await runRequestingBothTools(t, { gateTheRead: true });
+
+    await reviewer.mutation(api.agentRuns.decideApproval, {
+      approvalId: approvals[0]._id,
+      decision: "APPROVED",
+    });
+    // The precise drain rather than the looping one: exactly one function is
+    // scheduled here and it deliberately schedules nothing further, which is the
+    // behaviour under test. `finishAllScheduledFunctions` keeps pumping timers
+    // looking for follow-on work and, under a loaded suite, gives up before the
+    // action it is already waiting on has resolved.
+    vi.runAllTimers();
+    await t.finishInProgressScheduledFunctions();
+
+    // Still one model call: the loop has not been resumed, because the model
+    // cannot be answered until every call of that turn has an answer.
+    expect(generateMock).toHaveBeenCalledTimes(1);
+    const { run } = await runSteps(t);
+    expect(run?.status).toBe("PENDING_APPROVAL");
+    expect((await checkpoints(t))[0]?.status).toBe("AWAITING_APPROVAL");
+    // The approved tool did run, though — it is the run's status that waits, not
+    // the work someone already signed off.
+    const { toolCalls } = await runSteps(t);
+    expect(toolCalls.filter((call) => call.status === "SUCCESS")).toHaveLength(1);
+    expect(toolCalls.filter((call) => call.status === "APPROVAL_REQUIRED")).toHaveLength(1);
+  });
+
+  test("the last decision resumes the run and answers both calls in one turn", async () => {
+    const t = makeTest();
+    const { approvals, reviewer } = await runRequestingBothTools(t, { gateTheRead: true });
+
+    for (const approval of approvals) {
+      await reviewer.mutation(api.agentRuns.decideApproval, {
+        approvalId: approval._id,
+        decision: "APPROVED",
+      });
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+    }
+
+    expect(generateMock).toHaveBeenCalledTimes(2);
+
+    // The contract: one model turn carrying N calls is answered by one function
+    // turn carrying the matching N responses, in the same order.
+    const contents = lastTranscript();
+    const functionTurns = contents.filter((turn) => turn.role === "function");
+    expect(functionTurns).toHaveLength(1);
+    expect(functionTurns[0].parts).toHaveLength(2);
+
+    const modelToolTurns = contents.filter((turn) =>
+      turn.role === "model" && turn.parts?.some((part) => "functionCall" in part));
+    expect(modelToolTurns).toHaveLength(1);
+    expect(modelToolTurns[0].parts).toHaveLength(2);
+
+    const { run } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+    expect(await checkpoints(t)).toHaveLength(0);
+  });
+
+  test("the batch is answered in request order, not the order it was decided", async () => {
+    const t = makeTest();
+    const { approvals, reviewer } = await runRequestingBothTools(t, { gateTheRead: true });
+
+    // Second one first.
+    for (const approval of [approvals[1], approvals[0]]) {
+      await reviewer.mutation(api.agentRuns.decideApproval, {
+        approvalId: approval._id,
+        decision: "APPROVED",
+      });
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+    }
+
+    const functionTurn = lastTranscript().find((turn) => turn.role === "function");
+    const answeredNames = (functionTurn?.parts ?? []).map((part) => {
+      const response = part.functionResponse as { name?: string } | undefined;
+      return response?.name;
+    });
+    // The model asked for the write first. Answering in decision order would line
+    // each response up against the wrong call.
+    expect(answeredNames).toEqual(["company_overview_update", "knowledge_search"]);
+  });
+
+  test("a mixed batch answers the call that ran and the call that waited together", async () => {
+    // The transcript fault, and it exists whether or not batching is supported.
+    // With one call gated and one not, the runtime used to write a turn answering
+    // only the call that ran, then a second turn on resume answering the approved
+    // one — two response turns for one request turn.
+    const t = makeTest();
+    const { approvals, reviewer } = await runRequestingBothTools(t, { gateTheRead: false });
+
+    expect(approvals).toHaveLength(1);
+    const { toolCalls: parkedCalls } = await runSteps(t);
+    // The read ran at park time and its result is on the row, waiting.
+    expect(parkedCalls).toHaveLength(2);
+    expect(parkedCalls.filter((call) => call.status === "APPROVAL_REQUIRED")).toHaveLength(1);
+    expect(parkedCalls.filter((call) => call.resultJson !== undefined)).toHaveLength(1);
+
+    await reviewer.mutation(api.agentRuns.decideApproval, {
+      approvalId: approvals[0]._id,
+      decision: "APPROVED",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const contents = lastTranscript();
+    const functionTurns = contents.filter((turn) => turn.role === "function");
+    expect(functionTurns).toHaveLength(1);
+    expect(functionTurns[0].parts).toHaveLength(2);
+
+    const { run } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+  });
+});
+
 describe("autonomous tool execution", () => {
   beforeEach(() => {
     vi.useFakeTimers();

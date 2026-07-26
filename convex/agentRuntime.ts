@@ -81,6 +81,46 @@ type RuntimeToolMetadata = {
 };
 
 /**
+ * A stored tool call's arguments, as the provider expects them.
+ *
+ * Anything that is not a JSON object degrades to `{}` rather than failing the
+ * resume: a call whose arguments cannot be read still has to be answered, or the
+ * model is left with a request and no response.
+ */
+function parseToolArguments(argumentsJson: string): Record<string, unknown> {
+    try {
+        const parsed = JSON.parse(argumentsJson) as unknown;
+        return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+            ? parsed as Record<string, unknown>
+            : {};
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * A stored tool result, for replaying into the transcript.
+ *
+ * A call with no stored result is one that never ran — it should not happen once
+ * the batch is settled, so it is reported to the model as an error rather than
+ * being silently omitted, which would leave the response turn short of the
+ * request turn.
+ */
+function parseToolResult(resultJson: string | undefined): unknown {
+    if (!resultJson) {
+        return buildToolResultPayload({
+            status: "error",
+            error: "This tool call has no recorded result.",
+        });
+    }
+    try {
+        return JSON.parse(resultJson) as unknown;
+    } catch {
+        return buildToolResultPayload({ status: "error", error: "Tool result could not be read." });
+    }
+}
+
+/**
  * Whether a tool call has to be approved by a person before it runs.
  *
  * Precedence, most decisive first:
@@ -1234,6 +1274,16 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             // transcript matches what the model asked for.
             const executedCalls: ExecutedAgentToolCall[] = [];
             let toolBudgetStopMessage: string | undefined;
+            /**
+             * Gated calls in this batch, in request order.
+             *
+             * The loop used to park and return on the first call needing approval,
+             * discarding every call after it in the same batch — the model had to
+             * notice and re-request them. Now each one is queued and the batch is
+             * parked once, at the end.
+             */
+            let deferredApprovalCount = 0;
+            let firstApprovalMessage: string | undefined;
 
             for (const funcCall of funcCalls) {
                 // Bound the batch: shouldStopForToolBudget only looks at completed
@@ -1330,6 +1380,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         confirmationRequired: true,
                         companyId: companyId,
                         userId: thread.userId,
+                        turnIndex: loopIndex,
                     });
 
                     stepIndex += 1;
@@ -1361,75 +1412,12 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         }),
                     });
 
-                    const calculatedCost = calculateModelCostGBP({
-                        inputTokens: inTokens,
-                        outputTokens: outTokens,
-                        cachedInputTokens: cachedInTokens,
-                        config,
-                    });
-                    await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
-                        runId,
-                        inputTokens: inTokens,
-                        outputTokens: outTokens,
-                        costGBP: calculatedCost,
-                        modelId: modelConfig.modelId,
-                        providerKey: modelConfig.providerKey,
-                        providerModelId: modelConfig.providerModelId,
-                    });
-                    await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
-                        runId,
-                        status: "PENDING_APPROVAL",
-                        finalOutput: approvalMessage,
-                    });
-                    if (stream.messageId !== undefined) {
-                        // A turn that requests a tool often narrates first. That
-                        // half-sentence is on screen marked as typing, and the
-                        // run is now parked indefinitely waiting for a human, so
-                        // it has to be closed here rather than at the end of a
-                        // loop that is not going to reach its end.
-                        await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-                            messageId: stream.messageId,
-                            content: approvalMessage,
-                            inputTokens: inTokens,
-                            outputTokens: outTokens,
-                            modelUsed: modelConfig.modelId,
-                            providerKey: modelConfig.providerKey,
-                            providerModelId: modelConfig.providerModelId,
-                        });
-                        stream.messageId = undefined;
-                    } else {
-                        await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                            threadId,
-                            content: approvalMessage,
-                            inputTokens: inTokens,
-                            outputTokens: outTokens,
-                            modelUsed: modelConfig.modelId,
-                            providerKey: modelConfig.providerKey,
-                            providerModelId: modelConfig.providerModelId,
-                        });
-                    }
-
-                    // Keep the results of any calls in this batch that ran
-                    // before the one needing approval. They were paid for and
-                    // the model asked for them; discarding them would make the
-                    // resumed run repeat the work.
-                    if (executedCalls.length > 0) {
-                        conversationHistory.push(...buildToolInteractionTurns(executedCalls));
-                    }
-
-                    // A person may take hours to decide, and a prompt cache
-                    // lives for minutes. Release it now rather than paying to
-                    // store a prefix that will have expired by the time anyone
-                    // looks; the resumed run rebuilds one if it runs long again.
-                    await releasePromptCache();
-
-                    // Park the run rather than discarding it. Marked
-                    // AWAITING_APPROVAL so the stalled-run sweeper leaves it
-                    // alone: a run waiting on a person is not a run that died.
-                    // The turn that requested the tool is finished, so the
-                    // resumed loop starts at the next one.
-                    await saveCheckpoint("AWAITING_APPROVAL", loopIndex + 1);
-                    return;
+                    // Queued, not parked. The rest of the batch still has to be
+                    // considered: the model asked for those calls too, and
+                    // returning here is what used to discard them.
+                    deferredApprovalCount += 1;
+                    firstApprovalMessage ??= approvalMessage;
+                    continue;
                 }
 
                 let toolStatus: "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED" = "FAILED";
@@ -1518,6 +1506,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     confirmationRequired: toolMetadata?.confirmationRequired ?? false,
                     companyId: companyId,
                     userId: thread.userId,
+                    turnIndex: loopIndex,
                     error: toolError,
                 });
 
@@ -1539,6 +1528,84 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     args: toolCall.args,
                     responsePayload: toolResponsePayload,
                 });
+            }
+
+            if (deferredApprovalCount > 0) {
+                // Park once for the whole batch.
+                //
+                // Deliberately no tool-result turn is written into the transcript
+                // here. A model turn requesting N calls must be answered by one
+                // turn carrying N results, and only some of them exist yet — the
+                // rest are waiting on a person. Pushing what has run so far would
+                // put a turn answering 2 of 3 calls into the conversation, and the
+                // resume would then append a second turn for the third. That is
+                // what the runtime used to do, and it is a transcript the provider
+                // contract does not allow: it can be rejected outright, or worse
+                // accepted with results lined up against the wrong calls.
+                //
+                // The results are not lost. They are on the tool call rows, keyed
+                // by `turnIndex`, and the resume that settles the last approval
+                // assembles the whole batch into one turn in request order.
+                const parkMessage = firstApprovalMessage ?? getApprovalRequiredMessage("tool");
+                const calculatedCost = calculateModelCostGBP({
+                    inputTokens: inTokens,
+                    outputTokens: outTokens,
+                    cachedInputTokens: cachedInTokens,
+                    config,
+                });
+                await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
+                    runId,
+                    inputTokens: inTokens,
+                    outputTokens: outTokens,
+                    costGBP: calculatedCost,
+                    modelId: modelConfig.modelId,
+                    providerKey: modelConfig.providerKey,
+                    providerModelId: modelConfig.providerModelId,
+                });
+                await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
+                    runId,
+                    status: "PENDING_APPROVAL",
+                    finalOutput: parkMessage,
+                });
+                if (stream.messageId !== undefined) {
+                    // A turn that requests a tool often narrates first. That
+                    // half-sentence is on screen marked as typing, and the run is
+                    // now parked indefinitely waiting for a human, so it has to be
+                    // closed here rather than at the end of a loop that is not
+                    // going to reach its end.
+                    await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+                        messageId: stream.messageId,
+                        content: parkMessage,
+                        inputTokens: inTokens,
+                        outputTokens: outTokens,
+                        modelUsed: modelConfig.modelId,
+                        providerKey: modelConfig.providerKey,
+                        providerModelId: modelConfig.providerModelId,
+                    });
+                    stream.messageId = undefined;
+                } else {
+                    await ctx.runMutation(internal.chat.saveAssistantMessage, {
+                        threadId,
+                        content: parkMessage,
+                        inputTokens: inTokens,
+                        outputTokens: outTokens,
+                        modelUsed: modelConfig.modelId,
+                        providerKey: modelConfig.providerKey,
+                        providerModelId: modelConfig.providerModelId,
+                    });
+                }
+
+                // A person may take hours to decide, and a prompt cache lives for
+                // minutes. Release it now rather than paying to store a prefix that
+                // will have expired by the time anyone looks.
+                await releasePromptCache();
+
+                // Marked AWAITING_APPROVAL so the stalled-run sweeper leaves it
+                // alone: a run waiting on a person is not a run that died. The turn
+                // that requested the tools is finished, so the resumed loop starts
+                // at the next one.
+                await saveCheckpoint("AWAITING_APPROVAL", loopIndex + 1);
+                return;
             }
 
             // Record the whole batch as one model turn plus one function turn,
@@ -2107,15 +2174,7 @@ export const resumeApprovedToolCall = internalAction({
       throw new Error("Approved tool call is not pending execution.");
     }
 
-    let parsedArgs: Record<string, unknown> = {};
-    try {
-      const parsed = JSON.parse(context.toolCall.argumentsJson) as unknown;
-      parsedArgs = parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
-        ? parsed as Record<string, unknown>
-        : {};
-    } catch {
-      parsedArgs = {};
-    }
+    const parsedArgs = parseToolArguments(context.toolCall.argumentsJson);
 
     let resultPayload;
     let finalOutput: string;
@@ -2150,9 +2209,24 @@ export const resumeApprovedToolCall = internalAction({
       finalOutput = `Approved tool call failed: ${error}`;
     }
 
-    // Put the call and its result into the conversation the model is having,
-    // then let the loop carry on. Without this the agent asked permission,
-    // watched the tool run, and never found out what it returned.
+    // Record the outcome and find out whether the batch is settled. A single
+    // model turn can request several tools, so this run may be holding other
+    // approvals that nobody has decided yet.
+    const settlement = await ctx.runMutation(internal.agentRuns.recordApprovedToolResultInternal, {
+      approvalId: args.approvalId,
+      status,
+      resultJson: JSON.stringify(resultPayload),
+      error,
+    });
+
+    // Something in this batch is still waiting on a person. Leave the run parked:
+    // the model asked for these calls together and has to be answered together,
+    // so appending a partial answer now is exactly the fault this avoids.
+    if (!settlement.settled) return;
+
+    // Put the whole turn into the conversation the model is having, then let the
+    // loop carry on. Without this the agent asked permission, watched the tool
+    // run, and never found out what it returned.
     const checkpoint = await ctx.runQuery(internal.agentRunCheckpoints.getCheckpointInternal, {
       runId: context.approval.runId,
     });
@@ -2167,20 +2241,24 @@ export const resumeApprovedToolCall = internalAction({
       }
 
       if (transcript) {
-        transcript.push(...buildToolInteractionTurns([{
-          name: context.toolCall.normalizedToolName,
-          args: parsedArgs,
-          responsePayload: resultPayload,
-        }]) as Content[]);
+        // One model turn declaring every call of that turn, one function turn
+        // answering all of them, in the order the model asked. Built from the tool
+        // call rows rather than from this one approval, because the calls that ran
+        // without needing approval have been waiting on their rows since the run
+        // parked.
+        const batchTurns = buildToolInteractionTurns(settlement.batchCalls.map((call) => ({
+          name: call.name,
+          args: parseToolArguments(call.argumentsJson),
+          responsePayload: parseToolResult(call.resultJson),
+        })));
+        transcript.push(...batchTurns as Content[]);
 
         const { serialized } = trimConversationForCheckpoint(transcript);
         if (isCheckpointStorable(serialized)) {
           const resumed = await ctx.runMutation(internal.agentRuns.continueRunAfterApprovalInternal, {
             approvalId: args.approvalId,
-            status,
-            resultJson: JSON.stringify(resultPayload),
             transcriptJson: serialized,
-            error,
+            stepIndex: settlement.stepIndex,
           });
           if (resumed) return;
         }
@@ -2193,7 +2271,6 @@ export const resumeApprovedToolCall = internalAction({
     const completion = await ctx.runMutation(internal.agentRuns.completeApprovalResumeInternal, {
       approvalId: args.approvalId,
       status,
-      resultJson: JSON.stringify(resultPayload),
       finalOutput,
       error,
     });

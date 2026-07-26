@@ -729,6 +729,13 @@ export default defineSchema({
     confirmationGrantedAt: v.optional(v.number()),
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
+    // Which model turn asked for this call. A single turn can request several
+    // tools, and the provider contract is that one turn carrying N calls is
+    // answered by one turn carrying N results, in order. When a run parks on an
+    // approval the results arrive one at a time, so the batch has to be
+    // reassembled to answer it properly — and nothing on the row identified the
+    // turn it belonged to.
+    turnIndex: v.optional(v.number()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     error: v.optional(v.string()),
@@ -736,7 +743,10 @@ export default defineSchema({
     .index("by_run_started", ["runId", "startedAt"])
     .index("by_agent_started", ["agentId", "startedAt"])
     .index("by_company_started", ["companyId", "startedAt"])
-    .index("by_status_started", ["status", "startedAt"]),
+    .index("by_status_started", ["status", "startedAt"])
+    // startedAt in the key so the batch comes back in request order rather than
+    // relying on insertion order as a happy accident.
+    .index("by_run_turn", ["runId", "turnIndex", "startedAt"]),
 
   agentRunApprovals: defineTable({
     runId: v.id("agentRuns"),

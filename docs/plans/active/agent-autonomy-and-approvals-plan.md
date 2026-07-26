@@ -587,7 +587,47 @@ Verified: `verify:env`, `lint:all` (0 errors), `check` (429 files, 3179 tests),
 `build`, `git diff --check` all clean. Not browser-verified — the toggle that makes
 this reachable is Phase 5, so there is nothing on screen yet.
 
-### Phase 2 — Queue the whole batch, resume once
+### Phase 2 — Queue the whole batch, resume once — **DONE**
+
+Built as planned, with three things the build turned up.
+
+**A run reported `RUNNING` while it sat parked.** `decideApproval` set the run to
+`RUNNING` on every approval, which was correct when one approval meant one parked
+run. With a batch, approving one of three left the run claiming to be running while
+it waited on the other two — and a run that says `RUNNING` while waiting on a person
+is exactly what the stalled-run sweeper exists to catch. It now only returns to
+`RUNNING` once nothing else in that run is pending. The approved tool still executes
+immediately; it is the run's *status* that waits. Caught by the test, not by reading.
+
+**The mutations were split rather than extended.** `continueRunAfterApprovalInternal`
+was doing three jobs — record the result, patch the run, resume the loop — and the
+fallback path duplicated the first of them. Now
+`recordApprovedToolResultInternal` records the outcome and answers the one question
+the caller needs ("is anything still waiting?"), `continueRunAfterApprovalInternal`
+only resumes, and `completeApprovalResumeInternal` only concludes. Phase 3 and Phase 4
+both need the settle-or-wait branch, and it now exists in one place.
+
+**One new test was flaky, and that was fixed rather than tolerated.**
+`finishAllScheduledFunctions` pumps timers in a loop hunting for follow-on work; the
+unsettled path deliberately schedules nothing, so under a loaded suite the helper gave
+up before the action it was already awaiting had resolved. It passed alone and failed
+about one run in three in the full suite. Replaced with the precise
+`vi.runAllTimers()` + `finishInProgressScheduledFunctions()` pair, which is the right
+API when exactly one function is scheduled and it schedules nothing further. Five
+consecutive full-suite runs clean afterwards.
+
+Tests: five new, in a `describe("a batch of approvals")` block. Guards proved by
+reverting four ways — stopping at the first gated call, pushing a partial turn before
+parking, answering in decision order, and always setting `RUNNING` — each failing the
+test that covers it.
+
+Verified: `lint:all` (0 errors), `check` (430 files, 3212 tests, five consecutive
+clean runs), `build`, `git diff --check` clean. Not browser-verified: this is engine
+behaviour with no screen of its own, and producing a real two-approval batch against
+live data would mean running an agent with two gated tools on the user's own
+deployment.
+
+**Original plan text follows.**
 
 The largest phase, and the one to build carefully. All of it is in
 `convex/agentRuntime.ts`, `convex/agentRuns.ts` and the schema.

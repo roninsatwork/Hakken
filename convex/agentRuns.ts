@@ -1291,10 +1291,26 @@ export const decideApproval = superAdminMutation({
         });
       }
 
-      await ctx.db.patch(approval.runId, {
-        status: "RUNNING",
-        updatedAt: now,
-      });
+      // Only back to RUNNING once nothing else in this run is waiting. A model
+      // turn can request several tools, so approving one of three leaves the run
+      // parked — and a run that reports RUNNING while it sits waiting on a person
+      // is exactly the state the stalled-run sweeper is meant to catch. The
+      // approved tool still executes now; it is the run's status that waits.
+      const stillPending = await ctx.db
+        .query("agentRunApprovals")
+        .withIndex("by_run_requested", (q) => q.eq("runId", approval.runId))
+        .filter((q) => q.eq(q.field("status"), "PENDING"))
+        .take(AGENT_RUN_DETAIL_LIMIT);
+
+      if (stillPending.length === 0) {
+        await ctx.db.patch(approval.runId, {
+          status: "RUNNING",
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.patch(approval.runId, { updatedAt: now });
+      }
+
       await ctx.scheduler.runAfter(0, internal.agentRuntime.resumeApprovedToolCall, {
         approvalId: args.approvalId,
       });
@@ -1717,6 +1733,8 @@ export const insertToolCallInternal = internalMutation({
     confirmationGrantedAt: v.optional(v.number()),
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
+    /** The model turn that requested this call, so the batch can be reassembled. */
+    turnIndex: v.optional(v.number()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -1801,13 +1819,91 @@ export const getApprovalResumeContextInternal = internalQuery({
  * to the scheduler. Returns false when there is no checkpoint to resume into, in
  * which case the caller falls back to concluding the run.
  */
-export const continueRunAfterApprovalInternal = internalMutation({
+/**
+ * Record one approved call's outcome, and say whether the batch is settled.
+ *
+ * A single model turn can request several tools, so a parked run may hold several
+ * approvals. They are decided one at a time, but the model must be answered once,
+ * with every result of that turn in the order it asked for them. So this records
+ * the outcome and then answers the only question the caller needs: is anything in
+ * this run still waiting on a person?
+ *
+ * While something is, the run stays parked and nothing is appended. When nothing
+ * is, the whole batch comes back — including the calls that ran without needing
+ * approval, whose results have been sitting on their rows since the run parked.
+ */
+export const recordApprovedToolResultInternal = internalMutation({
   args: {
     approvalId: v.id("agentRunApprovals"),
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
     resultJson: v.string(),
-    transcriptJson: v.string(),
     error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const approval = await ctx.db.get(args.approvalId);
+    if (!approval) throw new Error("Approval not found");
+
+    const now = Date.now();
+    const resultStepIndex = await getNextStepIndex(ctx, approval.runId);
+    await ctx.db.insert("agentRunSteps", {
+      runId: approval.runId,
+      agentId: approval.agentId,
+      companyId: approval.companyId,
+      stepIndex: resultStepIndex,
+      kind: "TOOL_RESULT",
+      status: args.status,
+      output: args.resultJson,
+      startedAt: now,
+      completedAt: now,
+      ...(args.error !== undefined ? { error: args.error } : {}),
+    });
+
+    if (approval.toolCallId) {
+      await ctx.db.patch(approval.toolCallId, {
+        status: args.status,
+        resultJson: args.resultJson,
+        completedAt: now,
+        ...(args.error !== undefined ? { error: args.error } : {}),
+      });
+    }
+
+    const stillPending = await ctx.db
+      .query("agentRunApprovals")
+      .withIndex("by_run_requested", (q) => q.eq("runId", approval.runId))
+      .filter((q) => q.eq(q.field("status"), "PENDING"))
+      .take(AGENT_RUN_DETAIL_LIMIT);
+    if (stillPending.length > 0) {
+      return { settled: false as const, batchCalls: [], stepIndex: resultStepIndex };
+    }
+
+    const toolCall = approval.toolCallId ? await ctx.db.get(approval.toolCallId) : null;
+    // A row written before `turnIndex` existed has none. Answering with just this
+    // call is the old behaviour, which is the right fallback for an old row.
+    const batch = toolCall?.turnIndex === undefined
+      ? (toolCall ? [toolCall] : [])
+      : await ctx.db
+          .query("agentToolCalls")
+          .withIndex("by_run_turn", (q) =>
+            q.eq("runId", approval.runId).eq("turnIndex", toolCall.turnIndex))
+          .take(AGENT_RUN_DETAIL_LIMIT);
+
+    return {
+      settled: true as const,
+      stepIndex: resultStepIndex,
+      batchCalls: batch.map((call) => ({
+        name: call.normalizedToolName,
+        argumentsJson: call.argumentsJson,
+        resultJson: call.resultJson,
+      })),
+    };
+  },
+});
+
+export const continueRunAfterApprovalInternal = internalMutation({
+  args: {
+    approvalId: v.id("agentRunApprovals"),
+    transcriptJson: v.string(),
+    stepIndex: v.number(),
   },
   handler: async (ctx, args) => {
     const approval = await ctx.db.get(args.approvalId);
@@ -1823,29 +1919,6 @@ export const continueRunAfterApprovalInternal = internalMutation({
     if (!checkpoint || checkpoint.status !== "AWAITING_APPROVAL") return false;
 
     const now = Date.now();
-    const resultStepIndex = await getNextStepIndex(ctx, approval.runId);
-    await ctx.db.insert("agentRunSteps", {
-      runId: approval.runId,
-      agentId: approval.agentId,
-      companyId: approval.companyId,
-      stepIndex: resultStepIndex,
-      kind: "TOOL_RESULT",
-      status: args.status,
-      output: args.resultJson,
-      startedAt: now,
-      completedAt: now,
-      ...(args.error !== undefined ? { error: args.error } : {}),
-    });
-
-    if (approval.toolCallId) {
-      await ctx.db.patch(approval.toolCallId, {
-        status: args.status,
-        resultJson: args.resultJson,
-        completedAt: now,
-        ...(args.error !== undefined ? { error: args.error } : {}),
-      });
-    }
-
     // Back to RUNNING, not to a terminal status: the objective is not finished,
     // it was waiting.
     await ctx.db.patch(approval.runId, {
@@ -1856,7 +1929,7 @@ export const continueRunAfterApprovalInternal = internalMutation({
     await ctx.db.patch(checkpoint._id, {
       status: "ACTIVE",
       transcriptJson: args.transcriptJson,
-      stepIndex: resultStepIndex,
+      stepIndex: args.stepIndex,
       updatedAt: now,
     });
 
@@ -1868,11 +1941,17 @@ export const continueRunAfterApprovalInternal = internalMutation({
   },
 });
 
+/**
+ * Conclude a run that cannot be resumed into a conversation.
+ *
+ * A triggered run with no chat thread, or one whose conversation grew too large to
+ * checkpoint. The tool ran and its outcome is already recorded by
+ * `recordApprovedToolResultInternal`; all that is left is to close the run.
+ */
 export const completeApprovalResumeInternal = internalMutation({
   args: {
     approvalId: v.id("agentRunApprovals"),
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
-    resultJson: v.string(),
     finalOutput: v.string(),
     error: v.optional(v.string()),
   },
@@ -1884,25 +1963,12 @@ export const completeApprovalResumeInternal = internalMutation({
     if (!run) throw new Error("Run not found");
 
     const now = Date.now();
-    const resultStepIndex = await getNextStepIndex(ctx, approval.runId);
+    const finalStepIndex = await getNextStepIndex(ctx, approval.runId);
     await ctx.db.insert("agentRunSteps", {
       runId: approval.runId,
       agentId: approval.agentId,
       companyId: approval.companyId,
-      stepIndex: resultStepIndex,
-      kind: "TOOL_RESULT",
-      status: args.status,
-      output: args.resultJson,
-      startedAt: now,
-      completedAt: now,
-      ...(args.error !== undefined ? { error: args.error } : {}),
-    });
-
-    await ctx.db.insert("agentRunSteps", {
-      runId: approval.runId,
-      agentId: approval.agentId,
-      companyId: approval.companyId,
-      stepIndex: resultStepIndex + 1,
+      stepIndex: finalStepIndex,
       kind: "FINAL",
       status: args.status,
       output: args.finalOutput,
@@ -1910,15 +1976,6 @@ export const completeApprovalResumeInternal = internalMutation({
       completedAt: now,
       ...(args.error !== undefined ? { error: args.error } : {}),
     });
-
-    if (approval.toolCallId) {
-      await ctx.db.patch(approval.toolCallId, {
-        status: args.status,
-        resultJson: args.resultJson,
-        completedAt: now,
-        ...(args.error !== undefined ? { error: args.error } : {}),
-      });
-    }
 
     await ctx.db.patch(approval.runId, {
       status: args.status,
