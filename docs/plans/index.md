@@ -22,6 +22,11 @@ completed work.
   paging, search indexes and rollups the model catalogue needs to hold hundreds
   of models. Owns the AI Providers screen and everything about provider
   resolution at run time.
+- [AI Checks Plan](./active/ai-checks-plan.md) — the plan to make AI testing real
+  and understandable across both surfaces. Owns company evals and agent evals,
+  the shared "Check" vocabulary, and the readiness gates that depend on eval
+  evidence. Read it before touching `convex/companyEvals.ts`,
+  `convex/agentEvalFixtures.ts`, or either evals screen.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
   work left outside the platform hardening plan or deliberately stopped short of
   that plan.
@@ -33,8 +38,10 @@ The plans do not overlap. If work touches movement, the Movement Definitive Plan
 wins. If work touches non-movement platform hardening, check the Platform
 Hardening Plan, then Outstanding Tasks and Handover for current status. If work
 touches AI providers, provider resolution at run time, or the scale of the model
-catalogue, use the OpenRouter And Model Scale Plan. If work touches the other
-named admin UX screens, use the Admin UI/UX Plan.
+catalogue, use the OpenRouter And Model Scale Plan. If work touches AI testing —
+company evals, agent evals, or the readiness gates that read eval evidence — use
+the AI Checks Plan. If work touches the other named admin UX screens, use the
+Admin UI/UX Plan.
 
 ## Retired And Completed Plans
 
