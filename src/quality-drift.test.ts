@@ -916,8 +916,10 @@ describe('Quality Drift Guardrails', () => {
     const allowedGeminiReferenceFiles = new Set([
       'convex/aiModelService.ts',
       'convex/aiModelsActions.ts',
+      'convex/aiModelsActions.test.ts',
       'convex/aiModels.test.ts',
       'convex/seedWorkflows.ts',
+      'convex/vertexProviderService.ts',
       'docs/plans/completed/code-quality-95-plan.md',
       'docs/developer/future-agent-maintenance-plan.md',
       'docs/index.md',
@@ -1046,6 +1048,7 @@ describe('Quality Drift Guardrails', () => {
       'convex/knowledge.test.ts',
       'convex/openaiProviderService.test.ts',
       'convex/seedWorkflows.ts',
+      'convex/vertexProviderService.ts',
       'docs/plans/completed/model-provider-agnostic-plan.md',
       'src/app/(dashboard)/admin/ai/costs/_components/AICostCharts.test.tsx',
       'src/quality-drift.test.ts',

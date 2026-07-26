@@ -18,8 +18,12 @@ const models = [
     friendlyName: "Chat",
     isEnabled: true,
     supportedUseCases: ["chat"],
-    standardInputCostBelow200k: 0.0000005,
-    outputResponseCost: 0.0000015,
+    // Rates are stored per million tokens, which is how the provider publishes
+    // them and how `calculateModelCostGBP` applies them. This fixture used to
+    // hold per-token figures, which is the misreading that made the screen show
+    // a rate a million times too big.
+    standardInputCostBelow200k: 0.5,
+    outputResponseCost: 1.5,
   },
 ];
 
@@ -56,6 +60,7 @@ function getConvexPath(functionReference: unknown) {
 describe("AIModelDefaultsPage", () => {
   const setGlobalModelDefault = vi.fn();
   const clearGlobalModelDefault = vi.fn();
+  const setDefaultModel = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,10 +74,12 @@ describe("AIModelDefaultsPage", () => {
     vi.mocked(useMutation).mockImplementation((mutationFn: Parameters<typeof useMutation>[0]) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("clearGlobalModelDefault")) return clearGlobalModelDefault as unknown as ReturnType<typeof useMutation>;
+      if (path.includes("setDefaultModel")) return setDefaultModel as unknown as ReturnType<typeof useMutation>;
       return setGlobalModelDefault as unknown as ReturnType<typeof useMutation>;
     });
     setGlobalModelDefault.mockResolvedValue(undefined);
     clearGlobalModelDefault.mockResolvedValue(undefined);
+    setDefaultModel.mockResolvedValue(undefined);
   });
 
 
@@ -88,7 +95,7 @@ describe("AIModelDefaultsPage", () => {
     expect(screen.getByText("Ordinary conversations with people.")).toBeInTheDocument();
 
     // Cost is the trade-off being made here, shown where it is made.
-    expect(screen.getByText("£0.50 in · £1.50 out per million")).toBeInTheDocument();
+    expect(screen.getByText("$0.50 in · $1.50 out per million")).toBeInTheDocument();
 
     // "Configured" on every row carried no information. Only the exception does.
     expect(screen.queryByText("Configured")).not.toBeInTheDocument();
@@ -107,6 +114,34 @@ describe("AIModelDefaultsPage", () => {
 
     await waitFor(() => {
       expect(setGlobalModelDefault).toHaveBeenCalledWith({ useCase: "chat", modelId: "chat-model" });
+    });
+  });
+
+  /**
+   * Reassigning every job is a real decision, so it asks.
+   *
+   * This action arrived here from a hover-revealed *Make Default* button on a
+   * Model Catalogue row, where it read as marking a favourite and fired
+   * immediately. It rewrites every row on this screen, so it belongs where those
+   * rows are visible and it must not act on a single click.
+   */
+  it("asks before pointing every job at one model", async () => {
+    render(<AIModelDefaultsPage />);
+
+    const everyJobSelect = screen.getAllByRole("combobox").at(-1)!;
+    fireEvent.change(everyJobSelect, { target: { value: "model_1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply to every job" }));
+
+    // Nothing has been written yet — the click opened a confirmation.
+    expect(setDefaultModel).not.toHaveBeenCalled();
+    expect(screen.getByText(/replacing the choices currently set/i)).toBeInTheDocument();
+    // And it names the rows it is about to overwrite.
+    expect(screen.getByText(/Chat, Router\./)).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Apply to every job" }).at(-1)!);
+
+    await waitFor(() => {
+      expect(setDefaultModel).toHaveBeenCalledWith({ modelId: "model_1" });
     });
   });
 });

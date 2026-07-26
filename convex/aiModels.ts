@@ -95,8 +95,6 @@ export const getOffsetPaginatedModels = superAdminQuery({
     searchTerm: v.optional(v.string()),
     statusFilter: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
     providerFilter: v.optional(v.string()),
-    capabilityFilter: v.optional(v.string()),
-    useCaseFilter: v.optional(v.string()),
     page: v.number(),
     pageSize: v.number(),
   },
@@ -104,8 +102,6 @@ export const getOffsetPaginatedModels = superAdminQuery({
     const term = normalizeSearchTerm(args.searchTerm);
     const statusEnabled = args.statusFilter === undefined ? undefined : args.statusFilter === "active";
     const providerFilter = args.providerFilter && args.providerFilter !== "all" ? args.providerFilter : undefined;
-    const capabilityFilter = args.capabilityFilter && args.capabilityFilter !== "all" ? args.capabilityFilter : undefined;
-    const useCaseFilter = args.useCaseFilter && args.useCaseFilter !== "all" ? args.useCaseFilter : undefined;
     let models: Doc<"aiModels">[] = [];
 
     if (term) {
@@ -162,14 +158,6 @@ export const getOffsetPaginatedModels = superAdminQuery({
 
     if (providerFilter) {
       models = models.filter((m) => m.providerKey === providerFilter);
-    }
-
-    if (capabilityFilter) {
-      models = models.filter((m) => m.capabilities?.includes(capabilityFilter));
-    }
-
-    if (useCaseFilter) {
-      models = models.filter((m) => modelSupportsUseCase(m, useCaseFilter));
     }
 
     models.sort((a, b) => {
@@ -1021,7 +1009,9 @@ export const updatePricingConfig = superAdminMutation({
     cachedInputCostBelow200k: v.optional(v.number()),
     cachedInputCostAbove200k: v.optional(v.number()),
     outputResponseCost: v.optional(v.number()),
-    outputReasoningCost: v.optional(v.number()),
+    // `outputReasoningCost` was collected by the model page and read by nothing:
+    // no cost calculation, no budget, no report. A field that only ever travels
+    // one way looks like it means something, so it stopped being asked for.
   },
   handler: async (ctx, args) => {
     const { userId } = ctx;

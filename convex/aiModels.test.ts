@@ -478,17 +478,19 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     expect(page.data.map((model) => model.modelId)).toEqual(["openai:gpt-test", "openai:vision-test"]);
 
-    const filteredPage = await client.query(api.aiModels.getOffsetPaginatedModels, {
+    // The capability and use-case filters were removed with the two columns
+    // they narrowed: provider metadata nobody could act on from the catalogue.
+    // Provider and status are the two that remain, and the search index is what
+    // finds a named model.
+    const searchedPage = await client.query(api.aiModels.getOffsetPaginatedModels, {
       providerFilter: "openai",
       statusFilter: "active",
-      capabilityFilter: "tool-calling",
-      useCaseFilter: "agent",
-      searchTerm: "",
+      searchTerm: "gpt",
       page: 1,
       pageSize: 15,
     });
 
-    expect(filteredPage.data.map((model) => model.modelId)).toEqual(["openai:gpt-test"]);
+    expect(searchedPage.data.map((model) => model.modelId)).toEqual(["openai:gpt-test"]);
     expect(providers.map((provider) => provider.providerKey)).toEqual(["google", "openai", "anthropic"]);
   });
 

@@ -6,13 +6,12 @@ import { requireActionSuperAdmin } from "./actionAuth";
 import {
   ANTHROPIC_PROVIDER_KEY,
   EMBEDDING_MODEL_USE_CASE,
-  GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
 } from "./aiModelService";
 import { listAnthropicModels } from "./anthropicProviderService";
 import { listOpenAIModels } from "./openaiProviderService";
-import { buildVertexProviderConfig } from "./vertexProviderService";
+import { buildVertexProviderConfig, createVertexGenAIClient, listVertexModels } from "./vertexProviderService";
 import { superAdminAction } from "./tenantFunctions";
 
 function getErrorMessage(error: unknown): string {
@@ -53,7 +52,7 @@ function getTextGenerationCapabilities(modelId: string) {
   return capabilities;
 }
 
-function isOpenAITextGenerationModel(modelId: string) {
+export function isOpenAITextGenerationModel(modelId: string) {
   const normalized = modelId.toLowerCase();
   if (
     normalized.includes("embedding") ||
@@ -77,58 +76,37 @@ function isOpenAITextGenerationModel(modelId: string) {
     normalized.startsWith("chatgpt-");
 }
 
-const CURATED_OPENAI_TEXT_MODELS = [
-  "gpt-5",
-  "gpt-5-mini",
-  "gpt-5-nano",
-  "gpt-4.1",
-  "gpt-4.1-mini",
-  "gpt-4.1-nano",
-  "gpt-4o",
-  "gpt-4o-mini",
-  "o4-mini",
-  "o3",
-  "o3-mini",
-  "o1",
-];
-
-export function getOpenAITextModelCatalogue(modelIds: string[]) {
-  const liveTextModelIds = modelIds.filter(isOpenAITextGenerationModel);
-  return Array.from(new Set([...CURATED_OPENAI_TEXT_MODELS, ...liveTextModelIds]));
-}
-
 async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
-  // In @google/genai with Vertex, we fetch available models using the standard method
-  // Unfortunately models.list does not currently support Vertex AI perfectly in some beta SDK versions.
-  // Wait, let's actually just fetch models in a fail-safe way.
-  // If ai.models.list isn't populated, we can provide a definitive list of active production models
-  // because Vertex AI doesn't always expose the standard model indexing publicly like AI Studio does.
+  const ai = createVertexGenAIClient();
+  const listed = await listVertexModels(ai);
 
-  const hardcodedVertexModels = [
-    { name: "gemini-3.1-pro-preview", displayName: "Gemini 3.1 Pro (Preview)", description: "Reasoning and complex logic", capabilities: ["text", "reasoning", "vision", "tool-calling", "json-mode"] },
-    { name: "gemini-3.1-flash-lite-preview", displayName: "Gemini 3.1 Flash Lite", description: "Ultra-low latency operations", capabilities: ["text", "vision", "tool-calling", "json-mode"] },
-    { name: "gemini-3-flash-preview", displayName: "Gemini 3 Flash", description: "Balanced fast performance", capabilities: ["text", "vision", "tool-calling", "json-mode"] },
-    { name: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash", description: "Standard generation", capabilities: ["text", "vision", "tool-calling", "json-mode"] },
-    { name: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro", description: "Complex instructions", capabilities: ["text", "reasoning", "vision", "tool-calling", "json-mode"] },
-    {
-      name: GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
-      displayName: "Text Embedding 004",
-      description: "Stable 768-dimension embedding model for Sonae knowledge vector indexes",
-      capabilities: ["embeddings"],
-      supportedUseCases: [EMBEDDING_MODEL_USE_CASE],
-    }
-  ];
+  if (listed.length === 0) {
+    throw new Error("Vertex AI returned no usable models.");
+  }
 
-  const formattedModels = hardcodedVertexModels.map((m) => ({
-    modelId: m.name,
-    providerModelId: m.name,
-    displayName: m.displayName,
-    description: m.description,
-    capabilities: m.capabilities,
-    supportedUseCases: "supportedUseCases" in m && m.supportedUseCases
-      ? m.supportedUseCases
-      : ["chat", "fast-chat", "reasoning", "agent", "workflow", "report", "router", "title", "transcription"],
-  }));
+  const formattedModels = listed.map((model) => {
+    const isEmbedding = model.modelId.toLowerCase().includes("embedding");
+    return {
+      modelId: model.modelId,
+      providerModelId: model.modelId,
+      // Vertex answers with the model id as its display name, so
+      // "gemini-2.5-flash" would become the name on screen. Titleizing is a
+      // rule applied to whatever comes back, not a table of pretty names to
+      // keep in step with Google's releases.
+      displayName: titleizeModelId(model.displayName || model.modelId),
+      description: model.description,
+      // Vertex does not report what a model can do in a form this catalogue
+      // uses, so capabilities are derived from the model id — again a rule
+      // rather than a list of models to maintain.
+      capabilities: isEmbedding ? ["embeddings"] : getTextGenerationCapabilities(model.modelId),
+      supportedUseCases: isEmbedding ? [EMBEDDING_MODEL_USE_CASE] : getTextGenerationUseCases(model.modelId),
+      // Vertex leaves these unset on the listing. Passing undefined through
+      // would clear whatever a model already had, so they are only sent when
+      // Vertex actually reports them.
+      ...(model.contextWindowTokens ? { contextWindowTokens: model.contextWindowTokens } : {}),
+      ...(model.maxOutputTokens ? { maxOutputTokens: model.maxOutputTokens } : {}),
+    };
+  });
 
   await ctx.runMutation(internal.aiModels.internalBatchUpsert, {
     providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
@@ -137,34 +115,43 @@ async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
   });
   await ctx.runMutation(internal.aiModels.backfillGoogleVertexModelProviders);
 
+  await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, {
+    providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
+    displayName: "Google Vertex AI",
+    status: "healthy",
+    syncStatus: "catalog-synced",
+    settings: JSON.stringify({
+      lastHealthMessage: `Listed ${formattedModels.length} models from Vertex AI.`,
+    }),
+  });
+
   return formattedModels;
 }
 
+/**
+ * The OpenAI catalogue, asked of OpenAI.
+ *
+ * A curated list of twelve model ids used to be merged into whatever the live
+ * call returned, and substituted wholesale when the call failed. Same fault as
+ * the Vertex list: it silently decided what existed, went stale without saying
+ * so, and made a failed sync look like a successful one.
+ */
 async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
-  let modelIds: string[] = [];
-  let fallbackMessage = "";
+  const modelIds = await listOpenAIModels();
+  const textModelIds = modelIds.filter(isOpenAITextGenerationModel);
 
-  try {
-    modelIds = await listOpenAIModels();
-  } catch (error) {
-    fallbackMessage = getErrorMessage(error);
-    modelIds = CURATED_OPENAI_TEXT_MODELS;
+  if (textModelIds.length === 0) {
+    throw new Error("OpenAI returned no text-generation models.");
   }
 
-  const liveTextModelIds = modelIds.filter(isOpenAITextGenerationModel);
-  if (modelIds.length > 0 && liveTextModelIds.length === 0) {
-    fallbackMessage = fallbackMessage || "OpenAI returned no text-generation models from the live catalogue.";
-  }
-
-  const formattedModels = getOpenAITextModelCatalogue(modelIds)
-    .map((modelId) => ({
-      modelId,
-      providerModelId: modelId,
-      displayName: titleizeModelId(modelId),
-      description: "OpenAI text generation model available to this API key.",
-      capabilities: getTextGenerationCapabilities(modelId),
-      supportedUseCases: getTextGenerationUseCases(modelId),
-    }));
+  const formattedModels = textModelIds.map((modelId) => ({
+    modelId,
+    providerModelId: modelId,
+    displayName: titleizeModelId(modelId),
+    description: "OpenAI text generation model available to this API key.",
+    capabilities: getTextGenerationCapabilities(modelId),
+    supportedUseCases: getTextGenerationUseCases(modelId),
+  }));
 
   await ctx.runMutation(internal.aiModels.internalBatchUpsert, {
     providerKey: OPENAI_PROVIDER_KEY,
@@ -172,22 +159,15 @@ async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
     models: formattedModels,
   });
 
-  if (fallbackMessage) {
-    const credentialsMissing = fallbackMessage.includes("OPENAI_API_KEY");
-    const healthArgs = {
-      providerKey: OPENAI_PROVIDER_KEY,
-      displayName: "OpenAI",
-      status: credentialsMissing ? "error" : "degraded",
-      syncStatus: "catalog-fallback",
-      settings: JSON.stringify({
-        lastHealthMessage: `OpenAI live sync unavailable. Seeded curated catalogue. ${fallbackMessage}`,
-      }),
-    } as const;
-
-    await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, credentialsMissing
-      ? { ...healthArgs, isEnabled: false }
-      : healthArgs);
-  }
+  await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, {
+    providerKey: OPENAI_PROVIDER_KEY,
+    displayName: "OpenAI",
+    status: "healthy",
+    syncStatus: "catalog-synced",
+    settings: JSON.stringify({
+      lastHealthMessage: `Listed ${formattedModels.length} text models from OpenAI.`,
+    }),
+  });
 
   return formattedModels;
 }

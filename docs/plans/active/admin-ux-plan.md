@@ -342,6 +342,291 @@ a confident recommendation with nothing behind it. The descriptions and the
 prices give a reader what they need to choose; a preset should wait until there
 is a real basis for one.
 
+### Phase E — Models, second pass: make the screens true (1 day)
+
+**Opened 2026-07-26.** Anthony came back to the Model Catalogue and the model
+detail page. Phase C made the catalogue say more; reading it again showed that
+some of what it says is false, and that the detail page collects thirty fields to
+edit two numbers.
+
+Three faults found, and they outrank the layout work. This is the same principle
+Phase A ran on: a screen that shows the wrong thing is worse than a screen that
+shows the right thing badly.
+
+| # | Item | Size | State |
+|---|---|---|---|
+| E1 | Prices are wrong by a factor of a million | 0.25 | **done** |
+| E2 | One currency, stated once | 0.25 | **done** |
+| E3 | "Default" means what actually runs | 0.25 | **done** |
+| E4 | *Make Default* stops rewriting all ten jobs | 0.25 | **done** |
+
+**E1 — the price is a million times too big.** `formatTokenCost` multiplies the
+stored rate by 1,000,000 to reach a per-million figure. But the stored rate is
+*already* per million: `aiCostService.ts` divides token counts by 1,000,000
+before applying it, the detail page's own fields are labelled "per 1M tokens",
+and every synced record carries `inputTokenUnit: "Per 1M tokens"`. So a model
+priced at £0.075 per million displays as **£75,000.00**. The same helper feeds
+the Defaults screen, so the cost shown at the point of choosing is wrong there
+too — which undoes the one thing C2 added.
+
+The fix is one helper and its tests. The test that matters asserts the screen
+agrees with `calculateModelCostGBP`: given rates and a token count, what the
+catalogue prints per million must be what the runtime actually charges.
+
+**E2 — three currencies for one number.** The detail page prefixes every price
+field with `$` and the record says `currency: "USD"`, because that is how
+providers publish. The catalogue prints `£`. The runtime function is called
+`calculateModelCostGBP` and converts nothing. A `convertUsdToGbp` helper already
+exists in `analyticsService.ts` at a fixed 0.78 and is not applied to model
+rates.
+
+Decision **as planned**: keep storing the provider's published dollar price,
+convert once for display, and say so. Typing in the provider's own number is what
+makes the figure checkable against their pricing page; converting on the way in
+would bake today's rate into stored data and quietly rot.
+
+**Decision as built: dollars, not converted pounds.** Anthony had agreed to the
+conversion, and implementing it turned up the fact that changed the answer —
+`convertUsdToGbp` **has no production callers at all**. Nothing in the product
+converts. Every cost figure on every screen, including Running Costs and the
+agent spend budgets, is a dollar number with a `£` in front of it.
+
+Converting on the catalogue alone would therefore have made it disagree with
+every other cost surface: a wrong number swapped for an inconsistent one. So
+model rates now read `$0.075 in · $0.30 out`, which is what the provider
+publishes, what the detail page's own `$` fields collect, and what the record's
+`currency: "USD"` says.
+
+**Raised, and deliberately left:** whether platform spend is tracked in dollars
+or pounds is a costing decision, not a screen decision. Fixing it properly means
+applying the conversion once at the point of calculation and dealing with the
+historical `costGBP` records already stored under the wrong label. That is its
+own piece of work.
+
+**E3 — the star marks a setting that usually decides nothing.** The catalogue
+stars `isDefault`. The detail page labels the same flag "Legacy Default", which
+is the honest name. What actually decides which model runs is `aiModelDefaults`,
+one row per job. Traced end to end, the chain is:
+
+```
+the agent's own choice        (if enabled)
+  → the company's choice for that job
+  → the platform's choice for that job     ← the Defaults screen
+  → the starred model                      ← the star
+  → any enabled model at all
+  → a hardcoded failsafe model id (SYSTEM_FAILSAFE_MODEL_ID)
+```
+
+The star is the fourth thing tried. It is not dead — it is a fallback tier, and
+provider sync seeds the platform defaults from it — but presenting it as *the*
+default is wrong, and the agent and chat pickers compound it by labelling that
+model "system default" to users when the runtime may be routing elsewhere.
+
+So the catalogue stops showing the flag and starts showing the fact: **is this
+model currently handling any job?** Yes, with the jobs named — *Chat, Title* —
+or no. That is the question the star was failing to answer.
+
+**E4 — one hover button reassigns the whole platform.** *Make Default* reads like
+marking a favourite. It rewrites **all ten** platform defaults — Chat, Fast Chat,
+Reasoning, Agent, Workflow, Report, Router, Title, Transcription, Embedding — to
+that one model, with no confirmation, from a control revealed on hover next to
+*Deactivate*. Sending embedding traffic to a chat model is one mis-click away.
+
+The mutation stays: a fresh deployment needs a way to point everything somewhere,
+and provider sync depends on the flag. It moves to the Defaults screen, where the
+ten jobs it overwrites are visible on the same page, named for what it does —
+*Use this model for every job* — and asking first. The catalogue row loses it
+entirely; choosing what handles what belongs on the screen built for it, one job
+at a time.
+
+### Phase F — Models, second pass: make the screens simple (1 day)
+
+| # | Item | Size | State |
+|---|---|---|---|
+| F1 | The catalogue table is four columns | 0.5 | **done** |
+| F2 | The detail page is two panels | 0.5 | **done** |
+
+**F1 — four columns, Anthony's call.** Model name · Provider · Default · Active.
+
+**Capabilities and Use Cases go completely** — the columns, the two filter
+dropdowns, and the chip lists on the detail page. Anthony's call, and the code
+agrees with it: they are provider-synced metadata nobody can change from these
+screens, they cost five to eight chips per row plus a "+6 more", and they are the
+single largest source of noise on the page. Nobody browses a model catalogue by
+"json-mode".
+
+One of the two is genuinely dead and one is load-bearing, so they are removed
+differently:
+
+- **`capabilities` is display-only.** It is written by provider sync and read by
+  nothing but the two screens and its own filter. Removing those removes its last
+  reader. The synced field stays in the database rather than earning a migration
+  for data that costs nothing at rest, recorded here as dead so the next person
+  into provider sync can stop writing it.
+- **`supportedUseCases` decides things, invisibly.** It is what stops an
+  embedding model being offered for chat: it filters every model picker, it
+  filters the candidate list on the Defaults screen, and setting a default is
+  rejected if the model does not support the job. So it disappears from every
+  screen — which is what was asked — and stays as plumbing behind the Defaults
+  dropdowns. Deleting the data would silently offer every model for every job.
+
+The `capabilityFilter` and `useCaseFilter` arguments come off
+`getOffsetPaginatedModels` with the dropdowns, along with the two post-fetch
+filter passes they drive.
+
+Cost loses its column too. C1 gave it one on the reasoning that price is the
+decision being made here; with the catalogue reduced to *what exists, and is it
+on*, the decision has moved to the detail page and to Defaults. What must not go
+is the consequence: an unpriced model runs its agents on a reduced budget. That
+survives as a short amber tag beside the name and **one** line above the table —
+not, as now, the same forty-word paragraph repeated inside every affected row.
+
+**Active is the control, not a second copy of it.** C1 removed the `ONLINE` badge
+because it printed the same fact as the *Deactivate* button beside it. Adding an
+Active column reintroduces exactly that duplication unless the column *is* the
+switch. So it is: a real toggle in the cell, no separate action column, and the
+word *Initialize* — which is not a word for turning something on — goes with it.
+
+Search leads on its own full-width row, as the Skill Center now does. It has been
+there all along, crushed between three dropdowns and a toggle until its
+placeholder truncated to "Sea", which is why the screen reads as having none.
+With the capability and use-case dropdowns gone, provider and active are the only
+two left and there is room for the search box to look like one.
+
+**F2 — thirty fields to edit two numbers.** The detail page exists so prices can
+be entered. Almost none of it is that.
+
+*Provider Metadata* is nine read-only fields plus the two chip lists removed in
+F1. Of the nine, Context Window, Max Output and Pricing Effective all read "Not
+recorded", and Input Unit, Output Unit and Currency are constants that never
+vary. Three are worth keeping — provider, model id, last synced — as one grey
+line, not a bordered card with an icon.
+
+*Selection Summary* goes entirely. All three of its fields restate something
+already on the page: "Availability: Selectable" is the ACTIVE badge in the title,
+"Display Name" is the box directly above it, and "Legacy Default" exposes the
+debt named in E3 to whoever opens the page.
+
+Of the seven price fields, five are genuinely read by the cost engine. **Cost per
+1M Reasoning Tokens is written and never read anywhere** — it is removed rather
+than left to look meaningful. Price in and price out lead, because they are the
+two anyone will actually type; the 200k-tier and cached-token prices are real but
+rarely touched, and fold behind *More prices*.
+
+In their place, the sentence the page should always have carried: which jobs this
+model currently handles, linking to Defaults.
+
+**Done.** The catalogue is Model · Provider · Default · Active, every row the
+same height. `ModelTagList`, `MODEL_CAPABILITY_OPTIONS` and
+`MODEL_USE_CASE_OPTIONS` had no readers left once the columns and dropdowns went,
+and the `capabilityFilter` / `useCaseFilter` arguments came off
+`getOffsetPaginatedModels` with the two post-fetch passes they drove.
+
+The detail page went from six panels and about thirty fields to two panels and
+seven, of which two are visible by default. Saving now returns to the catalogue
+rather than stepping back through history to wherever the reader happened to
+arrive from. `outputReasoningCost` was removed from the form **and** from
+`updatePricingConfig` — a field that only ever travelled one way looks like it
+means something.
+
+*Not done, and worth knowing:* the sort inside `getOffsetPaginatedModels` still
+floats the legacy `isDefault` row to the top of the list. It is one row and it is
+harmless, but it now sorts on something the screen no longer shows. Sorting on
+the real defaults would mean reading `aiModelDefaults` inside the paginated
+query.
+
+### Phase G — asked for while Phase F was on screen (done)
+
+Anthony reviewed the rebuilt catalogue and asked for four changes. All are done
+and checked in the running app.
+
+| # | Item | State |
+|---|---|---|
+| G1 | Yes/no only in the Default cell | **done** |
+| G2 | A Pricing column reading *Added* or *Missing* | **done** |
+| G3 | *Make this the default model* on the model page | **done** |
+| G4 | Search and both filters on one line | **done** |
+
+**G1.** F1 shipped the Default cell naming all ten jobs it handled. That made one
+row three times taller than its neighbours and put back the wall of text this
+pass exists to remove. It reads *Yes* or *No*; the jobs are hover text.
+
+**G2.** Price came off the table in F1, and the consequence of an unpriced model
+went with it — first as a badge on the name and a banner above the table, both of
+which were additions nobody asked for and both of which made the table feel full
+again. A column of its own says it in one word. Columns are now **Model name ·
+Provider · Pricing · Default · Active**.
+
+**G3.** *Make this the default model* sits on the model page beside the sentence
+saying what it currently handles, and hides itself when it already handles
+everything. It uses the same confirmation as the Defaults screen: it names all
+ten jobs, warns that embedding needs an embedding model, and says when it will
+also switch the model on.
+
+**G4.** Search, provider and the active/inactive toggle share one row. Four
+controls was what crushed the search box down to "Sea"; three fit.
+
+### Phase H — the catalogue is whatever the provider says it is (done)
+
+**Found while Anthony asked "why are we missing models from Vertex — is it
+actually working".** It was not.
+
+`syncGoogleVertexModelCatalogue` never contacted Google. It held **six model ids
+typed into the source**, above a comment explaining that the SDK could not list
+Vertex models "in some beta SDK versions" — true when written, long out of date,
+and never revisited. Pressing Sync could not discover a model Google had
+released, and nothing on screen admitted it.
+
+**Proven, not assumed.** A throwaway probe deployed to the dev deployment called
+Vertex with the real service-account credentials and returned **15 usable
+models**, including four the hardcoded six never had. The probe was deleted.
+
+The fix calls `models.list({ queryBase: true })` on the client that already
+exists, which the SDK routes to the v1beta1 `publishers/google/models` endpoint.
+
+**No fallback list, anywhere.** Anthony's instruction, and it applies to more
+than Vertex: the twelve curated OpenAI ids went too. They were the same fault —
+a list silently deciding what exists, going stale without saying so, and turning
+a failed sync into one that looks successful. A sync that cannot reach its
+provider now throws and marks the provider unhealthy.
+
+What replaces the lists is **rules applied to whatever comes back**: keep the
+text-generation and embedding models and drop the image, video and speech ones no
+code path can call; derive capabilities from the model id; titleize the name
+Vertex returns, which is the raw id. A model Google ships tomorrow appears with no code change,
+and a test asserts that.
+
+Two tests had to be rewritten because they **pinned the bug in place**, asserting
+that a sync returns exactly six models. They now assert that a sync which cannot
+reach Vertex fails and writes nothing.
+
+*Two limits worth knowing, both checked against Google's own documentation:*
+
+- **Context window and max output stay empty.** Vertex does not return them on
+  the listing. They are only sent to the database when actually reported, since
+  passing undefined through would clear whatever a model already had.
+- **Pricing cannot be automated.** Google publishes no per-model pricing API. The
+  nearest thing, the Cloud Billing catalogue, identifies models only by marketing
+  prose in a SKU description, with no structured model id to join on. Too brittle
+  to depend on, which is what the Pricing column is for.
+
+### Raised, not fixed
+
+Found while tracing E3, all outside these two phases and none of them
+UI problems:
+
+- **`reasoning` is a job nobody runs.** It is settable on the Defaults screen and
+  offered by provider sync, but no runtime call ever asks for it. Choosing a
+  model for it does nothing.
+- **`fallbackModelId` is read on four branches of the resolution chain and
+  written by nothing** outside the local demo seed.
+- **Disabling a provider does not stop its models running.** It hides them from
+  every picker and blocks new defaults, but an already-set default on that
+  provider still executes.
+- **A stale default can outlive its own eligibility.** Use-case support is
+  checked when a default is set, not when it is used, so a model whose supported
+  jobs are later narrowed by provider sync keeps handling the job it lost.
+
 ### Phase D — Settings (1 day)
 
 | # | Item | Size | State |

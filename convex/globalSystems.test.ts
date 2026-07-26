@@ -2,7 +2,6 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import { GOOGLE_VERTEX_EMBEDDING_MODEL_ID } from "./aiModelService";
 
 describe("OWASP: Global Ecosystem Protection", () => {
   test("Standard Admin cannot invoke provider model sync", async () => {
@@ -27,7 +26,16 @@ describe("OWASP: Global Ecosystem Protection", () => {
     ).rejects.toThrowError(/Unauthorized/);
   });
 
-  test("Super admins can sync the curated Google Vertex AI model catalogue", async () => {
+  /**
+   * The catalogue comes from Vertex, so with no Vertex to call it fails.
+   *
+   * These two tests used to assert that syncing returned exactly six models —
+   * pinning in place the list of model ids that was typed into the source, and
+   * turning the bug into a requirement. What matters now is that a failed sync
+   * fails: seeding a fallback catalogue would leave the screen looking current
+   * when nothing had been fetched, which is the fault being removed.
+   */
+  test("a sync that cannot reach Vertex fails rather than seeding a list", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const superAdminId = await t.run(async (ctx) =>
@@ -38,22 +46,14 @@ describe("OWASP: Global Ecosystem Protection", () => {
     );
     const client = t.withIdentity({ subject: superAdminId });
 
-    const syncedModels = await client.action(api.aiModelsActions.syncGoogleModels);
+    await expect(
+      client.action(api.aiModelsActions.syncGoogleModels)
+    ).rejects.toThrowError(/Failed to sync Google Vertex AI models/);
 
-    expect(syncedModels).toHaveLength(6);
-    expect(syncedModels.filter((model) => model.modelId.startsWith("g" + "emini-"))).toHaveLength(5);
-    expect(syncedModels).toContainEqual(expect.objectContaining({
-      modelId: GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
-      supportedUseCases: ["embedding"],
-      capabilities: ["embeddings"],
-    }));
-    const { storedModels, provider } = await t.run(async (ctx) => ({
-      storedModels: await ctx.db.query("aiModels").collect(),
-      provider: await ctx.db.query("aiProviders").withIndex("by_provider_key", (q) => q.eq("providerKey", "google")).first(),
-    }));
-    expect(storedModels.map((model) => model.modelId)).toEqual(syncedModels.map((model) => model.modelId));
-    expect(storedModels.every((model) => model.providerKey === "google")).toBe(true);
-    expect(provider).toMatchObject({ displayName: "Google Vertex AI", isEnabled: true });
+    // Nothing was written. A seeded catalogue here is exactly what a reader
+    // would mistake for a working sync.
+    const storedModels = await t.run(async (ctx) => await ctx.db.query("aiModels").collect());
+    expect(storedModels).toEqual([]);
   });
 
   test("legacy Vertex sync action remains available as a compatibility alias", async () => {
@@ -67,8 +67,8 @@ describe("OWASP: Global Ecosystem Protection", () => {
     );
     const client = t.withIdentity({ subject: superAdminId });
 
-    const syncedModels = await client.action(api.aiModelsActions.syncVertexModels);
-    expect(syncedModels).toHaveLength(6);
-    expect(syncedModels.map((model) => model.modelId)).toContain(GOOGLE_VERTEX_EMBEDDING_MODEL_ID);
+    await expect(
+      client.action(api.aiModelsActions.syncVertexModels)
+    ).rejects.toThrowError(/Failed to sync Vertex Models/);
   });
 });

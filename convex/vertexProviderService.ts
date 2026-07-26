@@ -73,6 +73,91 @@ export function createVertexGenAIClient(args: { env?: VertexProviderEnv; locatio
   });
 }
 
+/** What the catalogue needs from a listed model, and nothing more. */
+export type VertexCatalogueModel = {
+  modelId: string;
+  displayName: string;
+  description?: string;
+  contextWindowTokens?: number;
+  maxOutputTokens?: number;
+  supportedActions?: string[];
+};
+
+/** Vertex returns `publishers/google/gemini-2.5-flash`; the catalogue wants the last part. */
+export function parseVertexModelId(resourceName: string | undefined) {
+  if (!resourceName) return "";
+  return resourceName.split("/").filter(Boolean).at(-1) ?? "";
+}
+
+/**
+ * A model Sonae can actually use.
+ *
+ * Vertex publishes far more than text generation and embeddings — image, video,
+ * speech and tuning-only entries all come back from the same call. Listing them
+ * would fill the catalogue with models nothing in this codebase can call.
+ */
+export function isUsableVertexModel(modelId: string) {
+  const normalized = modelId.toLowerCase();
+  if (!normalized) return false;
+  if (normalized.includes("embedding")) return true;
+  if (!normalized.startsWith("gemini")) return false;
+  // Gemini variants this platform has no code path for.
+  return !(
+    normalized.includes("image")
+    || normalized.includes("vision-tuning")
+    || normalized.includes("live")
+    || normalized.includes("tts")
+    || normalized.includes("audio")
+    || normalized.includes("veo")
+    || normalized.includes("imagen")
+  );
+}
+
+/**
+ * The models this project can actually reach on Vertex, asked of Vertex.
+ *
+ * This did not exist. `syncGoogleVertexModelCatalogue` carried a list of six
+ * model ids typed into the source, above a comment explaining that the SDK's
+ * listing "does not currently support Vertex AI perfectly in some beta SDK
+ * versions" — true when it was written, and long out of date. The consequence
+ * was that pressing Sync could never discover a model Google had released, and
+ * the screen gave no sign that was the case.
+ *
+ * `queryBase: true` is what asks for publisher base models rather than the
+ * project's own tuned ones.
+ */
+export async function listVertexModels(
+  ai: GoogleGenAI,
+  args: { pageLimit?: number } = {}
+): Promise<VertexCatalogueModel[]> {
+  const pageLimit = args.pageLimit ?? 10;
+  const collected: VertexCatalogueModel[] = [];
+  const seen = new Set<string>();
+
+  let pager = await ai.models.list({ config: { queryBase: true, pageSize: 100 } });
+
+  for (let pageCount = 0; pageCount < pageLimit; pageCount += 1) {
+    for (const model of pager.page) {
+      const modelId = parseVertexModelId(model.name);
+      if (!modelId || seen.has(modelId) || !isUsableVertexModel(modelId)) continue;
+      seen.add(modelId);
+      collected.push({
+        modelId,
+        displayName: model.displayName || modelId,
+        description: model.description,
+        contextWindowTokens: model.inputTokenLimit,
+        maxOutputTokens: model.outputTokenLimit,
+        supportedActions: model.supportedActions,
+      });
+    }
+
+    if (!pager.hasNextPage()) break;
+    pager = await pager.nextPage() as unknown as typeof pager;
+  }
+
+  return collected;
+}
+
 function logGoogleRetry(event: {
   operation: string;
   attempt: number;

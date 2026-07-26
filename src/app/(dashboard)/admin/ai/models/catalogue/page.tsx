@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Bot, List, RefreshCw, Search, Star } from "lucide-react";
+import { Bot, List, RefreshCw, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
@@ -22,13 +22,10 @@ import { isModelCostMeasurable } from "@/convex/agentRuntimeService";
 import { cn } from "@/src/ui/lib/utils";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import {
+  buildDefaultJobsByModelId,
   formatModelTag,
-  formatTokenCost,
   getProviderDisplayName,
-  MODEL_CAPABILITY_OPTIONS,
-  MODEL_USE_CASE_OPTIONS,
   ModelAdminHeader,
-  ModelTagList,
   type ModelStatusFilter,
 } from "../_components/modelAdminUtils";
 
@@ -36,14 +33,11 @@ export default function AIModelCataloguePage() {
   const router = useRouter();
   const t = useTranslations("ai.models");
   const toggleModelEnforcement = useMutation(api.aiModels.toggleModelEnforcement);
-  const setDefaultModel = useMutation(api.aiModels.setDefaultModel);
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
   const [statusFilter, setStatusFilter] = useState<ModelStatusFilter>("active");
   const [providerFilter, setProviderFilter] = useState("all");
-  const [capabilityFilter, setCapabilityFilter] = useState("all");
-  const [useCaseFilter, setUseCaseFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [modelError, setModelError] = useState("");
   const pageSize = ADMIN_PAGE_SIZE;
@@ -52,13 +46,15 @@ export default function AIModelCataloguePage() {
     searchTerm: debouncedSearch,
     statusFilter,
     providerFilter,
-    capabilityFilter,
-    useCaseFilter,
     page,
     pageSize,
   });
   const providersResult = useQuery(api.aiModels.getProviders);
   const providers = Array.isArray(providersResult) ? providersResult : [];
+  // What each model is actually doing, rather than which one carries the legacy
+  // flag. Ten rows, unaffected by the page or the filters.
+  const globalDefaultsResult = useQuery(api.aiModels.getGlobalModelDefaults);
+  const defaultJobsByModelId = buildDefaultJobsByModelId(globalDefaultsResult);
   const isLoading = modelsData === undefined;
   const models = modelsData?.data || [];
   const totalCount = modelsData?.totalCount || 0;
@@ -80,16 +76,6 @@ export default function AIModelCataloguePage() {
     setPage(1);
   };
 
-  const handleCapabilityFilterChange = (value: string) => {
-    setCapabilityFilter(value);
-    setPage(1);
-  };
-
-  const handleUseCaseFilterChange = (value: string) => {
-    setUseCaseFilter(value);
-    setPage(1);
-  };
-
   const toggleStatus = async (modelId: Id<"aiModels">, currentState: boolean) => {
     setModelError("");
     try {
@@ -100,35 +86,29 @@ export default function AIModelCataloguePage() {
     }
   };
 
-  const makeDefault = async (modelId: Id<"aiModels">) => {
-    setModelError("");
-    try {
-      await setDefaultModel({ modelId });
-    } catch (error) {
-      console.error(error);
-      setModelError("Failed to update default model.");
-    }
-  };
-
   return (
-    <div className="flex flex-col gap-6 w-full h-full pb-12">
+    <div className="flex flex-col gap-5 w-full h-full pb-12">
       <ModelAdminHeader
         icon={<List className="w-6 h-6 text-brand" />}
         title="Model Catalogue"
-        subtitle="Manage synced model availability, capabilities, and catalogue metadata."
+        subtitle="Which models this platform has, and which of them are switched on."
       />
       <AiWorkspaceNav />
       <AdminSaveError>{modelError}</AdminSaveError>
 
-      <div className="w-full flex flex-col gap-2 rounded-[16px] border border-border-dim bg-card/40 p-2 shadow-sm backdrop-blur-xl md:flex-row md:items-center">
-        <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
-          <Search className="w-4 h-4 flex-shrink-0 text-muted" />
+      {/* Search and both filters on one line. The original crammed three
+          dropdowns and a toggle in beside the search box, squeezing its
+          placeholder down to "Sea" — with two controls instead of four there is
+          room for the search to grow and still read as a search box. */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             value={searchTerm}
             onChange={(event) => handleSearchChange(event.target.value)}
-            placeholder="Search model names or IDs..."
-            className="h-9 w-full bg-transparent text-[13px] tracking-wide text-foreground outline-none placeholder:text-muted/60"
+            placeholder="Search models by name"
+            className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
           />
         </div>
 
@@ -136,39 +116,15 @@ export default function AIModelCataloguePage() {
           aria-label="Provider filter"
           value={providerFilter}
           onChange={(event) => handleProviderFilterChange(event.target.value)}
-          className="h-10 rounded-[12px] border border-border-dim bg-background/40 px-3 text-[12px] font-medium text-foreground outline-none md:w-[220px]"
+          className="h-10 shrink-0 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50 sm:w-[200px]"
         >
-          <option value="all">All Providers</option>
+          <option value="all">All providers</option>
           {providers.map((provider) => (
             <option key={provider._id} value={provider.providerKey}>{provider.displayName}</option>
           ))}
         </select>
 
-        <select
-          aria-label="Capability filter"
-          value={capabilityFilter}
-          onChange={(event) => handleCapabilityFilterChange(event.target.value)}
-          className="h-10 rounded-[12px] border border-border-dim bg-background/40 px-3 text-[12px] font-medium text-foreground outline-none md:w-[180px]"
-        >
-          <option value="all">All Capabilities</option>
-          {MODEL_CAPABILITY_OPTIONS.map((capability) => (
-            <option key={capability} value={capability}>{formatModelTag(capability)}</option>
-          ))}
-        </select>
-
-        <select
-          aria-label="Use case filter"
-          value={useCaseFilter}
-          onChange={(event) => handleUseCaseFilterChange(event.target.value)}
-          className="h-10 rounded-[12px] border border-border-dim bg-background/40 px-3 text-[12px] font-medium text-foreground outline-none md:w-[180px]"
-        >
-          <option value="all">All Use Cases</option>
-          {MODEL_USE_CASE_OPTIONS.map((useCase) => (
-            <option key={useCase} value={useCase}>{formatModelTag(useCase)}</option>
-          ))}
-        </select>
-
-        <div className="grid grid-cols-2 gap-1 rounded-[12px] border border-border-dim bg-background/40 p-1 md:w-[300px]">
+        <div className="grid shrink-0 grid-cols-2 gap-1 rounded-[8px] border border-border-dim bg-card p-1 sm:w-[220px]">
           {[
             { value: "active" as const, label: "Active" },
             { value: "inactive" as const, label: "Inactive" },
@@ -178,7 +134,7 @@ export default function AIModelCataloguePage() {
               type="button"
               onClick={() => handleStatusFilterChange(option.value)}
               className={cn(
-                "h-8 rounded-[8px] px-3 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors",
+                "h-8 rounded-[6px] px-3 text-[12px] font-medium transition-colors",
                 statusFilter === option.value
                   ? "bg-foreground/10 text-foreground shadow-sm"
                   : "text-muted hover:bg-foreground/5 hover:text-secondary"
@@ -191,6 +147,7 @@ export default function AIModelCataloguePage() {
       </div>
 
       <AdminTableShell
+        minWidthClassName="min-w-[760px]"
         footer={
           <AdminPaginationFooter
             page={page}
@@ -199,25 +156,31 @@ export default function AIModelCataloguePage() {
             pageSize={pageSize}
             isLoading={isLoading}
             onPageChange={setPage}
+            labels={{
+              empty: "No models found",
+              showing: (start, end, total) => `Showing ${start}-${end} of ${total} models`,
+            }}
           />
         }
       >
         <thead>
-          <tr className="border-b border-border-dim/50 bg-sidebar/40">
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[300px]">Model Name</th>
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[190px]">Provider</th>
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">Cost per million tokens</th>
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[230px]">Capabilities</th>
-            <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[230px]">Use Cases</th>
-            <th className="w-[240px] px-5 py-3.5"></th>
+          {/* A model is a name, who supplies it, whether it is doing any job,
+              and whether it is on. Capabilities and use cases were five to eight
+              chips a row of provider metadata nobody could act on from here. */}
+          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+            <th className="px-4 py-3 font-medium w-[38%]">Model name</th>
+            <th className="px-4 py-3 font-medium w-[20%]">Provider</th>
+            <th className="px-4 py-3 font-medium w-[14%]">Pricing</th>
+            <th className="px-4 py-3 font-medium w-[14%]">Default</th>
+            <th className="px-4 py-3 font-medium w-[14%]">Active</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/5">
+        <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={6} />
+            <AdminTableLoadingRow colSpan={5} />
           ) : models.length === 0 ? (
             <AdminTableEmptyRow
-              colSpan={6}
+              colSpan={5}
               icon={<Bot className="w-8 h-8 text-muted/30" />}
               label={t("empty.title")}
               action={
@@ -231,98 +194,97 @@ export default function AIModelCataloguePage() {
               }
             />
           ) : (
-            models.map((model) => (
-              <tr
-                key={model._id}
-                onClick={() => router.push(`/admin/ai/models/${model._id}`)}
-                className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
-              >
-                <td className="px-5 py-4 align-middle">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0 shadow-sm",
-                      model.isDefault ? "bg-brand text-white" : model.isEnabled ? "bg-foreground/10 text-foreground" : "bg-foreground/5 text-muted"
-                    )}>
-                      <Bot className="w-4 h-4" />
+            models.map((model) => {
+              const defaultJobs = defaultJobsByModelId.get(model.modelId) ?? [];
+              return (
+                <tr
+                  key={model._id}
+                  onClick={() => router.push(`/admin/ai/models/${model._id}`)}
+                  className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors cursor-pointer"
+                >
+                  {/* The name, and the id underneath so a developer can still
+                      match it to the provider's docs. Price belongs on the
+                      model's own page, where it is set. */}
+                  <td className="px-4 py-3">
+                    <div className="text-[13px] font-semibold text-foreground truncate">
+                      {model.friendlyName || model.displayName}
                     </div>
-                    <div className="flex flex-col">
-                      <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors flex flex-wrap items-center gap-2">
-                        {model.displayName}
-                        {model.isDefault && (
-                          <Star className="w-3 h-3 fill-brand text-brand" />
-                        )}
-                        {model.isEnabled && !isModelCostMeasurable(model) && (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-full border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#f59e0b]"
-                          >
-                            <AlertTriangle className="w-3 h-3" />
-                            Add its price
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-[11px] font-mono text-muted mt-0.5">{model.providerModelId || model.modelId}</p>
-                      {model.isEnabled && !isModelCostMeasurable(model) && (
-                        <p className="text-[11px] leading-relaxed text-[#f59e0b] mt-1 max-w-[280px]">
-                          Without a price we cannot measure what this model spends, so agents using it are kept to a smaller budget. Open it to add one.
-                        </p>
-                      )}
+                    <div className="text-[11px] font-mono text-muted truncate mt-0.5">
+                      {model.providerModelId || model.modelId}
                     </div>
-                  </div>
-                </td>
-                <td className="px-5 py-4 align-middle">
-                  <span className="inline-flex rounded-full border border-border-dim bg-foreground/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-secondary">
+                  </td>
+                  <td className="px-4 py-3 text-[12px] text-secondary">
                     {getProviderDisplayName(model.providerKey, providerNameByKey)}
-                  </span>
-                </td>
-                <td className="px-5 py-4 align-middle">
-                  {/* What a model costs is the decision being made on this
-                      screen. It was not on it; the provider's internal model id
-                      had the column instead, and now sits under the name. */}
-                  {isModelCostMeasurable(model) ? (
-                    <p className="text-[12.5px] text-secondary">
-                      {formatTokenCost(model.standardInputCostBelow200k)} in · {formatTokenCost(model.outputResponseCost)} out
-                    </p>
-                  ) : (
-                    <p className="text-[12.5px] text-muted">Not set</p>
-                  )}
-                </td>
-                <td className="px-5 py-4 align-middle">
-                  <ModelTagList values={model.capabilities} emptyLabel="Unclassified" />
-                </td>
-                <td className="px-5 py-4 align-middle">
-                  <ModelTagList values={model.supportedUseCases} emptyLabel="Inherited" />
-                </td>
-                <td className="px-5 py-4 align-middle text-right">
-                  <div className="flex items-center justify-end gap-3 text-secondary">
-                    {model.isEnabled && !model.isDefault && (
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          makeDefault(model._id);
-                        }}
-                        className="px-3 py-1.5 border border-border-dim rounded-[6px] text-[11px] font-bold tracking-wider uppercase text-secondary hover:text-brand hover:border-brand/40 hover:bg-brand/5 transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        Make Default
-                      </button>
+                  </td>
+                  {/* One word. Missing is worth colouring because it has a
+                      consequence: without a price the runtime cannot measure
+                      spend, so agents on this model are held to a smaller
+                      budget. The model's own page says so and is one click
+                      away. */}
+                  <td className="px-4 py-3">
+                    {isModelCostMeasurable(model) ? (
+                      <span className="text-[12px] text-secondary">Added</span>
+                    ) : (
+                      <span className="text-[12px] text-[#f59e0b]">Missing</span>
                     )}
+                  </td>
+                  {/* Yes or no, and nothing else. Naming the ten jobs here made
+                      one row three times taller than the rest and put back the
+                      wall of text this pass exists to remove — they are on hover
+                      instead, and in full on the Defaults screen.
+
+                      The answer comes from the jobs a model is really handling,
+                      not the `isDefault` flag, which is only the fourth thing
+                      the runtime tries and can sit on a model doing nothing. */}
+                  <td className="px-4 py-3">
+                    {defaultJobs.length > 0 ? (
+                      <span
+                        title={`Handles ${defaultJobs.map(formatModelTag).join(", ")}`}
+                        className="inline-flex rounded-full border border-brand/30 bg-brand/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand"
+                      >
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-muted">No</span>
+                    )}
+                  </td>
+                  {/* The column is the control. An Active column beside a
+                      separate Deactivate button would print the same fact
+                      twice, which is the duplication the ONLINE badge was
+                      removed for. */}
+                  <td className="px-4 py-3">
                     <button
+                      type="button"
+                      role="switch"
+                      aria-checked={model.isEnabled}
+                      aria-label={`${model.isEnabled ? "Deactivate" : "Activate"} ${model.friendlyName || model.displayName}`}
                       onClick={(event) => {
                         event.stopPropagation();
                         toggleStatus(model._id, model.isEnabled);
                       }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-[6px] text-[11px] font-bold tracking-wider uppercase transition-all",
-                        model.isEnabled
-                          ? "bg-foreground/5 text-foreground hover:bg-red-500/10 hover:text-red-500"
-                          : "bg-brand/10 text-brand border border-brand/20 hover:bg-brand hover:text-white"
-                      )}
+                      className="flex items-center gap-2 group/switch"
                     >
-                      {model.isEnabled ? "Deactivate" : "Initialize"}
+                      <span
+                        className={cn(
+                          "relative h-5 w-9 rounded-full transition-colors",
+                          model.isEnabled ? "bg-brand" : "bg-foreground/15"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
+                            model.isEnabled ? "left-[18px]" : "left-0.5"
+                          )}
+                        />
+                      </span>
+                      <span className="text-[12px] text-secondary group-hover/switch:text-foreground transition-colors">
+                        {model.isEnabled ? "Active" : "Inactive"}
+                      </span>
                     </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </AdminTableShell>

@@ -1,41 +1,23 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, Loader2, Save, Settings2, Zap, Database, Cpu, Layers, Tags } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, Save } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-
-function formatTag(value: string) {
-  return value
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function formatProviderName(providerKey?: string) {
-  if (!providerKey) return "Unclassified";
-  if (providerKey === "google") return "Google Vertex AI";
-  if (providerKey === "openai") return "OpenAI";
-  if (providerKey === "anthropic") return "Anthropic";
-  return providerKey;
-}
-
-function formatNumber(value?: number) {
-  if (value === undefined) return "Not recorded";
-  return new Intl.NumberFormat("en-GB").format(value);
-}
-
-function formatTokenCount(value?: number) {
-  if (value === undefined) return "Not recorded";
-  return `${formatNumber(value)} tokens`;
-}
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import {
+  buildDefaultJobsByModelId,
+  formatModelTag,
+  getProviderDisplayName,
+} from "../_components/modelAdminUtils";
 
 function formatDate(value?: number) {
-  if (!value) return "Not recorded";
+  if (!value) return "never";
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
@@ -45,33 +27,38 @@ function formatDate(value?: number) {
   }).format(new Date(value));
 }
 
-function MetadataValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{label}</p>
-      <p className="break-words text-[13px] font-medium text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function TagList({ label, values, emptyLabel }: { label: string; values?: string[]; emptyLabel: string }) {
+/**
+ * A price field, in the unit the provider publishes.
+ *
+ * Every rate on this page is dollars per million tokens. That was previously
+ * said once in a section subtitle and then contradicted by a bare "$" beside a
+ * field called "Cost ≤ 200K Context", which reads as a total rather than a rate.
+ */
+function PriceField({
+  hint,
+  label,
+  onChange,
+  value,
+}: {
+  hint?: string;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
   return (
     <div>
-      <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{label}</p>
-      {values && values.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {values.map((value) => (
-            <span
-              key={value}
-              className="rounded-[6px] border border-border-dim bg-foreground/5 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-secondary"
-            >
-              {formatTag(value)}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p className="text-[13px] font-medium text-muted">{emptyLabel}</p>
-      )}
+      <label className="block text-[12px] font-medium text-secondary mb-1.5">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted">$</span>
+        <input
+          type="number"
+          step="0.01"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full h-10 rounded-[8px] border border-border-dim bg-card pl-7 pr-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+        />
+      </div>
+      {hint && <p className="text-[11px] text-muted mt-1.5">{hint}</p>}
     </div>
   );
 }
@@ -82,21 +69,25 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
   const modelId = resolvedParams.id as Id<"aiModels">;
 
   const model = useQuery(api.aiModels.getModel, { modelId });
+  const providersResult = useQuery(api.aiModels.getProviders);
+  const globalDefaultsResult = useQuery(api.aiModels.getGlobalModelDefaults);
   const updatePricing = useMutation(api.aiModels.updatePricingConfig);
+
+  const setDefaultModel = useMutation(api.aiModels.setDefaultModel);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  
-  // Form State
+  const [showMorePrices, setShowMorePrices] = useState(false);
+  const [isDefaultConfirmOpen, setIsDefaultConfirmOpen] = useState(false);
+  const [isMakingDefault, setIsMakingDefault] = useState(false);
+
   const [friendlyName, setFriendlyName] = useState("");
   const [standardBelow, setStandardBelow] = useState("");
   const [standardAbove, setStandardAbove] = useState("");
   const [cachedBelow, setCachedBelow] = useState("");
   const [cachedAbove, setCachedAbove] = useState("");
   const [outputResponse, setOutputResponse] = useState("");
-  const [outputReasoning, setOutputReasoning] = useState("");
 
-  // Sync state
   useEffect(() => {
     if (model) {
       setFriendlyName(model.friendlyName || "");
@@ -105,7 +96,6 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
       setCachedBelow(model.cachedInputCostBelow200k?.toString() || "");
       setCachedAbove(model.cachedInputCostAbove200k?.toString() || "");
       setOutputResponse(model.outputResponseCost?.toString() || "");
-      setOutputReasoning(model.outputReasoningCost?.toString() || "");
     }
   }, [model]);
 
@@ -121,12 +111,13 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         cachedInputCostBelow200k: cachedBelow ? parseFloat(cachedBelow) : 0,
         cachedInputCostAbove200k: cachedAbove ? parseFloat(cachedAbove) : 0,
         outputResponseCost: outputResponse ? parseFloat(outputResponse) : 0,
-        outputReasoningCost: outputReasoning ? parseFloat(outputReasoning) : 0,
       });
-      router.back();
+      // Back to the catalogue rather than back through history, which could be
+      // anywhere the reader happened to come from.
+      router.push("/admin/ai/models/catalogue");
     } catch (e) {
       console.error(e);
-      setSaveError("Failed to save pricing configuration.");
+      setSaveError("Failed to save this model.");
     } finally {
       setIsSaving(false);
     }
@@ -140,28 +131,55 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
     return <div className="py-24 text-center">Model not found.</div>;
   }
 
+  const providers = Array.isArray(providersResult) ? providersResult : [];
+  const providerNameByKey = new Map(providers.map((provider) => [provider.providerKey, provider.displayName]));
+  const defaultJobs = buildDefaultJobsByModelId(globalDefaultsResult).get(model.modelId) ?? [];
+  const allJobs = globalDefaultsResult?.useCases ?? [];
+  // Nothing left to make default if it already handles everything.
+  const handlesEveryJob = allJobs.length > 0 && defaultJobs.length === allJobs.length;
+
+  /**
+   * Point every job at this model.
+   *
+   * "The default model" means all ten jobs on this platform — chat, router,
+   * title, embedding and the rest — because that is what the underlying action
+   * does. It asks first, and names what it is taking over, for the same reason
+   * this control is no longer a hover-revealed button on a catalogue row.
+   */
+  const makeDefault = async () => {
+    setIsMakingDefault(true);
+    setSaveError("");
+    try {
+      await setDefaultModel({ modelId });
+      setIsDefaultConfirmOpen(false);
+    } catch (e) {
+      console.error(e);
+      setSaveError("Failed to make this the default model.");
+    } finally {
+      setIsMakingDefault(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 w-full h-full pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-dim pb-6">
+    <div className="flex flex-col gap-5 w-full h-full pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-dim pb-5">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/admin/ai/models/catalogue")}
+            aria-label="Back to the model catalogue"
             className="w-10 h-10 flex flex-shrink-0 items-center justify-center rounded-full border border-border-dim bg-sidebar/40 hover:bg-foreground/5 transition-all"
           >
             <ArrowLeft className="w-4 h-4 text-secondary" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              {model.displayName} Configuration
+            <h1 className="text-[24px] font-semibold tracking-tight text-foreground">
+              {model.friendlyName || model.displayName || model.modelId}
             </h1>
-            <div className="flex items-center gap-2 mt-1 text-[13px] font-mono tracking-wide">
-              <span className="text-secondary">{model.modelId}</span>
-              <span className="text-muted">•</span>
-              <span className={cn(
-                "font-bold px-2 py-0.5 rounded-full uppercase tracking-wider text-[10px]",
-                model.isEnabled ? "text-[#10b981] bg-[#10b981]/10" : "text-muted bg-foreground/5"
-              )}>
-                {model.isEnabled ? "ACTIVE" : "DISABLED"}
+            <div className="flex items-center gap-2 mt-1 text-[12px]">
+              <span className="font-mono text-secondary">{model.providerModelId || model.modelId}</span>
+              <span className="text-muted">·</span>
+              <span className={cn("font-medium", model.isEnabled ? "text-[#10b981]" : "text-muted")}>
+                {model.isEnabled ? "Active" : "Inactive"}
               </span>
             </div>
           </div>
@@ -169,220 +187,162 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="h-10 px-6 rounded-full bg-foreground text-background font-medium text-[13px] tracking-wide flex items-center gap-2 hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
+          className="h-10 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          SAVE PRICING CONFIGURATION
+          Save
         </button>
-	      </div>
+      </div>
       <AdminSaveError>{saveError}</AdminSaveError>
 
-	      <div className="flex flex-col gap-6">
-        
-        {/* General Information */}
-        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center">
-              <Settings2 className="w-4 h-4 text-brand" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-foreground">General Information</h3>
-              <p className="text-[12px] text-secondary">Basic configuration and display settings.</p>
-            </div>
-          </div>
-          <div className="p-6">
-            <div className="max-w-xl">
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Friendly Name</label>
-              <input 
-                type="text" 
-                value={friendlyName}
-                onChange={(e) => setFriendlyName(e.target.value)}
-                placeholder="e.g. 3.1 Pro"
-                className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] px-4 text-[14px] text-foreground focus:outline-none focus:border-brand/50 transition-colors"
-              />
-              <p className="text-[12px] text-muted mt-2">A short, user-friendly name displayed in toolbars and chat.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Provider Metadata */}
-        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Layers className="w-4 h-4 text-emerald-500" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-foreground">Provider Metadata</h3>
-              <p className="text-[12px] text-secondary">Read-only catalogue details used by model selection, defaults, and analytics.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-2">
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <MetadataValue label="Provider" value={formatProviderName(model.providerKey)} />
-              <MetadataValue label="Provider Model ID" value={model.providerModelId || model.modelId} />
-              <MetadataValue label="Internal Model ID" value={model.modelId} />
-              <MetadataValue label="Catalogue Status" value={model.status ? formatTag(model.status) : model.isEnabled ? "Available" : "Disabled"} />
-              <MetadataValue label="Context Window" value={formatTokenCount(model.contextWindowTokens)} />
-              <MetadataValue label="Max Output" value={formatTokenCount(model.maxOutputTokens)} />
-              <MetadataValue label="Last Synced" value={formatDate(model.lastSyncedAt)} />
-              <MetadataValue label="Pricing Source" value={model.pricingSource || "Manual"} />
-            </div>
-            <div className="flex flex-col gap-5">
-              <TagList label="Capabilities" values={model.capabilities} emptyLabel="No capabilities recorded yet." />
-              <TagList label="Supported Use Cases" values={model.supportedUseCases} emptyLabel="Uses legacy default compatibility." />
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <MetadataValue label="Input Unit" value={model.inputTokenUnit || "Per 1M tokens"} />
-                <MetadataValue label="Output Unit" value={model.outputTokenUnit || "Per 1M tokens"} />
-                <MetadataValue label="Currency" value={model.currency || "USD"} />
-                <MetadataValue label="Pricing Effective" value={formatDate(model.pricingEffectiveAt)} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Capability Summary */}
-        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-              <Tags className="w-4 h-4 text-purple-500" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-foreground">Selection Summary</h3>
-              <p className="text-[12px] text-secondary">How this model can appear in platform, company, agent, and workflow selectors.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-5 p-6 sm:grid-cols-3">
-            <MetadataValue label="Availability" value={model.isEnabled ? "Selectable" : "Hidden from selectors"} />
-            <MetadataValue label="Legacy Default" value={model.isDefault ? "Yes" : "No"} />
-            <MetadataValue label="Display Name" value={model.friendlyName || model.displayName} />
-          </div>
-        </section>
-
-        {/* Standard Input */}
-        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-orange-500" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-foreground">Standard Input (Text, Image, Video, Audio)</h3>
-              <p className="text-[12px] text-secondary">Price per 1M tokens processed by the model initially.</p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Cost ≤ 200K Context</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-mono">$</span>
-                <input 
-                  type="number"
-                  step="0.01" 
-                  value={standardBelow}
-                  onChange={(e) => setStandardBelow(e.target.value)}
-                  className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] pl-8 pr-4 text-[14px] text-foreground font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Cost &gt; 200K Context</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-mono">$</span>
-                <input 
-                  type="number"
-                  step="0.01" 
-                  value={standardAbove}
-                  onChange={(e) => setStandardAbove(e.target.value)}
-                  className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] pl-8 pr-4 text-[14px] text-foreground font-mono focus:outline-none focus:border-orange-500/50 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Cached Input */}
-        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Database className="w-4 h-4 text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-foreground">Cached Input</h3>
-              <p className="text-[12px] text-secondary">Discounted price per 1M cached input tokens when the provider supports caching.</p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Cached Cost ≤ 200K Context</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-mono">$</span>
-                <input 
-                  type="number"
-                  step="0.01" 
-                  value={cachedBelow}
-                  onChange={(e) => setCachedBelow(e.target.value)}
-                  className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] pl-8 pr-4 text-[14px] text-foreground font-mono focus:outline-none focus:border-blue-500/50 transition-colors"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Cached Cost &gt; 200K Context</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-mono">$</span>
-                <input 
-                  type="number"
-                  step="0.01" 
-                  value={cachedAbove}
-                  onChange={(e) => setCachedAbove(e.target.value)}
-                  className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] pl-8 pr-4 text-[14px] text-foreground font-mono focus:outline-none focus:border-blue-500/50 transition-colors"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Generated Output */}
-        <section className="bg-sidebar/40 border border-border-dim rounded-[16px] overflow-hidden">
-          <div className="p-5 border-b border-border-dim/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
-              <Cpu className="w-4 h-4 text-yellow-500" />
-            </div>
-            <div>
-              <h3 className="text-[14px] font-bold text-foreground">Generated Output</h3>
-              <p className="text-[12px] text-secondary">Price per 1M tokens generated by the model.</p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Cost per 1M Response Tokens</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-mono">$</span>
-                <input 
-                  type="number"
-                  step="0.01" 
-                  value={outputResponse}
-                  onChange={(e) => setOutputResponse(e.target.value)}
-                  className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] pl-8 pr-4 text-[14px] text-foreground font-mono focus:outline-none focus:border-yellow-500/50 transition-colors"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">Cost per 1M Reasoning Tokens</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary font-mono">$</span>
-                <input 
-                  type="number"
-                  step="0.01" 
-                  value={outputReasoning}
-                  onChange={(e) => setOutputReasoning(e.target.value)}
-                  className="w-full h-11 bg-background/50 border border-border-dim rounded-[8px] pl-8 pr-4 text-[14px] text-foreground font-mono focus:outline-none focus:border-yellow-500/50 transition-colors"
-                />
-              </div>
-              <p className="text-[11px] text-muted mt-2">For models with thinking/reasoning modes.</p>
-            </div>
-          </div>
-        </section>
-
+      {/* What this model is doing, which is the question the old "Legacy
+          Default: Yes" field answered wrongly. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[13px] text-secondary">
+          {defaultJobs.length > 0 ? (
+            <>
+              This model currently handles{" "}
+              <span className="text-foreground font-medium">{defaultJobs.map(formatModelTag).join(", ")}</span>.{" "}
+            </>
+          ) : (
+            <>This model is not handling any job by default. </>
+          )}
+          <Link href="/admin/ai/models/defaults" className="text-brand hover:underline">
+            Change which model handles what
+          </Link>
+          .
+        </p>
+        {!handlesEveryJob && (
+          <button
+            type="button"
+            onClick={() => setIsDefaultConfirmOpen(true)}
+            className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground"
+          >
+            Make this the default model
+          </button>
+        )}
       </div>
+
+      <section className="border border-border-dim rounded-[8px] bg-card px-5 py-5">
+        <h2 className="text-[14px] font-semibold text-foreground">What it is called</h2>
+        <p className="text-[12px] text-secondary mt-1 mb-4">
+          The short name people see in chat and in model pickers.
+        </p>
+        <input
+          type="text"
+          value={friendlyName}
+          onChange={(e) => setFriendlyName(e.target.value)}
+          placeholder={model.displayName}
+          className="w-full max-w-md h-10 rounded-[8px] border border-border-dim bg-background/50 px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+        />
+      </section>
+
+      <section className="border border-border-dim rounded-[8px] bg-card px-5 py-5">
+        <h2 className="text-[14px] font-semibold text-foreground">What it costs</h2>
+        <p className="text-[12px] text-secondary mt-1 mb-4">
+          Dollars per million tokens, as the provider publishes them. Without a price we cannot measure
+          what this model spends, so agents using it are kept to a smaller budget.
+        </p>
+
+        {/* The two anyone actually types. The other four are real and rarely
+            touched, so they fold away rather than competing for attention. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+          <PriceField
+            label="Price in"
+            value={standardBelow}
+            onChange={setStandardBelow}
+            hint="What you are charged for the text sent to the model."
+          />
+          <PriceField
+            label="Price out"
+            value={outputResponse}
+            onChange={setOutputResponse}
+            hint="What you are charged for the text it writes back."
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowMorePrices((open) => !open)}
+          className="mt-5 flex items-center gap-1.5 text-[12px] font-medium text-secondary hover:text-foreground transition-colors"
+        >
+          <ChevronDown className={cn("w-4 h-4 transition-transform", showMorePrices && "rotate-180")} />
+          {showMorePrices ? "Fewer prices" : "More prices"}
+        </button>
+
+        {showMorePrices && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl border-t border-border-dim pt-4">
+            <PriceField
+              label="Price in, very long conversations"
+              value={standardAbove}
+              onChange={setStandardAbove}
+              hint="Used instead of Price in once a conversation passes 200,000 tokens."
+            />
+            <PriceField
+              label="Price in, repeated text"
+              value={cachedBelow}
+              onChange={setCachedBelow}
+              hint="The discounted rate when the provider has already seen this text. Falls back to Price in when left empty."
+            />
+            <PriceField
+              label="Price in, repeated text in very long conversations"
+              value={cachedAbove}
+              onChange={setCachedAbove}
+            />
+          </div>
+        )}
+      </section>
+
+      {/* Nine read-only fields became one line. Three of them read "Not
+          recorded" on every model, three were constants that never varied, and
+          the whole panel restated things already on this page. */}
+      <p className="text-[12px] text-muted">
+        Supplied by {getProviderDisplayName(model.providerKey, providerNameByKey)} · known internally as{" "}
+        <span className="font-mono">{model.modelId}</span> · last synced {formatDate(model.lastSyncedAt)}
+      </p>
+
+      <SonaeModal
+        isOpen={isDefaultConfirmOpen}
+        onClose={() => setIsDefaultConfirmOpen(false)}
+        title="Make this the default model"
+        size="sm"
+      >
+        <div className="flex flex-col gap-5 px-1 pb-2">
+          <p className="text-[13px] leading-relaxed text-secondary">
+            <span className="font-semibold text-foreground">
+              {model.friendlyName || model.displayName || model.modelId}
+            </span>{" "}
+            will handle every job, replacing whatever is set for each of them:
+          </p>
+          <p className="text-[12px] leading-relaxed text-muted">
+            {allJobs.map(formatModelTag).join(", ")}.
+          </p>
+          <p className="text-[12px] leading-relaxed text-secondary">
+            Turning documents into something searchable needs an embedding model, so check this one
+            can do that job before making it the default for all of them. Companies, agents and
+            workflows can still override any of this.
+            {!model.isEnabled && " This will also switch the model on."}
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsDefaultConfirmOpen(false)}
+              className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={makeDefault}
+              disabled={isMakingDefault}
+              className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+            >
+              {isMakingDefault && <Loader2 className="w-4 h-4 animate-spin" />}
+              Make it the default
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
     </div>
   );
 }

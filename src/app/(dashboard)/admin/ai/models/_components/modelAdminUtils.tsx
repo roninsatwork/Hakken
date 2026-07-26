@@ -17,29 +17,34 @@ export type GlobalDefaultRow = {
   } | null;
 };
 
-export const MODEL_CAPABILITY_OPTIONS = [
-  "text",
-  "reasoning",
-  "vision",
-  "audio",
-  "tool-calling",
-  "json-mode",
-  "streaming",
-  "embeddings",
-];
-
-export const MODEL_USE_CASE_OPTIONS = [
-  "chat",
-  "agent",
-  "workflow",
-  "report",
-  "router",
-  "title",
-  "embedding",
-  "transcription",
-  "vision",
-  "tool-calling",
-];
+/**
+ * Which jobs each model is actually handling, keyed by model id.
+ *
+ * The catalogue used to answer "is this the default?" from the `isDefault` flag
+ * on the model row. That flag is real but it is the *fourth* thing the runtime
+ * tries: an agent's own choice, then the company's choice for the job, then the
+ * platform's choice for the job, and only then the flag. So a starred model
+ * could easily be running nothing at all, while the model doing all the work
+ * carried no mark.
+ *
+ * The platform's choices live one row per job in `aiModelDefaults`, which is
+ * what `getGlobalModelDefaults` returns and what the Defaults screen edits.
+ * Ten rows, so inverting them in the client is cheaper than threading them
+ * through the paginated model query.
+ */
+export function buildDefaultJobsByModelId(
+  globalDefaults: { defaults?: GlobalDefaultRow[] } | undefined | null
+) {
+  const jobsByModelId = new Map<string, string[]>();
+  for (const row of globalDefaults?.defaults ?? []) {
+    const modelId = row.default?.modelId;
+    if (!modelId) continue;
+    const existing = jobsByModelId.get(modelId);
+    if (existing) existing.push(row.useCase);
+    else jobsByModelId.set(modelId, [row.useCase]);
+  }
+  return jobsByModelId;
+}
 
 export function formatModelTag(value: string) {
   return value
@@ -85,46 +90,6 @@ export function getProviderDisplayName(
   return providerNameByKey.get(providerKey) || providerKey;
 }
 
-export function ModelTagList({
-  emptyLabel,
-  limit = 3,
-  values,
-}: {
-  emptyLabel: string;
-  limit?: number;
-  values?: string[];
-}) {
-  if (!values || values.length === 0) {
-    return <span className="text-[11px] font-medium text-muted">{emptyLabel}</span>;
-  }
-
-  const visible = values.slice(0, limit);
-  const hiddenCount = values.length - visible.length;
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {visible.map((value) => (
-        <span
-          key={value}
-          className="inline-flex rounded-[6px] border border-border-dim bg-foreground/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-secondary"
-        >
-          {formatModelTag(value)}
-        </span>
-      ))}
-      {hiddenCount > 0 && (
-        // "+6" told the reader six things existed and gave them no way to find
-        // out what. Naming them costs one attribute and answers the question.
-        <span
-          title={values.slice(limit).map(formatModelTag).join(", ")}
-          className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted cursor-help underline decoration-dotted underline-offset-2"
-        >
-          +{hiddenCount} more
-        </span>
-      )}
-    </div>
-  );
-}
-
 export function ModelAdminHeader({
   children,
   icon,
@@ -153,20 +118,37 @@ export function ModelAdminHeader({
 }
 
 /**
- * A per-token price as money someone can compare.
+ * A model's rate, as money someone can compare.
  *
- * Prices are stored per token, which produces numbers like 0.0000003 — true,
- * and useless for choosing between two models. Per million tokens is the unit
- * every provider publishes and the only one at human scale.
+ * The rate is stored **already per million tokens**. This is not a guess:
+ * `calculateModelCostGBP` divides token counts by 1,000,000 before applying it,
+ * the detail page's own fields are labelled "per 1M tokens", and every synced
+ * record carries `inputTokenUnit: "Per 1M tokens"`.
+ *
+ * This function used to multiply by a million on the way out, on the assumption
+ * that the stored figure was per single token. A model priced at 0.075 per
+ * million therefore displayed as "£75000.00", and the same helper feeds the
+ * Defaults screen, so the cost shown at the point of choosing a model was wrong
+ * by the same factor.
+ *
+ * Dollars, because that is the currency the number is in: the record says
+ * `currency: "USD"`, the pricing fields are entered from the provider's own
+ * published dollar price, and nothing in the codebase converts. Printing a "£"
+ * in front of a dollar figure was the second thing this got wrong. See
+ * `docs/plans/active/admin-ux-plan.md` (E2) for why converting here would have
+ * disagreed with every other cost figure in the product.
  */
-export function formatTokenCost(costPerToken: number | undefined) {
-  if (!costPerToken || costPerToken <= 0) return "—";
-  const perMillion = costPerToken * 1_000_000;
-  // Two decimals reads as money. Below a penny per million, two decimals would
-  // round every cheap model to £0.00 and hide the difference between them.
-  return perMillion >= 0.01
-    ? `£${perMillion.toFixed(2)}`
-    : `£${perMillion.toFixed(4)}`;
+export function formatTokenCost(costPerMillionTokens: number | undefined) {
+  if (!costPerMillionTokens || costPerMillionTokens <= 0) return "—";
+  // Two decimals reads as money, but the cheap models are priced in fractions of
+  // a cent per million — rounding 0.075 to "0.08" would misquote the provider's
+  // own published figure. So two decimals minimum, four when the number needs
+  // them.
+  const amount = new Intl.NumberFormat("en-GB", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(costPerMillionTokens);
+  return `$${amount}`;
 }
 
 /**
