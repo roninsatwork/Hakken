@@ -427,7 +427,7 @@ labelled honestly but should read as *not tested* once the statuses are reworked
 **Done when** no combination of clicks turns a readiness light green, or a
 counter positive, without a real model answer behind it.
 
-### Phase 1 — Delete the fields nothing needs
+### Phase 1 — Delete the fields nothing needs — DATA CLEARED 2026-07-26
 
 Everything in *What gets deleted* above, with a data migration for existing
 rows and the tests updated. Done before the new engine so nothing downstream has
@@ -580,7 +580,24 @@ row and select it by index.**
 - Where a bound still exists, `log` what was dropped. A gate that silently
   truncates reads as "all clear" when it is "the first 1,000".
 
-### Phase 4 — One shared screen, in plain English
+### Phase 4 — One shared screen, in plain English — DONE 2026-07-26
+
+Both screens use the Skill Center's `AdminTableShell`: Check, Status, Must pass, Last
+run. One sentence replaces five counters on the company screen and six on the agent
+one. Eval became Check, `BLOCKER` became a Must pass column reading Yes or No,
+`NEEDS_REVIEW` became "Not tested". Tests on both screens fail if any of the machine
+constants — or "deterministic", "fixture", "rubric", "suite", "Evidence JSON" —
+appear on the page again.
+
+Both surfaces have the check detail page: the question, what a good answer must do,
+**the answer in full**, the marker's reason, what it used, and earlier runs.
+
+Three faults here were found only by opening the browser, not by any test: the empty
+state said "nothing here" three times over, the table's empty row is styled uppercase
+so a sentence in it was shouted at the reader, and the orange primary on an empty
+screen was "Run checks", which could do nothing.
+
+### Phase 4 — original scope
 
 Build the Checks screen once and use it for both, plus **the check detail page
 described above** — the piece neither surface has today. All the language from the
@@ -599,7 +616,7 @@ and the button-disabling gets a key so one check running does not freeze the pag
 The gate stops being implicit: one line at the top of the list says which checks
 must pass before this agent can go live, and why it is currently blocked.
 
-### Phase 6 — Starters, editing, archive
+### Phase 6 — Starters, editing, archive — MOSTLY DONE 2026-07-26
 
 - **Starter checks**, offered on the empty screen rather than silently seeded,
   following `seedStarterSkills` (`convex/agentSkills.ts:1619`). For a company:
