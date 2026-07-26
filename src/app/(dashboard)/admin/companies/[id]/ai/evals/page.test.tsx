@@ -140,7 +140,7 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
     expect(screen.getByRole("columnheader", { name: "Check" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Result" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Must pass" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Last run" })).toBeInTheDocument();
 
@@ -156,15 +156,17 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
     expect(screen.queryByRole("button", { name: "Run all" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Run 2 unproven/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Run checks/ })).toBeInTheDocument();
     expect(screen.getByText(/asks your company AI the question, then has a second AI mark the answer/i)).toBeInTheDocument();
   });
 
-  it("disables the batch button when nothing needs running", () => {
-    mockQueries({ estimate: { selectedCount: 0, providerCallCount: 0 } });
-
+  // A button says what it does. "Everything passing" was a status wearing a
+  // control, and it was disabled — so the one place that told you the state was the
+  // one place you could not read.
+  it("keeps the batch button labelled as an action, never as a status", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    expect(screen.getByRole("button", { name: /Everything passing/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Run checks/ })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Everything passing/ })).not.toBeInTheDocument();
   });
 });

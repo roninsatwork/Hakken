@@ -37,10 +37,10 @@ type CompanyEvalRun = Doc<"companyEvalRuns">;
  * lands here too, so this is the only place that decides how an untested check
  * reads, rather than three screens each guessing.
  */
-function describeResult(status: CompanyEvalRun["status"] | undefined) {
+function describeStatus(status: CompanyEvalRun["status"] | undefined) {
   if (status === "PASSED") return { label: "Passing", tone: "text-emerald-400" };
   if (status === "FAILED") return { label: "Failing", tone: "text-red-400" };
-  if (status === undefined) return { label: "Not run yet", tone: "text-muted" };
+  if (status === undefined) return { label: "Not run", tone: "text-muted" };
   return { label: "Not tested", tone: "text-amber-400" };
 }
 
@@ -84,7 +84,12 @@ export default function CompanyAiEvalsPage() {
   const archiveCase = useMutation(api.companyEvals.archiveCase);
   const runCheck = useAction(api.companyEvalRuns.runCheck);
   const runBatch = useAction(api.companyEvalRuns.runBatch);
-  const batchEstimate = useQuery(api.companyEvals.getBatchEstimate, { companyId, mode: "FAILED_OR_NOT_RUN" });
+  // Unproven checks first. Once everything passes, the button re-runs the lot —
+  // because a check that passed last week is not evidence about today, especially
+  // after the memory or skills behind it changed.
+  const unprovenEstimate = useQuery(api.companyEvals.getBatchEstimate, { companyId, mode: "FAILED_OR_NOT_RUN" });
+  const batchMode = (unprovenEstimate?.selectedCount ?? 0) > 0 ? "FAILED_OR_NOT_RUN" : "ALL";
+  const batchEstimate = useQuery(api.companyEvals.getBatchEstimate, { companyId, mode: batchMode });
   const cases = usePaginatedQuery(
     api.companyEvals.getCasesForCompany,
     { companyId, status: "ACTIVE" },
@@ -120,7 +125,7 @@ export default function CompanyAiEvalsPage() {
 
   const handleRunBatch = async () => {
     setBatchNotice("");
-    const outcome = await batchAction.run(() => runBatch({ companyId, mode: "FAILED_OR_NOT_RUN" }), {
+    const outcome = await batchAction.run(() => runBatch({ companyId, mode: batchMode }), {
       fallbackMessage: "The checks could not be started.",
       suppressErrorToast: true,
     });
@@ -128,12 +133,14 @@ export default function CompanyAiEvalsPage() {
     if (!outcome.ok) return;
     setBatchNotice(
       outcome.data.scheduled === 0
-        ? "Nothing needed running. Every check already passes."
+        ? "Nothing needed running."
         : `Running ${outcome.data.scheduled} check${outcome.data.scheduled === 1 ? "" : "s"}. Results appear here as each one finishes.`
     );
   };
 
-  const unprovenCount = batchEstimate?.selectedCount ?? 0;
+  // What pressing the button will actually run. The label stays "Run checks" — a
+  // button says what it does, and how things stand is the sentence beside it.
+  const runnableCount = batchEstimate?.selectedCount ?? 0;
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
@@ -155,11 +162,11 @@ export default function CompanyAiEvalsPage() {
             <button
               type="button"
               onClick={() => setConfirmBatch(true)}
-              disabled={batchAction.isBusy() || unprovenCount === 0}
+              disabled={batchAction.isBusy() || runnableCount === 0}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              {unprovenCount === 0 ? "Everything passing" : `Run ${unprovenCount} unproven`}
+              Run checks
             </button>
             <Link
               href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
@@ -199,7 +206,7 @@ export default function CompanyAiEvalsPage() {
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="px-4 py-3 font-medium">Check</th>
-            <th className="px-4 py-3 font-medium w-[130px]">Result</th>
+            <th className="px-4 py-3 font-medium w-[130px]">Status</th>
             <th className="px-4 py-3 font-medium w-[120px]">Must pass</th>
             <th className="px-4 py-3 font-medium w-[170px]">Last run</th>
             <th className="px-4 py-3 font-medium w-[150px] text-right"></th>
@@ -216,7 +223,7 @@ export default function CompanyAiEvalsPage() {
             />
           ) : cases.results.map((evalCase) => {
             const latestRun = getLatestRun(latestRuns, evalCase._id);
-            const result = describeResult(latestRun?.status);
+            const status = describeStatus(latestRun?.status);
             const isRunning = runAction.isBusy(`run:${evalCase._id}`);
 
             return (
@@ -230,7 +237,7 @@ export default function CompanyAiEvalsPage() {
                   </Link>
                   <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">{evalCase.prompt}</div>
                 </td>
-                <td className={`px-4 py-3 text-[13px] font-semibold ${result.tone}`}>{result.label}</td>
+                <td className={`px-4 py-3 text-[13px] font-semibold ${status.tone}`}>{status.label}</td>
                 <td className="px-4 py-3 text-[12px] text-secondary">
                   {evalCase.severity === "BLOCKER" ? "Yes" : "No"}
                 </td>
@@ -271,7 +278,7 @@ export default function CompanyAiEvalsPage() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-[13px] leading-relaxed text-secondary">
             <p>
-              This asks your company AI {unprovenCount} question{unprovenCount === 1 ? "" : "s"}, then has a second AI mark each answer — {batchEstimate?.providerCallCount ?? 0} AI calls in total, which cost money.
+              This asks your company AI {runnableCount} question{runnableCount === 1 ? "" : "s"}, then has a second AI mark each answer — {batchEstimate?.providerCallCount ?? 0} AI calls in total, which cost money.
             </p>
             <p>Results appear on this page as each one finishes. You can leave the page.</p>
             {batchEstimate?.isCapped && (

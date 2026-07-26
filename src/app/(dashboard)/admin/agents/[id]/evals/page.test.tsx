@@ -116,42 +116,107 @@ const releaseComparison = {
   entries: [],
 };
 
-describe("AgentEvalsPage skill filtering", () => {
+const runSmokeEval = vi.fn();
+
+function mockQueries(history: typeof evalHistory = evalHistory, gate = readiness.releaseGatePolicy) {
+  vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
+    void args;
+    const functionName = getFunctionName(queryFn);
+    if (functionName === "agentEvalFixtures:getRecentForAgent") return fixtures as unknown as ReturnType<typeof useQuery>;
+    if (functionName === "agentEvalFixtures:getSmokeEvalHistory") return history as unknown as ReturnType<typeof useQuery>;
+    if (functionName === "agents:getAgentReadiness") {
+      return { ...readiness, releaseGatePolicy: gate } as unknown as ReturnType<typeof useQuery>;
+    }
+    return undefined as unknown as ReturnType<typeof useQuery>;
+  });
+}
+
+describe("AgentEvalsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
-      void args;
-      const functionName = getFunctionName(queryFn);
-      if (functionName === "agentEvalFixtures:getRecentForAgent") return fixtures as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "agentEvalFixtures:getSmokeEvalHistory") return evalHistory as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "agentEvalFixtures:getReleaseCandidateComparison") return releaseComparison as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "agentEvalFixtures:listSuitePresets") return [] as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "agents:getAgentReadiness") return readiness as unknown as ReturnType<typeof useQuery>;
-      return undefined as unknown as ReturnType<typeof useQuery>;
+    void releaseComparison;
+    mockQueries();
+    vi.mocked(useMutation).mockImplementation((mutationFn) => {
+      const functionName = getFunctionName(mutationFn);
+      if (functionName === "agentEvalFixtures:runSmokeEval") {
+        return runSmokeEval as unknown as ReturnType<typeof useMutation>;
+      }
+      return vi.fn() as unknown as ReturnType<typeof useMutation>;
     });
-    vi.mocked(useMutation).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useMutation>);
   });
 
-  it("shows skill coverage and filters fixtures by selected skill", () => {
+  it("uses the standard table and leads with one sentence", () => {
     render(<AgentEvalsPage />);
 
-    expect(screen.getByText("Skill eval coverage")).toBeInTheDocument();
-    expect(screen.getAllByText("Risk Monitoring").length).toBeGreaterThan(0);
-    expect(screen.getByText("stale")).toBeInTheDocument();
-    expect(screen.getByText("Fixture contracts run without executing external or destructive side effects.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Checks" })).toBeInTheDocument();
+    expect(screen.getByText("0 of 2 checks passing. 2 not proven yet.")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Check" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Must pass" })).toBeInTheDocument();
     expect(screen.getByText("Assess whether a new adverse event should be escalated.")).toBeInTheDocument();
-    expect(screen.getByText("Answer a general onboarding question.")).toBeInTheDocument();
+  });
 
-    const skillCoverage = screen.getByText("Skill eval coverage").closest("section");
-    expect(skillCoverage).not.toBeNull();
-    fireEvent.click(within(skillCoverage as HTMLElement).getByRole("button", { name: "Filter" }));
+  // Six tiles, five competing buttons, a policy strip, a skill panel and a release
+  // comparison panel — several of which never rendered for a company admin at all,
+  // because readiness was super-admin only.
+  it("shows no machine constants, counters or jargon", () => {
+    render(<AgentEvalsPage />);
 
-    expect(screen.getByText("1 fixture shown for the selected skill.")).toBeInTheDocument();
-    expect(screen.getByText("Assess whether a new adverse event should be escalated.")).toBeInTheDocument();
-    expect(screen.queryByText("Answer a general onboarding question.")).not.toBeInTheDocument();
+    const body = document.body.textContent ?? "";
+    for (const jargon of [
+      "MODEL_GRADED",
+      "CONTRACT_ONLY",
+      "fixture",
+      "Fixture",
+      "rubric",
+      "suite",
+      "Suite",
+      "release gate",
+      "checkpoint",
+      "Eval runs",
+    ]) {
+      expect(body).not.toContain(jargon);
+    }
+  });
 
-    fireEvent.click(within(skillCoverage as HTMLElement).getByRole("button", { name: "Clear" }));
-    expect(screen.getByText("Fixture contracts run without executing external or destructive side effects.")).toBeInTheDocument();
-    expect(screen.getByText("Answer a general onboarding question.")).toBeInTheDocument();
+  // A contract run calls no model. Showing its success as a pass is why the screen
+  // and the activation gate reported different numbers.
+  it("reports a setup-only result as not proven, never as passing", () => {
+    mockQueries({
+      totals: { total: 1, passed: 0, failed: 0, queued: 0 },
+      entries: [{
+        status: "SUCCESS",
+        gradingMode: "CONTRACT_ONLY",
+        completedAt: Date.UTC(2026, 5, 18),
+        startedAt: Date.UTC(2026, 5, 18),
+        fixture: { fixtureId: "fixture_general" },
+      }],
+    } as unknown as typeof evalHistory);
+
+    render(<AgentEvalsPage />);
+
+    expect(screen.getByText("Setup only")).toBeInTheDocument();
+    expect(screen.queryByText("Passing")).not.toBeInTheDocument();
+    expect(screen.getByText("0 of 2 checks passing. 2 not proven yet.")).toBeInTheDocument();
+  });
+
+  // The per-row Run button used to default to the configuration check — the thing
+  // that is not a test — and report that it had passed.
+  it("runs a real graded check from the row, not a setup check", () => {
+    render(<AgentEvalsPage />);
+
+    fireEvent.click(within(screen.getAllByRole("row")[1]).getByRole("button", { name: /Run/ }));
+
+    expect(runSmokeEval).toHaveBeenCalledWith({
+      agentId: "agent_1",
+      fixtureId: "fixture_skill_risk",
+      gradingMode: "MODEL_GRADED",
+    });
+  });
+
+  it("says plainly when nothing has to pass before going live", () => {
+    render(<AgentEvalsPage />);
+
+    expect(screen.getByText(/No check has to pass before this agent goes live/)).toBeInTheDocument();
   });
 });
