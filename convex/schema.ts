@@ -1505,6 +1505,20 @@ export default defineSchema({
     requiredMemoriesJson: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
     forbiddenClaimsJson: v.optional(v.string()),
+    /*
+     * Retired. Nothing reads these and nothing writes them any more.
+     *
+     * They are still declared because Convex validates existing documents when a
+     * schema is pushed: removing the lines before
+     * `2026-07-26-retire-unread-company-check-fields` has run against a deployment
+     * would refuse the deploy on every row that still carries them. Delete these
+     * five lines once that migration has completed everywhere, including production.
+     *
+     * `expectedModelUseCase` fed a check that compared a field to itself and could
+     * not fail. `fixtureContextJson` existed only so the deleted batch runner could
+     * hand a case's own declarations back to itself as evidence. `judgeRubric` was a
+     * second box asking the same question as "what a good answer must do".
+     */
     expectedModelUseCase: v.optional(v.string()),
     expectedOutputFormat: v.optional(v.string()),
     judgeRubric: v.optional(v.string()),

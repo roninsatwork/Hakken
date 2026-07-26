@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useAction, useQuery } from "convex/react";
 import { useParams, useSearchParams } from "next/navigation";
-import { CheckCircle2, ClipboardCheck, Loader2, Play, XCircle } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, Loader2, Pencil, Play, XCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -111,6 +112,14 @@ export default function CompanyEvalCaseDetailPage() {
             <span className="text-[12px] text-secondary">Must pass before going live</span>
           )}
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Link
+          href={`/admin/companies/${companyId}/ai/evals/${evalCaseId}/edit?returnTo=${encodeURIComponent(backHref)}`}
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
+        >
+          <Pencil className="h-4 w-4" />
+          Edit
+        </Link>
         <button
           type="button"
           onClick={() => action.run(() => runCheck({ evalCaseId }), { fallbackMessage: "The check could not be run." })}
@@ -120,6 +129,7 @@ export default function CompanyEvalCaseDetailPage() {
           {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
           Run this check
         </button>
+        </div>
       </div>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">

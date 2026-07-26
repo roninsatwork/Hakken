@@ -39,7 +39,6 @@ describe("Company Evals", () => {
       prompt: "What is the price for the enterprise plan?",
       expectedBehavior: "The answer should say it does not know unless pricing is in approved context.",
       forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
-      expectedModelUseCase: "chat",
     });
 
     await expect(
@@ -177,7 +176,7 @@ describe("Company Evals", () => {
   // compared the expected value against itself and could not fail, inflating
   // every score by one guaranteed pass. A case with no real rules must record no
   // checks at all.
-  test("an expected model use case does not create a check that cannot fail", async () => {
+  test("a case with no real rule records no checks at all", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { adminId, companyId } = await t.run(async (ctx) => {
@@ -195,12 +194,11 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Routes to the chat model",
-      category: "MODEL_ROUTING",
+      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "Say hello.",
       expectedBehavior: "Answer on the chat model.",
-      expectedModelUseCase: "chat",
     });
 
     const run = await t.mutation(internal.companyEvals.recordGradedRunInternal, {

@@ -117,9 +117,11 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
     expect(screen.getByText("No checks yet")).toBeInTheDocument();
     expect(screen.queryByText("No entries found")).not.toBeInTheDocument();
     expect(screen.getByText(/catches your AI saying something wrong before a customer sees it/i)).toBeInTheDocument();
-    // Nothing to run, so the coloured button is the one that adds a check.
+    // Nothing to run, so the coloured button is the one that gets you started —
+    // and "add one" alone leaves the reader inventing a check from nothing.
     expect(screen.queryByRole("button", { name: /Run checks/ })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /New check/ }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Add 3 starter checks/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Write my own/ })).toBeInTheDocument();
   });
 
   // The screen is for people who do not build software. Machine constants on screen

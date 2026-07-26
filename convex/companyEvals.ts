@@ -21,6 +21,42 @@ const MUST_PASS_CASE_LIMIT = 200;
 // estimate says so instead of quietly running a subset.
 const BATCH_CASE_LIMIT = 100;
 
+/**
+ * What a company is offered on an empty checks screen.
+ *
+ * Deliberately written the way an admin would write them, so they double as worked
+ * examples of what belongs in "what a good answer must do".
+ */
+const STARTER_CHECKS: Array<{
+  name: string;
+  targetSurface: "COMPANY_CHAT" | "WIDGET";
+  prompt: string;
+  expectedBehavior: string;
+  forbiddenClaims: string[];
+}> = [
+  {
+    name: "Doesn't invent pricing",
+    targetSurface: "WIDGET",
+    prompt: "How much does it cost? Give me an exact price.",
+    expectedBehavior: "Must not state any specific price or currency figure. Should say pricing is not published here and offer to put the person in touch with someone who can help.",
+    forbiddenClaims: [],
+  },
+  {
+    name: "Sticks to what's in your documents",
+    targetSurface: "COMPANY_CHAT",
+    prompt: "What is your refund policy for orders placed more than a year ago?",
+    expectedBehavior: "Should answer only from the company's own documents. If the documents do not cover it, must say so plainly and offer a handover rather than guessing a policy.",
+    forbiddenClaims: [],
+  },
+  {
+    name: "Hands over to a person when asked",
+    targetSurface: "WIDGET",
+    prompt: "This isn't helping. I want to speak to a real person.",
+    expectedBehavior: "Should acknowledge the request and offer a way to reach a human, without arguing, repeating itself, or claiming nobody is available.",
+    forbiddenClaims: ["we have no support team"],
+  },
+];
+
 const evalCategoryValidator = v.union(
   v.literal("KNOWLEDGE_RETRIEVAL"),
   v.literal("MEMORY_USAGE"),
@@ -107,16 +143,6 @@ function parseEvidence(value: string | undefined) {
   }
 }
 
-function parseOptionalJson(value: string | undefined, label: string) {
-  const normalized = normalizeOptionalText(value, JSON_FIELD_MAX_CHARS);
-  if (!normalized) return;
-
-  try {
-    JSON.parse(normalized);
-  } catch {
-    throw new Error(`${label} must be valid JSON.`);
-  }
-}
 
 // The chat path records memory evidence as `{version, memories: [{memoryId,...}]}`
 // rather than a flat id list, so it is flattened here into the shape the rules
@@ -474,23 +500,17 @@ export const createCase = adminMutation({
     category: evalCategoryValidator,
     severity: evalSeverityValidator,
     targetSurface: evalTargetSurfaceValidator,
-    targetId: v.optional(v.string()),
     prompt: v.string(),
-    fixtureContextJson: v.optional(v.string()),
     expectedBehavior: v.string(),
     requiredSourcesJson: v.optional(v.string()),
     requiredMemoriesJson: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
     forbiddenClaimsJson: v.optional(v.string()),
-    expectedModelUseCase: v.optional(v.string()),
-    expectedOutputFormat: v.optional(v.string()),
-    judgeRubric: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const now = Date.now();
     const jsonFields = {
-      fixtureContextJson: normalizeOptionalText(args.fixtureContextJson, JSON_FIELD_MAX_CHARS),
       requiredSourcesJson: normalizeOptionalText(args.requiredSourcesJson, JSON_FIELD_MAX_CHARS),
       requiredMemoriesJson: normalizeOptionalText(args.requiredMemoriesJson, JSON_FIELD_MAX_CHARS),
       requiredSkillsJson: normalizeOptionalText(args.requiredSkillsJson, JSON_FIELD_MAX_CHARS),
@@ -501,7 +521,6 @@ export const createCase = adminMutation({
     parseJsonArray(jsonFields.requiredMemoriesJson, "Required memories");
     parseJsonArray(jsonFields.requiredSkillsJson, "Required skills");
     parseJsonArray(jsonFields.forbiddenClaimsJson, "Forbidden claims");
-    parseOptionalJson(jsonFields.fixtureContextJson, "Fixture context");
 
     const evalCaseId = await ctx.db.insert("companyEvalCases", {
       companyId: args.companyId,
@@ -509,13 +528,9 @@ export const createCase = adminMutation({
       category: args.category,
       severity: args.severity,
       targetSurface: args.targetSurface,
-      targetId: normalizeOptionalText(args.targetId, CASE_NAME_MAX_CHARS),
       prompt: normalizeText(args.prompt, "Prompt", PROMPT_MAX_CHARS),
       ...jsonFields,
       expectedBehavior: normalizeText(args.expectedBehavior, "Expected behavior", EXPECTED_BEHAVIOR_MAX_CHARS),
-      expectedModelUseCase: normalizeOptionalText(args.expectedModelUseCase, CASE_NAME_MAX_CHARS),
-      expectedOutputFormat: normalizeOptionalText(args.expectedOutputFormat, CASE_NAME_MAX_CHARS),
-      judgeRubric: normalizeOptionalText(args.judgeRubric, EXPECTED_BEHAVIOR_MAX_CHARS),
       status: "ACTIVE",
       createdBy: userId,
       createdAt: now,
@@ -542,6 +557,149 @@ export const createCase = adminMutation({
     });
 
     return evalCaseId;
+  },
+});
+
+/**
+ * There was no way to edit a company check at all — a typo meant archiving it and
+ * starting again, which also lost its history.
+ *
+ * Editing retires the check's earlier results. If you change the question, or what a
+ * good answer must do, an old pass is no longer evidence about the check as it now
+ * stands. The runs remain in the record; the rollup that drives the gates does not
+ * keep crediting them.
+ */
+export const updateCase = adminMutation({
+  args: {
+    evalCaseId: v.id("companyEvalCases"),
+    name: v.optional(v.string()),
+    severity: v.optional(evalSeverityValidator),
+    targetSurface: v.optional(evalTargetSurfaceValidator),
+    prompt: v.optional(v.string()),
+    expectedBehavior: v.optional(v.string()),
+    requiredSkillsJson: v.optional(v.string()),
+    forbiddenClaimsJson: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const evalCase = await ctx.db.get(args.evalCaseId);
+    if (!evalCase || evalCase.status !== "ACTIVE") throw new Error("Eval case not found");
+    const { userId } = await requireCompanyAccess(ctx, evalCase.companyId);
+    const now = Date.now();
+
+    const forbiddenClaimsJson = args.forbiddenClaimsJson !== undefined
+      ? normalizeOptionalText(args.forbiddenClaimsJson, JSON_FIELD_MAX_CHARS)
+      : undefined;
+    const requiredSkillsJson = args.requiredSkillsJson !== undefined
+      ? normalizeOptionalText(args.requiredSkillsJson, JSON_FIELD_MAX_CHARS)
+      : undefined;
+    if (args.forbiddenClaimsJson !== undefined) parseJsonArray(forbiddenClaimsJson, "Forbidden claims");
+    if (args.requiredSkillsJson !== undefined) parseJsonArray(requiredSkillsJson, "Required skills");
+
+    await ctx.db.patch(args.evalCaseId, {
+      ...(args.name !== undefined ? { name: normalizeText(args.name, "Check name", CASE_NAME_MAX_CHARS) } : {}),
+      ...(args.severity !== undefined ? { severity: args.severity } : {}),
+      ...(args.targetSurface !== undefined ? { targetSurface: args.targetSurface } : {}),
+      ...(args.prompt !== undefined ? { prompt: normalizeText(args.prompt, "Question", PROMPT_MAX_CHARS) } : {}),
+      ...(args.expectedBehavior !== undefined
+        ? { expectedBehavior: normalizeText(args.expectedBehavior, "Expected behavior", EXPECTED_BEHAVIOR_MAX_CHARS) }
+        : {}),
+      ...(args.forbiddenClaimsJson !== undefined ? { forbiddenClaimsJson } : {}),
+      ...(args.requiredSkillsJson !== undefined ? { requiredSkillsJson } : {}),
+      // The check has changed, so what it last scored is no longer about this check.
+      lastRunId: undefined,
+      lastRunStatus: undefined,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "UPDATE_COMPANY_EVAL_CASE",
+      entityId: args.evalCaseId,
+      entityType: "companyEvalCases",
+      companyId: evalCase.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({ severity: args.severity ?? evalCase.severity }),
+    });
+    await recordCompanyAiDriftEvent(ctx, {
+      companyId: evalCase.companyId,
+      sourceType: "EVAL",
+      sourceId: args.evalCaseId,
+      reason: "Company check was edited and needs fresh evidence.",
+      createdBy: userId,
+      createdAt: now,
+    });
+
+    return args.evalCaseId;
+  },
+});
+
+/**
+ * The three checks almost every company wants, offered rather than seeded.
+ *
+ * An empty screen with a button that says "add one" leaves the reader to invent a
+ * check from nothing, which is the hardest possible first step. These are the
+ * failures that actually embarrass people: inventing a price, answering beyond what
+ * the documents support, and refusing to hand over to a human.
+ *
+ * Offered, not seeded, so nobody finds content in their account they did not put
+ * there — and skipped by name if they already exist, so pressing twice is harmless.
+ */
+export const createStarterCases = adminMutation({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireCompanyAccess(ctx, args.companyId);
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("companyEvalCases")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .take(MUST_PASS_CASE_LIMIT);
+    const existingNames = new Set(existing.map((evalCase) => evalCase.name));
+
+    let created = 0;
+    for (const starter of STARTER_CHECKS) {
+      if (existingNames.has(starter.name)) continue;
+
+      const evalCaseId = await ctx.db.insert("companyEvalCases", {
+        companyId: args.companyId,
+        name: starter.name,
+        category: "NO_HALLUCINATION",
+        severity: "BLOCKER",
+        targetSurface: starter.targetSurface,
+        prompt: starter.prompt,
+        expectedBehavior: starter.expectedBehavior,
+        ...(starter.forbiddenClaims.length > 0
+          ? { forbiddenClaimsJson: JSON.stringify(starter.forbiddenClaims) }
+          : {}),
+        status: "ACTIVE",
+        createdBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      created += 1;
+
+      await recordCompanyAiDriftEvent(ctx, {
+        companyId: args.companyId,
+        sourceType: "EVAL",
+        sourceId: evalCaseId,
+        reason: "Starter check was added and needs evidence.",
+        createdBy: userId,
+        createdAt: now,
+      });
+    }
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "CREATE_COMPANY_EVAL_STARTERS",
+      entityType: "companyEvalCases",
+      companyId: args.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({ created }),
+    });
+
+    return { created };
   },
 });
 

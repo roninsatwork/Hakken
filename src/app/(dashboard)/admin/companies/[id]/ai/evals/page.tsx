@@ -11,6 +11,7 @@ import {
   Loader2,
   Play,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -82,6 +83,7 @@ export default function CompanyAiEvalsPage() {
   const summary = useQuery(api.companyEvals.getSummary, { companyId });
   const latestRuns = useQuery(api.companyEvals.getLatestRunsForCompany, { companyId });
   const archiveCase = useMutation(api.companyEvals.archiveCase);
+  const createStarterCases = useMutation(api.companyEvals.createStarterCases);
   const runCheck = useAction(api.companyEvalRuns.runCheck);
   const runBatch = useAction(api.companyEvalRuns.runBatch);
   // Unproven checks first. Once everything passes, the button re-runs the lot —
@@ -105,6 +107,18 @@ export default function CompanyAiEvalsPage() {
   // other button on the page.
   const runAction = useAdminAction({ scope: "admin-company-evals-run" });
   const batchAction = useAdminAction({ scope: "admin-company-evals-batch" });
+  const starterAction = useAdminAction({ scope: "admin-company-evals-starters" });
+
+  // An empty screen with only "add one" leaves the reader to invent a check from
+  // nothing, which is the hardest possible first step. These are the failures that
+  // actually embarrass people.
+  const handleAddStarters = async () => {
+    setBatchNotice("");
+    const outcome = await starterAction.run(() => createStarterCases({ companyId }), {
+      fallbackMessage: "The starter checks could not be added.",
+    });
+    if (outcome.ok) setBatchNotice(`Added ${outcome.data.created} starter checks. Press Run checks to see how your AI does.`);
+  };
 
   const handleArchiveCase = async () => {
     if (!archiveTarget) return;
@@ -235,13 +249,24 @@ export default function CompanyAiEvalsPage() {
                   <p className="max-w-sm text-[13px] normal-case tracking-normal text-secondary">
                     A check catches your AI saying something wrong before a customer sees it.
                   </p>
-                  <Link
-                    href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New check
-                  </Link>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddStarters}
+                      disabled={starterAction.isBusy()}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+                    >
+                      {starterAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      Add 3 starter checks
+                    </button>
+                    <Link
+                      href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold normal-case tracking-normal text-foreground transition-colors hover:bg-foreground/5"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Write my own
+                    </Link>
+                  </div>
                 </div>
               }
             />
