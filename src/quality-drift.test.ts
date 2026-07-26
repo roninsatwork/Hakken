@@ -414,6 +414,10 @@ describe('Quality Drift Guardrails', () => {
   test('admin list pages keep using shared table primitives after cleanup', () => {
     const pages = [
       'src/app/(dashboard)/admin/agents/page.tsx',
+      // The last card grid in the admin area, and the one the skills page's own
+      // migration comment wrongly claimed was already using the shared table.
+      // Nothing caught that, because this list did not name it.
+      'src/app/(dashboard)/admin/agents/approvals/page.tsx',
       'src/app/(dashboard)/admin/companies/page.tsx',
       'src/app/(dashboard)/admin/settings/plans/page.tsx',
     ];

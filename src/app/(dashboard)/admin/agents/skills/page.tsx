@@ -314,10 +314,14 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         </div>
       </div>
 
-      {/* The repo's standard admin table, the same one the model catalogue,
-          API keys and approvals use. A card grid was a second way of listing
-          things that only this screen had, and it scanned worse the longer the
-          catalogue got. */}
+      {/* The repo's standard admin table, the same one the model catalogue and
+          API keys use. A card grid was a second way of listing things, and it
+          scanned worse the longer the catalogue got.
+
+          This comment used to claim approvals used the shared table too. It did
+          not — it was still the card grid this argues against, and stayed that
+          way until the approvals queue was rebuilt. Both are now in the drift
+          guard, so the claim is checked rather than asserted. */}
       <AdminTableShell
         minWidthClassName="min-w-[640px]"
         footer={

@@ -989,6 +989,71 @@
             "description": "Deploy, configure, and monitor specialized AI personalities.",
             "new": "New Agent",
             "searchPlaceholder": "Search agents by name...",
+            "approvals": {
+                "title": "Agent approvals",
+                "description": "Runs paused until someone decides. Each one is an agent waiting to write, send, or call something outside the platform.",
+                "searchPlaceholder": "Search by agent or tool name...",
+                "unknownTool": "Unknown tool",
+                "unknownAgent": "Unknown agent",
+                "unknownObjective": "No objective recorded",
+                "defaultMessage": "This run is paused until an administrator reviews the tool call.",
+                "count": {
+                    "loading": "Counting...",
+                    "pending": "{count}{suffix} waiting"
+                },
+                "columns": {
+                    "tool": "Tool",
+                    "agent": "Agent",
+                    "run": "Run",
+                    "requested": "Waiting since",
+                    "actions": "Decision"
+                },
+                "sideEffect": {
+                    "READ": "Read only",
+                    "WRITE": "Writes data",
+                    "DESTRUCTIVE": "Deletes data",
+                    "EXTERNAL": "Calls out"
+                },
+                "actions": {
+                    "approve": "Approve and continue the run",
+                    "reject": "Reject and end the run"
+                },
+                "links": {
+                    "openRun": "View run",
+                    "openAgent": "View agent"
+                },
+                "empty": {
+                    "none": "Nothing waiting",
+                    "noMatches": "No approvals match that search"
+                },
+                "footer": {
+                    "empty": "Nothing waiting",
+                    "showing": "Showing {count}",
+                    "loadMore": "Load more",
+                    "loading": "Loading..."
+                },
+                "confirm": {
+                    "title": "Reject this tool call?",
+                    "body": "The agent asked to run {tool}.",
+                    "warningTitle": "This ends the run",
+                    "warningBody": "The run stops here and is marked failed. Everything it has done so far is kept, but it will not finish the job.",
+                    "cancel": "Keep waiting",
+                    "confirm": "Reject and end run"
+                },
+                "decisionReason": {
+                    "APPROVED": "Approved from the agent approvals queue.",
+                    "REJECTED": "Rejected from the agent approvals queue.",
+                    "CANCELLED": "Cancelled from the agent approvals queue."
+                },
+                "success": {
+                    "APPROVED": "Approved. The run is continuing.",
+                    "REJECTED": "Rejected. The run has ended.",
+                    "CANCELLED": "Cancelled. The run has ended."
+                },
+                "errors": {
+                    "failed": "Could not record that decision."
+                }
+            },
             "table": {
                 "agent": "Agent",
                 "model": "Model",

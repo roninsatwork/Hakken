@@ -754,6 +754,12 @@ export default defineSchema({
     ),
     message: v.optional(v.string()),
     previewJson: v.optional(v.string()),
+    // Agent name and tool name, denormalised so the queue can be searched.
+    // What a reviewer types is one of those two, and both live on joined records
+    // — so without this a search bar could only filter the page already loaded,
+    // reporting "no matches" while matches sat on the next page. Cheap to
+    // duplicate: the row is written once by the runtime and never updated.
+    searchText: v.optional(v.string()),
     requestedAt: v.number(),
     reviewedAt: v.optional(v.number()),
     decisionReason: v.optional(v.string()),
@@ -761,7 +767,8 @@ export default defineSchema({
     .index("by_run_requested", ["runId", "requestedAt"])
     .index("by_company_status_requested", ["companyId", "status", "requestedAt"])
     .index("by_status_requested", ["status", "requestedAt"])
-    .index("by_agent_requested", ["agentId", "requestedAt"]),
+    .index("by_agent_requested", ["agentId", "requestedAt"])
+    .searchIndex("search_approval", { searchField: "searchText", filterFields: ["status"] }),
 
   agentRunFeedback: defineTable({
     runId: v.id("agentRuns"),

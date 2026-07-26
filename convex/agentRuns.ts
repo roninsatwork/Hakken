@@ -1193,13 +1193,24 @@ export const getRunObservatory = adminQuery({
 export const getPendingApprovals = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const approvalsPage = await ctx.db
-      .query("agentRunApprovals")
-      .withIndex("by_status_requested", (q) => q.eq("status", "PENDING"))
-      .order("desc")
-      .paginate(args.paginationOpts);
+    const searchTerm = args.searchTerm?.trim();
+    // Two indexes, one for each mode. Filtering the loaded page in the browser
+    // instead would search 15 rows of an unknown number and report "no matches"
+    // with matches still unpaged.
+    const approvalsPage = searchTerm
+      ? await ctx.db
+          .query("agentRunApprovals")
+          .withSearchIndex("search_approval", (q) =>
+            q.search("searchText", searchTerm).eq("status", "PENDING"))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("agentRunApprovals")
+          .withIndex("by_status_requested", (q) => q.eq("status", "PENDING"))
+          .order("desc")
+          .paginate(args.paginationOpts);
 
     const page = await Promise.all(approvalsPage.page.map(async (approval) => {
       const [run, toolCall, agent] = await Promise.all([
@@ -1734,8 +1745,19 @@ export const insertApprovalInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    // Resolved here rather than on read: the queue is searched far more often
+    // than it is written, and a search index needs the text on the row.
+    const [agent, toolCall] = await Promise.all([
+      ctx.db.get(args.agentId),
+      args.toolCallId ? ctx.db.get(args.toolCallId) : null,
+    ]);
+    const searchText = [agent?.name, toolCall?.normalizedToolName, toolCall?.handlerMapping]
+      .filter((part): part is string => Boolean(part))
+      .join(" ");
+
     return await ctx.db.insert("agentRunApprovals", {
       ...args,
+      ...(searchText.length > 0 ? { searchText } : {}),
       requestedAt: now,
       ...(args.status !== "PENDING" ? { reviewedAt: now } : {}),
     });

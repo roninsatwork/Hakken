@@ -989,6 +989,71 @@
             "description": "Distribuisci, configura e monitora personalità AI specializzate.",
             "new": "Nuovo Agent",
             "searchPlaceholder": "Cerca agent per nome...",
+            "approvals": {
+                "title": "Approvazioni agent",
+                "description": "Esecuzioni in pausa finché qualcuno non decide. Ognuna è un agent in attesa di scrivere, inviare o chiamare qualcosa fuori dalla piattaforma.",
+                "searchPlaceholder": "Cerca per nome agent o strumento...",
+                "unknownTool": "Strumento sconosciuto",
+                "unknownAgent": "Agent sconosciuto",
+                "unknownObjective": "Nessun obiettivo registrato",
+                "defaultMessage": "Questa esecuzione è in pausa finché un amministratore non esamina la chiamata dello strumento.",
+                "count": {
+                    "loading": "Conteggio...",
+                    "pending": "{count}{suffix} in attesa"
+                },
+                "columns": {
+                    "tool": "Strumento",
+                    "agent": "Agent",
+                    "run": "Esecuzione",
+                    "requested": "In attesa da",
+                    "actions": "Decisione"
+                },
+                "sideEffect": {
+                    "READ": "Sola lettura",
+                    "WRITE": "Scrive dati",
+                    "DESTRUCTIVE": "Elimina dati",
+                    "EXTERNAL": "Chiama all'esterno"
+                },
+                "actions": {
+                    "approve": "Approva e continua l'esecuzione",
+                    "reject": "Rifiuta e termina l'esecuzione"
+                },
+                "links": {
+                    "openRun": "Vedi esecuzione",
+                    "openAgent": "Vedi agent"
+                },
+                "empty": {
+                    "none": "Nessuna attesa",
+                    "noMatches": "Nessuna approvazione corrisponde alla ricerca"
+                },
+                "footer": {
+                    "empty": "Nessuna attesa",
+                    "showing": "Mostrate {count}",
+                    "loadMore": "Carica altre",
+                    "loading": "Caricamento..."
+                },
+                "confirm": {
+                    "title": "Rifiutare questa chiamata?",
+                    "body": "L'agent ha chiesto di eseguire {tool}.",
+                    "warningTitle": "Questo termina l'esecuzione",
+                    "warningBody": "L'esecuzione si ferma qui ed è segnata come non riuscita. Tutto ciò che ha già fatto viene conservato, ma non completerà il lavoro.",
+                    "cancel": "Continua ad attendere",
+                    "confirm": "Rifiuta e termina"
+                },
+                "decisionReason": {
+                    "APPROVED": "Approvata dalla coda di approvazioni agent.",
+                    "REJECTED": "Rifiutata dalla coda di approvazioni agent.",
+                    "CANCELLED": "Annullata dalla coda di approvazioni agent."
+                },
+                "success": {
+                    "APPROVED": "Approvata. L'esecuzione continua.",
+                    "REJECTED": "Rifiutata. L'esecuzione è terminata.",
+                    "CANCELLED": "Annullata. L'esecuzione è terminata."
+                },
+                "errors": {
+                    "failed": "Impossibile registrare la decisione."
+                }
+            },
             "table": {
                 "agent": "Agent",
                 "model": "Modello",

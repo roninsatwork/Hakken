@@ -775,6 +775,101 @@ describe("Agent Runs", () => {
       .toEqual({ count: 0, atLimit: false });
   });
 
+  test("the approval queue is searchable by agent and tool name, server-side", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, emailApprovalId, lookupApprovalId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "search-super@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const emailAgentId = await ctx.db.insert("agents", {
+        name: "Renewals Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const lookupAgentId = await ctx.db.insert("agents", {
+        name: "Reporting Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      const seedApproval = async (agentId: typeof emailAgentId, toolName: string) => {
+        const runId = await ctx.db.insert("agentRuns", {
+          agentId,
+          triggerType: "CHAT",
+          objective: `Objective for ${toolName}`,
+          status: "PENDING_APPROVAL",
+          startedAt: 100,
+          updatedAt: 100,
+        });
+        const toolCallId = await ctx.db.insert("agentToolCalls", {
+          runId,
+          agentId,
+          normalizedToolName: toolName,
+          handlerMapping: `handler.${toolName}`,
+          argumentsJson: "{}",
+          status: "APPROVAL_REQUIRED",
+          requiredRole: "ADMIN",
+          sideEffectLevel: "WRITE",
+          confirmationRequired: true,
+          startedAt: 101,
+        });
+        return { runId, toolCallId, agentId };
+      };
+
+      const emailSeed = await seedApproval(emailAgentId, "email_send");
+      const lookupSeed = await seedApproval(lookupAgentId, "report_read");
+
+      // Inserted through the internal mutation, because that is what populates
+      // the denormalised search text the index reads.
+      const emailApprovalId = await ctx.runMutation(internal.agentRuns.insertApprovalInternal, {
+        runId: emailSeed.runId,
+        toolCallId: emailSeed.toolCallId,
+        agentId: emailSeed.agentId,
+        status: "PENDING",
+      });
+      const lookupApprovalId = await ctx.runMutation(internal.agentRuns.insertApprovalInternal, {
+        runId: lookupSeed.runId,
+        toolCallId: lookupSeed.toolCallId,
+        agentId: lookupSeed.agentId,
+        status: "PENDING",
+      });
+
+      return { superAdminId, emailApprovalId, lookupApprovalId };
+    });
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+
+    const byAgent = await superAdminClient.query(api.agentRuns.getPendingApprovals, {
+      paginationOpts,
+      searchTerm: "Renewals",
+    });
+    expect(byAgent.page.map((entry) => entry.approval._id)).toEqual([emailApprovalId]);
+
+    const byTool = await superAdminClient.query(api.agentRuns.getPendingApprovals, {
+      paginationOpts,
+      searchTerm: "report_read",
+    });
+    expect(byTool.page.map((entry) => entry.approval._id)).toEqual([lookupApprovalId]);
+
+    // No term means the whole queue, not an empty result.
+    const unfiltered = await superAdminClient.query(api.agentRuns.getPendingApprovals, { paginationOpts });
+    expect(unfiltered.page).toHaveLength(2);
+
+    const noMatch = await superAdminClient.query(api.agentRuns.getPendingApprovals, {
+      paginationOpts,
+      searchTerm: "nothing matches this",
+    });
+    expect(noMatch.page).toHaveLength(0);
+  });
+
   test("run analytics summarize cost, reliability, tools, approvals, and tenant scope", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

@@ -895,7 +895,51 @@ Tests:
 - the count query is super-admin only and counts across companies
 - `SidebarNavigation` — the badge is absent at zero and shows the number above it
 
-### Phase 8 — Standardise the approvals screen
+### Phase 8 — Standardise the approvals screen — **DONE**
+
+Rebuilt on the shared primitives, with server-side search, full i18n in both
+locales, and the page added to the drift guard. The false claim in the skills page
+comment (`admin/agents/skills/page.tsx:317-320`) is corrected rather than deleted,
+so the record of what went wrong survives.
+
+Decisions the build settled:
+
+- **Search needed a schema change, as expected.** `searchText` on
+  `agentRunApprovals` — agent name, tool name and handler mapping — populated in
+  `insertApprovalInternal`, with `searchIndex("search_approval")` filtered on
+  status. `getPendingApprovals` takes an optional term and switches index. Two
+  guards prove it: neutering the term, and dropping the `searchText` write, each
+  fail the search test.
+- **The empty state tells "nothing waiting" from "no matches".** Reporting
+  "nothing waiting" while a search is filtering the queue would be a lie.
+- **Cancel came off the row.** The old screen had Approve, Reject and Cancel, and
+  Reject and Cancel both ended the run — a reviewer could not tell why there were
+  two. Reject stays, behind a confirmation. Cancel belongs to `cancelRun` on the run
+  itself, and Phase 3 gives Reject a distinct meaning, at which point the three are
+  genuinely three things.
+- **One rotated chevron for the expander, not a directional pair.** The drift guard
+  matches on text and treats `ChevronLeft`/`ChevronRight` as the signature of
+  hand-rolled pagination, so it cannot tell an expander from a pager. Worth noting
+  the guard first failed on a *comment* naming those icons, which is the guard
+  behaving exactly as designed.
+
+**Deferred within this phase, because their dependencies do not exist yet:** the
+turn-grouping in step 9 needs Phase 2's `turnIndex`, and the `EXPIRED` rendering in
+step 11 needs Phase 4's status. Both remain listed below.
+
+Tests: ten new page tests, the screen's first ever — it was at 0% coverage — plus a
+backend search test. Guards proved by reverting three ways: rejecting without the
+confirmation, counting loaded rows instead of the total, and breaking either half of
+the search path.
+
+Verified: `lint:all` (0 errors), `check` (429 files, 3207 tests), `build`,
+`git diff --check` clean. **Browser-verified** against the live dev server: renders
+as a five-column table inside the rounded shell with the footer attached, no
+horizontal overflow, console clean, and typing a term switched the empty state to
+"no approvals match that search" — which also confirms the new search index deployed
+and the query resolves. The search box was cleared afterwards.
+
+**Original plan text follows.**
 
 `src/app/(dashboard)/admin/agents/approvals/page.tsx`, rebuilt on the shared
 primitives.
