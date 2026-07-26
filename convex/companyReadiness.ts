@@ -72,18 +72,6 @@ function scoreAreas(areas: ReadinessArea[]) {
   return Math.round((score / areas.length) * 100);
 }
 
-async function getLatestRunsByCase(ctx: QueryCtx, companyId: Id<"companies">) {
-  const recentRuns = await ctx.db
-    .query("companyEvalRuns")
-    .withIndex("by_company_completed", (q) => q.eq("companyId", companyId))
-    .order("desc")
-    .take(READINESS_EVAL_LIMIT);
-  const latestRunByCase = new Map<Id<"companyEvalCases">, Doc<"companyEvalRuns">>();
-  for (const run of recentRuns) {
-    if (!latestRunByCase.has(run.evalCaseId)) latestRunByCase.set(run.evalCaseId, run);
-  }
-  return latestRunByCase;
-}
 
 async function buildReadinessSummary(ctx: QueryCtx, companyId: Id<"companies">) {
   const [evalCases, unresolvedDriftEvents, activeSkills, enabledBindings, approvedMemories] = await Promise.all([
@@ -111,19 +99,19 @@ async function buildReadinessSummary(ctx: QueryCtx, companyId: Id<"companies">) 
       .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "APPROVED"))
       .take(1000),
   ]);
-  const latestRunByCase = await getLatestRunsByCase(ctx, companyId);
-  const latestRuns = evalCases
-    .map((evalCase) => latestRunByCase.get(evalCase._id))
-    .filter((run): run is Doc<"companyEvalRuns"> => Boolean(run));
-  const passedRuns = latestRuns.filter((run) => run.status === "PASSED").length;
-  const failedRuns = latestRuns.filter((run) => run.status === "FAILED").length;
-  const needsReviewRuns = latestRuns.filter((run) => run.status === "NEEDS_REVIEW").length;
+  // Read from the rollup on each case. This used to take 1,000 runs and reduce them
+  // into a "latest run per case" map — the same reduction `companyEvals.getSummary`
+  // was doing separately, so one page load did it twice over 4,000 rows.
+  const passedRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "PASSED").length;
+  const failedRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
+  const needsReviewRuns = evalCases.filter((evalCase) => evalCase.lastRunStatus === "NEEDS_REVIEW").length;
   const blockerCases = evalCases.filter((evalCase) => evalCase.severity === "BLOCKER");
-  const blockerFailures = blockerCases.filter((evalCase) => latestRunByCase.get(evalCase._id)?.status === "FAILED").length;
-  const blockerNotRun = blockerCases.filter((evalCase) => !latestRunByCase.has(evalCase._id)).length;
+  const blockerFailures = blockerCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
+  const blockerNotRun = blockerCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
   const widgetBlockerCases = evalCases.filter((evalCase) => evalCase.severity === "BLOCKER" && evalCase.targetSurface === "WIDGET");
-  const widgetBlockerFailures = widgetBlockerCases.filter((evalCase) => latestRunByCase.get(evalCase._id)?.status === "FAILED").length;
-  const widgetBlockerNotRun = widgetBlockerCases.filter((evalCase) => !latestRunByCase.has(evalCase._id)).length;
+  const widgetBlockerFailures = widgetBlockerCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
+  const widgetBlockerNotRun = widgetBlockerCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
+  const casesWithAResult = evalCases.filter((evalCase) => evalCase.lastRunStatus !== undefined).length;
   const activeSkillIds = new Set(activeSkills.map((skill) => skill._id));
   const flattenedBindings = enabledBindings.flat();
   const boundActiveSkillIds = new Set(flattenedBindings.filter((binding) => activeSkillIds.has(binding.skillId)).map((binding) => binding.skillId));
@@ -209,13 +197,13 @@ async function buildReadinessSummary(ctx: QueryCtx, companyId: Id<"companies">) 
     },
     evals: {
       totalCases: evalCases.length,
-      latestRuns: latestRuns.length,
+      latestRuns: casesWithAResult,
       passedRuns,
       failedRuns,
       needsReviewRuns,
       blockerFailures,
       blockerNotRun,
-      passRate: latestRuns.length > 0 ? passedRuns / latestRuns.length : 0,
+      passRate: casesWithAResult > 0 ? passedRuns / casesWithAResult : 0,
     },
     skills: {
       activeSkills: activeSkills.length,

@@ -20,6 +20,13 @@ const MUST_PASS_CASE_LIMIT = 200;
 // to run in one press rather than what the database can return. When it bites, the
 // estimate says so instead of quietly running a subset.
 const BATCH_CASE_LIMIT = 100;
+// The summary counts every active case, so it needs a bound. Past this it reports
+// `isPartial` rather than presenting a sample as a total.
+const SUMMARY_CASE_LIMIT = 2000;
+// A check with more results than this has a runaway runner behind it, not a history
+// worth keeping. Deleting in one transaction keeps the check and its results
+// consistent.
+const DELETE_RUN_LIMIT = 500;
 
 /**
  * What a company is offered on an empty checks screen.
@@ -306,6 +313,7 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
   await ctx.db.patch(args.evalCase._id, {
     lastRunId: runId,
     lastRunStatus: status,
+    lastRunAt: now,
     updatedAt: now,
   });
 
@@ -367,36 +375,28 @@ export const getSummary = adminQuery({
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
 
+    // Counted off the rollup on each case, so this reads no runs at all. It used to
+    // take 1,000 cases *and* 1,000 runs and reduce them into a "latest run per case"
+    // map — the same reduction written out three times across this file and
+    // `companyReadiness`, and a silent sample on any company past the limit.
     const activeCases = await ctx.db
       .query("companyEvalCases")
       .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
-      .take(1000);
-    const recentRuns = await ctx.db
-      .query("companyEvalRuns")
-      .withIndex("by_company_completed", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .take(1000);
-    const latestRunByCase = new Map<Id<"companyEvalCases">, Doc<"companyEvalRuns">>();
-    for (const run of recentRuns) {
-      if (!latestRunByCase.has(run.evalCaseId)) latestRunByCase.set(run.evalCaseId, run);
-    }
+      .take(SUMMARY_CASE_LIMIT);
 
-    const activeCaseIds = new Set(activeCases.map((evalCase) => evalCase._id));
-    const latestRuns = Array.from(latestRunByCase.entries())
-      .filter(([caseId]) => activeCaseIds.has(caseId))
-      .map(([, run]) => run);
-    const passedRuns = latestRuns.filter((run) => run.status === "PASSED").length;
-    const failedRuns = latestRuns.filter((run) => run.status === "FAILED").length;
-    const needsReviewRuns = latestRuns.filter((run) => run.status === "NEEDS_REVIEW").length;
-    const notRunCases = activeCases.length - latestRuns.length;
+    const passedRuns = activeCases.filter((evalCase) => evalCase.lastRunStatus === "PASSED").length;
+    const failedRuns = activeCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
+    const needsReviewRuns = activeCases.filter((evalCase) => evalCase.lastRunStatus === "NEEDS_REVIEW").length;
+    const notRunCases = activeCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
+    const latestRuns = activeCases.length - notRunCases;
     const blockerCases = activeCases.filter((evalCase) => evalCase.severity === "BLOCKER");
-    const blockerFailures = blockerCases.filter((evalCase) => latestRunByCase.get(evalCase._id)?.status === "FAILED").length;
-    const blockerNotRun = blockerCases.filter((evalCase) => !latestRunByCase.has(evalCase._id)).length;
+    const blockerFailures = blockerCases.filter((evalCase) => evalCase.lastRunStatus === "FAILED").length;
+    const blockerNotRun = blockerCases.filter((evalCase) => evalCase.lastRunStatus === undefined).length;
 
     return {
       totalCases: activeCases.length,
       blockerCases: blockerCases.length,
-      latestRuns: latestRuns.length,
+      latestRuns,
       passedRuns,
       failedRuns,
       needsReviewRuns,
@@ -404,7 +404,11 @@ export const getSummary = adminQuery({
       failedOrNotRunCases: failedRuns + needsReviewRuns + notRunCases,
       blockerFailures,
       blockerNotRun,
-      passRate: latestRuns.length > 0 ? passedRuns / latestRuns.length : 0,
+      passRate: latestRuns > 0 ? passedRuns / latestRuns : 0,
+      // Said out loud rather than left to be inferred from a suspiciously round
+      // number. A gate deciding on the first N cases must not read as deciding on
+      // all of them.
+      isPartial: activeCases.length >= SUMMARY_CASE_LIMIT,
     };
   },
 });
@@ -463,35 +467,10 @@ export const getRunsForCase = adminQuery({
   },
 });
 
-export const getLatestRunsForCompany = adminQuery({
-  args: {
-    companyId: v.id("companies"),
-  },
-  handler: async (ctx, args) => {
-    await requireCompanyAccess(ctx, args.companyId);
-
-    const activeCases = await ctx.db
-      .query("companyEvalCases")
-      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
-      .take(1000);
-    const activeCaseIds = new Set(activeCases.map((evalCase) => evalCase._id));
-    const recentRuns = await ctx.db
-      .query("companyEvalRuns")
-      .withIndex("by_company_completed", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .take(1000);
-    const latestRuns: Doc<"companyEvalRuns">[] = [];
-    const seenCaseIds = new Set<Id<"companyEvalCases">>();
-
-    for (const run of recentRuns) {
-      if (!activeCaseIds.has(run.evalCaseId) || seenCaseIds.has(run.evalCaseId)) continue;
-      seenCaseIds.add(run.evalCaseId);
-      latestRuns.push(run);
-    }
-
-    return latestRuns;
-  },
-});
+// `getLatestRunsForCompany` used to live here. It took 1,000 cases and 1,000 runs to
+// work out the newest run per case, purely so the list could show a status and a date
+// against each row — the third copy of that same reduction. Both facts are rolled up
+// onto the case now, so the list reads the rows it already has and the query is gone.
 
 export const createCase = adminMutation({
   args: {
@@ -608,6 +587,7 @@ export const updateCase = adminMutation({
       // The check has changed, so what it last scored is no longer about this check.
       lastRunId: undefined,
       lastRunStatus: undefined,
+      lastRunAt: undefined,
       updatedAt: now,
     });
 
@@ -703,43 +683,47 @@ export const createStarterCases = adminMutation({
   },
 });
 
-export const archiveCase = adminMutation({
+/**
+ * Deletes a check outright, with its results.
+ *
+ * It used to archive: the row stayed, hidden, with `status: "ARCHIVED"`. That left
+ * every screen filtering on status, a list of things nobody could see or restore, and
+ * no honest answer to "how do I get rid of this?". Anthony: "we can delete an eval we
+ * dont need an archive."
+ *
+ * The runs go with it. A result is only meaningful as evidence about a check, so
+ * keeping them would leave rows pointing at nothing. The audit log keeps the record
+ * that the check existed and who removed it.
+ */
+export const deleteCase = adminMutation({
   args: {
     evalCaseId: v.id("companyEvalCases"),
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase || evalCase.status === "ARCHIVED") throw new Error("Eval case not found");
+    if (!evalCase) throw new Error("Check not found");
     const { userId } = await requireCompanyAccess(ctx, evalCase.companyId);
     const now = Date.now();
 
-    await ctx.db.patch(args.evalCaseId, {
-      status: "ARCHIVED",
-      archivedBy: userId,
-      archivedAt: now,
-      updatedAt: now,
-    });
+    const runs = await ctx.db
+      .query("companyEvalRuns")
+      .withIndex("by_case_completed", (q) => q.eq("evalCaseId", args.evalCaseId))
+      .take(DELETE_RUN_LIMIT);
+    for (const run of runs) await ctx.db.delete(run._id);
+    await ctx.db.delete(args.evalCaseId);
 
     await ctx.db.insert("auditLogs", {
       actorId: userId,
-      actionType: "ARCHIVE_COMPANY_EVAL_CASE",
+      actionType: "DELETE_COMPANY_EVAL_CASE",
       entityId: args.evalCaseId,
       entityType: "companyEvalCases",
       companyId: evalCase.companyId,
       timestamp: now,
-      metadata: JSON.stringify({ category: evalCase.category, severity: evalCase.severity }),
-    });
-    await recordCompanyAiDriftEvent(ctx, {
-      companyId: evalCase.companyId,
-      sourceType: "EVAL",
-      sourceId: args.evalCaseId,
-      reason: "Company eval case was archived.",
-      affectedEvalCategories: [evalCase.category],
-      createdBy: userId,
-      createdAt: now,
+      // The name is recorded here because the row it came from no longer exists.
+      metadata: JSON.stringify({ name: evalCase.name, severity: evalCase.severity, deletedRuns: runs.length }),
     });
 
-    return true;
+    return { deletedRuns: runs.length };
   },
 });
 

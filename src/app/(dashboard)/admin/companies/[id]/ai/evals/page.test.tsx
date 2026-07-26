@@ -33,12 +33,14 @@ const CASE_ROW = {
   category: "NO_HALLUCINATION",
   targetSurface: "COMPANY_CHAT",
   updatedAt: 1_770_000_000_000,
+  // Rolled up onto the case, so the list needs no run query at all.
+  lastRunStatus: "FAILED",
+  lastRunAt: 1_770_000_000_000,
 };
 
 function mockQueries(overrides: {
   summary?: Record<string, number>;
   estimate?: Record<string, unknown>;
-  latestRuns?: unknown[];
 } = {}) {
   (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
     const functionName = getFunctionName(queryFn as never);
@@ -58,9 +60,6 @@ function mockQueries(overrides: {
     }
     if (functionName === "companyEvals:getBatchEstimate") {
       return { selectedCount: 2, providerCallCount: 4, isCapped: false, cap: 100, ...overrides.estimate };
-    }
-    if (functionName === "companyEvals:getLatestRunsForCompany") {
-      return overrides.latestRuns ?? [{ evalCaseId: "case_1", status: "FAILED", completedAt: 1_770_000_000_000 }];
     }
     if (functionName === "companyEvals:getRunsForCase") return [];
     return undefined;

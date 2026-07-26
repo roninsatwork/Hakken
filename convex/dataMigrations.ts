@@ -239,6 +239,54 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   },
 
   /**
+   * Backfills `lastRunStatus` and `lastRunAt` onto company checks.
+   *
+   * Three separate places used to work out "the latest run per check" by taking a
+   * thousand runs and reducing them in the query, and one page load did it twice.
+   * They now read the rollup on the case — but a check whose last run predates the
+   * rollup has neither field, so it would read "Not run" despite having results, and
+   * the gates would treat it as unproven.
+   *
+   * Reads the newest run per case through `by_case_completed`, which is one indexed
+   * read per case rather than a scan of the run table.
+   */
+  "2026-07-26-company-check-last-run-rollup-fields": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("companyEvalCases").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const evalCase of page.page) {
+      // Both fields, not just one. Guarding on the status alone skipped exactly the
+      // rows this exists to fix: a check run before `lastRunAt` was added carries a
+      // status and no date, so the list showed "Passing" beside "—". Found by
+      // looking at the screen after the first version of this had "completed".
+      if (evalCase.lastRunStatus !== undefined && evalCase.lastRunAt !== undefined) continue;
+
+      const latestRun = await ctx.db
+        .query("companyEvalRuns")
+        .withIndex("by_case_completed", (q) => q.eq("evalCaseId", evalCase._id))
+        .order("desc")
+        .first();
+      // Never run is a legitimate state, and stamping nothing is the correct record
+      // of it.
+      if (!latestRun) continue;
+
+      await ctx.db.patch(evalCase._id, {
+        lastRunId: latestRun._id,
+        lastRunStatus: latestRun.status,
+        lastRunAt: latestRun.completedAt,
+      });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /**
    * The same for agent memory, whose four kinds carried the same unused
    * distinction: INSTRUCTION and PREFERENCE described how the agent should
    * behave throughout, FACT and SUMMARY described something to look up.

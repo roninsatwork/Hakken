@@ -45,10 +45,6 @@ function describeStatus(status: CompanyEvalRun["status"] | undefined) {
   return { label: "Not tested", tone: "text-amber-400" };
 }
 
-function getLatestRun(runs: CompanyEvalRun[] | undefined, evalCaseId: Id<"companyEvalCases">) {
-  return runs?.find((run) => run.evalCaseId === evalCaseId);
-}
-
 /**
  * One sentence instead of five counters.
  *
@@ -81,8 +77,7 @@ export default function CompanyAiEvalsPage() {
   const companyId = params.id as Id<"companies">;
   const aiHref = `/admin/companies/${companyId}/ai`;
   const summary = useQuery(api.companyEvals.getSummary, { companyId });
-  const latestRuns = useQuery(api.companyEvals.getLatestRunsForCompany, { companyId });
-  const archiveCase = useMutation(api.companyEvals.archiveCase);
+  const deleteCase = useMutation(api.companyEvals.deleteCase);
   const createStarterCases = useMutation(api.companyEvals.createStarterCases);
   const runCheck = useAction(api.companyEvalRuns.runCheck);
   const runBatch = useAction(api.companyEvalRuns.runBatch);
@@ -98,11 +93,11 @@ export default function CompanyAiEvalsPage() {
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
 
-  const [archiveTarget, setArchiveTarget] = useState<CompanyEvalCase | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CompanyEvalCase | null>(null);
   const [confirmBatch, setConfirmBatch] = useState(false);
   const [batchNotice, setBatchNotice] = useState("");
 
-  const archiveAction = useAdminAction({ scope: "admin-company-evals-archive" });
+  const deleteAction = useAdminAction({ scope: "admin-company-evals-delete" });
   // Its own runner, keyed per row, so running one check does not disable every
   // other button on the page.
   const runAction = useAdminAction({ scope: "admin-company-evals-run" });
@@ -120,13 +115,13 @@ export default function CompanyAiEvalsPage() {
     if (outcome.ok) setBatchNotice(`Added ${outcome.data.created} starter checks. Press Run checks to see how your AI does.`);
   };
 
-  const handleArchiveCase = async () => {
-    if (!archiveTarget) return;
-    const outcome = await archiveAction.run(() => archiveCase({ evalCaseId: archiveTarget._id }), {
-      fallbackMessage: "The check could not be removed.",
+  const handleDeleteCase = async () => {
+    if (!deleteTarget) return;
+    const outcome = await deleteAction.run(() => deleteCase({ evalCaseId: deleteTarget._id }), {
+      fallbackMessage: "The check could not be deleted.",
     });
     if (!outcome.ok) return;
-    setArchiveTarget(null);
+    setDeleteTarget(null);
   };
 
   const handleRunCheck = async (evalCaseId: Id<"companyEvalCases">) => {
@@ -271,8 +266,9 @@ export default function CompanyAiEvalsPage() {
               }
             />
           ) : cases.results.map((evalCase) => {
-            const latestRun = getLatestRun(latestRuns, evalCase._id);
-            const status = describeStatus(latestRun?.status);
+            // Read straight off the case. The list used to fetch a thousand runs to
+            // work out this one status and date per row.
+            const status = describeStatus(evalCase.lastRunStatus);
             const isRunning = runAction.isBusy(`run:${evalCase._id}`);
 
             return (
@@ -291,7 +287,7 @@ export default function CompanyAiEvalsPage() {
                   {evalCase.severity === "BLOCKER" ? "Yes" : "No"}
                 </td>
                 <td className="px-4 py-3 text-[12px] text-secondary">
-                  {latestRun ? formatDateTime(latestRun.completedAt) : "—"}
+                  {evalCase.lastRunAt ? formatDateTime(evalCase.lastRunAt) : "—"}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
@@ -306,9 +302,9 @@ export default function CompanyAiEvalsPage() {
                     </button>
                     <button
                       type="button"
-                      aria-label={`Remove ${evalCase.name}`}
-                      title="Remove"
-                      onClick={() => setArchiveTarget(evalCase)}
+                      aria-label={`Delete ${evalCase.name}`}
+                      title="Delete"
+                      onClick={() => setDeleteTarget(evalCase)}
                       className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -348,18 +344,19 @@ export default function CompanyAiEvalsPage() {
         </div>
       </SonaeModal>
 
-      <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title="Remove check" size="sm">
+      <SonaeModal isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} title="Delete check" size="sm">
         <div className="flex flex-col gap-6">
           <p className="text-[13px] leading-relaxed text-secondary">
-            This stops the check counting towards readiness. Its past results stay in the audit record.
+            This deletes <span className="font-semibold text-foreground">{deleteTarget?.name}</span> and
+            its results for good. There is no undo.
           </p>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
-            <button type="button" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
+            <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleteAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleArchiveCase} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
-              {archiveAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Remove
+            <button type="button" onClick={handleDeleteCase} disabled={deleteAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+              {deleteAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Delete check
             </button>
           </div>
         </div>

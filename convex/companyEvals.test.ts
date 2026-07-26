@@ -98,7 +98,7 @@ describe("Company Evals", () => {
       passRate: 1,
     });
 
-    await adminAClient.mutation(api.companyEvals.archiveCase, { evalCaseId });
+    await adminAClient.mutation(api.companyEvals.deleteCase, { evalCaseId });
     const archivedSummary = await adminAClient.query(api.companyEvals.getSummary, { companyId: companyAId });
     expect(archivedSummary.totalCases).toBe(0);
 
@@ -109,7 +109,7 @@ describe("Company Evals", () => {
       "CREATE_COMPANY_EVAL_CASE",
       "RUN_COMPANY_EVAL_CASE",
       "RUN_COMPANY_EVAL_CASE",
-      "ARCHIVE_COMPANY_EVAL_CASE",
+      "DELETE_COMPANY_EVAL_CASE",
     ]);
     expect(companyBId).not.toBe(companyAId);
   });

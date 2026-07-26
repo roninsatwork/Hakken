@@ -1534,6 +1534,9 @@ export default defineSchema({
       v.literal("FAILED"),
       v.literal("NEEDS_REVIEW")
     )),
+    // When that result landed. With this on the row, the checks list needs no run
+    // query at all: the case carries everything the table shows.
+    lastRunAt: v.optional(v.number()),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
