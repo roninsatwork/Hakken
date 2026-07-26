@@ -277,7 +277,8 @@ function buildSuggestionPatchPreview(suggestion: Doc<"agentImprovementSuggestion
       target: "Human approval required",
       before: "Current agent policy",
       after: patch.humanApprovalRequired === true ? "Enabled" : String(patch.humanApprovalRequired ?? "Enabled"),
-      note: appliedNote || "Requires operator approval for similar actions.",
+      note: appliedNote
+        || "Requires operator approval for similar actions, and takes the agent off autonomous running if it was on.",
     }];
   }
 

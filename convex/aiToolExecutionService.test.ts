@@ -230,6 +230,83 @@ describe("ai tool execution service", () => {
     ).toEqual({ allowed: true });
   });
 
+  test("an autonomous agent waives confirmation but keeps every other restriction", () => {
+    // The normalizer forces confirmationRequired true for anything that is not a
+    // plain read and ignores a passed-in false, so autonomy cannot be expressed
+    // that way — it would be overruled and an unattended agent would still park
+    // on every write.
+    expect(
+      normalizeToolExecutionPolicy({ requiredRole: "ADMIN", sideEffectLevel: "DESTRUCTIVE", confirmationRequired: false })
+    ).toEqual({
+      requiredRole: "ADMIN",
+      sideEffectLevel: "DESTRUCTIVE",
+      confirmationRequired: true,
+    });
+
+    // Waived for an admin in their own tenant...
+    expect(
+      canExecuteTool({
+        requiredRole: "ADMIN",
+        userRole: "ADMIN",
+        userCompanyId: "a",
+        targetCompanyId: "a",
+        sideEffectLevel: "DESTRUCTIVE",
+        autonomous: true,
+      })
+    ).toEqual({ allowed: true });
+
+    // ...and for a super admin.
+    expect(
+      canExecuteTool({
+        requiredRole: "ADMIN",
+        userRole: "SUPER_ADMIN",
+        sideEffectLevel: "DESTRUCTIVE",
+        autonomous: true,
+      })
+    ).toEqual({ allowed: true });
+
+    // Autonomy removes the human, not the permissions. A tenant boundary still
+    // holds, a role requirement still holds, and an unauthenticated caller is
+    // still refused — each checked before confirmation is considered.
+    expect(
+      canExecuteTool({
+        requiredRole: "ADMIN",
+        userRole: "ADMIN",
+        userCompanyId: "a",
+        targetCompanyId: "b",
+        sideEffectLevel: "DESTRUCTIVE",
+        autonomous: true,
+      })
+    ).toEqual({
+      allowed: false,
+      reason: "Tool execution is not allowed across tenant boundaries.",
+    });
+    expect(
+      canExecuteTool({
+        requiredRole: "SUPER_ADMIN",
+        userRole: "ADMIN",
+        userCompanyId: "a",
+        sideEffectLevel: "DESTRUCTIVE",
+        autonomous: true,
+      })
+    ).toEqual({
+      allowed: false,
+      reason: "Tool execution requires super-admin privileges.",
+    });
+    expect(
+      canExecuteTool({ requiredRole: "ADMIN", userRole: "USER", autonomous: true })
+    ).toEqual({
+      allowed: false,
+      reason: "Tool execution requires administrator privileges.",
+    });
+    expect(
+      canExecuteTool({ requiredRole: "ADMIN", autonomous: true })
+    ).toEqual({
+      allowed: false,
+      reason: "Tool execution requires an authenticated user.",
+    });
+  });
+
   test("normalizes AI runtime errors into stable UI-safe shapes", () => {
     expect(normalizeAiRuntimeError(new Error("Provider unavailable"))).toEqual({
       ok: false,

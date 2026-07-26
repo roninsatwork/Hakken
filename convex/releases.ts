@@ -109,6 +109,7 @@ type AgentSnapshot = {
   };
   policy?: {
     humanApprovalRequired?: boolean;
+    autonomousToolExecution?: boolean;
     allowInternetAccess?: boolean;
     triggerType?: string;
   };
@@ -304,6 +305,7 @@ function buildAgentRestorePatch(snapshot: AgentSnapshot, now: number): AgentPatc
   }
   if (snapshot.policy) {
     if (typeof snapshot.policy.humanApprovalRequired === "boolean") patch.humanApprovalRequired = snapshot.policy.humanApprovalRequired;
+    if (typeof snapshot.policy.autonomousToolExecution === "boolean") patch.autonomousToolExecution = snapshot.policy.autonomousToolExecution;
     if (typeof snapshot.policy.allowInternetAccess === "boolean") patch.allowInternetAccess = snapshot.policy.allowInternetAccess;
     patch.triggerType = parseTriggerType(snapshot.policy.triggerType);
   }
@@ -366,7 +368,9 @@ function summarizeModel(model?: AgentSnapshot["model"]) {
 function summarizePolicy(policy?: AgentSnapshot["policy"]) {
   if (!policy) return "No policy config";
   return [
-    policy.humanApprovalRequired ? "approval required" : "approval not required",
+    policy.autonomousToolExecution
+      ? "autonomous"
+      : policy.humanApprovalRequired ? "approval required" : "approval not required",
     policy.allowInternetAccess ? "internet allowed" : "internet blocked",
     policy.triggerType || "manual trigger",
   ].join(" / ");

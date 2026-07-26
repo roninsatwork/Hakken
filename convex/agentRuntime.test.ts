@@ -251,6 +251,40 @@ async function bindKnowledgeSearchTool(t: TestConvex, agentId: Id<"agents">, use
   });
 }
 
+/**
+ * A tool that is not a plain read, so the runtime gates it on side-effect level
+ * alone with no agent flag involved.
+ *
+ * Reuses the knowledge handler so the call actually executes when it is allowed
+ * through — what is under test is the gate, not the tool. Note the model calls it
+ * `knowledge_search`: the declared function name comes from `handlerMapping`, not
+ * from `name` (see `buildProviderToolDeclaration`), so the display name here is
+ * cosmetic.
+ */
+async function bindWriteTool(t: TestConvex, agentId: Id<"agents">, userId: Id<"users">) {
+  return await t.run(async (ctx) => {
+    const toolId = await ctx.db.insert("aiTools", {
+      name: "Record Note",
+      description: "Write a note.",
+      handlerMapping: "knowledge.search",
+      requiredRole: "ADMIN",
+      sideEffectLevel: "WRITE",
+      confirmationRequired: false,
+      inputSchema: JSON.stringify({
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      }),
+      isActive: true,
+      version: 1,
+      createdAt: Date.now(),
+      createdBy: userId,
+    });
+    await ctx.db.insert("agentTools", { agentId, toolId, assignedAt: Date.now() });
+    return toolId;
+  });
+}
+
 /** Long enough to exceed the streaming flush threshold, so a write is guaranteed. */
 const NARRATION =
   "Give me a moment while I check the knowledge base for the relevant policy documents and confirm "
@@ -1254,6 +1288,120 @@ describe("human-in-the-loop approval", () => {
     // A rejected run parks in AWAITING_APPROVAL, which the sweeper ignores by
     // design, so nothing else would ever clear this.
     expect(await checkpoints(t)).toHaveLength(0);
+  });
+});
+
+describe("autonomous tool execution", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Seed a run whose agent holds a non-read tool, and apply the given agent flags. */
+  async function runWithWriteTool(t: TestConvex, flags: Record<string, boolean>) {
+    const seeded = await seedAgentRun(t);
+    await bindWriteTool(t, seeded.agentId, seeded.userId);
+    if (Object.keys(flags).length > 0) {
+      await t.run(async (ctx) => {
+        await ctx.db.patch(seeded.agentId, flags);
+      });
+    }
+
+    generateMock
+      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValue(textResponse("Note recorded."));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId: seeded.threadId,
+      agentId: seeded.agentId,
+      content: "Record a note about refunds.",
+    });
+
+    const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
+    return { ...seeded, approvals };
+  }
+
+  test("an autonomous agent completes a write with no approval requested", async () => {
+    // The whole point. Before this, no field, flag or template could let an agent
+    // run a write unattended: anything that was not a plain read returned true
+    // unconditionally, so an agent with one write tool could never finish a run.
+    const t = makeTest();
+    const { approvals } = await runWithWriteTool(t, { autonomousToolExecution: true });
+
+    expect(approvals).toHaveLength(0);
+
+    const { run, toolCalls } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+    expect(toolCalls).toHaveLength(1);
+    expect(toolCalls[0].status).toBe("SUCCESS");
+    expect(toolCalls[0].confirmationRequired).toBe(false);
+    // Straight through: request, tool, answer.
+    expect(generateMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("an agent without the field still gates the same write", async () => {
+    // The regression guard. `humanApprovalRequired` is written false on every
+    // agent at creation, so reusing it for autonomy would have read as "every
+    // agent is autonomous" and stripped the brake off the platform in one deploy.
+    // Absent must mean gated.
+    const t = makeTest();
+    const { approvals } = await runWithWriteTool(t, {});
+
+    expect(approvals).toHaveLength(1);
+    expect(approvals[0].status).toBe("PENDING");
+
+    const { run, toolCalls } = await runSteps(t);
+    expect(run?.status).toBe("PENDING_APPROVAL");
+    expect(toolCalls[0].status).toBe("APPROVAL_REQUIRED");
+  });
+
+  test("an agent with the field explicitly false still gates the same write", async () => {
+    const t = makeTest();
+    const { approvals } = await runWithWriteTool(t, { autonomousToolExecution: false });
+
+    expect(approvals).toHaveLength(1);
+    expect(await runSteps(t).then((state) => state.run?.status)).toBe("PENDING_APPROVAL");
+  });
+
+  test("autonomy outranks an agent marked as requiring approval", async () => {
+    // Both flags set. Autonomy wins deliberately: it is the explicit choice made
+    // on the settings screen, where `humanApprovalRequired` arrives from a
+    // template or an applied suggestion.
+    const t = makeTest();
+    const { approvals } = await runWithWriteTool(t, {
+      autonomousToolExecution: true,
+      humanApprovalRequired: true,
+    });
+
+    expect(approvals).toHaveLength(0);
+    expect(await runSteps(t).then((state) => state.run?.status)).toBe("SUCCESS");
+  });
+
+  test("autonomy outranks a read tool that asks for confirmation", async () => {
+    const t = makeTest();
+    const seeded = await seedAgentRun(t);
+    const toolId = await bindKnowledgeSearchTool(t, seeded.agentId, seeded.userId);
+    await t.run(async (ctx) => {
+      await ctx.db.patch(toolId, { confirmationRequired: true });
+      await ctx.db.patch(seeded.agentId, { autonomousToolExecution: true });
+    });
+
+    generateMock
+      .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
+      .mockResolvedValue(textResponse("Refunds take 14 days."));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId: seeded.threadId,
+      agentId: seeded.agentId,
+      content: "What is the refund window?",
+    });
+
+    const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
+    expect(approvals).toHaveLength(0);
+    expect(await runSteps(t).then((state) => state.run?.status)).toBe("SUCCESS");
   });
 });
 

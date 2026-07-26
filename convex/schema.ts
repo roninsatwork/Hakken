@@ -1673,6 +1673,13 @@ export default defineSchema({
     // Deterministic Execution Parameters
     temperature: v.optional(v.number()), // 0.0 to 2.0
     humanApprovalRequired: v.optional(v.boolean()),
+    // Run without a human anywhere in the loop. Absent or false means gated, so
+    // every agent that already exists keeps stopping before a write; only a
+    // deliberate flip on agent settings writes true. A separate field from
+    // `humanApprovalRequired` on purpose: that one is written false on every
+    // agent at creation and only ever tightens the gate, so redefining it would
+    // have stripped the brake off the whole platform in one deploy.
+    autonomousToolExecution: v.optional(v.boolean()),
     inputSchema: v.optional(v.string()), // Stringified JSON Schema
     outputSchema: v.optional(v.string()), // Stringified JSON Schema
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),

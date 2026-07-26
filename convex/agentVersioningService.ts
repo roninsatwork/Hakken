@@ -166,6 +166,10 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
   };
   const policySnapshot = {
     humanApprovalRequired: agent.humanApprovalRequired,
+    // Captured so a rollback restores the intent. A release that silently turned
+    // autonomy on, or off, behind the operator's back would be a worse fault
+    // than the one autonomy was added to fix.
+    autonomousToolExecution: agent.autonomousToolExecution,
     allowInternetAccess: agent.allowInternetAccess,
     triggerType: agent.triggerType,
   };

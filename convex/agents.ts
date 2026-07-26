@@ -942,6 +942,7 @@ export const updateAgent = superAdminMutation({
     storageId: v.optional(v.id("_storage")),
     temperature: v.optional(v.number()),
     humanApprovalRequired: v.optional(v.boolean()),
+    autonomousToolExecution: v.optional(v.boolean()),
     inputSchema: v.optional(v.string()),
     outputSchema: v.optional(v.string()),
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),

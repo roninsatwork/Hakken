@@ -513,7 +513,29 @@ Verified: `verify:env`, `lint:all` (0 errors), `check` (429 files, 3173 tests),
 function has no UI caller until Phase 10 builds one, so there is nothing a preview
 could show.
 
-### Phase 1 — The autonomy switch in the runtime
+### Phase 1 — The autonomy switch in the runtime — **DONE**
+
+**The plan was incomplete, and the tests caught it.** Setting
+`getToolConfirmationRequired` to return `false` was not enough to let an
+autonomous agent run a write. `canExecuteTool` calls
+`normalizeToolExecutionPolicy` (`convex/aiToolExecutionService.ts:246-257`), which
+**recomputes** `confirmationRequired` from the side-effect level and discards the
+value passed in — forcing `true` for anything that is not a plain read. So the
+runtime's computed "no approval needed" was silently overruled and an autonomous
+agent still parked on every write.
+
+Found because the first version of the write-tool test asserted zero approvals and
+got zero for the wrong reason: the fixture named its tool by display name, but
+`buildProviderToolDeclaration` (`:198-204`) derives the function name from
+`handlerMapping`, so the call resolved to no metadata and skipped the gate
+entirely. Fixing the fixture surfaced the real fault.
+
+The fix: `canExecuteTool` takes an explicit `autonomous` flag, checked **at the
+confirmation branches only** — after the role and tenant checks, so autonomy
+removes the human and not the permissions. `normalizeToolExecutionPolicy` is
+untouched: "a non-read tool needs confirmation" is a true statement about the
+tool, and autonomy is a property of the agent, so it could not be expressed by
+passing a different `confirmationRequired`.
 
 1. `convex/schema.ts`, agents table (beside `humanApprovalRequired` at `:1675`):
    add `autonomousToolExecution: v.optional(v.boolean())`.
@@ -533,16 +555,37 @@ could show.
    `autonomousToolExecution`. `convex/agentMemoryCandidates.ts:279` describes the
    change to the reader and needs the same treatment.
 
-Tests in `convex/agentRuntime.test.ts`, extending the existing
-`describe("human-in-the-loop approval")` block at `:1145`:
+7. `convex/aiToolExecutionService.ts` — the `autonomous` flag described above, and
+   `convex/agentRuntime.ts` passes `agent.autonomousToolExecution === true` at the
+   `canExecuteTool` call site.
 
-- **an agent with `autonomousToolExecution: true` runs a `WRITE` tool with no
-  approval row created and the run reaching a terminal state** — the new
-  behaviour
-- **an agent with the field absent still gates that same `WRITE` tool** — the
-  regression guard for the polarity trap, and the one to prove by reverting
+Tests added in a new `describe("autonomous tool execution")` block in
+`convex/agentRuntime.test.ts`, plus a case in `convex/aiToolExecutionService.test.ts`:
+
+- **an autonomous agent completes a `WRITE` with no approval row and the run
+  reaching `SUCCESS`** — the new behaviour
+- **an agent with the field absent still gates that same `WRITE`** — the polarity
+  guard
+- an agent with the field explicitly `false` still gates it
 - autonomy beats `humanApprovalRequired: true` on the same agent
 - autonomy beats a `READ` tool carrying `confirmationRequired: true`
+- at the service level: autonomy waives confirmation for both an admin in their own
+  tenant and a super admin, but **a tenant boundary, a role requirement and an
+  unauthenticated caller are all still refused**
+
+Guards proved by reverting three separate ways: inverting the polarity at the
+`canExecuteTool` call site fails the absent-field test; removing the `autonomous`
+argument fails both autonomy tests; removing the service-level waiver fails those
+two plus the service unit test.
+
+Worth recording: inverting `getToolConfirmationRequired` itself does **not** fail
+the absent-field test, because for non-read tools the load-bearing gate is
+`normalizeToolExecutionPolicy` inside `canExecuteTool`, not the metadata. The
+metadata value matters for reads. Two mechanisms, and the tests now pin both.
+
+Verified: `verify:env`, `lint:all` (0 errors), `check` (429 files, 3179 tests),
+`build`, `git diff --check` all clean. Not browser-verified — the toggle that makes
+this reachable is Phase 5, so there is nothing on screen yet.
 
 ### Phase 2 — Queue the whole batch, resume once
 

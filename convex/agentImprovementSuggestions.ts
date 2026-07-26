@@ -526,8 +526,13 @@ async function applySuggestion(ctx: Parameters<typeof ensureAgentVersionSnapshot
       updatedAt: args.now,
     });
   } else if (args.suggestion.type === "APPROVAL_POLICY_CHANGE") {
+    // Autonomy outranks the approval flag in the runtime, so setting the flag on
+    // an autonomous agent would apply cleanly, report success and change nothing.
+    // A suggestion whose whole purpose is to restore human review has to turn
+    // autonomy off as well.
     await ctx.db.patch(agent._id, {
       humanApprovalRequired: true,
+      autonomousToolExecution: false,
       updatedAt: args.now,
     });
   } else {

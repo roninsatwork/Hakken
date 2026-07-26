@@ -256,6 +256,20 @@ export function normalizeToolExecutionPolicy(tool: ToolExecutionPolicyInput): No
   };
 }
 
+/**
+ * `autonomous` waives the confirmation requirement, and nothing else.
+ *
+ * `normalizeToolExecutionPolicy` forces `confirmationRequired` to true for
+ * anything that is not a plain read, deliberately, because that is a true
+ * statement about the tool. Autonomy is a property of the *agent*, so it cannot
+ * be expressed by passing a different `confirmationRequired` — the normalizer
+ * would overrule it and an agent set to run unattended would still park on
+ * every write.
+ *
+ * It is checked at the confirmation branches rather than at the top on purpose:
+ * an autonomous agent still cannot exceed its role or reach across a tenant
+ * boundary. Autonomy removes the human, not the permissions.
+ */
 export function canExecuteTool(args: {
   requiredRole: ToolAccessRole;
   userRole?: ToolExecutorRole;
@@ -264,6 +278,7 @@ export function canExecuteTool(args: {
   sideEffectLevel?: ToolSideEffectLevel;
   confirmationRequired?: boolean;
   confirmationGranted?: boolean;
+  autonomous?: boolean;
 }): ToolAccessDecision {
   const policy = normalizeToolExecutionPolicy({
     requiredRole: args.requiredRole,
@@ -283,8 +298,12 @@ export function canExecuteTool(args: {
     return { allowed: false, reason: "Tool execution requires super-admin privileges." };
   }
 
+  const needsConfirmation = policy.confirmationRequired
+    && !args.confirmationGranted
+    && args.autonomous !== true;
+
   if (args.userRole === "SUPER_ADMIN") {
-    if (policy.confirmationRequired && !args.confirmationGranted) {
+    if (needsConfirmation) {
       return { allowed: false, reason: "Tool execution requires explicit user confirmation." };
     }
 
@@ -295,7 +314,7 @@ export function canExecuteTool(args: {
     return { allowed: false, reason: "Tool execution is not allowed across tenant boundaries." };
   }
 
-  if (policy.confirmationRequired && !args.confirmationGranted) {
+  if (needsConfirmation) {
     return { allowed: false, reason: "Tool execution requires explicit user confirmation." };
   }
 

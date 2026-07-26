@@ -83,20 +83,33 @@ type RuntimeToolMetadata = {
 /**
  * Whether a tool call has to be approved by a person before it runs.
  *
- * Anything that is not a plain read requires approval regardless of how the tool
- * is configured. On top of that, an agent may be marked as requiring human
- * approval outright, which puts every one of its calls — reads included —
- * through the same gate.
+ * Precedence, most decisive first:
  *
- * That agent-level flag existed on the record and in the admin UI but was never
- * read by the runtime, so switching it on changed nothing. A control that
- * appears to restrict an agent and does not is worse than no control.
+ *  1. An autonomous agent never asks. Off means off — writes, sends, external
+ *     calls and deletions all run unattended.
+ *  2. An agent marked as requiring human approval asks for everything, reads
+ *     included.
+ *  3. Otherwise anything that is not a plain read asks, and a read asks only if
+ *     its tool was configured to.
+ *
+ * Autonomy deliberately outranks the other two rather than deferring to them. A
+ * half-autonomous agent that still parks on a delete recreates the fault this
+ * whole area exists to fix: someone is told the agent runs unattended, it stops
+ * silently, and nobody is watching the queue. Safety for an autonomous agent
+ * lives in which tools it was given and what it is allowed to spend, both of
+ * which a person can see.
+ *
+ * The `humanApprovalRequired` flag was stored on the record and offered in the
+ * admin UI but never read here, so switching it on changed nothing. A control
+ * that appears to restrict an agent and does not is worse than no control.
  */
 function getToolConfirmationRequired(
     sideEffectLevel: ToolSideEffectLevel,
     configured?: boolean,
     agentRequiresApproval?: boolean,
+    agentRunsAutonomously?: boolean,
 ) {
+    if (agentRunsAutonomously === true) return false;
     if (agentRequiresApproval === true) return true;
     return sideEffectLevel === "READ" ? (configured ?? false) : true;
 }
@@ -291,6 +304,7 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
             sideEffectLevel,
             toolDef.confirmationRequired,
             agent.humanApprovalRequired,
+            agent.autonomousToolExecution,
           ),
         });
       } catch (error) {
@@ -1274,6 +1288,11 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     targetCompanyId: companyId,
                     sideEffectLevel: toolMetadata?.sideEffectLevel,
                     confirmationRequired: toolMetadata?.confirmationRequired,
+                    // Passed as well as being folded into the metadata above,
+                    // because canExecuteTool re-derives the confirmation
+                    // requirement from the side-effect level and would otherwise
+                    // overrule it — parking an autonomous agent on every write.
+                    autonomous: execution.agent.autonomousToolExecution === true,
                 });
 
                 if (
