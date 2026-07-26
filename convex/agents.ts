@@ -3,7 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import { adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { SYSTEM_FAILSAFE_MODEL_ID, getDefaultModelId } from "./aiModelService";
 import {
   buildAgentUpdatePatch,
@@ -750,9 +750,26 @@ export const get = superAdminQuery({
   },
 });
 
-export const getAgentReadiness = superAdminQuery({
+// Readiness was a superAdminQuery while the evals screen that consumes it is
+// reachable by a company admin, so for them it threw and two metric tiles, the
+// skill-coverage panel, both blocking banners and the release-policy strip sat on
+// a loading state permanently. A large part of that screen had never rendered for
+// the people it is built for. A company admin may read readiness for an agent
+// belonging to their company, matching how the fixtures on the same screen are
+// already scoped.
+export const getAgentReadiness = adminQuery({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
+    const { user } = ctx;
+    const agent = await ctx.db.get(args.id);
+    if (!agent) throw new Error("Agent not found");
+
+    if (user.role !== "SUPER_ADMIN") {
+      if (!user.companyId || agent.companyId !== user.companyId) {
+        throw new Error("Unauthorized");
+      }
+    }
+
     return await buildAgentReadiness(ctx, args.id);
   },
 });

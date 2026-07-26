@@ -130,6 +130,36 @@ describe("Agent Eval Fixtures", () => {
       "UPDATE_AGENT_EVAL_FIXTURE",
     ]);
 
+    // The edit form only renders `handlerMapping`, so an edit used to rebuild the
+    // tool plan from bare strings and discard the richer detail `createFromRun`
+    // records against each mapping. Opening a run-derived fixture and pressing
+    // Save degraded it, silently. Unchanged mappings keep what they had.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(result.fixtureId, {
+        expectedToolPlanJson: JSON.stringify([{
+          handlerMapping: "company.overview.update",
+          normalizedToolName: "company_overview_update",
+          sideEffectLevel: "WRITE",
+          confirmationRequired: true,
+          status: "APPROVAL_REQUIRED",
+        }]),
+      });
+    });
+    await adminClient.mutation(api.agentEvalFixtures.updateFixture, {
+      fixtureId: result.fixtureId,
+      objective: "Block unsafe Acme updates, revised.",
+      expectedToolMappings: ["company.overview.update"],
+    });
+    expect(JSON.parse(
+      (await t.run(async (ctx) => await ctx.db.get(result.fixtureId)))?.expectedToolPlanJson || "[]"
+    )).toEqual([{
+      handlerMapping: "company.overview.update",
+      normalizedToolName: "company_overview_update",
+      sideEffectLevel: "WRITE",
+      confirmationRequired: true,
+      status: "APPROVAL_REQUIRED",
+    }]);
+
     await expect(adminClient.mutation(api.agentEvalFixtures.archiveFixture, {
       fixtureId: result.fixtureId,
     })).resolves.toBe(result.fixtureId);
@@ -142,6 +172,7 @@ describe("Agent Eval Fixtures", () => {
     expect(archivedState.fixture?.status).toBe("ARCHIVED");
     expect(archivedState.auditLogs.map((log) => log.actionType)).toEqual([
       "CREATE_MANUAL_AGENT_EVAL_FIXTURE",
+      "UPDATE_AGENT_EVAL_FIXTURE",
       "UPDATE_AGENT_EVAL_FIXTURE",
       "ARCHIVE_AGENT_EVAL_FIXTURE",
     ]);
@@ -488,10 +519,14 @@ describe("Agent Eval Fixtures", () => {
       missingToolMappings: ["company.overview.update"],
     }));
 
+    // A contract run calls no model, so its success is a configuration result and
+    // is reported as `setupPassed`. It used to land in `passed`, which is the
+    // number the activation gate refuses to accept as evidence.
     const smokeHistory = await adminAClient.query(api.agentEvalFixtures.getSmokeEvalHistory, { agentId, limit: 5 });
     expect(smokeHistory.totals).toEqual({
       total: 2,
-      passed: 1,
+      passed: 0,
+      setupPassed: 1,
       failed: 1,
       active: 0,
       modelGraded: 0,

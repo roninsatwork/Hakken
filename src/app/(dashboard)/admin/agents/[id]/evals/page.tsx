@@ -603,9 +603,26 @@ export default function AgentEvalsPage() {
         <MetricTile label="Active fixtures" value={fixtures ? fixtures.length.toLocaleString() : "..."} icon={ClipboardCheck} />
         <MetricTile label="Critical" value={releaseGatePolicy ? `${releaseGatePolicy.passedCriticalFixtureCount}/${releaseGatePolicy.criticalFixtureCount}` : "..."} icon={ShieldCheck} />
         <MetricTile label="Eval runs" value={evalHistory ? evalHistory.totals.total.toLocaleString() : "..."} icon={Timer} />
-        <MetricTile label="Passed" value={evalHistory ? evalHistory.totals.passed.toLocaleString() : "..."} icon={CheckCircle2} />
-        <MetricTile label="Failed" value={evalHistory ? evalHistory.totals.failed.toLocaleString() : "..."} icon={XCircle} />
-        <MetricTile label="Release gate" value={!readiness?.latestSmokeEvalRun ? "Not run" : latestEvalPassed ? "Passing" : "Blocked"} icon={ShieldCheck} />
+        {/* "Passed" counted configuration checks, which call no model. It now
+            counts graded passes only, and setup results are reported as what they
+            are so the two are never added together. */}
+        <MetricTile label="Graded passes" value={evalHistory ? evalHistory.totals.passed.toLocaleString() : "..."} icon={CheckCircle2} />
+        <MetricTile label="Setup only" value={evalHistory ? (evalHistory.totals.setupPassed ?? 0).toLocaleString() : "..."} icon={XCircle} />
+        {/* This read the most recent run of any fixture in any mode, so it could
+            say "Passing" while the banner directly below said the gate was
+            blocking activation. It now reads the gate policy — the same source the
+            banner and the activation check use. */}
+        <MetricTile
+          label="Release gate"
+          value={!releaseGatePolicy
+            ? "..."
+            : releaseGatePolicy.criticalFixtureCount === 0
+              ? "Not set"
+              : releaseGatePolicy.passedCriticalFixtureCount >= releaseGatePolicy.criticalFixtureCount
+                ? "Passing"
+                : "Blocked"}
+          icon={ShieldCheck}
+        />
       </div>
 
       {skillCoverageRows.length > 0 && (
@@ -1080,12 +1097,24 @@ export default function AgentEvalsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(entry.status)}`}>
-                          {entry.status.replace("_", " ")}
+                        {/* A contract run checks configuration and calls no model,
+                            so a green SUCCESS pill beside it read as proof the
+                            agent works. Setup results get their own neutral tone
+                            and say what they are. */}
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${
+                          entry.gradingMode === "MODEL_GRADED"
+                            ? getStatusTone(entry.status)
+                            : "border-border-dim bg-white/[0.03] text-secondary"
+                        }`}>
+                          {entry.gradingMode === "MODEL_GRADED"
+                            ? entry.status.replace("_", " ")
+                            : `Setup ${entry.status === "SUCCESS" ? "ok" : entry.status.replace("_", " ").toLowerCase()}`}
                         </span>
-                        <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                          {entry.gradingMode === "MODEL_GRADED" ? "Model graded" : "Contract"}
-                        </span>
+                        {entry.gradingMode !== "MODEL_GRADED" && (
+                          <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-300">
+                            Not tested
+                          </span>
+                        )}
                       </div>
                       <p className="text-[13px] text-foreground mt-2 leading-relaxed line-clamp-2">
                         {entry.fixture?.objective || entry.objective}

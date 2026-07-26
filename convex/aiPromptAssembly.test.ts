@@ -204,8 +204,12 @@ describe("assistant prompt assembly", () => {
       loadChunk: async (id) => ({ text: `${id}:${"x".repeat(1000 - id.length - 1)}` }),
     });
 
-    expect(selected.some((text) => text.startsWith("thread-upload:"))).toBe(true);
-    expect(selected.join("").length).toBeLessThanOrEqual(32000);
+    expect(selected.chunkTexts.some((text) => text.startsWith("thread-upload:"))).toBe(true);
+    expect(selected.chunkTexts.join("").length).toBeLessThanOrEqual(32000);
+    // The ids come back alongside the texts and in the same order, so a caller can
+    // record which documents reached the model.
+    expect(selected.chunkIds).toHaveLength(selected.chunkTexts.length);
+    expect(selected.chunkIds).toContain("thread-upload");
   });
 
   test("skips agent-scoped chunks and never double-counts the reserved pass", async () => {
@@ -223,7 +227,8 @@ describe("assistant prompt assembly", () => {
           : { text: `${id} text` },
     });
 
-    expect(selected).toEqual(["thread-a text"]);
+    expect(selected.chunkTexts).toEqual(["thread-a text"]);
+    expect(selected.chunkIds).toEqual(["thread-a"]);
   });
 
   test("respects the overall budget even with nothing to reserve", async () => {
@@ -241,7 +246,8 @@ describe("assistant prompt assembly", () => {
       loadChunk: async () => ({ text: "12345678" }),
     });
 
-    expect(selected).toEqual(["12345678"]);
+    expect(selected.chunkTexts).toEqual(["12345678"]);
+    expect(selected.chunkIds).toEqual(["a"]);
   });
 
   test("equal scores fall back to thread, then company, then global", () => {

@@ -58,15 +58,30 @@ describe("Company AI readiness", () => {
       surfaceType: "COMPANY_CHAT",
       isEnabled: true,
     });
-    const evalCaseId = await adminAClient.mutation(api.companyEvals.createCase, {
+    // Both must-pass cases carry a check that can actually fail, and one of them
+    // covers the widget, because the widget gate is only proven by a widget case.
+    // The earlier version of this test reached READY with a single case whose only
+    // check compared a field to itself, and with no widget case at all — it was
+    // asserting the false all-clear rather than guarding against it.
+    const chatCaseId = await adminAClient.mutation(api.companyEvals.createCase, {
       companyId: companyAId,
-      name: "Proposal routing uses chat model",
-      category: "MODEL_ROUTING",
+      name: "Proposal intro does not promise a discount",
+      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "Draft a proposal intro.",
-      expectedBehavior: "Uses the chat model route.",
-      expectedModelUseCase: "chat",
+      expectedBehavior: "Mention implementation support, never promise a discount.",
+      forbiddenClaimsJson: JSON.stringify(["guaranteed discount"]),
+    });
+    const widgetCaseId = await adminAClient.mutation(api.companyEvals.createCase, {
+      companyId: companyAId,
+      name: "Widget does not invent pricing",
+      category: "NO_HALLUCINATION",
+      severity: "BLOCKER",
+      targetSurface: "WIDGET",
+      prompt: "What does this cost?",
+      expectedBehavior: "Say pricing is not published and offer a handover.",
+      forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
     });
 
     await expect(
@@ -78,10 +93,21 @@ describe("Company AI readiness", () => {
     expect(driftedSummary.drift.unresolvedCount).toBeGreaterThanOrEqual(4);
     expect(driftedSummary.areas).toContainEqual(expect.objectContaining({ key: "drift", status: "WARN" }));
 
-    const passingRun = await adminAClient.mutation(api.companyEvals.runCase, {
-      evalCaseId,
+    // One passing must-pass case is not company-wide evidence, so the backlog
+    // stays put until the other one passes too.
+    const firstRun = await adminAClient.mutation(api.companyEvals.runCase, {
+      evalCaseId: chatCaseId,
       answer: "Here is a proposal intro using approved company context.",
-      resolvedUseCase: "chat",
+    });
+    expect(firstRun).toMatchObject({ status: "PASSED" });
+    expect(firstRun.resolvedDriftCount).toBe(0);
+    expect(
+      (await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId })).state
+    ).toBe("DRIFTED");
+
+    const passingRun = await adminAClient.mutation(api.companyEvals.runCase, {
+      evalCaseId: widgetCaseId,
+      answer: "Pricing is not published here, but I can put you in touch with the team.",
     });
     expect(passingRun).toMatchObject({ status: "PASSED" });
     expect(passingRun.resolvedDriftCount).toBeGreaterThanOrEqual(4);

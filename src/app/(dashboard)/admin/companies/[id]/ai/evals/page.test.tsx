@@ -47,11 +47,15 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
         return {
           totalCases: 2,
           blockerCases: 0,
+          latestRuns: 2,
           passedRuns: 1,
           failedRuns: 1,
           passRate: 0.5,
           failedOrNotRunCases: 1,
         };
+      }
+      if (functionName === "companyEvals:getBatchEstimate") {
+        return { selectedCount: 2, providerCallCount: 4, isCapped: false, cap: 100 };
       }
       if (functionName === "companyEvals:getLatestRunsForCompany") return [];
       if (functionName === "companyEvals:getRunsForCase") return [];
@@ -80,17 +84,75 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
 
     expect(header).not.toBeNull();
     expect(screen.queryByRole("button", { name: /AI section/i })).not.toBeInTheDocument();
-    expect(within(header as HTMLElement).queryByRole("button", { name: "Run all" })).not.toBeInTheDocument();
-    expect(within(header as HTMLElement).queryByRole("button", { name: "Run failed/not run" })).not.toBeInTheDocument();
     expect(within(header as HTMLElement).queryByRole("link", { name: "New eval" })).not.toBeInTheDocument();
 
     const activeCasesHeading = screen.getByRole("heading", { level: 2, name: "Active Eval Cases" });
     const activeCasesSection = activeCasesHeading.closest("section");
 
     expect(activeCasesSection).not.toBeNull();
-    expect(within(activeCasesSection as HTMLElement).getByRole("button", { name: "Run failed/not run" })).toBeInTheDocument();
-    expect(within(activeCasesSection as HTMLElement).getByRole("button", { name: "Run all" })).toBeInTheDocument();
     expect(within(activeCasesSection as HTMLElement).getByRole("link", { name: "New eval" })).toBeInTheDocument();
-    expect(activeCasesHeading.compareDocumentPosition(screen.getByRole("button", { name: "Run all" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // Running is real provider work now: the assistant answers, then a different
+  // model marks it. The batch button says how many it will run rather than
+  // offering an unbounded "Run all", and the old fabricated batch is gone.
+  it("names how many evals the batch will run, and says what running does", () => {
+    renderWithProviders(<CompanyAiEvalsPage />);
+
+    expect(screen.queryByRole("button", { name: "Run all" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run failed/not run" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Run 2 unproven/ })).toBeInTheDocument();
+    expect(screen.getByText(/asks your company AI the question, then has a second model mark the answer/i)).toBeInTheDocument();
+  });
+
+  // Nothing to run must not read as an invitation to run nothing.
+  it("disables the batch button when every eval already passes", () => {
+    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
+      const functionName = getFunctionName(queryFn as never);
+      if (functionName === "companyEvals:getSummary") {
+        return { totalCases: 2, blockerCases: 2, latestRuns: 2, passedRuns: 2, failedRuns: 0, passRate: 1, failedOrNotRunCases: 0 };
+      }
+      if (functionName === "companyEvals:getBatchEstimate") {
+        return { selectedCount: 0, providerCallCount: 0, isCapped: false, cap: 100 };
+      }
+      if (functionName === "companyEvals:getLatestRunsForCompany") return [];
+      if (functionName === "companyEvals:getRunsForCase") return [];
+      return undefined;
+    });
+
+    renderWithProviders(<CompanyAiEvalsPage />);
+
+    expect(screen.getByRole("button", { name: /All evals passing/ })).toBeDisabled();
+  });
+
+  // A pass rate of 0% and a pass rate of "nothing has run" are the same number
+  // and opposite facts. An empty account used to read as total failure.
+  it("shows no pass rate until something has run", () => {
+    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
+      const functionName = getFunctionName(queryFn as never);
+      if (functionName === "companyEvals:getSummary") {
+        return {
+          totalCases: 2,
+          blockerCases: 0,
+          latestRuns: 0,
+          passedRuns: 0,
+          failedRuns: 0,
+          passRate: 0,
+          failedOrNotRunCases: 2,
+        };
+      }
+      if (functionName === "companyEvals:getBatchEstimate") {
+        return { selectedCount: 2, providerCallCount: 4, isCapped: false, cap: 100 };
+      }
+      if (functionName === "companyEvals:getLatestRunsForCompany") return [];
+      if (functionName === "companyEvals:getRunsForCase") return [];
+      return undefined;
+    });
+
+    renderWithProviders(<CompanyAiEvalsPage />);
+
+    const passRateLabel = screen.getByText("Pass rate");
+    expect(passRateLabel.parentElement?.textContent).toContain("—");
+    expect(passRateLabel.parentElement?.textContent).not.toContain("0%");
   });
 });

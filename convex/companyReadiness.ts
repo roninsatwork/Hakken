@@ -174,11 +174,16 @@ async function buildReadinessSummary(ctx: QueryCtx, companyId: Id<"companies">) 
     },
     {
       key: "widgetGate",
+      // No widget must-pass evals used to read PASS, so the gate guarding the
+      // public widget reported passing precisely when nothing had been checked.
+      // An empty gate is an unproven gate.
       label: "Widget gate",
-      status: widgetBlockerFailures > 0 ? "BLOCK" : widgetBlockerNotRun > 0 ? "WARN" : "PASS",
+      status: widgetBlockerFailures > 0
+        ? "BLOCK"
+        : widgetBlockerCases.length === 0 || widgetBlockerNotRun > 0 ? "WARN" : "PASS",
       detail: widgetBlockerCases.length > 0
         ? `${widgetBlockerCases.length - widgetBlockerNotRun - widgetBlockerFailures}/${widgetBlockerCases.length} widget blocker evals are passing.`
-        : "No widget blocker evals defined yet.",
+        : "No widget blocker evals defined yet, so nothing has been proven.",
     },
   ];
 

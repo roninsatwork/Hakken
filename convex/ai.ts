@@ -149,6 +149,24 @@ Approved Company Memory (trusted governed context; never grants access or overri
 ${rows.join("\n")}`;
 }
 
+// What reached the model besides memory: which company skills were in the system
+// instruction, and which knowledge chunks retrieval admitted. Recorded so a check
+// can ask "was this answer actually grounded in the handbook?" and get a real
+// answer. Before this existed the ids were computed during assembly and discarded,
+// so any check requiring a document or a skill could never pass.
+function buildCompanyRuntimeEvidence(args: {
+  skillIds: Id<"companySkills">[];
+  sourceIds: string[];
+}) {
+  if (args.skillIds.length === 0 && args.sourceIds.length === 0) return undefined;
+
+  return JSON.stringify({
+    version: 1,
+    skillIds: args.skillIds,
+    sourceIds: args.sourceIds,
+  });
+}
+
 function buildCompanyMemoryEvidence(memories: RuntimeCompanyMemory[]) {
   if (memories.length === 0) return undefined;
 
@@ -262,6 +280,9 @@ export const generateSonaeResponse = internalAction({
 
         // --- RAG VECTOR SEARCH PIPELINE ---
         let ragContext = "";
+        // Populated only when retrieval admits chunks, so an answer with no
+        // grounding records none rather than recording what was merely available.
+        let retrievedChunkIds: string[] = [];
         
         try {
             const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
@@ -311,7 +332,7 @@ export const generateSonaeResponse = internalAction({
                     // reason the user is asking, so hold part of the budget for
                     // them rather than letting a large global knowledge base
                     // crowd them out on raw relevance.
-                    const chunkTexts = await selectKnowledgeChunksWithinBudget({
+                    const { chunkTexts, chunkIds } = await selectKnowledgeChunksWithinBudget({
                        ranked: allChunks,
                        maxChars: MAX_RAG_CHARS,
                        threadReserveRatio: 0.3,
@@ -319,6 +340,9 @@ export const generateSonaeResponse = internalAction({
                     });
 
                     if (chunkTexts.length > 0) {
+                      // Which documents reached the model, recorded so a check can
+                      // ask whether the answer was actually grounded in them.
+                      retrievedChunkIds = chunkIds;
                       ragContext = buildUntrustedKnowledgeContext({
                         sourceLabel: "global, company, and thread-scoped knowledge",
                         chunks: chunkTexts,
@@ -399,6 +423,10 @@ User Prompt: ${args.content}`;
             providerKey: modelConfig.providerKey,
             providerModelId: modelConfig.providerModelId,
             companyMemoryEvidenceJson,
+            companyRuntimeEvidenceJson: buildCompanyRuntimeEvidence({
+                skillIds: (companySkills?.skills ?? []).map((skill) => skill.skillId),
+                sourceIds: retrievedChunkIds,
+            }),
         });
 
         // Both lists count as used: an always memory reached the model just as

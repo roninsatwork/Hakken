@@ -204,14 +204,20 @@ export function rankAssistantKnowledgeMatches<T extends { _score: number }>(args
  * scores higher across the board.
  *
  * `loadChunk` is injected so the caller keeps ownership of the database read.
+ *
+ * Returns the admitted ids alongside their texts, in the same order. The ids were
+ * previously computed here and thrown away, which meant nothing downstream could
+ * say which documents reached the model — so a check asking "did it use the
+ * handbook?" had nothing to compare against and could never pass.
  */
 export async function selectKnowledgeChunksWithinBudget<T extends { _id: string }>(args: {
   ranked: RankedKnowledgeMatch<T>[];
   maxChars: number;
   threadReserveRatio: number;
   loadChunk: (id: T["_id"]) => Promise<{ text: string; agentId?: unknown } | null>;
-}): Promise<string[]> {
+}): Promise<{ chunkTexts: string[]; chunkIds: string[] }> {
   const chunkTexts: string[] = [];
+  const chunkIds: string[] = [];
   const taken = new Set<string>();
   let used = 0;
 
@@ -229,6 +235,7 @@ export async function selectKnowledgeChunksWithinBudget<T extends { _id: string 
       if (used + chunk.text.length > budget) break;
 
       taken.add(entry.match._id);
+      chunkIds.push(entry.match._id);
       chunkTexts.push(chunk.text);
       used += chunk.text.length;
     }
@@ -240,7 +247,7 @@ export async function selectKnowledgeChunksWithinBudget<T extends { _id: string 
   );
   await collect(args.ranked, args.maxChars);
 
-  return chunkTexts;
+  return { chunkTexts, chunkIds };
 }
 
 function sanitizeHistoryRole(role: string) {

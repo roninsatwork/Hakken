@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useAction, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -10,11 +10,10 @@ import {
   CheckCircle2,
   ClipboardCheck,
   FlaskConical,
-  Info,
   Loader2,
+  PencilLine,
   Play,
   Plus,
-  RotateCcw,
   XCircle,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -28,7 +27,6 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 type CompanyEvalCase = Doc<"companyEvalCases">;
 type CompanyEvalRun = Doc<"companyEvalRuns">;
 type EvalSeverity = CompanyEvalCase["severity"];
-type BatchMode = "ALL" | "FAILED_OR_NOT_RUN";
 
 type DeterministicResult = {
   label: string;
@@ -53,6 +51,16 @@ function formatPercent(value: number | undefined) {
   return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
 }
 
+// A pass rate of 0% and a pass rate of "nothing has run" look identical as a
+// number and mean opposite things. An empty account read as total failure.
+function formatPassRate(summary: { latestRuns: number; passRate: number } | undefined) {
+  if (summary === undefined) return "...";
+  // Falsy rather than `=== 0`, so an unknown run count reads as "no data" too.
+  // Guessing in the other direction prints a rate nothing supports.
+  if (!summary.latestRuns) return "—";
+  return formatPercent(summary.passRate);
+}
+
 function getLatestRun(runs: CompanyEvalRun[] | undefined, evalCaseId: Id<"companyEvalCases">) {
   return runs?.find((run) => run.evalCaseId === evalCaseId);
 }
@@ -74,7 +82,9 @@ export default function CompanyAiEvalsPage() {
   const summary = useQuery(api.companyEvals.getSummary, { companyId });
   const latestRuns = useQuery(api.companyEvals.getLatestRunsForCompany, { companyId });
   const archiveCase = useMutation(api.companyEvals.archiveCase);
-  const runBatch = useMutation(api.companyEvals.runBatch);
+  const runCheck = useAction(api.companyEvalRuns.runCheck);
+  const runBatch = useAction(api.companyEvalRuns.runBatch);
+  const batchEstimate = useQuery(api.companyEvals.getBatchEstimate, { companyId, mode: "FAILED_OR_NOT_RUN" });
   const cases = usePaginatedQuery(
     api.companyEvals.getCasesForCompany,
     { companyId, status: "ACTIVE" },
@@ -82,13 +92,38 @@ export default function CompanyAiEvalsPage() {
   );
 
   const [archiveTarget, setArchiveTarget] = useState<CompanyEvalCase | null>(null);
-  const [batchSummary, setBatchSummary] = useState("");
   const [expandedCaseId, setExpandedCaseId] = useState<Id<"companyEvalCases"> | null>(null);
+  const [confirmBatch, setConfirmBatch] = useState(false);
+  const [batchNotice, setBatchNotice] = useState("");
 
-  // The batch banner sits on the page permanently, so archiving keeps its own
-  // runner — otherwise a failed archive would surface in the batch banner.
-  const batchAction = useAdminAction({ scope: "admin-company-evals-batch" });
   const archiveAction = useAdminAction({ scope: "admin-company-evals-archive" });
+  // Its own runner, so one check failing does not disable every other row's button
+  // and does not surface in the batch banner.
+  const runAction = useAdminAction({ scope: "admin-company-evals-run" });
+  const batchAction = useAdminAction({ scope: "admin-company-evals-batch" });
+
+  const handleRunCheck = async (evalCaseId: Id<"companyEvalCases">) => {
+    setBatchNotice("");
+    await runAction.run(() => runCheck({ evalCaseId }), {
+      key: `run:${evalCaseId}`,
+      fallbackMessage: "The eval could not be run.",
+    });
+  };
+
+  const handleRunBatch = async () => {
+    setBatchNotice("");
+    const outcome = await batchAction.run(() => runBatch({ companyId, mode: "FAILED_OR_NOT_RUN" }), {
+      fallbackMessage: "The evals could not be queued.",
+      suppressErrorToast: true,
+    });
+    setConfirmBatch(false);
+    if (!outcome.ok) return;
+    setBatchNotice(
+      outcome.data.scheduled === 0
+        ? "Nothing needed running. Every eval already has a passing result."
+        : `Running ${outcome.data.scheduled} eval${outcome.data.scheduled === 1 ? "" : "s"}. Results appear here as each one finishes.`
+    );
+  };
 
   const activeRuns = useQuery(
     api.companyEvals.getRunsForCase,
@@ -104,25 +139,6 @@ export default function CompanyAiEvalsPage() {
     if (expandedCaseId === archiveTarget._id) setExpandedCaseId(null);
     setArchiveTarget(null);
   };
-
-  const handleRunBatch = async (mode: BatchMode) => {
-    setBatchSummary("");
-    const outcome = await batchAction.run(() => runBatch({ companyId, mode }), {
-      key: `batch:${mode}`,
-      fallbackMessage: "Eval batch could not be run.",
-      suppressErrorToast: true,
-    });
-    if (!outcome.ok) return;
-    const result = outcome.data;
-    setBatchSummary(
-      result.selected === 0
-        ? "No evals needed a batch run. Everything active already has passing evidence."
-        : `Ran ${result.selected} eval${result.selected === 1 ? "" : "s"}: ${result.passed} passed, ${result.failed} failed, ${result.needsReview} need review.`
-    );
-  };
-
-  const isBatchRunning = batchAction.isBusy();
-  const hasActiveCases = (summary?.totalCases ?? 0) > 0;
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
@@ -143,7 +159,7 @@ export default function CompanyAiEvalsPage() {
             { label: "Blockers", value: summary?.blockerCases ?? 0 },
             { label: "Passed", value: summary?.passedRuns ?? 0 },
             { label: "Failed", value: summary?.failedRuns ?? 0 },
-            { label: "Pass rate", value: formatPercent(summary?.passRate) },
+            { label: "Pass rate", value: formatPassRate(summary) },
           ].map((metric) => (
             <div key={metric.label} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-4">
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted">{metric.label}</div>
@@ -155,25 +171,13 @@ export default function CompanyAiEvalsPage() {
         </div>
       </header>
 
-      <section className="rounded-[8px] border border-blue-500/20 bg-blue-500/10 p-4">
-        <div className="flex items-start gap-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
-          <div className="text-[12px] leading-relaxed text-blue-100">
-            <h2 className="text-[13px] font-semibold text-blue-50">How eval runs work</h2>
-            <p className="mt-1">
-              Batch runs record deterministic proof for each selected eval. They check configured requirements such as forbidden claims, required sources, required memories, required skills, and expected model use case. Cases with no configured checks are marked as needing review.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {(batchSummary || batchAction.error) && (
+      {(batchNotice || batchAction.error) && (
         <section className={`rounded-[8px] border px-4 py-3 text-[13px] ${
           batchAction.error ? "border-red-500/20 bg-red-500/10 text-red-200" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
         }`}>
           <div className="flex items-start gap-3">
             {batchAction.error ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
-            <p>{batchAction.error || batchSummary}</p>
+            <p>{batchAction.error || batchNotice}</p>
           </div>
         </section>
       )}
@@ -182,7 +186,7 @@ export default function CompanyAiEvalsPage() {
         <div className="flex flex-col gap-3 border-b border-border-dim px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <h2 className="text-[14px] font-semibold text-foreground">Active Eval Cases</h2>
-            <p className="mt-0.5 text-[12px] text-secondary">Run one eval for manual evidence, or run a batch to refresh readiness evidence quickly.</p>
+            <p className="mt-0.5 text-[12px] text-secondary">Running an eval asks your company AI the question, then has a second model mark the answer.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {(cases.status === "LoadingFirstPage" || latestRuns === undefined) && (
@@ -192,21 +196,14 @@ export default function CompanyAiEvalsPage() {
             )}
             <button
               type="button"
-              onClick={() => handleRunBatch("FAILED_OR_NOT_RUN")}
-              disabled={isBatchRunning || !hasActiveCases || (summary?.failedOrNotRunCases ?? 0) === 0}
+              onClick={() => setConfirmBatch(true)}
+              disabled={batchAction.isBusy() || (batchEstimate?.selectedCount ?? 0) === 0}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {batchAction.isBusy("batch:FAILED_OR_NOT_RUN") ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-              Run failed/not run
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRunBatch("ALL")}
-              disabled={isBatchRunning || !hasActiveCases}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {batchAction.isBusy("batch:ALL") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Run all
+              {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {(batchEstimate?.selectedCount ?? 0) === 0
+                ? "All evals passing"
+                : `Run ${batchEstimate?.selectedCount} unproven`}
             </button>
             <Link
               href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
@@ -265,12 +262,23 @@ export default function CompanyAiEvalsPage() {
                       <FlaskConical className="h-3.5 w-3.5" />
                       Evidence
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRunCheck(evalCase._id)}
+                      disabled={runAction.isBusy(`run:${evalCase._id}`)}
+                      className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {runAction.isBusy(`run:${evalCase._id}`)
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Play className="h-3.5 w-3.5" />}
+                      Run
+                    </button>
                     <Link
                       href={`${aiHref}/evals/${evalCase._id}/run?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
-                      className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15"
+                      className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-3 text-[12px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
                     >
-                      <Play className="h-3.5 w-3.5" />
-                      Run
+                      <PencilLine className="h-3.5 w-3.5" />
+                      Record by hand
                     </Link>
                     <button
                       type="button"
@@ -327,6 +335,34 @@ export default function CompanyAiEvalsPage() {
           onLoadMore={() => cases.loadMore(ADMIN_PAGE_SIZE)}
         />
       </section>
+
+      {/* Running is now real provider work, so it says what it will do before it
+          does it. The old batch button spent nothing, which is exactly why it
+          proved nothing. */}
+      <SonaeModal isOpen={confirmBatch} onClose={() => setConfirmBatch(false)} title="Run evals" size="sm">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3 text-[13px] leading-relaxed text-secondary">
+            <p>
+              This asks your company AI {batchEstimate?.selectedCount ?? 0} question{batchEstimate?.selectedCount === 1 ? "" : "s"}, then has a second model mark each answer — {batchEstimate?.providerCallCount ?? 0} AI calls in total, which cost money.
+            </p>
+            <p>Results appear on this page as each one finishes. You can leave the page.</p>
+            {batchEstimate?.isCapped && (
+              <p className="text-amber-200">
+                Only the first {batchEstimate.cap} evals will run this time. Run again afterwards to cover the rest.
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
+            <button type="button" onClick={() => setConfirmBatch(false)} disabled={batchAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
+              Cancel
+            </button>
+            <button type="button" onClick={handleRunBatch} disabled={batchAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
+              {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Run evals
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
 
       <SonaeModal isOpen={Boolean(archiveTarget)} onClose={() => setArchiveTarget(null)} title="Archive Eval" size="sm">
         <div className="flex flex-col gap-6">

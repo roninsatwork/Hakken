@@ -1501,6 +1501,16 @@ export default defineSchema({
     judgeRubric: v.optional(v.string()),
     status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
     lastRunId: v.optional(v.id("companyEvalRuns")),
+    // Rolled up from the latest run so readiness and the summary never scan the
+    // run table. Reading "the latest run per case" by taking 1000 runs and
+    // reducing them in memory was the same work repeated in three places, and it
+    // silently truncated for any company past the limit. Absent means never run,
+    // which is the safe reading for rows written before this field existed.
+    lastRunStatus: v.optional(v.union(
+      v.literal("PASSED"),
+      v.literal("FAILED"),
+      v.literal("NEEDS_REVIEW")
+    )),
     createdBy: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -1509,7 +1519,11 @@ export default defineSchema({
   })
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
     .index("by_company_category_status", ["companyId", "category", "status"])
-    .index("by_company_surface", ["companyId", "targetSurface"]),
+    .index("by_company_surface", ["companyId", "targetSurface"])
+    // Must-pass cases drive the readiness gates, so they are selected by index
+    // rather than by filtering every active case in memory.
+    .index("by_company_status_severity", ["companyId", "status", "severity"])
+    .index("by_company_status_surface_severity", ["companyId", "status", "targetSurface", "severity"]),
 
   companyEvalRuns: defineTable({
     companyId: v.id("companies"),
@@ -1647,6 +1661,11 @@ export default defineSchema({
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
     companyMemoryEvidenceJson: v.optional(v.string()),
+    // Which company skills reached the model and which knowledge chunks retrieval
+    // admitted, as `{version, skillIds, sourceIds}`. A check that requires a
+    // document or a skill is graded against this; without it, the ids were
+    // computed during prompt assembly and thrown away.
+    companyRuntimeEvidenceJson: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
     agentId: v.optional(v.id("agents")),

@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
 import { recordCompanyAiDriftEvent, resolveCompanyAiDriftEvents } from "./companyReadiness";
@@ -12,6 +13,13 @@ const PROMPT_MAX_CHARS = 4000;
 const EXPECTED_BEHAVIOR_MAX_CHARS = 4000;
 const ANSWER_MAX_CHARS = 12000;
 const JSON_FIELD_MAX_CHARS = 8000;
+// Gate decisions must not silently truncate. A company past this many must-pass
+// cases needs a rollup counter, not a bigger number here.
+const MUST_PASS_CASE_LIMIT = 200;
+// A batch is two provider calls per check, so the cap is what a company can afford
+// to run in one press rather than what the database can return. When it bites, the
+// estimate says so instead of quietly running a subset.
+const BATCH_CASE_LIMIT = 100;
 
 const evalCategoryValidator = v.union(
   v.literal("KNOWLEDGE_RETRIEVAL"),
@@ -41,7 +49,6 @@ const evalTargetSurfaceValidator = v.union(
 );
 
 const evalStatusValidator = v.union(v.literal("ACTIVE"), v.literal("ARCHIVED"));
-const evalBatchModeValidator = v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN"));
 
 type DeterministicResult = {
   key: string;
@@ -111,15 +118,36 @@ function parseOptionalJson(value: string | undefined, label: string) {
   }
 }
 
+// The chat path records memory evidence as `{version, memories: [{memoryId,...}]}`
+// rather than a flat id list, so it is flattened here into the shape the rules
+// compare against.
+function parseMemoryEvidenceIds(value: string | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as { memories?: unknown };
+    if (!Array.isArray(parsed?.memories)) return [];
+    return parsed.memories
+      .map((memory) => (memory as { memoryId?: unknown })?.memoryId)
+      .filter((memoryId): memoryId is string => typeof memoryId === "string");
+  } catch {
+    return [];
+  }
+}
+
 function stringSet(value: unknown) {
   return new Set(Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []);
 }
 
+// Checks the answer and the recorded evidence, and nothing else. An earlier
+// version also compared the run's resolved use case against the case's expected
+// one, but the only caller that filled the resolved value in passed the expected
+// value straight back — the check compared a field to itself and could not fail,
+// while still counting towards the score. Model routing is worth testing; it
+// needs a real routing decision to test against, which is Phase 3.
 function buildDeterministicResults(args: {
   evalCase: Doc<"companyEvalCases">;
   answer: string;
   evidenceJson?: string;
-  resolvedUseCase?: string;
 }) {
   const forbiddenClaims = parseJsonArray(args.evalCase.forbiddenClaimsJson, "Forbidden claims");
   const requiredSources = parseJsonArray(args.evalCase.requiredSourcesJson, "Required sources");
@@ -172,17 +200,6 @@ function buildDeterministicResults(args: {
     });
   }
 
-  if (args.evalCase.expectedModelUseCase) {
-    const expected = args.evalCase.expectedModelUseCase;
-    const passed = args.resolvedUseCase === expected;
-    results.push({
-      key: `model-use-case:${expected}`,
-      label: "Expected model use case",
-      passed,
-      detail: passed ? `Resolved use case matched ${expected}.` : `Expected ${expected}, got ${args.resolvedUseCase || "missing"}.`,
-    });
-  }
-
   return results;
 }
 
@@ -196,42 +213,23 @@ function getRunScore(results: DeterministicResult[]) {
   return results.filter((result) => result.passed).length / results.length;
 }
 
-function getAutomaticAnswer(evalCase: Doc<"companyEvalCases">) {
-  return [
-    `Automatic deterministic run for eval: ${evalCase.name}.`,
-    `Prompt: ${evalCase.prompt}`,
-    `Expected behavior: ${evalCase.expectedBehavior}`,
-    "This run records configured checks only. Manual answer quality or LLM judging can be added from the individual run screen.",
-  ].join("\n\n");
-}
-
-function getAutomaticEvidenceJson(evalCase: Doc<"companyEvalCases">) {
-  const fixtureContextJson = normalizeOptionalText(evalCase.fixtureContextJson, JSON_FIELD_MAX_CHARS);
-  if (!fixtureContextJson) return undefined;
-
-  try {
-    const parsed = JSON.parse(fixtureContextJson) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      const payload = parsed as EvidencePayload;
-      return JSON.stringify({
-        sourceIds: Array.isArray(payload.sourceIds) ? payload.sourceIds : [],
-        memoryIds: Array.isArray(payload.memoryIds) ? payload.memoryIds : [],
-        skillIds: Array.isArray(payload.skillIds) ? payload.skillIds : [],
-      });
-    }
-  } catch {
-    return undefined;
-  }
-
-  return undefined;
-}
-
 async function insertCompanyEvalRun(ctx: MutationCtx, args: {
   answer: string;
   costJson?: string;
   evalCase: Doc<"companyEvalCases">;
   evidenceJson?: string;
   judgeNotes?: string;
+  // The second model's verdict on whether the answer meets the case's expected
+  // behavior. It joins the rule results rather than sitting beside them, so it
+  // counts towards the score and shows up in the evidence list like any other
+  // check — an admin should not have to look in two places to see why a run
+  // failed.
+  judgeResult?: { passed: boolean; detail: string };
+  // Set when `answer` is an error message rather than something the assistant
+  // said. The rules are then not evaluated at all, because a "must never say X"
+  // rule trivially passes against an error and would score a run that produced no
+  // answer at 50% — a total failure reading as half marks.
+  answerFailed?: boolean;
   resolvedModelId?: string;
   resolvedUseCase?: string;
   tokenUsageJson?: string;
@@ -241,12 +239,23 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
   const answer = normalizeText(args.answer, "Answer", ANSWER_MAX_CHARS);
   const evidenceJson = normalizeOptionalText(args.evidenceJson, JSON_FIELD_MAX_CHARS);
   const resolvedUseCase = normalizeOptionalText(args.resolvedUseCase, CASE_NAME_MAX_CHARS);
-  const deterministicResults = buildDeterministicResults({
-    evalCase: args.evalCase,
-    answer,
-    evidenceJson,
-    resolvedUseCase,
-  });
+  const deterministicResults = [
+    ...(args.judgeResult
+      ? [{
+        key: "answer-quality",
+        label: "Answer quality",
+        passed: args.judgeResult.passed,
+        detail: args.judgeResult.detail,
+      }]
+      : []),
+    ...(args.answerFailed
+      ? []
+      : buildDeterministicResults({
+        evalCase: args.evalCase,
+        answer,
+        evidenceJson,
+      })),
+  ];
   const status = getRunStatus(deterministicResults);
   const score = getRunScore(deterministicResults);
 
@@ -270,6 +279,7 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
 
   await ctx.db.patch(args.evalCase._id, {
     lastRunId: runId,
+    lastRunStatus: status,
     updatedAt: now,
   });
 
@@ -282,7 +292,12 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
     timestamp: now,
     metadata: JSON.stringify({ evalCaseId: args.evalCase._id, status, score }),
   });
-  const resolvedDriftCount = status === "PASSED"
+  // Drift is the backlog of "things changed since anyone last checked", and it
+  // covers the whole company. Clearing it needs company-wide evidence, so it
+  // waits until every must-pass check has a passing result. One check going
+  // green used to wipe the entire backlog, which is how a company could read as
+  // fully checked on the strength of a single answer.
+  const resolvedDriftCount = status === "PASSED" && await hasCompleteBlockerEvidence(ctx, args.evalCase.companyId)
     ? await resolveCompanyAiDriftEvents(ctx, {
       companyId: args.evalCase.companyId,
       resolvedBy: args.userId,
@@ -292,6 +307,23 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
     : 0;
 
   return { runId, status, score, deterministicResults, resolvedDriftCount };
+}
+
+// True only when every active must-pass case has a latest run that passed. A
+// company with no must-pass cases has proved nothing, so it does not qualify.
+//
+// Selected by index and read from the rolled-up `lastRunStatus`, so this costs
+// one indexed range read rather than a scan of every active case plus a run
+// query for each of them.
+async function hasCompleteBlockerEvidence(ctx: MutationCtx, companyId: Id<"companies">) {
+  const mustPassCases = await ctx.db
+    .query("companyEvalCases")
+    .withIndex("by_company_status_severity", (q) =>
+      q.eq("companyId", companyId).eq("status", "ACTIVE").eq("severity", "BLOCKER"))
+    .take(MUST_PASS_CASE_LIMIT);
+  if (mustPassCases.length === 0) return false;
+
+  return mustPassCases.every((evalCase) => evalCase.lastRunStatus === "PASSED");
 }
 
 async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
@@ -582,85 +614,174 @@ export const runCase = adminMutation({
   },
 });
 
-export const runBatch = adminMutation({
+// `runBatch` used to live here. It walked the active cases and, for each one,
+// wrote a run whose "answer" was a template string echoing the case's own name,
+// prompt and expected behavior — then scored that string. The company AI was
+// never called, so a forbidden-phrase check passed on text the system had just
+// written itself, and a passing run cleared the company's entire drift backlog.
+// Pressing one button turned the readiness lights green on no evidence.
+//
+// What replaces it asks the real company AI and has a second model mark the
+// answer. The plumbing for that is below; the action that drives it lives in
+// `companyEvalRunActions` because it needs the Node runtime to reach a provider.
+
+/**
+ * A throwaway thread for one check run.
+ *
+ * `purpose: "EVAL"` keeps it out of the admin thread lists, the same way agent
+ * eval threads are hidden. The triggering admin's user id is kept deliberately:
+ * retrieval and tool authorisation resolve from the thread's user, so a run under
+ * no user would be graded on an assistant stripped of the context it normally
+ * has — which would test something nobody ships.
+ */
+export const createEvalThreadInternal = internalMutation({
   args: {
     companyId: v.id("companies"),
-    mode: evalBatchModeValidator,
+    evalCaseId: v.id("companyEvalCases"),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireCompanyAccess(ctx, args.companyId);
+    const now = Date.now();
+    return await ctx.db.insert("threads", {
+      userId: args.userId,
+      companyId: args.companyId,
+      title: `Check ${args.evalCaseId}`,
+      purpose: "EVAL",
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+/**
+ * The assistant's answer from a check thread, and what reached the model.
+ *
+ * `sourceIds` and `skillIds` come from the runtime evidence the chat path records
+ * (Phase 2); `memoryIds` from the memory evidence it already recorded. These are
+ * what a "must use this document" rule is graded against, and before they were
+ * recorded such a rule could never pass.
+ */
+export const getEvalThreadOutcomeInternal = internalQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .order("desc")
+      .take(10);
+    const reply = messages.find((message) => message.role === "assistant");
+
+    const runtimeEvidence = parseEvidence(reply?.companyRuntimeEvidenceJson);
+    const memoryEvidence = parseMemoryEvidenceIds(reply?.companyMemoryEvidenceJson);
+
+    return {
+      answer: reply?.content ?? "",
+      modelUsed: reply?.modelUsed,
+      inputTokens: reply?.inputTokens ?? 0,
+      outputTokens: reply?.outputTokens ?? 0,
+      evidenceJson: JSON.stringify({
+        sourceIds: Array.isArray(runtimeEvidence.sourceIds) ? runtimeEvidence.sourceIds : [],
+        memoryIds: memoryEvidence,
+        skillIds: Array.isArray(runtimeEvidence.skillIds) ? runtimeEvidence.skillIds : [],
+      }),
+    };
+  },
+});
+
+/**
+ * What running every unproven check would cost, before spending it.
+ *
+ * Each check is two provider calls, so a batch is real money and a real wait. The
+ * old batch button spent nothing because it called no provider, which is exactly
+ * why it proved nothing.
+ */
+export const getBatchEstimate = adminQuery({
+  args: {
+    companyId: v.id("companies"),
+    mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
+  },
+  handler: async (ctx, args) => {
+    await requireCompanyAccess(ctx, args.companyId);
+
     const activeCases = await ctx.db
       .query("companyEvalCases")
       .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
-      .take(100);
-    const recentRuns = await ctx.db
-      .query("companyEvalRuns")
-      .withIndex("by_company_completed", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .take(1000);
-    const latestRunByCase = new Map<Id<"companyEvalCases">, Doc<"companyEvalRuns">>();
-
-    for (const run of recentRuns) {
-      if (!latestRunByCase.has(run.evalCaseId)) latestRunByCase.set(run.evalCaseId, run);
-    }
-
-    const selectedCases = activeCases.filter((evalCase) => {
-      if (args.mode === "ALL") return true;
-      const latestRun = latestRunByCase.get(evalCase._id);
-      return !latestRun || latestRun.status !== "PASSED";
-    });
-
-    const results = [];
-    let passed = 0;
-    let failed = 0;
-    let needsReview = 0;
-    let resolvedDriftCount = 0;
-
-    for (const evalCase of selectedCases) {
-      const result = await insertCompanyEvalRun(ctx, {
-        evalCase,
-        answer: getAutomaticAnswer(evalCase),
-        evidenceJson: getAutomaticEvidenceJson(evalCase),
-        resolvedUseCase: evalCase.expectedModelUseCase,
-        judgeNotes: "Automatic batch run. Deterministic checks were recorded from configured eval requirements; use the individual run screen for manual answer evidence.",
-        userId,
-      });
-
-      if (result.status === "PASSED") passed += 1;
-      if (result.status === "FAILED") failed += 1;
-      if (result.status === "NEEDS_REVIEW") needsReview += 1;
-      resolvedDriftCount += result.resolvedDriftCount;
-      results.push({
-        evalCaseId: evalCase._id,
-        runId: result.runId,
-        status: result.status,
-        score: result.score,
-      });
-    }
-
-    await ctx.db.insert("auditLogs", {
-      actorId: userId,
-      actionType: "RUN_COMPANY_EVAL_BATCH",
-      entityType: "companyEvalRuns",
-      companyId: args.companyId,
-      timestamp: Date.now(),
-      metadata: JSON.stringify({
-        mode: args.mode,
-        selected: selectedCases.length,
-        passed,
-        failed,
-        needsReview,
-      }),
-    });
+      .take(BATCH_CASE_LIMIT + 1);
+    const selectable = activeCases
+      .slice(0, BATCH_CASE_LIMIT)
+      .filter((evalCase) => args.mode === "ALL" || evalCase.lastRunStatus !== "PASSED");
 
     return {
-      mode: args.mode,
-      selected: selectedCases.length,
-      passed,
-      failed,
-      needsReview,
-      resolvedDriftCount,
-      results,
+      selectedCount: selectable.length,
+      // Two calls per check: the assistant answers, then a second model grades.
+      providerCallCount: selectable.length * 2,
+      isCapped: activeCases.length > BATCH_CASE_LIMIT,
+      cap: BATCH_CASE_LIMIT,
     };
+  },
+});
+
+export const getBatchCaseIdsInternal = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+    mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
+  },
+  handler: async (ctx, args) => {
+    const activeCases = await ctx.db
+      .query("companyEvalCases")
+      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+      .take(BATCH_CASE_LIMIT);
+
+    return activeCases
+      .filter((evalCase) => args.mode === "ALL" || evalCase.lastRunStatus !== "PASSED")
+      .map((evalCase) => evalCase._id);
+  },
+});
+
+export const getCaseForRunInternal = internalQuery({
+  args: { evalCaseId: v.id("companyEvalCases") },
+  handler: async (ctx, args) => {
+    const evalCase = await ctx.db.get(args.evalCaseId);
+    if (!evalCase || evalCase.status !== "ACTIVE") return null;
+    return evalCase;
+  },
+});
+
+export const recordGradedRunInternal = internalMutation({
+  args: {
+    evalCaseId: v.id("companyEvalCases"),
+    userId: v.id("users"),
+    answer: v.string(),
+    evidenceJson: v.optional(v.string()),
+    // Absent means nobody graded the answer — the run could not be completed, so
+    // it records as "not tested" rather than as a failure. A failure means the
+    // grader read the answer and judged it wanting; being unable to reach a
+    // provider is not evidence about the assistant, and reporting it as a failure
+    // would tell an admin their AI is broken when the truth is that we did not
+    // manage to ask.
+    judgePassed: v.optional(v.boolean()),
+    judgeDetail: v.optional(v.string()),
+    judgeNotes: v.optional(v.string()),
+    answerFailed: v.optional(v.boolean()),
+    resolvedModelId: v.optional(v.string()),
+    tokenUsageJson: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const evalCase = await ctx.db.get(args.evalCaseId);
+    if (!evalCase || evalCase.status !== "ACTIVE") throw new Error("Eval case not found");
+
+    return await insertCompanyEvalRun(ctx, {
+      evalCase,
+      answer: args.answer,
+      evidenceJson: args.evidenceJson,
+      judgeResult: args.judgePassed === undefined || args.judgeDetail === undefined
+        ? undefined
+        : { passed: args.judgePassed, detail: args.judgeDetail },
+      judgeNotes: args.judgeNotes,
+      answerFailed: args.answerFailed,
+      resolvedModelId: args.resolvedModelId,
+      tokenUsageJson: args.tokenUsageJson,
+      userId: args.userId,
+    });
   },
 });

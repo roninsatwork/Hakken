@@ -108,11 +108,38 @@ function normalizeHandlerMappings(handlerMappings: string[] | undefined) {
   )).slice(0, 25);
 }
 
-function buildExpectedToolPlanJson(handlerMappings: string[] | undefined) {
+// `existingToolPlanJson` carries the richer per-mapping detail that
+// `createFromRun` records — `normalizedToolName`, `sideEffectLevel`,
+// `confirmationRequired`, `status`. The edit form only renders `handlerMapping`,
+// so rebuilding the plan from the form's bare strings silently threw the rest
+// away: opening a run-derived fixture and pressing Save degraded it. Entries whose
+// mapping is unchanged keep everything they already had.
+function buildExpectedToolPlanJson(handlerMappings: string[] | undefined, existingToolPlanJson?: string) {
   const normalizedMappings = normalizeHandlerMappings(handlerMappings);
-  return normalizedMappings.length > 0
-    ? JSON.stringify(normalizedMappings.map((handlerMapping) => ({ handlerMapping })))
-    : undefined;
+  if (normalizedMappings.length === 0) return undefined;
+
+  const existingByMapping = new Map<string, Record<string, unknown>>();
+  if (existingToolPlanJson) {
+    try {
+      const parsed = JSON.parse(existingToolPlanJson) as unknown;
+      if (Array.isArray(parsed)) {
+        for (const entry of parsed) {
+          if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+          const record = entry as Record<string, unknown>;
+          const handlerMapping = record.handlerMapping;
+          if (typeof handlerMapping === "string" && handlerMapping.trim().length > 0) {
+            existingByMapping.set(handlerMapping.trim(), record);
+          }
+        }
+      }
+    } catch {
+      // An unreadable stored plan is replaced rather than merged into.
+    }
+  }
+
+  return JSON.stringify(normalizedMappings.map((handlerMapping) =>
+    existingByMapping.get(handlerMapping) ?? { handlerMapping }
+  ));
 }
 
 function normalizeOptionalJsonObject(value: string | undefined, fieldLabel: string) {
@@ -731,7 +758,7 @@ export const updateFixture = adminMutation({
       ...(objective !== undefined ? { objective } : {}),
       ...(expectedFinalOutputRubric !== undefined ? { expectedFinalOutputRubric } : {}),
       ...(args.expectedToolMappings !== undefined
-        ? { expectedToolPlanJson: buildExpectedToolPlanJson(args.expectedToolMappings) }
+        ? { expectedToolPlanJson: buildExpectedToolPlanJson(args.expectedToolMappings, fixture.expectedToolPlanJson) }
         : {}),
       ...(args.expectedBlockedActionsJson !== undefined
         ? { expectedBlockedActionsJson: normalizeOptionalJsonObject(args.expectedBlockedActionsJson, "Expected blocked actions") }
@@ -1754,16 +1781,29 @@ export const getSmokeEvalHistory = adminQuery({
       };
     }));
 
+    // A contract-only run checks configuration: that the rubric is non-empty,
+    // that expected tool mappings are bound, that blocked-actions JSON parses. No
+    // model is called, and the codebase says elsewhere that it "is not evidence
+    // the agent works" — which is why the activation gate counts only model-graded
+    // runs. This screen was counting contract passes in `passed` anyway, so the
+    // number an admin read and the number that gated activation disagreed, and the
+    // screen showed the flattering one. `passed` now means graded and passed;
+    // configuration passes are reported separately under their own name.
     const totals = entries.reduce((acc, entry) => {
       acc.total += 1;
-      if (entry.status === "SUCCESS") acc.passed += 1;
+      const isGraded = entry.gradingMode === "MODEL_GRADED";
+      if (entry.status === "SUCCESS") {
+        if (isGraded) acc.passed += 1;
+        else acc.setupPassed += 1;
+      }
       if (entry.status === "FAILED") acc.failed += 1;
       if (entry.status === "QUEUED" || entry.status === "RUNNING" || entry.status === "PENDING_APPROVAL") acc.active += 1;
-      if (entry.gradingMode === "MODEL_GRADED") acc.modelGraded += 1;
+      if (isGraded) acc.modelGraded += 1;
       return acc;
     }, {
       total: 0,
       passed: 0,
+      setupPassed: 0,
       failed: 0,
       active: 0,
       modelGraded: 0,

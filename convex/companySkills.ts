@@ -399,6 +399,10 @@ export const getRuntimeCompanySkillsInternal = internalQuery({
       // though the company row still points at it.
       if (row.sourceAgentSkillId && (!central || central.status !== "ACTIVE")) continue;
       skills.push({
+        // The id travels with the skill so a run can record which skills actually
+        // reached the model. Without it, a check asking "did it use the refund
+        // skill?" had nothing to compare against and could never pass.
+        skillId: row._id,
         name: central?.name ?? row.name,
         instruction: central?.instruction ?? row.instruction,
         category: central?.category ?? row.category,

@@ -44,6 +44,59 @@ describe("OWASP: Broken Access Control - Agents", () => {
     ).rejects.toThrow("Unauthorized");
   });
 
+  // Readiness was a superAdminQuery while the agent evals screen that reads it is
+  // reachable by a company admin. For them it threw, so two metric tiles, the
+  // skill-coverage panel, both blocking banners and the release-policy strip never
+  // resolved — a large part of that screen had never rendered for the people it is
+  // built for. A company admin may read readiness for their own company's agent
+  // and no one else's.
+  test("a company admin can read readiness for their own agent but not another company's", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyAdminId, otherAdminId, ownAgentId, otherAgentId } = await t.run(async (ctx) => {
+      const companyAId = await ctx.db.insert("companies", { name: "Readiness Co A", createdAt: Date.now() });
+      const companyBId = await ctx.db.insert("companies", { name: "Readiness Co B", createdAt: Date.now() });
+      const agentRecord = {
+        name: "Scoped",
+        modelId: "test-model",
+        thinkingMode: false,
+        isActive: true,
+        temperature: 1.0,
+        humanApprovalRequired: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      return {
+        companyAdminId: await ctx.db.insert("users", {
+          email: "readiness-a@test.com",
+          role: "ADMIN",
+          companyId: companyAId,
+        }),
+        otherAdminId: await ctx.db.insert("users", {
+          email: "readiness-b@test.com",
+          role: "ADMIN",
+          companyId: companyBId,
+        }),
+        ownAgentId: await ctx.db.insert("agents", { ...agentRecord, companyId: companyAId }),
+        otherAgentId: await ctx.db.insert("agents", { ...agentRecord, companyId: companyBId }),
+      };
+    });
+
+    const companyAdminClient = t.withIdentity({ subject: companyAdminId });
+    const readiness = await companyAdminClient.query(api.agents.getAgentReadiness, { id: ownAgentId });
+    expect(readiness).toBeTruthy();
+
+    await expect(
+      companyAdminClient.query(api.agents.getAgentReadiness, { id: otherAgentId })
+    ).rejects.toThrow("Unauthorized");
+
+    const otherAdminClient = t.withIdentity({ subject: otherAdminId });
+    await expect(
+      otherAdminClient.query(api.agents.getAgentReadiness, { id: ownAgentId })
+    ).rejects.toThrow("Unauthorized");
+  });
+
   test("New agents use the platform failsafe when the configured default is disabled", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
@@ -255,10 +308,14 @@ describe("OWASP: Broken Access Control - Agents", () => {
       status: "SUCCESS",
     });
 
+    // A contract run is a configuration result, not evidence the agent works, so
+    // it is counted separately from a graded pass. This assertion used to require
+    // the opposite, which is the screen disagreeing with the activation gate.
     const smokeHistory = await client.query(api.agentEvalFixtures.getSmokeEvalHistory, { agentId, limit: 5 });
     expect(smokeHistory.totals).toEqual({
       total: 1,
-      passed: 1,
+      passed: 0,
+      setupPassed: 1,
       failed: 0,
       active: 0,
       modelGraded: 0,
@@ -575,6 +632,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(smokeHistory.totals).toEqual({
       total: 1,
       passed: 0,
+      setupPassed: 0,
       failed: 1,
       active: 0,
       modelGraded: 0,
@@ -688,6 +746,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(smokeHistory.totals).toEqual({
       total: 1,
       passed: 0,
+      setupPassed: 0,
       failed: 0,
       active: 1,
       modelGraded: 1,
