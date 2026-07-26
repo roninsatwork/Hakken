@@ -72,7 +72,6 @@ describe("Company learning loop", () => {
       threadId,
       messageId: assistantMessageId,
       name: "Enterprise onboarding answer stays bounded",
-      category: "NO_HALLUCINATION",
       severity: "WARNING",
       targetSurface: "COMPANY_CHAT",
       prompt: "Does enterprise include onboarding?",
@@ -94,19 +93,14 @@ describe("Company learning loop", () => {
     });
     expect(state.evalCase).toMatchObject({
       status: "ACTIVE",
-      category: "NO_HALLUCINATION",
       severity: "WARNING",
       targetSurface: "COMPANY_CHAT",
       forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
     });
-    expect(JSON.parse(state.evalCase?.fixtureContextJson ?? "{}")).toMatchObject({
-      source: "company_chat",
-      threadId,
-      observedMessage: {
-        messageId: assistantMessageId,
-        role: "assistant",
-      },
-    });
+    // The chat provenance used to be asserted through `fixtureContextJson`, which is
+    // retired: it existed only so the deleted batch runner could hand a case's own
+    // declarations back to itself as evidence. The audit log below is where the
+    // provenance actually lives.
     expect(state.auditLogs.map((log) => log.actionType)).toEqual([
       "CREATE_COMPANY_MEMORY_CANDIDATE_FROM_CHAT",
       "CREATE_COMPANY_EVAL_CASE_FROM_CHAT",
@@ -156,7 +150,6 @@ describe("Company learning loop", () => {
         companyId: companyAId,
         threadId: threadBId,
         name: "Bad",
-        category: "NO_HALLUCINATION",
         severity: "WARNING",
         targetSurface: "COMPANY_CHAT",
         prompt: "Prompt",
@@ -179,7 +172,6 @@ describe("Company learning loop", () => {
         companyId: companyAId,
         threadId: threadAId,
         name: "Bad JSON",
-        category: "NO_HALLUCINATION",
         severity: "WARNING",
         targetSurface: "COMPANY_CHAT",
         prompt: "Prompt",
@@ -245,7 +237,6 @@ describe("Company learning loop", () => {
       const evalCaseId = await ctx.db.insert("companyEvalCases", {
         companyId: companyAId,
         name: "Do not invent onboarding pricing",
-        category: "NO_HALLUCINATION",
         severity: "BLOCKER",
         targetSurface: "COMPANY_CHAT",
         prompt: "Does enterprise onboarding cost extra?",

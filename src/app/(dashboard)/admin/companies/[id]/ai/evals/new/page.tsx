@@ -87,10 +87,6 @@ export default function NewCompanyEvalPage() {
     const outcome = await action.run(() => createCase({
       companyId,
       name: form.name,
-      // Category no longer appears on screen. The field is still required by the
-      // mutation until the migration drops it, so it is stamped with the one value
-      // that describes every check here: the answer must be right.
-      category: "NO_HALLUCINATION",
       severity: form.mustPass ? "BLOCKER" : "ADVISORY",
       targetSurface: form.targetSurface,
       prompt: form.prompt,

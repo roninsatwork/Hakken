@@ -61,6 +61,20 @@ type MigrationRunner = (
  * Registered migrations, keyed by a stable name that also records when it was
  * introduced. Never rename or reuse a key: the name is the ledger's identity.
  */
+/*
+ * Two retirement migrations lived here and have been removed:
+ * `2026-07-26-retire-unread-company-check-fields` and
+ * `2026-07-26-retire-company-check-category`. They cleared six fields off
+ * `companyEvalCases`, and once the fields left `schema.ts` the migrations could no
+ * longer compile against the very schema they existed to enable.
+ *
+ * They ran on dev, and this is a one-way door: a deployment whose rows still carry
+ * those fields will have its schema push refused, with no migration left to clear
+ * them. Recovering means checking out the commit before the removal, deploying that,
+ * running both migrations, then deploying forward. Anthony confirmed on 2026-07-26
+ * that nothing real was live, which is why that trade was taken rather than carrying
+ * dead code indefinitely.
+ */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   /**
    * Backfills `swarmLogs.companyId`, added alongside the swarm-log access fix
@@ -186,57 +200,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     return { cursor: null, isDone: true, processed: rows.length, updated };
   },
 
-  /**
-   * Clears the company-check fields nothing reads.
-   *
-   * - `expectedModelUseCase` fed a check that compared a field to itself and could
-   *   not fail. The check went in Phase 0; this removes what it read.
-   * - `fixtureContextJson` existed only so the deleted batch runner could present a
-   *   case's own declarations back to itself as evidence.
-   * - `targetId`, `expectedOutputFormat` and `judgeRubric` are stored and never
-   *   read. `judgeRubric` in particular was a second box asking the same question as
-   *   "what a good answer must do", which is why neither got filled in.
-   *
-   * The schema still declares them, deliberately. Convex validates existing
-   * documents when a schema is pushed, so removing the fields before this has run
-   * against a deployment would refuse the deploy on any row that still carries them.
-   * The lines come out in a later release, once this has run everywhere — see the
-   * note on them in `schema.ts`.
-   *
-   * `category` is not cleared: it is a required union, so retiring it needs the same
-   * dance one step earlier (make optional, clear, remove). It no longer appears on
-   * any screen, which was the point.
-   */
-  "2026-07-26-retire-unread-company-check-fields": async (ctx, cursor, batchSize) => {
-    const page = await ctx.db.query("companyEvalCases").paginate({ cursor, numItems: batchSize });
-    let updated = 0;
-
-    for (const evalCase of page.page) {
-      const hasAny = evalCase.targetId !== undefined
-        || evalCase.fixtureContextJson !== undefined
-        || evalCase.expectedModelUseCase !== undefined
-        || evalCase.expectedOutputFormat !== undefined
-        || evalCase.judgeRubric !== undefined;
-      // Idempotent: a row already cleared is skipped, so a re-run changes nothing.
-      if (!hasAny) continue;
-
-      await ctx.db.patch(evalCase._id, {
-        targetId: undefined,
-        fixtureContextJson: undefined,
-        expectedModelUseCase: undefined,
-        expectedOutputFormat: undefined,
-        judgeRubric: undefined,
-      });
-      updated += 1;
-    }
-
-    return {
-      cursor: page.continueCursor,
-      isDone: page.isDone,
-      processed: page.page.length,
-      updated,
-    };
-  },
 
   /**
    * Backfills `lastRunStatus` and `lastRunAt` onto company checks.
@@ -285,6 +248,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       updated,
     };
   },
+
 
   /**
    * The same for agent memory, whose four kinds carried the same unused

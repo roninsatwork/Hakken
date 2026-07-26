@@ -33,7 +33,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminAClient.mutation(api.companyEvals.createCase, {
       companyId: companyAId,
       name: "Widget does not invent pricing",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "WIDGET",
       prompt: "What is the price for the enterprise plan?",
@@ -132,7 +131,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Uses required context",
-      category: "MEMORY_USAGE",
       severity: "WARNING",
       targetSurface: "COMPANY_CHAT",
       prompt: "Summarize the escalation policy.",
@@ -162,7 +160,6 @@ describe("Company Evals", () => {
       adminClient.mutation(api.companyEvals.createCase, {
         companyId,
         name: "Bad JSON",
-        category: "MEMORY_USAGE",
         severity: "WARNING",
         targetSurface: "COMPANY_CHAT",
         prompt: "Prompt",
@@ -194,7 +191,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Routes to the chat model",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "Say hello.",
@@ -241,7 +237,6 @@ describe("Company Evals", () => {
     const firstCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Does not invent pricing",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "WIDGET",
       prompt: "What is the enterprise price?",
@@ -251,7 +246,6 @@ describe("Company Evals", () => {
     const secondCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Hands off to a human",
-      category: "RULE_COMPLIANCE",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "I want to speak to someone.",
@@ -302,7 +296,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Offers a handover",
-      category: "RULE_COMPLIANCE",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "I want to speak to someone.",
@@ -357,7 +350,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Does not invent pricing",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "What does it cost?",
@@ -403,7 +395,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Asked three times",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "What does it cost?",
@@ -463,7 +454,6 @@ describe("Company Evals", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Friendly tone",
-      category: "BRAND_TONE",
       severity: "ADVISORY",
       targetSurface: "COMPANY_CHAT",
       prompt: "Say hello.",

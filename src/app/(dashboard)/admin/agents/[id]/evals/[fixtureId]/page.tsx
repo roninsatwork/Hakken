@@ -17,13 +17,15 @@ type CheckRun = {
 };
 
 /**
- * The check detail page for an agent.
- *
- * The company screen got one first; this is the same idea for the other surface. What
- * an agent actually produced, and why it was marked down, was previously reachable
- * only from an undifferentiated stream of every run the agent had ever had, clamped
- * to two lines. It is the most useful thing this feature holds.
+ * What the run cost. Zero and "not priced" are different facts, so an unpriced run
+ * says nothing rather than claiming it was free.
  */
+function formatRunCost(costGBP: number | undefined) {
+  if (typeof costGBP !== "number" || !Number.isFinite(costGBP) || costGBP <= 0) return null;
+  const pence = costGBP * 100;
+  return pence < 1 ? `${pence.toFixed(2)}p` : `£${costGBP.toFixed(2)}`;
+}
+
 function describeStatus(entry: CheckRun | undefined) {
   if (!entry) return { label: "Not run yet", tone: "text-muted" };
   if (entry.gradingMode !== "MODEL_GRADED") return { label: "Setup only", tone: "text-amber-400" };
@@ -32,6 +34,14 @@ function describeStatus(entry: CheckRun | undefined) {
   return { label: "Running…", tone: "text-secondary" };
 }
 
+/**
+ * The check detail page for an agent.
+ *
+ * The company screen got one first; this is the same idea for the other surface. What
+ * an agent actually produced, and why it was marked down, was previously reachable
+ * only from an undifferentiated stream of every run the agent had ever had, clamped
+ * to two lines. It is the most useful thing this feature holds.
+ */
 export default function AgentCheckDetailPage() {
   const params = useParams();
   const agentId = params.id as Id<"agents">;
@@ -116,6 +126,8 @@ export default function AgentCheckDetailPage() {
             <p className="mt-4 text-[12px] text-secondary">
               {latest.modelId ? `Answered by ${latest.modelId}` : "Model not recorded"}
               {typeof latest.inputTokens === "number" ? ` · ${latest.inputTokens} in / ${latest.outputTokens ?? 0} out` : ""}
+              {detail.check.sampleCount > 1 ? ` · asked up to ${detail.check.sampleCount} times` : ""}
+              {formatRunCost(latest.costGBP) ? ` · cost ${formatRunCost(latest.costGBP)}` : ""}
             </p>
           </>
         )}

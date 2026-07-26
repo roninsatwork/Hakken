@@ -435,7 +435,6 @@ export const createEvalCaseFromChat = adminMutation({
     threadId: v.id("threads"),
     messageId: v.optional(v.id("messages")),
     name: v.string(),
-    category: evalCategoryValidator,
     severity: evalSeverityValidator,
     targetSurface: evalTargetSurfaceValidator,
     prompt: v.string(),
@@ -451,11 +450,9 @@ export const createEvalCaseFromChat = adminMutation({
     const evalCaseId = await ctx.db.insert("companyEvalCases", {
       companyId: args.companyId,
       name: normalizeText(args.name, "Eval name", TITLE_MAX_CHARS),
-      category: args.category,
       severity: args.severity,
       targetSurface: args.targetSurface,
       prompt: normalizeText(args.prompt, "Prompt", TEXT_MAX_CHARS),
-      fixtureContextJson: buildFixtureContextJson({ thread, message }),
       expectedBehavior: normalizeText(args.expectedBehavior, "Expected behavior", TEXT_MAX_CHARS),
       forbiddenClaimsJson: parseJsonArray(args.forbiddenClaimsJson, "Forbidden claims"),
       requiredMemoriesJson: parseJsonArray(args.requiredMemoriesJson, "Required memories"),
@@ -473,14 +470,13 @@ export const createEvalCaseFromChat = adminMutation({
       entityType: "companyEvalCases",
       companyId: args.companyId,
       timestamp: now,
-      metadata: JSON.stringify({ threadId: args.threadId, messageId: args.messageId, category: args.category, severity: args.severity }),
+      metadata: JSON.stringify({ threadId: args.threadId, messageId: args.messageId, severity: args.severity }),
     });
     await recordCompanyAiDriftEvent(ctx, {
       companyId: args.companyId,
       sourceType: "EVAL",
       sourceId: evalCaseId,
       reason: "Company eval case was created from chat evidence.",
-      affectedEvalCategories: [args.category],
       createdBy: userId,
       createdAt: now,
     });

@@ -65,6 +65,7 @@ const DEFAULT_FORM = {
   rubric: "",
   tools: "",
   mustPass: true,
+  sampleCount: 1,
 };
 
 export default function AgentEvalsPage() {
@@ -128,6 +129,7 @@ export default function AgentEvalsPage() {
       rubric: fixture.expectedFinalOutputRubric,
       tools: "",
       mustPass: fixture.tags.includes(MUST_PASS_TAG),
+      sampleCount: fixture.sampleCount ?? 1,
     });
     setIsFormOpen(true);
   };
@@ -147,6 +149,7 @@ export default function AgentEvalsPage() {
           expectedFinalOutputRubric: form.rubric,
           ...(tools.length > 0 ? { expectedToolMappings: tools } : {}),
           tags,
+          sampleCount: form.sampleCount,
         });
         return;
       }
@@ -441,7 +444,21 @@ export default function AgentEvalsPage() {
 
           <details className="rounded-[8px] border border-border-dim px-3 py-2.5">
             <summary className="cursor-pointer text-[13px] font-semibold text-foreground">Advanced</summary>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-col gap-5">
+              <AdminModalFormField
+                label="Give it the task more than once"
+                hint="A check that passes two times in three is a check that fails one conversation in three. Each extra attempt is a whole agent turn plus a grade."
+              >
+                <select
+                  className={adminModalInputClassName}
+                  value={String(form.sampleCount)}
+                  onChange={(event) => setForm((current) => ({ ...current, sampleCount: Number(event.target.value) }))}
+                >
+                  <option value="1">Once</option>
+                  <option value="3">3 times — all must pass</option>
+                  <option value="5">5 times — all must pass</option>
+                </select>
+              </AdminModalFormField>
               <AdminModalFormField
                 label="Tools it should use"
                 hint="Optional, comma separated. Leave empty unless you are testing that a particular tool gets used."

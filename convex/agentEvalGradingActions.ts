@@ -8,9 +8,57 @@ import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import {
   buildGradingPrompt,
+  combineGradeSamples,
   parseGradeVerdict,
   selectGraderModel,
+  type GradeVerdict,
 } from "./agentEvalGradingService";
+import { calculateModelCostGBP } from "./aiCostService";
+
+/** More than this is a runaway, not a confidence interval. */
+const MAX_SAMPLE_COUNT = 5;
+
+/**
+ * What a graded check cost, in pounds.
+ *
+ * The run already recorded tokens and the table already had `costGBP`; nothing joined
+ * the two, so an eval's spend read as zero. Reuses the catalogue rates rather than
+ * inventing a second cost calculation.
+ */
+async function calculateGradedRunCostGBP(
+  ctx: { runQuery: (ref: typeof internal.aiModels.getModelByIdInternal, args: { modelId: string }) => Promise<{
+    standardInputCostBelow200k?: number;
+    standardInputCostAbove200k?: number;
+    cachedInputCostBelow200k?: number;
+    cachedInputCostAbove200k?: number;
+    outputResponseCost?: number;
+  } | null> },
+  args: {
+    answerModelId?: string;
+    graderModelId?: string;
+    answerInputTokens: number;
+    answerOutputTokens: number;
+    gradingInputTokens: number;
+    gradingOutputTokens: number;
+  },
+) {
+  const answerRates = args.answerModelId
+    ? await ctx.runQuery(internal.aiModels.getModelByIdInternal, { modelId: args.answerModelId })
+    : null;
+  const graderRates = args.graderModelId
+    ? await ctx.runQuery(internal.aiModels.getModelByIdInternal, { modelId: args.graderModelId })
+    : null;
+
+  return calculateModelCostGBP({
+    inputTokens: args.answerInputTokens,
+    outputTokens: args.answerOutputTokens,
+    rates: answerRates,
+  }) + calculateModelCostGBP({
+    inputTokens: args.gradingInputTokens,
+    outputTokens: args.gradingOutputTokens,
+    rates: graderRates,
+  });
+}
 
 function getRequestedModelId(agent: Doc<"agents">) {
   return agent.modelSelectionMode === "inherit" ? undefined : agent.modelId;
@@ -59,73 +107,115 @@ export const gradeSmokeEvalWithModel = internalAction({
       // history or budgets — so it graded a model, not the agent that ships. An
       // agent whose whole job is looking things up would be evaluated with its
       // ability to look things up removed.
-      const evalThreadId = await ctx.runMutation(internal.agentEvalFixtures.createEvalThreadInternal, {
-        agentId: args.agentId,
-        companyId: args.companyId,
-        userId: args.userId,
-        fixtureId: args.fixtureId,
-      });
+      //
+      // Repeated `sampleCount` times, every sample required to pass. One attempt at a
+      // non-deterministic system is weak evidence, and this gates whether the agent
+      // goes live. Opt-in, because each sample is a whole agent turn plus a grade.
+      const sampleCount = Math.min(
+        Math.max(Math.round(context.fixture.sampleCount ?? 1), 1),
+        MAX_SAMPLE_COUNT,
+      );
+      const verdicts: GradeVerdict[] = [];
+      let modelOutput = "Agent produced no readable output.";
+      let gradingOutput = "";
+      let independentGrade = false;
+      let graderModelId: string | undefined;
+      let answerInputTokens = 0;
+      let answerOutputTokens = 0;
+      let gradingInputTokens = 0;
+      let gradingOutputTokens = 0;
 
-      await ctx.runAction(internal.agentRuntime.runAgentObjective, {
-        threadId: evalThreadId,
-        agentId: args.agentId,
-        content: context.fixture.objective,
-      });
-
-      const outcome = await ctx.runQuery(internal.agentEvalFixtures.getEvalThreadOutcomeInternal, {
-        threadId: evalThreadId,
-      });
-      const modelOutput = outcome.output || "Agent produced no readable output.";
-
-      // Grade with a different model from the one under test. The same model
-      // marking its own homework favours its own output, and a model that has
-      // just confidently asserted something wrong is the least likely thing to
-      // notice — so the grade measured self-consistency, not correctness.
-      // Text-capable only. Reading every enabled model meant that on a deployment
-      // with an enabled embedding model the grader could be `text-embedding-004`,
-      // which answers a generate-text call with a provider NOT_FOUND — and
-      // `parseGradeVerdict` fails closed, so every model-graded eval failed for a
-      // reason that had nothing to do with the agent.
-      const enabledModelIds = await ctx.runQuery(internal.aiModels.getEnabledTextModelIdsInternal, {});
-      const grader = selectGraderModel({
-        targetModelId: modelConfig.modelId,
-        enabledModelIds,
-      });
-      const graderConfig = grader.independent
-        ? await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-          requestedModelId: grader.modelId,
+      for (let sample = 0; sample < sampleCount; sample += 1) {
+        const evalThreadId = await ctx.runMutation(internal.agentEvalFixtures.createEvalThreadInternal, {
+          agentId: args.agentId,
           companyId: args.companyId,
-          useCase: "agent",
-        })
-        : modelConfig;
+          userId: args.userId,
+          fixtureId: args.fixtureId,
+        });
 
-      // Through the registry, so a grader on any provider can grade. Grading
-      // independently means grading with a *different* model than the one under
-      // test, which was impossible to guarantee while every grade had to run on
-      // Vertex.
-      const gradingResponse = await generateTextWithResolvedModel({
-        model: graderConfig,
-        contents: [{
-          type: "text",
-          text: buildGradingPrompt({
-            objective: context.fixture.objective,
-            expectedFinalOutputRubric: context.fixture.expectedFinalOutputRubric,
-            modelOutput,
-          }),
-        }],
-        temperature: 0,
-      });
-      const gradingOutput = gradingResponse.text || "";
-      const grade = parseGradeVerdict(gradingOutput);
+        await ctx.runAction(internal.agentRuntime.runAgentObjective, {
+          threadId: evalThreadId,
+          agentId: args.agentId,
+          content: context.fixture.objective,
+        });
+
+        const outcome = await ctx.runQuery(internal.agentEvalFixtures.getEvalThreadOutcomeInternal, {
+          threadId: evalThreadId,
+        });
+        modelOutput = outcome.output || "Agent produced no readable output.";
+        answerInputTokens += outcome.inputTokens;
+        answerOutputTokens += outcome.outputTokens;
+
+        // Grade with a different model from the one under test. The same model
+        // marking its own homework favours its own output, and a model that has
+        // just confidently asserted something wrong is the least likely thing to
+        // notice — so the grade measured self-consistency, not correctness.
+        // Text-capable only. Reading every enabled model meant that on a deployment
+        // with an enabled embedding model the grader could be `text-embedding-004`,
+        // which answers a generate-text call with a provider NOT_FOUND — and
+        // `parseGradeVerdict` fails closed, so every model-graded eval failed for a
+        // reason that had nothing to do with the agent.
+        const enabledModelIds = await ctx.runQuery(internal.aiModels.getEnabledTextModelIdsInternal, {});
+        const grader = selectGraderModel({
+          targetModelId: modelConfig.modelId,
+          enabledModelIds,
+        });
+        const graderConfig = grader.independent
+          ? await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+            requestedModelId: grader.modelId,
+            companyId: args.companyId,
+            useCase: "agent",
+          })
+          : modelConfig;
+        independentGrade = grader.independent;
+        graderModelId = graderConfig.modelId;
+
+        // Through the registry, so a grader on any provider can grade. Grading
+        // independently means grading with a *different* model than the one under
+        // test, which was impossible to guarantee while every grade had to run on
+        // Vertex.
+        const gradingResponse = await generateTextWithResolvedModel({
+          model: graderConfig,
+          contents: [{
+            type: "text",
+            text: buildGradingPrompt({
+              objective: context.fixture.objective,
+              expectedFinalOutputRubric: context.fixture.expectedFinalOutputRubric,
+              modelOutput,
+            }),
+          }],
+          temperature: 0,
+        });
+        gradingOutput = gradingResponse.text || "";
+        gradingInputTokens += gradingResponse.inputTokens || 0;
+        gradingOutputTokens += gradingResponse.outputTokens || 0;
+
+        const sampleVerdict = parseGradeVerdict(gradingOutput);
+        verdicts.push(sampleVerdict);
+        // Every sample has to pass, so a failure settles it. Continuing would spend a
+        // whole further agent turn to confirm a result already decided.
+        if (!sampleVerdict.pass) break;
+      }
+
+      const grade = combineGradeSamples(verdicts);
       const status = grade.pass ? "SUCCESS" : "FAILED";
       // A deployment with one enabled model cannot grade independently. Say so
       // on the result rather than letting a weaker grade read like a full one.
-      const independenceNote = grader.independent
-        ? `Graded by ${graderConfig.modelId}.`
+      const independenceNote = independentGrade
+        ? `Graded by ${graderModelId}.`
         : `Graded by the model under test — no other model is enabled, so this grade is not independent.`;
+      const sampleNote = sampleCount > 1 ? ` Ran ${verdicts.length} of ${sampleCount} samples.` : "";
       const finalOutput = grade.pass
-        ? `Model-graded smoke eval passed. ${grade.reason} ${independenceNote}`
-        : `Model-graded smoke eval failed. ${grade.reason} ${independenceNote}`;
+        ? `Model-graded check passed. ${grade.reason} ${independenceNote}${sampleNote}`
+        : `Model-graded check failed. ${grade.reason} ${independenceNote}${sampleNote}`;
+      const costGBP = await calculateGradedRunCostGBP(ctx, {
+        answerModelId: modelConfig.modelId,
+        graderModelId,
+        answerInputTokens,
+        answerOutputTokens,
+        gradingInputTokens,
+        gradingOutputTokens,
+      });
 
       await ctx.runMutation(internal.agentEvalFixtures.completeModelGradedSmokeEvalInternal, {
         runId: args.runId,
@@ -144,8 +234,9 @@ export const gradeSmokeEvalWithModel = internalAction({
         providerModelId,
         // The agent's own spend is already recorded against its run; this adds
         // what the grading pass cost on top.
-        inputTokens: outcome.inputTokens + (gradingResponse.inputTokens || 0),
-        outputTokens: outcome.outputTokens + (gradingResponse.outputTokens || 0),
+        inputTokens: answerInputTokens + gradingInputTokens,
+        outputTokens: answerOutputTokens + gradingOutputTokens,
+        costGBP,
       });
     } catch (error: unknown) {
       const errorMessage = normalizeAiRuntimeError(error, "Model-graded smoke eval failed.").error;

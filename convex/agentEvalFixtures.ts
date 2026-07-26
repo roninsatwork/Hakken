@@ -15,6 +15,8 @@ const AGENT_EVAL_TOOL_LOOKUP_LIMIT = 250;
 const SMOKE_EVAL_HISTORY_LIMIT = 25;
 const EVAL_SUITE_FIXTURE_LIMIT = 50;
 const SMOKE_EVAL_OBJECTIVE_PREFIX = "Smoke eval:";
+/** More than this is a runaway, not a confidence interval. */
+const MAX_FIXTURE_SAMPLE_COUNT = 5;
 const EVAL_SUITE_TAG_LIMIT = 30;
 const EVAL_SUITE_PRESET_NAME_LIMIT = 120;
 const EVAL_SUITE_PRESET_DESCRIPTION_LIMIT = 500;
@@ -114,6 +116,12 @@ function normalizeHandlerMappings(handlerMappings: string[] | undefined) {
 // so rebuilding the plan from the form's bare strings silently threw the rest
 // away: opening a run-derived fixture and pressing Save degraded it. Entries whose
 // mapping is unchanged keep everything they already had.
+/** Clamped server-side, so a hand-crafted request cannot queue fifty agent turns. */
+function normalizeSampleCount(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(Math.max(Math.round(value), 1), MAX_FIXTURE_SAMPLE_COUNT);
+}
+
 function buildExpectedToolPlanJson(handlerMappings: string[] | undefined, existingToolPlanJson?: string) {
   const normalizedMappings = normalizeHandlerMappings(handlerMappings);
   if (normalizedMappings.length === 0) return undefined;
@@ -729,6 +737,7 @@ export const updateFixture = adminMutation({
     expectedToolMappings: v.optional(v.array(v.string())),
     expectedBlockedActionsJson: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    sampleCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
@@ -764,6 +773,7 @@ export const updateFixture = adminMutation({
         ? { expectedBlockedActionsJson: normalizeOptionalJsonObject(args.expectedBlockedActionsJson, "Expected blocked actions") }
         : {}),
       ...(args.tags !== undefined ? { tags: normalizeTags(args.tags, nextType) } : {}),
+      ...(args.sampleCount !== undefined ? { sampleCount: normalizeSampleCount(args.sampleCount) } : {}),
       agentVersionId,
       updatedAt: now,
     };
@@ -1628,6 +1638,7 @@ export const completeModelGradedSmokeEvalInternal = internalMutation({
     providerModelId: v.optional(v.string()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
+    costGBP: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -1642,6 +1653,9 @@ export const completeModelGradedSmokeEvalInternal = internalMutation({
       ...(args.providerModelId !== undefined ? { providerModelId: args.providerModelId } : {}),
       ...(args.inputTokens !== undefined ? { inputTokens: args.inputTokens } : {}),
       ...(args.outputTokens !== undefined ? { outputTokens: args.outputTokens } : {}),
+      // The run table always had this column; nothing had ever filled it in for an
+      // eval, so a check's spend read as zero however many turns it took.
+      ...(args.costGBP !== undefined ? { costGBP: args.costGBP } : {}),
     });
 
     await ctx.db.insert("agentRunSteps", {
@@ -1764,6 +1778,7 @@ export const getCheckDetail = adminQuery({
         modelId: run.modelId,
         inputTokens: run.inputTokens,
         outputTokens: run.outputTokens,
+        costGBP: run.costGBP,
         finalOutput: run.finalOutput,
         error: run.error,
         failures: getStringArrayMetadataValue(metadata, "failures"),
@@ -1778,6 +1793,7 @@ export const getCheckDetail = adminQuery({
         objective: fixture.objective,
         expectedFinalOutputRubric: fixture.expectedFinalOutputRubric,
         tags: fixture.tags,
+        sampleCount: fixture.sampleCount ?? 1,
         updatedAt: fixture.updatedAt,
         status: fixture.status,
       },

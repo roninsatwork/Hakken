@@ -971,6 +971,14 @@ export default defineSchema({
     expectedToolPlanJson: v.optional(v.string()),
     expectedBlockedActionsJson: v.optional(v.string()),
     expectedFinalOutputRubric: v.string(),
+    /*
+     * How many times to give the agent the task, per run. Absent means once.
+     *
+     * Same reasoning as the company side: a check that passes two times in three is a
+     * check that fails one conversation in three, and one attempt cannot tell those
+     * apart. Opt-in, because each extra sample is a whole agent turn plus a grade.
+     */
+    sampleCount: v.optional(v.number()),
     expectedMemoryUsageJson: v.optional(v.string()),
     sourceEvidenceJson: v.string(),
     tags: v.array(v.string()),
@@ -1473,18 +1481,6 @@ export default defineSchema({
   companyEvalCases: defineTable({
     companyId: v.id("companies"),
     name: v.string(),
-    category: v.union(
-      v.literal("KNOWLEDGE_RETRIEVAL"),
-      v.literal("MEMORY_USAGE"),
-      v.literal("RULE_COMPLIANCE"),
-      v.literal("BRAND_TONE"),
-      v.literal("SKILL_ROUTING"),
-      v.literal("MODEL_ROUTING"),
-      v.literal("NO_HALLUCINATION"),
-      v.literal("TENANT_ISOLATION"),
-      v.literal("WIDGET_READINESS"),
-      v.literal("AGENT_INHERITANCE")
-    ),
     severity: v.union(
       v.literal("BLOCKER"),
       v.literal("WARNING"),
@@ -1497,31 +1493,12 @@ export default defineSchema({
       v.literal("WORKFLOW"),
       v.literal("APP_KIT")
     ),
-    targetId: v.optional(v.string()),
     prompt: v.string(),
-    fixtureContextJson: v.optional(v.string()),
     expectedBehavior: v.string(),
     requiredSourcesJson: v.optional(v.string()),
     requiredMemoriesJson: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
     forbiddenClaimsJson: v.optional(v.string()),
-    /*
-     * Retired. Nothing reads these and nothing writes them any more.
-     *
-     * They are still declared because Convex validates existing documents when a
-     * schema is pushed: removing the lines before
-     * `2026-07-26-retire-unread-company-check-fields` has run against a deployment
-     * would refuse the deploy on every row that still carries them. Delete these
-     * five lines once that migration has completed everywhere, including production.
-     *
-     * `expectedModelUseCase` fed a check that compared a field to itself and could
-     * not fail. `fixtureContextJson` existed only so the deleted batch runner could
-     * hand a case's own declarations back to itself as evidence. `judgeRubric` was a
-     * second box asking the same question as "what a good answer must do".
-     */
-    expectedModelUseCase: v.optional(v.string()),
-    expectedOutputFormat: v.optional(v.string()),
-    judgeRubric: v.optional(v.string()),
     status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
     lastRunId: v.optional(v.id("companyEvalRuns")),
     // Rolled up from the latest run so readiness and the summary never scan the
@@ -1553,7 +1530,6 @@ export default defineSchema({
     archivedAt: v.optional(v.number()),
   })
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
-    .index("by_company_category_status", ["companyId", "category", "status"])
     .index("by_company_surface", ["companyId", "targetSurface"])
     // Must-pass cases drive the readiness gates, so they are selected by index
     // rather than by filtering every active case in memory.

@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
-import { ClipboardCheck, Loader2, MessageSquareText } from "lucide-react";
+import { ClipboardCheck, Loader2, MessageSquareText, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -20,45 +20,20 @@ import {
 } from "@/src/app/(dashboard)/admin/companies/[id]/ai/_components/CompanyAiFormPage";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
-type EvalCategory = CompanyEvalCase["category"];
+
+const WHERE_OPTIONS: Array<{ value: EvalTargetSurface; label: string; hint: string }> = [
+  { value: "COMPANY_CHAT", label: "Internal chat", hint: "Staff asking your AI questions" },
+  { value: "WIDGET", label: "Customer widget", hint: "The public widget on your site" },
+];
 type EvalSeverity = CompanyEvalCase["severity"];
 type EvalTargetSurface = CompanyEvalCase["targetSurface"];
 
-const EVAL_CATEGORIES: Array<{ value: EvalCategory; label: string }> = [
-  { value: "KNOWLEDGE_RETRIEVAL", label: "Knowledge retrieval" },
-  { value: "MEMORY_USAGE", label: "Memory usage" },
-  { value: "RULE_COMPLIANCE", label: "Rule compliance" },
-  { value: "BRAND_TONE", label: "Brand tone" },
-  { value: "SKILL_ROUTING", label: "Skill routing" },
-  { value: "MODEL_ROUTING", label: "Model routing" },
-  { value: "NO_HALLUCINATION", label: "No hallucination" },
-  { value: "TENANT_ISOLATION", label: "Tenant isolation" },
-  { value: "WIDGET_READINESS", label: "Widget readiness" },
-  { value: "AGENT_INHERITANCE", label: "Agent inheritance" },
-];
-
-const EVAL_SEVERITIES: Array<{ value: EvalSeverity; label: string }> = [
-  { value: "BLOCKER", label: "Blocker" },
-  { value: "WARNING", label: "Warning" },
-  { value: "ADVISORY", label: "Advisory" },
-];
-
-const EVAL_TARGETS: Array<{ value: EvalTargetSurface; label: string }> = [
-  { value: "COMPANY_CHAT", label: "Company chat" },
-  { value: "WIDGET", label: "Widget" },
-  { value: "AGENT", label: "Agent" },
-  { value: "WORKFLOW", label: "Workflow" },
-  { value: "APP_KIT", label: "App kit" },
-];
-
 const DEFAULT_EVAL_FORM = {
   name: "",
-  category: "NO_HALLUCINATION" as EvalCategory,
   severity: "WARNING" as EvalSeverity,
   targetSurface: "COMPANY_CHAT" as EvalTargetSurface,
   prompt: "",
   expectedBehavior: "",
-  forbiddenClaimsJson: "",
 };
 
 export default function NewChatEvalPage() {
@@ -86,6 +61,18 @@ export default function NewChatEvalPage() {
 
   const [evalForm, setEvalForm] = useState(DEFAULT_EVAL_FORM);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [bannedPhrases, setBannedPhrases] = useState<string[]>([]);
+  const [phraseDraft, setPhraseDraft] = useState("");
+
+  const addPhrase = () => {
+    const phrase = phraseDraft.trim();
+    if (!phrase || bannedPhrases.includes(phrase)) {
+      setPhraseDraft("");
+      return;
+    }
+    setBannedPhrases((current) => [...current, phrase]);
+    setPhraseDraft("");
+  };
   const action = useAdminAction({ scope: "admin-company-ai" });
 
   // Hydrating during render rather than in an effect: React re-runs this
@@ -94,14 +81,12 @@ export default function NewChatEvalPage() {
   if (thread && messages && !hasHydrated) {
       setEvalForm({
         name: thread.title ? `${thread.title.slice(0, 90)} regression` : "Chat evidence regression",
-        category: thread.widgetId ? "WIDGET_READINESS" : "NO_HALLUCINATION",
         severity: thread.widgetId ? "BLOCKER" : "WARNING",
         targetSurface: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
         prompt: latestUserMessage?.content ?? "",
         expectedBehavior: selectedAssistantMessage
           ? "Preserve the useful parts of the observed answer, stay grounded in approved company context, and avoid unsupported claims."
           : "Answer should be grounded in approved company context and avoid unsupported claims.",
-        forbiddenClaimsJson: "",
       });
       setHasHydrated(true);
   }
@@ -113,12 +98,11 @@ export default function NewChatEvalPage() {
           threadId,
           messageId: selectedAssistantMessage?._id,
           name: evalForm.name,
-          category: evalForm.category,
           severity: evalForm.severity,
           targetSurface: evalForm.targetSurface,
           prompt: evalForm.prompt,
           expectedBehavior: evalForm.expectedBehavior,
-          forbiddenClaimsJson: evalForm.forbiddenClaimsJson || undefined,
+          forbiddenClaimsJson: bannedPhrases.length > 0 ? JSON.stringify(bannedPhrases) : undefined,
       }), {
       fallbackMessage: "Eval case could not be created.",
       // The form renders the message itself, so a toast would repeat it.
@@ -184,36 +168,27 @@ export default function NewChatEvalPage() {
               placeholder="Regression name"
             />
           </AdminModalFormField>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <AdminModalFormField label="Category">
-              <select
-                className={adminModalInputClassName}
-                value={evalForm.category}
-                onChange={(event) => setEvalForm((current) => ({ ...current, category: event.target.value as EvalCategory }))}
-              >
-                {EVAL_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
-              </select>
-            </AdminModalFormField>
-            <AdminModalFormField label="Severity">
-              <select
-                className={adminModalInputClassName}
-                value={evalForm.severity}
-                onChange={(event) => setEvalForm((current) => ({ ...current, severity: event.target.value as EvalSeverity }))}
-              >
-                {EVAL_SEVERITIES.map((severity) => <option key={severity.value} value={severity.value}>{severity.label}</option>)}
-              </select>
-            </AdminModalFormField>
-            <AdminModalFormField label="Surface">
-              <select
-                className={adminModalInputClassName}
-                value={evalForm.targetSurface}
-                onChange={(event) => setEvalForm((current) => ({ ...current, targetSurface: event.target.value as EvalTargetSurface }))}
-              >
-                {EVAL_TARGETS.map((target) => <option key={target.value} value={target.value}>{target.label}</option>)}
-              </select>
-            </AdminModalFormField>
-          </div>
-          <AdminModalFormField label="Prompt">
+          <AdminModalFormField label="Where does this apply?">
+            <div className="flex flex-col gap-2">
+              {WHERE_OPTIONS.map((option) => (
+                <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
+                  <input
+                    type="radio"
+                    name="where"
+                    checked={evalForm.targetSurface === option.value}
+                    onChange={() => setEvalForm((current) => ({ ...current, targetSurface: option.value }))}
+                    className="mt-0.5 accent-brand"
+                  />
+                  <span>
+                    <span className="block text-[13px] font-semibold text-foreground">{option.label}</span>
+                    <span className="block text-[12px] text-secondary">{option.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </AdminModalFormField>
+
+          <AdminModalFormField label="What would someone ask?">
             <textarea
               required
               className={`${adminModalTextareaClassName} min-h-[190px]`}
@@ -222,7 +197,7 @@ export default function NewChatEvalPage() {
               placeholder="Question or task to replay as an eval."
             />
           </AdminModalFormField>
-          <AdminModalFormField label="Expected behavior">
+          <AdminModalFormField label="What does a good answer look like?">
             <textarea
               required
               className={`${adminModalTextareaClassName} min-h-[190px]`}
@@ -231,14 +206,54 @@ export default function NewChatEvalPage() {
               placeholder="What a passing answer must do."
             />
           </AdminModalFormField>
-          <AdminModalFormField label="Forbidden claims" hint="JSON string array">
-            <textarea
-              className={`${adminModalTextareaClassName} min-h-[160px] font-mono`}
-              value={evalForm.forbiddenClaimsJson}
-              onChange={(event) => setEvalForm((current) => ({ ...current, forbiddenClaimsJson: event.target.value }))}
-              placeholder={'["enterprise is free"]'}
-            />
+          <AdminModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
+            <div className="flex flex-col gap-2">
+              <input
+                className={adminModalInputClassName}
+                value={phraseDraft}
+                onChange={(event) => setPhraseDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addPhrase();
+                  }
+                }}
+                onBlur={addPhrase}
+                placeholder="enterprise is free"
+              />
+              {bannedPhrases.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {bannedPhrases.map((phrase) => (
+                    <span key={phrase} className="inline-flex items-center gap-1.5 rounded-full border border-border-dim bg-foreground/5 px-3 py-1 text-[12px] text-foreground">
+                      {phrase}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${phrase}`}
+                        onClick={() => setBannedPhrases((current) => current.filter((entry) => entry !== phrase))}
+                        className="text-muted transition-colors hover:text-red-400"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </AdminModalFormField>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
+            <input
+              type="checkbox"
+              checked={evalForm.severity === "BLOCKER"}
+              onChange={(event) => setEvalForm((current) => ({ ...current, severity: event.target.checked ? "BLOCKER" : "ADVISORY" }))}
+              className="mt-0.5 accent-brand"
+            />
+            <span>
+              <span className="block text-[13px] font-semibold text-foreground">This must pass before the AI goes live</span>
+              <span className="block text-[12px] text-secondary">Leave ticked for anything that would embarrass you in front of a customer.</span>
+            </span>
+          </label>
+
           <CompanyAiFormActions
             backHref={backHref}
             submitLabel={action.isBusy() ? "Creating..." : "Create eval"}

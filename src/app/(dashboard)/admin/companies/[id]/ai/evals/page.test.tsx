@@ -30,7 +30,6 @@ const CASE_ROW = {
   prompt: "How much does the enterprise plan cost?",
   expectedBehavior: "Say pricing is not published.",
   severity: "BLOCKER",
-  category: "NO_HALLUCINATION",
   targetSurface: "COMPANY_CHAT",
   updatedAt: 1_770_000_000_000,
   // Rolled up onto the case, so the list needs no run query at all.

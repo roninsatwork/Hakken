@@ -91,7 +91,6 @@ import type * as connectorSecretResolver from "../connectorSecretResolver.js";
 import type * as crons from "../crons.js";
 import type * as dataMigrations from "../dataMigrations.js";
 import type * as emailBrandingService from "../emailBrandingService.js";
-import type * as evalFieldRetirementAudit from "../evalFieldRetirementAudit.js";
 import type * as googleAgentProvider from "../googleAgentProvider.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
 import type * as http from "../http.js";
@@ -255,7 +254,6 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   dataMigrations: typeof dataMigrations;
   emailBrandingService: typeof emailBrandingService;
-  evalFieldRetirementAudit: typeof evalFieldRetirementAudit;
   googleAgentProvider: typeof googleAgentProvider;
   googleProviderAdapter: typeof googleProviderAdapter;
   http: typeof http;

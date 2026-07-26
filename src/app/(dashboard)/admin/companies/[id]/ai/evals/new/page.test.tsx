@@ -104,7 +104,6 @@ describe("NewCompanyEvalPage", () => {
       expect(createCase).toHaveBeenCalledWith({
         companyId: "company123",
         name: "Doesn't invent pricing",
-        category: "NO_HALLUCINATION",
         severity: "BLOCKER",
         targetSurface: "COMPANY_CHAT",
         prompt: "How much is the enterprise plan?",

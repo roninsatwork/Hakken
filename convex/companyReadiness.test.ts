@@ -66,7 +66,6 @@ describe("Company AI readiness", () => {
     const chatCaseId = await adminAClient.mutation(api.companyEvals.createCase, {
       companyId: companyAId,
       name: "Proposal intro does not promise a discount",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "COMPANY_CHAT",
       prompt: "Draft a proposal intro.",
@@ -76,7 +75,6 @@ describe("Company AI readiness", () => {
     const widgetCaseId = await adminAClient.mutation(api.companyEvals.createCase, {
       companyId: companyAId,
       name: "Widget does not invent pricing",
-      category: "NO_HALLUCINATION",
       severity: "BLOCKER",
       targetSurface: "WIDGET",
       prompt: "What does this cost?",
@@ -165,7 +163,6 @@ describe("Company AI readiness", () => {
     const evalCaseId = await adminClient.mutation(api.companyEvals.createCase, {
       companyId,
       name: "Widget does not invent pricing",
-      category: "WIDGET_READINESS",
       severity: "BLOCKER",
       targetSurface: "WIDGET",
       prompt: "What does enterprise cost?",

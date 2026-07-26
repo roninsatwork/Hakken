@@ -66,18 +66,6 @@ const STARTER_CHECKS: Array<{
   },
 ];
 
-const evalCategoryValidator = v.union(
-  v.literal("KNOWLEDGE_RETRIEVAL"),
-  v.literal("MEMORY_USAGE"),
-  v.literal("RULE_COMPLIANCE"),
-  v.literal("BRAND_TONE"),
-  v.literal("SKILL_ROUTING"),
-  v.literal("MODEL_ROUTING"),
-  v.literal("NO_HALLUCINATION"),
-  v.literal("TENANT_ISOLATION"),
-  v.literal("WIDGET_READINESS"),
-  v.literal("AGENT_INHERITANCE")
-);
 
 const evalSeverityValidator = v.union(
   v.literal("BLOCKER"),
@@ -484,7 +472,6 @@ export const createCase = adminMutation({
   args: {
     companyId: v.id("companies"),
     name: v.string(),
-    category: evalCategoryValidator,
     severity: evalSeverityValidator,
     targetSurface: evalTargetSurfaceValidator,
     prompt: v.string(),
@@ -512,8 +499,7 @@ export const createCase = adminMutation({
 
     const evalCaseId = await ctx.db.insert("companyEvalCases", {
       companyId: args.companyId,
-      name: normalizeText(args.name, "Eval name", CASE_NAME_MAX_CHARS),
-      category: args.category,
+      name: normalizeText(args.name, "Check name", CASE_NAME_MAX_CHARS),
       severity: args.severity,
       targetSurface: args.targetSurface,
       prompt: normalizeText(args.prompt, "Prompt", PROMPT_MAX_CHARS),
@@ -533,14 +519,13 @@ export const createCase = adminMutation({
       entityType: "companyEvalCases",
       companyId: args.companyId,
       timestamp: now,
-      metadata: JSON.stringify({ category: args.category, severity: args.severity, targetSurface: args.targetSurface }),
+      metadata: JSON.stringify({ severity: args.severity, targetSurface: args.targetSurface }),
     });
     await recordCompanyAiDriftEvent(ctx, {
       companyId: args.companyId,
       sourceType: "EVAL",
       sourceId: evalCaseId,
       reason: "Company eval case was created and needs evidence.",
-      affectedEvalCategories: [args.category],
       createdBy: userId,
       createdAt: now,
     });
@@ -657,7 +642,6 @@ export const createStarterCases = adminMutation({
       const evalCaseId = await ctx.db.insert("companyEvalCases", {
         companyId: args.companyId,
         name: starter.name,
-        category: "NO_HALLUCINATION",
         severity: "BLOCKER",
         targetSurface: starter.targetSurface,
         prompt: starter.prompt,
