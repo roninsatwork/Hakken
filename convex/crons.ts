@@ -30,6 +30,16 @@ crons.interval(
   {}
 );
 
+// Give up on approvals nobody answered, so a parked run does not hold its
+// checkpoint and its place in every count for ever. The window is measured in
+// hours, so this only needs to run often enough that the number is roughly true.
+crons.interval(
+  "agent-approval-expiry",
+  { minutes: 15 },
+  internal.agentRuns.expireStalePendingApprovals,
+  {}
+);
+
 // Recompute the Skill Center counts. They used to be totalled on every page
 // load by walking every skill and all of its agent bindings; counting cannot be
 // indexed away, so it happens here instead. Ten minutes keeps the panel close

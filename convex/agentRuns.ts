@@ -12,6 +12,17 @@ import {
   buildRefusedToolCallKey,
   getRefusedToolCallMessage,
 } from "./agentRuntimeService";
+import {
+  APPROVAL_EXPIRY_CONFIG_KEY,
+  DEFAULT_APPROVAL_EXPIRY_HOURS,
+  MAX_APPROVAL_EXPIRY_HOURS,
+  MIN_APPROVAL_EXPIRY_HOURS,
+  getApprovalExpiredMessage,
+  isApprovalExpired,
+  normalizeApprovalExpiryHoursForUpdate,
+  parseApprovalExpiryConfig,
+  resolveApprovalExpiryHours,
+} from "./approvalExpiryService";
 
 const AGENT_RUN_DETAIL_LIMIT = 500;
 const AGENT_RUN_ANALYTICS_LIMIT = 500;
@@ -19,6 +30,8 @@ const RUN_OBSERVATORY_LIMIT = 120;
 const RUN_OBSERVATORY_TOOL_LIMIT = 300;
 /** Counting cannot be indexed away, so the badge stops here and says it did. */
 const PENDING_APPROVAL_COUNT_LIMIT = 99;
+/** One sweep's worth. The cron runs every 15 minutes, so a backlog drains quickly. */
+const APPROVAL_EXPIRY_SWEEP_LIMIT = 100;
 const PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH = 4000;
 
 const agentRunStatusValidator = v.union(
@@ -1276,6 +1289,11 @@ export const decideApproval = superAdminMutation({
     const { userId } = ctx;
     const approval = await ctx.db.get(args.approvalId);
     if (!approval) throw new Error("Approval not found");
+    // Covers EXPIRED as well, so a stale browser tab cannot approve something the
+    // platform has already closed and whose run has been cancelled underneath it.
+    if (approval.status === "EXPIRED") {
+      throw new Error("This request expired before it was answered, and its run has stopped.");
+    }
     if (approval.status !== "PENDING") throw new Error("Approval has already been reviewed");
 
     const run = await ctx.db.get(approval.runId);
@@ -1971,6 +1989,183 @@ export const recordApprovedToolResultInternal = internalMutation({
         resultJson: call.resultJson,
       })),
     };
+  },
+});
+
+export const getApprovalExpiryConfig = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const config = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", APPROVAL_EXPIRY_CONFIG_KEY))
+      .first();
+
+    return {
+      ...parseApprovalExpiryConfig(config?.value),
+      defaultHours: DEFAULT_APPROVAL_EXPIRY_HOURS,
+      minHours: MIN_APPROVAL_EXPIRY_HOURS,
+      maxHours: MAX_APPROVAL_EXPIRY_HOURS,
+    };
+  },
+});
+
+export const updateApprovalExpiryConfig = superAdminMutation({
+  args: {
+    expiryHours: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = ctx;
+    const expiryHours = normalizeApprovalExpiryHoursForUpdate(args.expiryHours);
+    const now = Date.now();
+    const value = JSON.stringify({ expiryHours });
+
+    const existing = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", APPROVAL_EXPIRY_CONFIG_KEY))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { value, updatedAt: now, updatedBy: userId });
+    } else {
+      await ctx.db.insert("systemConfig", {
+        key: APPROVAL_EXPIRY_CONFIG_KEY,
+        value,
+        updatedAt: now,
+        updatedBy: userId,
+      });
+    }
+
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "UPDATE_SYSTEM_PREFERENCES",
+      entityType: "systemConfig",
+      entityId: APPROVAL_EXPIRY_CONFIG_KEY,
+      metadata: JSON.stringify({ expiryHours }),
+      timestamp: now,
+    });
+
+    return expiryHours;
+  },
+});
+
+/**
+ * Give up on approvals nobody answered.
+ *
+ * Only ever cancels. An unattended yes to a deletion is the one outcome worse than
+ * a stuck run, and unlike a rejection nobody made a judgement here — so the run is
+ * stopped rather than the model being told it was refused, which would put a
+ * decision in the transcript that no person took.
+ *
+ * The whole batch goes together. A model turn's calls were requested together and
+ * leaving siblings pending would park the run again with nothing able to settle it.
+ */
+export const expireStalePendingApprovals = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const platformConfig = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", APPROVAL_EXPIRY_CONFIG_KEY))
+      .first();
+    const platformExpiryHours = parseApprovalExpiryConfig(platformConfig?.value).expiryHours;
+
+    const pending = await ctx.db
+      .query("agentRunApprovals")
+      .withIndex("by_status_requested", (q) => q.eq("status", "PENDING"))
+      .take(APPROVAL_EXPIRY_SWEEP_LIMIT);
+
+    let expiredRuns = 0;
+    const handledRuns = new Set<string>();
+
+    for (const approval of pending) {
+      if (handledRuns.has(approval.runId)) continue;
+
+      const agent = await ctx.db.get(approval.agentId);
+      const expiryHours = resolveApprovalExpiryHours({
+        agentExpiryHours: agent?.approvalExpiryHours,
+        platformExpiryHours,
+      });
+      if (!isApprovalExpired({ requestedAt: approval.requestedAt, now, expiryHours })) continue;
+
+      const run = await ctx.db.get(approval.runId);
+      // A run that has already reached a terminal state has been dealt with by
+      // something else — a cancellation, most likely. Leave its rows alone.
+      if (!run || run.status !== "PENDING_APPROVAL") continue;
+
+      handledRuns.add(approval.runId);
+      expiredRuns += 1;
+      const message = getApprovalExpiredMessage(expiryHours);
+
+      const runApprovals = await ctx.db
+        .query("agentRunApprovals")
+        .withIndex("by_run_requested", (q) => q.eq("runId", approval.runId))
+        .filter((q) => q.eq(q.field("status"), "PENDING"))
+        .take(AGENT_RUN_DETAIL_LIMIT);
+
+      for (const stale of runApprovals) {
+        await ctx.db.patch(stale._id, {
+          status: "EXPIRED",
+          reviewedAt: now,
+          decisionReason: message,
+        });
+        if (stale.toolCallId) {
+          await ctx.db.patch(stale.toolCallId, {
+            status: "CANCELLED",
+            completedAt: now,
+            error: message,
+          });
+        }
+      }
+
+      const stepIndex = await getNextStepIndex(ctx, approval.runId);
+      await ctx.db.insert("agentRunSteps", {
+        runId: approval.runId,
+        agentId: approval.agentId,
+        companyId: approval.companyId,
+        stepIndex,
+        kind: "FINAL",
+        status: "SKIPPED",
+        output: message,
+        startedAt: now,
+        completedAt: now,
+      });
+
+      await ctx.db.patch(approval.runId, {
+        status: "CANCELLED",
+        updatedAt: now,
+        completedAt: now,
+        cancelledAt: now,
+        finalOutput: message,
+      });
+      await updateMemoryUsageOutcomeForRun(ctx, approval.runId, "CANCELLED");
+
+      // The parked position is not something to resume from, and the sweeper that
+      // clears stale checkpoints deliberately ignores AWAITING_APPROVAL ones.
+      const checkpoint = await ctx.db
+        .query("agentRunCheckpoints")
+        .withIndex("by_run", (q) => q.eq("runId", approval.runId))
+        .first();
+      if (checkpoint) await ctx.db.delete(checkpoint._id);
+
+      // Deliberately no audit row. `auditLogs.actorId` is required and names the
+      // admin who did a thing; nobody did this one, and inventing an actor to
+      // satisfy the column would put a person's name against a decision they never
+      // took. Widening a table every screen reads, for a nicety, is the worse
+      // trade. The expiry is already traceable without it: the approval carries
+      // EXPIRED and the reason, the run carries a FINAL step and CANCELLED, and the
+      // conversation gets the sentence below.
+
+      // Nobody chose this, so the conversation gets a sentence rather than simply
+      // going dead.
+      if (run.threadId) {
+        await ctx.scheduler.runAfter(0, internal.chat.saveAssistantMessage, {
+          threadId: run.threadId,
+          content: message,
+        });
+      }
+    }
+
+    return { examined: pending.length, expiredRuns };
   },
 });
 

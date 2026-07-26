@@ -752,7 +752,47 @@ Tests in `convex/agentRuntime.test.ts` and `convex/agentRuns.test.ts`:
   `convex/agentRuntime.test.ts:1238-1257` are rewritten, not deleted, so the new
   contract is pinned exactly where the old one was
 
-### Phase 4 — Expire what nobody answers, on a window you can set
+### Phase 4 — Expire what nobody answers, on a window you can set — **DONE**
+
+Built as planned, with two deviations and one thing added.
+
+**No audit row for an expiry, deliberately.** The plan called for one.
+`auditLogs.actorId` is required and names the admin who did a thing; nobody did
+this one, and inventing an actor to satisfy the column would put a person's name
+against a decision they never took. Widening a table every screen reads, for a
+nicety, is the worse trade. The expiry is traceable without it: the approval carries
+`EXPIRED` and the reason, the run carries a `FINAL` step and `CANCELLED`, and the
+conversation gets a sentence. The *config change* does write an audit row, because
+that one has an actor.
+
+**The whole batch expires together.** One approval past the window expires every
+pending approval on that run. Expiring one and leaving its siblings would park the
+run again with nothing left able to settle it — a permanently stuck run, which is
+the fault this phase exists to remove.
+
+**The platform window got a screen, not just an API.** The plan listed it; it would
+have been easy to ship the query and mutation and stop, which is precisely the
+"reachable permission with no screen behind it" pattern this plan has corrected twice
+already. `ApprovalExpirySection` sits with purge retention on the settings screen —
+both answer "how long does the platform wait before it acts", and both are the rare
+operational limits an admin can actually set. Every other threshold on this platform
+is a module constant the health screen can only display.
+
+Also: the per-agent field is hidden while an agent is autonomous, because an
+autonomous agent never waits and there is nothing for a window to bound.
+
+Tests: three new — the sweep with a stale run, a fresh one and a sibling; the
+per-agent override; and the config round-trip with its floor. Guards proved by
+reverting three ways — leaving siblings pending, ignoring the per-agent window, and
+removing the minimum floor.
+
+Verified: `lint:all` (0 errors), `check` (3217 tests, three consecutive clean runs),
+`build`, `git diff --check` clean. **Browser-verified**: the per-agent field renders
+with the platform window named in its hint, disappears when the agent is switched to
+autonomous, and the platform section renders on the settings screen with the right
+default, floor and ceiling. Console clean. Nothing saved against live data.
+
+**Original plan text follows.**
 
 1. `convex/schema.ts:741-764` — add `v.literal("EXPIRED")` to the
    `agentRunApprovals` status union. `convex/schema.ts:1654-1662` — add

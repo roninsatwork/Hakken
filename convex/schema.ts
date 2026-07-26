@@ -766,6 +766,10 @@ export default defineSchema({
       v.literal("PENDING"),
       v.literal("APPROVED"),
       v.literal("REJECTED"),
+      // Its own status rather than reusing CANCELLED: "nobody answered" and
+      // "someone decided against it" are different facts about the platform, and
+      // a queue that cannot tell them apart cannot tell you it is being ignored.
+      v.literal("EXPIRED"),
       v.literal("CANCELLED")
     ),
     message: v.optional(v.string()),
@@ -1703,6 +1707,9 @@ export default defineSchema({
     // agent at creation and only ever tightens the gate, so redefining it would
     // have stripped the brake off the whole platform in one deploy.
     autonomousToolExecution: v.optional(v.boolean()),
+    // How long this agent's approvals may wait before the platform gives up.
+    // Unset follows the platform window.
+    approvalExpiryHours: v.optional(v.number()),
     inputSchema: v.optional(v.string()), // Stringified JSON Schema
     outputSchema: v.optional(v.string()), // Stringified JSON Schema
     triggerType: v.optional(v.union(v.literal("MANUAL"), v.literal("WEBHOOK"), v.literal("SCHEDULE"))),

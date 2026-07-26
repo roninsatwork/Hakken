@@ -24,6 +24,7 @@ import { AppearanceSettingsSection } from "./_components/AppearanceSettingsSecti
 import { AuditLogsSection } from "./_components/AuditLogsTable";
 import { IdentitySettingsSection } from "./_components/IdentitySettingsSection";
 import { PurgesSettingsSection } from "./_components/PurgesSettingsSection";
+import { ApprovalExpirySection } from "./_components/ApprovalExpirySection";
 import { SettingBlock } from "./_components/SettingBlock";
 import { isSettingsTab } from "./_components/settingsTabs";
 import { WhiteLabelCustomDomainChecklistSection, type WhiteLabelCustomDomainChecklist } from "./_components/WhiteLabelCustomDomainChecklistSection";
@@ -512,7 +513,13 @@ export default function SystemSettingsPage() {
         )}
 
         {activeTab === "purges" && (
-          <PurgesSettingsSection />
+          <section className="flex flex-col gap-6">
+            <PurgesSettingsSection />
+            {/* Grouped with retention rather than given a tab of its own: both are
+                "how long does the platform keep waiting before it acts", and both
+                are the rare operational limits an admin can actually set. */}
+            <ApprovalExpirySection />
+          </section>
         )}
       </div>
 

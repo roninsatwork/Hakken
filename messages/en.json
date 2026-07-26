@@ -1228,6 +1228,8 @@
                                 "required": "Require approval",
                                 "autonomous": "Run autonomously",
                                 "hintRequired": "The agent stops and waits for a person before it writes, sends, or calls anything outside the platform.",
+                                "expiryLabel": "Give up after (hours)",
+                                "expiryHint": "Blank follows the platform window of {hours}. After this long with no decision the run stops, nothing is sent, and the conversation says so.",
                                 "hintAutonomous": "The agent completes writes, sends and deletions on its own, with nobody asked. What bounds it is the tools you give it and the run budget below."
                             },
                             "budget": {

@@ -103,6 +103,8 @@ type AgentSettingsFormData = {
   isActive: boolean;
   /** Inverted for display: the switch reads as the safe state being on. */
   requireHumanApproval: boolean;
+  /** Blank follows the platform window. */
+  approvalExpiryHours: string;
   /** Blank means inherit the platform default. Held as text so a box can be empty. */
   maxSteps: string;
   maxToolCalls: string;
@@ -122,6 +124,7 @@ const emptyFormData: AgentSettingsFormData = {
   allowInternetAccess: false,
   isActive: true,
   requireHumanApproval: true,
+  approvalExpiryHours: "",
   maxSteps: "",
   maxToolCalls: "",
   maxRuntimeMinutes: "",
@@ -260,6 +263,9 @@ export default function AgentOverviewPage() {
     [activeModels],
   );
 
+  // So a blank box can name the window it will actually follow, rather than
+  // leaving the reader to guess.
+  const approvalExpiry = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
   const updateAgent = useMutation(api.agents.updateAgent);
   const runSmokeEval = useMutation(api.agentEvalFixtures.runSmokeEval);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
@@ -347,6 +353,7 @@ export default function AgentOverviewPage() {
       // true makes an agent autonomous, so an agent that predates the setting
       // shows the switch on.
       requireHumanApproval: agent.autonomousToolExecution !== true,
+      approvalExpiryHours: agent.approvalExpiryHours ? String(agent.approvalExpiryHours) : "",
       maxSteps: agent.maxSteps ? String(agent.maxSteps) : "",
       maxToolCalls: agent.maxToolCalls ? String(agent.maxToolCalls) : "",
       maxRuntimeMinutes: agent.maxRuntimeMs ? String(Math.round(agent.maxRuntimeMs / 60000)) : "",
@@ -378,6 +385,7 @@ export default function AgentOverviewPage() {
         allowInternetAccess: formData.allowInternetAccess,
         isActive: formData.isActive,
         autonomousToolExecution: !formData.requireHumanApproval,
+        approvalExpiryHours: parseLimitInput(formData.approvalExpiryHours) ?? 0,
         // Zero rather than omitted, because an omitted argument means "leave the
         // stored value alone" and a cleared box has to mean "go back to the
         // platform default". The server turns anything unusable into a removal.
@@ -714,6 +722,32 @@ export default function AgentOverviewPage() {
                   ? t("sections.engine.approval.hintRequired")
                   : t("sections.engine.approval.hintAutonomous")}
               </p>
+
+              {/* Only meaningful while approval is on: an autonomous agent never
+                  waits, so there is nothing for a window to bound. */}
+              {formData.requireHumanApproval && (
+                <div className="flex flex-col gap-1.5 pt-3 max-w-[260px]">
+                  <label htmlFor="agent-approval-expiry" className="text-[11px] text-secondary">
+                    {t("sections.engine.approval.expiryLabel")}
+                  </label>
+                  <input
+                    id="agent-approval-expiry"
+                    type="number"
+                    min={0}
+                    step="1"
+                    max={approvalExpiry?.maxHours ?? 720}
+                    value={formData.approvalExpiryHours}
+                    onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
+                    placeholder={String(approvalExpiry?.expiryHours ?? 24)}
+                    className="w-full h-[42px] rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground placeholder:text-muted focus:border-brand/40 focus:outline-none"
+                  />
+                  <p className="text-[10px] text-muted">
+                    {t("sections.engine.approval.expiryHint", {
+                      hours: approvalExpiry?.expiryHours ?? 24,
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* The budget is what remains when approval is off, so it sits directly

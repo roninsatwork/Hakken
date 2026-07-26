@@ -778,6 +778,220 @@ describe("Agent Runs", () => {
       .toEqual({ count: 0, atLimit: false });
   });
 
+  test("an approval nobody answers expires, and its whole run stops", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const dayInMs = 24 * 60 * 60 * 1000;
+
+    const { superAdminId, staleApprovalId, staleSiblingId, freshApprovalId, staleRunId, freshRunId, threadId } =
+      await t.run(async (ctx) => {
+        const superAdminId = await ctx.db.insert("users", {
+          email: "expiry-super@example.com",
+          role: "SUPER_ADMIN",
+        });
+        const agentId = await ctx.db.insert("agents", {
+          name: "Expiry Agent",
+          modelId: "model-test",
+          thinkingMode: false,
+          isActive: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        const threadId = await ctx.db.insert("threads", {
+          title: "Expiry thread",
+          userId: superAdminId,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+
+        const seedRun = async (requestedAt: number, withThread: boolean) => {
+          const runId = await ctx.db.insert("agentRuns", {
+            agentId,
+            userId: superAdminId,
+            ...(withThread ? { threadId } : {}),
+            triggerType: "CHAT",
+            objective: "Waiting on a person",
+            status: "PENDING_APPROVAL",
+            startedAt: requestedAt,
+            updatedAt: requestedAt,
+          });
+          const toolCallId = await ctx.db.insert("agentToolCalls", {
+            runId,
+            agentId,
+            normalizedToolName: "email_send",
+            handlerMapping: "email.send",
+            argumentsJson: "{}",
+            status: "APPROVAL_REQUIRED",
+            requiredRole: "ADMIN",
+            sideEffectLevel: "WRITE",
+            confirmationRequired: true,
+            startedAt: requestedAt,
+            turnIndex: 0,
+          });
+          const approvalId = await ctx.db.insert("agentRunApprovals", {
+            runId,
+            toolCallId,
+            agentId,
+            status: "PENDING",
+            requestedAt,
+          });
+          await ctx.db.insert("agentRunCheckpoints", {
+            runId,
+            agentId,
+            threadId,
+            status: "AWAITING_APPROVAL",
+            transcriptJson: "[]",
+            loopIndex: 1,
+            stepIndex: 1,
+            toolCallCount: 1,
+            inputTokens: 0,
+            outputTokens: 0,
+            segmentCount: 1,
+            resumeAttempts: 0,
+            createdAt: requestedAt,
+            updatedAt: requestedAt,
+          });
+          return { runId, approvalId, toolCallId };
+        };
+
+        // Waited two days, which is past the 24-hour default.
+        const stale = await seedRun(Date.now() - 2 * dayInMs, true);
+        // A sibling from the same model turn: the batch has to go together, or the
+        // run parks again with nothing able to settle it.
+        const staleSiblingId = await ctx.db.insert("agentRunApprovals", {
+          runId: stale.runId,
+          agentId,
+          status: "PENDING",
+          requestedAt: Date.now() - 2 * dayInMs,
+        });
+        const fresh = await seedRun(Date.now() - 60 * 1000, false);
+
+        return {
+          superAdminId,
+          staleApprovalId: stale.approvalId,
+          staleSiblingId,
+          freshApprovalId: fresh.approvalId,
+          staleRunId: stale.runId,
+          freshRunId: fresh.runId,
+          threadId,
+        };
+      });
+
+    const result = await t.mutation(internal.agentRuns.expireStalePendingApprovals, {});
+    expect(result.expiredRuns).toBe(1);
+
+    const state = await t.run(async (ctx) => ({
+      stale: await ctx.db.get(staleApprovalId),
+      sibling: await ctx.db.get(staleSiblingId),
+      fresh: await ctx.db.get(freshApprovalId),
+      staleRun: await ctx.db.get(staleRunId),
+      freshRun: await ctx.db.get(freshRunId),
+      checkpoints: await ctx.db.query("agentRunCheckpoints").collect(),
+      steps: await ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", staleRunId)).collect(),
+    }));
+
+    // Its own status, so "nobody answered" stays distinguishable from "someone
+    // decided against it".
+    expect(state.stale?.status).toBe("EXPIRED");
+    expect(state.sibling?.status).toBe("EXPIRED");
+    // Cancelled, never approved: an unattended yes to a deletion is the one
+    // outcome worse than a stuck run.
+    expect(state.staleRun?.status).toBe("CANCELLED");
+    expect(state.staleRun?.finalOutput).toContain("without a decision");
+    expect(state.steps.at(-1)).toMatchObject({ kind: "FINAL", status: "SKIPPED" });
+    // The parked position is gone, which nothing else would ever have cleared.
+    expect(state.checkpoints.filter((entry) => entry.runId === staleRunId)).toHaveLength(0);
+
+    // One inside the window is untouched.
+    expect(state.fresh?.status).toBe("PENDING");
+    expect(state.freshRun?.status).toBe("PENDING_APPROVAL");
+
+    // A stale browser tab cannot approve what the platform has already closed.
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    await expect(
+      superAdminClient.mutation(api.agentRuns.decideApproval, {
+        approvalId: staleApprovalId,
+        decision: "APPROVED",
+      })
+    ).rejects.toThrow(/expired/);
+
+    void threadId;
+  });
+
+  test("an agent may be less patient than the platform", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { patientApprovalId, impatientApprovalId } = await t.run(async (ctx) => {
+      const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+      const seed = async (approvalExpiryHours?: number) => {
+        const agentId = await ctx.db.insert("agents", {
+          name: approvalExpiryHours ? "Impatient Agent" : "Patient Agent",
+          modelId: "model-test",
+          thinkingMode: false,
+          isActive: true,
+          ...(approvalExpiryHours ? { approvalExpiryHours } : {}),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        const runId = await ctx.db.insert("agentRuns", {
+          agentId,
+          triggerType: "CHAT",
+          objective: "Waiting",
+          status: "PENDING_APPROVAL",
+          startedAt: twoHoursAgo,
+          updatedAt: twoHoursAgo,
+        });
+        return await ctx.db.insert("agentRunApprovals", {
+          runId,
+          agentId,
+          status: "PENDING",
+          requestedAt: twoHoursAgo,
+        });
+      };
+
+      return {
+        patientApprovalId: await seed(undefined),
+        impatientApprovalId: await seed(1),
+      };
+    });
+
+    await t.mutation(internal.agentRuns.expireStalePendingApprovals, {});
+
+    const state = await t.run(async (ctx) => ({
+      patient: await ctx.db.get(patientApprovalId),
+      impatient: await ctx.db.get(impatientApprovalId),
+    }));
+
+    // A daily reconciliation agent and one that fires monthly do not deserve the
+    // same patience.
+    expect(state.patient?.status).toBe("PENDING");
+    expect(state.impatient?.status).toBe("EXPIRED");
+  });
+
+  test("the platform expiry window is configurable and floored", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const superAdminId = await t.run(async (ctx) => await ctx.db.insert("users", {
+      email: "config-super@example.com",
+      role: "SUPER_ADMIN",
+    }));
+    const client = t.withIdentity({ subject: superAdminId });
+
+    expect(await client.query(api.agentRuns.getApprovalExpiryConfig, {}))
+      .toMatchObject({ expiryHours: 24, defaultHours: 24, minHours: 1 });
+
+    await client.mutation(api.agentRuns.updateApprovalExpiryConfig, { expiryHours: 6 });
+    expect((await client.query(api.agentRuns.getApprovalExpiryConfig, {})).expiryHours).toBe(6);
+
+    // Floored by name, so the screen can say why rather than silently accepting a
+    // window that makes the queue unanswerable.
+    await expect(
+      client.mutation(api.agentRuns.updateApprovalExpiryConfig, { expiryHours: 0 })
+    ).rejects.toThrow(/at least 1 hour/);
+
+    const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
+    expect(audit.some((entry) => entry.entityId === "APPROVAL_EXPIRY_CONFIG")).toBe(true);
+  });
+
   test("the approval queue is searchable by agent and tool name, server-side", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { isGlobalAgent } from "./agentService";
 import { AGENT_LIMIT_OVERRIDE_FIELDS, clampAgentLimitOverride } from "./agentRuntimeService";
+import { clampAgentApprovalExpiryHours } from "./approvalExpiryService";
 import { buildAgentReadiness } from "./agents";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 
@@ -111,6 +112,7 @@ type AgentSnapshot = {
   policy?: {
     humanApprovalRequired?: boolean;
     autonomousToolExecution?: boolean;
+    approvalExpiryHours?: number;
     maxSteps?: number;
     maxToolCalls?: number;
     maxRuntimeMs?: number;
@@ -311,6 +313,9 @@ function buildAgentRestorePatch(snapshot: AgentSnapshot, now: number): AgentPatc
   if (snapshot.policy) {
     if (typeof snapshot.policy.humanApprovalRequired === "boolean") patch.humanApprovalRequired = snapshot.policy.humanApprovalRequired;
     if (typeof snapshot.policy.autonomousToolExecution === "boolean") patch.autonomousToolExecution = snapshot.policy.autonomousToolExecution;
+    if (typeof snapshot.policy.approvalExpiryHours === "number") {
+      patch.approvalExpiryHours = clampAgentApprovalExpiryHours(snapshot.policy.approvalExpiryHours);
+    }
     // Restored through the same clamp as a live edit, so a rollback to a snapshot
     // taken before the ceilings tightened cannot reinstate a budget above them.
     for (const field of AGENT_LIMIT_OVERRIDE_FIELDS) {

@@ -19,6 +19,7 @@ import {
   isGlobalAgent,
 } from "./agentService";
 import { AGENT_LIMIT_OVERRIDE_FIELDS, clampAgentLimitOverride } from "./agentRuntimeService";
+import { clampAgentApprovalExpiryHours } from "./approvalExpiryService";
 import { getAgentTemplateById, getAgentTemplates } from "./agentTemplates";
 import { seedFixturesForTemplate } from "./agentEvalFixtures";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
@@ -944,6 +945,7 @@ export const updateAgent = superAdminMutation({
     temperature: v.optional(v.number()),
     humanApprovalRequired: v.optional(v.boolean()),
     autonomousToolExecution: v.optional(v.boolean()),
+    approvalExpiryHours: v.optional(v.number()),
     maxSteps: v.optional(v.number()),
     maxToolCalls: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
@@ -973,6 +975,11 @@ export const updateAgent = superAdminMutation({
       if (field in updates) {
         updates[field] = clampAgentLimitOverride(field, updates[field]);
       }
+    }
+    // Same rule: a cleared box arrives as 0 and becomes a removal, so the agent
+    // goes back to following the platform window.
+    if ("approvalExpiryHours" in updates) {
+      updates.approvalExpiryHours = clampAgentApprovalExpiryHours(updates.approvalExpiryHours);
     }
     if (updates.releaseGateTags !== undefined) {
       updates.releaseGateTags = normalizeReleaseGateTags(updates.releaseGateTags);
