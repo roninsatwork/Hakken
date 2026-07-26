@@ -15,6 +15,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { MAX_SKILLS_PER_AGENT } from "@/convex/agentSkills";
 
 /** One screenful of candidates; "load more" fetches the next. */
 const PICKER_PAGE_SIZE = 20;
@@ -150,7 +151,8 @@ export default function AgentSkillsPage() {
             Agent skills
           </h1>
           <p className="text-[13px] text-secondary mt-1 max-w-3xl">
-            Skills from the Skill Center that this agent uses.
+            Skills from the Skill Center that this agent uses. Two at most — each one is added to
+            every message the agent sends.
           </p>
         </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -163,6 +165,7 @@ export default function AgentSkillsPage() {
             </Link>
             <button
               type="button"
+              disabled={bindings.length >= MAX_SKILLS_PER_AGENT}
               onClick={() => {
                 setIsPickerOpen(true);
                 setSelectedSkillIds([]);

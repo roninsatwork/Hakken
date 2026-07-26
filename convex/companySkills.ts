@@ -360,6 +360,12 @@ export const searchImportableGlobalSkills = adminQuery({
 });
 
 /**
+ * How many skills one company may carry. See MAX_SKILLS_PER_AGENT for why two:
+ * a skill is text on every message, not a setting.
+ */
+export const MAX_SKILLS_PER_COMPANY = 2;
+
+/**
  * The skills a company's own AI should follow — company chat and the widget.
  *
  * Until now nothing read these. A company could be given a skill and it changed
@@ -378,7 +384,7 @@ export const searchImportableGlobalSkills = adminQuery({
  * one that never does, so the cap is small and the caller is told when it was
  * reached rather than being handed a silently shortened list.
  */
-export const RUNTIME_COMPANY_SKILL_LIMIT = 8;
+export const RUNTIME_COMPANY_SKILL_LIMIT = MAX_SKILLS_PER_COMPANY;
 
 export const getRuntimeCompanySkillsInternal = internalQuery({
   args: { companyId: v.id("companies") },
@@ -488,6 +494,21 @@ export const importGlobalSkill = adminMutation({
       .query("companySkills")
       .withIndex("by_company_source_skill", (q) => q.eq("companyId", args.companyId).eq("sourceAgentSkillId", args.skillId))
       .first();
+
+    // Enforced on the way in, so a third skill fails loudly rather than being
+    // added and then quietly ignored by the runtime.
+    if (!existing || existing.status === "ARCHIVED") {
+      const active = await ctx.db
+        .query("companySkills")
+        .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
+        .take(MAX_SKILLS_PER_COMPANY + 1);
+      if (active.length >= MAX_SKILLS_PER_COMPANY) {
+        throw new Error(
+          `A company can have ${MAX_SKILLS_PER_COMPANY} skills. Remove one before adding another.`,
+        );
+      }
+    }
+
     const now = Date.now();
     const centralSkillPatch = buildSkillPatch({
       name: globalSkill.name,

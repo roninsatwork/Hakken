@@ -599,6 +599,78 @@ describe("agent skills", () => {
     expect(binding.snapshot).toContain("cite each one");
   });
 
+  test("an agent and a company each stop at two skills, and say so", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+    const client = t.withIdentity({ subject: adminId });
+
+    const { agentId, companyId, skillIds } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const agentId = await ctx.db.insert("agents", {
+        name: "Helper",
+        modelId: "test-provider-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const companyId = await ctx.db.insert("companies", { name: "Capped Co", createdAt: now });
+      const skillIds = [];
+      for (let index = 0; index < 3; index += 1) {
+        skillIds.push(await ctx.db.insert("agentSkills", {
+          name: `Skill ${index}`,
+          category: "GENERAL",
+          status: "ACTIVE",
+          riskLevel: "LOW",
+          instruction: "Do the thing.",
+          createdBy: adminId,
+          createdAt: now + index,
+          updatedAt: now + index,
+        }));
+      }
+      return { agentId, companyId, skillIds };
+    });
+
+    await client.mutation(api.agentSkills.bindSkillToAgent, { agentId, skillId: skillIds[0] });
+    await client.mutation(api.agentSkills.bindSkillToAgent, { agentId, skillId: skillIds[1] });
+    // The third is refused rather than accepted and then ignored.
+    await expect(
+      client.mutation(api.agentSkills.bindSkillToAgent, { agentId, skillId: skillIds[2] }),
+    ).rejects.toThrow(/can have 2 skills/);
+
+    await client.mutation(api.companySkills.importGlobalSkill, { companyId, skillId: skillIds[0] });
+    await client.mutation(api.companySkills.importGlobalSkill, { companyId, skillId: skillIds[1] });
+    await expect(
+      client.mutation(api.companySkills.importGlobalSkill, { companyId, skillId: skillIds[2] }),
+    ).rejects.toThrow(/can have 2 skills/);
+
+    // Re-adding one it already has is not a third skill.
+    await expect(
+      client.mutation(api.companySkills.importGlobalSkill, { companyId, skillId: skillIds[0] }),
+    ).resolves.toBeDefined();
+  });
+
+  test("no skills at all is a normal state, not a broken one", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) => {
+      return await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" });
+    });
+
+    const companyId = await t.run(async (ctx) => {
+      return await ctx.db.insert("companies", { name: "No Skills Co", createdAt: Date.now() });
+    });
+    void adminId;
+
+    const runtime = await t.run(async (ctx) => {
+      return await ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId });
+    });
+
+    expect(runtime.skills).toEqual([]);
+    expect(runtime.isCapped).toBe(false);
+  });
+
   test("SKILL.md preview handles frontmatter, dependencies, connectors, examples, and duplicate warnings", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {

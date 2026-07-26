@@ -23,6 +23,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { MAX_SKILLS_PER_COMPANY } from "@/convex/companySkills";
 
 type CompanySkill = Doc<"companySkills">;
 type GlobalSkill = Doc<"agentSkills">;
@@ -132,12 +133,14 @@ export default function CompanyAiSkillsPage() {
               Company Skills
             </h1>
             <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-              Skills from the Skill Center that this company&rsquo;s agents can use.
+              Skills from the Skill Center that this company&rsquo;s own AI uses. Two at most — each one
+              is added to every message it answers.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              disabled={skills.results.length >= MAX_SKILLS_PER_COMPANY}
               onClick={() => {
                 setIsImportOpen(true);
                 action.clearError();
