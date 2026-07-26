@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
@@ -342,5 +342,184 @@ describe("workflow runtime actions", () => {
       status: "FAILED",
       error: expect.stringContaining("API Action request failed: SSRF Prevention"),
     });
+  });
+});
+
+/**
+ * `resumeApprovalStep` had no test of any kind, which is how it kept a guard of
+ * "any authenticated user" while every other workflow function required a super
+ * admin. These pin the guard, not just the happy path.
+ */
+describe("resumeApprovalStep authorization", () => {
+  async function seedHaltedApproval(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", {
+        name: "Halted Co",
+        createdAt: Date.now(),
+      });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@halted.test",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const companyAdminId = await ctx.db.insert("users", {
+        email: "admin@halted.test",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      const plainUserId = await ctx.db.insert("users", {
+        email: "user@halted.test",
+        role: "USER",
+        companyId,
+        createdAt: Date.now(),
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Halted Approval Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: JSON.stringify([
+          { id: "approval", type: "approvalNode" },
+          { id: "downstream", type: "bypassNode" },
+        ]),
+        edges: JSON.stringify([{ source: "approval", target: "downstream" }]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        companyId,
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        state: JSON.stringify({ trigger: {} }),
+        startedAt: Date.now(),
+        startedBy: superAdminId,
+      });
+      const stepId = await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "approval",
+        input: JSON.stringify({ trigger: {} }),
+        output: JSON.stringify({ _system: { halt: true }, message: "Review" }),
+        status: "PENDING_APPROVAL",
+        startedAt: Date.now(),
+      });
+
+      return { companyId, superAdminId, companyAdminId, plainUserId, workflowId, executionId, stepId };
+    });
+  }
+
+  test("a plain user cannot resume an approval step", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { plainUserId, executionId } = await seedHaltedApproval(t);
+
+    await expect(
+      t.withIdentity({ subject: plainUserId }).action(api.workflowRuntime.resumeApprovalStep, {
+        executionId,
+        nodeId: "approval",
+        action: "APPROVED",
+      })
+    ).rejects.toThrow(/Unauthorized/);
+
+    const { steps } = await getRuntimeState(t, executionId);
+    expect(steps[0].status).toBe("PENDING_APPROVAL");
+  });
+
+  test("a company admin cannot resume an approval step, even in their own company", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyAdminId, executionId } = await seedHaltedApproval(t);
+
+    await expect(
+      t.withIdentity({ subject: companyAdminId }).action(api.workflowRuntime.resumeApprovalStep, {
+        executionId,
+        nodeId: "approval",
+        action: "APPROVED",
+      })
+    ).rejects.toThrow(/Unauthorized/);
+
+    const { execution, steps } = await getRuntimeState(t, executionId);
+    expect(steps[0].status).toBe("PENDING_APPROVAL");
+    expect(execution?.status).toBe("RUNNING");
+  });
+
+  test("an unauthenticated caller cannot resume an approval step", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { executionId } = await seedHaltedApproval(t);
+
+    await expect(
+      t.action(api.workflowRuntime.resumeApprovalStep, {
+        executionId,
+        nodeId: "approval",
+        action: "APPROVED",
+      })
+    ).rejects.toThrow();
+  });
+
+  test("a super admin approving resumes the step and releases downstream nodes", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId, executionId } = await seedHaltedApproval(t);
+
+    const resumed = await t
+      .withIdentity({ subject: superAdminId })
+      .action(api.workflowRuntime.resumeApprovalStep, {
+        executionId,
+        nodeId: "approval",
+        action: "APPROVED",
+      });
+
+    expect(resumed).toBe(true);
+
+    const { steps } = await getRuntimeState(t, executionId);
+    expect(steps.find((step) => step.nodeId === "approval")?.status).toBe("SUCCESS");
+    expect(steps.some((step) => step.nodeId === "downstream")).toBe(true);
+  });
+
+  test("a super admin rejecting fails the execution", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId, executionId } = await seedHaltedApproval(t);
+
+    const resumed = await t
+      .withIdentity({ subject: superAdminId })
+      .action(api.workflowRuntime.resumeApprovalStep, {
+        executionId,
+        nodeId: "approval",
+        action: "REJECTED",
+      });
+
+    expect(resumed).toBe(false);
+
+    const { execution } = await getRuntimeState(t, executionId);
+    expect(execution?.status).toBe("FAILED");
+  });
+
+  test("an execution with no workflow is refused rather than resumed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seedHaltedApproval(t);
+
+    const orphanExecutionId = await t.run(async (ctx) => {
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        triggerType: "MANUAL",
+        status: "RUNNING",
+        state: JSON.stringify({ trigger: {} }),
+        startedAt: Date.now(),
+        startedBy: superAdminId,
+      });
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "approval",
+        input: JSON.stringify({ trigger: {} }),
+        status: "PENDING_APPROVAL",
+        startedAt: Date.now(),
+      });
+      return executionId;
+    });
+
+    await expect(
+      t.withIdentity({ subject: superAdminId }).action(api.workflowRuntime.resumeApprovalStep, {
+        executionId: orphanExecutionId,
+        nodeId: "approval",
+        action: "APPROVED",
+      })
+    ).rejects.toThrow(/no workflow/);
   });
 });

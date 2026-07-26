@@ -140,13 +140,35 @@ super-admin getter and setter that enforces a hard minimum
 on the settings screen. That is the pattern to copy, and it is the reason the
 expiry window can be made configurable without inventing anything.
 
-Related, and deliberately **not** fixed here: the per-agent budget fields
-`maxSteps`, `maxToolCalls`, `maxRuntimeMs` and `maxCostGBP` exist on the agents
-table (`convex/schema.ts:1654-1662`) and are honoured by the runtime, but appear
-in neither `createAgent` nor `updateAgent`'s arguments, so no route can write
-them. Every agent runs on the module defaults. That is the same class of fault as
-this plan's subject but a different feature, and it is being raised separately
-rather than smuggled in here.
+### The only brake that survives autonomy is also unreachable
+
+This is the one that makes the budget fields part of this plan rather than a
+neighbouring chore.
+
+Turn the Phase 1 toggle off and an agent runs writes, sends and deletions with no
+human anywhere in the loop. What stops it running away is then no longer approval —
+it is the budgets: how many steps it may take, how many tools it may call, how long
+it may run, and how much it may spend. Those four are the safety story for an
+autonomous agent.
+
+All four are write-dead. `maxSteps`, `maxToolCalls`, `maxRuntimeMs` and `maxCostGBP`
+exist on the agents table (`convex/schema.ts:1654-1662`) and are honoured by
+`resolveAgentObjectiveLimits` (`convex/agentRuntimeService.ts:111-135`, clamped via
+`clampLimit` at `:73-78` against `AGENT_OBJECTIVE_LIMIT_CEILINGS` at `:45-53`), and
+they appear in the arguments of neither `createAgent` (`convex/agents.ts:827-833`)
+nor `updateAgent` (`:927-952`). Grep finds the four names nowhere in `src/` beyond
+two descriptive strings on the system health screen
+(`admin/settings/system-health/page.tsx:194,399`).
+
+So every agent on the platform runs on `DEFAULT_AGENT_OBJECTIVE_LIMITS`
+(`agentRuntimeService.ts:10-17`) — 10 steps, 8 tool calls, 5 minutes, £1 — and no
+route exists to change any of it. Shipping autonomy while the only remaining limits
+cannot be set would be handing someone the keys and telling them the brakes are
+adjustable when they are welded shut.
+
+`maxInputTokens` and `maxOutputTokens` are a deliberate exception:
+`resolveAgentObjectiveLimits` (`:130-131`) always takes them from the default
+constant, and that stays as it is.
 
 ### There is a whole second approval system, and it cannot be used at all
 
@@ -322,9 +344,16 @@ the non-read rule. No carve-out for `DESTRUCTIVE`.
 The temptation is to keep deletes gated even on autopilot. It is the wrong call
 and it recreates the exact fault this plan is fixing: an agent someone has been
 told runs unattended parks silently, and by the evidence above nobody is watching
-the queue. Safety moves to a place a person can actually see — **which tools the
-agent is given.** Do not give an autopilot agent a delete tool. A carve-out can
-be added later on evidence from a real client; it will not be guessed at now.
+the queue. Safety moves to two places a person can actually see — **which tools the
+agent is given**, and **what it is allowed to spend doing it.** A carve-out can be
+added later on evidence from a real client; it will not be guessed at now.
+
+**The budget limits ship with autonomy, not after it.** They are the only brake
+left once approval is switched off, and today they cannot be set at all. Doing them
+separately would also mean opening `updateAgent`, the agent settings screen, the
+version snapshot and the release restore twice — Phases 1, 4 and 5 already touch
+every one of those four places, so this is one pass over six fields rather than two
+passes over two and four.
 
 **A batch is answered as a batch, in one turn, or not at all.** No tool-result
 turn is written into the checkpoint when a run parks. Results live on the tool
@@ -446,27 +475,43 @@ a destructive tool call is exactly the event an audit log exists for.
 
 ## Phases
 
-### Phase 0 — Close the workflow authorization hole
+### Phase 0 — Close the workflow authorization hole — **DONE**
 
-Ships alone, ahead of everything else. Small, and nothing here depends on the rest
-of the plan.
+Shipped alone, ahead of everything else. Nothing here depended on the rest of the
+plan.
 
-1. `convex/workflowRuntime.ts:353` — `resumeApprovalStep` moves from `tenantAction`
-   to the super-admin action guard used by the rest of the workflow surface
-   (`convex/workflows.ts`, `convex/scheduler.ts`).
-2. Load the execution and assert `execution.workflowId === args.workflowId` before
-   doing anything. The argument is currently used only for scheduling and is never
-   checked against the execution it claims to belong to.
-3. Assert the caller may access `execution.companyId` via the same helper the agent
-   side uses (`assertAdminCanAccessCompany`).
+1. `convex/workflowRuntime.ts` — `resumeApprovalStep` moved from `tenantAction` to
+   `superAdminAction` (`convex/tenantFunctions.ts:155`), matching the rest of the
+   workflow surface.
+2. The `workflowId` argument was **removed** rather than validated. The plan said to
+   assert `execution.workflowId === args.workflowId`; reading it from the execution
+   is strictly better, because an id that cannot be supplied cannot disagree. The
+   handler now loads the execution first, which also gives existence checking for
+   free. Safe to change the signature because the function has no caller anywhere in
+   the repo.
+3. **No company assertion was added**, and the plan's step 3 was wrong to ask for
+   one. Once the guard is super-admin only it would be dead code:
+   `assertTenantAccess` returns early for `SUPER_ADMIN`
+   (`convex/tenantFunctions.ts:99`), and super admins operate across companies by
+   design. A check that can never fail reads as protection and provides none.
 
-Tests — new, because there are none:
+Tests added in `convex/workflowRuntime.test.ts` — the function previously had none:
 
-- **a `USER`-role caller is refused**, and **an admin of another company is
-  refused** — the two guards, each proved by reverting
-- a mismatched `workflowId` is refused
-- a super-admin approve resumes and schedules the downstream nodes
-- a super-admin reject is handled
+- **a `USER`-role caller is refused**
+- **a company ADMIN is refused, even in the owning company**
+- an unauthenticated caller is refused
+- a super-admin approve resumes the step and releases the downstream node
+- a super-admin reject fails the execution
+- an execution with no workflow is refused rather than resumed
+
+All three guards proved by reverting: swapping `superAdminAction` back to
+`tenantAction` fails the two role tests, and removing the missing-workflow throw
+fails the sixth.
+
+Verified: `verify:env`, `lint:all` (0 errors), `check` (429 files, 3173 tests),
+`build`, `git diff --check` all clean. Not browser-verified, deliberately — the
+function has no UI caller until Phase 10 builds one, so there is nothing a preview
+could show.
 
 ### Phase 1 — The autonomy switch in the runtime
 
@@ -635,27 +680,55 @@ Tests in `convex/agentRuns.test.ts` plus a new service unit test:
 - a row whose run already reached a terminal state is skipped, not expired
 - `decideApproval` on an expired row throws
 
-### Phase 5 — The toggle on agent settings
+### Phase 5 — The controls on agent settings: the toggle, and the limits behind it
 
 `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx`, in the Engine section
 (`:554`), following the two-button pattern already used by Internet Access
 (`:627-644`) and Status (`:648-662`) rather than introducing a third idiom.
+
+**The toggle.**
 
 1. Label "Require human approval", on when `autonomousToolExecution !== true`.
 2. Hint text that says what each side means in one sentence each, and names the
    consequence of off: the agent completes writes, sends and external calls
    without stopping.
 3. `handleSave` posts `autonomousToolExecution` as the inverse of the toggle.
-4. Strings via `messages/en.json` and `messages/it.json` under
-   `admin.agents.details.settings.sections.engine.approval`, matching the rest of
-   this screen.
 
-Tests, extending `.../agents/[id]/settings/page.test.tsx`:
+**The limits, which are what remains when the toggle is off.**
+
+4. `convex/agents.ts:927-952` — `updateAgent` accepts `maxSteps`, `maxToolCalls`,
+   `maxRuntimeMs` and `maxCostGBP`, each passed through the existing `clampLimit`
+   (`convex/agentRuntimeService.ts:73-78`) against
+   `AGENT_OBJECTIVE_LIMIT_CEILINGS` (`:45-53`) so an admin cannot raise an agent
+   above the platform ceiling and a nonsensical value is ignored rather than
+   stored.
+5. Four numeric fields on the same screen, each showing the platform default it
+   overrides — the pattern Phase 4 uses for the expiry window, and the pattern the
+   model-defaults work established: name the inherited value rather than leaving a
+   blank box.
+6. Carried through the version snapshot (`convex/agentVersioningService.ts:168`)
+   and release restore (`convex/releases.ts:306`) alongside
+   `autonomousToolExecution` and `approvalExpiryHours` — one pass over those two
+   files for all six new fields rather than three.
+7. `maxInputTokens` and `maxOutputTokens` stay platform-only.
+   `resolveAgentObjectiveLimits` (`:130-131`) deliberately always reads them from
+   the default constant, and this plan does not change that.
+
+Strings via `messages/en.json` and `messages/it.json` under
+`admin.agents.details.settings.sections.engine`, matching the rest of this screen.
+
+Tests, extending `.../agents/[id]/settings/page.test.tsx` and
+`convex/agents.test.ts`:
 
 - an agent with the field absent renders the toggle **on**
 - **switching it off saves `autonomousToolExecution: true`**
 - an agent already autonomous renders it off, and saving an unrelated field does
   not flip it back
+- each limit renders the platform default when the agent has no override
+- **an override above the platform ceiling is clamped to the ceiling, not stored as
+  given** — the guard, and the one to prove by reverting
+- an override of zero or a negative number is ignored and the default applies
+- an agent with no overrides still resolves to the module defaults at runtime
 
 ### Phase 6 — Delete the control that lies
 
@@ -939,10 +1012,15 @@ post-approval state. That makes these fixes safe in a way they would not be if t
 feature worked. Worth stating in the commit body so it does not read as a
 casual change to graph semantics.
 
-**Nothing is deferred out of this plan.** The one adjacent fault deliberately left
-out is the write-dead per-agent budget fields (`maxSteps`, `maxToolCalls`,
-`maxRuntimeMs`, `maxCostGBP`) described above — same class of fault, different
-feature, raised separately rather than smuggled in.
+**Making the budget limits settable creates a new way to break an agent.** An admin
+can now cap an agent's spend or step count below what its objective needs, and the
+agent will stop mid-task reporting a budget stop rather than a failure. The ceilings
+prevent someone raising a limit unsafely; nothing prevents someone lowering one
+unhelpfully. Naming the platform default beside each field is the mitigation —
+someone typing 2 into a box labelled "default 10" can see what they are doing.
+
+**Nothing is deferred out of this plan.** Everything found during research is a
+phase.
 
 ---
 
@@ -956,24 +1034,29 @@ than treating it as extra.
 hole on a write path does not wait behind a ten-phase plan, and nothing else here
 depends on it.
 
-**The agent side — Phases 1-9.** Around eight days. Phase 2 is a third of that on
-its own and Phase 8 another day and a half. This is the body of work that answers
-the original request: agents that can run unattended, approvals that are visible,
-and a queue that looks like the rest of the platform.
+**The agent side — Phases 1-9.** Around eight and a half days. Phase 2 is a third
+of that on its own and Phase 8 another day and a half. This is the body of work that
+answers the original request: agents that can run unattended, limits that hold them,
+approvals that are visible, and a queue that looks like the rest of the platform.
+
+The budget limits add about half a day here rather than the full day they would cost
+standalone, because Phases 1, 4 and 5 already open every file they touch.
 
 **The workflow side — Phase 10.** Around four days. Independent of everything
 above, shares no code with it, and is the difference between a "Human Approval"
 node customers can build with and one they cannot.
 
-So roughly **twelve to thirteen days**, two and a half to three weeks, and it
-splits cleanly at three points rather than being one long march. Phase 0 today,
-Phases 1-9 as the main body, Phase 10 as its own piece of work whenever the
-workflow builder next matters.
+So roughly **thirteen days**, around three weeks, and it splits cleanly at three
+points rather than being one long march. Phase 0 today, Phases 1-9 as the main body,
+Phase 10 as its own piece of work whenever the workflow builder next matters.
 
 If only part of this gets built, the order above is also the priority order. Phase 0
 is not optional. Phases 1, 5 and 7 together are the smallest set that delivers
-something useful — autonomy, the toggle to set it, and a badge so a parked run is
-visible — at about two days.
+something defensible — autonomy, the toggle and the limits that back it, and a badge
+so a parked run is visible — at about two and a half days.
+
+Phase 5 is the one phase that must not be split from Phase 1. Autonomy without
+settable budgets is a brake pedal connected to nothing.
 
 ---
 
@@ -986,10 +1069,10 @@ Per `AGENTS.md`: `npm run verify:env`, `npm run lint:all`, `npm run check`,
 `convex/workflowRuntime.test.ts` and `src/quality-drift.test.ts` green.
 
 The regression guards — the absent-field agent still gating a write, the two-row
-batch, the mixed-batch transcript, the refused-call re-request, the expiry window,
-the two Phase 0 authorization guards, the preserved workflow approval payload, and
-reject requiring confirmation — each checked by reverting the fix and confirming the
-test fails, not by assuming.
+batch, the mixed-batch transcript, the refused-call re-request, the clamped budget
+override, the expiry window, the two Phase 0 authorization guards, the preserved
+workflow approval payload, and reject requiring confirmation — each checked by
+reverting the fix and confirming the test fails, not by assuming.
 
 Driven in the browser before hand-back, and this matters more than usual because
 the screen has never been seen with data in it:
@@ -1008,6 +1091,8 @@ the screen has never been seen with data in it:
 - the window changed on the settings screen and the change observed taking effect
 - the same agent switched to autonomous and run again, confirming it completes with
   no row created at all
+- **and then, with approval off, its cost limit dropped and the agent observed
+  stopping on the budget** — the brake that is now the only one left, seen working
 
 And for Phase 10, a workflow built with a Human Approval node and actually driven
 end to end — run, halted, found on the executions screen, approved, and the

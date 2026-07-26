@@ -8,7 +8,7 @@ import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { requireActionUser } from "./actionAuth";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
-import { tenantAction } from "./tenantFunctions";
+import { superAdminAction } from "./tenantFunctions";
 import {
   buildActionRequest,
   buildActionResponseOutput,
@@ -350,14 +350,34 @@ export const executeNode = internalAction({
   },
 });
 
-export const resumeApprovalStep = tenantAction({
+/**
+ * Sign off, or refuse, a workflow step halted by an approval node.
+ *
+ * Declared `superAdminAction` because it resumes a paused graph and can schedule
+ * work that writes. It used to be `tenantAction`, whose guard is only "is
+ * authenticated" — so any signed-in user of any role could resume or fail any
+ * tenant's execution, while every other workflow function on the platform
+ * required a super admin. Nothing enforced tenancy inside the handler either.
+ *
+ * The workflow is read from the execution rather than passed in. It was
+ * previously an argument that nothing checked against the execution it claimed
+ * to belong to, so a caller could name one workflow and resume a step from
+ * another, scheduling downstream nodes against the wrong graph. An id that
+ * cannot be supplied cannot disagree.
+ */
+export const resumeApprovalStep = superAdminAction({
   args: {
     executionId: v.id("workflowExecutions"),
     nodeId: v.string(),
-    workflowId: v.id("workflows"),
     action: v.union(v.literal("APPROVED"), v.literal("REJECTED"))
   },
   handler: async (ctx, args) => {
+    const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, {
+      id: args.executionId,
+    });
+    if (!execution) throw new Error("Workflow execution not found");
+    if (!execution.workflowId) throw new Error("Workflow execution has no workflow");
+
     if (args.action === "REJECTED") {
         await ctx.runMutation(internal.workflowEngine.failNodeStep, {
             executionId: args.executionId,
@@ -375,7 +395,7 @@ export const resumeApprovalStep = tenantAction({
 
     for (const nextNodeId of downstreamNodesToSchedule) {
       await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNode, {
-        workflowId: args.workflowId,
+        workflowId: execution.workflowId,
         executionId: args.executionId,
         nodeId: nextNodeId
       });
