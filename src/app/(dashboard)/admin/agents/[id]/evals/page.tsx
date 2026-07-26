@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -340,7 +341,12 @@ export default function AgentEvalsPage() {
             return (
               <tr key={fixture._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
                 <td className="px-4 py-3">
-                  <div className="text-[13px] font-semibold text-foreground line-clamp-1 max-w-[480px]">{fixture.objective}</div>
+                  <Link
+                    href={`/admin/agents/${agentId}/evals/${fixture._id}`}
+                    className="block text-[13px] font-semibold text-foreground line-clamp-1 max-w-[480px] hover:text-brand transition-colors"
+                  >
+                    {fixture.objective}
+                  </Link>
                   <div className="text-[12px] text-secondary line-clamp-1 max-w-[480px]">{fixture.expectedFinalOutputRubric}</div>
                 </td>
                 <td className={`px-4 py-3 text-[13px] font-semibold ${status.tone}`}>{status.label}</td>

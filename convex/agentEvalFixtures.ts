@@ -933,6 +933,9 @@ async function createSmokeEvalRun(args: {
     agentVersionId,
     triggerType: "MANUAL",
     objective,
+    // Stamped on the run as well as in the step metadata, so one check's history is
+    // an indexed read rather than a scan of every run plus a parse of every step.
+    evalFixtureId: args.fixture._id,
     status: runStatus,
     companyId: args.fixture.companyId,
     userId: args.userId,
@@ -1711,6 +1714,75 @@ export const getForRun = adminQuery({
       .withIndex("by_run_created", (q) => q.eq("sourceRunId", args.runId))
       .order("desc")
       .paginate(args.paginationOpts);
+  },
+});
+
+/**
+ * One check, with what the agent actually did the last few times it ran.
+ *
+ * The output and the grader's reasoning were only reachable from a stream of every
+ * run for the agent, clamped to two lines. They are the most useful thing either
+ * testing surface holds, so they get a query of their own — an indexed read on
+ * `evalFixtureId` rather than a scan of the agent's runs and a parse of every step.
+ *
+ * Runs written before that field existed are not returned. They predate the check
+ * detail page entirely, and inventing a join back through step metadata to find them
+ * would cost the scan this exists to avoid.
+ */
+export const getCheckDetail = adminQuery({
+  args: {
+    fixtureId: v.id("agentEvalFixtures"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { user } = ctx;
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("Check not found");
+    assertAdminCanAccessCompany(user, fixture.companyId);
+
+    const limit = Math.min(Math.max(args.limit ?? 10, 1), SMOKE_EVAL_HISTORY_LIMIT);
+    const runs = await ctx.db
+      .query("agentRuns")
+      .withIndex("by_eval_fixture_started", (q) => q.eq("evalFixtureId", args.fixtureId))
+      .order("desc")
+      .take(limit);
+
+    const history = await Promise.all(runs.map(async (run) => {
+      const steps = await ctx.db
+        .query("agentRunSteps")
+        .withIndex("by_run_step", (q) => q.eq("runId", run._id))
+        .order("asc")
+        .take(EVAL_FIXTURE_DETAIL_LIMIT);
+      const metadata = parseSmokeEvalMetadata(steps.find((step) => step.kind === "OBSERVE")?.output);
+
+      return {
+        runId: run._id,
+        status: run.status,
+        gradingMode: metadata.gradingMode === "MODEL_GRADED" ? "MODEL_GRADED" as const : "CONTRACT_ONLY" as const,
+        startedAt: run.startedAt,
+        completedAt: run.completedAt ?? run.updatedAt,
+        modelId: run.modelId,
+        inputTokens: run.inputTokens,
+        outputTokens: run.outputTokens,
+        finalOutput: run.finalOutput,
+        error: run.error,
+        failures: getStringArrayMetadataValue(metadata, "failures"),
+        missingToolMappings: getStringArrayMetadataValue(metadata, "missingToolMappings"),
+      };
+    }));
+
+    return {
+      check: {
+        fixtureId: fixture._id,
+        agentId: fixture.agentId,
+        objective: fixture.objective,
+        expectedFinalOutputRubric: fixture.expectedFinalOutputRubric,
+        tags: fixture.tags,
+        updatedAt: fixture.updatedAt,
+        status: fixture.status,
+      },
+      history,
+    };
   },
 });
 

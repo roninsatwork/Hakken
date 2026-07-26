@@ -64,7 +64,7 @@ function buildHeadline(summary: {
   notRunCases: number;
 } | undefined) {
   if (summary === undefined) return "Loading…";
-  if (summary.totalCases === 0) return "No checks yet.";
+  if (summary.totalCases === 0) return "";
 
   const parts: string[] = [];
   if (summary.failedRuns > 0) parts.push(`${summary.failedRuns} failing`);
@@ -141,6 +141,7 @@ export default function CompanyAiEvalsPage() {
   // What pressing the button will actually run. The label stays "Run checks" — a
   // button says what it does, and how things stand is the sentence beside it.
   const runnableCount = batchEstimate?.selectedCount ?? 0;
+  const hasChecks = cases.results.length > 0;
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
@@ -157,24 +158,33 @@ export default function CompanyAiEvalsPage() {
         </div>
 
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <p className="text-[15px] font-semibold text-foreground">{buildHeadline(summary)}</p>
+          {buildHeadline(summary) && (
+            <p className="text-[15px] font-semibold text-foreground">{buildHeadline(summary)}</p>
+          )}
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirmBatch(true)}
-              disabled={batchAction.isBusy() || runnableCount === 0}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Run checks
-            </button>
-            <Link
-              href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
-            >
-              <Plus className="h-4 w-4" />
-              New check
-            </Link>
+            {hasChecks && (
+              <button
+                type="button"
+                onClick={() => setConfirmBatch(true)}
+                disabled={batchAction.isBusy() || runnableCount === 0}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                Run checks
+              </button>
+            )}
+            {/* On an empty screen the invitation lives in the table, with the
+                sentence explaining why anyone would want one. A second identical
+                button above it is just noise. */}
+            {hasChecks && (
+              <Link
+                href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
+              >
+                <Plus className="h-4 w-4" />
+                New check
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -194,14 +204,14 @@ export default function CompanyAiEvalsPage() {
           stack of rows carrying five uppercase machine constants each. */}
       <AdminTableShell
         minWidthClassName="min-w-[760px]"
-        footer={
+        footer={cases.results.length > 0 ? (
           <AdminLoadMoreFooter
             visibleCount={cases.results.length}
             canLoadMore={cases.status === "CanLoadMore"}
             isLoading={cases.status === "LoadingMore"}
             onLoadMore={() => cases.loadMore(ADMIN_PAGE_SIZE)}
           />
-        }
+        ) : undefined}
       >
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
@@ -219,7 +229,21 @@ export default function CompanyAiEvalsPage() {
             <AdminTableEmptyRow
               colSpan={5}
               icon={<ClipboardCheck className="h-8 w-8 text-muted/30" />}
-              label="No checks yet — add one to catch your AI saying something wrong"
+              label="No checks yet"
+              action={
+                <div className="flex flex-col items-center gap-3">
+                  <p className="max-w-sm text-[13px] normal-case tracking-normal text-secondary">
+                    A check catches your AI saying something wrong before a customer sees it.
+                  </p>
+                  <Link
+                    href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New check
+                  </Link>
+                </div>
+              }
             />
           ) : cases.results.map((evalCase) => {
             const latestRun = getLatestRun(latestRuns, evalCase._id);

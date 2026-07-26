@@ -563,6 +563,13 @@ export default defineSchema({
       v.literal("EVENT")
     ),
     objective: v.string(),
+    // Which check this run was of, when it was one.
+    //
+    // The fixture id was only ever recorded inside a run *step's* metadata JSON, so
+    // "show me this check's history" meant reading recent runs for the agent, then
+    // reading every one's steps, then parsing each blob. Stamped on the run it is a
+    // single indexed range read.
+    evalFixtureId: v.optional(v.id("agentEvalFixtures")),
     status: v.union(
       v.literal("QUEUED"),
       v.literal("RUNNING"),
@@ -596,6 +603,8 @@ export default defineSchema({
   })
     .index("by_agent_started", ["agentId", "startedAt"])
     .index("by_agent_version_started", ["agentVersionId", "startedAt"])
+    // One check's history, without reading every run the agent has ever had.
+    .index("by_eval_fixture_started", ["evalFixtureId", "startedAt"])
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_company_status_started", ["companyId", "status", "startedAt"])
     .index("by_replay_source_started", ["replayOfRunId", "startedAt"])

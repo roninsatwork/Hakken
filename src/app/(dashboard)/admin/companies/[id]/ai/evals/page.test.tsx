@@ -112,8 +112,14 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
 
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    expect(screen.getByText("No checks yet.")).toBeInTheDocument();
-    expect(screen.getByText(/add one to catch your AI saying something wrong/i)).toBeInTheDocument();
+    // One empty state, with the way forward in it. The headline, the table's empty row
+    // and the pager footer all used to say "nothing here" at once.
+    expect(screen.getByText("No checks yet")).toBeInTheDocument();
+    expect(screen.queryByText("No entries found")).not.toBeInTheDocument();
+    expect(screen.getByText(/catches your AI saying something wrong before a customer sees it/i)).toBeInTheDocument();
+    // Nothing to run, so the coloured button is the one that adds a check.
+    expect(screen.queryByRole("button", { name: /Run checks/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /New check/ }).length).toBeGreaterThan(0);
   });
 
   // The screen is for people who do not build software. Machine constants on screen
