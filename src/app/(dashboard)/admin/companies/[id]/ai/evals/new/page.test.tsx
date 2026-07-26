@@ -75,39 +75,81 @@ describe("NewCompanyEvalPage", () => {
     });
   });
 
-  it("creates eval cases with required skills selected from active central skills available to the company", async () => {
+  // Five questions in plain English, and a phrase list instead of a JSON array. The
+  // form previously had fifteen fields, three of them raw JSON, and a ten-option
+  // dropdown of machine constants feeding a field nothing ever read.
+  it("creates a check from plain-English answers and a typed phrase list", async () => {
     createCase.mockResolvedValue({ evalCaseId: "eval_1" });
 
     render(<NewCompanyEvalPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("Widget does not invent pricing"), { target: { value: "Research skill routing" } });
-    fireEvent.change(screen.getByDisplayValue("No hallucination"), { target: { value: "SKILL_ROUTING" } });
-    fireEvent.change(screen.getByPlaceholderText("Question or task the company AI must handle."), { target: { value: "Prepare a sourced research update." } });
-    fireEvent.change(screen.getByPlaceholderText("Describe what a passing answer must do."), { target: { value: "Uses the research briefing skill." } });
+    fireEvent.change(screen.getByPlaceholderText("Doesn't invent pricing"), { target: { value: "Doesn't invent pricing" } });
+    fireEvent.change(
+      screen.getByPlaceholderText("How much does your enterprise plan cost?"),
+      { target: { value: "How much is the enterprise plan?" } },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText(/Should say pricing isn't published/),
+      { target: { value: "Says pricing is not published and offers a handover." } },
+    );
 
-    expect(screen.getByText("Research Briefing")).toBeInTheDocument();
-    expect(screen.getByText("Approval Handoff")).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText(/Research Briefing/));
+    // Banned phrases are typed and confirmed with Enter; nobody writes brackets.
+    const phraseInput = screen.getByPlaceholderText("enterprise is free");
+    fireEvent.change(phraseInput, { target: { value: "enterprise is free" } });
+    fireEvent.keyDown(phraseInput, { key: "Enter" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Create eval" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create check" }));
 
     await waitFor(() => {
       expect(createCase).toHaveBeenCalledWith({
         companyId: "company123",
-        name: "Research skill routing",
-        category: "SKILL_ROUTING",
+        name: "Doesn't invent pricing",
+        category: "NO_HALLUCINATION",
         severity: "BLOCKER",
         targetSurface: "COMPANY_CHAT",
-        prompt: "Prepare a sourced research update.",
-        expectedBehavior: "Uses the research briefing skill.",
-        forbiddenClaimsJson: undefined,
-        requiredSourcesJson: undefined,
-        requiredMemoriesJson: undefined,
-        requiredSkillsJson: JSON.stringify(["skill_research"]),
-        expectedModelUseCase: "chat",
-        judgeRubric: undefined,
+        prompt: "How much is the enterprise plan?",
+        expectedBehavior: "Says pricing is not published and offers a handover.",
+        forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
+        requiredSkillsJson: undefined,
       });
     });
     expect(push).toHaveBeenCalledWith("/admin/companies/company123/ai/evals");
+  });
+
+  it("asks for no JSON and shows no machine constants", () => {
+    render(<NewCompanyEvalPage />);
+
+    const body = document.body.textContent ?? "";
+    for (const jargon of ["BLOCKER", "NO_HALLUCINATION", "COMPANY_CHAT", "JSON", "rubric", "fixture"]) {
+      expect(body).not.toContain(jargon);
+    }
+  });
+
+  // Requiring a skill still works, but it is not one of the five questions — it
+  // only became meaningful once runs began recording which skills reached the model.
+  it("keeps the skill requirement behind Advanced", async () => {
+    createCase.mockResolvedValue({ evalCaseId: "eval_1" });
+
+    render(<NewCompanyEvalPage />);
+
+    expect(screen.getByText("Advanced")).toBeInTheDocument();
+    expect(screen.getByText("Research Briefing")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Research Briefing/));
+
+    fireEvent.change(
+      screen.getByPlaceholderText("How much does your enterprise plan cost?"),
+      { target: { value: "Prepare a sourced research update." } },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText(/Should say pricing isn't published/),
+      { target: { value: "Uses the research briefing skill." } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create check" }));
+
+    await waitFor(() => {
+      expect(createCase).toHaveBeenCalledWith(expect.objectContaining({
+        requiredSkillsJson: JSON.stringify(["skill_research"]),
+      }));
+    });
   });
 });

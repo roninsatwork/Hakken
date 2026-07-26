@@ -1,8 +1,8 @@
 import React from "react";
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import CompanyAiEvalsPage from "./page";
 
@@ -24,6 +24,49 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const CASE_ROW = {
+  _id: "case_1",
+  name: "Does not invent pricing",
+  prompt: "How much does the enterprise plan cost?",
+  expectedBehavior: "Say pricing is not published.",
+  severity: "BLOCKER",
+  category: "NO_HALLUCINATION",
+  targetSurface: "COMPANY_CHAT",
+  updatedAt: 1_770_000_000_000,
+};
+
+function mockQueries(overrides: {
+  summary?: Record<string, number>;
+  estimate?: Record<string, unknown>;
+  latestRuns?: unknown[];
+} = {}) {
+  (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
+    const functionName = getFunctionName(queryFn as never);
+    if (functionName === "companyEvals:getSummary") {
+      return {
+        totalCases: 3,
+        blockerCases: 2,
+        latestRuns: 2,
+        passedRuns: 1,
+        failedRuns: 1,
+        needsReviewRuns: 0,
+        notRunCases: 1,
+        failedOrNotRunCases: 2,
+        passRate: 0.5,
+        ...overrides.summary,
+      };
+    }
+    if (functionName === "companyEvals:getBatchEstimate") {
+      return { selectedCount: 2, providerCallCount: 4, isCapped: false, cap: 100, ...overrides.estimate };
+    }
+    if (functionName === "companyEvals:getLatestRunsForCompany") {
+      return overrides.latestRuns ?? [{ evalCaseId: "case_1", status: "FAILED", completedAt: 1_770_000_000_000 }];
+    }
+    if (functionName === "companyEvals:getRunsForCase") return [];
+    return undefined;
+  });
+}
+
 describe("CompanyAiEvalsPage layout guardrails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,118 +84,87 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
       })),
     });
 
-    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
-      const functionName = getFunctionName(queryFn as never);
-      if (functionName === "companyEvals:getSummary") {
-        return {
-          totalCases: 2,
-          blockerCases: 0,
-          latestRuns: 2,
-          passedRuns: 1,
-          failedRuns: 1,
-          passRate: 0.5,
-          failedOrNotRunCases: 1,
-        };
-      }
-      if (functionName === "companyEvals:getBatchEstimate") {
-        return { selectedCount: 2, providerCallCount: 4, isCapped: false, cap: 100 };
-      }
-      if (functionName === "companyEvals:getLatestRunsForCompany") return [];
-      if (functionName === "companyEvals:getRunsForCase") return [];
-      return undefined;
+    mockQueries();
+    (usePaginatedQuery as unknown as HookMock).mockReturnValue({
+      results: [CASE_ROW],
+      status: "Exhausted",
+      loadMore: vi.fn(),
     });
+  });
 
+  it("leads with one sentence rather than a row of counters", () => {
+    renderWithProviders(<CompanyAiEvalsPage />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Checks" })).toBeInTheDocument();
+    expect(screen.getByText("1 of 3 checks passing. 1 failing, 1 not tested yet.")).toBeInTheDocument();
+    // The five counters the page used to lead with, all reading 0 on a new company.
+    expect(screen.queryByText("Pass rate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Blockers")).not.toBeInTheDocument();
+  });
+
+  it("says no checks yet rather than showing a zero", () => {
+    mockQueries({ summary: { totalCases: 0, passedRuns: 0, failedRuns: 0, needsReviewRuns: 0, notRunCases: 0 } });
     (usePaginatedQuery as unknown as HookMock).mockReturnValue({
       results: [],
       status: "Exhausted",
       loadMore: vi.fn(),
     });
 
-    (useMutation as unknown as HookMock).mockReturnValue(vi.fn().mockResolvedValue({
-      selected: 0,
-      passed: 0,
-      failed: 0,
-      needsReview: 0,
-    }));
-  });
-
-  it("keeps page navigation in the header and eval actions with the active cases table", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    const title = screen.getByRole("heading", { level: 1, name: "Company Evals" });
-    const header = title.closest("header");
-
-    expect(header).not.toBeNull();
-    expect(screen.queryByRole("button", { name: /AI section/i })).not.toBeInTheDocument();
-    expect(within(header as HTMLElement).queryByRole("link", { name: "New eval" })).not.toBeInTheDocument();
-
-    const activeCasesHeading = screen.getByRole("heading", { level: 2, name: "Active Eval Cases" });
-    const activeCasesSection = activeCasesHeading.closest("section");
-
-    expect(activeCasesSection).not.toBeNull();
-    expect(within(activeCasesSection as HTMLElement).getByRole("link", { name: "New eval" })).toBeInTheDocument();
+    expect(screen.getByText("No checks yet.")).toBeInTheDocument();
+    expect(screen.getByText(/add one to catch your AI saying something wrong/i)).toBeInTheDocument();
   });
 
-  // Running is real provider work now: the assistant answers, then a different
-  // model marks it. The batch button says how many it will run rather than
-  // offering an unbounded "Run all", and the old fabricated batch is gone.
-  it("names how many evals the batch will run, and says what running does", () => {
+  // The screen is for people who do not build software. Machine constants on screen
+  // were the first of the four faults raised about the admin surfaces.
+  it("shows no machine constants or jargon", () => {
+    renderWithProviders(<CompanyAiEvalsPage />);
+
+    const body = document.body.textContent ?? "";
+    for (const jargon of [
+      "BLOCKER",
+      "NO_HALLUCINATION",
+      "COMPANY_CHAT",
+      "NEEDS_REVIEW",
+      "ADVISORY",
+      "deterministic",
+      "Evidence JSON",
+      "eval case",
+    ]) {
+      expect(body).not.toContain(jargon);
+    }
+  });
+
+  it("uses the standard admin table, with a row that links to its own page", () => {
+    renderWithProviders(<CompanyAiEvalsPage />);
+
+    expect(screen.getByRole("columnheader", { name: "Check" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Result" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Must pass" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Last run" })).toBeInTheDocument();
+
+    const nameLink = screen.getByRole("link", { name: "Does not invent pricing" });
+    expect(nameLink).toHaveAttribute("href", expect.stringContaining("/ai/evals/case_1"));
+
+    // Plain words for the result, and must-pass as a yes rather than a severity.
+    expect(screen.getByText("Failing")).toBeInTheDocument();
+    expect(screen.getByText("Yes")).toBeInTheDocument();
+  });
+
+  it("names how many checks the batch will run, and what running does", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
     expect(screen.queryByRole("button", { name: "Run all" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Run failed/not run" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Run 2 unproven/ })).toBeInTheDocument();
-    expect(screen.getByText(/asks your company AI the question, then has a second model mark the answer/i)).toBeInTheDocument();
+    expect(screen.getByText(/asks your company AI the question, then has a second AI mark the answer/i)).toBeInTheDocument();
   });
 
-  // Nothing to run must not read as an invitation to run nothing.
-  it("disables the batch button when every eval already passes", () => {
-    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
-      const functionName = getFunctionName(queryFn as never);
-      if (functionName === "companyEvals:getSummary") {
-        return { totalCases: 2, blockerCases: 2, latestRuns: 2, passedRuns: 2, failedRuns: 0, passRate: 1, failedOrNotRunCases: 0 };
-      }
-      if (functionName === "companyEvals:getBatchEstimate") {
-        return { selectedCount: 0, providerCallCount: 0, isCapped: false, cap: 100 };
-      }
-      if (functionName === "companyEvals:getLatestRunsForCompany") return [];
-      if (functionName === "companyEvals:getRunsForCase") return [];
-      return undefined;
-    });
+  it("disables the batch button when nothing needs running", () => {
+    mockQueries({ estimate: { selectedCount: 0, providerCallCount: 0 } });
 
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    expect(screen.getByRole("button", { name: /All evals passing/ })).toBeDisabled();
-  });
-
-  // A pass rate of 0% and a pass rate of "nothing has run" are the same number
-  // and opposite facts. An empty account used to read as total failure.
-  it("shows no pass rate until something has run", () => {
-    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
-      const functionName = getFunctionName(queryFn as never);
-      if (functionName === "companyEvals:getSummary") {
-        return {
-          totalCases: 2,
-          blockerCases: 0,
-          latestRuns: 0,
-          passedRuns: 0,
-          failedRuns: 0,
-          passRate: 0,
-          failedOrNotRunCases: 2,
-        };
-      }
-      if (functionName === "companyEvals:getBatchEstimate") {
-        return { selectedCount: 2, providerCallCount: 4, isCapped: false, cap: 100 };
-      }
-      if (functionName === "companyEvals:getLatestRunsForCompany") return [];
-      if (functionName === "companyEvals:getRunsForCase") return [];
-      return undefined;
-    });
-
-    renderWithProviders(<CompanyAiEvalsPage />);
-
-    const passRateLabel = screen.getByText("Pass rate");
-    expect(passRateLabel.parentElement?.textContent).toContain("—");
-    expect(passRateLabel.parentElement?.textContent).not.toContain("0%");
+    expect(screen.getByRole("button", { name: /Everything passing/ })).toBeDisabled();
   });
 });
