@@ -81,6 +81,28 @@ export default defineConfig({
           globals: true,
           environment: 'node',
           include: ['convex/**/*.test.{ts,tsx}', 'scripts/**/*.test.{js,mjs,ts,tsx}'],
+          /*
+           * Vitest's default is 5s, which is too tight for these.
+           *
+           * Many of them are integration tests, not unit tests: `convexTest` runs the
+           * real runtime, the real scheduler and the real database for a whole agent
+           * turn. `agentRuntime.test.ts`'s slowest case takes ~550ms alone, and was
+           * observed at 5,004ms — a 9x slowdown — while 429 files ran in parallel
+           * against a busy machine. CI is the harder case, not the easier one: a
+           * two-core runner with coverage instrumentation on top.
+           *
+           * A timeout exists to catch a hang, not to police performance. At 5s it was
+           * doing the second job and failing at the first, and the failure did not
+           * stay contained: a timed-out `t.action` keeps running, so its orphaned
+           * model call consumed the `mockResolvedValueOnce` queued by the *next*
+           * test, which then failed instantly on a response it never asked for. One
+           * slow test, two red results, neither of them a real defect.
+           *
+           * A genuine deadlock still fails here, thirty seconds later, and stands out
+           * against a suite whose full wall-clock is around twenty-five.
+           */
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
         },
       },
     ],
