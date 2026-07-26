@@ -16,7 +16,31 @@ import type { Doc } from "./_generated/dataModel";
  * the plan rather than made as a side effect.
  */
 export const SYSTEM_FAILSAFE_MODEL_ID = "gemini-2.5-flash";
-export const GOOGLE_VERTEX_EMBEDDING_MODEL_ID = "text-embedding-004";
+/**
+ * The embedding model, and the region that serves it.
+ *
+ * This was `text-embedding-004`, which Google has since retired. Asking for it
+ * returned a provider NOT_FOUND, and every caller wraps retrieval in a catch that
+ * logs and continues — so the assistant carried on answering with no knowledge
+ * attached, confidently and with no sign on any screen that it had stopped
+ * consulting anything. Found while verifying company checks against the dev
+ * deployment.
+ *
+ * `text-embedding-005` is the successor and produces 768 dimensions, so the vector
+ * index keeps its shape and no schema change is needed. It is regional, though:
+ * asked of Vertex, the `global` endpoint offers only `gemini-embedding-2`, while
+ * `europe-west2` serves this one. Embeddings therefore pin their own location while
+ * generation stays wherever it was — a single global location cannot serve both,
+ * and moving generation to a region would strand the Gemini models that are
+ * global-only.
+ *
+ * Changing this model invalidates existing vectors. Embeddings from two different
+ * models are not comparable even at the same dimension count, so stored chunks must
+ * be re-embedded; matching a new query vector against old stored ones returns
+ * confident nonsense, which is worse than returning nothing.
+ */
+export const GOOGLE_VERTEX_EMBEDDING_MODEL_ID = "text-embedding-005";
+export const GOOGLE_VERTEX_EMBEDDING_LOCATION = "europe-west2";
 export const GOOGLE_VERTEX_EMBEDDING_DIMENSIONS = 768;
 export const GOOGLE_VERTEX_PROVIDER_KEY = "google";
 export const OPENAI_PROVIDER_KEY = "openai";

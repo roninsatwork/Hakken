@@ -12,10 +12,12 @@ import { assertWithinAiActionRateLimit } from "./aiActionRequestService";
 
 const {
     createVertexGenAIClientMock,
+    createVertexEmbeddingClientMock,
     embedVertexContentWithRetryMock,
     generateTextWithResolvedModelMock,
 } = vi.hoisted(() => ({
     createVertexGenAIClientMock: vi.fn(() => ({})),
+    createVertexEmbeddingClientMock: vi.fn(() => ({})),
     embedVertexContentWithRetryMock: vi.fn(),
     generateTextWithResolvedModelMock: vi.fn(),
 }));
@@ -25,6 +27,7 @@ vi.mock("./vertexProviderService", async (importOriginal) => {
     return {
         ...actual,
         createVertexGenAIClient: createVertexGenAIClientMock,
+        createVertexEmbeddingClient: createVertexEmbeddingClientMock,
         embedVertexContentWithRetry: embedVertexContentWithRetryMock,
     };
 });
@@ -39,6 +42,7 @@ vi.mock("./aiProviderRegistry", async (importOriginal) => {
 
 beforeEach(() => {
     createVertexGenAIClientMock.mockClear();
+    createVertexEmbeddingClientMock.mockClear();
     embedVertexContentWithRetryMock.mockReset();
     generateTextWithResolvedModelMock.mockReset();
 });
@@ -239,6 +243,9 @@ describe("Ask Sonae safety generation smoke tests", () => {
         ).resolves.toBeNull();
 
         expect(createVertexGenAIClientMock).not.toHaveBeenCalled();
+        // Retrieval builds its own client now, so this has to be asserted too or a
+        // blocked prompt could reach the embedding provider unnoticed.
+        expect(createVertexEmbeddingClientMock).not.toHaveBeenCalled();
         expect(embedVertexContentWithRetryMock).not.toHaveBeenCalled();
         expect(generateTextWithResolvedModelMock).not.toHaveBeenCalled();
 

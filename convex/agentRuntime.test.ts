@@ -84,6 +84,9 @@ const cacheProbe = vi.hoisted(() => ({
 
 vi.mock("./vertexProviderService", () => ({
   createVertexGenAIClient: () => ({}),
+  // Embeddings use their own client, pinned to the region that serves the
+  // embedding model.
+  createVertexEmbeddingClient: () => ({}),
   createVertexPromptCache: async (_ai: unknown, params: {
     contents: unknown[];
     systemInstruction?: string;

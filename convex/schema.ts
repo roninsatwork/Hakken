@@ -1621,7 +1621,13 @@ export default defineSchema({
     vectorField: "embedding",
     dimensions: 768, // Current text embedding provider uses 768-length vectors
     filterFields: ["companyId", "agentId", "documentId", "isGlobal", "threadId"],
-  }).index("by_document", ["documentId"]),
+  })
+    .index("by_document", ["documentId"])
+    // Which model embedded a chunk, so a re-embed after a model change is
+    // countable. Without it, "how many chunks are still on the old model" meant
+    // reading every chunk, which on 2,000 chunks came within 0.4MB of Convex's
+    // 16.7MB per-execution read limit.
+    .index("by_embedding_model", ["embeddingModelId"]),
 
   // Sonae Assistant Tables
   threads: defineTable({

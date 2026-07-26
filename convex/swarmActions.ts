@@ -7,6 +7,7 @@ import { internal } from "./_generated/api";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import {
+  createVertexEmbeddingClient,
   createVertexGenAIClient,
   embedVertexContentWithRetry,
   generateVertexContentWithRetry,
@@ -93,7 +94,10 @@ export const executeSwarmObjective = internalAction({
                  companyId: tenantContext.companyId ?? undefined,
                });
                const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "swarm RAG search");
-               const { embeddings } = await embedVertexContentWithRetry(ai, {
+               // Its own client: this handler's `ai` generates as well, and the
+               // embedding model is served from a different region than the
+               // generation models.
+               const { embeddings } = await embedVertexContentWithRetry(createVertexEmbeddingClient(), {
                  model: embeddingProviderModelId,
                  contents: args.content,
                }, {

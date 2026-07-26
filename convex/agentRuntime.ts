@@ -27,6 +27,7 @@ import {
 import { buildAgentSystemInstruction, buildUntrustedKnowledgeContext } from "./aiPromptAssembly";
 import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 import {
+  createVertexEmbeddingClient,
   createVertexGenAIClient,
   embedVertexContentWithRetry,
   generateVertexContentWithRetry,
@@ -449,7 +450,8 @@ export const runAgentObjective = internalAction({
         return;
     }
 
-    const ai = createVertexGenAIClient();
+    // Embeddings only, and pinned to the region that serves the embedding model.
+    const embeddingAi = createVertexEmbeddingClient();
 
     try {
         execution = await buildLoopExecutionContext(ctx, {
@@ -587,7 +589,7 @@ export const runAgentObjective = internalAction({
                 companyId: thread.companyId,
             });
             const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "agent RAG search");
-            const userEmbeddingResp = await embedVertexContentWithRetry(ai, {
+            const userEmbeddingResp = await embedVertexContentWithRetry(embeddingAi, {
                 model: embeddingProviderModelId,
                 contents: args.content
             }, {

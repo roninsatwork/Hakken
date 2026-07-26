@@ -7,7 +7,7 @@ import type {
   GenerateContentResponse,
   Tool,
 } from "@google/genai";
-import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { GOOGLE_VERTEX_EMBEDDING_LOCATION, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { withProviderRetry, type ProviderRetryPolicy } from "./aiProviderRetryService";
 
 export type VertexProviderEnv = {
@@ -71,6 +71,22 @@ export function createVertexGenAIClient(args: { env?: VertexProviderEnv; locatio
       credentials: config.credentials,
     },
   });
+}
+
+/**
+ * A client pinned to the region that serves the embedding model.
+ *
+ * Embeddings cannot share the generation client. Asked of Vertex, the `global`
+ * endpoint this project generates on offers no `text-embedding-*` model at all, so
+ * every embedding call made through the generation client returned a provider
+ * NOT_FOUND — silently, because each caller logs retrieval failures and continues.
+ *
+ * Kept as its own factory rather than a location argument at each call site, so a
+ * new embedding caller gets the right region by default instead of having to know
+ * this.
+ */
+export function createVertexEmbeddingClient(args: { env?: VertexProviderEnv } = {}) {
+  return createVertexGenAIClient({ env: args.env, location: GOOGLE_VERTEX_EMBEDDING_LOCATION });
 }
 
 /** What the catalogue needs from a listed model, and nothing more. */

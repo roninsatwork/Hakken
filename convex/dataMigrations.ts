@@ -3,6 +3,15 @@ import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { superAdminQuery } from "./tenantFunctions";
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
+import {
+  EMBEDDING_MODEL_USE_CASE,
+  GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
+  GOOGLE_VERTEX_PROVIDER_KEY,
+  buildModelSearchText,
+} from "./aiModelService";
+
+/** The model Google retired, kept here only so the migration can retire the row. */
+const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
 
 /**
  * Data migrations and backfills.
@@ -108,6 +117,73 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       processed: page.page.length,
       updated,
     };
+  },
+
+  /**
+   * Moves the catalogue off the retired embedding model.
+   *
+   * Google retired `text-embedding-004`. The catalogue still had it enabled and
+   * serving the embedding use case, so every retrieval call asked for a model that
+   * no longer exists and got a provider NOT_FOUND — swallowed by the catch each
+   * caller wraps retrieval in, so the assistant simply answered with no knowledge
+   * attached and nothing said so.
+   *
+   * `text-embedding-005` is the successor at the same 768 dimensions, so the vector
+   * index is unchanged. It is regional rather than global, which the embedding
+   * client handles.
+   *
+   * Single-batch: the catalogue holds a handful of embedding rows, not a table
+   * worth of them. It reports `isDone` on the first pass and is idempotent, so a
+   * re-run changes nothing.
+   */
+  "2026-07-26-embedding-model-005": async (ctx) => {
+    const rows = await ctx.db
+      .query("aiModels")
+      .withIndex("by_provider", (q) => q.eq("providerKey", GOOGLE_VERTEX_PROVIDER_KEY))
+      .take(2000);
+    let updated = 0;
+
+    for (const row of rows) {
+      // Retire the dead model wherever it is still enabled or still flagged
+      // default, so nothing resolves to it again.
+      if (row.modelId === RETIRED_EMBEDDING_MODEL_ID && (row.isEnabled || row.isDefault)) {
+        await ctx.db.patch(row._id, { isEnabled: false, isDefault: false, status: "RETIRED" });
+        updated += 1;
+      }
+    }
+
+    const successor = rows.find((row) => row.modelId === GOOGLE_VERTEX_EMBEDDING_MODEL_ID);
+    if (!successor) {
+      await ctx.db.insert("aiModels", {
+        modelId: GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
+        providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
+        providerModelId: GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
+        displayName: "Text Embedding 005",
+        friendlyName: "Text Embedding 005",
+        description: "Google Vertex text embedding model, 768 dimensions. Serves knowledge retrieval.",
+        isEnabled: true,
+        isDefault: false,
+        capabilities: ["embeddings"],
+        supportedUseCases: [EMBEDDING_MODEL_USE_CASE],
+        lastSyncedAt: Date.now(),
+        searchText: buildModelSearchText({
+          modelId: GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
+          providerModelId: GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
+          displayName: "Text Embedding 005",
+          friendlyName: "Text Embedding 005",
+        }),
+      });
+      updated += 1;
+    } else if (!successor.isEnabled || !successor.supportedUseCases?.includes(EMBEDDING_MODEL_USE_CASE)) {
+      await ctx.db.patch(successor._id, {
+        isEnabled: true,
+        capabilities: ["embeddings"],
+        supportedUseCases: [EMBEDDING_MODEL_USE_CASE],
+      });
+      updated += 1;
+    }
+
+    return { cursor: null, isDone: true, processed: rows.length, updated };
   },
 
   /**

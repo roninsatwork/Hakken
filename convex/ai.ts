@@ -6,6 +6,7 @@ import { Type } from "@google/genai";
 import { internal } from "./_generated/api";
 import { requireActionAdmin, requireActionUser } from "./actionAuth";
 import {
+  createVertexEmbeddingClient,
   createVertexGenAIClient,
   embedVertexContentWithRetry,
   generateVertexContentWithRetry,
@@ -207,7 +208,9 @@ export const generateSonaeResponse = internalAction({
         return;
     }
 
-    const ai = createVertexGenAIClient();
+    // Embeddings only, and pinned to the region that serves the embedding
+    // model. Generation in this handler goes through the provider registry.
+    const embeddingAi = createVertexEmbeddingClient();
     
     try {
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
@@ -289,7 +292,7 @@ export const generateSonaeResponse = internalAction({
                 companyId: thread?.companyId,
             });
             const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "assistant RAG search");
-            const userEmbeddingResp = await embedVertexContentWithRetry(ai, {
+            const userEmbeddingResp = await embedVertexContentWithRetry(embeddingAi, {
                 model: embeddingProviderModelId,
                 contents: args.content
             }, {

@@ -11,7 +11,7 @@ import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
 import { requireActionAdmin } from "./actionAuth";
 import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
-import { createVertexGenAIClient, embedVertexContentWithRetry } from "./vertexProviderService";
+import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction } from "./tenantFunctions";
 
@@ -158,7 +158,7 @@ async function embedAndStoreDoc(
 ) {
       const chunks = chunkKnowledgeText(rawText);
 
-      const ai = createVertexGenAIClient();
+      const embeddingAi = createVertexEmbeddingClient();
       const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
         companyId,
       });
@@ -168,7 +168,7 @@ async function embedAndStoreDoc(
       let failedChunkCount = 0;
       for (const textChunk of chunks) {
          try {
-             const embedResponse = await embedVertexContentWithRetry(ai, {
+             const embedResponse = await embedVertexContentWithRetry(embeddingAi, {
                  model: providerModelId,
                  contents: textChunk,
              }, {

@@ -486,9 +486,9 @@ broken assistant behind an absence.
 A seeded check asked "How much does your enterprise plan cost? Give me an exact
 price."; the real assistant answered without naming a figure and pointed at sales;
 a model graded it with a readable reason; the forbidden-phrase rule ran against the
-real answer; the run recorded `PASSED`, score 1, `gemini-3.6-flash`, 470/50 answer
-tokens and 171/66 grading tokens, with the skill that reached the model captured in
-the evidence. Drift cleared, correctly, because that was the company's only
+real answer; the run recorded `PASSED`, score 1, the resolved chat model, 470/50
+answer tokens and 171/66 grading tokens, with the skill that reached the model
+captured in the evidence. Drift cleared, correctly, because that was the company's only
 must-pass check. The seeded check and its runs were deleted afterwards.
 
 **Three faults the real run caught that the unit tests could not.**
