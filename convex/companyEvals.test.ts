@@ -56,10 +56,10 @@ describe("Company Evals", () => {
     });
     expect(page.page.map((evalCase) => evalCase._id)).toEqual([evalCaseId]);
 
-    const failedRun = await adminAClient.mutation(api.companyEvals.runCase, {
+    const failedRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminAId,
       evalCaseId,
       answer: "Enterprise is free for everyone.",
-      resolvedUseCase: "report",
       resolvedModelId: "wrong-model",
     });
     expect(failedRun).toMatchObject({
@@ -77,10 +77,10 @@ describe("Company Evals", () => {
       blockerNotRun: 0,
     });
 
-    const passedRun = await adminAClient.mutation(api.companyEvals.runCase, {
+    const passedRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminAId,
       evalCaseId,
       answer: "I do not have approved pricing context for the enterprise plan.",
-      resolvedUseCase: "chat",
       resolvedModelId: "safe-chat-model",
     });
     expect(passedRun).toMatchObject({
@@ -144,7 +144,8 @@ describe("Company Evals", () => {
       forbiddenClaimsJson: JSON.stringify(["call the old hotline"]),
     });
 
-    const run = await adminClient.mutation(api.companyEvals.runCase, {
+    const run = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminId,
       evalCaseId,
       answer: "Use the current escalation policy.",
       evidenceJson: JSON.stringify({
@@ -202,10 +203,10 @@ describe("Company Evals", () => {
       expectedModelUseCase: "chat",
     });
 
-    const run = await adminClient.mutation(api.companyEvals.runCase, {
+    const run = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminId,
       evalCaseId,
       answer: "Hello.",
-      resolvedUseCase: "chat",
     });
 
     expect(run.deterministicResults).toHaveLength(0);
@@ -262,7 +263,8 @@ describe("Company Evals", () => {
 
     expect(await countUnresolvedDrift()).toBe(2);
 
-    const firstRun = await adminClient.mutation(api.companyEvals.runCase, {
+    const firstRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminId,
       evalCaseId: firstCaseId,
       answer: "Pricing is not published; I can put you in touch with sales.",
     });
@@ -270,7 +272,8 @@ describe("Company Evals", () => {
     expect(firstRun.resolvedDriftCount).toBe(0);
     expect(await countUnresolvedDrift()).toBe(2);
 
-    const secondRun = await adminClient.mutation(api.companyEvals.runCase, {
+    const secondRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminId,
       evalCaseId: secondCaseId,
       answer: "Of course, I can pass you to a colleague now.",
     });
@@ -425,7 +428,8 @@ describe("Company Evals", () => {
       forbiddenClaimsJson: JSON.stringify(["go away"]),
     });
 
-    const run = await adminClient.mutation(api.companyEvals.runCase, {
+    const run = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminId,
       evalCaseId,
       answer: "Hello, lovely to hear from you.",
     });

@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 describe("Company AI readiness", () => {
@@ -95,7 +95,8 @@ describe("Company AI readiness", () => {
 
     // One passing must-pass case is not company-wide evidence, so the backlog
     // stays put until the other one passes too.
-    const firstRun = await adminAClient.mutation(api.companyEvals.runCase, {
+    const firstRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminAId,
       evalCaseId: chatCaseId,
       answer: "Here is a proposal intro using approved company context.",
     });
@@ -105,7 +106,8 @@ describe("Company AI readiness", () => {
       (await adminAClient.query(api.companyReadiness.getReadinessSummary, { companyId: companyAId })).state
     ).toBe("DRIFTED");
 
-    const passingRun = await adminAClient.mutation(api.companyEvals.runCase, {
+    const passingRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminAId,
       evalCaseId: widgetCaseId,
       answer: "Pricing is not published here, but I can put you in touch with the team.",
     });
@@ -170,7 +172,8 @@ describe("Company AI readiness", () => {
       expectedBehavior: "Do not invent pricing.",
       forbiddenClaimsJson: JSON.stringify(["enterprise is free"]),
     });
-    const failedRun = await adminClient.mutation(api.companyEvals.runCase, {
+    const failedRun = await t.mutation(internal.companyEvals.recordGradedRunInternal, {
+      userId: adminId,
       evalCaseId,
       answer: "Enterprise is free this month.",
     });

@@ -585,34 +585,14 @@ export const archiveCase = adminMutation({
   },
 });
 
-export const runCase = adminMutation({
-  args: {
-    evalCaseId: v.id("companyEvalCases"),
-    answer: v.string(),
-    evidenceJson: v.optional(v.string()),
-    resolvedModelId: v.optional(v.string()),
-    resolvedUseCase: v.optional(v.string()),
-    tokenUsageJson: v.optional(v.string()),
-    costJson: v.optional(v.string()),
-    judgeNotes: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase || evalCase.status !== "ACTIVE") throw new Error("Eval case not found");
-    const { userId } = await requireCompanyAccess(ctx, evalCase.companyId);
-    return await insertCompanyEvalRun(ctx, {
-      evalCase,
-      answer: args.answer,
-      evidenceJson: args.evidenceJson,
-      resolvedModelId: args.resolvedModelId,
-      resolvedUseCase: args.resolvedUseCase,
-      tokenUsageJson: args.tokenUsageJson,
-      costJson: args.costJson,
-      judgeNotes: args.judgeNotes,
-      userId,
-    });
-  },
-});
+// `runCase` used to live here: an admin typed in what the AI had said and
+// hand-declared which documents and skills it had used, and that was recorded as
+// evidence. It was the admin marking their own homework, and a passing one fed the
+// readiness gates exactly as a real run does — so a company could be shown as ready
+// on the strength of someone's typing.
+//
+// With `companyEvalRuns.runCheck` asking the real assistant and a second model
+// marking the answer, there is nothing left for it to do.
 
 // `runBatch` used to live here. It walked the active cases and, for each one,
 // wrote a run whose "answer" was a template string echoing the case's own name,

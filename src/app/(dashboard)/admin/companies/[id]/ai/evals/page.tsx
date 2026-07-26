@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Loader2,
-  PencilLine,
   Play,
   Plus,
   Trash2,
@@ -249,14 +248,6 @@ export default function CompanyAiEvalsPage() {
                       {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                       Run
                     </button>
-                    <Link
-                      href={`${aiHref}/evals/${evalCase._id}/run?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
-                      aria-label={`Record an answer for ${evalCase.name} by hand`}
-                      title="Record an answer by hand"
-                      className="p-2 rounded-md text-muted hover:text-foreground hover:bg-foreground/5 transition-colors"
-                    >
-                      <PencilLine className="h-4 w-4" />
-                    </Link>
                     <button
                       type="button"
                       aria-label={`Remove ${evalCase.name}`}
