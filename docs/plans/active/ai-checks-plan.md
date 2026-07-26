@@ -551,7 +551,7 @@ The engine the agent side already has, pointed at company chat.
 **Done when** a failing check shows the admin the actual answer their AI gave
 and a sentence explaining why it is not good enough.
 
-### Phase 3.5 — Read the numbers off an index, not off a scan
+### Phase 3.5 — Read the numbers off an index, not off a scan — DONE 2026-07-26
 
 Every count on both surfaces is currently produced by taking up to 1,000 rows and
 reducing them in memory, and the same reduction is written three times.
@@ -605,7 +605,7 @@ table above, the one-sentence summary, failures first, the five-field form, the
 standard admin table used by Skill Center rather than a bespoke list, and paging
 and search done in the database rather than over a fetched page.
 
-### Phase 5 — Move the agent screen onto it
+### Phase 5 — Move the agent screen onto it — DONE 2026-07-26
 
 Same component, same words. The agent extras that survive — setup check, groups,
 must-pass-before-going-live — are presented in the shared vocabulary. The per-row
@@ -632,7 +632,7 @@ must pass before this agent can go live, and why it is currently blocked.
   restore mutation at all, so archive is a one-way disappearance. Archiving a
   group stops silently resetting other agents' gates.
 
-### Phase 7 — Confidence
+### Phase 7 — Confidence — DONE 2026-07-26
 
 - Wire `combineGradeSamples` to a per-check sample count, so a check that passes
   two times in three reports as failing. This decides whether things go live.
@@ -656,6 +656,40 @@ must pass before this agent can go live, and why it is currently blocked.
   chat into a check.
 
 ---
+
+## Where this ended up
+
+All nine phases are done. What the brief asked for, and what it got:
+
+**"It has to work."** A check asks the real assistant, down the same path a customer
+message takes, and a different model marks the answer. Nothing can report a pass that
+was not asked for — proved by tests that fail if a fabricated or configuration-only
+run ever produces one. Verified end to end in the browser, not only by test.
+
+**"It has to be easy to understand."** Both screens are the Skill Center's table with
+one sentence above it. Fifteen fields became five, none of them code. Every machine
+constant is gone, and a test on each screen fails if one comes back.
+
+**Four things were found only by looking at the real screen**, and none of them could
+have been caught by a test: three ways of saying "nothing here" at once, a sentence
+shouted in uppercase because the empty row is styled that way, an orange primary
+button that could not do anything, and a migration that reported success while leaving
+"Passing" beside a blank date.
+
+**Two live bugs were found by running it for real**, both outside the eval code: the
+grader could be an embedding model, which had been silently failing every model-graded
+agent eval; and the retired `text-embedding-004` meant the assistant had stopped
+reading its own documents entirely, swallowed by a catch, with no sign anywhere.
+
+**Still outstanding, deliberately:**
+
+- Five retired fields remain declared in `schema.ts` and `category` remains required.
+  Removing them needs the migration to have run on production first, or the deploy is
+  refused. The note is on the lines themselves.
+- Production still has the retired embedding model, so its assistant is still
+  answering without its knowledge base. That needs a deploy and two migration runs.
+- Agent checks have no repeat sampling or cost figure; both were done on the company
+  side only.
 
 ## Acceptance rules
 
