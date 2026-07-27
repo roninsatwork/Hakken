@@ -1,131 +1,160 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
-import { describe, expect, it, vi } from "vitest";
-import AdminDashboard from "./page";
+import AdminDashboardPage from "./page";
 
-vi.mock("convex/react", () => ({
-  useQuery: vi.fn(),
-}));
+vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: vi.fn(() => (key: string) => {
-    const translations: Record<string, string> = {
-      title: "Admin Overview",
-      subtitle: "Platform analytics",
-      "charts.daily": "Daily",
-      "charts.noData": "No data",
-      "metrics.mrr": "MRR",
-      "metrics.mrrSub": "Monthly revenue",
-      "metrics.mau": "MAU",
-      "metrics.mauSub": "Active users",
-      "metrics.logisticBurn": "Cost",
-      "metrics.burnSub": "AI cost",
-      "metrics.activeContext": "Active Context",
-      "metrics.activeSub": "Current users",
-      "metrics.compute": "Compute",
-      "metrics.computeSub": "Input {input} Output {output}",
-      "metrics.messagesSent": "Messages",
-      "metrics.messagesSub": "Total messages",
-      "leaderboards.empty": "No rows",
-      "leaderboards.tenants": "Top Companies",
-      "leaderboards.initiators": "Top Users",
-    };
-    return translations[key] || key;
-  }),
-}));
-
-vi.mock("next/image", () => ({
-  default: ({ alt }: { alt: string }) => <span>{alt}</span>,
-}));
-
-vi.mock("framer-motion", () => ({
-  motion: new Proxy(
-    {},
-    {
-      get: (_target, tag: string) => {
-        const MotionComponent = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(({ children, ...props }, ref) =>
-          React.createElement(tag, { ...props, ref }, children)
-        );
-        MotionComponent.displayName = `MotionMock(${tag})`;
-        return MotionComponent;
-      },
-    }
-  ),
-}));
-
-vi.mock("@/src/ui/components/charts/ChartExportWrapper", () => ({
-  default: ({ children, exportName }: { children: React.ReactNode; exportName: string }) => (
-    <div data-export-name={exportName}>{children}</div>
-  ),
-}));
-
-vi.mock("@/src/ui/components/TimeframeDropdown", () => ({
-  default: () => <div>Timeframe dropdown</div>,
-}));
-
-vi.mock("recharts", () => {
-  const Shell = ({ children, data, dataKey, name }: { children?: React.ReactNode; data?: unknown[]; dataKey?: string; name?: string }) => {
-    const visibleChildren = React.Children.toArray(children).filter(
-      (child) => !React.isValidElement(child) || typeof child.type !== "string" || !["defs", "linearGradient", "stop"].includes(child.type)
-    );
-
-    return (
-      <div data-count={data?.length ?? 0} data-key={dataKey} data-name={name}>
-        {visibleChildren}
-      </div>
-    );
-  };
-
+// Recharts needs a measured container, which jsdom does not give it. The data
+// is asserted against the query's own tests; what matters here is the copy
+// around the charts and that the page renders.
+vi.mock("recharts", async () => {
+  const stub = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   return {
-    Area: Shell,
-    AreaChart: Shell,
-    Bar: Shell,
-    BarChart: Shell,
-    CartesianGrid: Shell,
-    Cell: ({ fill }: { fill: string }) => <span data-testid="chart-cell" data-fill={fill} />,
-    Legend: Shell,
-    Pie: Shell,
-    PieChart: Shell,
-    ResponsiveContainer: Shell,
-    Tooltip: Shell,
-    XAxis: Shell,
-    YAxis: Shell,
+    Area: stub,
+    AreaChart: stub,
+    Bar: stub,
+    BarChart: stub,
+    CartesianGrid: stub,
+    Cell: stub,
+    Line: stub,
+    LineChart: stub,
+    ResponsiveContainer: stub,
+    Tooltip: stub,
+    XAxis: stub,
+    YAxis: stub,
   };
 });
 
-describe("AdminDashboard", () => {
-  it("renders provider distribution on the global overview dashboard", () => {
-    vi.mocked(useQuery)
-      .mockReturnValueOnce({
-        aggregates: {
-          aggregationType: "day",
-          activeUsers: 1,
-          mau: 1,
-          totalCostGBP: 0.01,
-          totalInputTokens: 100,
-          totalMessages: 2,
-          totalOutputTokens: 50,
-          totalTokens: 150,
-        },
-        modelDistribution: [{ name: "Platform Model", calls: 2, cost: 0.01 }],
-        providerDistribution: [{ providerKey: "openai", calls: 2, cost: 0.01 }],
-        timeline: [{ date: "2026-06-02", cost: 0.01, messages: 2, inputTokens: 100, outputTokens: 50 }],
-        topAgents: [],
-        topCompanies: [],
-        topUsers: [],
-      } as unknown as ReturnType<typeof useQuery>)
-      .mockReturnValueOnce({
-        aggregates: { mrr: 0 },
-        planDistribution: [],
-        systemIntegrity: { totalProvisionedCompanies: 1 },
-      } as unknown as ReturnType<typeof useQuery>);
+vi.mock("next/link", () => ({
+  default: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children: React.ReactNode; href: string }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
+}));
 
-    render(<AdminDashboard />);
+const overview = {
+  windowDays: 30,
+  clients: { total: 4, healthy: 2, needsAttention: 1, unused: 1 },
+  money: { projectedMrrGBP: 400, aiSpendGBP: 12.5, spendAsPercentOfRevenue: 3.1 },
+  seats: { total: 12, active: 4, utilisation: 33 },
+  todo: { pendingInvitations: 2, companiesWithNoPlan: 1 },
+  planDistribution: [
+    { name: "Studio", companies: 2 },
+    { name: "No plan", companies: 1 },
+  ],
+  daily: [
+    { day: "2026-07-26", questions: 0, aiCalls: 2, spendGBP: 0.1 },
+    { day: "2026-07-27", questions: 5, aiCalls: 9, spendGBP: 0.4 },
+  ],
+  signInBands: [
+    { day: "2026-07-27", didNotSignIn: 8, oneSession: 3, twoSessions: 1, threeSessions: 0, fourSessions: 0, fivePlusSessions: 0 },
+  ],
+  portfolio: [
+    { companyId: "c_attention", name: "Ronins Website", planName: "Studio", mrrGBP: 200, people: 3, activeRecently: 1, quiet: 2, state: "NEEDS_ATTENTION" },
+    { companyId: "c_unused", name: "New Client", planName: undefined, mrrGBP: 0, people: 0, activeRecently: 0, quiet: 0, state: "UNUSED" },
+    { companyId: "c_healthy", name: "Happy Client", planName: "Studio", mrrGBP: 200, people: 2, activeRecently: 2, quiet: 0, state: "HEALTHY" },
+  ],
+};
 
-    expect(screen.getByText("Provider Distribution")).toBeInTheDocument();
-    expect(screen.getByText("Cost drivers by provider")).toBeInTheDocument();
-    expect(screen.getByText("Model Logistics")).toBeInTheDocument();
-    expect(screen.getByText("Token Flux")).toBeInTheDocument();
+describe("AdminDashboardPage", () => {
+  let fixture: unknown;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fixture = overview;
+    vi.mocked(useQuery).mockImplementation(() => fixture as ReturnType<typeof useQuery>);
+  });
+
+  /**
+   * What was here reported tokens, model mix and provider mix — the same view
+   * the per-company AI Usage screen gives, aggregated, and an answer to neither
+   * question a platform owner opens the front page to ask.
+   */
+  it("leads with how the clients are, not with tokens", () => {
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("2 of 4 clients healthy · 1 need attention · 1 with nobody added.")).toBeInTheDocument();
+    expect(screen.queryByText(/Model Logistics/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Provider Distribution/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Token Flux/i)).not.toBeInTheDocument();
+  });
+
+  /** A bare revenue figure hides the margin, which is the number that matters. */
+  it("states revenue against what it costs to serve", () => {
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("£400.00")).toBeInTheDocument();
+    expect(screen.getByText("AI spend £12.50 · 3.1% of it")).toBeInTheDocument();
+  });
+
+  it("says how many seats are actually used", () => {
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("of 12")).toBeInTheDocument();
+    expect(screen.getByText("33% used in the last 30 days")).toBeInTheDocument();
+  });
+
+  it("names its charts and every sign-in band", () => {
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("Activity")).toBeInTheDocument();
+    expect(screen.getByText("AI spend")).toBeInTheDocument();
+    expect(screen.getByText("How often people sign in")).toBeInTheDocument();
+    expect(screen.getByText("Did not sign in")).toBeInTheDocument();
+    // The gap between these two lines is automation running unasked.
+    expect(screen.getByText("Questions people asked")).toBeInTheDocument();
+    expect(screen.getByText("All AI calls, including automation")).toBeInTheDocument();
+  });
+
+  /**
+   * Unused and unhealthy are different problems, and the worst sorts first so
+   * the reason to open the screen is the first thing read.
+   */
+  it("lists every client with its state, worst first, each openable", () => {
+    render(<AdminDashboardPage />);
+
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(within(rows[0]).getByText("Ronins Website")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("Needs attention")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Nobody added")).toBeInTheDocument();
+    expect(within(rows[0]).getByRole("link", { name: /Open/ }))
+      .toHaveAttribute("href", "/admin/companies/c_attention");
+  });
+
+  it("raises what is worth doing", () => {
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("2 invitations nobody has accepted")).toBeInTheDocument();
+    expect(screen.getByText("1 client is on no plan")).toBeInTheDocument();
+  });
+
+  /** A permanent panel of zeroes is the fault this whole pass has removed. */
+  it("stays quiet when there is nothing to do", () => {
+    fixture = { ...overview, todo: { pendingInvitations: 0, companiesWithNoPlan: 0 } };
+    render(<AdminDashboardPage />);
+
+    expect(screen.queryByText("Worth doing")).not.toBeInTheDocument();
+  });
+
+  it("says so plainly when every client is healthy", () => {
+    fixture = {
+      ...overview,
+      clients: { total: 3, healthy: 3, needsAttention: 0, unused: 0 },
+    };
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("All 3 clients are healthy.")).toBeInTheDocument();
+  });
+
+  it("says so when there are no clients at all", () => {
+    fixture = {
+      ...overview,
+      clients: { total: 0, healthy: 0, needsAttention: 0, unused: 0 },
+      portfolio: [],
+    };
+    render(<AdminDashboardPage />);
+
+    expect(screen.getByText("No clients yet.")).toBeInTheDocument();
   });
 });

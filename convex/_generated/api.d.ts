@@ -117,6 +117,7 @@ import type * as planService from "../planService.js";
 import type * as plans from "../plans.js";
 import type * as platformAlertRecipients from "../platformAlertRecipients.js";
 import type * as platformAlertService from "../platformAlertService.js";
+import type * as platformOverview from "../platformOverview.js";
 import type * as promptCacheService from "../promptCacheService.js";
 import type * as properties from "../properties.js";
 import type * as providerHttpService from "../providerHttpService.js";
@@ -281,6 +282,7 @@ declare const fullApi: ApiFromModules<{
   plans: typeof plans;
   platformAlertRecipients: typeof platformAlertRecipients;
   platformAlertService: typeof platformAlertService;
+  platformOverview: typeof platformOverview;
   promptCacheService: typeof promptCacheService;
   properties: typeof properties;
   providerHttpService: typeof providerHttpService;

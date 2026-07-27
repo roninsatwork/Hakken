@@ -572,6 +572,48 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       ],
     };
   }
+  if (path === "platformOverview:getPlatformOverview") {
+    const day = (offset: number) => new Date(now - offset * 86400000).toISOString().slice(0, 10);
+    const daily = Array.from({ length: 30 }, (_, index) => {
+      const offset = 29 - index;
+      const questions = offset < 12 ? Math.max(0, 9 - offset) : 0;
+      return { day: day(offset), questions, aiCalls: questions * 2 + (offset % 4 === 0 ? 3 : 0), spendGBP: questions * 0.03 };
+    });
+    const signInBands = Array.from({ length: 30 }, (_, index) => {
+      const offset = 29 - index;
+      const one = offset % 3 === 0 ? 2 : 1;
+      const two = offset % 5 === 0 ? 1 : 0;
+      return {
+        day: day(offset),
+        didNotSignIn: Math.max(0, 12 - one - two),
+        oneSession: one,
+        twoSessions: two,
+        threeSessions: offset === 4 ? 1 : 0,
+        fourSessions: 0,
+        fivePlusSessions: offset === 9 ? 1 : 0,
+      };
+    });
+    return {
+      windowDays: 30,
+      clients: { total: 4, healthy: 2, needsAttention: 1, unused: 1 },
+      money: { projectedMrrGBP: 400, aiSpendGBP: 12.54, spendAsPercentOfRevenue: 3.1 },
+      seats: { total: 12, active: 4, utilisation: 33 },
+      todo: { pendingInvitations: 2, companiesWithNoPlan: 1 },
+      planDistribution: [
+        { name: "Studio", companies: 2 },
+        { name: "Trial", companies: 1 },
+        { name: "No plan", companies: 1 },
+      ],
+      daily,
+      signInBands,
+      portfolio: [
+        { companyId: "c_attention", name: "Ronins Website", planName: "Studio", mrrGBP: 200, people: 3, activeRecently: 1, quiet: 2, state: "NEEDS_ATTENTION" },
+        { companyId: "c_unused", name: "New Client", planName: undefined, mrrGBP: 0, people: 0, activeRecently: 0, quiet: 0, state: "UNUSED" },
+        { companyId: "c_healthy", name: "Happy Client", planName: "Studio", mrrGBP: 200, people: 2, activeRecently: 2, quiet: 0, state: "HEALTHY" },
+        { companyId: "c_trial", name: "Trialling Co", planName: "Trial", mrrGBP: 0, people: 1, activeRecently: 1, quiet: 0, state: "HEALTHY" },
+      ],
+    };
+  }
   if (path === "aiTools:getTools") {
     return [
       {
