@@ -65,7 +65,7 @@ Sonae uses a bracket syntax to pass data between nodes.
 *   **AI Agent:** Mounts one of your autonomous LLM Agents mid-flow to analyze data. An agent with the knowledge-search tool bound to it can query your knowledge base as part of its run — there is no separate RAG node.
 
 ### Control & UI (The Breaks)
-*   **Requires Approval:** Freezes the entire workflow dead in its tracks. A human administrator must log in and click "Approve" before the next node executes. Perfect for large financial transactions.
+*   **Requires Approval:** Freezes the entire workflow dead in its tracks. A super admin must approve it on the Workflow Runs screen before the next node executes. Perfect for large financial transactions. An approval nobody answers expires on the platform window and the run is marked failed — it is never approved unattended.
 *   **Delay/Timer:** Halts execution for a specified duration (e.g., "Wait 2 Hours").
 
 ---

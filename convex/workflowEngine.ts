@@ -10,6 +10,12 @@ import {
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import {
+  APPROVAL_EXPIRY_CONFIG_KEY,
+  getApprovalExpiredMessage,
+  isApprovalExpired,
+  parseApprovalExpiryConfig,
+} from "./approvalExpiryService";
 
 /**
  * Maximum items an iterator node may fan out to in a single execution.
@@ -49,6 +55,8 @@ type WorkflowDbSelectQuery = {
 
 const WORKFLOW_DB_SELECT_LIMIT = 100;
 const ACTIVE_WORKFLOW_SCHEDULE_DISPATCH_LIMIT = 500;
+/** One sweep's worth. The cron runs every 15 minutes, so a backlog drains fast. */
+const WORKFLOW_APPROVAL_EXPIRY_SWEEP_LIMIT = 100;
 
 function getQueryValue(query: WorkflowDbSelectQuery, field: string) {
   return query.equals.find((filter) => filter.field === field)?.value;
@@ -680,6 +688,75 @@ export const rejectNodeApproval = internalMutation({
     });
 
     return step._id;
+  },
+});
+
+/**
+ * Give up on workflow steps nobody answered.
+ *
+ * A halted step waited indefinitely: the completeness check counts
+ * `PENDING_APPROVAL` as incomplete, so the parent execution stayed `RUNNING` for
+ * ever, and no cron or health signal ever looked at it. The only thing that
+ * eventually touched one was the retention purge — minimum thirty days — which
+ * deleted the execution outright, so it was never completed, never failed and
+ * never reported.
+ *
+ * Shares the platform window with agent approvals, because it is the same
+ * question: how long does the platform wait for a person before it acts.
+ */
+export const expireStaleWorkflowApprovals = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const config = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", APPROVAL_EXPIRY_CONFIG_KEY))
+      .first();
+    const expiryHours = parseApprovalExpiryConfig(config?.value).expiryHours;
+
+    const halted = await ctx.db
+      .query("workflowExecutionSteps")
+      .withIndex("by_status_started", (q) => q.eq("status", "PENDING_APPROVAL"))
+      .take(WORKFLOW_APPROVAL_EXPIRY_SWEEP_LIMIT);
+
+    let expiredExecutions = 0;
+    const handled = new Set<string>();
+
+    for (const step of halted) {
+      if (!isApprovalExpired({ requestedAt: step.startedAt, now, expiryHours })) continue;
+      if (handled.has(step.executionId)) continue;
+
+      const execution = await ctx.db.get(step.executionId);
+      // Anything already finished has been dealt with by something else.
+      if (!execution || execution.status !== "RUNNING") continue;
+
+      handled.add(step.executionId);
+      expiredExecutions += 1;
+      const error = getApprovalExpiredMessage(expiryHours);
+
+      // Every halted step of that execution, not just this one: leaving siblings
+      // waiting would keep the execution incomplete with nothing able to settle it.
+      const executionSteps = await ctx.db
+        .query("workflowExecutionSteps")
+        .withIndex("by_execution_status_started", (q) =>
+          q.eq("executionId", step.executionId).eq("status", "PENDING_APPROVAL"))
+        .take(WORKFLOW_APPROVAL_EXPIRY_SWEEP_LIMIT);
+
+      for (const stale of executionSteps) {
+        await ctx.db.patch(stale._id, {
+          status: "FAILED",
+          error,
+          completedAt: now,
+        });
+      }
+
+      await ctx.db.patch(step.executionId, {
+        status: "FAILED",
+        completedAt: now,
+      });
+    }
+
+    return { examined: halted.length, expiredExecutions };
   },
 });
 

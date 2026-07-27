@@ -632,23 +632,6 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       },
     ];
   }
-  if (path === "scheduler:getWorkflowExecutions") {
-    return [
-      {
-        _id: "execution_e2e",
-        _creationTime: now,
-        workflowId,
-        workflowName: "E2E Workflow",
-        startedByName: "E2E Super Admin",
-        triggerType: "MANUAL",
-        status: "SUCCESS",
-        state: "Completed deterministic browser journey",
-        startedAt: now,
-        completedAt: now + 1000,
-        createdAt: now,
-      },
-    ];
-  }
   if (path === "analytics:getGlobalAnalytics" || path === "analytics:getCompanyMetrics" || path === "analytics:getGlobalInventoryMetrics") return analytics;
   if (path === "movements:get") {
     return queryArgs.id === movementId ? movementFixture : null;
@@ -719,6 +702,41 @@ export function useAction(functionReference: FunctionReference) {
 export function usePaginatedQuery(functionReference: FunctionReference, args?: unknown) {
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+
+  if (path === "scheduler:getWorkflowExecutions") {
+    return {
+      results: [
+        {
+          _id: "execution_e2e_halted",
+          _creationTime: now,
+          workflowId,
+          workflowName: "E2E Workflow",
+          startedByName: "E2E Super Admin",
+          triggerType: "MANUAL",
+          status: "RUNNING",
+          startedAt: now,
+          // So the "needs a decision" state is reachable in the browser journey
+          // rather than only in unit tests.
+          awaitingApprovalNodeId: "approval",
+        },
+        {
+          _id: "execution_e2e",
+          _creationTime: now,
+          workflowId,
+          workflowName: "E2E Workflow",
+          startedByName: "E2E Super Admin",
+          triggerType: "MANUAL",
+          status: "SUCCESS",
+          state: "Completed deterministic browser journey",
+          startedAt: now,
+          completedAt: now + 1000,
+        },
+      ],
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
 
   if (path === "users:getPaginatedUsers") {
     return {

@@ -40,6 +40,17 @@ crons.interval(
   {}
 );
 
+// The same window, for the other approval mechanism. A workflow halted on a
+// Human Approval node kept its execution RUNNING for ever; nothing but the
+// 30-day retention purge ever touched it, and that deleted it rather than
+// finishing it.
+crons.interval(
+  "workflow-approval-expiry",
+  { minutes: 15 },
+  internal.workflowEngine.expireStaleWorkflowApprovals,
+  {}
+);
+
 // Recompute the Skill Center counts. They used to be totalled on every page
 // load by walking every skill and all of its agent bindings; counting cannot be
 // indexed away, so it happens here instead. Ten minutes keeps the panel close

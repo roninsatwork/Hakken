@@ -64,7 +64,7 @@ Indexes matter for scale and correctness. Workflows use `by_createdAt` and `sear
 
 ## Authorization And Tenancy
 
-Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts` uses `requireSuperAdmin` for list, paginated list, get, create, update, delete, manual trigger, and webhook-secret read. `convex/scheduler.ts` also uses `requireSuperAdmin` for schedule list, get, create, update, toggle, delete, force run, and execution record queries. `convex/workflowRuntime.ts` uses `requireActionUser` for approval resumption, but no standalone admin workflow execution log route is currently exposed.
+Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts` uses `requireSuperAdmin` for list, paginated list, get, create, update, delete, manual trigger, and webhook-secret read. `convex/scheduler.ts` also uses `requireSuperAdmin` for schedule list, get, create, update, toggle, delete, force run, and execution record queries. `convex/workflowRuntime.ts` uses the super-admin action guard for approval resumption, and the execution browser is exposed at `/admin/workflows/executions`.
 
 Database nodes have a separate runtime guard in `convex/workflowEngine.ts`. The runtime loads the workflow creator and treats a creator with `SUPER_ADMIN` as unrestricted for database operations. If the creator is not a super admin, database operations are limited to an allowlist and force or verify the creator's company id. Non-super-admin database selects must use supported indexed query contracts or a document id that belongs to the creator's company. Inserts and updates force the creator company id and reject attempts to cross company boundaries. This matters even though the public UI currently limits workflow authoring to super admins, because runtime paths and tests cover tenant boundary behavior defensively.
 
@@ -104,7 +104,7 @@ Manual runs from the designer call `api.workflows.triggerManualRun`. The mutatio
 
 After a successful node, `finalizeNodeStep` updates the step, appends the parsed output into execution state under `nodes[nodeId].output`, computes downstream readiness, creates pending downstream steps, and returns node ids that should be scheduled. If no pending, running, or approval steps remain, the execution is marked `SUCCESS`. Any thrown error calls `failNodeStep`, marks the current step failed when possible, and marks the entire execution `FAILED`.
 
-Approval resumption is action-based. The log detail screen calls `api.workflowRuntime.resumeApprovalStep` for `APPROVED`. Rejection is implemented by the action but the current UI only exposes an approve-and-resume button. Approval resumes the halted node by finalizing it with an approved system output and schedules downstream nodes immediately.
+Approval resumption is action-based. `/admin/workflows/executions/[id]` calls `api.workflowRuntime.resumeApprovalStep` for both `APPROVED` and `REJECTED`, with rejection behind a confirmation because it stops the whole run. Approval resumes the halted node by finalizing it with its own stored output marked approved, preserving `message` and `previewData` for downstream templates, and schedules downstream nodes immediately.
 
 ## Schedules
 

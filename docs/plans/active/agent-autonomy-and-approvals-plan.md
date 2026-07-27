@@ -1158,7 +1158,52 @@ side-effect level, decision, reason. The expiry sweep from Phase 4 writes the sa
 row with no actor. Retitle and extend `convex/agentRuns.test.ts:563` so the
 assertion matches the name it has always had.
 
-### Phase 10 — Finish the workflow approval system
+### Phase 10 — Finish the workflow approval system — **DONE**
+
+Delivered in four stages, each committed separately.
+
+**The engine (stage one).** Four faults, all untested and all masked by the feature
+being unreachable: approving destroyed the node's own payload (so the config
+drawer's preview field would have broken the first time anyone used it); rejecting
+resolved the step by recency rather than by status, so on a fanned-out iterator node
+it could fail a completed sibling and leave the halted step waiting for ever;
+`failNodeStep`'s error text described a partial-branch failure the code never did;
+and `upsertStep` could not represent `PENDING_APPROVAL` at all.
+
+**Findability (stage two).** Every step index was prefixed by `executionId`, so
+"all steps awaiting approval" was not an answerable question. Added a status index,
+carried `companyId` onto the step, paginated the executions query, flagged rows
+awaiting a decision, and added a count for the badge that counts workflows rather
+than steps.
+
+**The screens (stage three).** The two pages deleted in `cc5bc9558`, rebuilt on the
+shared admin table, with the decision on the detail screen and rejection behind a
+confirmation. Also closes an unrelated gap: after pressing "run" in the builder
+there was nowhere to see what happened.
+
+**Expiry and the record (stage four).** The platform approval window now applies to
+halted workflows too, so an execution cannot sit `RUNNING` for ever waiting on the
+30-day retention purge to delete it unfinished. The stale-approvals health signal
+counts both mechanisms — it only ever looked at agent runs, so the other one was
+invisible to the one place that reports things waiting on a person. The in-app hint,
+four documentation files and `WORKFLOWS.md` corrected, the dead `workflows/logs`
+directory deleted, and the orphaned e2e mock updated to the paginated shape (it was
+returning a bare array, which is why the screen first rendered empty in the browser).
+
+**A guard that could not fail, found by breaking it.** The drift check used
+`includes('AdminTableShell')`, which `AdminTableShellX` also satisfies — so a
+renamed or hand-rolled lookalike walked straight past it. This affected the existing
+guard, not only the new entry. Now matched as JSX tags and re-checked both ways.
+
+Deliberately not done: no audit row for a workflow expiry, for the same reason as
+the agent one — `auditLogs.actorId` is required and nobody performed the action.
+
+Verified: `lint:all` (0 errors), `check` (3230 tests, two consecutive clean runs),
+`build`, `git diff --check` clean. Browser-verified: the runs list renders both
+states, the halted row carries its amber flag, the nav entry and badge are present,
+console clean.
+
+**Original plan text follows.**
 
 The second approval system, from a halt with nowhere to answer it to a working
 screen. Largest phase after Phase 2, and independent of Phases 1-9 — it shares no

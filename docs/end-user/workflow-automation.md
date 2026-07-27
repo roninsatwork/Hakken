@@ -60,7 +60,7 @@ The available node types are:
 
 Use the save graph button after changing the canvas. Sonae checks for direct cycles before saving. If the canvas routes backward and could loop forever, Sonae rejects the save and shows an in-app message. Use the iterator node when the goal is repeated work over a list.
 
-The manual run button starts the real workflow graph from the builder. It creates an execution record and queues the first node or nodes. Open the execution logs to inspect progress and results.
+The manual run button starts the real workflow graph from the builder. It creates an execution record and queues the first node or nodes. Open Workflow Runs under Agents to inspect progress and results.
 
 ## Configuring Triggers
 
@@ -118,6 +118,6 @@ For scheduled operations, confirm both the schedule and the workflow trigger typ
 
 For webhook operations, verify the endpoint, workflow id, active status, trigger type, `x-sonae-secret` header, and request size. The request body becomes initial workflow data, so keep it within the expected shape and avoid sending unnecessary sensitive data. Oversized webhook payloads are rejected before execution rather than truncated into the workflow run.
 
-For approvals, monitor execution logs. A run can remain in progress while it waits for approval. Approving resumes the downstream path. Failed runs should be inspected from the step list and execution state before being retried.
+For approvals, open Workflow Runs. A run waiting on a person is flagged there and counted on the sidebar. Opening it shows what the approval node is asking, and its preview, with approve and reject on the waiting step. Approving resumes the downstream path; rejecting stops the whole run. An approval nobody answers expires on the platform window and the run is marked failed. Failed runs should be inspected from the step list before being retried.
 
 Workflow automation connects to the rest of Sonae through agents, models, settings, knowledge, database records, email branding, and logs. Changes in those areas can affect workflow behavior. For example, an inactive agent may prevent a scheduled agent run, missing email configuration may make email nodes simulate rather than send, and model settings can affect agent node output. Treat workflows as operational assets that need periodic review, especially after changing agents, model configuration, external endpoints, or company data structures.

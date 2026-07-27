@@ -571,6 +571,24 @@ describe("analytics cron snapshots", () => {
         message: "Approve external write",
         requestedAt: now - 45 * 60 * 1000,
       });
+      // A workflow halted on a Human Approval node. This signal only ever looked
+      // at agent runs, so the other approval mechanism was invisible to the one
+      // place on the platform that reports things waiting on a person.
+      const haltedExecutionId = await ctx.db.insert("workflowExecutions", {
+        companyId,
+        status: "RUNNING",
+        triggerType: "MANUAL",
+        startedAt: now - 60 * 60 * 1000,
+        startedBy: userId,
+      });
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId: haltedExecutionId,
+        nodeId: "sign-off",
+        companyId,
+        input: "{}",
+        status: "PENDING_APPROVAL",
+        startedAt: now - 50 * 60 * 1000,
+      });
       await ctx.db.insert("agentToolCalls", {
         runId: staleRunId,
         agentId,
@@ -640,10 +658,17 @@ describe("analytics cron snapshots", () => {
       summary: expect.stringContaining("Long-running operational check"),
       targetName: "Ops Agent",
     });
-    expect(health.operations.pendingApprovals).toMatchObject({ count: 1 });
+    // Both mechanisms, counted together: what the reader needs to know is how
+    // many things are waiting on a person, not which subsystem they came from.
+    expect(health.operations.pendingApprovals).toMatchObject({ count: 2 });
     expect(health.operations.pendingApprovals.examples[0]).toMatchObject({
       summary: "Approve external write",
       targetName: "Ops Agent",
+      targetType: "agent",
+    });
+    expect(health.operations.pendingApprovals.examples[1]).toMatchObject({
+      targetName: "sign-off",
+      targetType: "workflow",
     });
     expect(health.operations.failedToolCalls).toMatchObject({ count: 1 });
     expect(health.operations.failedToolCalls.examples[0]).toMatchObject({

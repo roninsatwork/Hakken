@@ -508,16 +508,42 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
       .withIndex("by_status_requested", (q) => q.eq("status", "PENDING").lte("requestedAt", pendingApprovalCutoffTs))
       .order("asc")
       .take(HEALTH_COLLECTION_LIMIT);
-  const pendingApprovals = await Promise.all(
-    pendingApprovalRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (approval): Promise<OperationalFailureExample> => ({
+  // Workflow approvals count here too.
+  //
+  // They are a separate mechanism with their own table, and this signal only ever
+  // looked at agent runs — so a workflow halted on a Human Approval node was
+  // invisible to the one place on the platform that reports things waiting on a
+  // person. Company-scoped reads rely on `workflowExecutionSteps.companyId`, which
+  // is copied from the parent execution precisely because a cross-execution query
+  // cannot reach through to it.
+  const haltedWorkflowRows = (await ctx.db
+    .query("workflowExecutionSteps")
+    .withIndex("by_status_started", (q) =>
+      q.eq("status", "PENDING_APPROVAL").lte("startedAt", pendingApprovalCutoffTs))
+    .order("asc")
+    .take(HEALTH_COLLECTION_LIMIT))
+    .filter((step) => scope?.type === "company" && scope.companyId
+      ? step.companyId === scope.companyId
+      : true);
+
+  const pendingApprovals = await Promise.all([
+    ...pendingApprovalRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (approval): Promise<OperationalFailureExample> => ({
       id: approval._id,
       label: approval.status,
       occurredAt: approval.requestedAt,
       summary: truncateHealthSummary(approval.message),
       targetName: await getAgentName(ctx, approval.agentId),
-      targetType: "agent",
-    }))
-  );
+      targetType: "agent" as const,
+    })),
+    ...haltedWorkflowRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (step): Promise<OperationalFailureExample> => ({
+      id: step._id,
+      label: "PENDING_APPROVAL",
+      occurredAt: step.startedAt,
+      summary: truncateHealthSummary(`Workflow step '${step.nodeId}' is waiting for a decision.`),
+      targetName: step.nodeId,
+      targetType: "workflow" as const,
+    })),
+  ]);
 
   const recentFailedToolCalls = await ctx.db
     .query("agentToolCalls")
@@ -678,7 +704,10 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     failedScheduledExecutions: buildOperationalBucket(failedScheduledExecutions, failedScheduleRuns.length),
     highCostAgents: buildOperationalBucket(highCostAgents, highCostRows.length),
     overdueSchedules: buildOperationalBucket(overdueSchedules, overdueScheduleRows.length),
-    pendingApprovals: buildOperationalBucket(pendingApprovals, pendingApprovalRows.length),
+    pendingApprovals: buildOperationalBucket(
+      pendingApprovals,
+      pendingApprovalRows.length + haltedWorkflowRows.length,
+    ),
     providerFailures: buildOperationalBucket(providerFailures, failedTransactions.length),
     schedulesMissingNextRun: buildOperationalBucket(schedulesMissingNextRun, missingNextRunRows.length),
     staleAgentRuns: buildOperationalBucket(staleAgentRuns, staleAgentRunCandidates.length),

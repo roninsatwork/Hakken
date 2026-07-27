@@ -115,7 +115,7 @@ Merge nodes have special readiness behavior. A merge with `_mergeConfig.mode ===
 
 Wait nodes return a delay through `_system.delayMs`. `scheduleDownstreamNodes` converts the output into run-after decisions, so a wait node's downstream nodes are created as pending steps during finalization and then scheduled after the configured delay.
 
-Approval nodes return `_system.halt`. The step is left as `PENDING_APPROVAL`, no downstream nodes are created for that finalization pass, and the execution remains `RUNNING`. `resumeApprovalStep` can approve or reject. Approval calls `resumeNodeStep`, finalizes the approval node with an approved system output, and schedules newly ready downstream nodes immediately. Rejection calls `failNodeStep`, which marks the step and execution failed. The current admin log UI exposes the approval path.
+Approval nodes return `_system.halt`. The step is left as `PENDING_APPROVAL`, no downstream nodes are created for that finalization pass, and the execution remains `RUNNING`. `resumeApprovalStep` is a `superAdminAction` and can approve or reject. Approval calls `resumeNodeStep`, which finalizes the node with its **own** stored output marked approved — not a bare placeholder, which used to overwrite the node's `message` and `previewData` and break downstream templates reading them. Rejection calls `rejectNodeApproval`, which resolves the step by `PENDING_APPROVAL` status rather than by recency, so a fanned-out iterator node cannot have a completed sibling failed instead; it marks that step and the execution failed. `expireStaleWorkflowApprovals` gives up on steps past the platform approval window. The approval path is exposed at `/admin/workflows/executions/[id]`.
 
 Any thrown runtime error is caught by `executeNode`, passed through `getRuntimeErrorMessage`, and sent to `failNodeStep`. That mutation marks the current step failed when it can identify one and marks the whole execution `FAILED`, which prevents further scheduled node work from proceeding.
 
@@ -171,7 +171,7 @@ Keep webhook secrets out of URLs, logs, and docs examples. When debugging, inspe
 
 ## Observability And Debugging
 
-Workflow execution evidence is stored in `workflowExecutions` and `workflowExecutionSteps`. The list/detail query helpers are bounded and sorted by newest `startedAt`, but no standalone admin workflow execution log browser is currently exposed.
+Workflow execution evidence is stored in `workflowExecutions` and `workflowExecutionSteps`. `getWorkflowExecutions` is paginated and sorted by newest `startedAt`, flagging rows awaiting a decision; `getWorkflowExecution` returns one execution with its steps. Both are browsed at `/admin/workflows/executions`. `workflowExecutionSteps` carries `companyId`, copied from the parent execution, and a `by_status_started` index — without it, "all steps awaiting approval" was not an answerable question.
 
 When diagnosing a runtime issue, check:
 

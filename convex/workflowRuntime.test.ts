@@ -618,4 +618,61 @@ describe("resumeApprovalStep authorization", () => {
       })
     ).rejects.toThrow(/no workflow/);
   });
+  test("a workflow nobody answers expires, and its whole run stops", async () => {
+    // A halted step waited indefinitely: the completeness check counts
+    // PENDING_APPROVAL as incomplete, so the execution stayed RUNNING for ever and
+    // nothing but the 30-day retention purge ever touched it — and that deleted it
+    // rather than finishing it.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { executionId, stepId } = await seedHaltedApproval(t);
+
+    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    const { siblingId, freshExecutionId } = await t.run(async (ctx) => {
+      await ctx.db.patch(stepId, { startedAt: twoDaysAgo });
+      // A second halted step on the same execution: leaving siblings waiting would
+      // keep it incomplete with nothing able to settle it.
+      const siblingId = await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "approval-two",
+        input: "{}",
+        status: "PENDING_APPROVAL",
+        startedAt: twoDaysAgo,
+      });
+
+      const freshExecutionId = await ctx.db.insert("workflowExecutions", {
+        status: "RUNNING",
+        triggerType: "MANUAL",
+        startedAt: Date.now(),
+        startedBy: (await ctx.db.query("users").first())!._id,
+      });
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId: freshExecutionId,
+        nodeId: "approval",
+        input: "{}",
+        status: "PENDING_APPROVAL",
+        startedAt: Date.now(),
+      });
+
+      return { siblingId, freshExecutionId };
+    });
+
+    const result = await t.mutation(internal.workflowEngine.expireStaleWorkflowApprovals, {});
+    expect(result.expiredExecutions).toBe(1);
+
+    const state = await t.run(async (ctx) => ({
+      halted: await ctx.db.get(stepId),
+      sibling: await ctx.db.get(siblingId),
+      execution: await ctx.db.get(executionId),
+      freshExecution: await ctx.db.get(freshExecutionId),
+    }));
+
+    expect(state.halted?.status).toBe("FAILED");
+    expect(state.halted?.error).toContain("without a decision");
+    expect(state.sibling?.status).toBe("FAILED");
+    expect(state.execution?.status).toBe("FAILED");
+    expect(state.execution?.completedAt).toEqual(expect.any(Number));
+
+    // One inside the window is untouched.
+    expect(state.freshExecution?.status).toBe("RUNNING");
+  });
 });

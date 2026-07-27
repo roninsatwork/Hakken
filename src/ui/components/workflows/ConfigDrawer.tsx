@@ -896,7 +896,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
           {node.type === 'approvalNode' && (
             <div className="flex flex-col gap-6 mt-4">
                <div className="bg-brand/5 border border-brand/10 p-4 rounded-[12px] flex flex-col gap-2">
-                   <span className="text-[11px] text-brand leading-relaxed block w-full"><strong>Human-in-the-Loop:</strong> Pauses graph execution indefinitely until an Administrator manually signs off from the execution logs, securing critical operations like automated emails, deletions, and mass outreach.</span>
+                   <span className="text-[11px] text-brand leading-relaxed block w-full"><strong>Human-in-the-Loop:</strong> Pauses the workflow until a super admin approves it on the Workflow Runs screen, securing critical operations like automated emails, deletions, and mass outreach. Nothing after this node happens until then, and an unanswered approval expires on the platform window.</span>
                </div>
                
                <div className="flex flex-col gap-2">
