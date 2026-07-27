@@ -79,229 +79,156 @@
         "copyright": "© {year} Sonae. Tutti i diritti riservati."
     },
     "dashboard": {
-        "intro": "Sonae e una base completa per costruire prodotti AI seri. Include gia cio che i clienti chiedono dopo la prima demo: scelta dei modelli, conoscenza privata, comportamento AI piu sicuro, creazione di processi AI, controllo dei costi, visibilita dell'utilizzo, widget per clienti e un'ampia rete di controlli automatici.",
         "hero": {
             "eyebrow": "Costruisci su Sonae",
-            "title": "Parti con la profondita che i clienti AI seri si aspettano.",
-            "body": "Molti prodotti AI iniziano con una chat e poi passano mesi ad aggiungere le parti essenziali: modelli affidabili, protezione da prompt ostili, conoscenza aziendale privata, permessi chiari, una traccia di cio che l'AI ha fatto, builder di flussi AI, limiti di utilizzo e report sui costi. Sonae riunisce queste basi dal primo giorno.",
+            "title": "Abbiamo gi\u00e0 costruito la met\u00e0 del tuo prodotto AI che nessuno vede.",
+            "body": "Ogni prodotto AI ha bisogno delle stesse cose sotto \u2014 conoscenza, permessi, approvazioni, controllo dei costi, una registrazione di ci\u00f2 che ha realmente fatto. La maggior parte dei team passa mezzo anno a costruirlo prima di arrivare alla parte che interessa ai clienti. Sonae te lo consegna gi\u00e0 pronto, cos\u00ec parti dal tuo prodotto.",
             "primaryAction": "Prova l'assistente",
-            "secondaryAction": "Vedi cosa include",
-            "highlights": {
-                "answers": {
-                    "value": "Modelli AI",
-                    "label": "Google Gemini, ChatGPT, Fable, Claude Opus, Claude Haiku, Claude Sonnet e spazio per modelli approvati"
-                },
-                "knowledge": {
-                    "value": "Dati privati",
-                    "label": "conoscenza aziendale, upload file, gestione delle informazioni sensibili e regole di accesso chiare"
-                },
-                "control": {
-                    "value": "Sicurezza AI",
-                    "label": "protezione da prompt ostili, jailbreak, azioni non sicure, fuga di dati e accesso ad aziende sbagliate"
-                },
-                "growth": {
-                    "value": "Controllo costi",
-                    "label": "visibilita per modello, cliente, utente, volume messaggi, limiti di utilizzo e spesa"
-                }
-            }
+            "secondaryAction": "Cosa è incluso"
         },
-        "features": {
-            "assistant": {
-                "title": "Scelta dei principali modelli AI",
-                "body": "Sonae permette di offrire il modello giusto per il lavoro giusto, inclusi Google Gemini, ChatGPT, Fable, Claude Opus, Claude Haiku e Claude Sonnet, da un'unica esperienza gestita."
-            },
-            "knowledge": {
-                "title": "Conoscenza privata per ogni cliente",
-                "body": "Documenti, file caricati, linee guida aziendali e conoscenza AI restano nello spazio cliente corretto, cosi i team possono usare contesto privato senza mescolare dati tra aziende."
-            },
-            "workflows": {
-                "title": "Visual builder per flussi AI",
-                "body": "Crea percorsi AI a piu passaggi, lavoro programmato, approvazioni, follow-up e flussi ripetibili. Questo porta il prodotto oltre la semplice chat, verso AI che aiuta davvero a completare il lavoro."
-            },
-            "widget": {
-                "title": "Protezione dall'uso improprio dell'AI",
-                "body": "Sonae include protezioni contro manipolazione dei prompt, jailbreak, azioni non sicure, esposizione di dati sensibili e tentativi di far ignorare le regole o accedere all'azienda sbagliata."
-            },
-            "reports": {
-                "title": "Visione chiara di cosa fa l'AI",
-                "body": "I team possono rivedere conversazioni, azioni eseguite, flussi completati, passaggi falliti, chat clienti e segnali di salute."
-            },
-            "admin": {
-                "title": "Controllo di costi e utilizzo",
-                "body": "Sonae mostra l'utilizzo per modelli, clienti, utenti, messaggi e costi, aiutando i team a prezzare, gestire e scalare l'AI in modo responsabile."
-            }
-        },
-        "platformDepth": {
-            "eyebrow": "Cosa e gia incluso",
-            "title": "Le parti difficili della piattaforma sono gia presenti.",
-            "body": "Il valore non e solo l'assistente visibile. Il vero vantaggio e il livello di controllo, sicurezza, visibilita e gestione dietro di esso.",
-            "items": {
-                "models": {
-                    "title": "Catalogo di modelli approvati",
-                    "body": "Offri piu famiglie di modelli mantenendo le scelte chiare, controllate e allineate a costo, qualita e bisogni del cliente."
+        "layers": {
+            "title": "Your product on top. Everything underneath already built.",
+            "yours": "Il tuo prodotto",
+            "yoursLabel": "The bit only you can make",
+            "platform": "Sonae",
+            "rows": [
+                {
+                    "title": "Assistant, agents and flows",
+                    "body": "Chat, agents that do work, multi-step flows and schedules"
                 },
-                "safety": {
-                    "title": "Difesa dagli attacchi all'AI",
-                    "body": "Le protezioni aiutano contro prompt ostili, bypass delle regole, azioni AI non sicure e tentativi di estrarre informazioni riservate."
+                {
+                    "title": "Knowledge and memory",
+                    "body": "Company documents, file uploads and what the AI remembers"
                 },
-                "privacy": {
-                    "title": "Dati sensibili gestiti con cura",
-                    "body": "Conoscenza, documenti, utenti, chat e dati aziendali sono organizzati intorno a una separazione chiara, cosi ogni cliente raggiunge solo cio che deve."
+                {
+                    "title": "Safety, permissions and approvals",
+                    "body": "Prompt attack defence, company separation, roles, and a person in the loop"
                 },
-                "testing": {
-                    "title": "700+ controlli automatici",
-                    "body": "Il prodotto e protetto da molti controlli automatici su accesso, utenti, clienti, agenti AI, flussi, scelta modelli, sicurezza, conoscenza, report, widget e schermate di gestione."
+                {
+                    "title": "Any model",
+                    "body": "Google, OpenAI, Anthropic and OpenRouter behind one interface"
                 },
-                "observability": {
-                    "title": "Visibilita sull'attivita AI",
-                    "body": "Rivedi cosa ha fatto l'AI, quali flussi sono partiti, quali azioni sono state eseguite, dove sono avvenuti errori e cosa hanno vissuto i clienti."
-                },
-                "costs": {
-                    "title": "Visibilita spesa e limiti",
-                    "body": "Traccia utilizzo, messaggi, costi modello, attivita aziendale, utenti principali, piani e limiti mensili prima che la spesa sfugga."
-                },
-                "workflows": {
-                    "title": "Builder di flussi AI",
-                    "body": "Crea processi AI ripetibili, programma il lavoro, rivedi i risultati e trasforma conoscenze specifiche del prodotto in flussi riutilizzabili."
-                },
-                "widgets": {
-                    "title": "Widget AI per clienti",
-                    "body": "Distribuisci assistenti AI brandizzati in siti o portali e testali in sicurezza prima dell'uso da parte dei clienti."
+                {
+                    "title": "Checks, history and cost",
+                    "body": "Graded AI checks, a timeline of every run, spend limits and health alerts"
                 }
-            }
+            ]
+        },
+        "capabilities": {
+            "title": "What it does",
+            "subtitle": "The assistant is the part people see. The advantage is everything sitting behind it.",
+            "items": [
+                {
+                    "title": "Model agnostic by design",
+                    "body": "Google, OpenAI, Anthropic and OpenRouter all run behind one managed experience. Your administrators choose what is available and what each job uses, so a vendor changing their pricing is not a rebuild."
+                },
+                {
+                    "title": "Private company knowledge",
+                    "body": "Documents, uploads and company guidance stay inside the right workspace, so teams get answers from their own material without it mixing with anyone else's."
+                },
+                {
+                    "title": "Agents that do the work",
+                    "body": "Multi-step jobs that pull a report together, watch for something changing or send a summary on, run on a schedule or a trigger."
+                },
+                {
+                    "title": "A person in the loop",
+                    "body": "Before an agent writes, sends or changes anything outside Sonae it stops and waits. Saying no teaches it rather than killing the run."
+                },
+                {
+                    "title": "Customer-facing widgets",
+                    "body": "Branded assistants for a website or portal, testable safely before a customer ever sees one."
+                },
+                {
+                    "title": "Spend that cannot run away",
+                    "body": "Every run carries a hard ceiling on steps, tool calls, minutes and money, and stops when it reaches it."
+                }
+            ]
+        },
+        "control": {
+            "title": "What you control",
+            "subtitle": "The settings a team needs once the first demo has gone well.",
+            "items": [
+                {
+                    "title": "Every company kept apart",
+                    "body": "Companies, people, documents, chat history, settings and permissions each sit in their own workspace rather than one shared pool."
+                },
+                {
+                    "title": "Roles that mean something",
+                    "body": "Platform owners, company managers and everyday users each get their own screens and their own limits, which is what makes it possible to sell into a multi-company environment."
+                },
+                {
+                    "title": "Nothing the AI does is open-ended",
+                    "body": "Every tool is set up deliberately, given permission and recorded. It only runs down approved paths."
+                },
+                {
+                    "title": "A history you can read",
+                    "body": "Setting changes, conversations, AI activity, completed flows and failed ones, all there to inspect instead of guessed at."
+                },
+                {
+                    "title": "Told when something breaks",
+                    "body": "Stuck runs, unanswered approvals, failing tools and cost pressure are watched, and you get emailed rather than having to remember to look."
+                }
+            ]
+        },
+        "proof": {
+            "title": "How you know it works",
+            "subtitle": "AI products fail quietly. Permissions drift, actions reach too far, a prompt gets attacked and a journey breaks with nobody watching. Two things guard against that.",
+            "statValue": "3,200+",
+            "statLabel": "automated tests, run on every change",
+            "items": [
+                {
+                    "title": "Graded AI checks",
+                    "body": "A check is a task and a description of a good result. Running one gives the task to the real agent, with its real tools and documents, and a second AI marks what came back."
+                },
+                {
+                    "title": "Must pass before it goes live",
+                    "body": "You choose which checks have to pass before an agent can be switched on. Until they do it stays a draft."
+                },
+                {
+                    "title": "Every run has a timeline",
+                    "body": "What it was asked, which tools it called, what came back, where it stopped and what it cost. Failed runs can be replayed."
+                },
+                {
+                    "title": "Tests across the whole product",
+                    "body": "Company boundaries, permissions, uploads, safety rules, management screens and customer journeys, all checked automatically on every change."
+                }
+            ]
         },
         "hosting": {
-            "eyebrow": "Opzioni di hosting",
-            "title": "Distribuisci Sonae dove serve ai tuoi clienti.",
-            "body": "Sonae puo essere adattata alla scelta di hosting piu adatta al cliente, al processo di acquisto, alle aspettative di sicurezza e al rapporto cloud gia esistente.",
-            "items": {
-                "googleCloud": {
+            "title": "Where it runs",
+            "subtitle": "Shaped around the hosting choice that suits the customer, their procurement and whatever cloud relationship already exists.",
+            "items": [
+                {
                     "title": "Google Cloud",
-                    "body": "Esegui Sonae su Google Cloud per clienti gia orientati ai servizi AI, dati e cloud enterprise di Google."
+                    "body": "For organisations already invested in Google's AI and data services."
                 },
-                "aws": {
+                {
                     "title": "AWS",
-                    "body": "Distribuisci su AWS per organizzazioni che vogliono Sonae dentro il loro ambiente Amazon cloud, con account e modello operativo gia stabiliti."
+                    "body": "For teams who want Sonae inside their established Amazon environment and account structure."
                 },
-                "azure": {
+                {
                     "title": "Azure",
-                    "body": "Supporta clienti Microsoft-first con un percorso Azure coerente con cloud enterprise, identita e aspettative di controllo gia esistenti."
+                    "body": "For Microsoft-first organisations, fitting existing identity and management expectations."
                 }
-            }
-        },
-        "assurance": {
-            "eyebrow": "Fiducia integrata",
-            "title": "Una piattaforma AI seria deve dimostrare di continuare a funzionare.",
-            "body": "Sonae e supportata da piu di 700 controlli automatici su comportamento prodotto, scenari di sicurezza, schermate utente, sicurezza AI, flussi, gestione modelli, report, widget e protezione dal ritorno di vecchi problemi. Questo conta perche i prodotti AI possono fallire in modo silenzioso: permessi che cambiano, azioni troppo ampie, prompt attaccati, costi che crescono e percorsi cliente che si rompono.",
-            "proofLabel": "Cosa proteggono i controlli",
-            "proofBody": "I controlli coprono esperienza cliente, schermate di gestione, separazione tra aziende, comportamento dei modelli AI, gestione conoscenza, flussi AI, report costi, widget e regole che impediscono il ritorno di vecchi problemi.",
-            "items": {
-                "unit": {
-                    "title": "Regole quotidiane del prodotto",
-                    "body": "Regole piccole ma importanti vengono controllate automaticamente, cosi le modifiche quotidiane hanno meno probabilita di rompere comportamenti condivisi."
-                },
-                "security": {
-                    "title": "Controlli su sicurezza e accessi",
-                    "body": "I controlli automatici coprono confini aziendali, ruoli, inviti, upload file, comportamenti non sicuri nei flussi AI e regole di sicurezza AI."
-                },
-                "ui": {
-                    "title": "Controlli su schermate e percorsi",
-                    "body": "Schermate importanti come dashboard, tabelle di gestione, modali, impostazioni, utenti, aziende, flussi AI, costi, widget e controlli assistant sono verificate come vere esperienze di prodotto."
-                },
-                "regression": {
-                    "title": "Protezione dai vecchi problemi",
-                    "body": "Regole automatiche aiutano a impedire il ritorno di vecchi problemi, incluse pagine rotte, scorciatoie non sicure, liste incoerenti e modifiche accidentali ad aree protette."
-                },
-                "backend": {
-                    "title": "Controlli su AI e dati",
-                    "body": "Agenti AI, cronologia attivita, report, chat, aziende, conoscenza, flussi, programmi, modelli, azioni approvate e salute della piattaforma vengono controllati dietro le quinte."
-                },
-                "drift": {
-                    "title": "Controlli di crescita e manutenzione",
-                    "body": "I controlli proteggono i pattern che mantengono gestibile la piattaforma mentre crescono aziende, utenti, chat, modelli, flussi e widget."
-                }
-            }
-        },
-        "benefits": {
-            "eyebrow": "Perche costruire su Sonae",
-            "title": "Parti oltre la fase prototipo.",
-            "body": "Quando un cliente chiede sicurezza, privacy, scelta dei modelli, visibilita, costi, permessi del team, affidabilita o scala, Sonae ha gia una risposta credibile. Per questo e una base per costruire prodotti AI, non solo un'altra interfaccia.",
-            "action": "Vedi controllo costi",
-            "items": {
-                "faster": {
-                    "title": "Mesi di fondamenta gia completati",
-                    "body": "Accesso, ruoli, workspace clienti, pagine di gestione, scelta modelli, chat, file, conoscenza, azioni approvate, widget, flussi AI, report e impostazioni esistono gia come superfici prodotto."
-                },
-                "safer": {
-                    "title": "Costruito per domande enterprise",
-                    "body": "La piattaforma risponde alle domande dei clienti su dati sensibili, uso improprio dell'AI, separazione aziende, supervisione manageriale, cronologia attivita, ruoli e modelli controllati."
-                },
-                "clearer": {
-                    "title": "Affidabilita dimostrabile",
-                    "body": "Un ampio set di controlli automatici protegge il prodotto: sicurezza AI, flussi AI, accesso, conoscenza, report, percorsi di gestione e widget."
-                },
-                "together": {
-                    "title": "Vendi una storia completa",
-                    "body": "Sonae permette di mostrare ai clienti tutto il quadro: esperienza utente curata, AI controllata, supervisione chiara, controllo costi, spazio per estendere e una vera base prodotto."
-                }
-            }
-        },
-        "governance": {
-            "eyebrow": "Controllo operativo",
-            "title": "Il livello di gestione e costruito per usare AI nel mondo reale.",
-            "body": "Sonae offre ai team i controlli necessari dopo il successo della prima demo: chi puo accedere a cosa, quali modelli possono essere usati, cosa ha fatto l'AI, quali azioni sono state eseguite, quanto costa ogni cliente e se la piattaforma e sana.",
-            "items": {
-                "tenancy": {
-                    "title": "Separazione degli spazi cliente",
-                    "body": "Aziende, utenti, conoscenza, widget, cronologia chat, impostazioni modello, regole e permessi sono strutturati intorno a spazi cliente separati."
-                },
-                "roles": {
-                    "title": "Ruoli e permessi chiari",
-                    "body": "Proprietari della piattaforma, manager aziendali e utenti quotidiani possono avere schermate e permessi diversi, per vendere prodotti basati su Sonae in ambienti multi-azienda."
-                },
-                "pii": {
-                    "title": "Gestione delle informazioni sensibili",
-                    "body": "Linguaggio attento, regole sui file, controlli accesso e aree di conoscenza private danno una risposta piu forte quando i clienti chiedono dei dati sensibili."
-                },
-                "tools": {
-                    "title": "Azioni AI controllate",
-                    "body": "Le azioni AI non sono lasciate aperte. Sono configurate, autorizzate, controllate, registrate ed eseguite solo tramite percorsi approvati."
-                },
-                "audit": {
-                    "title": "Cronologia attivita chiara",
-                    "body": "I team possono ispezionare modifiche alle impostazioni, cronologia chat, attivita AI, flussi completati, azioni fallite ed eventi operativi."
-                },
-                "health": {
-                    "title": "Salute piattaforma e manutenzione",
-                    "body": "Controlli di salute, strumenti di manutenzione, alert, pulizia dati, snapshot report e diagnostica aiutano a supportare la piattaforma dopo il lancio."
-                }
-            }
+            ]
         },
         "useCases": {
-            "eyebrow": "Prova della piattaforma",
-            "title": "Questa e la base sotto un business AI.",
-            "action": "Apri assistente",
-            "items": {
-                "sales": {
-                    "title": "Per SaaS e portali clienti",
-                    "body": "Costruisci AI per clienti con widget brandizzati, conoscenza approvata, accesso sicuro ai modelli, flussi di supporto e visibilita di gestione."
+            "title": "What gets built on it",
+            "subtitle": "",
+            "items": [
+                {
+                    "title": "SaaS and customer portals",
+                    "body": "Customer-facing AI with branded widgets, approved knowledge and safe model access, with the oversight to go alongside."
                 },
-                "customers": {
-                    "title": "Per workspace AI interni",
-                    "body": "Dai ai team un assistente controllato con file, conoscenza, scelta modelli, report, accesso team, cronologia chat e controlli organizzativi."
+                {
+                    "title": "Internal AI workspaces",
+                    "body": "A controlled assistant for your own team with files, knowledge, model choice, reporting and chat history."
                 },
-                "teams": {
-                    "title": "Per prodotti che automatizzano lavoro con AI",
-                    "body": "Usa builder di flussi AI, programmazioni, cronologia attivita, azioni approvate, sicurezza e visibilita per creare prodotti che fanno lavoro, non solo rispondono."
+                {
+                    "title": "AI work automation",
+                    "body": "Flows, schedules, approved actions and a full activity history, for products that do the work rather than only answering questions."
                 }
-            }
-        },
-        "modal": {
-            "title": "Perche Sonae e un punto di partenza piu forte",
-            "body": "Sonae riunisce gia le parti enterprise difficili: scelta dei modelli tra famiglie leader, conoscenza privata piu sicura, protezione dai prompt ostili, flussi AI, cronologia chiara, controlli automatici, controllo costi, workspace clienti, widget e controlli di gestione.",
-            "pointTitle": "Il vantaggio",
-            "pointBody": "Costruisci il livello unico del prodotto sopra Sonae invece di passare mesi a ricreare le fondamenta che ogni acquirente AI serio si aspettera.",
-            "close": "Capito"
+            ]
         }
     },
     "login": {
