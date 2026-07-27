@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -6,7 +7,8 @@ import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 
 const SCHEDULE_LIST_LIMIT = 100;
-const WORKFLOW_EXECUTION_LIST_LIMIT = 50;
+/** Counting cannot be indexed away, so the badge stops here and says it did. */
+const WORKFLOW_APPROVAL_COUNT_LIMIT = 99;
 const WORKFLOW_EXECUTION_STEP_DETAIL_LIMIT = 500;
 
 export const getSchedules = superAdminQuery({
@@ -246,28 +248,75 @@ export const completeSimulation = internalMutation({
   }
 });
 
-// For Logs View
+/**
+ * Workflow executions, newest first.
+ *
+ * There has been no screen showing these since the log pages were deleted in
+ * `cc5bc9558`, so after pressing "run" in the builder an operator had nowhere to
+ * see what happened — and a workflow halted on an approval was invisible to
+ * everything on the platform.
+ *
+ * Each row carries whether it is waiting on a person, because that is the one
+ * thing on this list that needs acting on rather than reading.
+ */
 export const getWorkflowExecutions = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-    const execs = await ctx.db
+  args: {
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const page = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_startedAt")
       .order("desc")
-      .take(WORKFLOW_EXECUTION_LIST_LIMIT);
-    
-    // Enrich
-    return await Promise.all(
-      execs.map(async (e) => {
-        const wf = e.workflowId ? await ctx.db.get(e.workflowId) : null;
-        const user = e.startedBy ? await ctx.db.get(e.startedBy) : null;
+      .paginate(args.paginationOpts);
+
+    const enriched = await Promise.all(
+      page.page.map(async (execution) => {
+        const workflow = execution.workflowId ? await ctx.db.get(execution.workflowId) : null;
+        const user = execution.startedBy ? await ctx.db.get(execution.startedBy) : null;
+        const halted = execution.status === "RUNNING"
+          ? await ctx.db
+              .query("workflowExecutionSteps")
+              .withIndex("by_execution_status_started", (q) =>
+                q.eq("executionId", execution._id).eq("status", "PENDING_APPROVAL"))
+              .first()
+          : null;
+
         return {
-          ...e,
-          workflowName: wf?.name || "Deleted Workflow",
-          startedByName: user?.name || user?.email || "System"
+          ...execution,
+          workflowName: workflow?.name || "Deleted Workflow",
+          startedByName: user?.name || user?.email || "System",
+          awaitingApprovalNodeId: halted?.nodeId,
         };
       })
     );
+
+    return { ...page, page: enriched };
+  }
+});
+
+/**
+ * How many workflows are waiting on a person, for the nav badge.
+ *
+ * Counting cannot be indexed away, so this stops at a bound and says so — the same
+ * shape as the agent approval count.
+ */
+export const getPendingWorkflowApprovalCount = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const halted = await ctx.db
+      .query("workflowExecutionSteps")
+      .withIndex("by_status_started", (q) => q.eq("status", "PENDING_APPROVAL"))
+      .take(WORKFLOW_APPROVAL_COUNT_LIMIT);
+
+    // One execution can hold several halted steps; the badge counts workflows
+    // needing attention, not steps.
+    const executions = new Set(halted.map((step) => step.executionId));
+
+    return {
+      count: executions.size,
+      atLimit: halted.length === WORKFLOW_APPROVAL_COUNT_LIMIT,
+    };
   }
 });
 

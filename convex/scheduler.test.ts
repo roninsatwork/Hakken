@@ -151,7 +151,9 @@ describe("Scheduler Authorization", () => {
     const agentExecutionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { agentId });
     await t.mutation(internal.scheduler.completeSimulation, { executionId, success: false });
 
-    const executions = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {});
+    const executions = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {
+      paginationOpts: { numItems: 20, cursor: null },
+    });
     const execution = await superAdminClient.query(api.scheduler.getWorkflowExecution, { executionId });
     const agentExecution = await superAdminClient.query(api.scheduler.getWorkflowExecution, { executionId: agentExecutionId });
     const agentRun = await t.run(async (ctx) => {
@@ -159,8 +161,8 @@ describe("Scheduler Authorization", () => {
       return await ctx.db.get(agentExecution.agentRunId);
     });
 
-    expect(executions.some((entry) => entry._id === executionId)).toBe(true);
-    expect(executions.some((entry) => entry._id === agentExecutionId)).toBe(true);
+    expect(executions.page.some((entry) => entry._id === executionId)).toBe(true);
+    expect(executions.page.some((entry) => entry._id === agentExecutionId)).toBe(true);
     expect(execution).toMatchObject({
       _id: executionId,
       status: "FAILED",
@@ -296,15 +298,25 @@ describe("Scheduler Authorization", () => {
     expect(schedules[0]).toMatchObject({ name: "Schedule 119", workflowName: "High Volume Workflow" });
     expect(schedules.at(-1)).toMatchObject({ name: "Schedule 20" });
 
-    const executions = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {});
-    expect(executions).toHaveLength(50);
-    expect(executions[0]).toMatchObject({
+    // Paginated now, because the executions screen needs to page rather than be
+    // handed a fixed slice of the newest fifty.
+    const executions = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {
+      paginationOpts: { numItems: 50, cursor: null },
+    });
+    expect(executions.page).toHaveLength(50);
+    expect(executions.isDone).toBe(false);
+    expect(executions.page[0]).toMatchObject({
       workflowId,
       workflowName: "High Volume Workflow",
       startedByName: "Super Admin",
       startedAt: 74,
     });
-    expect(executions.at(-1)).toMatchObject({ startedAt: 25 });
+    expect(executions.page.at(-1)).toMatchObject({ startedAt: 25 });
+
+    const nextPage = await superAdminClient.query(api.scheduler.getWorkflowExecutions, {
+      paginationOpts: { numItems: 50, cursor: executions.continueCursor },
+    });
+    expect(nextPage.page.length).toBeGreaterThan(0);
   });
 
   test("dispatcher reads due active schedules and advances nextRunAt", async () => {
@@ -391,5 +403,76 @@ describe("Scheduler Authorization", () => {
     expect(dueAgentSchedule?.lastRunTs).toEqual(expect.any(Number));
     expect(dueAgentSchedule?.nextRunAt).toBeGreaterThan(Date.now());
     expect(futureSchedule?.lastRunTs).toBeUndefined();
+  });
+  test("a workflow halted on an approval is findable and counted", async () => {
+    // Every workflowExecutionSteps index was prefixed by executionId, so "all
+    // steps awaiting approval" was not an answerable question — which is part of
+    // why a halted workflow was invisible to every screen and every health signal.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, haltedExecutionId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "halted-list@test.com",
+        role: "SUPER_ADMIN",
+        name: "Super Admin",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Halted Workflow",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: JSON.stringify([{ id: "approval", type: "approvalNode" }]),
+        edges: JSON.stringify([]),
+        createdBy: superAdminId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      const seedExecution = async (status: "RUNNING" | "SUCCESS", halted: boolean) => {
+        const executionId = await ctx.db.insert("workflowExecutions", {
+          workflowId,
+          status,
+          triggerType: "MANUAL",
+          startedAt: Date.now(),
+          startedBy: superAdminId,
+        });
+        await ctx.db.insert("workflowExecutionSteps", {
+          executionId,
+          nodeId: "approval",
+          input: "{}",
+          status: halted ? "PENDING_APPROVAL" : "SUCCESS",
+          startedAt: Date.now(),
+        });
+        return executionId;
+      };
+
+      const haltedExecutionId = await seedExecution("RUNNING", true);
+      // A second halted step on the same execution: the badge counts workflows
+      // needing attention, not steps.
+      await ctx.db.insert("workflowExecutionSteps", {
+        executionId: haltedExecutionId,
+        nodeId: "approval-two",
+        input: "{}",
+        status: "PENDING_APPROVAL",
+        startedAt: Date.now(),
+      });
+      await seedExecution("SUCCESS", false);
+
+      return { superAdminId, haltedExecutionId };
+    });
+
+    const client = t.withIdentity({ subject: superAdminId });
+
+    expect(await client.query(api.scheduler.getPendingWorkflowApprovalCount, {}))
+      .toEqual({ count: 1, atLimit: false });
+
+    const executions = await client.query(api.scheduler.getWorkflowExecutions, {
+      paginationOpts: { numItems: 20, cursor: null },
+    });
+    const halted = executions.page.find((entry) => entry._id === haltedExecutionId);
+    const finished = executions.page.find((entry) => entry._id !== haltedExecutionId);
+
+    // The row says it needs acting on rather than merely reading.
+    expect(halted?.awaitingApprovalNodeId).toBe("approval");
+    expect(finished?.awaitingApprovalNodeId).toBeUndefined();
   });
 });

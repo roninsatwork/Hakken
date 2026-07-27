@@ -44,7 +44,15 @@ export const upsertStep = internalMutation({
     agentId: v.optional(v.id("agents")),
     input: v.string(),
     output: v.optional(v.string()),
-    status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED")),
+    // PENDING_APPROVAL is a state the engine produces, so a write path that
+    // cannot express it is a write path that cannot round-trip its own data.
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("RUNNING"),
+      v.literal("PENDING_APPROVAL"),
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+    ),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -56,18 +64,22 @@ export const upsertStep = internalMutation({
       .order("desc")
       .first();
 
+    // A step waiting on a person has not completed. Stamping `completedAt` on it
+    // would make it look finished to anything reading the timeline.
+    const isOpen = args.status === "RUNNING" || args.status === "PENDING_APPROVAL";
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         ...args,
         ...(args.status === "RUNNING" && !existing.startedAt ? { startedAt: Date.now() } : {}),
-        ...(args.status !== "RUNNING" ? { completedAt: Date.now() } : {}),
+        ...(isOpen ? {} : { completedAt: Date.now() }),
       });
       return existing._id;
     } else {
       return await ctx.db.insert("workflowExecutionSteps", {
         ...args,
         startedAt: Date.now(),
-        ...(args.status !== "RUNNING" ? { completedAt: Date.now() } : {}),
+        ...(isOpen ? {} : { completedAt: Date.now() }),
       });
     }
   },

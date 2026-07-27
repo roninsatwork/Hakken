@@ -2045,6 +2045,10 @@ export default defineSchema({
     output: v.optional(v.string()), // JSON stringified
     status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED"), v.literal("PENDING_APPROVAL")),
     error: v.optional(v.string()),
+    // Copied from the parent execution on insert. Tenancy lived only on the
+    // parent, so a query spanning executions could not filter by company without a
+    // lookup per row — which is not something an index can do.
+    companyId: v.optional(v.id("companies")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
   })
@@ -2052,7 +2056,11 @@ export default defineSchema({
     .index("by_execution_started", ["executionId", "startedAt"])
     .index("by_execution_node_started", ["executionId", "nodeId", "startedAt"])
     .index("by_execution_node_status_started", ["executionId", "nodeId", "status", "startedAt"])
-    .index("by_execution_status_started", ["executionId", "status", "startedAt"]),
+    .index("by_execution_status_started", ["executionId", "status", "startedAt"])
+    // Every other index here is prefixed by `executionId`, so "all steps awaiting
+    // approval" was not an answerable question — which is part of why a halted
+    // workflow was invisible to every screen and every health signal.
+    .index("by_status_started", ["status", "startedAt"]),
 
   // template:remove:start salesReports
   // Generated Agent Reports

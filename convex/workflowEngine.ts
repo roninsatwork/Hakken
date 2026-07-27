@@ -363,6 +363,9 @@ export const initExecution = internalMutation({
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new Error("Workflow not found");
+    // Read so each step can carry the tenant. Steps are queried across executions
+    // now, and a company filter cannot reach through to the parent.
+    const execution = await ctx.db.get(args.executionId);
 
     const nodes = parseWorkflowNodes(workflow.nodes);
     const edges = parseWorkflowEdges(workflow.edges);
@@ -395,6 +398,7 @@ export const initExecution = internalMutation({
         executionId: args.executionId,
         nodeId: node.id,
         agentId: node.data?._agentId,
+        companyId: execution?.companyId,
         input: JSON.stringify(initialPayload),
         status: "PENDING",
         startedAt: Date.now(),
@@ -539,6 +543,7 @@ async function processNodeFinalization(ctx: MutationCtx, args: { executionId: Id
               executionId: args.executionId,
               nodeId: dId,
               agentId: nextNodeDef?.data?._agentId,
+              companyId: execution.companyId,
               input: JSON.stringify(payload),
               status: "PENDING",
               startedAt: Date.now(),
@@ -599,13 +604,83 @@ export const resumeNodeStep = internalMutation({
 
     if (!step || step.status !== "PENDING_APPROVAL") throw new Error("Step is not pending approval");
 
-    // We manually push an empty "approved" flag so that downstream nodes unlock
+    // Resume with the node's *own* output, marked approved.
+    //
+    // This used to finalize with a bare `{_system:{approved,fromHalt}}`, which
+    // overwrote the step's stored output and published that placeholder into
+    // `execution.state` under this node. So the approval node's `message` and
+    // `previewData` were destroyed at the moment of approval, and any downstream
+    // template reading `{{nodes.<id>.output.previewData}}` resolved to nothing —
+    // which means the preview field offered in the config drawer broke the first
+    // time anyone used it.
+    const haltedOutput = parseWorkflowOutput(step.output ?? "{}");
+    const resumedOutput = {
+      ...haltedOutput,
+      _system: {
+        ...(haltedOutput._system ?? {}),
+        // The halt is over, so it must not read as still halted.
+        halt: false,
+        approved: true,
+        fromHalt: true,
+      },
+    };
+
     return await processNodeFinalization(ctx, {
       executionId: args.executionId,
       nodeId: args.nodeId,
-      outputData: JSON.stringify({ _system: { approved: true, fromHalt: true } })
+      stepId: step._id,
+      outputData: JSON.stringify(resumedOutput),
     });
   }
+});
+
+/**
+ * Refuse a halted approval step.
+ *
+ * Its own mutation rather than a call to `failNodeStep` with no `stepId`. That
+ * fallback resolves the *latest* step for the node in any status, which on a
+ * fanned-out iterator node is not necessarily the one waiting for a decision — so
+ * a rejection could mark a completed sibling as failed and leave the halted step
+ * pending for ever. Resolving by status, the same way `resumeNodeStep` does, makes
+ * that impossible rather than unlikely.
+ *
+ * Failing the whole execution is deliberate. The old error text read "Branch
+ * terminated", which the code never did — it always failed the parent execution.
+ * Partial-branch failure is a different feature, and inventing it here to make an
+ * error message true would be the wrong way round.
+ */
+export const rejectNodeApproval = internalMutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+    nodeId: v.string(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const step = await getLatestExecutionStepByStatus(ctx, {
+      executionId: args.executionId,
+      nodeId: args.nodeId,
+      status: "PENDING_APPROVAL",
+    });
+    if (!step) throw new Error("Step is not pending approval");
+
+    const now = Date.now();
+    const error = args.reason?.trim()
+      ? `An administrator refused this step: ${args.reason.trim()}`
+      : "An administrator refused this step.";
+
+    await ctx.db.patch(step._id, {
+      status: "FAILED",
+      error,
+      completedAt: now,
+    });
+
+    await ctx.db.patch(args.executionId, {
+      status: "FAILED",
+      completedAt: now,
+    });
+
+    return step._id;
+  },
 });
 
 export const failNodeStep = internalMutation({

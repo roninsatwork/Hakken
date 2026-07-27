@@ -400,7 +400,13 @@ describe("resumeApprovalStep authorization", () => {
         executionId,
         nodeId: "approval",
         input: JSON.stringify({ trigger: {} }),
-        output: JSON.stringify({ _system: { halt: true }, message: "Review" }),
+        output: JSON.stringify({
+          _system: { halt: true },
+          message: "Review",
+          // The config drawer offers a preview template resolved at halt time. It
+          // is the reason the payload has to survive approval.
+          previewData: "Deal A",
+        }),
         status: "PENDING_APPROVAL",
         startedAt: Date.now(),
       });
@@ -490,6 +496,96 @@ describe("resumeApprovalStep authorization", () => {
 
     const { execution } = await getRuntimeState(t, executionId);
     expect(execution?.status).toBe("FAILED");
+  });
+
+  /**
+   * The fault that broke the config drawer's own preview field.
+   *
+   * `resumeNodeStep` finalized with a bare `{_system:{approved,fromHalt}}`, which
+   * overwrote the step's output and published that placeholder into
+   * `execution.state`. So a downstream template reading
+   * `{{nodes.approval.output.previewData}}` resolved to nothing — the moment
+   * anyone used the feature, it broke.
+   */
+  test("approving keeps the approval node's own payload for downstream nodes", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId, executionId } = await seedHaltedApproval(t);
+
+    await t.withIdentity({ subject: superAdminId }).action(api.workflowRuntime.resumeApprovalStep, {
+      executionId,
+      nodeId: "approval",
+      action: "APPROVED",
+    });
+
+    const { execution, steps } = await getRuntimeState(t, executionId);
+    const approvalStep = steps.find((step) => step.nodeId === "approval");
+
+    const stepOutput = JSON.parse(approvalStep?.output ?? "{}") as Record<string, unknown>;
+    expect(stepOutput).toMatchObject({ message: "Review", previewData: "Deal A" });
+    expect(stepOutput._system).toMatchObject({ approved: true, halt: false });
+
+    // And it reaches the place downstream templates actually read from.
+    const state = JSON.parse(execution?.state ?? "{}") as {
+      nodes?: Record<string, { output?: Record<string, unknown> }>;
+    };
+    expect(state.nodes?.approval?.output).toMatchObject({
+      message: "Review",
+      previewData: "Deal A",
+    });
+  });
+
+  test("rejecting marks the step that is waiting, not merely the latest one", async () => {
+    // On a fanned-out iterator node the latest step for a node is not necessarily
+    // the one awaiting a decision, so the old fallback could fail a completed
+    // sibling and leave the halted step pending for ever.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId, executionId, stepId } = await seedHaltedApproval(t);
+
+    const laterSiblingId = await t.run(async (ctx) => await ctx.db.insert("workflowExecutionSteps", {
+      executionId,
+      nodeId: "approval",
+      input: JSON.stringify({ trigger: {} }),
+      output: JSON.stringify({ done: true }),
+      status: "SUCCESS",
+      startedAt: Date.now() + 1000,
+      completedAt: Date.now() + 1000,
+    }));
+
+    await t.withIdentity({ subject: superAdminId }).action(api.workflowRuntime.resumeApprovalStep, {
+      executionId,
+      nodeId: "approval",
+      action: "REJECTED",
+      reason: "Not this one",
+    });
+
+    const { execution, steps } = await getRuntimeState(t, executionId);
+    const halted = steps.find((step) => step._id === stepId);
+    const sibling = steps.find((step) => step._id === laterSiblingId);
+
+    expect(halted?.status).toBe("FAILED");
+    expect(halted?.error).toContain("Not this one");
+    expect(sibling?.status).toBe("SUCCESS");
+    expect(execution?.status).toBe("FAILED");
+  });
+
+  test("a step waiting on a person is not recorded as completed", async () => {
+    // `upsertStep`'s validator omitted PENDING_APPROVAL entirely, so one write path
+    // could not represent a state the engine produces.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { executionId } = await seedHaltedApproval(t);
+
+    const stepId = await t.mutation(internal.workflowExecutions.upsertStep, {
+      executionId,
+      nodeId: "downstream",
+      input: "{}",
+      status: "PENDING_APPROVAL",
+    });
+
+    const step = await t.run(async (ctx) => await ctx.db.get(stepId));
+    expect(step?.status).toBe("PENDING_APPROVAL");
+    // Stamping completedAt would make it look finished to anything reading the
+    // timeline.
+    expect(step?.completedAt).toBeUndefined();
   });
 
   test("an execution with no workflow is refused rather than resumed", async () => {

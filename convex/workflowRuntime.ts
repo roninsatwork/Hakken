@@ -369,7 +369,8 @@ export const resumeApprovalStep = superAdminAction({
   args: {
     executionId: v.id("workflowExecutions"),
     nodeId: v.string(),
-    action: v.union(v.literal("APPROVED"), v.literal("REJECTED"))
+    action: v.union(v.literal("APPROVED"), v.literal("REJECTED")),
+    reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, {
@@ -379,10 +380,10 @@ export const resumeApprovalStep = superAdminAction({
     if (!execution.workflowId) throw new Error("Workflow execution has no workflow");
 
     if (args.action === "REJECTED") {
-        await ctx.runMutation(internal.workflowEngine.failNodeStep, {
+        await ctx.runMutation(internal.workflowEngine.rejectNodeApproval, {
             executionId: args.executionId,
             nodeId: args.nodeId,
-            error: "Administrator explicitly rejected the operation. Branch terminated.",
+            reason: args.reason,
         });
         return false;
     }
