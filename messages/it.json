@@ -349,6 +349,7 @@
         "connectors": "Connettori",
         "workflows": "Workflow",
         "manageWorkflows": "Gestisci Workflow",
+        "workflowRuns": "Esecuzioni Workflow",
         "schedules": "Programmazioni",
         "users": "Utenti",
         "manageUsers": "Gestisci Utenti",
@@ -719,6 +720,68 @@
                     "saveAgentFailed": "Impossibile sincronizzare la configurazione dell'agent.",
                     "promoteFailed": "Impossibile promuovere l'agent alla flotta globale.",
                     "dispatchFailed": "Impossibile avviare l'esecuzione manuale."
+                }
+            },
+            "executions": {
+                "title": "Esecuzioni workflow",
+                "description": "Ogni esecuzione di ogni workflow, e l'unico posto dove rispondere a una in pausa.",
+                "empty": "Nessuna esecuzione workflow",
+                "awaitingApproval": "Richiede una decisione",
+                "status": {
+                    "RUNNING": "In corso",
+                    "SUCCESS": "Completata",
+                    "FAILED": "Non riuscita"
+                },
+                "stepStatus": {
+                    "PENDING": "In coda",
+                    "RUNNING": "In corso",
+                    "PENDING_APPROVAL": "In attesa di te",
+                    "SUCCESS": "Completato",
+                    "FAILED": "Non riuscito"
+                },
+                "columns": {
+                    "workflow": "Workflow",
+                    "status": "Stato",
+                    "trigger": "Attivazione",
+                    "startedBy": "Avviata da",
+                    "started": "Avviata"
+                },
+                "footer": {
+                    "showing": "Mostrate {count}",
+                    "loadMore": "Carica altre",
+                    "loading": "Caricamento..."
+                },
+                "detail": {
+                    "loadingTitle": "Esecuzione workflow",
+                    "description": "{status} \u00b7 avviata {started}",
+                    "back": "Tutte le esecuzioni",
+                    "noSteps": "Questa esecuzione non ha ancora passaggi",
+                    "approve": "Approva",
+                    "reject": "Rifiuta",
+                    "columns": {
+                        "node": "Passaggio",
+                        "status": "Stato",
+                        "started": "Avviato",
+                        "decision": "Decisione"
+                    },
+                    "confirm": {
+                        "title": "Rifiutare questo passaggio?",
+                        "body": "Il workflow \u00e8 in attesa a {node}.",
+                        "warningTitle": "Questo ferma l'intera esecuzione",
+                        "warningBody": "L'esecuzione \u00e8 segnata come non riuscita e i passaggi successivi non avvengono. Ci\u00f2 che \u00e8 gi\u00e0 stato eseguito viene conservato.",
+                        "cancel": "Continua ad attendere",
+                        "confirm": "Rifiuta e ferma"
+                    }
+                },
+                "decisionReason": {
+                    "REJECTED": "Rifiutata dalla schermata esecuzioni workflow."
+                },
+                "success": {
+                    "APPROVED": "Approvata. Il workflow continua.",
+                    "REJECTED": "Rifiutata. L'esecuzione si \u00e8 fermata."
+                },
+                "errors": {
+                    "failed": "Impossibile registrare la decisione."
                 }
             },
             "schedules": {

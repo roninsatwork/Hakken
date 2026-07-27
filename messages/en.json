@@ -349,6 +349,7 @@
         "connectors": "Connectors",
         "workflows": "Workflows",
         "manageWorkflows": "Manage Workflows",
+        "workflowRuns": "Workflow Runs",
         "schedules": "Schedules",
         "users": "Users",
         "manageUsers": "Manage Users",
@@ -719,6 +720,68 @@
                     "saveAgentFailed": "Failed to synchronize agent configuration.",
                     "promoteFailed": "Failed to promote agent to global fleet.",
                     "dispatchFailed": "Failed to dispatch manual execution."
+                }
+            },
+            "executions": {
+                "title": "Workflow runs",
+                "description": "Every run of every workflow, and the only place a paused one can be answered.",
+                "empty": "No workflow runs yet",
+                "awaitingApproval": "Needs a decision",
+                "status": {
+                    "RUNNING": "Running",
+                    "SUCCESS": "Finished",
+                    "FAILED": "Failed"
+                },
+                "stepStatus": {
+                    "PENDING": "Queued",
+                    "RUNNING": "Running",
+                    "PENDING_APPROVAL": "Waiting for you",
+                    "SUCCESS": "Done",
+                    "FAILED": "Failed"
+                },
+                "columns": {
+                    "workflow": "Workflow",
+                    "status": "Status",
+                    "trigger": "Trigger",
+                    "startedBy": "Started by",
+                    "started": "Started"
+                },
+                "footer": {
+                    "showing": "Showing {count}",
+                    "loadMore": "Load more",
+                    "loading": "Loading..."
+                },
+                "detail": {
+                    "loadingTitle": "Workflow run",
+                    "description": "{status} \u00b7 started {started}",
+                    "back": "All runs",
+                    "noSteps": "This run has no steps yet",
+                    "approve": "Approve",
+                    "reject": "Reject",
+                    "columns": {
+                        "node": "Step",
+                        "status": "Status",
+                        "started": "Started",
+                        "decision": "Decision"
+                    },
+                    "confirm": {
+                        "title": "Reject this step?",
+                        "body": "The workflow is waiting at {node}.",
+                        "warningTitle": "This stops the whole run",
+                        "warningBody": "The run is marked failed and no later steps happen. What has already run is kept.",
+                        "cancel": "Keep waiting",
+                        "confirm": "Reject and stop run"
+                    }
+                },
+                "decisionReason": {
+                    "REJECTED": "Rejected from the workflow runs screen."
+                },
+                "success": {
+                    "APPROVED": "Approved. The workflow is continuing.",
+                    "REJECTED": "Rejected. The run has stopped."
+                },
+                "errors": {
+                    "failed": "Could not record that decision."
                 }
             },
             "schedules": {

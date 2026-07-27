@@ -205,6 +205,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
   if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
+  if (pathname.startsWith('/admin/workflows/executions')) return 'Workflow Runs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
   if (pathname.startsWith('/admin/settings/system-health')) return 'System Health';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
@@ -300,6 +301,12 @@ export default function SidebarNavigation() {
   // super admin, because the query is super-admin only and the page is too.
   const pendingApprovals = useQuery(
     api.agentRuns.getPendingApprovalCount,
+    isAdmin && isSuperAdmin ? {} : "skip"
+  );
+  // Same reasoning as the agent queue: a workflow halted on a Human Approval node
+  // waits indefinitely, and until this badge nothing on the platform said so.
+  const pendingWorkflowApprovals = useQuery(
+    api.scheduler.getPendingWorkflowApprovalCount,
     isAdmin && isSuperAdmin ? {} : "skip"
   );
 
@@ -427,7 +434,8 @@ export default function SidebarNavigation() {
                           activeItem === 'Agent Approvals' ||
                           activeItem === 'Manage Agents' || 
                           activeItem === 'Workflows' || 
-                          activeItem === 'Manage Workflows' || 
+                          activeItem === 'Manage Workflows' ||
+                          activeItem === 'Workflow Runs' || 
                           activeItem === 'Schedules'
                         }
                         onClick={() => setActiveItem('Agents')}
@@ -439,6 +447,7 @@ export default function SidebarNavigation() {
                         <SubNavItem label={t('manageAgents')} href="/admin/agents" navKey="agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
                         
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" navKey="workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
+                        <SubNavItem label={t('workflowRuns')} href="/admin/workflows/executions" navKey="workflowRuns" isActive={pathname.startsWith('/admin/workflows/executions')} onClick={() => setActiveItem('Workflow Runs')} badge={pendingWorkflowApprovals?.count} badgeAtLimit={pendingWorkflowApprovals?.atLimit} />
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" navKey="schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
                       </NavItem>
                     )}

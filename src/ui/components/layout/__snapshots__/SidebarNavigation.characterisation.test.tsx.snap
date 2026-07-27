@@ -93,6 +93,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "systemHealth -> /admin/settings/system-health",
     "systemSettings -> /admin/settings",
     "webhookDeliveries -> /admin/settings/webhook-deliveries",
+    "workflowRuns -> /admin/workflows/executions",
   ],
   "sections": [
     "agents",

@@ -453,6 +453,27 @@ describe('Quality Drift Guardrails', () => {
       'src/app/(dashboard)/admin/settings/plans/page.tsx',
     ];
 
+    // The executions list has no search bar: it is a chronological log rather than
+    // a catalogue, and the thing worth finding on it — a run waiting on a person —
+    // is flagged on the row and counted in the nav. Checked separately so it still
+    // has to use the shared table and footer.
+    // Matched as JSX tags rather than bare substrings. `includes('AdminTableShell')`
+    // is satisfied by `AdminTableShellX`, so a renamed or hand-rolled lookalike
+    // would slip straight past — which it did, when this guard was checked by
+    // deliberately breaking it.
+    const listPagesWithoutSearch = ['src/app/(dashboard)/admin/workflows/executions/page.tsx']
+      .filter((filePath) => {
+        const contents = readRepoFile(filePath);
+        return !/<AdminTableShell[\s>]/.test(contents)
+          || !/<AdminLoadMoreFooter[\s>]/.test(contents)
+          || contents.includes('ChevronLeft')
+          || contents.includes('ChevronRight');
+      });
+    expect(
+      listPagesWithoutSearch,
+      `Workflow execution pages drifted away from shared table primitives:\n${listPagesWithoutSearch.join('\n')}`
+    ).toEqual([]);
+
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
 

@@ -32,6 +32,7 @@ vi.mock("convex/react", () => ({
 vi.mock("@/convex/_generated/api", () => ({
   api: {
     agentRuns: { getPendingApprovalCount: "agentRuns:getPendingApprovalCount" },
+    scheduler: { getPendingWorkflowApprovalCount: "scheduler:getPendingWorkflowApprovalCount" },
     companies: { getCompanyById: "companies:getCompanyById" },
     users: { getMe: "users:getMe", impersonateCompany: "users:impersonateCompany" },
   },
