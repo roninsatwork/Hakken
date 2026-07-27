@@ -66,6 +66,9 @@ describe("CompanyDashboardLayout navigation", () => {
     const menu = screen.getByRole("menu");
     const expectedItems = [
       ["Overview", "/admin/companies/company123/ai"],
+      // The company's Dashboard tab was an AI usage report under a name nobody
+      // looking for AI usage would open. It lives here now.
+      ["AI Usage", "/admin/companies/company123/ai/usage"],
       ["Knowledge", "/admin/companies/company123/ai/knowledge"],
       ["Memory", "/admin/companies/company123/ai/memory"],
       ["Skills", "/admin/companies/company123/ai/skills"],

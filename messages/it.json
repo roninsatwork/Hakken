@@ -580,7 +580,13 @@
             "leaderboard": {
                 "title": "Iniziatori Diretti",
                 "empty": "Nessun iniziatore attivo in questo ciclo."
-            }
+            },
+            "aiUsageTitle": "Utilizzo AI",
+            "aiUsageSubtitle": "Cosa ha usato questa azienda e quanto è costato.",
+            "dashboardSubtitle": "Un riepilogo di questa azienda, a colpo d'occhio.",
+            "dashboardEmpty": "Ancora niente qui",
+            "dashboardEmptyHint": "Qui andrà il riepilogo di questa azienda.",
+            "aiUsage": "Utilizzo AI"
         },
         "workflows": {
             "title": "Workflow Autonomi",

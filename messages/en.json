@@ -580,7 +580,13 @@
             "leaderboard": {
                 "title": "Top Users",
                 "empty": "No active users in this period."
-            }
+            },
+            "aiUsageTitle": "AI Usage",
+            "aiUsageSubtitle": "What this company has used, and what it has cost.",
+            "dashboardSubtitle": "A summary of this company, at a glance.",
+            "dashboardEmpty": "Nothing here yet",
+            "dashboardEmptyHint": "This is where this company's summary will go.",
+            "aiUsage": "AI Usage"
         },
         "workflows": {
             "title": "Workflows",

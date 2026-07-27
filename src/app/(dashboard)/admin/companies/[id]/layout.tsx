@@ -10,6 +10,7 @@ import {
   AppWindow,
   ArrowLeft,
   Activity,
+  LayoutDashboard,
   BrainCircuit,
   Building2,
   ClipboardCheck,
@@ -70,7 +71,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   const companyHref = `/admin/companies/${companyId}`;
   const aiHref = `${companyHref}/ai`;
   const tabs = [
-    { label: "Dashboard", href: companyHref, icon: Activity },
+    { label: "Dashboard", href: companyHref, icon: LayoutDashboard },
     { label: "Overview", href: `${companyHref}/overview`, icon: FileText },
     {
       label: "Directory",
@@ -121,6 +122,14 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           href: aiHref,
           icon: Gauge,
           matches: (pathname: string) => pathname === aiHref,
+        },
+        {
+          // What used to be the company's Dashboard tab: tokens, quota, provider
+          // spend. It was an AI usage report filed under a name nobody looking
+          // for AI usage would open.
+          label: "AI Usage",
+          href: `${aiHref}/usage`,
+          icon: Activity,
         },
         {
           label: "Knowledge",
