@@ -373,7 +373,10 @@ export default function AppDashboardPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {useCases.map((item, index) => (
             <article key={item.title} className="relative overflow-hidden rounded-[20px] border border-border-dim bg-card/40 p-6">
-              <span className="pointer-events-none absolute -right-2 -top-6 font-mono text-[68px] leading-none text-brand/10">
+              {/* Inside the card, not bleeding off it. At -top-6 the card's own
+                  overflow-hidden cropped the numeral to its bottom third, which
+                  reads as a smudge above the title rather than a number. */}
+              <span className="pointer-events-none absolute right-4 top-2 font-mono text-[52px] leading-none text-brand/10">
                 {String(index + 1).padStart(2, "0")}
               </span>
               <h3 className="relative z-10 text-[16px] font-semibold text-foreground">{item.title}</h3>
