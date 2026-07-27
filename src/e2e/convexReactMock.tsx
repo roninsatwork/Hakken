@@ -541,6 +541,37 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       ],
     };
   }
+  if (path === "companyEngagement:getCompanyEngagement") {
+    const day = (offset: number) => new Date(now - offset * 86400000).toISOString().slice(0, 10);
+    const daily = Array.from({ length: 14 }, (_, index) => {
+      const offset = 13 - index;
+      const signedIn = offset % 3 === 0 ? 2 : offset % 5 === 0 ? 1 : 0;
+      return {
+        day: day(offset),
+        didNotSignIn: 4 - signedIn,
+        oneSession: signedIn > 0 ? 1 : 0,
+        twoSessions: signedIn > 1 ? 1 : 0,
+        threeSessions: offset === 3 ? 1 : 0,
+        fourSessions: 0,
+        fivePlusSessions: offset === 6 ? 1 : 0,
+        questions: offset % 2 === 0 ? offset : 0,
+      };
+    });
+    return {
+      daysBack: 14,
+      people: { total: 4, active: 3, quiet: 1 },
+      questions: { asked: 42, byPeople: 3 },
+      signIns: { total: 11, onDays: 6 },
+      invitations: { pending: 1, accepted: 3, revoked: 0 },
+      daily,
+      everyone: [
+        { userId: "u_never", name: "Priya Shah", email: "priya@example.com", isAdmin: false, lastSeenAt: undefined, signIns: 0, questions: 0, agentRuns: 0 },
+        { userId: "u_stale", name: "Tom Reid", email: "tom@example.com", isAdmin: false, lastSeenAt: now - 21 * 86400000, signIns: 1, questions: 2, agentRuns: 0 },
+        { userId: "u_ok", name: "Sam Okafor", email: "sam@example.com", isAdmin: false, lastSeenAt: now - 2 * 86400000, signIns: 4, questions: 12, agentRuns: 1 },
+        { userId: "u_admin", name: "Dana Lowe", email: "dana@example.com", isAdmin: true, lastSeenAt: now - 3600000, signIns: 6, questions: 28, agentRuns: 5 },
+      ],
+    };
+  }
   if (path === "aiTools:getTools") {
     return [
       {
