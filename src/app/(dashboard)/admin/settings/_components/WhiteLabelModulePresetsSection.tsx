@@ -43,11 +43,11 @@ const fallbackPresets: WhiteLabelModulePreset[] = [
   },
   {
     key: "operatorWorkspace",
-    href: "/admin/settings/system-health",
+    href: "/admin/health",
     linkLabelKey: "health",
     readinessDependencies: ["identity", "logos", "diagnostics", "email", "production"],
     visible: ["dashboardReports", "workflowsSchedules", "approvalsRuns"],
-    owner: ["releaseCenter", "systemHealth", "auditLedger"],
+    owner: ["systemHealth", "auditLedger"],
     handoff: ["confirmRoleAccess", "setScheduleOwners", "exportHealthReport"],
   },
 ];

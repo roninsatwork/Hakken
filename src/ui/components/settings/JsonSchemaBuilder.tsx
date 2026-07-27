@@ -3,7 +3,33 @@
 import { useState } from "react";
 import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react";
 
+/** What the reader picks. Held in its own terms, not the model's. */
 export type SchemaType = "STRING" | "NUMBER" | "BOOLEAN";
+
+/**
+ * JSON Schema's own type names.
+ *
+ * This builder wrote `"OBJECT"` and `"STRING"` in capitals, which is the
+ * convention of a *different* Vertex field — while the runtime handed the
+ * result to `responseJsonSchema`, which is standard JSON Schema and lowercase.
+ * So a shape built here was rejected by the one path that read it. Every
+ * provider agrees on the lowercase spelling, so that is what is written now.
+ */
+const JSON_SCHEMA_TYPES: Record<SchemaType, "string" | "number" | "boolean"> = {
+  STRING: "string",
+  NUMBER: "number",
+  BOOLEAN: "boolean",
+};
+
+const SCHEMA_TYPE_BY_JSON_TYPE: Record<string, SchemaType> = {
+  string: "STRING",
+  number: "NUMBER",
+  boolean: "BOOLEAN",
+  // Shapes saved before the spelling was fixed still open in the builder.
+  STRING: "STRING",
+  NUMBER: "NUMBER",
+  BOOLEAN: "BOOLEAN",
+};
 
 export interface SchemaProperty {
   id: string; // for React keys
@@ -14,7 +40,7 @@ export interface SchemaProperty {
 }
 
 type JsonSchemaProperty = {
-  type?: SchemaType;
+  type?: string;
   description?: string;
 };
 
@@ -40,13 +66,14 @@ function parseInitialProperties(initialSchemaJson?: string): SchemaProperty[] {
 
   try {
     const parsed = JSON.parse(initialSchemaJson) as JsonSchemaObject;
-    if (parsed.type !== "OBJECT" || !parsed.properties) return [];
+    // Either spelling opens, so a shape saved before the fix is still editable.
+    if ((parsed.type !== "object" && parsed.type !== "OBJECT") || !parsed.properties) return [];
 
     const requiredArr = parsed.required || [];
     return Object.entries(parsed.properties).map(([key, value]) => ({
       id: createPropertyId(),
       keyName: key,
-      type: value.type || "STRING",
+      type: SCHEMA_TYPE_BY_JSON_TYPE[value.type ?? "string"] ?? "STRING",
       description: value.description || "",
       isRequired: requiredArr.includes(key),
     }));
@@ -68,7 +95,7 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
       if (!p.keyName.trim()) return;
       
       propertiesObj[p.keyName] = { 
-        type: p.type, 
+        type: JSON_SCHEMA_TYPES[p.type], 
         ...(p.description.trim() ? { description: p.description.trim() } : {})
       };
       
@@ -84,7 +111,7 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
     }
 
     const finalSchema = {
-      type: "OBJECT",
+      type: "object",
       properties: propertiesObj,
       ...(requiredKeys.length > 0 ? { required: requiredKeys } : {})
     };
@@ -129,14 +156,14 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-foreground/10 hover:bg-foreground/20 text-foreground transition-colors text-[12px] font-medium border border-border-dim"
         >
           <Plus className="w-3.5 h-3.5" />
-          Add Node
+          Add a field
         </button>
       </div>
 
       <div className="flex flex-col gap-3 pt-2">
         {properties.length === 0 ? (
-          <div className="w-full py-8 text-center text-muted text-[13px] font-mono border border-dashed border-border-dim/50 rounded-[12px]">
-            No schema nodes declared. Dynamic structure implicitly inferred.
+          <div className="w-full rounded-[12px] border border-dashed border-border-dim/50 py-8 text-center text-[13px] text-muted">
+            No fields yet, so the agent answers in plain English.
           </div>
         ) : (
           properties.map((prop) => (
@@ -151,7 +178,7 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
                     type="text"
                     value={prop.keyName}
                     onChange={e => updateProperty(prop.id, { keyName: e.target.value.replace(/[^a-zA-Z0-9_]/g, '_') })}
-                    placeholder="key_identifier"
+                    placeholder="field_name"
                     className="flex-1 bg-transparent border-b border-dashed border-border-dim focus:border-brand outline-none px-2 py-1.5 text-[13px] font-mono text-foreground placeholder:text-muted transition-colors min-w-[120px]"
                   />
 
@@ -170,7 +197,7 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
                  type="text"
                  value={prop.description}
                  onChange={e => updateProperty(prop.id, { description: e.target.value })}
-                 placeholder="Tell LLM exactly what to extract for this key..."
+                 placeholder="What should go in this field?"
                  className="flex-[2] w-full bg-transparent border-none outline-none px-2 py-1.5 text-[12px] text-foreground/80 placeholder:text-muted/60"
                />
 
@@ -185,7 +212,7 @@ export default function JsonSchemaBuilder({ initialSchemaJson, onChange, title, 
                      />
                      <div className="w-8 h-4 bg-foreground/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-brand"></div>
                    </div>
-                   <span className="text-[11px] font-bold uppercase tracking-widest text-muted peer-checked:text-foreground transition-colors">Req</span>
+                   <span className="text-[11px] text-muted transition-colors peer-checked:text-foreground">Always</span>
                  </label>
 
                  <button

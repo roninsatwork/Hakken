@@ -977,6 +977,28 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
         const cacheStyle = getPromptCacheStyle(modelConfig.providerKey);
 
         /**
+         * The fixed answer shape this agent asks for, if it asks for one.
+         *
+         * Parsed once per segment rather than per turn. An unparseable schema is
+         * ignored rather than failing the run: it is a configuration mistake on
+         * a screen, and refusing to run the agent at all would be a worse answer
+         * than running it unconstrained.
+         */
+        const agentResponseJsonSchema = (() => {
+            const stored = execution.agent.outputSchema;
+            if (!stored) return undefined;
+            try {
+                const parsed = JSON.parse(stored) as unknown;
+                return parsed && typeof parsed === "object"
+                    ? parsed as Record<string, unknown>
+                    : undefined;
+            } catch {
+                console.warn("Agent output schema is not valid JSON; running without it", { runId });
+                return undefined;
+            }
+        })();
+
+        /**
          * Release the provider-side cache, if this run made one.
          *
          * Called on every terminal path. A cache that outlives its run is not a
@@ -1243,6 +1265,15 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 temperature,
                 cacheName: promptCache.name,
                 cachedPrefixTurns: stablePrefixTurns,
+                // Both settings have been on the agent screen since it was
+                // built, and neither reached a model from here: reasoning effort
+                // was read by nothing at all, and web access only by the
+                // workflow-node path. So an agent set to High that searched the
+                // web inside a workflow did neither when launched from its own
+                // page.
+                reasoningEffort: execution.agent.reasoningEffort,
+                webSearch: execution.agent.allowInternetAccess === true,
+                responseJsonSchema: agentResponseJsonSchema,
             };
             const onText = async (fragment: string) => {
                 stream.text += fragment;

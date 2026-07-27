@@ -12,14 +12,13 @@ Agent administration is under the admin area:
 - `/admin/agents/[id]` opens an agent dashboard with usage, token, and cost summaries.
 - `/admin/agents/[id]/runs` shows runs, feedback, replay, cancellation, eval creation, memory candidates, reflections, and improvement suggestions.
 - `/admin/agents/[id]/evals` manages eval fixtures, smoke eval history, release-gate comparisons, and eval suite presets.
-- `/admin/agents/[id]/settings` manages identity, model behavior, activation readiness, smoke eval checks, and release candidate actions.
+- `/admin/agents/[id]/settings` manages identity, model behavior, and whether the agent is a draft or live.
 - `/admin/agents/[id]/skills` attaches reusable skills to one agent.
 - `/admin/agents/[id]/knowledge` connects knowledge documents to an agent.
 - `/admin/agents/[id]/memory` reviews stored memories, proposed memories, reflections, and improvement suggestions.
 - `/admin/agents/[id]/system-prompt` edits the agent's system prompt.
 - `/admin/agents/[id]/rules` manages rules attached to an agent.
-- `/admin/agents/[id]/integrations` manages tool and integration bindings.
-- `/admin/agents/[id]/schemas` edits input and output schemas.
+- `/admin/agents/[id]/interfaces` chooses which tools the agent may use, and whether it answers in plain English or in a fixed set of fields.
 - `/admin/agents/[id]/logs` and `/admin/agents/[id]/logs/[logId]` inspect agent logs.
 - `/admin/ai/skills` manages the reusable skill catalog.
 - `/admin/ai/skills/[id]` opens one skill.
@@ -50,7 +49,7 @@ The runs tab is the main operational review area. Runs can be filtered by status
 
 The evals tab manages tests for the agent. Evals can be manually created or generated from runs and reflections. The implemented fixture types cover happy paths, approval pauses, rejected actions, prompt injection, tenant boundary checks, bad tool arguments, cancellation, replayed failures, tool plans, and cost or latency budgets. Smoke evals and eval suites provide evidence for readiness and release gates.
 
-The settings tab controls agent identity and runtime behavior. It includes name, description, avatar, model selection mode, reasoning effort, thinking mode, internet access, active state, smoke eval actions, and release candidate actions. Activation is guarded by readiness checks: an agent cannot be activated if required smoke eval or release gate evidence is missing, if the latest smoke eval fails, or if enabled skills are missing required tools or high-risk skill evidence.
+The settings tab controls agent identity and runtime behavior. It includes name, description, avatar, model selection mode, reasoning effort, thinking mode, internet access, and whether the agent is a draft or live. An agent cannot be switched live until it has passed a check: the screen names the one reason it is held back and links to the checks that fix it. Having no tools or no knowledge documents is not a reason to hold an agent back.
 
 The skills tab attaches active reusable skills to one agent. A skill is a capability package with instructions, risk level, tool requirements, and suggested evals. Skill bindings can be enabled, disabled, upgraded to the latest version, or removed.
 

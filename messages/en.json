@@ -343,8 +343,6 @@
         "agents": "Agents",
         "agentApprovals": "Agent Approvals",
         "agentSkills": "Agent Skills",
-        "releaseCenter": "Ship Checks",
-        "runObservatory": "Run Observatory",
         "manageAgents": "Manage Agents",
         "connectors": "Connectors",
         "workflows": "Workflows",
@@ -358,10 +356,8 @@
         "settings": "Settings",
         "systemSettings": "System Settings",
         "apiKeys": "API Keys",
-        "webhookDeliveries": "Webhook Deliveries",
         "analytics": "Analytics",
         "maintenance": "Maintenance",
-        "systemHealth": "System Health",
         "scripts": "Scripts",
         "authDiagnostics": "Auth Diagnostics",
         "workspace": "Workspace",
@@ -371,7 +367,9 @@
         "propertiesSearch": "Search",
         "propertiesScrapedData": "Scraped Data",
         "impersonatingLabel": "Impersonating Workspace",
-        "exitWorkspace": "Exit Workspace"
+        "exitWorkspace": "Exit Workspace",
+        "tools": "Tools",
+        "health": "Health"
     },
     "properties": {
         "search": {
@@ -753,7 +751,7 @@
                 },
                 "detail": {
                     "loadingTitle": "Workflow run",
-                    "description": "{status} \u00b7 started {started}",
+                    "description": "{status} · started {started}",
                     "back": "All runs",
                     "noSteps": "This run has no steps yet",
                     "approve": "Approve",
@@ -942,86 +940,6 @@
             }
         },
         "aiTools": {
-            "marketplace": {
-                "title": "Connector Marketplace",
-                "subtitle": "Install governed connector definitions, test connection state, and create safe tool records from approved handler mappings.",
-                "count": "{count} starter connectors",
-                "install": "Install",
-                "installing": "Installing...",
-                "sync": "Sync",
-                "test": "Validate",
-                "testing": "Validating...",
-                "manage": "Manage",
-                "untested": "UNVALIDATED",
-                "availability": {
-                    "unavailable": "NOT AVAILABLE",
-                    "partial": "{available} OF {total} AVAILABLE",
-                    "unavailableHelp": "This connector is a declaration only — nothing implements it yet. An agent that calls it will record the call as not implemented and will not perform the action."
-                }
-            },
-            "connectorDetails": {
-                "back": "Back to Connectors",
-                "untested": "UNVALIDATED",
-                "active": "Active",
-                "disabled": "Disabled",
-                "save": "Save Changes",
-                "saving": "Saving...",
-                "test": "Validate Configuration",
-                "testing": "Validating...",
-                "noSecrets": "No secret references are required.",
-                "noTools": "This connector does not expose executable tools yet.",
-                "noGeneratedTools": "No generated tools are currently linked.",
-                "noTestLogs": "No configuration checks have been recorded.",
-                "noSecretRegistry": "No secret reference records have been synchronized.",
-                "required": "Required",
-                "optional": "Optional",
-                "sections": {
-                    "connection": "Connection Configuration",
-                    "tools": "Enabled Tools",
-                    "oauth": "OAuth Connection",
-                    "generatedTools": "Generated Tools",
-                    "secretRegistry": "Secret Reference Registry",
-                    "testHistory": "Validation History"
-                },
-                "fields": {
-                    "authMode": "Auth Mode",
-                    "availability": "Availability",
-                    "active": "Active",
-                    "scope": "Install Scope",
-                    "tenant": "Tenant",
-                    "oauthStatus": "OAuth Status",
-                    "oauthAccount": "Account Ref",
-                    "oauthScopes": "Scopes",
-                    "secretRefs": "Configured Secret References"
-                },
-                "scope": {
-                    "global": "Global",
-                    "tenant": "Tenant restricted",
-                    "noTenant": "No tenant selected"
-                },
-                "placeholders": {
-                    "secretRefs": "e.g. base_url, auth_header",
-                    "oauthState": "OAuth state",
-                    "oauthAccountRef": "account_ref",
-                    "oauthTokenRef": "vault/oauth/token_ref"
-                },
-                "oauth": {
-                    "notConnected": "NOT_CONNECTED",
-                    "noAccount": "No account reference",
-                    "start": "Start OAuth",
-                    "starting": "Starting...",
-                    "complete": "Complete OAuth",
-                    "completing": "Completing...",
-                    "disconnect": "Disconnect OAuth",
-                    "latest": "Latest OAuth session: {provider} / {status}"
-                },
-                "diagnostics": {
-                    "authMode": "Auth",
-                    "installStatus": "Install",
-                    "authConnectionStatus": "OAuth",
-                    "missingSecretRefs": "Missing refs"
-                }
-            },
             "new": {
                 "back": "Back to Tools Library",
                 "title": "Add AI Tool",
@@ -1209,8 +1127,6 @@
                     "memory": "Memory",
                     "prompt": "Prompt",
                     "rules": "AI Rules",
-                    "integrations": "Integrations",
-                    "schemas": "I/O Schemas",
                     "logs": "Logs"
                 },
                 "dashboard": {
@@ -1267,7 +1183,7 @@
                             },
                             "reasoning": {
                                 "label": "Reasoning Effort",
-                                "hint": "Higher effort increases depth but raises latency and cost.",
+                                "hint": "How hard the model thinks before it answers. Higher is deeper, slower and dearer.",
                                 "levels": {
                                     "LOW": "Low",
                                     "MEDIUM": "Medium",
@@ -1275,10 +1191,9 @@
                                 }
                             },
                             "internet": {
-                                "label": "Web Search Capabilities",
-                                "hint": "Enable live web retrieval via Google Search.",
-                                "offline": "Disabled",
-                                "liveSearch": "Enabled"
+                                "label": "Web search",
+                                "hintOn": "The agent can search the web while it works.",
+                                "hintOff": "The agent answers from its own knowledge, its documents and its tools."
                             },
                             "approval": {
                                 "label": "Human Approval",
@@ -1303,104 +1218,20 @@
                             "status": {
                                 "label": "Status",
                                 "active": "Active",
-                                "inactive": "Draft"
+                                "inactive": "Draft",
+                                "blockedLink": "Review checks",
+                                "blockedReason": {
+                                    "modelDefault": "This agent can't go live yet — there's no model it can run on.",
+                                    "skills": "This agent can't go live yet — a skill is switched on without the tools it needs.",
+                                    "smokeEval": "This agent can't go live yet — it hasn't passed a check.",
+                                    "releaseGate": "This agent can't go live yet — a must-pass check is failing."
+                                },
+                                "hintActive": "The agent can be run — by you, or by anything it is wired into.",
+                                "hintInactive": "A draft cannot run at all. Launch Run is refused too."
                             },
-                            "readiness": {
-                                "title": "Activation Readiness",
-                                "loading": "Checking agent setup...",
-                                "ready": "No activation blockers are currently flagged for this agent.",
-                                "activationWarning": "{count} readiness warning(s) should be reviewed before this agent is active.",
-                                "activationBlocked": "Run a successful smoke eval before activating this draft agent.",
-                                "releaseGateBlocked": "The latest smoke eval failed or is still pending. Rerun the eval suite and get a passing latest result before activation.",
-                                "runSmokeEval": "Run Smoke Eval",
-                                "runningSmokeEval": "Running...",
-                                "runModelSmokeEval": "Model Grade",
-                                "runningModelSmokeEval": "Grading...",
-                                "smokeRunQueued": "Model-graded smoke eval queued. The latest smoke result will refresh when grading completes.",
-                                "smokeRunSuccess": "Smoke eval checkpoint recorded. The readiness checklist will refresh automatically.",
-                                "smokeRunFailed": "Smoke eval could not be recorded.",
-                                "latestSmokeEval": {
-                                    "title": "Latest Smoke Eval",
-                                    "empty": "Not run",
-                                    "hint": "Run a smoke eval from an active fixture to unlock draft activation.",
-                                    "status": {
-                                        "QUEUED": "Queued",
-                                        "RUNNING": "Running",
-                                        "PENDING_APPROVAL": "Pending approval",
-                                        "SUCCESS": "Passed",
-                                        "FAILED": "Failed",
-                                        "CANCELLED": "Cancelled"
-                                    }
-                                },
-                                "coverage": {
-                                    "title": "Fixture Coverage",
-                                    "summary": "{covered}/{total} fixture categories have active coverage.",
-                                    "smokeCovered": "{count} smoke-covered",
-                                    "fixtureCount": "{count} active",
-                                    "status": {
-                                        "missing": "Missing",
-                                        "fixtureReady": "Fixture ready",
-                                        "smokePassed": "Smoke passed"
-                                    },
-                                    "types": {
-                                        "HAPPY_PATH": "Happy path",
-                                        "TOOL_PLAN": "Tool plan",
-                                        "APPROVAL_PAUSE": "Approval pause",
-                                        "REJECTED_ACTION": "Rejected action",
-                                        "PROMPT_INJECTION": "Prompt injection",
-                                        "TENANT_BOUNDARY": "Tenant boundary",
-                                        "BAD_TOOL_ARGS": "Bad tool args",
-                                        "CANCELLATION": "Cancellation",
-                                        "REPLAYED_FAILURE": "Replayed failure",
-                                        "COST_LATENCY_BUDGET": "Cost/latency budget"
-                                    }
-                                },
-                                "badge": {
-                                    "clear": "Clear",
-                                    "review": "Review"
-                                },
-                                "checks": {
-                                    "draftStatus": {
-                                        "title": "Draft Review",
-                                        "pass": "Agent is still in draft while readiness is reviewed.",
-                                        "warn": "Agent is already active while readiness warnings remain."
-                                    },
-                                    "modelDefault": {
-                                        "title": "Model Default",
-                                        "pass": "An agent-capable model default or override is available.",
-                                        "warn": "No enabled agent-capable default model is configured."
-                                    },
-                                    "tools": {
-                                        "title": "Tool Access",
-                                        "pass": "{count} tool binding(s) are available.",
-                                        "warn": "No tools are bound to this agent yet."
-                                    },
-                                    "skills": {
-                                        "title": "Skills",
-                                        "pass": "{count} enabled skill(s) are attached.",
-                                        "warn": "Required skill tools or high-risk skill smoke evals need attention."
-                                    },
-                                    "knowledge": {
-                                        "title": "Knowledge Sources",
-                                        "pass": "{count} knowledge document(s) are linked.",
-                                        "warn": "No approved knowledge documents are linked."
-                                    },
-                                    "evalFixtures": {
-                                        "title": "Eval Fixtures",
-                                        "pass": "{count} active eval fixture(s) are ready.",
-                                        "warn": "No active eval fixtures are ready for regression checks."
-                                    },
-                                    "smokeEval": {
-                                        "title": "Smoke Eval",
-                                        "pass": "{count} successful smoke eval run(s) found.",
-                                        "warn": "No successful smoke eval run has been recorded."
-                                    },
-                                    "releaseGate": {
-                                        "title": "Release Gate",
-                                        "pass": "The latest smoke eval checkpoint is passing.",
-                                        "warn": "The latest smoke eval checkpoint is not passing."
-                                    }
-                                }
+                            "groups": {
+                                "behaviour": "How it behaves",
+                                "limits": "What bounds it"
                             }
                         }
                     },
@@ -1533,40 +1364,6 @@
                         "browseButton": "Browse Files"
                     }
                 },
-                "integrations": {
-                    "title": "Integrations",
-                    "subtitle": "Connect third-party APIs and internal tools for this agent.",
-                    "sectionTitle": "Available Integrations",
-                    "empty": "No tools or integrations mapped to this unit.",
-                    "errors": {
-                        "assignFailed": "Failed to assign integration."
-                    },
-                    "card": {
-                        "assigned": "Connected"
-                    }
-                },
-                "schemas": {
-                    "title": "Data Schemas",
-                    "subtitle": "Define structured JSON data formats for this agent's inputs and outputs.",
-                    "saveButton": "Save Schemas",
-                    "savingButton": "Saving...",
-                    "saveSuccess": "Schemas saved successfully",
-                    "input": {
-                        "title": "Input Schema",
-                        "subtitle": "The exact data format this agent requires to begin processing."
-                    },
-                    "output": {
-                        "title": "Output Schema",
-                        "subtitle": "The strict JSON structure this agent must return.",
-                        "warning": {
-                            "label": "WARNING:",
-                            "text": "Forcing an output schema bypasses standard conversational responses. The agent will exclusively reply in raw JSON matching this schema."
-                        }
-                    },
-                    "errors": {
-                        "saveFailed": "Failed to save schemas."
-                    }
-                },
                 "logs": {
                     "title": "Activity Logs",
                     "subtitle": "View a history of this agent's interactions and background tasks.",
@@ -1602,6 +1399,46 @@
                             "config": "PROMPT & RUNTIME CONFIGURATION"
                         }
                     }
+                },
+                "interfaces": {
+                    "title": "Interfaces",
+                    "subtitle": "What this agent can use, and how it answers.",
+                    "tools": {
+                        "title": "Tools it can use",
+                        "description": "Tools let this agent do things beyond talking — look something up, call another system, write a record. Switch on the ones it should have.",
+                        "columns": {
+                            "name": "Tool",
+                            "description": "What it does",
+                            "access": "Who can use it",
+                            "state": "On"
+                        },
+                        "roles": {
+                            "SUPER_ADMIN": "System admins",
+                            "ADMIN": "Admins",
+                            "USER": "Anyone"
+                        },
+                        "empty": "No tools have been set up yet",
+                        "emptyHint": "Tools are built once and shared by every agent.",
+                        "emptyAction": "Set one up",
+                        "errors": {
+                            "assignFailed": "That could not be switched. Try again."
+                        }
+                    },
+                    "answer": {
+                        "title": "How it answers",
+                        "description": "By default the agent writes back in plain English. If something other than a person has to read its answer — a workflow step, an app, a widget — you can ask for a fixed set of fields instead.",
+                        "builderTitle": "Fields it must return",
+                        "builderSubtitle": "Add one for each piece of information the answer has to contain. Leave this empty to keep plain English.",
+                        "warning": "With fields set, the agent stops writing in sentences. Every answer comes back as data in exactly this shape.",
+                        "saveButton": "Save",
+                        "savingButton": "Saving...",
+                        "saveSuccess": "Saved",
+                        "errors": {
+                            "saveFailed": "That could not be saved. Try again."
+                        }
+                    },
+                    "loading": "Loading...",
+                    "notFound": "Agent not found."
                 }
             }
         },
@@ -1867,7 +1704,6 @@
                     "dashboardReports": "Dashboard and reports",
                     "workflowsSchedules": "Workflows and schedules",
                     "approvalsRuns": "Approvals and runs",
-                    "releaseCenter": "Release Center",
                     "auditLedger": "Audit ledger",
                     "confirmRoleAccess": "Confirm role access",
                     "setScheduleOwners": "Set schedule owners",
@@ -1950,9 +1786,7 @@
                     "systemSettings": "System Settings",
                     "systemHealth": "System Health",
                     "adminCompanies": "Companies admin",
-                    "releaseCenter": "Release Center",
                     "apiKeys": "API keys",
-                    "webhookDeliveries": "Webhook deliveries",
                     "publicWidget": "Public widget",
                     "customerChatHistory": "Customer chat history",
                     "knowledgeQa": "Knowledge QA",

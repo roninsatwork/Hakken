@@ -75,8 +75,6 @@ scripts, and operator procedures change.
 - [Auxiliary App Experiences](./developer/auxiliary-app-experiences.md)
 - [Embedded Widgets](./developer/embedded-widgets.md)
 - [Knowledge Management](./developer/knowledge-management.md)
-- [Agent Release Infrastructure](./developer/agent-release-infrastructure.md)
-- [Releases And Observability](./developer/releases-and-observability.md)
 - [Maintenance Scripts](./developer/maintenance-scripts.md)
 - [Organization And Company Workspaces](./developer/organization-and-company-workspaces.md)
 - [Platform Operations Settings](./developer/platform-operations-settings.md)
@@ -119,7 +117,6 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 ### Operator
 
 - [Operator Index](./operator/index.md)
-- [Developer Ship Checks Operator Guide](./operator/developer-ship-checks-operator-guide.md)
 - [Local Demo Seed Runbook](./operator/local-demo-seed-runbook.md)
 - [Local Test Auth Runbook](./operator/local-test-auth-runbook.md)
 - [White-Label Packaging Operator Guide](./operator/white-label-packaging-operator-guide.md)
@@ -146,8 +143,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Auxiliary App Experiences](./end-user/auxiliary-app-experiences.md)
 - [Embedded Widgets](./end-user/embedded-widgets.md)
 - [Knowledge Management](./end-user/knowledge-management.md)
-- [Releases And Observability](./end-user/releases-and-observability.md)
-- [Release Review And Run Observatory](./end-user/release-review-and-run-observatory.md)
+- [Health](./end-user/health.md)
 - [Organization And Company Workspaces](./end-user/organization-and-company-workspaces.md)
 - [Company Workspace Administration](./end-user/company-workspace-administration.md)
 - [Platform Plans And Quotas](./end-user/platform-plans-and-quotas.md)

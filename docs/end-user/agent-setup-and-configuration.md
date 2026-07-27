@@ -16,12 +16,11 @@ Use these admin routes:
 
 - `/admin/agents`: search agents, create agents, and delete agents.
 - `/admin/agents/[id]`: review usage, token, cost, and transaction summaries for one agent, or launch a manual scheduled run from the agent shell.
-- `/admin/agents/[id]/settings`: edit identity, avatar, model mode, reasoning effort, internet access, activation, smoke checks, and release candidate actions.
+- `/admin/agents/[id]/settings`: edit identity, avatar, model mode, reasoning effort, internet access, and whether the agent is a draft or live.
 - `/admin/agents/[id]/knowledge`: manage the agent's tenant-scoped knowledge library.
 - `/admin/agents/[id]/system-prompt`: edit the agent's system prompt.
 - `/admin/agents/[id]/rules`: list, add, and edit agent governance rules.
-- `/admin/agents/[id]/integrations`: configure tool and integration mappings.
-- `/admin/agents/[id]/schemas`: edit input and output schemas.
+- `/admin/agents/[id]/interfaces`: choose which tools the agent may use, and whether it answers in plain English or in a fixed set of fields.
 - `/admin/agents/[id]/skills`: attach reusable skills to one agent.
 - `/admin/agents/[id]/runs`: review run evidence, feedback, replay, cancellation, memory candidates, eval creation, and improvement suggestions.
 - `/admin/agents/[id]/evals`: manage eval fixtures, smoke evals, suite presets, release gates, and skill coverage.

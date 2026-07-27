@@ -114,6 +114,7 @@ import type * as openrouterProviderService from "../openrouterProviderService.js
 import type * as orchestrator from "../orchestrator.js";
 import type * as planService from "../planService.js";
 import type * as plans from "../plans.js";
+import type * as platformAlertRecipients from "../platformAlertRecipients.js";
 import type * as platformAlertService from "../platformAlertService.js";
 import type * as promptCacheService from "../promptCacheService.js";
 import type * as properties from "../properties.js";
@@ -121,7 +122,6 @@ import type * as providerHttpService from "../providerHttpService.js";
 import type * as publicApi from "../publicApi.js";
 import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
-import type * as releases from "../releases.js";
 import type * as resendEmailService from "../resendEmailService.js";
 import type * as salesReportActions from "../salesReportActions.js";
 import type * as salesReports from "../salesReports.js";
@@ -277,6 +277,7 @@ declare const fullApi: ApiFromModules<{
   orchestrator: typeof orchestrator;
   planService: typeof planService;
   plans: typeof plans;
+  platformAlertRecipients: typeof platformAlertRecipients;
   platformAlertService: typeof platformAlertService;
   promptCacheService: typeof promptCacheService;
   properties: typeof properties;
@@ -284,7 +285,6 @@ declare const fullApi: ApiFromModules<{
   publicApi: typeof publicApi;
   purgeScheduleService: typeof purgeScheduleService;
   purges: typeof purges;
-  releases: typeof releases;
   resendEmailService: typeof resendEmailService;
   salesReportActions: typeof salesReportActions;
   salesReports: typeof salesReports;

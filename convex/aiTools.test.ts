@@ -395,12 +395,17 @@ describe("AI Tools Authorization", () => {
     expect(configuredDetails.secretRefs.every((secretRef) => secretRef.status === "CONFIGURED")).toBe(true);
   });
 
-  test("refuses to start an OAuth connection it cannot carry out", async () => {
-    // `beginConnectorOAuth` used to mint a link to /api/connectors/oauth/authorize
-    // — a route that does not exist — and mark the connector PENDING for ever.
-    // The administrator got a 404 and a connector stuck mid-flow.
+  /**
+   * OAuth is unreachable, and this asserts it stays that way.
+   *
+   * Every connector that used OAuth was one of the seventeen with no
+   * implementation behind it, so they went. Nothing in the catalogue uses OAuth
+   * now, and the flow refuses before it can start. The mutations themselves are
+   * still there; if a connector ever needs OAuth, this is the test that should
+   * fail first and force the decision to be made deliberately.
+   */
+  test("no connector uses OAuth, and the flow refuses to start", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
-
     const superAdminId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
         email: "super@example.com",
@@ -409,37 +414,17 @@ describe("AI Tools Authorization", () => {
     });
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
+    const marketplace = await superAdminClient.query(api.aiTools.getConnectorMarketplace, {});
+    expect(marketplace.every((connector) => connector.authMode !== "OAUTH")).toBe(true);
+
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
-      key: "slack",
+      key: "http-rest",
       tenantAvailability: "GLOBAL",
     });
 
     await expect(
       superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId })
-    ).rejects.toThrow("OAuth connections are not available on this deployment.");
-
-    // Completion is gated too. It can only finish a session that begin created,
-    // so leaving it open would offer a door into a room with no entrance.
-    await expect(
-      superAdminClient.mutation(api.aiTools.completeConnectorOAuth, {
-        connectorId,
-        state: "connector:fabricated:0",
-        accountRef: "workspace/acme",
-        tokenRef: "vault/slack/acme/bot",
-      })
-    ).rejects.toThrow("OAuth connections are not available on this deployment.");
-
-    // And nothing claims to be connected as a result.
-    await expect(
-      superAdminClient.mutation(api.aiTools.validateConnectorConfiguration, { connectorId })
-    ).resolves.toMatchObject({
-      ok: false,
-      diagnosticCode: "OAUTH_NOT_CONNECTED",
-    });
-
-    const details = await superAdminClient.query(api.aiTools.getConnectorInstallDetails, { connectorId });
-    expect(details.connector.authConnectionStatus).not.toBe("CONNECTED");
-    expect(details.oauthConnection).toBeNull();
+    ).rejects.toThrow("Connector does not use OAuth.");
   });
 
   test("super admins can page and search tool inventory", async () => {
@@ -639,9 +624,9 @@ describe("connector marketplace honesty", () => {
   }
 
   test("reports availability from the handler registry, not the catalogue", async () => {
-    // The catalogue advertised 21 connectors while 2 could execute. Availability
-    // has to come from whether an implementation exists, because that is the
-    // only thing that decides whether a call does anything.
+    // The catalogue advertised 21 connectors while a handful could execute.
+    // Availability has to come from whether an implementation exists, because
+    // that is the only thing that decides whether a call does anything.
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminClient = await seedAdmin(t);
 
@@ -652,13 +637,11 @@ describe("connector marketplace honesty", () => {
     expect(knowledge?.availability).toBe("AVAILABLE");
     expect(knowledge?.toolDefinitions.every((tool) => tool.isExecutable)).toBe(true);
 
-    // Something the catalogue declares with nothing behind it must say so.
-    const unavailable = marketplace.filter((connector) => connector.availability === "UNAVAILABLE");
-    expect(unavailable.length).toBeGreaterThan(0);
-    for (const connector of unavailable) {
-      expect(connector.executableToolCount).toBe(0);
-      expect(connector.toolDefinitions.every((tool) => !tool.isExecutable)).toBe(true);
-    }
+    // Nothing in the catalogue is unavailable any more, because the seventeen
+    // connectors nobody had built were removed rather than left on screen
+    // wearing a badge. This is the shape the check takes now.
+    const unavailable = marketplace.filter((connector) => connector.availability !== "AVAILABLE");
+    expect(unavailable).toEqual([]);
   });
 
   test("counts are consistent with the per-tool flags", async () => {
@@ -676,14 +659,21 @@ describe("connector marketplace honesty", () => {
     }
   });
 
-  test("does not claim every declared connector works", async () => {
-    // The specific failure this item exists to remove: a catalogue describing
-    // capability the code does not have.
+  /**
+   * The catalogue used to describe capability the code did not have — 21
+   * connectors, a handful of implementations, and an Install button on every
+   * one. The seventeen with nothing behind them are gone. This is the guard
+   * against them coming back: anything offered here has to be able to run.
+   */
+  test("every connector offered can actually run", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminClient = await seedAdmin(t);
 
     const marketplace = await adminClient.query(api.aiTools.getConnectorMarketplace, {});
-    const available = marketplace.filter((connector) => connector.availability === "AVAILABLE");
-    expect(available.length).toBeLessThan(marketplace.length);
+    expect(marketplace.length).toBeGreaterThan(0);
+    for (const connector of marketplace) {
+      expect(connector.availability).toBe("AVAILABLE");
+      expect(connector.executableToolCount).toBe(connector.totalToolCount);
+    }
   });
 });

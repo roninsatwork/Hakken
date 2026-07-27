@@ -341,14 +341,15 @@ export const NOT_IMPLEMENTED_TOOL_STATUS = "not_implemented";
  * eval that grades it — had no way to tell a working connector from a declared
  * one. `isNotImplementedToolResult` is how the runtime now tells them apart.
  */
-function buildConnectorStubResult(input: ToolHandlerExecutionInput, connectorName: string) {
+function buildConnectorStubResult(input: ToolHandlerExecutionInput, connectorName?: string) {
+  const subject = connectorName ?? input.handlerMapping;
   return {
     ok: false,
     status: NOT_IMPLEMENTED_TOOL_STATUS,
     connectorName,
     handlerMapping: input.handlerMapping,
     companyId: input.companyId,
-    message: `${connectorName} connector execution is not implemented yet.`,
+    message: `${subject} cannot run: nothing implements it on this deployment.`,
   };
 }
 
@@ -620,16 +621,16 @@ export async function executeRegisteredTool(args: ToolHandlerExecutionInput) {
   const handler = REGISTERED_TOOL_HANDLERS[args.handlerMapping];
 
   if (!handler) {
-    // A connector the catalogue advertises but nobody has built is a gap in the
-    // platform, not a fault in this run. Reporting it as an error made the two
-    // indistinguishable — a typo in a tool's configuration and an entire missing
-    // integration produced the same unhelpful line in the log.
-    const connectorName = DECLARED_CONNECTOR_NAMES.get(args.handlerMapping);
-    if (connectorName) {
-      return buildConnectorStubResult(args, connectorName);
-    }
-
-    throw new Error(`No tool handler is registered for '${args.handlerMapping}'.`);
+    // Nothing implements this, which is a gap in the platform rather than a
+    // fault in this run. Reporting it as an error made the two indistinguishable
+    // in the log.
+    //
+    // It reports rather than throws whether or not the mapping was ever
+    // declared. It used to throw for anything not in the catalogue — so when the
+    // seventeen connectors nobody had built were removed, every tool already
+    // installed from one of them would have started failing hard instead of
+    // degrading. Whether a name is known changes the wording, never the outcome.
+    return buildConnectorStubResult(args, DECLARED_CONNECTOR_NAMES.get(args.handlerMapping));
   }
 
   return await handler(args);

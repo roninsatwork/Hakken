@@ -12,14 +12,6 @@ crons.interval(
   {}
 );
 
-// Activate approved agent releases when their reviewed launch window opens.
-crons.interval(
-  "agent-release-activation-dispatcher",
-  { minutes: 1 },
-  internal.releases.activateDueReleaseCandidates,
-  {}
-);
-
 // Revive agent runs whose action died without reaching a terminal state, and
 // fail the ones that cannot be revived. Without this a killed action leaves a
 // run marked RUNNING and a reply marked as streaming for ever.

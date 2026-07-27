@@ -79,43 +79,6 @@ const readiness = {
   activeEvalFixtureCount: 1,
 };
 
-const latestRelease = {
-  _id: "release_1",
-  agentId: "agent_1",
-  agentVersionId: "version_1",
-  status: "APPROVED",
-  title: "Support Triage Agent v1",
-  releaseNotes: "Ready after release gate coverage.",
-  rollbackPlan: "Deactivate and review recent runs.",
-  versionNumber: 1,
-  snapshotComparison: {
-    baselineVersionNumber: 0,
-    currentVersionNumber: 1,
-    changedAreas: ["Prompt and schemas", "Tools", "Policy"],
-    unchangedAreas: ["Model config"],
-    details: [
-      {
-        area: "Prompt and schemas",
-        before: "Prompt: Draft support prompt",
-        after: "Prompt: Reviewed support prompt",
-      },
-      {
-        area: "Tools",
-        before: "knowledge.search",
-        after: "knowledge.search | tickets.create",
-      },
-      {
-        area: "Policy",
-        before: "internet blocked / manual trigger",
-        after: "internet allowed / manual trigger",
-      },
-    ],
-    summary: "3 release areas changed from the previous live snapshot.",
-  },
-  createdAt: Date.UTC(2026, 5, 16),
-  approvedAt: Date.UTC(2026, 5, 16, 11),
-};
-
 const models = [
   {
     _id: "model_default",
@@ -187,7 +150,6 @@ describe("AgentOverviewPage model selection", () => {
       const functionName = getFunctionName(queryFn);
       if (functionName === "agents:get") return agentFixture as ReturnType<typeof useQuery>;
       if (functionName === "agents:getAgentReadiness") return readinessFixture as ReturnType<typeof useQuery>;
-      if (functionName === "releases:getLatestReleaseForAgent") return null as ReturnType<typeof useQuery>;
       if (functionName === "aiModels:getActiveModels") return models as unknown as ReturnType<typeof useQuery>;
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
@@ -297,7 +259,6 @@ describe("AgentOverviewPage approval and run budget", () => {
       if (functionName === "agents:getAgentReadiness") {
         return { ...readiness, modelReadiness: inheritedReadiness } as ReturnType<typeof useQuery>;
       }
-      if (functionName === "releases:getLatestReleaseForAgent") return null as ReturnType<typeof useQuery>;
       if (functionName === "aiModels:getActiveModels") return models as unknown as ReturnType<typeof useQuery>;
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
@@ -325,7 +286,7 @@ describe("AgentOverviewPage approval and run budget", () => {
   it("saves autonomy when the agent is switched to run autonomously", async () => {
     renderAgent();
 
-    fireEvent.click(screen.getByRole("button", { name: "sections.engine.approval.autonomous" }));
+    fireEvent.click(screen.getByRole("switch", { name: "sections.engine.approval.label" }));
     // The consequence is spelled out where the choice is made, not left implied.
     expect(screen.getByText("sections.engine.approval.hintAutonomous")).toBeInTheDocument();
 
@@ -389,62 +350,65 @@ describe("AgentOverviewPage approval and run budget", () => {
     expect(payload.maxSteps).toBe(0);
     expect(payload.maxCostGBP).toBe(0.5);
   });
+
+
 });
 
-describe("AgentOverviewPage release visibility", () => {
+/**
+ * The screen this replaces was a checklist of eight boxes at the foot of the
+ * page, drawn whether or not anything was wrong. Six of the eight could never
+ * stop an activation, so most of what it reported was not a problem — the same
+ * fault the company AI screen was rebuilt to remove. What is left is one
+ * sentence, at the one moment it applies.
+ */
+describe("AgentOverviewPage activation", () => {
   const mutationMock = vi.fn();
+  let readinessFixture: unknown;
+
+  const renderDraft = (activationWarnings: string[]) => {
+    readinessFixture = { ...readiness, modelReadiness: inheritedReadiness, activationWarnings };
+    render(<AgentOverviewPage />);
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useQuery).mockImplementation((queryFn, args?) => {
       void args;
       const functionName = getFunctionName(queryFn);
-      if (functionName === "agents:get") return agent as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "agents:getAgentReadiness") return readiness as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "releases:getLatestReleaseForAgent") return latestRelease as unknown as ReturnType<typeof useQuery>;
-      if (functionName === "aiModels:getActiveModels") return [] as unknown as ReturnType<typeof useQuery>;
+      if (functionName === "agents:get") return { ...agent, isActive: false } as unknown as ReturnType<typeof useQuery>;
+      if (functionName === "agents:getAgentReadiness") return readinessFixture as ReturnType<typeof useQuery>;
+      if (functionName === "aiModels:getActiveModels") return models as unknown as ReturnType<typeof useQuery>;
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
     vi.mocked(useMutation).mockReturnValue(mutationMock as unknown as ReturnType<typeof useMutation>);
+    mutationMock.mockResolvedValue(undefined);
   });
 
-  it("shows the latest release state on the agent settings page", () => {
-    render(<AgentOverviewPage />);
+  it("says nothing about readiness while the agent is left as a draft", () => {
+    renderDraft(["smokeEval"]);
 
-    expect(screen.getByText("Release Status")).toBeInTheDocument();
-    expect(screen.getByText("Support Triage Agent v1 · v1")).toBeInTheDocument();
-    expect(screen.getByText("Ready after release gate coverage.")).toBeInTheDocument();
-    expect(screen.getByText("APPROVED")).toBeInTheDocument();
-    expect(screen.getByText("Activate release")).toBeInTheDocument();
-    expect(screen.getByText("Snapshot comparison")).toBeInTheDocument();
-    expect(screen.getByText("3 release areas changed from the previous live snapshot.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Ship Checks" })).toHaveAttribute("href", "/admin/releases");
+    expect(screen.queryByText(/blockedReason/)).not.toBeInTheDocument();
   });
 
-  it("expands the full release snapshot field diff", () => {
-    render(<AgentOverviewPage />);
+  it("names the one reason a draft cannot go live, and links to where it is fixed", () => {
+    renderDraft(["smokeEval"]);
 
-    expect(screen.getAllByText("Prompt and schemas").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Tools").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Before: internet blocked/)).not.toBeInTheDocument();
-    expect(screen.getByText("Stable fields")).toBeInTheDocument();
-    expect(screen.getByText("Model config")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch", { name: "Draft" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Show all 3 fields" }));
-
-    expect(screen.getByText(/Before: internet blocked/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show fewer fields" })).toBeInTheDocument();
+    expect(screen.getByText("sections.engine.status.blockedReason.smokeEval")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /blockedLink/ })).toHaveAttribute(
+      "href",
+      "/admin/agents/agent_1/evals",
+    );
   });
 
-  it("can activate an approved release from agent settings", async () => {
-    mutationMock.mockResolvedValue("release_1");
-    render(<AgentOverviewPage />);
+  it("does not warn about tools or knowledge that are simply absent", () => {
+    // The server no longer counts absence as a fault, so an agent that
+    // deliberately has neither has nothing standing in its way.
+    renderDraft([]);
 
-    fireEvent.click(screen.getByText("Activate release"));
+    fireEvent.click(screen.getByRole("switch", { name: "Draft" }));
 
-    await waitFor(() => {
-      expect(mutationMock).toHaveBeenCalledWith({ releaseId: "release_1" });
-    });
-    expect(await screen.findByText("Release activated.")).toBeInTheDocument();
+    expect(screen.queryByText(/blockedReason/)).not.toBeInTheDocument();
   });
 });

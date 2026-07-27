@@ -36,6 +36,33 @@ type AgentModelUseCase = "agent" | "workflow";
 type AgentReadinessStatus = "PASS" | "WARN";
 type AgentReadinessCheckKey = "draftStatus" | "modelDefault" | "tools" | "skills" | "knowledge" | "evalFixtures" | "smokeEval" | "releaseGate";
 type ReleaseGateMode = "TAG" | "PRESET" | "NONE";
+
+/**
+ * The checks that can actually stop an agent going live.
+ *
+ * An agent with no tools bound, no knowledge documents, or still sitting in
+ * draft is not broken — those are ordinary designs. An agent that only writes
+ * and answers needs no tools; plenty of agents need no documents. Counting
+ * absence as a fault put amber warnings on working agents, and worse:
+ * `assertReadyForRelease` refuses a release candidate while any warning stands,
+ * so a well-built agent that had passed every check written for it could not be
+ * released for want of a filing cabinet.
+ *
+ * A warning is reserved for something set up here that does not work: no model
+ * the agent can run on, a skill switched on without the tools it requires,
+ * nothing ever proven by a real check, or a must-pass check failing. Absence is
+ * never one of them.
+ *
+ * `evalFixtures` is deliberately absent — an agent with no checks at all cannot
+ * have passed one, so `smokeEval` already reports it, and reporting it twice was
+ * how one fault became two warnings.
+ */
+const BLOCKING_READINESS_CHECK_KEYS = new Set<AgentReadinessCheckKey>([
+  "modelDefault",
+  "skills",
+  "smokeEval",
+  "releaseGate",
+]);
 type AgentEvalFixtureType =
   | "HAPPY_PATH"
   | "APPROVAL_PAUSE"
@@ -667,7 +694,7 @@ export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id
   ];
 
   const activationWarnings = checks
-    .filter((check) => check.status === "WARN")
+    .filter((check) => check.status === "WARN" && BLOCKING_READINESS_CHECK_KEYS.has(check.key))
     .map((check) => check.key);
 
   return {

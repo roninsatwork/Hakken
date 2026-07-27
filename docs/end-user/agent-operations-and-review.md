@@ -11,9 +11,9 @@ Agent review surfaces live under an agent detail page:
 - `/admin/agents/[id]/runs`: run list, run detail, feedback, replay, cancellation, memory candidate generation, reflections, eval creation, and improvement suggestions.
 - `/admin/agents/[id]/evals`: eval fixtures, smoke eval history, suite presets, skill coverage, and release gate comparison.
 - `/admin/agents/[id]/memory`: active memories, memory quality, memory candidates, reflections, and improvement suggestions.
-- `/admin/agents/[id]/settings`: activation readiness, smoke eval actions, and release candidate controls.
+- `/admin/agents/[id]/settings`: the draft/live switch, and the one reason an agent cannot go live.
 - `/admin/agents/approvals`: pending approval queue for tool calls that need human review.
-- `/admin/run-observatory`: cross-agent run health, failure, cost, model, and tool evidence.
+- `/admin/health`: cross-agent run health, failure, cost, model, and tool evidence.
 
 ## Run Statuses
 

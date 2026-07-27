@@ -1,118 +1,21 @@
 import { convexTest } from "convex-test";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import schema from "./schema";
 
-const paginationOpts = { numItems: 10, cursor: null };
 
 describe("Webhook delivery logs", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  test("admins list only visible tenant deliveries while super admins see platform deliveries", async () => {
-    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
-
-    const { companyAId, companyBId, adminAId, adminBId, superAdminId } = await t.run(async (ctx) => {
-      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
-      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
-      const adminAId = await ctx.db.insert("users", {
-        email: "admin-a@example.com",
-        role: "ADMIN",
-        companyId: companyAId,
-      });
-      const adminBId = await ctx.db.insert("users", {
-        email: "admin-b@example.com",
-        role: "ADMIN",
-        companyId: companyBId,
-      });
-      const superAdminId = await ctx.db.insert("users", {
-        email: "super@example.com",
-        role: "SUPER_ADMIN",
-      });
-
-      return { companyAId, companyBId, adminAId, adminBId, superAdminId };
-    });
-
-    const now = Date.now();
-    const deliveryAId = await t.mutation(internal.webhookDeliveries.recordQueuedInternal, {
-      companyId: companyAId,
-      eventType: "agent.run.completed",
-      destinationUrl: "https://example.com/a",
-      sourceType: "agentRun",
-      sourceId: "run_a",
-      requestBodyPreview: JSON.stringify({ runId: "run_a", status: "SUCCESS" }),
-      now,
-    });
-    await t.mutation(internal.webhookDeliveries.recordAttemptInternal, {
-      deliveryId: deliveryAId,
-      status: "SUCCESS",
-      statusCode: 200,
-      responseBodyPreview: "ok",
-      now: now + 100,
-    });
-    const deliveryBId = await t.mutation(internal.webhookDeliveries.recordQueuedInternal, {
-      companyId: companyBId,
-      eventType: "agent.run.failed",
-      destinationUrl: "https://example.com/b",
-      sourceType: "agentRun",
-      sourceId: "run_b",
-      now: now + 200,
-    });
-    await t.mutation(internal.webhookDeliveries.recordAttemptInternal, {
-      deliveryId: deliveryBId,
-      status: "RETRY_SCHEDULED",
-      statusCode: 503,
-      error: "Service unavailable",
-      nextAttemptAt: now + 1_000,
-      now: now + 300,
-    });
-
-    const adminAClient = t.withIdentity({ subject: adminAId });
-    const adminBClient = t.withIdentity({ subject: adminBId });
-    const superAdminClient = t.withIdentity({ subject: superAdminId });
-
-    const adminAList = await adminAClient.query(api.webhookDeliveries.list, { paginationOpts });
-    expect(adminAList.page.map((delivery) => delivery._id)).toEqual([deliveryAId]);
-    expect(adminAList.page[0]).toMatchObject({
-      companyName: "Company A",
-      eventType: "agent.run.completed",
-      status: "SUCCESS",
-      attemptCount: 1,
-      deliveredAt: now + 100,
-    });
-
-    const adminBRetryList = await adminBClient.query(api.webhookDeliveries.list, {
-      status: "RETRY_SCHEDULED",
-      paginationOpts,
-    });
-    expect(adminBRetryList.page.map((delivery) => delivery._id)).toEqual([deliveryBId]);
-
-    await expect(adminBClient.query(api.webhookDeliveries.list, {
-      companyId: companyAId,
-      paginationOpts,
-    })).rejects.toThrow("Unauthorized");
-
-    const superAdminList = await superAdminClient.query(api.webhookDeliveries.list, { paginationOpts });
-    expect(superAdminList.page.map((delivery) => delivery._id)).toEqual([deliveryBId, deliveryAId]);
-
-    const adminSummary = await adminAClient.query(api.webhookDeliveries.getSummary, { lookbackDays: 90 });
-    expect(adminSummary).toMatchObject({
-      scope: "company",
-      total: 1,
-      statusCounts: {
-        SUCCESS: 1,
-        RETRY_SCHEDULED: 0,
-      },
-      successRate: 1,
-    });
-
-    const platformSummary = await superAdminClient.query(api.webhookDeliveries.getSummary, { lookbackDays: 90 });
-    expect(platformSummary.total).toBe(2);
-    expect(platformSummary.statusCounts.SUCCESS).toBe(1);
-    expect(platformSummary.statusCounts.RETRY_SCHEDULED).toBe(1);
-  });
-
+  /**
+   * The listing test went with the screen it covered.
+   *
+   * Nothing queues a delivery and there is nowhere to register a destination,
+   * so the log had nothing to list. The engine below is the finished half and
+   * stays covered: recording, dispatch, retry backoff, and abandonment.
+   */
   test("delivery recording validates destination, retry windows, and preview truncation", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

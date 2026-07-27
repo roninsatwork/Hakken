@@ -51,7 +51,6 @@ Use audit detail when investigating:
 - system prompt or rule changes
 - model default changes
 - API key creation or revocation
-- release candidate actions
 - maintenance script execution
 - purge configuration or manual purge actions
 

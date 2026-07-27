@@ -8,11 +8,10 @@ For task-level incident health checks and maintenance scripts, see [System Healt
 
 - `/admin/settings` opens the main system settings workspace for identity, appearance, security, audit, options, white-label readiness, and unified purges.
 - `/admin/settings/api-keys` creates and revokes tenant-scoped API keys.
-- `/admin/settings/webhook-deliveries` reviews callback delivery attempts.
 - `/admin/settings/analytics` manages the platform analytics tracking id and shows analytics data-health checks.
 - `/admin/settings/scripts` lists allowlisted maintenance scripts.
 - `/admin/settings/scripts/[scriptId]` opens one maintenance script and its run history.
-- `/admin/settings/system-health` shows platform health, budget pressure, analytics health, and operational risk signals.
+- `/admin/health` shows platform health, budget pressure, analytics health, and operational risk signals.
 - `/admin/auth-diagnostics` opens the admin auth diagnostics surface.
 - `/app/settings/auth-diagnostics` opens the company-admin diagnostics surface.
 - `/admin/audit-logs/[id]` opens an audit log detail view from the settings audit feed.
@@ -34,7 +33,6 @@ API keys are tenant-scoped secrets for public API and webhook surfaces. The curr
 - `agent:run`: trigger governed agent runs.
 - `workflow:run`: trigger governed workflows.
 - `run:read`: read run status and evidence.
-- `webhook:deliver`: use callback delivery surfaces.
 
 When an API key is created, Sonae returns the raw secret once. After that, the system stores only a digest and a prefix. Operators should record the secret in the approved customer secret store immediately; it cannot be recovered from Sonae later.
 
@@ -42,11 +40,7 @@ Each key has a company, name, scopes, status, rate limit per minute, optional ex
 
 ## Webhook Deliveries
 
-Webhook deliveries show callback attempts, retries, and terminal failures. The page includes a 7-day summary, success rate, retrying count, failed or abandoned count, company filter, status filter, and a paginated table.
-
-Statuses are pending, delivering, success, failed, retry scheduled, and abandoned. Each row shows event type, company, destination URL, status, attempts, last HTTP status or error, next retry, delivery time, and a short request preview.
-
-Payloads are intentionally stored as short previews rather than full raw callback bodies. Use the page to diagnose destination health and retry behavior without turning Sonae into a long-term payload archive.
+Webhook deliveries have no listing screen. The delivery engine — queueing, dispatch, retry backoff and per-attempt recording — is built and works, but nothing queues a delivery and there is nowhere in the product to register a destination URL, so the log could never contain anything. The screen was removed rather than left showing an empty log of an event that cannot happen. To make webhooks real: give a company somewhere to store a destination, and call `recordQueuedInternal` when a run finishes.
 
 ## Analytics Settings
 

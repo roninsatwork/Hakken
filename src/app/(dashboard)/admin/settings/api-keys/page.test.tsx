@@ -87,36 +87,97 @@ describe("ApiKeysPage", () => {
     revokeApiKey.mockResolvedValue(undefined);
   });
 
-  it("renders API key inventory and creates a one-time secret", async () => {
+  it("lists the keys you have, in words", () => {
     renderWithProviders(<ApiKeysPage />);
 
-    expect(screen.getByText("API Keys")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "API Keys" })).toBeInTheDocument();
     expect(screen.getByText("Production agent trigger")).toBeInTheDocument();
-    expect(screen.getByText("sonae_abc123def456")).toBeInTheDocument();
+    expect(screen.getByText("Working")).toBeInTheDocument();
+    // The row spells the permissions out, rather than printing "agent:run".
+    expect(screen.getByText("Start an agent, Check on a run")).toBeInTheDocument();
+  });
 
-    fireEvent.change(screen.getByLabelText("Company"), { target: { value: "company_1" } });
-    fireEvent.change(screen.getByPlaceholderText("Production agent trigger"), { target: { value: "Warehouse trigger" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create API key" }));
+  /**
+   * The company select opened on "All companies", which is not a thing a key
+   * can be — every key belongs to exactly one. The form's default state could
+   * not be submitted.
+   */
+  it("asks which company the key is for, rather than defaulting to none", async () => {
+    renderWithProviders(<ApiKeysPage />);
+
+    expect(screen.getByRole("combobox", { name: "Which company is it for?" })).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: /Create key/ }));
 
     await waitFor(() => {
-      expect(createApiKey).toHaveBeenCalledWith({
+      expect(screen.getByText("Choose which company this key is for.")).toBeInTheDocument();
+    });
+    expect(createApiKey).not.toHaveBeenCalled();
+  });
+
+  it("creates a key and shows the secret once", async () => {
+    renderWithProviders(<ApiKeysPage />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Which company is it for?" }), {
+      target: { value: "company_1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Website contact form"), {
+      target: { value: "Warehouse trigger" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Create key/ }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalledWith(expect.objectContaining({
         companyId: "company_1",
         name: "Warehouse trigger",
         scopes: ["agent:run", "run:read"],
         rateLimitPerMinute: 60,
-      });
+      }));
     });
     expect(screen.getByText("sonae_newsecret_abcdef")).toBeInTheDocument();
+    expect(screen.getByText(/only time it will be shown/)).toBeInTheDocument();
   });
 
-  it("revokes an active API key with an in-app reason", async () => {
+  /** The field opened empty, so the obvious key never stopped working. */
+  it("gives a new key an expiry rather than leaving it forever", async () => {
     renderWithProviders(<ApiKeysPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Revoke" }));
-    fireEvent.change(screen.getByPlaceholderText("Rotated, leaked, no longer needed..."), {
+    expect(screen.getByLabelText("Stops working on")).not.toHaveValue("");
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Which company is it for?" }), {
+      target: { value: "company_1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Website contact form"), { target: { value: "Key" } });
+    fireEvent.click(screen.getByRole("button", { name: /Create key/ }));
+
+    await waitFor(() => {
+      const payload = createApiKey.mock.calls.at(-1)?.[0] as { expiresAt?: number };
+      expect(payload.expiresAt).toBeGreaterThan(Date.now());
+    });
+  });
+
+  /**
+   * "Webhook delivery — use future callback delivery surfaces" was offered as a
+   * permission. No endpoint has ever checked it, so it granted access to
+   * nothing.
+   */
+  it("does not offer a permission that grants nothing", () => {
+    renderWithProviders(<ApiKeysPage />);
+
+    expect(screen.queryByRole("switch", { name: /Webhook/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Start an agent" })).toBeInTheDocument();
+  });
+
+  it("warns what turning a key off means, and asks first", async () => {
+    renderWithProviders(<ApiKeysPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Turn off Production agent trigger" }));
+    expect(screen.getByText(/stops working straight away/)).toBeInTheDocument();
+    expect(revokeApiKey).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByPlaceholderText("No longer needed"), {
       target: { value: "Rotated after launch." },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Revoke key" }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn it off" }));
 
     await waitFor(() => {
       expect(revokeApiKey).toHaveBeenCalledWith({

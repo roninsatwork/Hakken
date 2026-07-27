@@ -10,10 +10,10 @@ The admin routes are under `src/app/(dashboard)/admin/agents/`:
 - `src/app/(dashboard)/admin/agents/[id]/layout.tsx` renders the agent detail shell and tabs. It also exposes a `Launch Run` action that calls `api.scheduler.manualRunSchedule` with the agent id.
 - `src/app/(dashboard)/admin/agents/[id]/page.tsx` shows transaction summary metrics and recent transactions.
 - `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx` shows run analytics, run lists, run details, replay, cancellation, feedback, reflections, memory candidate generation, eval creation, eval suite execution, and improvement suggestions.
-- `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages eval fixtures, smoke evals, suite presets, release candidate comparison, and release gate settings.
-- `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx` manages name, description, avatar upload, model mode, reasoning effort, internet access, activation, smoke eval checks, and release candidate actions.
+- `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages checks, smoke evals, suite presets, and which checks must pass before an agent goes live.
+- `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx` manages name, description, avatar upload, model mode, reasoning effort, internet access, and the draft/live switch.
 - `src/app/(dashboard)/admin/agents/[id]/skills/page.tsx` attaches, upgrades, enables, disables, and removes skills for one agent.
-- `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/integrations/page.tsx`, and `src/app/(dashboard)/admin/agents/[id]/schemas/page.tsx` configure the agent's context, governance, tools, and IO contracts.
+- `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx`, and `src/app/(dashboard)/admin/agents/[id]/interfaces/page.tsx` configure the agent's context, governance, tools, and answer shape.
 - `src/app/(dashboard)/admin/agents/[id]/memory/page.tsx` reviews memories, memory quality, memory candidates, reflections, and improvement suggestions.
 - `src/app/(dashboard)/admin/agents/[id]/logs/page.tsx` and `src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx` show agent logs.
 - `src/app/(dashboard)/admin/agents/skills/page.tsx` and `src/app/(dashboard)/admin/agents/skills/[id]/page.tsx` manage the reusable skill catalog.
@@ -29,11 +29,10 @@ The agent implementation is split across several Convex modules:
 - `convex/agentRuntime.ts` and `convex/agentService.ts` execute agent objectives and build the runtime prompt/tool flow.
 - `convex/agentRuns.ts` owns run listing, run detail, analytics, run observatory, pending approvals, approval decisions, replay, cancellation, and internal run creation/status updates.
 - `convex/agentRunFeedback.ts`, `convex/agentRunReflections.ts`, `convex/agentMemoryCandidates.ts`, `convex/agentMemories.ts`, and `convex/agentImprovementSuggestions.ts` implement learning and review loops.
-- `convex/agentEvalFixtures.ts` implements eval fixture CRUD, smoke evals, eval suites, release candidate comparisons, suite presets, and grading context.
+- `convex/agentEvalFixtures.ts` implements check CRUD, smoke evals, eval suites, suite presets, and grading context.
 - `convex/agentSkills.ts` implements the reusable skill catalog, skill versions, import/export, starter seeding, bindings, rollout analytics, and runtime skill lookup.
 - `convex/agentVersions.ts` creates and reads version snapshots.
 - `convex/agentTransactions.ts` and `convex/agentLogs.ts` provide dashboard telemetry and log detail.
-- `convex/releases.ts` manages release candidates for agents and is surfaced in the agent settings page.
 
 Related systems include `convex/aiModels.ts`, `convex/aiModelService.ts`, `convex/aiTools.ts`, `convex/knowledge.ts`, `convex/knowledgeActions.ts`, `convex/aiRules.ts`, `convex/scheduler.ts`, `convex/workflowRuntime.ts`, and `convex/orchestrator.ts`.
 
@@ -51,7 +50,7 @@ Agent-related schema lives in `convex/schema.ts`.
 
 `agentEvalFixtures` and `agentEvalSuitePresets` store eval evidence. Fixtures cover happy path, approval pause, rejected action, prompt injection, tenant boundary, bad tool args, cancellation, replayed failure, tool plan, and cost/latency budget scenarios. Suite presets group fixtures and can require model grading.
 
-`agentVersions`, `agentReleases`, `agentSkills`, `agentSkillVersions`, and `agentSkillBindings` support release and skill governance. Version snapshots hash prompt, tool set, skill set, memory revision, rule set, model config, and policy state. Skill bindings snapshot the skill version assigned to an agent so later catalog changes can be detected and upgraded intentionally.
+`agentVersions`, `agentSkills`, `agentSkillVersions`, and `agentSkillBindings` support version and skill governance. Version snapshots hash prompt, tool set, skill set, memory revision, rule set, model config, and policy state. Skill bindings snapshot the skill version assigned to an agent so later catalog changes can be detected and upgraded intentionally.
 
 ## Authorization And Tenancy
 
@@ -91,11 +90,11 @@ Learning flows start from runs and reflections. Feedback, failed runs, cancelled
 
 When changing this area, keep generated suggestions reviewable. Do not silently apply prompt, rule, tool-schema, routing, approval-policy, or skill-instruction changes without a review path.
 
-## Releases And Version Snapshots
+## Version Snapshots And The Activation Guard
 
-Agent settings surface release candidate actions through `convex/releases.ts`. Release candidates are backed by `agentVersions` snapshots and `agentReleases`. A snapshot records hashes for prompt, tools, skills, memories, rules, model config, and policy so reviewers can compare what changed.
+`agentVersions` records a snapshot per agent, hashing prompt, tools, skills, memories, rules, model config, and policy, so a check result can be tied to the exact agent that produced it.
 
-The settings UI shows latest release state, evidence summaries, activation windows, snapshot comparisons, and actions such as create candidate, approve, activate, cancel, and rollback. Release gates can be configured by tags or eval suite presets, and suite presets may require model grading. Activation guard logic in `agents.ts` should stay aligned with release-gate evidence generated in `agentEvalFixtures.ts` and release summaries in `releases.ts`.
+Switching an agent from draft to live is guarded in `agents.ts`. Only four things can hold it: no model the agent can run on, a skill switched on without the tools it requires, no check ever passed with a model, or a must-pass check failing. Absence is never one of them — an agent with no tools and no knowledge documents is an ordinary design, not a fault, and reporting it as one is what the removed readiness panel got wrong. Which checks must pass is configured by tag or by suite preset in `agentEvalFixtures.ts`, and a preset may require model grading.
 
 ## UI And Validation Notes
 

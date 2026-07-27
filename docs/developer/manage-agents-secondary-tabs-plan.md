@@ -1,5 +1,9 @@
 # Manage Agents Secondary Tabs UX Plan
 
+> **Superseded in part.** Interfaces is no longer a dropdown over Integrations and
+> I/O Schemas. Those were two halves of one question and are now a single screen at
+> `/admin/agents/:id/interfaces`. The rest of this plan still describes the tab row.
+
 This plan documents the agreed UX direction for the agent detail secondary tab row on the Manage Agents screen. The goal is to align the agent detail navigation with the global AI tabbed menu and the company workspace tabbed menu without changing the underlying agent routes.
 
 ## Problem

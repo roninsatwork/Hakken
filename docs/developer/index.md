@@ -35,8 +35,6 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Auxiliary App Experiences](./auxiliary-app-experiences.md)
 - [Embedded Widgets](./embedded-widgets.md)
 - [Knowledge Management](./knowledge-management.md)
-- [Agent Release Infrastructure](./agent-release-infrastructure.md)
-- [Releases And Observability](./releases-and-observability.md)
 - [Maintenance Scripts](./maintenance-scripts.md)
 - [Organization And Company Workspaces](./organization-and-company-workspaces.md)
 - [Platform Operations Settings](./platform-operations-settings.md)

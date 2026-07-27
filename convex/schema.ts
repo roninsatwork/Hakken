@@ -1048,42 +1048,6 @@ export default defineSchema({
     .index("by_agent_hash", ["agentId", "snapshotHash"])
     .index("by_agent_company_created", ["agentId", "companyId", "createdAt"]),
 
-  agentReleases: defineTable({
-    agentId: v.id("agents"),
-    agentVersionId: v.id("agentVersions"),
-    status: v.union(
-      v.literal("PENDING_SIGNOFF"),
-      v.literal("APPROVED"),
-      v.literal("ACTIVATED"),
-      v.literal("ROLLED_BACK"),
-      v.literal("CANCELLED")
-    ),
-    title: v.string(),
-    releaseNotes: v.string(),
-    rollbackPlan: v.string(),
-    ownerEmail: v.optional(v.string()),
-    approvalComment: v.optional(v.string()),
-    rollbackReason: v.optional(v.string()),
-    cancellationReason: v.optional(v.string()),
-    activationWindowStart: v.optional(v.number()),
-    activationWindowEnd: v.optional(v.number()),
-    readinessJson: v.string(),
-    createdBy: v.id("users"),
-    approvedBy: v.optional(v.id("users")),
-    activatedBy: v.optional(v.id("users")),
-    rolledBackBy: v.optional(v.id("users")),
-    cancelledBy: v.optional(v.id("users")),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    approvedAt: v.optional(v.number()),
-    activatedAt: v.optional(v.number()),
-    rolledBackAt: v.optional(v.number()),
-    cancelledAt: v.optional(v.number()),
-  })
-    .index("by_agent_created", ["agentId", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"])
-    .index("by_agent_status_created", ["agentId", "status", "createdAt"]),
-
   agentSkills: defineTable({
     name: v.string(),
     description: v.optional(v.string()),

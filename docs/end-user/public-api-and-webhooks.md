@@ -11,7 +11,6 @@ Available scopes are:
 - `agent:run` for triggering governed agent runs
 - `workflow:run` for triggering governed workflow executions
 - `run:read` for reading public run status
-- `webhook:deliver` reserved for callback delivery surfaces
 
 API keys can be revoked with an optional reason. Revoked and expired keys stop authenticating immediately.
 
@@ -44,18 +43,7 @@ API key creation and revocation are also recorded in audit logs.
 
 ## Webhook Deliveries
 
-Webhook delivery monitoring lives at `/admin/settings/webhook-deliveries`. The page shows delivery volume, success rate, retrying count, failed/abandoned count, status filters, company filters, destination URLs, attempt counts, next retry windows, last HTTP status, last error, and delivery timestamps.
-
-Delivery statuses are:
-
-- `PENDING`
-- `DELIVERING`
-- `SUCCESS`
-- `FAILED`
-- `RETRY_SCHEDULED`
-- `ABANDONED`
-
-Payloads and responses are stored as previews rather than full raw bodies. This keeps the operational log useful without turning it into a long-term payload archive.
+Webhook deliveries have no listing screen. The delivery engine — queueing, dispatch, retry backoff and per-attempt recording — is built and works, but nothing queues a delivery and there is nowhere in the product to register a destination URL, so the log could never contain anything. The screen was removed rather than left showing an empty log of an event that cannot happen. To make webhooks real: give a company somewhere to store a destination, and call `recordQueuedInternal` when a run finishes.
 
 ## Operating Guidance
 

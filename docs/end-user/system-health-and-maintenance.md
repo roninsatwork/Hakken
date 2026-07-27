@@ -2,14 +2,14 @@
 
 System health and maintenance scripts are Sonae operator tools for finding operational drift and running allowlisted repairs. Use them before and after launches, after provider incidents, when scheduled work looks stuck, when agent runs or approvals look wrong, or when dashboard data appears inconsistent.
 
-For the broader settings map, see [Platform Operations Settings](./platform-operations-settings.md). For release and run triage, see [Release Review And Run Observatory](./release-review-and-run-observatory.md).
+For the broader settings map, see [Platform Operations Settings](./platform-operations-settings.md). For run triage and platform health, see [Health](./health.md).
 
 ## Where To Find It
 
-- `/admin/settings/system-health`: platform or company-scoped health report.
+- `/admin/health`: platform or company-scoped health report.
 - `/admin/settings/scripts`: allowlisted maintenance script list.
 - `/admin/settings/scripts/[scriptId]`: one script's guidance, run action, and history.
-- `/admin/run-observatory`: recent agent run triage when system health points to run failures.
+- `/admin/health`: recent agent run triage when system health points to run failures.
 - `/admin/agents/approvals`: pending approval queue when system health reports stranded approvals.
 - `/admin/workflows/schedules`: schedule configuration when system health reports schedule drift or execution failures.
 

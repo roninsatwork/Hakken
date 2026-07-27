@@ -8,7 +8,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Code2, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, BrainCircuit, Timer, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, BrainCircuit, Timer, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -73,15 +73,10 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
         { label: t('tabs.rules'), href: `/admin/agents/${agentId}/rules`, icon: Scale },
       ],
     },
-    {
-      label: t('tabs.interfaces'),
-      href: `/admin/agents/${agentId}/integrations`,
-      icon: Cpu,
-      dropdownItems: [
-        { label: t('tabs.integrations'), href: `/admin/agents/${agentId}/integrations`, icon: Cpu },
-        { label: t('tabs.schemas'), href: `/admin/agents/${agentId}/schemas`, icon: Code2 },
-      ],
-    },
+    // One screen, so no dropdown. It was two — Integrations and I/O Schemas —
+    // which are two halves of the same question: what the agent can use, and
+    // what shape its answer comes back in.
+    { label: t('tabs.interfaces'), href: `/admin/agents/${agentId}/interfaces`, icon: Cpu },
     { label: t('tabs.settings'), href: `/admin/agents/${agentId}/settings`, icon: Settings },
     { label: t('tabs.logs'), href: `/admin/agents/${agentId}/logs`, icon: FileText },
   ];

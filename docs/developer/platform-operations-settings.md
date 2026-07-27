@@ -9,10 +9,9 @@ Platform operations settings cover API keys, webhook delivery logs, maintenance 
 - `src/app/(dashboard)/admin/settings/_components/PurgesSettingsSection.tsx` renders unified purge configuration, manual purge confirmation, cancellation, and recent purge history.
 - `src/app/(dashboard)/admin/settings/analytics/page.tsx` manages the global analytics tracking id and renders seven-day analytics data-health checks.
 - `src/app/(dashboard)/admin/settings/api-keys/page.tsx` manages tenant-scoped API keys.
-- `src/app/(dashboard)/admin/settings/webhook-deliveries/page.tsx` lists callback delivery attempts and summaries.
 - `src/app/(dashboard)/admin/settings/scripts/page.tsx` lists allowlisted maintenance scripts.
 - `src/app/(dashboard)/admin/settings/scripts/[scriptId]/page.tsx` shows one script, run guidance, and history.
-- `src/app/(dashboard)/admin/settings/system-health/page.tsx` renders platform health, alert rules, budget pressure, analytics health, and runbook signals.
+- `src/app/(dashboard)/admin/health/page.tsx` renders platform health, alert rules, budget pressure, analytics health, and runbook signals.
 - `src/app/(dashboard)/admin/auth-diagnostics/page.tsx` re-exports the shared auth diagnostics page.
 - `src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx` exposes the company settings diagnostics route.
 - `src/app/(dashboard)/admin/audit-logs/[id]/page.tsx` renders one audit log record from the settings audit feed.
@@ -35,7 +34,7 @@ Logo uploads use the `adminImage` frontend policy and `settings.generateUploadUr
 
 ## API Keys
 
-`convex/apiKeys.ts` implements key listing, creation, revocation, and public request authentication. API keys are company-scoped and can have `agent:run`, `workflow:run`, `run:read`, and `webhook:deliver` scopes.
+`convex/apiKeys.ts` implements key listing, creation, revocation, and public request authentication. API keys are company-scoped and can have `agent:run`, `workflow:run` and `run:read` scopes. `webhook:deliver` is still accepted so existing keys read back correctly, but it is no longer offered on screen: no endpoint has ever checked it, so it granted access to nothing.
 
 Creation normalizes the name, scopes, expiration, and rate limit. The raw key is generated once, returned to the caller, digested with SHA-256, and stored as `keyDigest` plus `keyPrefix`. Revocation stores status, revoker, timestamp, and optional reason. Creation and revocation write audit logs.
 
@@ -45,11 +44,7 @@ Do not store or display raw API keys after creation. New public API routes shoul
 
 ## Webhook Deliveries
 
-`convex/webhookDeliveries.ts` stores and lists webhook delivery records. Admin queries support platform or company scope, status filters, 7-day summaries, success rate, retry counts, failed/abandoned counts, and next-action text.
-
-Internal mutations record queued deliveries, schedule dispatch, and record attempts. Event type, destination URL, payload JSON, preview, max attempts, status, status code, errors, response previews, retry time, and delivery time are normalized. Payload previews are capped and full payloads are passed to the dispatch action rather than kept as long-term log data.
-
-`convex/webhookDeliveryActions.ts` performs dispatch. It loads the delivery, sends the callback, records success or failure, and schedules retries until attempts are exhausted. Keep retry decisions and payload preview limits aligned with the UI's promise that logs are evidence, not payload archives.
+Webhook deliveries have no listing screen. The delivery engine — queueing, dispatch, retry backoff and per-attempt recording — is built and works, but nothing queues a delivery and there is nowhere in the product to register a destination URL, so the log could never contain anything. The screen was removed rather than left showing an empty log of an event that cannot happen. To make webhooks real: give a company somewhere to store a destination, and call `recordQueuedInternal` when a run finishes.
 
 ## Maintenance Scripts
 
@@ -71,7 +66,7 @@ The detailed retention contract, pipeline behavior, batch limits, cancellation s
 
 ## System Health
 
-`src/app/(dashboard)/admin/settings/system-health/page.tsx` reads system health from `api.analyticsCron.getSystemHealthForAdmin` and renders signal rows, alert rule cards, budget pressure, analytics health, and a downloadable JSON report.
+`src/app/(dashboard)/admin/health/page.tsx` reads system health from `api.analyticsCron.getSystemHealthForAdmin` and renders signal rows, alert rule cards, budget pressure, analytics health, and a downloadable JSON report.
 
 Health report construction is supported by `convex/platformAlertService.ts` and related system/analytics modules. The report covers missing or duplicate analytics snapshots, message dimension drift, missing threads, agent error logs, failed transactions, stale runs, pending approvals, failed tool calls, provider failures, high-cost agents, budget pressure, failed or stale scheduled executions, overdue schedules, and schedules missing a next run.
 

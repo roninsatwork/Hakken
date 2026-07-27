@@ -2102,10 +2102,13 @@ describe("connectors that do not exist", () => {
     expect(JSON.stringify(functionTurn)).not.toContain('"status":"success"');
   });
 
-  test("a genuinely unknown handler is still an error, not a missing feature", async () => {
-    // A typo in a tool's configuration and an entire missing integration used to
-    // produce the same unhelpful log line. They need different answers: one is a
-    // gap in the platform, the other is broken configuration.
+  /**
+   * A typo used to throw while a declared-but-unbuilt connector reported itself.
+   * The distinction cost more than it was worth: removing something from the
+   * catalogue turned every tool already installed from it into a hard failure
+   * mid-run. Both report now, and the message names whatever it can.
+   */
+  test("a handler nothing implements is reported, not thrown", async () => {
     const t = makeTest();
     const { agentId, threadId, userId } = await seedAgentRun(t);
     await t.run(async (ctx) => {
@@ -2136,8 +2139,7 @@ describe("connectors that do not exist", () => {
     });
 
     const { toolCalls } = await runSteps(t);
-    expect(toolCalls[0].status).toBe("FAILED");
-    expect(toolCalls[0].error).toContain("No tool handler is registered");
+    expect(toolCalls[0].status).toBe("NOT_IMPLEMENTED");
   });
 });
 

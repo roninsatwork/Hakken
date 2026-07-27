@@ -9,14 +9,13 @@ Agent configuration routes live under `src/app/(dashboard)/admin/agents/`:
 - `page.tsx`: agent catalogue, search, template builder, blank-agent creation, template-agent creation, and delete confirmation.
 - `[id]/page.tsx`: agent dashboard with transaction summary cards and paginated transaction history.
 - `[id]/layout.tsx`: agent detail shell, tab navigation, and the manual `Launch Run` action that calls `api.scheduler.manualRunSchedule`.
-- `[id]/settings/page.tsx`: agent identity, avatar upload, model mode, reasoning effort, internet access, activation readiness, smoke-eval actions, and release candidate controls.
+- `[id]/settings/page.tsx`: agent identity, avatar upload, model mode, reasoning effort, internet access, and the draft/live switch with the one reason an agent cannot go live.
 - `[id]/knowledge/page.tsx`: per-agent knowledge library management through the shared knowledge admin surface.
 - `[id]/system-prompt/page.tsx`: system prompt editing.
 - `[id]/rules/page.tsx`, `[id]/rules/new/page.tsx`, and `[id]/rules/[ruleId]/page.tsx`: agent rule list, creation, and editing.
-- `[id]/integrations/page.tsx`: agent tool and integration mappings.
-- `[id]/schemas/page.tsx`: input and output JSON schema editing through `JsonSchemaBuilder`.
+- `[id]/interfaces/page.tsx`: which tools the agent may use, and the fixed answer shape it must return, edited through `JsonSchemaBuilder`.
 - `[id]/runs/page.tsx`: run review, run detail, replay, cancellation, feedback, reflections, memory candidate generation/review, eval creation, eval-suite execution, and improvement suggestions.
-- `[id]/evals/page.tsx`: eval fixtures, smoke evals, suite presets, skill coverage, release-gate policy, and release candidate comparison.
+- `[id]/evals/page.tsx`: checks, smoke evals, suite presets, skill coverage, and which checks must pass before an agent goes live.
 - `[id]/memory/page.tsx`: active memories, memory quality, memory candidates, reflections, and improvement suggestions.
 - `[id]/logs/page.tsx`: searchable agent trace list with offset pagination and delete confirmation.
 - `[id]/logs/[logId]/page.tsx`: single trace detail.
@@ -78,7 +77,7 @@ For template agents, the page calls `api.agents.createAgentFromTemplate`. For bl
 
 ## Schema Editing
 
-The schemas tab at `[id]/schemas/page.tsx` edits `agents.inputSchema` and `agents.outputSchema`.
+The interfaces tab at `[id]/interfaces/page.tsx` edits `agents.outputSchema`. `agents.inputSchema` is no longer edited or read: it was stored and versioned, and nothing consumed it.
 
 The UI uses `JsonSchemaBuilder` for both schemas:
 

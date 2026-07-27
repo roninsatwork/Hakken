@@ -12,22 +12,22 @@ describe("JsonSchemaBuilder", () => {
 
     render(<JsonSchemaBuilder title="Input Schema" subtitle="Data to collect" onChange={onChange} />);
 
-    expect(screen.getByText("No schema nodes declared. Dynamic structure implicitly inferred.")).toBeInTheDocument();
+    expect(screen.getByText("No fields yet, so the agent answers in plain English.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Add Node/i }));
-    fireEvent.change(screen.getByPlaceholderText("key_identifier"), { target: { value: "first name!" } });
+    fireEvent.click(screen.getByRole("button", { name: /Add a field/i }));
+    fireEvent.change(screen.getByPlaceholderText("field_name"), { target: { value: "first name!" } });
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "NUMBER" } });
-    fireEvent.change(screen.getByPlaceholderText("Tell LLM exactly what to extract for this key..."), {
+    fireEvent.change(screen.getByPlaceholderText("What should go in this field?"), {
       target: { value: "Customer age" },
     });
 
     expect(onChange).toHaveBeenLastCalledWith(
       JSON.stringify(
         {
-          type: "OBJECT",
+          type: "object",
           properties: {
             first_name_: {
-              type: "NUMBER",
+              type: "number",
               description: "Customer age",
             },
           },
@@ -64,8 +64,8 @@ describe("JsonSchemaBuilder", () => {
     expect(onChange).toHaveBeenLastCalledWith(
       JSON.stringify(
         {
-          type: "OBJECT",
-          properties: { score: { type: "NUMBER", description: "Confidence score" } },
+          type: "object",
+          properties: { score: { type: "number", description: "Confidence score" } },
         },
         null,
         2
@@ -82,9 +82,37 @@ describe("JsonSchemaBuilder", () => {
 
     render(<JsonSchemaBuilder title="Broken" subtitle="Invalid" onChange={vi.fn()} initialSchemaJson="not-json" />);
 
-    expect(screen.getByText("No schema nodes declared. Dynamic structure implicitly inferred.")).toBeInTheDocument();
+    expect(screen.getByText("No fields yet, so the agent answers in plain English.")).toBeInTheDocument();
     expect(errorSpy).toHaveBeenCalled();
 
     errorSpy.mockRestore();
   });
+
+  /**
+   * Shapes saved before the spelling was fixed.
+   *
+   * The builder used to write `"OBJECT"` and `"NUMBER"` in capitals, which the
+   * one runtime path that read them would have rejected. Anything already saved
+   * that way still has to open here, or fixing the spelling would silently empty
+   * every schema anyone had built.
+   */
+  it("opens a schema saved in the old capitalised spelling", () => {
+    const onChange = vi.fn();
+    render(
+      <JsonSchemaBuilder
+        title="Output Schema"
+        subtitle="Returned fields"
+        onChange={onChange}
+        initialSchemaJson={JSON.stringify({
+          type: "OBJECT",
+          properties: { score: { type: "NUMBER", description: "Confidence score" } },
+          required: ["score"],
+        })}
+      />
+    );
+
+    expect(screen.getByDisplayValue("score")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Confidence score")).toBeInTheDocument();
+  });
+
 });

@@ -19,7 +19,7 @@ Company model controls:
 
 Related monitoring:
 
-- `/admin/run-observatory` shows recent agent run health, cost, model, and tool signals.
+- `/admin/health` shows recent agent run health, cost, model, and tool signals.
 - `/admin/ai/chat-logs` helps investigate conversations behind cost or behavior changes.
 
 ## Providers

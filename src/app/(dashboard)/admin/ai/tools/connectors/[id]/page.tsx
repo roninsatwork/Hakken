@@ -1,13 +1,17 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
 import { useToast } from "@/src/context/ToastContext";
-import { Activity, ArrowLeft, CheckCircle2, KeyRound, Loader2, Save, ShieldCheck, SlidersHorizontal, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { cn } from "@/src/ui/lib/utils";
+import { formatDateTime } from "@/src/lib/dates";
+import { AdminSaveAction } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 
 type ConnectorDraft = {
   configuredSecretRefs: string;
@@ -17,102 +21,117 @@ type ConnectorDraft = {
   companyId: string;
 };
 
-function createDraft(details: {
-  connector: {
-    configuredSecretRefs?: string[];
-    enabledToolMappings?: string[];
-    isActive: boolean;
-    tenantAvailability: "GLOBAL" | "TENANT_RESTRICTED";
-    companyId?: Id<"companies">;
-  };
-}) {
-  return {
-    configuredSecretRefs: (details.connector.configuredSecretRefs ?? []).join(", "),
-    enabledToolMappings: details.connector.enabledToolMappings ?? [],
-    isActive: details.connector.isActive,
-    tenantAvailability: details.connector.tenantAvailability,
-    companyId: details.connector.companyId ?? "",
-  };
-}
-
 function parseSecretRefs(value: string) {
   return Array.from(new Set(value.split(",").map((entry) => entry.trim()).filter(Boolean)));
 }
 
-function parseDiagnosticDetails(value?: string) {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
-  } catch {
-    return null;
-  }
+/** A yes/no setting, stated once, with a sentence saying what the state does. */
+function SettingSwitch({ label, description, checked, onChange }: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-4">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-[13px] font-medium text-foreground">{label}</span>
+        <p className="text-[12px] leading-relaxed text-muted">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className="mt-0.5 shrink-0"
+      >
+        <span className={cn("relative block h-5 w-9 rounded-full transition-colors", checked ? "bg-brand" : "bg-foreground/15")}>
+          <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", checked ? "left-[18px]" : "left-0.5")} />
+        </span>
+      </button>
+    </div>
+  );
 }
 
-function formatDiagnosticValue(value: unknown) {
-  if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "-";
-  if (value === undefined || value === null || value === "") return "-";
-  return String(value);
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-6">
+      <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
-export default function ConnectorInstallPage({ params }: { params: Promise<{ id: Id<"toolConnectors"> }> }) {
-  const t = useTranslations("admin.aiTools.connectorDetails");
+/**
+ * One tool's setup, in plain words.
+ *
+ * The screen this replaces led with three read-only boxes reading AUTH MODE /
+ * NONE, AVAILABILITY / GLOBAL and ACTIVE — two facts nobody can act on beside
+ * one setting that can. Beside it sat three panels called Generated Tools,
+ * Secret Reference Registry and Validation History, two of which normally said
+ * "No … yet". What is left is the three things a reader can actually change,
+ * and one plain answer to "does it work".
+ */
+export default function ConnectorSetupPage() {
   const { showErrorToast } = useToast();
-  const { id } = use(params);
+  const params = useParams();
+  const id = params.id as Id<"toolConnectors">;
+
   const details = useQuery(api.aiTools.getConnectorInstallDetails, { connectorId: id });
   const companyOptions = useQuery(api.companies.getCompanyOptions, details?.canManageTenantScope ? {} : "skip") || [];
   const updateConnectorInstall = useMutation(api.aiTools.updateConnectorInstall);
   const validateConnectorConfiguration = useMutation(api.aiTools.validateConnectorConfiguration);
-  const beginConnectorOAuth = useMutation(api.aiTools.beginConnectorOAuth);
-  const completeConnectorOAuth = useMutation(api.aiTools.completeConnectorOAuth);
-  const disconnectConnectorOAuth = useMutation(api.aiTools.disconnectConnectorOAuth);
 
   const [draft, setDraft] = useState<ConnectorDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [isAuthorizing, setIsAuthorizing] = useState(false);
-  const [isCompletingOAuth, setIsCompletingOAuth] = useState(false);
-  const [oauthState, setOauthState] = useState("");
-  const [oauthAccountRef, setOauthAccountRef] = useState("");
-  const [oauthTokenRef, setOauthTokenRef] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   if (details === undefined) {
-    return (
-      <div className="flex-1 w-full h-full flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted" />
-      </div>
-    );
+    return <div className="p-8 text-secondary">Loading...</div>;
+  }
+  if (!details?.connector) {
+    return <div className="p-8 text-secondary">This tool could not be found.</div>;
   }
 
-  if (!details) return null;
+  const { connector, definition } = details;
+  const tools = details.tools ?? [];
+  const testLogs = details.testLogs ?? [];
+  // The definition, not the copy frozen into the install row. Renaming a tool
+  // used to leave every existing install showing its old name for ever.
+  const name = definition?.name ?? connector.name;
+  const description = definition?.description ?? connector.description;
+  const requiredSecretRefs = definition?.requiredSecretRefs ?? [];
+  const toolDefinitions = definition?.toolDefinitions ?? [];
 
-  const form = draft ?? createDraft(details);
-  const definition = details.definition;
-  const configuredSecretRefs = parseSecretRefs(form.configuredSecretRefs);
-  const missingRequiredRefs = (details.connector.requiredSecretRefs ?? []).filter((secretRef) => !configuredSecretRefs.includes(secretRef));
-
-  const updateDraft = (updates: Partial<ConnectorDraft>) => {
-    setDraft((current) => ({ ...(current ?? createDraft(details)), ...updates }));
+  const form: ConnectorDraft = draft ?? {
+    configuredSecretRefs: (connector.configuredSecretRefs ?? []).join(", "),
+    enabledToolMappings: connector.enabledToolMappings ?? [],
+    isActive: connector.isActive,
+    tenantAvailability: connector.tenantAvailability,
+    companyId: connector.companyId ?? "",
   };
+  const updateDraft = (patch: Partial<ConnectorDraft>) => setDraft({ ...form, ...patch });
 
-  const toggleToolMapping = (handlerMapping: string) => {
+  const latestCheck = testLogs[0];
+  const missingRefs = requiredSecretRefs.filter((ref) => !parseSecretRefs(form.configuredSecretRefs).includes(ref));
+
+  const toggleTool = (handlerMapping: string) => {
     const enabled = new Set(form.enabledToolMappings);
-    if (enabled.has(handlerMapping)) {
-      enabled.delete(handlerMapping);
-    } else {
-      enabled.add(handlerMapping);
-    }
+    if (enabled.has(handlerMapping)) enabled.delete(handlerMapping);
+    else enabled.add(handlerMapping);
     updateDraft({ enabledToolMappings: Array.from(enabled) });
   };
 
-  const handleSave = async (event: React.FormEvent) => {
+  const handleSave = async (event: FormEvent) => {
     event.preventDefault();
     if (isSaving) return;
     setIsSaving(true);
     try {
       await updateConnectorInstall({
         connectorId: id,
-        configuredSecretRefs,
+        configuredSecretRefs: parseSecretRefs(form.configuredSecretRefs),
         enabledToolMappings: form.enabledToolMappings,
         isActive: form.isActive,
         ...(details.canManageTenantScope ? {
@@ -121,6 +140,8 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
         } : {}),
       });
       setDraft(null);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
     } catch (error) {
       showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
@@ -128,401 +149,184 @@ export default function ConnectorInstallPage({ params }: { params: Promise<{ id:
     }
   };
 
-  const handleTest = async () => {
-    if (isTesting) return;
-    setIsTesting(true);
+  const handleCheck = async () => {
+    if (isChecking) return;
+    setIsChecking(true);
     try {
       await validateConnectorConfiguration({ connectorId: id });
     } catch (error) {
       showErrorToast(error, { scope: "admin-connector-detail" });
     } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleBeginOAuth = async () => {
-    if (isAuthorizing) return;
-    setIsAuthorizing(true);
-    try {
-      const result = await beginConnectorOAuth({ connectorId: id });
-      setOauthState(result.state);
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-    } finally {
-      setIsAuthorizing(false);
-    }
-  };
-
-  const handleCompleteOAuth = async () => {
-    if (isCompletingOAuth || !oauthState.trim() || !oauthAccountRef.trim() || !oauthTokenRef.trim()) return;
-    setIsCompletingOAuth(true);
-    try {
-      await completeConnectorOAuth({
-        connectorId: id,
-        state: oauthState.trim(),
-        accountRef: oauthAccountRef.trim(),
-        tokenRef: oauthTokenRef.trim(),
-      });
-      setOauthState("");
-      setOauthAccountRef("");
-      setOauthTokenRef("");
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-    } finally {
-      setIsCompletingOAuth(false);
-    }
-  };
-
-  const handleDisconnectOAuth = async () => {
-    if (isAuthorizing) return;
-    setIsAuthorizing(true);
-    try {
-      await disconnectConnectorOAuth({ connectorId: id });
-    } catch (error) {
-      showErrorToast(error, { scope: "admin-connector-detail" });
-    } finally {
-      setIsAuthorizing(false);
+      setIsChecking(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
-      <header className="flex flex-col gap-1">
+    <div className="flex w-full flex-col gap-6 pb-12 animate-in fade-in slide-in-from-bottom-2">
+      <header className="flex flex-col gap-2">
         <Link
           href="/admin/ai/tools"
-          className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
+          className="flex w-max items-center gap-2 text-[12px] text-muted transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{t("back")}</span>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Tools
         </Link>
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <SlidersHorizontal className="w-6 h-6 text-brand" />
-              {details.connector.name}
-            </h1>
-            <p className="text-[13px] text-secondary tracking-wide max-w-3xl mt-1">
-              {details.connector.description}
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{name}</h1>
+            <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">{description}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 rounded-[6px] border border-border-dim bg-foreground/5 text-[10px] font-bold tracking-[0.1em] uppercase text-muted">
-              {details.connector.installStatus}
-            </span>
-            <span className="px-2 py-1 rounded-[6px] border border-border-dim bg-foreground/5 text-[10px] font-bold tracking-[0.1em] uppercase text-muted">
-              {details.connector.testStatus ?? t("untested")}
-            </span>
-          </div>
+          <AdminSaveAction
+            isSaving={isSaving}
+            label="Save"
+            savingLabel="Saving..."
+            successLabel="Saved"
+            showSuccess={saveSuccess}
+            onClick={handleSave}
+          />
         </div>
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
-        <form onSubmit={handleSave} className="flex flex-col gap-5">
-          <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("sections.connection")}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-              <div className="rounded-[8px] border border-border-dim bg-background/40 p-3">
-                <span className="block text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.authMode")}</span>
-                <span className="block text-[13px] font-semibold text-foreground mt-1">{details.connector.authMode}</span>
-              </div>
-              <div className="rounded-[8px] border border-border-dim bg-background/40 p-3">
-                <span className="block text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.availability")}</span>
-                <span className="block text-[13px] font-semibold text-foreground mt-1">{details.connector.tenantAvailability}</span>
-              </div>
-              <label className="rounded-[8px] border border-border-dim bg-background/40 p-3 flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.active")}</span>
-                  <span className="block text-[13px] font-semibold text-foreground mt-1">{form.isActive ? t("active") : t("disabled")}</span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) => updateDraft({ isActive: event.target.checked })}
-                />
-              </label>
-            </div>
-
-            {details.canManageTenantScope && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                <label className="flex flex-col gap-2">
-                  <span className="text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.scope")}</span>
+      <form onSubmit={handleSave} className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="flex flex-col gap-6">
+          <Card title="Settings">
+            <div className="divide-y divide-border-dim/40">
+              <SettingSwitch
+                label="Available to agents"
+                description={form.isActive
+                  ? "Agents can be given this tool."
+                  : "Switched off. No agent can use this, whatever it has been given."}
+                checked={form.isActive}
+                onChange={(next) => updateDraft({ isActive: next })}
+              />
+              {details.canManageTenantScope && (
+                <div className="flex flex-col gap-2 py-4">
+                  <span className="text-[13px] font-medium text-foreground">Who can use it</span>
                   <select
+                    aria-label="Who can use it"
                     value={form.tenantAvailability}
                     onChange={(event) => updateDraft({
                       tenantAvailability: event.target.value as "GLOBAL" | "TENANT_RESTRICTED",
                       companyId: event.target.value === "GLOBAL" ? "" : form.companyId,
                     })}
-                    className="w-full bg-transparent border border-border-dim rounded-[8px] p-3 text-[13px] text-foreground outline-none focus:border-brand/40"
+                    className="h-[46px] w-full max-w-sm cursor-pointer rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
                   >
-                    <option value="GLOBAL">{t("scope.global")}</option>
-                    <option value="TENANT_RESTRICTED">{t("scope.tenant")}</option>
+                    <option value="GLOBAL">Every company</option>
+                    <option value="TENANT_RESTRICTED">One company only</option>
                   </select>
-                </label>
-                <label className="flex flex-col gap-2">
-                  <span className="text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.tenant")}</span>
-                  <select
-                    value={form.companyId}
-                    onChange={(event) => updateDraft({
-                      companyId: event.target.value,
-                      tenantAvailability: event.target.value ? "TENANT_RESTRICTED" : form.tenantAvailability,
-                    })}
-                    disabled={form.tenantAvailability === "GLOBAL"}
-                    className="w-full bg-transparent border border-border-dim rounded-[8px] p-3 text-[13px] text-foreground outline-none focus:border-brand/40 disabled:opacity-50"
-                  >
-                    <option value="">{t("scope.noTenant")}</option>
-                    {companyOptions.map((company) => (
-                      <option key={company._id} value={company._id}>{company.name}</option>
-                    ))}
-                  </select>
-                </label>
+                  {form.tenantAvailability === "TENANT_RESTRICTED" && (
+                    <select
+                      aria-label="Company"
+                      value={form.companyId}
+                      onChange={(event) => updateDraft({ companyId: event.target.value })}
+                      className="h-[46px] w-full max-w-sm cursor-pointer rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
+                    >
+                      <option value="">Choose a company</option>
+                      {companyOptions.map((company: { _id: string; name: string }) => (
+                        <option key={company._id} value={company._id}>{company.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+              {/* Only shown when this tool genuinely needs one. The old screen
+                  drew the box on every connector, including the ones that
+                  answered "No secret references are required" directly beneath it. */}
+              {requiredSecretRefs.length > 0 && (
+                <div className="flex flex-col gap-2 py-4">
+                  <label htmlFor="connector-secrets" className="text-[13px] font-medium text-foreground">
+                    Keys it needs
+                  </label>
+                  <p className="text-[12px] leading-relaxed text-muted">
+                    This tool needs {requiredSecretRefs.join(" and ")} set on the server. Name them here so Sonae knows where to look — the values themselves never live in this screen.
+                  </p>
+                  <input
+                    id="connector-secrets"
+                    type="text"
+                    value={form.configuredSecretRefs}
+                    onChange={(event) => updateDraft({ configuredSecretRefs: event.target.value })}
+                    placeholder={requiredSecretRefs.join(", ")}
+                    className="h-[46px] w-full max-w-sm rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
+                  />
+                  {missingRefs.length > 0 && (
+                    <p className="text-[12px] leading-relaxed text-amber-400">
+                      Still missing: {missingRefs.join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card title="What it can do">
+            {toolDefinitions.length === 0 ? (
+              <p className="text-[13px] text-secondary">This tool has nothing to switch on.</p>
+            ) : (
+              <div className="divide-y divide-border-dim/40">
+                {toolDefinitions.map((tool) => (
+                  <SettingSwitch
+                    key={tool.handlerMapping}
+                    label={tool.name}
+                    description={tool.description}
+                    checked={form.enabledToolMappings.includes(tool.handlerMapping)}
+                    onChange={() => toggleTool(tool.handlerMapping)}
+                  />
+                ))}
               </div>
             )}
+          </Card>
+        </div>
 
-            <div className="mt-4 flex flex-col gap-2">
-              <label className="text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.secretRefs")}</label>
-              <input
-                value={form.configuredSecretRefs}
-                onChange={(event) => updateDraft({ configuredSecretRefs: event.target.value })}
-                placeholder={t("placeholders.secretRefs")}
-                className="w-full bg-transparent border border-border-dim rounded-[8px] p-3 text-[13px] text-foreground placeholder:text-muted/40 outline-none focus:border-brand/40"
-              />
-              <div className="flex flex-wrap gap-2">
-                {(details.connector.requiredSecretRefs ?? []).map((secretRef) => (
-                  <span
-                    key={secretRef}
-                    className={`text-[11px] font-mono rounded-[6px] px-2 py-1 ${missingRequiredRefs.includes(secretRef) ? "bg-rose-500/10 text-rose-500" : "bg-emerald-500/10 text-emerald-500"}`}
-                  >
-                    {secretRef}
-                  </span>
-                ))}
-                {(details.connector.requiredSecretRefs ?? []).length === 0 && (
-                  <span className="text-[12px] text-muted">{t("noSecrets")}</span>
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("sections.tools")}</h2>
-            <div className="flex flex-col gap-3 mt-4">
-              {definition?.toolDefinitions.length ? (
-                definition.toolDefinitions.map((tool) => (
-                  <label key={tool.handlerMapping} className="flex items-start gap-3 border border-border-dim bg-background/40 rounded-[8px] p-3">
-                    <input
-                      type="checkbox"
-                      checked={form.enabledToolMappings.includes(tool.handlerMapping)}
-                      onChange={() => toggleToolMapping(tool.handlerMapping)}
-                      className="mt-1"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-semibold text-foreground">{tool.name}</span>
-                      <span className="block text-[12px] text-muted mt-1">{tool.description}</span>
-                      <span className="inline-flex mt-2 text-[11px] font-mono text-secondary bg-foreground/5 rounded-[6px] px-2 py-1">
-                        {tool.handlerMapping}
-                      </span>
-                    </span>
-                  </label>
-                ))
-              ) : (
-                <div className="border border-dashed border-border-dim rounded-[8px] p-6 text-[13px] text-muted">
-                  {t("noTools")}
-                </div>
-              )}
-            </div>
-          </section>
-
-          {details.connector.authMode === "OAUTH" && (
-            <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
-              <h2 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-brand" />
-                {t("sections.oauth")}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                <div className="rounded-[8px] border border-border-dim bg-background/40 p-3">
-                  <span className="block text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.oauthStatus")}</span>
-                  <span className="block text-[13px] font-semibold text-foreground mt-1">{details.connector.authConnectionStatus ?? t("oauth.notConnected")}</span>
-                </div>
-                <div className="rounded-[8px] border border-border-dim bg-background/40 p-3">
-                  <span className="block text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.oauthAccount")}</span>
-                  <span className="block text-[13px] font-semibold text-foreground mt-1 truncate">{details.connector.authAccountRef ?? t("oauth.noAccount")}</span>
-                </div>
-                <div className="rounded-[8px] border border-border-dim bg-background/40 p-3">
-                  <span className="block text-[10px] font-mono tracking-[0.18em] text-muted uppercase">{t("fields.oauthScopes")}</span>
-                  <span className="block text-[13px] font-semibold text-foreground mt-1">{(details.connector.oauthScopes ?? details.connector.requiredScopes ?? []).length}</span>
+        <div className="flex flex-col gap-6">
+          <Card title="Does it work">
+            {latestCheck ? (
+              <div className="flex items-start gap-3">
+                {latestCheck.status === "SUCCESS"
+                  ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#10b981]" />
+                  : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />}
+                <div className="min-w-0">
+                  <p className="text-[13px] leading-relaxed text-foreground">
+                    {latestCheck.status === "SUCCESS" ? "Working." : latestCheck.message}
+                  </p>
+                  <p className="mt-1 text-[12px] text-muted">
+                    Last checked {formatDateTime(latestCheck.testedAt)}
+                  </p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                <input
-                  value={oauthState}
-                  onChange={(event) => setOauthState(event.target.value)}
-                  placeholder={t("placeholders.oauthState")}
-                  className="w-full bg-transparent border border-border-dim rounded-[8px] p-3 text-[13px] text-foreground placeholder:text-muted/40 outline-none focus:border-brand/40"
-                />
-                <input
-                  value={oauthAccountRef}
-                  onChange={(event) => setOauthAccountRef(event.target.value)}
-                  placeholder={t("placeholders.oauthAccountRef")}
-                  className="w-full bg-transparent border border-border-dim rounded-[8px] p-3 text-[13px] text-foreground placeholder:text-muted/40 outline-none focus:border-brand/40"
-                />
-                <input
-                  value={oauthTokenRef}
-                  onChange={(event) => setOauthTokenRef(event.target.value)}
-                  placeholder={t("placeholders.oauthTokenRef")}
-                  className="w-full bg-transparent border border-border-dim rounded-[8px] p-3 text-[13px] text-foreground placeholder:text-muted/40 outline-none focus:border-brand/40"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={handleBeginOAuth}
-                  disabled={isAuthorizing}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] border border-border-dim text-[13px] font-medium text-foreground hover:bg-foreground/5 disabled:opacity-60"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  {isAuthorizing ? t("oauth.starting") : t("oauth.start")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCompleteOAuth}
-                  disabled={isCompletingOAuth || !oauthState.trim() || !oauthAccountRef.trim() || !oauthTokenRef.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  {isCompletingOAuth ? t("oauth.completing") : t("oauth.complete")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDisconnectOAuth}
-                  disabled={isAuthorizing}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] border border-rose-500/30 text-[13px] font-medium text-rose-500 hover:bg-rose-500/10 disabled:opacity-60"
-                >
-                  <XCircle className="w-4 h-4" />
-                  {t("oauth.disconnect")}
-                </button>
-              </div>
-              {details.oauthConnection && (
-                <p className="text-[12px] text-muted mt-3">
-                  {t("oauth.latest", { status: details.oauthConnection.status, provider: details.oauthConnection.provider })}
-                </p>
-              )}
-            </section>
-          )}
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] bg-foreground text-background text-[13px] font-medium hover:opacity-90 disabled:opacity-60"
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? t("saving") : t("save")}
-            </button>
+            ) : (
+              <p className="text-[13px] leading-relaxed text-secondary">
+                Not checked yet.
+              </p>
+            )}
             <button
               type="button"
-              onClick={handleTest}
-              disabled={isTesting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] border border-border-dim text-[13px] font-medium text-foreground hover:bg-foreground/5 disabled:opacity-60"
+              onClick={handleCheck}
+              disabled={isChecking}
+              className="mt-1 inline-flex h-9 w-max items-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
             >
-              <Activity className="w-4 h-4" />
-              {isTesting ? t("testing") : t("test")}
+              {isChecking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              {isChecking ? "Checking..." : "Check now"}
             </button>
-          </div>
-        </form>
+          </Card>
 
-        <aside className="flex flex-col gap-4">
-          <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
-            <h2 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-brand" />
-              {t("sections.generatedTools")}
-            </h2>
-            <div className="flex flex-col gap-2 mt-4">
-              {details.tools.length ? (
-                details.tools.map((tool) => (
-                  <Link
-                    key={tool._id}
-                    href={`/admin/ai/tools/${tool._id}`}
-                    className="border border-border-dim bg-background/40 rounded-[8px] p-3 hover:border-brand/30"
-                  >
-                    <span className="block text-[13px] font-semibold text-foreground">{tool.name}</span>
-                    <span className="block text-[11px] font-mono text-muted mt-1">{tool.handlerMapping}</span>
-                    <span className="block text-[11px] text-secondary mt-1">{tool.isActive === false ? t("disabled") : t("active")}</span>
-                  </Link>
-                ))
-              ) : (
-                <p className="text-[12px] text-muted">{t("noGeneratedTools")}</p>
-              )}
-            </div>
-          </section>
-
-          <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("sections.secretRegistry")}</h2>
-            <div className="flex flex-col gap-2 mt-4">
-              {details.secretRefs.length ? (
-                details.secretRefs.map((secretRef) => (
-                  <div key={secretRef._id} className="border border-border-dim bg-background/40 rounded-[8px] p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[12px] font-mono text-foreground">{secretRef.key}</span>
-                      <span className={`text-[10px] font-bold tracking-[0.1em] uppercase ${secretRef.status === "CONFIGURED" ? "text-emerald-500" : "text-rose-500"}`}>
-                        {secretRef.status}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted mt-2">{secretRef.required ? t("required") : t("optional")}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-[12px] text-muted">{t("noSecretRegistry")}</p>
-              )}
-            </div>
-          </section>
-
-          <section className="border border-border-dim bg-card/60 rounded-[8px] p-4">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("sections.testHistory")}</h2>
-            <div className="flex flex-col gap-2 mt-4">
-              {details.testLogs.length ? (
-                details.testLogs.map((log) => {
-                  const diagnosticDetails = parseDiagnosticDetails(log.diagnosticDetailsJson);
-
-                  return (
-                    <div key={log._id} className="border border-border-dim bg-background/40 rounded-[8px] p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          {log.status === "SUCCESS" ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-rose-500" />
-                          )}
-                          <span className="text-[12px] font-semibold text-foreground">{log.status}</span>
-                        </div>
-                        {log.diagnosticCode && (
-                          <span className="text-[10px] font-mono text-secondary bg-foreground/5 border border-border-dim rounded-[6px] px-2 py-1">
-                            {log.diagnosticCode}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[12px] text-muted mt-2">{log.message}</p>
-                      {diagnosticDetails && (
-                        <dl className="grid grid-cols-1 gap-1 mt-3 rounded-[8px] bg-foreground/5 p-2">
-                          {["authMode", "installStatus", "authConnectionStatus", "missingSecretRefs"].map((key) => (
-                            <div key={key} className="flex items-start justify-between gap-3">
-                              <dt className="text-[10px] font-mono text-muted">{t(`diagnostics.${key}`)}</dt>
-                              <dd className="text-[10px] text-secondary text-right break-all">
-                                {formatDiagnosticValue(diagnosticDetails[key])}
-                              </dd>
-                            </div>
-                          ))}
-                        </dl>
-                      )}
-                      <span className="block text-[10px] text-secondary mt-2">{new Date(log.testedAt).toLocaleString()}</span>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-[12px] text-muted">{t("noTestLogs")}</p>
-              )}
-            </div>
-          </section>
-        </aside>
-      </div>
+          {/* Only when there is something to show. Two of the three panels here
+              used to be permanent, and normally read "No … yet". */}
+          {tools.length > 0 && (
+            <Card title="Tools this created">
+              <ul className="flex flex-col gap-2">
+                {tools.map((tool: { _id: string; name: string; isActive?: boolean }) => (
+                  <li key={tool._id} className="flex items-center justify-between gap-3 text-[13px]">
+                    <Link href={`/admin/ai/tools/${tool._id}`} className="text-foreground transition-colors hover:text-brand">
+                      {tool.name}
+                    </Link>
+                    {tool.isActive === false ? <span className="text-[12px] text-muted">Off</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
+      </form>
     </div>
   );
 }

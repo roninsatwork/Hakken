@@ -125,7 +125,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     expect(agent?.modelSelectionMode).toBe("inherit");
   });
 
-  test("agent readiness reports activation warnings until tools, knowledge, fixtures, and smoke evals exist", async () => {
+  test("agent readiness warns until a check has passed, and never for tools or knowledge that are simply absent", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const adminId = await t.run(async (ctx) => {
@@ -166,7 +166,10 @@ describe("OWASP: Broken Access Control - Agents", () => {
       activeEvalFixtureCount: 0,
       successfulSmokeEvalRunCount: 0,
       activationRisk: true,
-      activationWarnings: ["draftStatus", "tools", "knowledge", "evalFixtures", "smokeEval"],
+      // Absence is not a fault. A fresh agent has no tools, no documents and no
+      // checks, and only the last of those is a reason it cannot go live —
+      // reported once, as "nothing has been proven", not four times.
+      activationWarnings: ["smokeEval"],
     });
     expect(initialReadiness.fixtureCoverage).toContainEqual({
       type: "HAPPY_PATH",

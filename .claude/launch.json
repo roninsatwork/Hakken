@@ -2,6 +2,19 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "//": "The real app: your own sign-in, your own Convex data. Start this one unless a task specifically needs one of the modes below. The e2e mode swaps the database out for fixtures, which looks like the app but is not, so nothing in it can be trusted or used.",
+      "name": "next-dev",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PATH=/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "npm",
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
       "name": "next-dev-test-auth",
       "runtimeExecutable": "env",
       "runtimeArgs": [

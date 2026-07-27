@@ -32,6 +32,7 @@ import {
 import { parseProviderSseChunk } from "./providerHttpService";
 import type {
   AgentProviderAdapter,
+  AgentReasoningEffort,
   AgentStreamOptions,
   AgentTurnRequest,
   AgentTurnResponse,
@@ -39,6 +40,44 @@ import type {
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
+
+/**
+ * The agent's three levels in OpenRouter's own terms.
+ *
+ * OpenRouter normalises this across the models it fronts — a reasoning model
+ * receives it, and one that cannot reason ignores it rather than failing — so
+ * the agent's setting can be passed straight through.
+ */
+const OPENROUTER_REASONING_EFFORT: Record<AgentReasoningEffort, "low" | "medium" | "high"> = {
+  LOW: "low",
+  MEDIUM: "medium",
+  HIGH: "high",
+};
+
+/** OpenRouter's hosted search, run model-side and never seen by the tool loop. */
+const OPENROUTER_WEB_PLUGIN = { id: "web" } as const;
+
+/** What this turn asks for beyond the transcript, built where it can be read. */
+export function buildOpenRouterTurnOptions(request: {
+  reasoningEffort?: AgentReasoningEffort;
+  webSearch?: boolean;
+  responseJsonSchema?: Record<string, unknown>;
+}) {
+  return {
+    ...(request.reasoningEffort
+      ? { reasoning: { effort: OPENROUTER_REASONING_EFFORT[request.reasoningEffort] } }
+      : {}),
+    ...(request.webSearch ? { plugins: [OPENROUTER_WEB_PLUGIN] } : {}),
+    ...(request.responseJsonSchema
+      ? {
+        response_format: {
+          type: "json_schema" as const,
+          json_schema: { name: "agent_response", strict: true, schema: request.responseJsonSchema },
+        },
+      }
+      : {}),
+  };
+}
 
 export function createOpenRouterAgentProvider(args: {
   apiKey?: string;
@@ -71,6 +110,11 @@ export function createOpenRouterAgentProvider(args: {
         stream_options: { include_usage: true },
         max_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
         temperature: request.temperature,
+        ...buildOpenRouterTurnOptions({
+          reasoningEffort: request.reasoningEffort,
+          webSearch: request.webSearch,
+          responseJsonSchema: request.responseJsonSchema,
+        }),
         messages,
         ...(tools.length > 0 ? { tools } : {}),
       });

@@ -153,7 +153,6 @@ Before activating a template-created agent or workflow:
 - run history has durable evidence for the smoke eval
 - admin has inspected failures and missing mappings
 - production secrets are configured outside the repo
-- release candidate, approval, activation window, and rollback path are clear
 
 ## Documentation To Ship With A Template
 

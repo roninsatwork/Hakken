@@ -10,11 +10,77 @@ import {
 } from "./vertexProviderService";
 import type {
   AgentProviderAdapter,
+  AgentReasoningEffort,
   AgentStreamOptions,
   AgentTurnRequest,
   AgentTurnResponse,
   PromptCacheRequest,
 } from "./agentProviderTypes";
+
+/**
+ * The agent's three levels in Vertex's own terms.
+ *
+ * Vertex names a fourth, `MINIMAL`, which the agent never offers — the screen's
+ * lowest setting is Low, and silently running below it would be a different
+ * answer than the one asked for.
+ */
+function toGoogleThinkingLevel(effort: AgentReasoningEffort) {
+  return effort;
+}
+
+/**
+ * What Vertex is asked for beyond the transcript, built where it can be read.
+ *
+ * Extracted from the adapter body so the request this builds can be asserted
+ * directly. The alternative was a test that stands up a Vertex client, which is
+ * why neither of the two settings assembled here had a test before.
+ */
+export function buildGoogleAgentConfig(request: {
+  systemInstruction: string;
+  temperature: number;
+  tools?: Tool[];
+  reasoningEffort?: AgentReasoningEffort;
+  webSearch?: boolean;
+  responseJsonSchema?: Record<string, unknown>;
+  cacheName?: string;
+  usingCache: boolean;
+}): GenerateContentConfig {
+  // Grounding is a provider-side tool, so it joins the function declarations
+  // rather than replacing them: an agent can search and still call its own
+  // tools in the same turn.
+  const tools: Tool[] = [
+    ...(request.tools ?? []),
+    ...(request.webSearch ? [{ googleSearch: {} } as Tool] : []),
+  ];
+  const thinking = request.reasoningEffort
+    ? { thinkingConfig: { thinkingLevel: toGoogleThinkingLevel(request.reasoningEffort) } }
+    : {};
+  // `responseJsonSchema` is the standard-JSON-Schema field, which is why the
+  // builder's capitalised spelling never worked here.
+  const structured = request.responseJsonSchema
+    ? { responseMimeType: "application/json", responseJsonSchema: request.responseJsonSchema }
+    : {};
+
+  // With a cache in play the prefix lives provider-side, so the instruction and
+  // tools come from the cache — repeating them alongside `cachedContent` is
+  // rejected. Thinking is a per-request setting, not part of the cached prefix,
+  // so it still applies.
+  if (request.usingCache) {
+    return {
+      temperature: request.temperature,
+      cachedContent: request.cacheName,
+      ...thinking,
+      ...structured,
+    } as GenerateContentConfig;
+  }
+  return {
+    systemInstruction: request.systemInstruction,
+    temperature: request.temperature,
+    ...(tools.length > 0 ? { tools } : {}),
+    ...thinking,
+    ...structured,
+  } as GenerateContentConfig;
+}
 
 /**
  * Google Vertex behind the neutral agent-provider contract.
@@ -46,21 +112,21 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
         ? [{ functionDeclarations: declarations }]
         : undefined;
 
-      // With a cache in play the prefix lives provider-side, so the request
-      // carries only what follows it and the instruction and tools come from
-      // the cache — repeating them alongside `cachedContent` is rejected.
       const usingCache = Boolean(request.cacheName) && (request.cachedPrefixTurns ?? 0) > 0;
       const contents = usingCache
         ? request.turns.slice(request.cachedPrefixTurns) as Content[]
         : request.turns as Content[];
 
-      const config: GenerateContentConfig = usingCache
-        ? { temperature: request.temperature, cachedContent: request.cacheName }
-        : {
-          systemInstruction: request.systemInstruction,
-          temperature: request.temperature,
-          ...(providerTools ? { tools: providerTools } : {}),
-        };
+      const config = buildGoogleAgentConfig({
+        systemInstruction: request.systemInstruction,
+        temperature: request.temperature,
+        tools: providerTools,
+        reasoningEffort: request.reasoningEffort,
+        webSearch: request.webSearch,
+        responseJsonSchema: request.responseJsonSchema,
+        cacheName: request.cacheName,
+        usingCache,
+      });
 
       const response = await streamVertexContentWithRetry(ai, {
         model: targetModel,

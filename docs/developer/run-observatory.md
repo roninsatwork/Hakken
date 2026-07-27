@@ -2,14 +2,14 @@
 
 The run observatory is the sampled operations view for recent agent execution health. It aggregates run status, failure reasons, cost, tokens, latency, model usage, agent activity, tool risk, and recent run evidence so operators can spot release regressions and runtime incidents quickly.
 
-Read this before changing `agentRuns.getRunObservatory`, `/admin/run-observatory`, run telemetry fields, tool-call sampling, or company scoping. For release review context, see [Releases And Observability](./releases-and-observability.md) and [Agent Release Infrastructure](./agent-release-infrastructure.md).
+Read this before changing `agentRuns.getRunObservatory`, `/admin/health`, run telemetry fields, tool-call sampling, or company scoping.
 
 ## Product Surface
 
-- `src/app/(dashboard)/admin/run-observatory/page.tsx` renders `/admin/run-observatory`.
+- `src/app/(dashboard)/admin/health/page.tsx` renders `/admin/health`.
 - `convex/agentRuns.ts` exports `getRunObservatory`.
 - `convex/agentRuns.test.ts` covers company-scoped and platform-scoped observatory behavior.
-- `src/app/(dashboard)/admin/run-observatory/page.test.tsx` covers the dashboard rendering contract.
+- `src/app/(dashboard)/admin/health/page.test.tsx` covers the dashboard rendering contract.
 
 The page is a dashboard, not a full historical analytics tool. It intentionally summarizes a bounded sample and links reviewers to individual agent run timelines for exact step, approval, replay, fixture, and memory evidence.
 
@@ -123,7 +123,7 @@ Add or update tests in `convex/agentRuns.test.ts` whenever observatory scoping c
 Focused tests:
 
 - `convex/agentRuns.test.ts` checks company versus platform scope, totals, tenant filtering, tool stats, failure reasons, and foreign-tenant exclusion.
-- `src/app/(dashboard)/admin/run-observatory/page.test.tsx` checks metrics, breakdowns, failure text, tool risk, and run timeline links.
+- `src/app/(dashboard)/admin/health/page.test.tsx` checks metrics, breakdowns, failure text, tool risk, and run timeline links.
 
 For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
 

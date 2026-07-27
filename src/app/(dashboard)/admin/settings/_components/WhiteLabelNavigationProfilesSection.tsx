@@ -24,7 +24,7 @@ const fallbackProfiles: WhiteLabelNavigationProfile[] = [
     key: "customerWorkspace",
     visible: ["appDashboard", "assistant", "reports", "organization"],
     owner: ["systemSettings", "systemHealth"],
-    hide: ["adminCompanies", "releaseCenter", "apiKeys", "webhookDeliveries"],
+    hide: ["adminCompanies", "apiKeys"],
     implementationNotes: ["tenantScoped", "preserveAdminRoutes", "keepServerAuthz"],
   },
   {
@@ -37,7 +37,7 @@ const fallbackProfiles: WhiteLabelNavigationProfile[] = [
   {
     key: "operatorConsole",
     visible: ["adminDashboard", "agents", "workflows", "approvals", "runObservatory"],
-    owner: ["releaseCenter", "systemHealth", "auditLogs"],
+    owner: ["systemHealth", "auditLogs"],
     hide: ["properties", "arcade", "publicWidget"],
     implementationNotes: ["superAdminOnly", "auditRouteChanges", "documentHiddenRoutes"],
   },

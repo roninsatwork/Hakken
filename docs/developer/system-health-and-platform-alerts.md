@@ -6,7 +6,7 @@ Read this before changing `analyticsCron.getSystemHealthForAdmin`, health signal
 
 ## Product Surface
 
-- `src/app/(dashboard)/admin/settings/system-health/page.tsx` renders `/admin/settings/system-health`.
+- `src/app/(dashboard)/admin/health/page.tsx` renders `/admin/health`.
 - `convex/analyticsCron.ts` builds analytics, operations, budget, alert-rule, and system health reports.
 - `convex/platformAlertService.ts` converts health reports into alert decisions and email HTML.
 - `convex/emailBrandingService.ts` supplies the sender name/address for alert dispatch.
@@ -124,7 +124,8 @@ Dispatch flow:
 2. Build a system health alert decision.
 3. Return `healthy` without sending when no signals exist.
 4. Resolve recipients from `PLATFORM_ALERT_EMAILS`, `PLATFORM_ALERT_EMAIL`, `ANALYTICS_ALERT_EMAILS`, `ANALYTICS_ALERT_EMAIL`, or `INITIAL_SUPER_ADMIN_EMAIL`.
-5. Return `missing_recipients` if no recipients are configured.
+5. Where none of those are set, fall back to every super admin's email address, via `internal.platformAlertRecipients.getPlatformAlertFallbackRecipients`. That query lives in a module of its own on purpose: a query and its caller in the same module resolve their types through the generated api and back again, and that cycle widens every `ctx.db.get` in the codebase to a union of every table.
+6. Return `missing_recipients` only when there are no configured recipients and no super admins — previously this was the normal outcome on any deployment without the environment variables set, which meant the job decided the platform was unhealthy every day and wrote it to a log nobody reads.
 6. Build system health alert HTML.
 7. Simulate dispatch when `RESEND_API_KEY` is missing.
 8. Otherwise load email branding, build the sender address, and send through Resend with an idempotency key based on alert type and report window.
@@ -166,7 +167,7 @@ Focused tests include:
 - `convex/analyticsCron.test.ts` for analytics snapshot and health report behavior.
 - `convex/analyticsService.test.ts` for cost and analytics helper behavior.
 - `convex/platformAlertService.test.ts` where present for alert decision and email helpers.
-- `src/app/(dashboard)/admin/settings/system-health/page.test.tsx` for loading, healthy, warning, budget, rule, and company-scope UI states.
+- `src/app/(dashboard)/admin/health/page.test.tsx` for loading, healthy, warning, budget, rule, and company-scope UI states.
 
 For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:
 

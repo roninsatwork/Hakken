@@ -473,6 +473,74 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   }
   if (path === "invites:getActiveTemplate") return inviteTemplateFixture;
   if (path === "invites:getInvitesByCompany") return [];
+  if (path === "aiTools:getConnectorMarketplace") {
+    return [
+      {
+        key: "sonae-knowledge",
+        name: "Knowledge search",
+        description: "Lets an agent search the documents you have uploaded, and quote from them.",
+        availability: "AVAILABLE",
+        executableToolCount: 1,
+        totalToolCount: 1,
+        authMode: "NONE",
+        requiredScopes: ["knowledge:read"],
+        requiredSecretRefs: [],
+        toolDefinitions: [],
+        installation: { _id: "connector_e2e", installStatus: "INSTALLED", testStatus: "SUCCESS" },
+      },
+      {
+        key: "http-rest",
+        name: "Call an API",
+        description: "Lets an agent call another system over the web. You set the address and the credentials; the agent only chooses what to ask for.",
+        availability: "AVAILABLE",
+        executableToolCount: 1,
+        totalToolCount: 1,
+        authMode: "SECRET_REF",
+        requiredScopes: ["http:request"],
+        requiredSecretRefs: ["base_url", "auth_header"],
+        toolDefinitions: [],
+        installation: null,
+      },
+    ];
+  }
+  if (path === "aiTools:getConnectorInstallDetails") {
+    return {
+      connector: {
+        _id: "connector_e2e",
+        key: "sonae-knowledge",
+        name: "Sonae Knowledge",
+        description: "Search approved tenant knowledge through the governed RAG path.",
+        configuredSecretRefs: [],
+        enabledToolMappings: ["knowledge.search"],
+        isActive: true,
+        tenantAvailability: "GLOBAL",
+        installStatus: "INSTALLED",
+        testStatus: "SUCCESS",
+      },
+      definition: {
+        key: "sonae-knowledge",
+        name: "Knowledge search",
+        description: "Lets an agent search the documents you have uploaded, and quote from them.",
+        requiredSecretRefs: [],
+        toolDefinitions: [
+          {
+            name: "Knowledge Search",
+            description: "Searches your approved documents and returns short quotes with their source.",
+            handlerMapping: "knowledge.search",
+          },
+        ],
+      },
+      company: null,
+      canManageTenantScope: true,
+      tools: [{ _id: "tool_e2e", name: "Knowledge Search", isActive: true }],
+      secretRefs: [],
+      oauthConnections: [],
+      oauthConnection: null,
+      testLogs: [
+        { _id: "log_e2e", status: "SUCCESS", message: "Connection test passed.", testedAt: now - 60000 },
+      ],
+    };
+  }
   if (path === "aiTools:getTools") {
     return [
       {

@@ -390,20 +390,28 @@ describe("ai tool execution service", () => {
     expect(runQuery).not.toHaveBeenCalled();
   });
 
-  test("a handler mapping nothing declares is an error", async () => {
-    // Broken configuration — a typo, a hand-written tool row pointing nowhere.
-    // Distinct from a connector the catalogue advertises but nobody has built:
-    // one needs fixing, the other needs writing.
-    await expect(
-      executeRegisteredTool({
-        ctx: { runQuery: vi.fn(), runMutation: vi.fn() },
-        handlerMapping: "crm.lookup",
-        args: {},
-      })
-    ).rejects.toThrow("No tool handler is registered for 'crm.lookup'.");
+  /**
+   * A typo or a hand-written tool row pointing nowhere used to throw, while a
+   * declared-but-unbuilt connector reported itself. The distinction was not
+   * worth the risk: it meant removing something from the catalogue turned every
+   * tool already installed from it into a hard failure. Both now report, and the
+   * message names whatever it can.
+   */
+  test("a handler mapping nothing declares reports rather than throwing", async () => {
+    const result = await executeRegisteredTool({
+      ctx: { runQuery: vi.fn(), runMutation: vi.fn() },
+      handlerMapping: "crm.lookup",
+      args: {},
+    });
+
+    expect(isNotImplementedToolResult(result)).toBe(true);
+    expect(result).toMatchObject({
+      handlerMapping: "crm.lookup",
+      message: "crm.lookup cannot run: nothing implements it on this deployment.",
+    });
   });
 
-  test("a declared connector with no implementation reports itself, without throwing", async () => {
+  test("a tool nothing implements reports itself, without throwing", async () => {
     // Reported rather than thrown so the runtime can record it as
     // NOT_IMPLEMENTED and tell the model plainly, instead of it looking like a
     // runtime fault the agent might sensibly retry.
@@ -421,7 +429,13 @@ describe("ai tool execution service", () => {
     expect(runMutation).not.toHaveBeenCalled();
   });
 
-  test("external connector stubs fail safely without side effects", async () => {
+  /**
+   * A tool row can outlive the thing that declared it — seventeen connectors
+   * nobody had built were removed from the catalogue, and any tool already
+   * installed from one of them is still in the database and still bindable. It
+   * has to fail the same safe way, not throw.
+   */
+  test("a tool left behind by a removed connector fails safely without side effects", async () => {
     const runQuery = vi.fn();
     const runMutation = vi.fn();
 
@@ -435,10 +449,10 @@ describe("ai tool execution service", () => {
     ).resolves.toEqual({
       ok: false,
       status: "not_implemented",
-      connectorName: "Slack",
+      connectorName: undefined,
       handlerMapping: "slack.message.send",
       companyId: "company_1",
-      message: "Slack connector execution is not implemented yet.",
+      message: "slack.message.send cannot run: nothing implements it on this deployment.",
     });
     expect(runQuery).not.toHaveBeenCalled();
     expect(runMutation).not.toHaveBeenCalled();

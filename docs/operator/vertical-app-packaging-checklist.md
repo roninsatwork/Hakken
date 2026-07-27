@@ -98,5 +98,4 @@ Then manually verify:
 - Tenant admins see only their company data.
 - Model defaults resolve for chat, agent, workflow, report, and embedding use cases.
 - A draft agent passes its smoke eval.
-- A release candidate can be reviewed in Developer Ship Checks.
 - System Health reports the intended scope and no unexpected critical rules.

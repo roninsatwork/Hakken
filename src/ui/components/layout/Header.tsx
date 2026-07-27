@@ -55,7 +55,7 @@ function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
   if (pathname.startsWith("/admin/companies")) return [t("companies")];
   if (pathname.startsWith("/admin/agents")) return [t("agents")];
   if (pathname.startsWith("/admin/workflows")) return [t("workflows")];
-  if (pathname.startsWith("/admin/settings/scripts") || pathname.startsWith("/admin/settings/system-health")) return [t("maintenance")];
+  if (pathname.startsWith("/admin/settings/scripts") || pathname.startsWith("/admin/health")) return [t("maintenance")];
   if (pathname.startsWith("/admin/settings")) return [t("settings")];
   if (pathname.startsWith("/admin/super-admins")) return [t("systemAdmins")];
   return [t("admin")];

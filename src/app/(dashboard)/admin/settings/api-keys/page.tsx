@@ -4,43 +4,95 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, KeyRound, Loader2, Plus, ShieldCheck, XCircle } from "lucide-react";
+import { Copy, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import {
   AdminLoadMoreFooter,
   AdminTableEmptyRow,
+  AdminTableHeaderCell,
+  AdminTableHeaderRow,
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { cn } from "@/src/ui/lib/utils";
 
-type ApiKeyScope = "agent:run" | "workflow:run" | "run:read" | "webhook:deliver";
+type ApiKeyScope = "agent:run" | "workflow:run" | "run:read";
 
+/**
+ * What a key is allowed to do.
+ *
+ * `webhook:deliver` was offered here as "use future callback delivery
+ * surfaces". No endpoint has ever checked it — it granted access to nothing —
+ * so it is no longer offered. Keys that already carry it still read back
+ * correctly; the scope simply cannot be given out any more.
+ */
 const API_KEY_SCOPES: Array<{ value: ApiKeyScope; label: string; description: string }> = [
-  { value: "agent:run", label: "Agent runs", description: "Trigger governed agent runs." },
-  { value: "workflow:run", label: "Workflow runs", description: "Trigger governed workflows." },
-  { value: "run:read", label: "Run status", description: "Read run status and evidence." },
-  { value: "webhook:deliver", label: "Webhook delivery", description: "Use future callback delivery surfaces." },
+  { value: "agent:run", label: "Start an agent", description: "Ask an agent to do something." },
+  { value: "run:read", label: "Check on a run", description: "See whether a run finished, and what it did." },
+  { value: "workflow:run", label: "Start a workflow", description: "Kick off a workflow from outside Sonae." },
 ];
 
-function getStatusColor(status: string) {
-  if (status === "ACTIVE") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-  return "text-red-400 bg-red-500/10 border-red-500/20";
+const SCOPE_LABELS: Record<string, string> = {
+  "agent:run": "Start an agent",
+  "run:read": "Check on a run",
+  "workflow:run": "Start a workflow",
+  "webhook:deliver": "Webhook delivery (no longer used)",
+};
+
+const DEFAULT_REQUESTS_PER_MINUTE = 60;
+
+/** A year out. The field used to open empty, so the obvious key never expired. */
+function defaultExpiry() {
+  const inAYear = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${inAYear.getFullYear()}-${pad(inAYear.getMonth() + 1)}-${pad(inAYear.getDate())}T09:00`;
+}
+
+function SettingSwitch({ label, description, checked, onChange }: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-[13px] font-medium text-foreground">{label}</span>
+        <p className="text-[12px] leading-relaxed text-muted">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className="mt-0.5 shrink-0"
+      >
+        <span className={cn("relative block h-5 w-9 rounded-full transition-colors", checked ? "bg-brand" : "bg-foreground/15")}>
+          <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", checked ? "left-[18px]" : "left-0.5")} />
+        </span>
+      </button>
+    </div>
+  );
 }
 
 export default function ApiKeysPage() {
   const companies = useQuery(api.companies.getCompanyOptions, { limit: 200 });
   const createApiKey = useMutation(api.apiKeys.create);
   const revokeApiKey = useMutation(api.apiKeys.revoke);
+
   const [selectedCompanyId, setSelectedCompanyId] = useState<Id<"companies"> | "">("");
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<ApiKeyScope[]>(["agent:run", "run:read"]);
-  const [rateLimitPerMinute, setRateLimitPerMinute] = useState(60);
-  const [expiresAt, setExpiresAt] = useState("");
+  const [requestsPerMinute, setRequestsPerMinute] = useState(DEFAULT_REQUESTS_PER_MINUTE);
+  const [expiresAt, setExpiresAt] = useState(defaultExpiry);
   const [validationError, setValidationError] = useState("");
   const [oneTimeKey, setOneTimeKey] = useState<{ apiKey: string; keyPrefix: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: Id<"apiKeys">; name: string } | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
 
@@ -50,18 +102,11 @@ export default function ApiKeysPage() {
   const createAction = useAdminAction({ scope: "admin-api-keys-create" });
   const revokeAction = useAdminAction({ scope: "admin-api-keys-revoke" });
 
-  const {
-    results: apiKeys,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
+  const { results: apiKeys, status, loadMore } = usePaginatedQuery(
     api.apiKeys.list,
     selectedCompanyId ? { companyId: selectedCompanyId } : {},
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: ADMIN_PAGE_SIZE },
   );
-  const isLoading = status === "LoadingFirstPage";
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
 
   const toggleScope = (scope: ApiKeyScope) => {
     setScopes((current) => current.includes(scope)
@@ -72,16 +117,17 @@ export default function ApiKeysPage() {
   const handleCreate = async () => {
     setValidationError("");
     setOneTimeKey(null);
+    setCopied(false);
     if (!selectedCompanyId) {
-      setValidationError("Choose a company before creating a tenant-scoped API key.");
+      setValidationError("Choose which company this key is for.");
       return;
     }
     if (!name.trim()) {
-      setValidationError("Name the API key before creating it.");
+      setValidationError("Give the key a name, so you know what it is later.");
       return;
     }
     if (scopes.length === 0) {
-      setValidationError("Select at least one scope.");
+      setValidationError("Choose at least one thing the key is allowed to do.");
       return;
     }
 
@@ -90,17 +136,17 @@ export default function ApiKeysPage() {
         companyId: selectedCompanyId,
         name: name.trim(),
         scopes,
-        rateLimitPerMinute,
+        rateLimitPerMinute: requestsPerMinute,
         ...(expiresAt ? { expiresAt: new Date(expiresAt).getTime() } : {}),
       }),
-      { fallbackMessage: "Failed to create API key.", suppressErrorToast: true },
+      { fallbackMessage: "That key could not be created. Try again.", suppressErrorToast: true },
     );
     if (!outcome.ok) return;
 
     setOneTimeKey({ apiKey: outcome.data.apiKey, keyPrefix: outcome.data.record.keyPrefix });
     setName("");
-    setExpiresAt("");
-    setRateLimitPerMinute(60);
+    setExpiresAt(defaultExpiry());
+    setRequestsPerMinute(DEFAULT_REQUESTS_PER_MINUTE);
     setScopes(["agent:run", "run:read"]);
   };
 
@@ -111,7 +157,7 @@ export default function ApiKeysPage() {
         apiKeyId: revokeTarget.id,
         ...(revokeReason.trim() ? { reason: revokeReason.trim() } : {}),
       }),
-      { fallbackMessage: "Failed to revoke API key.", suppressErrorToast: true },
+      { fallbackMessage: "That key could not be turned off. Try again.", suppressErrorToast: true },
     );
     if (!outcome.ok) return;
     setRevokeTarget(null);
@@ -119,253 +165,257 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <KeyRound className="w-6 h-6 text-brand" />
-            API Keys
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">
-            Create revocable tenant-scoped keys for future public API and webhook surfaces.
-          </p>
-        </div>
-        <div className="rounded-[8px] border border-border-dim bg-sidebar/30 px-3 py-2 flex items-center gap-2 text-[12px] text-secondary">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          Raw secrets are returned once, then only a digest and prefix are stored.
-        </div>
-      </div>
+    <div className="flex w-full flex-col gap-6 pb-12">
+      {/* The old description called this "future public API and webhook
+          surfaces". The public API is live — four endpoints, every one checking
+          the key and what it is allowed to do — so the screen that unlocks it
+          was telling the reader it did not exist yet. */}
+      <AdminPageHeader
+        icon={<KeyRound className="h-6 w-6 text-brand" />}
+        title="API Keys"
+        description="Let another system start your agents and check on runs. A key belongs to one company, and you can turn it off at any time."
+      />
 
-      <div className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-4 grid grid-cols-1 xl:grid-cols-[1.1fr_1fr] gap-4">
-        <div className="flex flex-col gap-3">
-          <div>
-            <label htmlFor="api-key-company" className="block text-[11px] uppercase tracking-widest font-mono text-muted mb-2">Company</label>
-            <select
-              id="api-key-company"
-              value={selectedCompanyId}
-              onChange={(event) => setSelectedCompanyId(event.target.value as Id<"companies"> | "")}
-              className="h-10 w-full rounded-[8px] border border-border-dim bg-background px-3 text-[13px] text-foreground focus:outline-none focus:border-brand"
-            >
-              <option value="">All companies</option>
-              {(companies ?? []).map((company) => (
-                <option key={company._id} value={company._id}>{company.name}</option>
-              ))}
-            </select>
-          </div>
+      <section className="flex flex-col gap-4 rounded-[16px] border border-border-dim bg-card/40 p-6">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">New key</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_160px_190px] gap-3">
-            <div>
-              <label htmlFor="api-key-name" className="block text-[11px] uppercase tracking-widest font-mono text-muted mb-2">Name</label>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="api-key-company" className="text-[12px] font-medium text-secondary">Which company is it for?</label>
+              <select
+                id="api-key-company"
+                value={selectedCompanyId}
+                onChange={(event) => setSelectedCompanyId(event.target.value as Id<"companies"> | "")}
+                className="h-[46px] w-full cursor-pointer rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
+              >
+                {/* Was "All companies", which is not a thing a key can be: every
+                    key belongs to exactly one. The form opened in a state that
+                    could not be submitted. */}
+                <option value="">Choose a company</option>
+                {(companies ?? []).map((company) => (
+                  <option key={company._id} value={company._id}>{company.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="api-key-name" className="text-[12px] font-medium text-secondary">What is it for?</label>
               <input
                 id="api-key-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Production agent trigger"
-                className="h-10 w-full rounded-[8px] border border-border-dim bg-background px-3 text-[13px] text-foreground focus:outline-none focus:border-brand"
+                placeholder="Website contact form"
+                className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
               />
             </div>
-            <div>
-              <label htmlFor="api-key-rate-limit" className="block text-[11px] uppercase tracking-widest font-mono text-muted mb-2">Rate/min</label>
-              <input
-                id="api-key-rate-limit"
-                type="number"
-                min={1}
-                max={600}
-                value={rateLimitPerMinute}
-                onChange={(event) => setRateLimitPerMinute(Number(event.target.value))}
-                className="h-10 w-full rounded-[8px] border border-border-dim bg-background px-3 text-[13px] text-foreground focus:outline-none focus:border-brand"
-              />
-            </div>
-            <div>
-              <label htmlFor="api-key-expires-at" className="block text-[11px] uppercase tracking-widest font-mono text-muted mb-2">Expires</label>
-              <input
-                id="api-key-expires-at"
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(event) => setExpiresAt(event.target.value)}
-                className="h-10 w-full rounded-[8px] border border-border-dim bg-background px-3 text-[13px] text-foreground focus:outline-none focus:border-brand"
-              />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="api-key-rate-limit" className="text-[12px] font-medium text-secondary">Requests a minute</label>
+                <input
+                  id="api-key-rate-limit"
+                  type="number"
+                  min={1}
+                  max={600}
+                  value={requestsPerMinute}
+                  onChange={(event) => setRequestsPerMinute(Number(event.target.value))}
+                  className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="api-key-expires-at" className="text-[12px] font-medium text-secondary">Stops working on</label>
+                <input
+                  id="api-key-expires-at"
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(event) => setExpiresAt(event.target.value)}
+                  className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {API_KEY_SCOPES.map((scope) => (
-              <label key={scope.value} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+          <div className="flex flex-col gap-2">
+            <span className="text-[12px] font-medium text-secondary">What is it allowed to do?</span>
+            <div className="divide-y divide-border-dim/40 rounded-[12px] border border-border-dim bg-black/20 px-4">
+              {API_KEY_SCOPES.map((scope) => (
+                <SettingSwitch
+                  key={scope.value}
+                  label={scope.label}
+                  description={scope.description}
                   checked={scopes.includes(scope.value)}
                   onChange={() => toggleScope(scope.value)}
-                  className="mt-1"
                 />
-                <span>
-                  <span className="block text-[13px] font-semibold text-foreground">{scope.label}</span>
-                  <span className="block text-[11px] text-secondary">{scope.description}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-
-          {(validationError || createAction.error) && (
-            <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-[13px] text-red-400">
-              {validationError || createAction.error}
+              ))}
             </div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={createAction.isBusy()}
-            className="w-fit inline-flex items-center gap-2 px-3 py-2 rounded-[8px] bg-foreground text-background text-[13px] font-semibold disabled:opacity-50"
-          >
-            {createAction.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Create API key
-          </button>
-        </div>
-
-        <div className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-foreground">
-            <AlertTriangle className="w-4 h-4 text-amber-300" />
-            <h2 className="text-[13px] font-semibold">One-time secret</h2>
           </div>
-          {oneTimeKey ? (
-            <>
-              <p className="text-[12px] text-secondary">
-                Store this key now. It will not be shown again after you leave this page.
-              </p>
-              <pre className="rounded-[8px] border border-border-dim bg-background px-3 py-3 text-[12px] text-foreground overflow-auto whitespace-pre-wrap break-all">
-                {oneTimeKey.apiKey}
-              </pre>
-              <div className="text-[11px] font-mono text-muted">prefix: {oneTimeKey.keyPrefix}</div>
-            </>
-          ) : (
-            <p className="text-[12px] text-secondary">
-              Create a key to reveal its secret once. Existing keys only display their prefix, scopes, status, and audit metadata.
-            </p>
-          )}
         </div>
-      </div>
 
-      <AdminTableShell
-        footer={
-          <AdminLoadMoreFooter
-            visibleCount={apiKeys.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
-            labels={{
-              empty: "No API keys created",
-              showing: (count) => `Showing ${count} API keys`,
-              loadMore: "Load more API keys",
-              loading: "Loading API keys...",
-            }}
-          />
-        }
-        minWidthClassName="min-w-[980px]"
-      >
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium">Key</th>
-            <th className="px-4 py-3 font-medium">Company</th>
-            <th className="px-4 py-3 font-medium">Scopes</th>
-            <th className="px-4 py-3 font-medium">Limits</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <AdminTableLoadingRow colSpan={6} />
-          ) : apiKeys.length === 0 ? (
-            <AdminTableEmptyRow
-              colSpan={6}
-              icon={<KeyRound className="w-8 h-8 text-muted/30" />}
-              label="No API keys created"
-            />
-          ) : apiKeys.map((apiKey) => (
-            <tr key={apiKey._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
-              <td className="px-4 py-3">
-                <div className="text-[13px] font-semibold text-foreground">{apiKey.name}</div>
-                <div className="text-[11px] font-mono text-muted">{apiKey.keyPrefix}</div>
-                <div className="text-[11px] text-muted">Created {formatDateTime(apiKey.createdAt)}</div>
-              </td>
-              <td className="px-4 py-3 text-[13px] text-secondary">{apiKey.companyName}</td>
-              <td className="px-4 py-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {apiKey.scopes.map((scope) => (
-                    <span key={scope} className="px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-[11px] font-mono text-secondary">
-                      {scope}
+        {validationError || createAction.error ? (
+          <p className="text-[13px] text-rose-300">{validationError || createAction.error}</p>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={createAction.isBusy()}
+          className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+        >
+          {createAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Create key
+        </button>
+
+        {oneTimeKey ? (
+          <div className="flex flex-col gap-3 rounded-[12px] border border-amber-500/20 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+              <p className="text-[13px] leading-relaxed text-amber-100">
+                Copy this now. It is the only time it will be shown — Sonae keeps only enough to recognise it, never the key itself.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-[8px] border border-border-dim bg-black/40 px-3 py-2 text-[12px] text-foreground">
+                {oneTimeKey.apiKey}
+              </code>
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(oneTimeKey.apiKey);
+                  setCopied(true);
+                }}
+                className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[8px] border border-border-dim px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[15px] font-semibold text-foreground">Keys you have</h2>
+
+        <AdminTableShell minWidthClassName="min-w-[900px]">
+          <thead>
+            <AdminTableHeaderRow>
+              <AdminTableHeaderCell>Key</AdminTableHeaderCell>
+              <AdminTableHeaderCell>Company</AdminTableHeaderCell>
+              <AdminTableHeaderCell>Allowed to</AdminTableHeaderCell>
+              <AdminTableHeaderCell>Limits</AdminTableHeaderCell>
+              <AdminTableHeaderCell>Status</AdminTableHeaderCell>
+              <AdminTableHeaderCell align="right">{""}</AdminTableHeaderCell>
+            </AdminTableHeaderRow>
+          </thead>
+          <tbody>
+            {status === "LoadingFirstPage" ? (
+              <AdminTableLoadingRow colSpan={6} />
+            ) : apiKeys.length === 0 ? (
+              <AdminTableEmptyRow
+                colSpan={6}
+                icon={<KeyRound className="h-8 w-8 text-muted/30" />}
+                label="No keys yet"
+                action={
+                  <span className="text-[13px] normal-case tracking-normal text-secondary">
+                    Create one above to let another system start your agents.
+                  </span>
+                }
+              />
+            ) : (
+              apiKeys.map((apiKey) => (
+                <tr key={apiKey._id} className="border-b border-border-dim/50">
+                  <td className="px-4 py-3 align-top">
+                    <div className="text-[13px] font-medium text-foreground">{apiKey.name}</div>
+                    <div className="text-[12px] text-muted">{apiKey.keyPrefix}…</div>
+                  </td>
+                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{apiKey.companyName}</td>
+                  <td className="px-4 py-3 align-top text-[13px] leading-relaxed text-secondary">
+                    {apiKey.scopes.map((scope: string) => SCOPE_LABELS[scope] ?? scope).join(", ")}
+                  </td>
+                  <td className="px-4 py-3 align-top text-[13px] text-secondary">
+                    <div>{apiKey.rateLimitPerMinute} a minute</div>
+                    <div className="text-[12px] text-muted">
+                      {apiKey.expiresAt ? `Stops ${formatDateTime(apiKey.expiresAt)}` : "Never stops"}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-top text-[13px]">
+                    <span className={apiKey.status === "ACTIVE" ? "text-[#10b981]" : "text-muted"}>
+                      {apiKey.status === "ACTIVE" ? "Working" : "Turned off"}
                     </span>
-                  ))}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-[12px] text-secondary">
-                <div>{apiKey.rateLimitPerMinute}/min</div>
-                <div>{apiKey.expiresAt ? `Expires ${formatDateTime(apiKey.expiresAt)}` : "No expiration"}</div>
-              </td>
-              <td className="px-4 py-3">
-                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-mono ${getStatusColor(apiKey.status)}`}>
-                  {apiKey.status === "ACTIVE" ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                  {apiKey.status}
-                </span>
-                {apiKey.revokedAt && (
-                  <div className="text-[11px] text-muted mt-1">Revoked {formatDateTime(apiKey.revokedAt)}</div>
-                )}
-              </td>
-              <td className="px-4 py-3 text-right">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRevokeTarget({ id: apiKey._id, name: apiKey.name });
-                    setRevokeReason("");
-                    revokeAction.clearError();
-                  }}
-                  disabled={apiKey.status === "REVOKED"}
-                  className="px-3 py-1.5 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[12px] font-semibold disabled:opacity-40"
-                >
-                  Revoke
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </AdminTableShell>
+                    {apiKey.revokedAt ? (
+                      <div className="text-[12px] text-muted">{formatDateTime(apiKey.revokedAt)}</div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3 align-top text-right">
+                    {apiKey.status === "ACTIVE" ? (
+                      <button
+                        type="button"
+                        onClick={() => setRevokeTarget({ id: apiKey._id, name: apiKey.name })}
+                        aria-label={`Turn off ${apiKey.name}`}
+                        className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </AdminTableShell>
+
+        <AdminLoadMoreFooter
+          visibleCount={apiKeys.length}
+          canLoadMore={status === "CanLoadMore"}
+          isLoading={status === "LoadingMore"}
+          onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+          labels={{
+            empty: "No keys yet",
+            showing: (count) => `Showing ${count} key${count === 1 ? "" : "s"}`,
+            loadMore: "Show more",
+            loading: "Loading...",
+          }}
+        />
+      </section>
 
       <SonaeModal
-        isOpen={!!revokeTarget}
+        isOpen={Boolean(revokeTarget)}
         onClose={() => setRevokeTarget(null)}
-        title="Revoke API key"
+        title="Turn off this key"
+        size="sm"
       >
-        <div className="flex flex-col gap-3">
-          {revokeTarget && (
-            <p className="text-[13px] text-secondary">
-              Revoke {revokeTarget.name}. Future public API requests using this key will be rejected once endpoints are enabled.
-            </p>
-          )}
-          <label className="text-[12px] font-semibold text-secondary">Reason</label>
-          <textarea
-            value={revokeReason}
-            onChange={(event) => setRevokeReason(event.target.value)}
-            rows={3}
-            placeholder="Rotated, leaked, no longer needed..."
-            className="w-full rounded-[8px] border border-border-dim bg-background px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand"
-          />
-          {revokeAction.error && <div className="text-[13px] text-red-400">{revokeAction.error}</div>}
-          <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col gap-4">
+          <p className="text-[13px] leading-relaxed text-secondary">
+            Anything using <span className="text-foreground">{revokeTarget?.name}</span> stops working straight away. This cannot be undone — you would need to create a new key.
+          </p>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="api-key-revoke-reason" className="text-[12px] font-medium text-secondary">Why? (optional)</label>
+            <input
+              id="api-key-revoke-reason"
+              value={revokeReason}
+              onChange={(event) => setRevokeReason(event.target.value)}
+              placeholder="No longer needed"
+              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
+            />
+          </div>
+          {revokeAction.error ? <p className="text-[13px] text-rose-300">{revokeAction.error}</p> : null}
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setRevokeTarget(null)}
-              className="px-3 py-2 rounded-[8px] border border-border-dim text-[13px] text-secondary"
+              className="inline-flex h-9 items-center rounded-[8px] border border-border-dim px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5"
             >
-              Cancel
+              Keep it
             </button>
             <button
               type="button"
               onClick={handleRevoke}
               disabled={revokeAction.isBusy()}
-              className="px-3 py-2 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-400 text-[13px] font-semibold disabled:opacity-50 flex items-center gap-2"
+              className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-rose-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-rose-600 disabled:opacity-50"
             >
-              {revokeAction.isBusy() && <Loader2 className="w-4 h-4 animate-spin" />}
-              Revoke key
+              {revokeAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Turn it off
             </button>
           </div>
         </div>

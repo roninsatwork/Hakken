@@ -122,16 +122,18 @@ describe("AgentDashboardLayout navigation", () => {
     expect(within(menu).getByRole("menuitem", { name: "AI Rules" })).toHaveAttribute("href", "/admin/agents/agent_1/rules");
     expect(within(menu).queryByRole("menuitem", { name: "Knowledge" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Interfaces" }));
-
-    menu = screen.getByRole("menu");
-    expect(within(menu).getByRole("menuitem", { name: "Integrations" })).toHaveAttribute("href", "/admin/agents/agent_1/integrations");
-    expect(within(menu).getByRole("menuitem", { name: "I/O Schemas" })).toHaveAttribute("href", "/admin/agents/agent_1/schemas");
-    expect(within(menu).queryByRole("menuitem", { name: "AI Rules" })).not.toBeInTheDocument();
+    // Interfaces is one screen now, so it is a plain link rather than a group.
+    expect(screen.getByRole("link", { name: "Interfaces" })).toHaveAttribute("href", "/admin/agents/agent_1/interfaces");
+    expect(screen.queryByRole("button", { name: "Interfaces" })).not.toBeInTheDocument();
   });
 
-  it("marks interface child routes active through the grouped trigger", () => {
-    vi.mocked(usePathname).mockReturnValue("/admin/agents/agent_1/schemas");
+  /**
+   * Interfaces was a dropdown over two pages — Integrations and I/O Schemas —
+   * which are two halves of one question. It is a single screen now, so the tab
+   * links straight to it.
+   */
+  it("marks the interfaces tab active on its own route", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/agents/agent_1/interfaces");
 
     render(
       <AgentDashboardLayout>
@@ -139,13 +141,6 @@ describe("AgentDashboardLayout navigation", () => {
       </AgentDashboardLayout>
     );
 
-    const interfacesTrigger = screen.getByRole("button", { name: "Interfaces" });
-    expect(interfacesTrigger).toHaveClass("border-brand");
-
-    fireEvent.click(interfacesTrigger);
-
-    const menu = screen.getByRole("menu");
-    expect(within(menu).getByRole("menuitem", { name: /I\/O Schemas/ })).toHaveClass("bg-brand");
-    expect(within(menu).getByLabelText("I/O Schemas selected")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Interfaces" })).toHaveClass("border-brand");
   });
 });

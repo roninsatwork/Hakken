@@ -1,10 +1,20 @@
-import { paginationOptsValidator } from "convex/server";
+/**
+ * The webhook delivery engine.
+ *
+ * Queueing, dispatch, retry backoff and per-attempt recording are all here and
+ * all work. Nothing calls them: no code path queues a delivery, and there is
+ * nowhere in the product to register a destination URL. The screen that listed
+ * these deliveries has been removed rather than left showing a log of an event
+ * that cannot happen — the engine is kept because it is the finished half.
+ *
+ * To make webhooks real: give a company somewhere to store a destination, and
+ * call `recordQueuedInternal` when a run finishes. The listing screen belongs
+ * back the day something can appear in it.
+ */
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery } from "./tenantFunctions";
-import { getActiveCompanyId } from "./authz";
 
 const WEBHOOK_DELIVERY_PREVIEW_MAX_LENGTH = 2000;
 const WEBHOOK_DELIVERY_EVENT_TYPE_MAX_LENGTH = 120;
@@ -33,7 +43,6 @@ const webhookDeliveryHeaderValidator = v.array(v.object({
   value: v.string(),
 }));
 
-type WebhookDeliveryStatus = Doc<"webhookDeliveries">["status"];
 
 function normalizeEventType(eventType: string) {
   const normalized = eventType.trim().replace(/\s+/g, ".");
@@ -84,110 +93,6 @@ function normalizePayloadJson(value: string) {
   return normalized;
 }
 
-function getManagedCompanyId(user: Doc<"users">, companyId: Id<"companies"> | undefined) {
-  if (user.role === "SUPER_ADMIN") return companyId;
-  const activeCompanyId = getActiveCompanyId(user);
-  if (!activeCompanyId) throw new Error("Unauthorized");
-  if (companyId && companyId !== activeCompanyId) throw new Error("Unauthorized");
-  return activeCompanyId;
-}
-
-export const list = adminQuery({
-  args: {
-    companyId: v.optional(v.id("companies")),
-    status: v.optional(webhookDeliveryStatusValidator),
-    paginationOpts: paginationOptsValidator,
-  },
-  handler: async (ctx, args) => {
-    const { user } = ctx;
-    const companyId = getManagedCompanyId(user, args.companyId);
-
-    const page = companyId
-      ? args.status
-        ? await ctx.db
-            .query("webhookDeliveries")
-            .withIndex("by_company_status_created", (q) => q.eq("companyId", companyId).eq("status", args.status as WebhookDeliveryStatus))
-            .order("desc")
-            .paginate(args.paginationOpts)
-        : await ctx.db
-            .query("webhookDeliveries")
-            .withIndex("by_company_created", (q) => q.eq("companyId", companyId))
-            .order("desc")
-            .paginate(args.paginationOpts)
-      : args.status
-        ? await ctx.db
-            .query("webhookDeliveries")
-            .withIndex("by_status_created", (q) => q.eq("status", args.status as WebhookDeliveryStatus))
-            .order("desc")
-            .paginate(args.paginationOpts)
-        : await ctx.db.query("webhookDeliveries").withIndex("by_created").order("desc").paginate(args.paginationOpts);
-
-    const companyIds = Array.from(new Set(page.page.map((delivery) => delivery.companyId)));
-    const companies = await Promise.all(companyIds.map(async (id) => await ctx.db.get(id)));
-    const companyNames = new Map(companyIds.map((id, index) => [id, companies[index]?.name ?? "Unknown company"]));
-
-    return {
-      ...page,
-      page: page.page.map((delivery) => ({
-        ...delivery,
-        companyName: companyNames.get(delivery.companyId) ?? "Unknown company",
-      })),
-    };
-  },
-});
-
-export const getSummary = adminQuery({
-  args: {
-    companyId: v.optional(v.id("companies")),
-    lookbackDays: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { user } = ctx;
-    const companyId = getManagedCompanyId(user, args.companyId);
-    const lookbackDays = Math.min(Math.max(args.lookbackDays ?? 7, 1), 90);
-    const cutoff = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
-
-    const deliveries = companyId
-      ? await ctx.db
-          .query("webhookDeliveries")
-          .withIndex("by_company_created", (q) => q.eq("companyId", companyId))
-          .order("desc")
-          .take(250)
-      : await ctx.db.query("webhookDeliveries").withIndex("by_created").order("desc").take(250);
-    const recent = deliveries.filter((delivery) => delivery.createdAt >= cutoff);
-
-    const statusCounts = {
-      PENDING: 0,
-      DELIVERING: 0,
-      SUCCESS: 0,
-      FAILED: 0,
-      RETRY_SCHEDULED: 0,
-      ABANDONED: 0,
-    };
-    for (const delivery of recent) {
-      statusCounts[delivery.status] += 1;
-    }
-
-    const terminalCount = statusCounts.SUCCESS + statusCounts.FAILED + statusCounts.ABANDONED;
-    return {
-      scope: companyId ? "company" : "platform",
-      lookbackDays,
-      total: recent.length,
-      statusCounts,
-      retrying: statusCounts.RETRY_SCHEDULED,
-      failedOrAbandoned: statusCounts.FAILED + statusCounts.ABANDONED,
-      successRate: terminalCount > 0 ? statusCounts.SUCCESS / terminalCount : 0,
-      nextActions: [
-        statusCounts.FAILED + statusCounts.ABANDONED > 0
-          ? "Inspect failed or abandoned deliveries before enabling more callback destinations."
-          : "No terminal delivery failures in the current sample.",
-        statusCounts.RETRY_SCHEDULED > 0
-          ? "Check retry windows and destination health for scheduled retries."
-          : "No retries are currently scheduled in the current sample.",
-      ],
-    };
-  },
-});
 
 export const getInternal = internalQuery({
   args: {

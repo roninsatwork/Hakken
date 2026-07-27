@@ -7,7 +7,6 @@ The public integration surface is implemented by `convex/apiKeys.ts`, `convex/pu
 Admin UI:
 
 - `src/app/(dashboard)/admin/settings/api-keys/page.tsx` creates, lists, filters, and revokes tenant-scoped API keys.
-- `src/app/(dashboard)/admin/settings/webhook-deliveries/page.tsx` lists delivery attempts, filters by company/status, and shows a seven-day summary.
 
 Convex HTTP routes in `convex/http.ts`:
 
@@ -31,7 +30,7 @@ Supported scopes are:
 - `agent:run`
 - `workflow:run`
 - `run:read`
-- `webhook:deliver`
+- `webhook:deliver` (accepted on existing keys, no longer offered; no endpoint checks it)
 
 `create` and `revoke` require admin access. Super admins must choose a target company for tenant-scoped keys. Company admins are restricted to their active company. Both creation and revocation write audit log rows.
 
@@ -100,7 +99,6 @@ Current coverage includes:
 - `convex/workflows.test.ts` for public workflow trigger creation, webhook company scoping, and direct workflow webhook payload limits
 - `convex/webhookDeliveries.test.ts` for listing, summaries, status transitions, validation, dispatch success, retry scheduling, and abandonment
 - `src/app/(dashboard)/admin/settings/api-keys/page.test.tsx` for API key UI behavior
-- `src/app/(dashboard)/admin/settings/webhook-deliveries/page.test.tsx` for delivery monitor rendering
 
 When changing public endpoints, update authentication tests, run-trigger tests, and handler tests together. When changing delivery status semantics, update both the Convex delivery tests and the admin page expectations.
 

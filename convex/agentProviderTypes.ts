@@ -44,7 +44,43 @@ export type AgentTurnRequest = {
   cacheName?: string;
   /** How many leading turns the cache covers, when one is in use. */
   cachedPrefixTurns?: number;
+  /**
+   * How hard the model should think before answering.
+   *
+   * The agent has carried this setting since it was first built, and the screen
+   * has always offered Low, Medium and High with a note about depth, latency
+   * and cost — but nothing read it. Every agent ran at whatever the model does
+   * by default, whichever button was lit.
+   *
+   * Each provider expresses it differently, so it crosses this seam as the
+   * agent's own three levels and each adapter translates.
+   */
+  reasoningEffort?: AgentReasoningEffort;
+  /**
+   * Whether the model may search the web while answering.
+   *
+   * Also long-standing and, until now, only honoured when an agent ran as a
+   * step inside a workflow. Pressing Launch Run on the agent itself ignored it,
+   * so the same agent searched in one place and not the other with nothing on
+   * screen saying so.
+   */
+  webSearch?: boolean;
+  /**
+   * A fixed shape the answer must come back in.
+   *
+   * Set on the agent as its output schema, and — like web access — only ever
+   * honoured when the agent ran as a workflow node. A direct run ignored it, so
+   * the screen's warning that the agent "will exclusively reply in raw JSON"
+   * was untrue everywhere the reader could actually press Launch Run.
+   *
+   * Standard JSON Schema. Two of the three providers can enforce it; the third
+   * is told the shape in its instruction, which its adapter does rather than
+   * the loop, because that is where provider differences belong.
+   */
+  responseJsonSchema?: Record<string, unknown>;
 };
+
+export type AgentReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 
 export type AgentTurnToolCall = {
   name: string;

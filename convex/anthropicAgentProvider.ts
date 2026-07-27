@@ -15,6 +15,7 @@ import {
 } from "./anthropicStreamService";
 import type {
   AgentProviderAdapter,
+  AgentReasoningEffort,
   AgentStreamOptions,
   AgentTurnRequest,
   AgentTurnResponse,
@@ -39,6 +40,71 @@ const ANTHROPIC_API_VERSION = "2023-06-01";
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
 
+/**
+ * The agent's three levels as an Anthropic thinking budget, in tokens.
+ *
+ * Anthropic's minimum is 1024, so Low is the floor rather than something
+ * smaller. Every budget stays well under `DEFAULT_MAX_OUTPUT_TOKENS`, which the
+ * API requires and which is also what keeps room for the answer itself.
+ *
+ * Extended thinking fixes temperature at 1, so this adapter — which has never
+ * sent a temperature — deliberately still does not.
+ */
+const ANTHROPIC_THINKING_BUDGET_TOKENS: Record<AgentReasoningEffort, number> = {
+  LOW: 1024,
+  MEDIUM: 2048,
+  HIGH: 4096,
+};
+
+/**
+ * Anthropic's own hosted search tool.
+ *
+ * A server tool: the model runs the search itself rather than asking the
+ * runtime to, so it sits alongside the agent's declared tools and never reaches
+ * the loop's tool-call handling.
+ */
+const ANTHROPIC_WEB_SEARCH_TOOL = {
+  type: "web_search_20250305",
+  name: "web_search",
+} as const;
+
+/**
+ * Anthropic has no response-format field, so the shape is asked for in words.
+ *
+ * The other two providers enforce a JSON Schema natively. Rather than leave this
+ * provider silently ignoring the setting — the exact fault being fixed — the
+ * required shape is appended to the instruction. It is a weaker guarantee, and
+ * saying so here is better than a screen that promises the same thing whichever
+ * model is chosen.
+ */
+export function appendAnthropicResponseShape(
+  systemInstruction: string,
+  responseJsonSchema?: Record<string, unknown>,
+) {
+  if (!responseJsonSchema) return systemInstruction;
+  const instruction = "Reply with JSON only, and nothing else — no prose, no code fence. "
+    + `It must match this JSON Schema exactly:\n${JSON.stringify(responseJsonSchema)}`;
+  return systemInstruction ? `${systemInstruction}\n\n${instruction}` : instruction;
+}
+
+/** What this turn asks for beyond the transcript, built where it can be read. */
+export function buildAnthropicTurnOptions(request: {
+  reasoningEffort?: AgentReasoningEffort;
+  webSearch?: boolean;
+}) {
+  return {
+    ...(request.reasoningEffort
+      ? {
+        thinking: {
+          type: "enabled" as const,
+          budget_tokens: ANTHROPIC_THINKING_BUDGET_TOKENS[request.reasoningEffort],
+        },
+      }
+      : {}),
+    extraTools: request.webSearch ? [ANTHROPIC_WEB_SEARCH_TOOL] : [],
+  };
+}
+
 export function createAnthropicAgentProvider(args: {
   apiKey?: string;
   fetchImpl?: typeof fetch;
@@ -56,17 +122,30 @@ export function createAnthropicAgentProvider(args: {
 
       const cacheable = applyAnthropicCacheControl({
         tools: toAnthropicTools(request.tools),
-        system: request.systemInstruction
-          ? [{ type: "text", text: request.systemInstruction }]
-          : [],
+        system: (() => {
+          const instruction = appendAnthropicResponseShape(
+            request.systemInstruction,
+            request.responseJsonSchema,
+          );
+          return instruction ? [{ type: "text", text: instruction }] : [];
+        })(),
       });
+
+      const { extraTools, ...turnOptions } = buildAnthropicTurnOptions({
+        reasoningEffort: request.reasoningEffort,
+        webSearch: request.webSearch,
+      });
+      // Appended after the cached tools rather than mixed in, so adding search
+      // does not move a cache breakpoint and invalidate the cached prefix.
+      const tools = [...cacheable.tools, ...extraTools];
 
       const body = JSON.stringify({
         model: request.model.providerModelId,
         max_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
         stream: true,
+        ...turnOptions,
         ...(cacheable.system.length > 0 ? { system: cacheable.system } : {}),
-        ...(cacheable.tools.length > 0 ? { tools: cacheable.tools } : {}),
+        ...(tools.length > 0 ? { tools } : {}),
         messages: toAnthropicMessages(request.turns),
       });
 

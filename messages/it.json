@@ -343,8 +343,6 @@
         "agents": "Agenti",
         "agentApprovals": "Approvazioni Agenti",
         "agentSkills": "Skill Agent",
-        "releaseCenter": "Controlli Ship",
-        "runObservatory": "Osservatorio Run",
         "manageAgents": "Gestisci Agenti",
         "connectors": "Connettori",
         "workflows": "Workflow",
@@ -358,10 +356,8 @@
         "settings": "Impostazioni",
         "systemSettings": "Impostazioni di Sistema",
         "apiKeys": "Chiavi API",
-        "webhookDeliveries": "Consegne Webhook",
         "analytics": "Analytics",
         "maintenance": "Manutenzione",
-        "systemHealth": "Salute del Sistema",
         "scripts": "Script",
         "authDiagnostics": "Diagnostica Auth",
         "workspace": "Workspace",
@@ -371,7 +367,9 @@
         "propertiesSearch": "Ricerca",
         "propertiesScrapedData": "Dati Estratti",
         "impersonatingLabel": "Workspace in Impersonificazione",
-        "exitWorkspace": "Esci da Workspace"
+        "exitWorkspace": "Esci da Workspace",
+        "tools": "Strumenti",
+        "health": "Salute"
     },
     "properties": {
         "search": {
@@ -753,7 +751,7 @@
                 },
                 "detail": {
                     "loadingTitle": "Esecuzione workflow",
-                    "description": "{status} \u00b7 avviata {started}",
+                    "description": "{status} · avviata {started}",
                     "back": "Tutte le esecuzioni",
                     "noSteps": "Questa esecuzione non ha ancora passaggi",
                     "approve": "Approva",
@@ -766,9 +764,9 @@
                     },
                     "confirm": {
                         "title": "Rifiutare questo passaggio?",
-                        "body": "Il workflow \u00e8 in attesa a {node}.",
+                        "body": "Il workflow è in attesa a {node}.",
                         "warningTitle": "Questo ferma l'intera esecuzione",
-                        "warningBody": "L'esecuzione \u00e8 segnata come non riuscita e i passaggi successivi non avvengono. Ci\u00f2 che \u00e8 gi\u00e0 stato eseguito viene conservato.",
+                        "warningBody": "L'esecuzione è segnata come non riuscita e i passaggi successivi non avvengono. Ciò che è già stato eseguito viene conservato.",
                         "cancel": "Continua ad attendere",
                         "confirm": "Rifiuta e ferma"
                     }
@@ -778,7 +776,7 @@
                 },
                 "success": {
                     "APPROVED": "Approvata. Il workflow continua.",
-                    "REJECTED": "Rifiutata. L'esecuzione si \u00e8 fermata."
+                    "REJECTED": "Rifiutata. L'esecuzione si è fermata."
                 },
                 "errors": {
                     "failed": "Impossibile registrare la decisione."
@@ -942,86 +940,6 @@
             }
         },
         "aiTools": {
-            "marketplace": {
-                "title": "Marketplace Connettori",
-                "subtitle": "Installa definizioni di connettori governate, verifica lo stato della connessione e crea tool sicuri da mapping handler approvati.",
-                "count": "{count} connettori starter",
-                "install": "Installa",
-                "installing": "Installazione...",
-                "sync": "Sincronizza",
-                "test": "Convalida",
-                "testing": "Convalida in corso...",
-                "manage": "Gestisci",
-                "untested": "NON CONVALIDATO",
-                "availability": {
-                    "unavailable": "NON DISPONIBILE",
-                    "partial": "{available} SU {total} DISPONIBILI",
-                    "unavailableHelp": "Questo connettore è solo una dichiarazione: non è ancora implementato. Un agente che lo richiama registrerà la chiamata come non implementata e non eseguirà l'azione."
-                }
-            },
-            "connectorDetails": {
-                "back": "Torna ai Connettori",
-                "untested": "NON CONVALIDATO",
-                "active": "Attivo",
-                "disabled": "Disattivato",
-                "save": "Salva Modifiche",
-                "saving": "Salvataggio...",
-                "test": "Convalida configurazione",
-                "testing": "Convalida in corso...",
-                "noSecrets": "Non sono richiesti riferimenti segreto.",
-                "noTools": "Questo connettore non espone ancora tool eseguibili.",
-                "noGeneratedTools": "Nessun tool generato e attualmente collegato.",
-                "noTestLogs": "Nessun controllo di configurazione registrato.",
-                "noSecretRegistry": "Nessun record di riferimento segreto sincronizzato.",
-                "required": "Richiesto",
-                "optional": "Opzionale",
-                "sections": {
-                    "connection": "Configurazione Connessione",
-                    "tools": "Tool Abilitati",
-                    "oauth": "Connessione OAuth",
-                    "generatedTools": "Tool Generati",
-                    "secretRegistry": "Registro Riferimenti Segreto",
-                    "testHistory": "Cronologia convalide"
-                },
-                "fields": {
-                    "authMode": "Modalità Auth",
-                    "availability": "Disponibilità",
-                    "active": "Attivo",
-                    "scope": "Ambito Installazione",
-                    "tenant": "Tenant",
-                    "oauthStatus": "Stato OAuth",
-                    "oauthAccount": "Rif Account",
-                    "oauthScopes": "Scope",
-                    "secretRefs": "Riferimenti Segreto Configurati"
-                },
-                "scope": {
-                    "global": "Globale",
-                    "tenant": "Limitato al tenant",
-                    "noTenant": "Nessun tenant selezionato"
-                },
-                "placeholders": {
-                    "secretRefs": "es. base_url, auth_header",
-                    "oauthState": "Stato OAuth",
-                    "oauthAccountRef": "account_ref",
-                    "oauthTokenRef": "vault/oauth/token_ref"
-                },
-                "oauth": {
-                    "notConnected": "NON_CONNESSO",
-                    "noAccount": "Nessun riferimento account",
-                    "start": "Avvia OAuth",
-                    "starting": "Avvio...",
-                    "complete": "Completa OAuth",
-                    "completing": "Completamento...",
-                    "disconnect": "Disconnetti OAuth",
-                    "latest": "Ultima sessione OAuth: {provider} / {status}"
-                },
-                "diagnostics": {
-                    "authMode": "Auth",
-                    "installStatus": "Installazione",
-                    "authConnectionStatus": "OAuth",
-                    "missingSecretRefs": "Rif mancanti"
-                }
-            },
             "new": {
                 "back": "Back to Tools Library",
                 "title": "Add AI Tool",
@@ -1209,8 +1127,6 @@
                     "memory": "Memoria",
                     "prompt": "Prompt di Sistema",
                     "rules": "Regole AI",
-                    "integrations": "Integrazioni",
-                    "schemas": "Schemi I/O",
                     "logs": "Log"
                 },
                 "dashboard": {
@@ -1267,7 +1183,7 @@
                             },
                             "reasoning": {
                                 "label": "Intensità di Ragionamento",
-                                "hint": "Un impegno maggiore aumenta la profondità ma eleva latenza e costi.",
+                                "hint": "Quanto a fondo ragiona il modello prima di rispondere. Più alto è più profondo, più lento e più costoso.",
                                 "levels": {
                                     "LOW": "Bassa",
                                     "MEDIUM": "Media",
@@ -1275,10 +1191,9 @@
                                 }
                             },
                             "internet": {
-                                "label": "Percezione Internet",
-                                "hint": "Abilita il recupero web live tramite Google Search.",
-                                "offline": "Solo Offline",
-                                "liveSearch": "Ricerca Live"
+                                "label": "Ricerca web",
+                                "hintOn": "L'agente può cercare sul web mentre lavora.",
+                                "hintOff": "L'agente risponde con le proprie conoscenze, i documenti e gli strumenti."
                             },
                             "approval": {
                                 "label": "Approvazione Umana",
@@ -1303,104 +1218,20 @@
                             "status": {
                                 "label": "Stato di Distribuzione",
                                 "active": "Flotta Attiva",
-                                "inactive": "Manutenzione / Bozza"
+                                "inactive": "Manutenzione / Bozza",
+                                "blockedLink": "Rivedi i controlli",
+                                "blockedReason": {
+                                    "modelDefault": "Questo agente non può ancora essere attivato: non c'è un modello con cui può funzionare.",
+                                    "skills": "Questo agente non può ancora essere attivato: una skill è attiva senza gli strumenti che le servono.",
+                                    "smokeEval": "Questo agente non può ancora essere attivato: non ha superato nessun controllo.",
+                                    "releaseGate": "Questo agente non può ancora essere attivato: un controllo obbligatorio non è superato."
+                                },
+                                "hintActive": "L'agente può essere eseguito, da te o da ciò a cui è collegato.",
+                                "hintInactive": "Una bozza non può essere eseguita. Anche Launch Run viene rifiutato."
                             },
-                            "readiness": {
-                                "title": "Prontezza Attivazione",
-                                "loading": "Controllo della configurazione agent...",
-                                "ready": "Al momento non ci sono blocchi di attivazione per questo agent.",
-                                "activationWarning": "{count} avviso/i di prontezza da rivedere prima di attivare questo agent.",
-                                "activationBlocked": "Esegui uno smoke eval con successo prima di attivare questo agent in bozza.",
-                                "releaseGateBlocked": "L'ultimo smoke eval e fallito o e ancora in sospeso. Riesegui la suite eval e ottieni un ultimo risultato superato prima dell'attivazione.",
-                                "runSmokeEval": "Esegui Smoke Eval",
-                                "runningSmokeEval": "Esecuzione...",
-                                "runModelSmokeEval": "Valuta con Modello",
-                                "runningModelSmokeEval": "Valutazione...",
-                                "smokeRunQueued": "Smoke eval con valutazione modello in coda. L'ultimo risultato si aggiornera al termine.",
-                                "smokeRunSuccess": "Checkpoint smoke eval registrato. La checklist di prontezza si aggiornera automaticamente.",
-                                "smokeRunFailed": "Impossibile registrare lo smoke eval.",
-                                "latestSmokeEval": {
-                                    "title": "Ultimo Smoke Eval",
-                                    "empty": "Non eseguito",
-                                    "hint": "Esegui uno smoke eval da una fixture attiva per sbloccare l'attivazione della bozza.",
-                                    "status": {
-                                        "QUEUED": "In coda",
-                                        "RUNNING": "In esecuzione",
-                                        "PENDING_APPROVAL": "In attesa approvazione",
-                                        "SUCCESS": "Superato",
-                                        "FAILED": "Fallito",
-                                        "CANCELLED": "Annullato"
-                                    }
-                                },
-                                "coverage": {
-                                    "title": "Copertura Fixture",
-                                    "summary": "{covered}/{total} categorie fixture hanno copertura attiva.",
-                                    "smokeCovered": "{count} coperte da smoke",
-                                    "fixtureCount": "{count} attive",
-                                    "status": {
-                                        "missing": "Mancante",
-                                        "fixtureReady": "Fixture pronta",
-                                        "smokePassed": "Smoke superato"
-                                    },
-                                    "types": {
-                                        "HAPPY_PATH": "Percorso felice",
-                                        "TOOL_PLAN": "Piano tool",
-                                        "APPROVAL_PAUSE": "Pausa approvazione",
-                                        "REJECTED_ACTION": "Azione rifiutata",
-                                        "PROMPT_INJECTION": "Prompt injection",
-                                        "TENANT_BOUNDARY": "Confine tenant",
-                                        "BAD_TOOL_ARGS": "Argomenti tool errati",
-                                        "CANCELLATION": "Annullamento",
-                                        "REPLAYED_FAILURE": "Errore riprodotto",
-                                        "COST_LATENCY_BUDGET": "Budget costo/latenza"
-                                    }
-                                },
-                                "badge": {
-                                    "clear": "Pronto",
-                                    "review": "Rivedi"
-                                },
-                                "checks": {
-                                    "draftStatus": {
-                                        "title": "Revisione Bozza",
-                                        "pass": "L'agent resta in bozza mentre viene verificata la prontezza.",
-                                        "warn": "L'agent e gia attivo mentre restano avvisi di prontezza."
-                                    },
-                                    "modelDefault": {
-                                        "title": "Default Modello",
-                                        "pass": "E disponibile un default o override modello compatibile con agent.",
-                                        "warn": "Nessun modello default abilitato e compatibile con agent."
-                                    },
-                                    "tools": {
-                                        "title": "Accesso Tool",
-                                        "pass": "{count} binding tool disponibili.",
-                                        "warn": "Nessun tool e ancora collegato a questo agent."
-                                    },
-                                    "skills": {
-                                        "title": "Skill",
-                                        "pass": "{count} skill abilitate collegate.",
-                                        "warn": "I tool richiesti dalle skill o gli smoke eval delle skill ad alto rischio richiedono attenzione."
-                                    },
-                                    "knowledge": {
-                                        "title": "Fonti Knowledge",
-                                        "pass": "{count} documento/i knowledge collegati.",
-                                        "warn": "Nessun documento knowledge approvato e collegato."
-                                    },
-                                    "evalFixtures": {
-                                        "title": "Fixture Eval",
-                                        "pass": "{count} fixture eval attive pronte.",
-                                        "warn": "Nessuna fixture eval attiva e pronta per i controlli di regressione."
-                                    },
-                                    "smokeEval": {
-                                        "title": "Smoke Eval",
-                                        "pass": "{count} smoke eval completati con successo.",
-                                        "warn": "Nessuno smoke eval completato con successo e stato registrato."
-                                    },
-                                    "releaseGate": {
-                                        "title": "Gate Rilascio",
-                                        "pass": "L'ultimo checkpoint smoke eval e superato.",
-                                        "warn": "L'ultimo checkpoint smoke eval non e superato."
-                                    }
-                                }
+                            "groups": {
+                                "behaviour": "Come si comporta",
+                                "limits": "Cosa lo limita"
                             }
                         }
                     },
@@ -1533,40 +1364,6 @@
                         "browseButton": "Browse Files"
                     }
                 },
-                "integrations": {
-                    "title": "Ecosistemi Connessi",
-                    "subtitle": "Connect third-party APIs and internal tools for this agent.",
-                    "sectionTitle": "Available Integrations",
-                    "empty": "Nessuno strumento o integrazione mappato a questa unità.",
-                    "errors": {
-                        "assignFailed": "Failed to assign integration."
-                    },
-                    "card": {
-                        "assigned": "Connected"
-                    }
-                },
-                "schemas": {
-                    "title": "Schemi dell'Interfaccia I/O",
-                    "subtitle": "Define structured JSON data formats for this agent's inputs and outputs.",
-                    "saveButton": "Save Schemas",
-                    "savingButton": "Saving...",
-                    "saveSuccess": "Schemas saved successfully",
-                    "input": {
-                        "title": "Input Schema",
-                        "subtitle": "The exact data format this agent requires to begin processing."
-                    },
-                    "output": {
-                        "title": "Output Schema",
-                        "subtitle": "The strict JSON structure this agent must return.",
-                        "warning": {
-                            "label": "WARNING:",
-                            "text": "Forcing an output schema bypasses standard conversational responses. The agent will exclusively reply in raw JSON matching this schema."
-                        }
-                    },
-                    "errors": {
-                        "saveFailed": "Failed to save schemas."
-                    }
-                },
                 "logs": {
                     "title": "Tracce di Esecuzione",
                     "subtitle": "View a history of this agent's interactions and background tasks.",
@@ -1602,6 +1399,46 @@
                             "config": "PROMPT & RUNTIME CONFIGURATION"
                         }
                     }
+                },
+                "interfaces": {
+                    "title": "Interfacce",
+                    "subtitle": "Cosa può usare questo agente e come risponde.",
+                    "tools": {
+                        "title": "Strumenti che può usare",
+                        "description": "Gli strumenti permettono all'agente di fare cose oltre a parlare: cercare qualcosa, chiamare un altro sistema, scrivere un record. Attiva quelli che deve avere.",
+                        "columns": {
+                            "name": "Strumento",
+                            "description": "Cosa fa",
+                            "access": "Chi può usarlo",
+                            "state": "Attivo"
+                        },
+                        "roles": {
+                            "SUPER_ADMIN": "Amministratori di sistema",
+                            "ADMIN": "Amministratori",
+                            "USER": "Chiunque"
+                        },
+                        "empty": "Nessuno strumento è ancora stato configurato",
+                        "emptyHint": "Gli strumenti si creano una volta e sono condivisi da tutti gli agenti.",
+                        "emptyAction": "Configurane uno",
+                        "errors": {
+                            "assignFailed": "Non è stato possibile cambiare. Riprova."
+                        }
+                    },
+                    "answer": {
+                        "title": "Come risponde",
+                        "description": "Di norma l'agente risponde in linguaggio naturale. Se la risposta deve essere letta da qualcosa che non è una persona — un passaggio di un workflow, un'app, un widget — puoi chiedere un insieme fisso di campi.",
+                        "builderTitle": "Campi che deve restituire",
+                        "builderSubtitle": "Aggiungine uno per ogni informazione che la risposta deve contenere. Lascia vuoto per mantenere il linguaggio naturale.",
+                        "warning": "Con i campi impostati l'agente smette di scrivere frasi. Ogni risposta arriva come dati esattamente in questa forma.",
+                        "saveButton": "Salva",
+                        "savingButton": "Salvataggio...",
+                        "saveSuccess": "Salvato",
+                        "errors": {
+                            "saveFailed": "Non è stato possibile salvare. Riprova."
+                        }
+                    },
+                    "loading": "Caricamento...",
+                    "notFound": "Agente non trovato."
                 }
             }
         },
@@ -1867,7 +1704,6 @@
                     "dashboardReports": "Dashboard e report",
                     "workflowsSchedules": "Workflow e schedulazioni",
                     "approvalsRuns": "Approvazioni e run",
-                    "releaseCenter": "Release Center",
                     "auditLedger": "Registro audit",
                     "confirmRoleAccess": "Conferma accessi ruolo",
                     "setScheduleOwners": "Imposta owner schedulazioni",
@@ -1950,9 +1786,7 @@
                     "systemSettings": "System Settings",
                     "systemHealth": "System Health",
                     "adminCompanies": "Admin aziende",
-                    "releaseCenter": "Release Center",
                     "apiKeys": "API key",
-                    "webhookDeliveries": "Consegne webhook",
                     "publicWidget": "Widget pubblico",
                     "customerChatHistory": "Cronologia chat clienti",
                     "knowledgeQa": "QA knowledge",

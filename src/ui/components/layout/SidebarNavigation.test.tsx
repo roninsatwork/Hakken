@@ -97,15 +97,13 @@ const labels: Record<string, string> = {
   manageCompanies: "Manage Companies",
   manageWorkflows: "Manage Workflows",
   models: "Models",
-  releaseCenter: "Release Center",
-  runObservatory: "Run Observatory",
+  health: "Health",
   runningCosts: "Running Costs",
   rules: "Rules",
   schedules: "Schedules",
   scripts: "Scripts",
   settings: "Settings",
   systemAdmins: "System Admins",
-  systemHealth: "System Health",
   systemPrompt: "System Prompt",
   systemSettings: "System Settings",
   webhookDeliveries: "Webhook Deliveries",
@@ -151,14 +149,13 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: "Workflow Logs" })).not.toBeInTheDocument();
   });
 
-  it("shows ship checks and run observatory in Maintenance instead of Agents", () => {
-    vi.mocked(usePathname).mockReturnValue("/admin/releases");
+  it("shows health in Maintenance instead of Agents", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/health");
 
     render(<SidebarNavigation />);
 
     expect(screen.getByRole("button", { name: "Maintenance" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Release Center" })).toHaveAttribute("href", "/admin/releases");
-    expect(screen.getByRole("link", { name: "Run Observatory" })).toHaveAttribute("href", "/admin/run-observatory");
+    expect(screen.getByRole("link", { name: "Health" })).toHaveAttribute("href", "/admin/health");
     expect(screen.getByRole("button", { name: "Agents" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Manage Agents" })).not.toBeInTheDocument();
   });
@@ -178,7 +175,7 @@ describe("SidebarNavigation AI guardrails", () => {
 
   /**
    * A run parked on an approval waits indefinitely, and until this badge existed
-   * nothing on the platform said so: the only other mention was a system-health
+   * nothing on the platform said so: the only other mention was a health
    * tile that stays at zero for the first thirty minutes.
    */
   it("shows a count on Agent Approvals when runs are waiting", () => {

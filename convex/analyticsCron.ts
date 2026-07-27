@@ -1426,13 +1426,23 @@ export const dispatchPlatformAlerts = internalAction({
       };
     }
 
-    const recipients = parsePlatformAlertRecipients(
+    const configuredRecipients = parsePlatformAlertRecipients(
       process.env.PLATFORM_ALERT_EMAILS ||
         process.env.PLATFORM_ALERT_EMAIL ||
         process.env.ANALYTICS_ALERT_EMAILS ||
         process.env.ANALYTICS_ALERT_EMAIL ||
         process.env.INITIAL_SUPER_ADMIN_EMAIL
     );
+    // Falls back to the people who can actually act on it, rather than giving up.
+    //
+    // Annotated, and awaited on its own line, because an un-annotated
+    // `ctx.runQuery` inside this action resolves its type through the generated
+    // api and back into this module. That cycle silently widens every
+    // `ctx.db.get` in the codebase to a union of every table.
+    const fallbackRecipients: string[] = configuredRecipients.length > 0
+      ? []
+      : await ctx.runQuery(internal.platformAlertRecipients.getPlatformAlertFallbackRecipients, {});
+    const recipients = configuredRecipients.length > 0 ? configuredRecipients : fallbackRecipients;
 
     if (recipients.length === 0) {
       console.warn("Platform alert triggered but no alert recipients are configured.", decision.summary);

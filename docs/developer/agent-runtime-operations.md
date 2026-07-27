@@ -9,10 +9,10 @@ Read this with `docs/developer/agents.md`, `docs/developer/ai-tools-and-connecto
 Operational routes:
 
 - `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx` reads analytics, paginated runs, run detail, feedback, reflections, memory candidates, eval fixtures, smoke history, versions, and improvement suggestions. It also triggers replay, cancellation, feedback writes, reflection creation, memory candidate generation/review, eval creation, eval suite execution, and improvement suggestion review.
-- `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages fixtures, smoke evals, suite presets, skill coverage, and release candidate comparison.
+- `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages checks, smoke evals, suite presets, and skill coverage.
 - `src/app/(dashboard)/admin/agents/[id]/memory/page.tsx` reviews active memories, quality signals, memory candidates, reflections, and improvement suggestions.
 - `src/app/(dashboard)/admin/agents/approvals/page.tsx` reviews pending approvals across agents.
-- `src/app/(dashboard)/admin/run-observatory/page.tsx` consumes cross-agent observability data.
+- `src/app/(dashboard)/admin/health/page.tsx` consumes cross-agent observability data.
 
 Shared operational UI should keep using admin pagination, in-app modals, inline save/error feedback, and redacted previews rather than native browser dialogs.
 
@@ -93,18 +93,11 @@ Run-derived fixtures collect run status, error, final output, tool plan, blocked
 
 Smoke evals can be contract-based or model-graded. Model grading is queued through `convex/agentEvalGradingActions.ts` when required. Suite presets group fixtures by release gate, skill coverage, or other operational tags.
 
-## Versions And Releases
+## Version Snapshots
 
-`convex/agentVersioningService.ts` and `convex/agentVersions.ts` create and read version snapshots. Snapshots hash prompt, tools, skills, memories, rules, model config, and policy state.
+`convex/agentVersioningService.ts` and `convex/agentVersions.ts` create and read version snapshots. Snapshots hash prompt, tools, skills, memories, rules, model config, and policy state, so a check result can be tied to the exact agent that produced it.
 
-Release actions live in `convex/releases.ts`:
-
-- `createReleaseCandidate`
-- `approveReleaseCandidate`
-- `activateReleaseCandidate`
-- `rollbackRelease`
-
-Release candidate comparison in `agentEvalFixtures.ts` checks fixture freshness and release-gate evidence. Activation logic in `convex/agents.ts` must stay aligned with release evidence, smoke eval status, and high-risk skill readiness.
+Activation logic in `convex/agents.ts` must stay aligned with must-pass check evidence, smoke eval status, and high-risk skill readiness.
 
 ## Authorization And Tenant Scope
 

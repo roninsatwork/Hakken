@@ -194,12 +194,12 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
 
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
-  if (pathname.startsWith('/admin/releases')) return 'Release Center';
-  if (pathname.startsWith('/admin/run-observatory')) return 'Run Observatory';
+  if (pathname.startsWith('/admin/health')) return 'Health';
   if (pathname.startsWith('/admin/companies')) return 'Companies';
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
   if (pathname === '/admin/users/invite') return 'Invitations';
   if (pathname.startsWith('/admin/users')) return 'Manage Users';
+  if (pathname.startsWith('/admin/ai/tools')) return 'Tools';
   if (pathname.startsWith('/admin/ai')) return 'Artificial Intelligence';
   if (pathname.startsWith('/admin/agents/approvals')) return 'Agent Approvals';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
@@ -207,9 +207,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
   if (pathname.startsWith('/admin/workflows/executions')) return 'Workflow Runs';
   if (pathname === '/admin/workflows') return 'Manage Workflows';
-  if (pathname.startsWith('/admin/settings/system-health')) return 'System Health';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
-  if (pathname.startsWith('/admin/settings/webhook-deliveries')) return 'Webhook Deliveries';
   if (pathname.startsWith('/admin/settings/api-keys')) return 'API Keys';
   if (pathname === '/admin/settings/analytics') return 'Analytics';
   if (pathname.startsWith('/admin/settings')) return 'System Settings';
@@ -250,12 +248,9 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     workflows: false,
     users: false,
     settings: pathname.startsWith('/admin/settings') &&
-      !pathname.startsWith('/admin/settings/scripts') &&
-      !pathname.startsWith('/admin/settings/system-health'),
-    maintenance: pathname.startsWith('/admin/releases') ||
-      pathname.startsWith('/admin/run-observatory') ||
+      !pathname.startsWith('/admin/settings/scripts'),
+    maintenance: pathname.startsWith('/admin/health') ||
       pathname.startsWith('/admin/settings/scripts') ||
-      pathname.startsWith('/admin/settings/system-health') ||
       pathname.startsWith('/admin/auth-diagnostics'),
     // template:remove:start salesReports
     reports: false,
@@ -296,7 +291,7 @@ export default function SidebarNavigation() {
     user?.impersonatingCompanyId ? { id: user.impersonatingCompanyId } : "skip"
   );
   // A run parked on an approval waits indefinitely and nothing else on the
-  // platform says so: the only other mention is a system-health tile that stays
+  // platform says so: the only other mention is a health tile that stays
   // at zero for the first thirty minutes. Skipped unless this is an admin area
   // super admin, because the query is super-admin only and the page is too.
   const pendingApprovals = useQuery(
@@ -422,7 +417,12 @@ export default function SidebarNavigation() {
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" navKey="globalAi" isActive={pathname.startsWith('/admin/ai')} onClick={() => setActiveItem('Artificial Intelligence')} />
+                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" navKey="globalAi" isActive={pathname === '/admin/ai' || (pathname.startsWith('/admin/ai') && !pathname.startsWith('/admin/ai/tools'))} onClick={() => setActiveItem('Artificial Intelligence')} />
+                      {/* Nothing linked here. The tool catalogue was reachable
+                          only by typing the URL, which is why the one screen
+                          deciding what an agent can actually do had never been
+                          opened. */}
+                      <SubNavItem label={t('tools')} href="/admin/ai/tools" navKey="tools" isActive={pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Tools')} />
                     </NavItem>
 
                     {isSuperAdmin && (
@@ -458,8 +458,7 @@ export default function SidebarNavigation() {
                           icon={Settings}
                           label={t('settings')}
                           isActive={(pathname.startsWith('/admin/settings') &&
-                            !pathname.startsWith('/admin/settings/scripts') &&
-                            !pathname.startsWith('/admin/settings/system-health')) ||
+                            !pathname.startsWith('/admin/settings/scripts')) ||
                             activeItem === 'System Settings' ||
                             activeItem === 'API Keys' ||
                             activeItem === 'Webhook Deliveries' ||
@@ -472,7 +471,6 @@ export default function SidebarNavigation() {
                           <SubNavItem label={t('systemSettings')} href="/admin/settings" navKey="systemSettings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
                           <SubNavItem label="Plans" href="/admin/settings/plans" navKey="plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
                           <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" navKey="apiKeys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
-                          <SubNavItem label={t('webhookDeliveries')} href="/admin/settings/webhook-deliveries" navKey="webhookDeliveries" isActive={activeItem === 'Webhook Deliveries' || pathname.startsWith('/admin/settings/webhook-deliveries')} onClick={() => setActiveItem('Webhook Deliveries')} />
                           <SubNavItem label={t('analytics')} href="/admin/settings/analytics" navKey="analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
                         </NavItem>
 
@@ -480,24 +478,23 @@ export default function SidebarNavigation() {
                           icon={Wrench}
                           label={t('maintenance')}
                           isActive={activeItem === 'Maintenance' ||
-                            activeItem === 'Release Center' ||
-                            activeItem === 'Run Observatory' ||
+                            activeItem === 'Health' ||
                             activeItem === 'Scripts' ||
-                            activeItem === 'System Health' ||
                             activeItem === 'Auth Diagnostics' ||
-                            pathname.startsWith('/admin/releases') ||
-                            pathname.startsWith('/admin/run-observatory') ||
+                            pathname.startsWith('/admin/health') ||
                             pathname.startsWith('/admin/settings/scripts') ||
-                            pathname.startsWith('/admin/settings/system-health') ||
                             pathname.startsWith('/admin/auth-diagnostics')}
                           onClick={() => setActiveItem('Maintenance')}
                           hasChildren
                           isOpen={openSections.maintenance}
                           onToggle={() => toggleSection('maintenance')}
                         >
-                          <SubNavItem label={t('releaseCenter')} href="/admin/releases" navKey="releaseCenter" isActive={pathname.startsWith('/admin/releases')} onClick={() => setActiveItem('Release Center')} />
-                          <SubNavItem label={t('runObservatory')} href="/admin/run-observatory" navKey="runObservatory" isActive={pathname.startsWith('/admin/run-observatory')} onClick={() => setActiveItem('Run Observatory')} />
-                          <SubNavItem label={t('systemHealth')} href="/admin/settings/system-health" navKey="systemHealth" isActive={activeItem === 'System Health' || pathname.startsWith('/admin/settings/system-health')} onClick={() => setActiveItem('System Health')} />
+                          {/* One screen. Run Observatory asked "how are my agents
+                              doing" and System Health asked "is anything broken" —
+                              the same question at two altitudes, answered twice in
+                              different words, both leading with counters that read
+                              zero on a healthy platform. */}
+                          <SubNavItem label={t('health')} href="/admin/health" navKey="health" isActive={pathname.startsWith('/admin/health')} onClick={() => setActiveItem('Health')} />
                           <SubNavItem label={t('scripts')} href="/admin/settings/scripts" navKey="scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
                           <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" navKey="diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>
