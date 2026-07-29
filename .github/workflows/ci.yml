@@ -44,10 +44,26 @@ jobs:
           node-version: '24.18.0'
           cache: 'npm'
 
+      # The same 1.1GB of packages every run, changing only when the lockfile
+      # does. Fetching them was about half the wall time of a check.
+      #
+      # The Linux rollup binary is installed before the cache is written, so a
+      # hit already contains it. If that workaround ever needs to change, bump
+      # the key's suffix — a stale cache would otherwise keep serving the old
+      # tree and the failure would look unrelated to whatever you changed.
+      - name: Restore installed packages
+        id: packages
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.packages.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Workaround NPM Optional Dependency Bug
+        if: steps.packages.outputs.cache-hit != 'true'
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
       - name: Run lint
@@ -67,7 +83,9 @@ jobs:
         run: npm run coverage:check
 
       - name: Upload coverage report
-        if: always()
+        # Only when something failed. A 28MB upload after every green check was
+        # paid for and never opened.
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report-quick
@@ -93,10 +111,26 @@ jobs:
           node-version: '24.18.0'
           cache: 'npm'
 
+      # The same 1.1GB of packages every run, changing only when the lockfile
+      # does. Fetching them was about half the wall time of a check.
+      #
+      # The Linux rollup binary is installed before the cache is written, so a
+      # hit already contains it. If that workaround ever needs to change, bump
+      # the key's suffix — a stale cache would otherwise keep serving the old
+      # tree and the failure would look unrelated to whatever you changed.
+      - name: Restore installed packages
+        id: packages
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.packages.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Workaround NPM Optional Dependency Bug
+        if: steps.packages.outputs.cache-hit != 'true'
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
       - name: Install Playwright browser
@@ -114,7 +148,9 @@ jobs:
         run: npm run coverage:check
 
       - name: Upload coverage report
-        if: always()
+        # Only when something failed. A 28MB upload after every green check was
+        # paid for and never opened.
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
