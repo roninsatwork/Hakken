@@ -27,6 +27,12 @@ completed work.
   the shared "Check" vocabulary, and the readiness gates that depend on eval
   evidence. Read it before touching `convex/companyEvals.ts`,
   `convex/agentEvalFixtures.ts`, or either evals screen.
+- [Agent Observability Plan](./active/agent-observability-plan.md) — the plan to
+  replace the basic agent Logs tab with an Observability menu that answers
+  whether an agent is working properly. Owns the agent Overview screen, the job
+  detail and waterfall, the rebuilt raw logs, and the `agentLogs` fields that
+  link a log entry back to its run. Read it before touching
+  `convex/agentLogs.ts` or either of the agent logs and runs screens.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
   work left outside the platform hardening plan or deliberately stopped short of
   that plan.
@@ -40,8 +46,11 @@ Hardening Plan, then Outstanding Tasks and Handover for current status. If work
 touches AI providers, provider resolution at run time, or the scale of the model
 catalogue, use the OpenRouter And Model Scale Plan. If work touches AI testing —
 company evals, agent evals, or the readiness gates that read eval evidence — use
-the AI Checks Plan. If work touches the other named admin UX screens, use the
-Admin UI/UX Plan.
+the AI Checks Plan. If work touches how an agent's activity is displayed — the
+Observability menu, the job detail, or raw logs — use the Agent Observability
+Plan, which defers approvals behaviour to the Agent Autonomy And Approvals Plan
+and eval content to the AI Checks Plan. If work touches the other named admin UX
+screens, use the Admin UI/UX Plan.
 
 ## Retired And Completed Plans
 

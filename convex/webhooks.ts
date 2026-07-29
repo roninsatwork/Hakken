@@ -1,6 +1,7 @@
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { producesPropertyListings } from "./apifyActors";
 
 function constantTimeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -145,6 +146,20 @@ export const storeRightmoveData = internalMutation({
       .unique();
 
     if (!run) throw new Error("Run not found");
+
+    // Only the Rightmove scraper's results are property listings. Anything else
+    // an agent starts through the generic Apify tool has a shape nobody here
+    // has seen, and forcing it into the properties table would invent records
+    // out of whichever fields happened to line up. The run is still recorded as
+    // finished, so the job is not silently lost.
+    if (!producesPropertyListings(run.actorId)) {
+      await ctx.db.patch(run._id, {
+        status: "COMPLETED",
+        completedAt: Date.now(),
+        propertiesScraped: 0,
+      });
+      return;
+    }
 
     for (const itemStr of args.items) {
       const item = JSON.parse(itemStr);

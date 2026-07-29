@@ -29,6 +29,94 @@ export type ToolConnectorDefinition = {
 
 export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
   {
+    key: "apify-actor",
+    name: "Apify",
+    description:
+      "Lets an agent run any job on Apify. The agent chooses which scraper to use, what to "
+      + "point it at, and what settings to give it.",
+    category: "HTTP",
+    // The account token stays in the environment, so the agent can start work
+    // without ever seeing the credential. Which job runs, and what it is
+    // pointed at, is the agent's decision — that is the point of the tool, and
+    // it is what lets one connector serve any use case without the platform
+    // learning about any of them.
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["apify:run"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Apify",
+        description:
+          "Runs a job on Apify. Give it the job's id from the Apify store and the settings that "
+          + "job expects, including any addresses to visit. It starts the job and reports back "
+          + "straight away — the results arrive a few minutes later, so do not expect them in "
+          + "the same answer.",
+        handlerMapping: "apify.actor.run",
+        requiredRole: "ADMIN",
+        // It leaves the platform and it costs money per item collected.
+        sideEffectLevel: "EXTERNAL",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["job"],
+          properties: {
+            job: {
+              type: "string",
+              description:
+                "The id of the Apify job to run, as it appears in the Apify store — for example "
+                + "'apify/website-content-crawler'.",
+            },
+            settings: {
+              type: "string",
+              description:
+                "The settings for this job, as JSON. What goes in here is decided by the job "
+                + "itself — for a property scraper it might be the search address and how many "
+                + "listings to collect.",
+            },
+          },
+        }),
+      },
+    ],
+  },
+  {
+    key: "sonae-firecrawl",
+    name: "Firecrawl",
+    description: "Lets an agent read a page on the web and use what it says.",
+    category: "KNOWLEDGE",
+    // The key lives in the environment, as it already does for document
+    // ingestion, rather than being typed in here.
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: [],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Firecrawl",
+        description:
+          "Fetches a web page and returns its readable text. Use it to look something up on a "
+          + "site rather than answering from memory. Give it the full address of one page.",
+        handlerMapping: "web.scrape",
+        requiredRole: "ADMIN",
+        // Nothing is written, but it leaves the platform and it costs money,
+        // which is not the same as reading our own data.
+        sideEffectLevel: "EXTERNAL",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: { type: "string", description: "The full address of the page to read." },
+            mainContentOnly: {
+              type: "string",
+              description: '"false" to include navigation and footers. Defaults to main content only.',
+            },
+          },
+        }),
+      },
+    ],
+  },
+  {
     key: "sonae-knowledge",
     name: "Knowledge search",
     description: "Lets an agent search the documents you have uploaded, and quote from them.",

@@ -1,55 +1,116 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
-import { normalizeSearchTerm, paginateItems } from "./adminQueryService";
+import { normalizeSearchTerm } from "./adminQueryService";
+import type { Id } from "./_generated/dataModel";
+import { buildFailureKey } from "./agentFailureKeyService";
+import {
+  countFailureKeys,
+  groupLogsByRun,
+  matchesLogFilter,
+} from "./agentLogGroupingService";
+import { assertAdminCanAccessCompany } from "./authz";
 
-export const getOffsetPaginated = adminQuery({
+/** A single job's exchange. Far above any real run, low enough to bound the read. */
+const AGENT_RUN_LOG_LIMIT = 500;
+
+/** How much recent history the grouped view reads before paging over the jobs in it. */
+const AGENT_LOG_WINDOW = 1000;
+
+/**
+ * The raw log, read as the jobs it came from.
+ *
+ * The old screen was a flat list of every entry in time order, interleaved
+ * across jobs — a chain of work presented as unrelated rows. This groups the
+ * entries under the job they belonged to and hands back that job's real
+ * outcome, duration and cost for the group header.
+ */
+export const getJobGroups = adminQuery({
   args: {
     agentId: v.id("agents"),
     searchTerm: v.optional(v.string()),
+    filter: v.optional(v.union(
+      v.literal("ALL"),
+      v.literal("THINKING"),
+      v.literal("TOOLS"),
+      v.literal("PROBLEMS")
+    )),
+    /** Narrows to one recurring fault, so "see the other 41" shows the 41. */
+    failureKey: v.optional(v.string()),
     page: v.number(),
     pageSize: v.number(),
   },
   handler: async (ctx, args) => {
     const { user } = ctx;
-
     if (user.role === "ADMIN" && !user.companyId) {
-       throw new Error("Unauthorized");
+      throw new Error("Unauthorized");
     }
 
     const searchTerm = normalizeSearchTerm(args.searchTerm);
-    const rawResults = searchTerm
-      ? user.role === "ADMIN"
-        ? await ctx.db
-            .query("agentLogs")
-            .withSearchIndex("search_content", (searchQ) =>
-              searchQ.search("promptContent", searchTerm).eq("agentId", args.agentId)
-            )
-            .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
-            .take(1000)
-        : await ctx.db
-            .query("agentLogs")
-            .withSearchIndex("search_content", (searchQ) =>
-              searchQ.search("promptContent", searchTerm).eq("agentId", args.agentId)
-            )
-            .take(1000)
-      : user.role === "ADMIN"
-        ? await ctx.db
-            .query("agentLogs")
-            .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId))
-            .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
-            .take(1000)
-        : await ctx.db
-            .query("agentLogs")
-            .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId))
-            .take(1000);
+    const filter = args.filter ?? "ALL";
 
-    const page = paginateItems(rawResults, args.page, args.pageSize, { minTotalPages: 0 });
+    const baseQuery = searchTerm
+      ? ctx.db
+          .query("agentLogs")
+          .withSearchIndex("search_content", (searchQ) =>
+            searchQ.search("promptContent", searchTerm).eq("agentId", args.agentId)
+          )
+      : ctx.db
+          .query("agentLogs")
+          .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId))
+          .order("desc");
+
+    const scoped = user.role === "ADMIN"
+      ? baseQuery.filter((q) => q.eq(q.field("companyId"), user.companyId))
+      : baseQuery;
+
+    const entries = await scoped.take(AGENT_LOG_WINDOW);
+
+    // Counted before filtering: "this happened 42 times" must mean across the
+    // window, not across whatever the reader is currently looking at.
+    const failureCounts = countFailureKeys(entries);
+
+    const visible = entries.filter((entry) =>
+      (args.failureKey === undefined || entry.failureKey === args.failureKey)
+      && matchesLogFilter(entry, filter)
+    );
+    const groups = groupLogsByRun(visible);
+
+    const start = Math.max(0, (args.page - 1) * args.pageSize);
+    const pageGroups = groups.slice(start, start + args.pageSize);
+
+    // Only the jobs on this page are read, so a long history costs one page of
+    // lookups rather than one per job it has ever run.
+    const runIds = [...new Set(pageGroups.map((group) => group.runId).filter(Boolean))] as Id<"agentRuns">[];
+    const runs = await Promise.all(runIds.map((runId) => ctx.db.get(runId)));
+    const runById = new Map(runIds.map((runId, index) => [runId, runs[index]]));
 
     return {
-      data: page.data,
-      totalCount: page.totalCount,
-      totalPages: page.totalPages,
+      groups: pageGroups.map((group) => {
+        const run = group.runId ? runById.get(group.runId as Id<"agentRuns">) : undefined;
+        return {
+          runId: group.runId,
+          startedAt: group.startedAt,
+          lastAt: group.lastAt,
+          job: run
+            ? {
+                objective: run.objective,
+                status: run.status,
+                startedAt: run.startedAt,
+                completedAt: run.completedAt,
+                costGBP: run.costGBP,
+                triggerType: run.triggerType,
+              }
+            : null,
+          entries: group.entries,
+        };
+      }),
+      totalGroups: groups.length,
+      totalPages: Math.max(1, Math.ceil(groups.length / args.pageSize)),
+      failureCounts,
+      // The window is capped, so a very chatty agent's history can be cut short.
+      // Said outright rather than left for the reader to infer.
+      windowTruncated: entries.length >= AGENT_LOG_WINDOW,
     };
   },
 });
@@ -104,8 +165,25 @@ export const insertAgentLogInternal = internalMutation({
     promptContent: v.string(),
     responseContent: v.string(),
     companyId: v.optional(v.id("companies")),
+    runId: v.optional(v.id("agentRuns")),
+    stepId: v.optional(v.id("agentRunSteps")),
+    outcome: v.optional(v.union(
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("UNKNOWN")
+    )),
+    durationMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const outcome = args.outcome ?? "UNKNOWN";
+
+    // Derived here rather than at each call site. There are eight of them
+    // across three files, and a key that only some of them remember to set is
+    // a grouping that silently misses failures.
+    const failureKey = outcome === "FAILED"
+      ? buildFailureKey(args.responseContent)
+      : undefined;
+
     return await ctx.db.insert("agentLogs", {
       agentId: args.agentId,
       threadId: args.threadId,
@@ -113,8 +191,40 @@ export const insertAgentLogInternal = internalMutation({
       promptContent: args.promptContent,
       responseContent: args.responseContent,
       companyId: args.companyId,
+      runId: args.runId,
+      stepId: args.stepId,
+      outcome,
+      durationMs: args.durationMs,
+      failureKey,
       createdAt: Date.now(),
     });
+  },
+});
+
+/**
+ * The raw exchange for one job, in the order it happened.
+ *
+ * Only possible since log entries started recording the run they belong to.
+ * Before that the raw exchange and the durable step trail were two accounts of
+ * the same events with no way to read them together, which is why the deepest
+ * layer of the job detail could not exist.
+ */
+export const getForRun = adminQuery({
+  args: { runId: v.id("agentRuns") },
+  handler: async (ctx, args) => {
+    const { user } = ctx;
+
+    // Authorised against the run rather than the entries: a caller who cannot
+    // see the job must not learn what it said by reading its log.
+    const run = await ctx.db.get(args.runId);
+    if (!run) return [];
+    assertAdminCanAccessCompany(user, run.companyId);
+
+    return await ctx.db
+      .query("agentLogs")
+      .withIndex("by_run", (ix) => ix.eq("runId", args.runId))
+      .order("asc")
+      .take(AGENT_RUN_LOG_LIMIT);
   },
 });
 

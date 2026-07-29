@@ -7,9 +7,369 @@ type E2ERole = "super-admin" | "company-admin" | "user";
 type FunctionReference = Parameters<typeof getFunctionName>[0];
 
 const now = 1_717_200_000_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const companyId = "company_e2e";
 const superAdminId = "user_e2e_super_admin";
 const userId = "user_e2e";
+
+/**
+ * A week of agent activity with a shape worth looking at: a quiet weekend, a
+ * failure that starts partway through, and a slow tail. Flat fixture data makes
+ * a chart look correct no matter how badly it is drawn.
+ */
+function observabilityAnalyticsFixture(lookbackDays: number) {
+  const perDay = [
+    { total: 103, failed: 4 },
+    { total: 109, failed: 3 },
+    { total: 97, failed: 5 },
+    { total: 56, failed: 2 },
+    { total: 49, failed: 1 },
+    { total: 138, failed: 38 },
+    { total: 142, failed: 41 },
+  ];
+  const todayStart = Math.floor(now / DAY_MS) * DAY_MS;
+  const dailySeries = perDay.map((day, index) => ({
+    dayStartMs: todayStart - (perDay.length - 1 - index) * DAY_MS,
+    total: day.total,
+    succeeded: day.total - day.failed,
+    failed: day.failed,
+    costGBP: day.total * 0.014,
+  }));
+
+  const runs = dailySeries.reduce((sum, day) => sum + day.total, 0);
+  const failed = dailySeries.reduce((sum, day) => sum + day.failed, 0);
+  const costGBP = dailySeries.reduce((sum, day) => sum + day.costGBP, 0);
+
+  return {
+    sampledRuns: runs,
+    sampledToolCalls: 2504,
+    sampledApprovals: 3,
+    sampledFeedback: 0,
+    totals: {
+      runs,
+      successfulRuns: runs - failed,
+      failedRuns: failed,
+      activeRuns: 4,
+      toolCalls: 2504,
+      approvals: 3,
+      feedback: 0,
+      costGBP,
+      inputTokens: 1_482_000,
+      outputTokens: 214_000,
+      successRate: (runs - failed) / runs,
+      positiveFeedbackRate: 0,
+      averageLatencyMs: 6600,
+    },
+    lookbackDays,
+    latency: { medianMs: 4200, p95Ms: 31400, averageMs: 6600, sampleSize: runs },
+    dailySeries,
+    comparison: {
+      current: {
+        runs,
+        succeeded: runs - failed,
+        failed,
+        costGBP,
+        successRate: (runs - failed) / runs,
+        costPerRunGBP: costGBP / runs,
+      },
+      previous: {
+        runs: 619,
+        succeeded: 604,
+        failed: 15,
+        costGBP: 8.19,
+        successRate: 604 / 619,
+        costPerRunGBP: 8.19 / 619,
+      },
+    },
+    versionChangeDays: [todayStart - 2 * DAY_MS],
+    sampleTruncated: false,
+    failureGroups: [
+      {
+        failureKey: "the property search timed out",
+        label: "The property search timed out",
+        count: 42,
+        firstSeenAt: now - 2 * DAY_MS,
+        lastSeenAt: now - 10 * 60 * 1000,
+        runIds: ["run_e2e_failed"],
+      },
+      {
+        failureKey: "gave up before finishing the job",
+        label: "Gave up before finishing the job",
+        count: 8,
+        firstSeenAt: now - 2 * DAY_MS,
+        lastSeenAt: now - 40 * 60 * 1000,
+        runIds: [],
+      },
+      {
+        failureKey: "nobody answered the approval request",
+        label: "Nobody answered the approval request",
+        count: 3,
+        firstSeenAt: now - 4 * DAY_MS,
+        lastSeenAt: now - DAY_MS,
+        runIds: [],
+      },
+    ],
+    statusCounts: {
+      QUEUED: 1,
+      RUNNING: 1,
+      PENDING_APPROVAL: 3,
+      SUCCESS: runs - failed,
+      FAILED: failed,
+      CANCELLED: 0,
+    },
+    triggerCounts: { SCHEDULE: runs - 40, MANUAL: 40 },
+    approvalCounts: { PENDING: 3, APPROVED: 12, REJECTED: 1, CANCELLED: 0 },
+    feedbackCounts: { POSITIVE: 0, NEGATIVE: 0, NEUTRAL: 0 },
+    feedbackLabelCounts: [],
+    modelStats: [],
+    versionStats: [],
+    toolStats: [
+      { handlerMapping: "rightmove.search", calls: 1180, successes: 1038, failures: 142, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
+      { handlerMapping: "records.save", calls: 964, successes: 964, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
+      { handlerMapping: "email.send", calls: 212, successes: 210, failures: 0, approvalsRequired: 3, denied: 0, cancelled: 0, notImplemented: 2 },
+      { handlerMapping: "postcode.lookup", calls: 148, successes: 148, failures: 0, approvalsRequired: 0, denied: 0, cancelled: 0, notImplemented: 0 },
+    ],
+    failureReasons: [
+      { reason: "The property search timed out", count: 42 },
+      { reason: "Gave up before finishing the job", count: 8 },
+    ],
+    recentFailures: [],
+  };
+}
+
+function observabilityRunFixtures() {
+  return [
+    {
+      _id: "run_e2e_running",
+      _creationTime: now - 12_000,
+      agentId: "agent_e2e",
+      companyId,
+      triggerType: "SCHEDULE",
+      objective: "Find new three-bed listings in Bath under £450k",
+      status: "RUNNING",
+      startedAt: now - 12_000,
+      updatedAt: now,
+    },
+    {
+      _id: "run_e2e_failed",
+      _creationTime: now - 40 * 60 * 1000,
+      agentId: "agent_e2e",
+      companyId,
+      triggerType: "SCHEDULE",
+      objective: "Find new three-bed listings in Bristol under £400k",
+      status: "FAILED",
+      error: "The property search timed out",
+      startedAt: now - 40 * 60 * 1000,
+      completedAt: now - 40 * 60 * 1000 + 31_400,
+      costGBP: 0.021,
+      updatedAt: now,
+    },
+    {
+      _id: "run_e2e_waiting",
+      _creationTime: now - 2 * DAY_MS,
+      agentId: "agent_e2e",
+      companyId,
+      triggerType: "MANUAL",
+      objective: "Email this week's shortlist to the Henderson account",
+      status: "PENDING_APPROVAL",
+      startedAt: now - 2 * DAY_MS,
+      updatedAt: now,
+    },
+    {
+      _id: "run_e2e_done",
+      _creationTime: now - 3 * 60 * 60 * 1000,
+      agentId: "agent_e2e",
+      companyId,
+      triggerType: "SCHEDULE",
+      objective: "Find new three-bed listings in Bath under £450k",
+      status: "SUCCESS",
+      startedAt: now - 3 * 60 * 60 * 1000,
+      completedAt: now - 3 * 60 * 60 * 1000 + 4_100,
+      costGBP: 0.013,
+      finalOutput: "Filed 14 listings",
+      updatedAt: now,
+    },
+    {
+      _id: "run_e2e_refresh",
+      _creationTime: now - 5 * 60 * 60 * 1000,
+      agentId: "agent_e2e",
+      companyId,
+      triggerType: "MANUAL",
+      objective: "Refresh prices on everything saved this month",
+      status: "SUCCESS",
+      startedAt: now - 5 * 60 * 60 * 1000,
+      completedAt: now - 5 * 60 * 60 * 1000 + 8_900,
+      costGBP: 0.028,
+      finalOutput: "Updated 62 records",
+      updatedAt: now,
+    },
+  ];
+}
+
+/**
+ * One failed job with a shape worth drawing: a fast start, two quick tool calls,
+ * then a second search that swallows three quarters of the run before failing.
+ */
+function observabilityRunDetailFixture() {
+  const start = now - 40 * 60 * 1000;
+  const at = (offsetMs: number) => start + offsetMs;
+  const mkStep = (id: string, kind: string, status: string, offsetMs: number, input?: string) => ({
+    _id: id,
+    _creationTime: at(offsetMs),
+    runId: "run_e2e_failed",
+    agentId: "agent_e2e",
+    companyId,
+    stepIndex: Number(id.split("_")[1]),
+    kind,
+    status,
+    input,
+    startedAt: at(offsetMs),
+    completedAt: at(offsetMs),
+  });
+
+  return {
+    run: {
+      _id: "run_e2e_failed",
+      _creationTime: start,
+      agentId: "agent_e2e",
+      companyId,
+      triggerType: "SCHEDULE",
+      objective: "Find new three-bed listings in Bristol under £400k",
+      status: "FAILED",
+      error: "The property search timed out",
+      startedAt: start,
+      completedAt: at(31_400),
+      costGBP: 0.021,
+      updatedAt: at(31_400),
+    },
+    steps: [
+      mkStep("step_1", "OBSERVE", "SUCCESS", 900),
+      mkStep("step_2", "PLAN", "SUCCESS", 2_500),
+      mkStep("step_3", "TOOL_CALL", "SUCCESS", 5_900, "property search"),
+      mkStep("step_4", "TOOL_CALL", "SUCCESS", 6_300, "records save"),
+      mkStep("step_5", "REPLAN", "SUCCESS", 7_500),
+      mkStep("step_6", "TOOL_CALL", "FAILED", 31_400, "property search"),
+    ],
+    toolCalls: [],
+    approvals: [],
+    timeline: [],
+    evalFixtureContext: { canCreateFromRun: true, activeCount: 0, archivedCount: 0, fixtures: [] },
+    replayContext: { sourceRun: null, replayRuns: [], comparison: null, timelineDiff: [] },
+  };
+}
+
+function observabilityRunLogFixtures() {
+  const start = now - 40 * 60 * 1000;
+  return [
+    {
+      _id: "log_e2e_1",
+      _creationTime: start + 900,
+      agentId: "agent_e2e",
+      companyId,
+      runId: "run_e2e_failed",
+      interactionType: "LLM SYNTHESIS",
+      promptContent: "Find new three-bed listings in Bristol under \u00a3400k",
+      responseContent: "I will search Bristol for three-bed properties up to \u00a3400,000.",
+      outcome: "SUCCESS",
+      durationMs: 900,
+      createdAt: start + 900,
+    },
+    {
+      _id: "log_e2e_2",
+      _creationTime: start + 5_900,
+      agentId: "agent_e2e",
+      companyId,
+      runId: "run_e2e_failed",
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Find new three-bed listings in Bristol under \u00a3400k",
+      responseContent: '{"functionCall": {"name": "property_search", "args": {"area": "Bristol", "bedrooms": 3, "maxPrice": 400000, "page": 1}}}',
+      outcome: "SUCCESS",
+      durationMs: 3_400,
+      createdAt: start + 5_900,
+    },
+    {
+      _id: "log_e2e_3",
+      _creationTime: start + 31_400,
+      agentId: "agent_e2e",
+      companyId,
+      runId: "run_e2e_failed",
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Find new three-bed listings in Bristol under \u00a3400k",
+      responseContent: "The property search timed out after 24000ms",
+      outcome: "FAILED",
+      durationMs: 23_900,
+      failureKey: "the property search timed out",
+      createdAt: start + 31_400,
+    },
+  ];
+}
+
+function observabilityLogGroupsFixture() {
+  const entries = observabilityRunLogFixtures();
+  return {
+    groups: [
+      {
+        runId: "run_e2e_failed",
+        startedAt: entries[0].createdAt,
+        lastAt: entries[entries.length - 1].createdAt,
+        job: {
+          objective: "Find new three-bed listings in Bristol under \u00a3400k",
+          status: "FAILED",
+          startedAt: now - 40 * 60 * 1000,
+          completedAt: now - 40 * 60 * 1000 + 31_400,
+          costGBP: 0.021,
+          triggerType: "SCHEDULE",
+        },
+        entries,
+      },
+      {
+        runId: "run_e2e_done",
+        startedAt: now - 3 * 60 * 60 * 1000,
+        lastAt: now - 3 * 60 * 60 * 1000 + 4_100,
+        job: {
+          objective: "Find new three-bed listings in Bath under \u00a3450k",
+          status: "SUCCESS",
+          startedAt: now - 3 * 60 * 60 * 1000,
+          completedAt: now - 3 * 60 * 60 * 1000 + 4_100,
+          costGBP: 0.013,
+          triggerType: "SCHEDULE",
+        },
+        entries: [
+          {
+            _id: "log_e2e_done_1",
+            _creationTime: now - 3 * 60 * 60 * 1000,
+            agentId: "agent_e2e",
+            companyId,
+            runId: "run_e2e_done",
+            interactionType: "LLM SYNTHESIS",
+            promptContent: "Find new three-bed listings in Bath under \u00a3450k",
+            responseContent: "Searching Bath for three-bed properties up to \u00a3450,000.",
+            outcome: "SUCCESS",
+            durationMs: 800,
+            createdAt: now - 3 * 60 * 60 * 1000,
+          },
+          {
+            _id: "log_e2e_done_2",
+            _creationTime: now - 3 * 60 * 60 * 1000 + 4_100,
+            agentId: "agent_e2e",
+            companyId,
+            runId: "run_e2e_done",
+            interactionType: "TOOL DISPATCH: records_save",
+            promptContent: "Find new three-bed listings in Bath under \u00a3450k",
+            responseContent: '{"functionCall": {"name": "records_save", "args": {"count": 14}}}',
+            outcome: "SUCCESS",
+            durationMs: 400,
+            createdAt: now - 3 * 60 * 60 * 1000 + 4_100,
+          },
+        ],
+      },
+    ],
+    totalGroups: 2,
+    totalPages: 1,
+    failureCounts: { "the property search timed out": 42 },
+    windowTruncated: false,
+  };
+}
 
 const settings = {
   platformName: "Sonae E2E",
@@ -810,6 +1170,62 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "chat:getMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
   if (path === "chatAdmin:getAdminThreadMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
   if (path === "knowledge:getThreadDocuments") return [];
+  // The Activity screen reads this before it can render anything. The generic
+  // empty-array fall-through gave it no `totals`, so the whole screen crashed
+  // rather than showing an agent with no checks yet.
+  if (path === "agentEvalFixtures:getSmokeEvalHistory") {
+    return {
+      entries: [],
+      totals: { total: 0, passed: 0, setupPassed: 0, failed: 0, active: 0, modelGraded: 0 },
+    };
+  }
+  // The Activity table pages by cursor and carries its own row markers, so the
+  // fixture answers with one page rather than a bare list of runs.
+  if (path === "agentRuns:getPageForAgent") {
+    return {
+      page: observabilityRunFixtures().map((run, index) => ({
+        ...run,
+        markers: {
+          feedback: index === 1 ? { rating: "NEGATIVE", labels: ["TOO_SLOW"], comment: "too slow" } : null,
+          reflected: index === 1,
+          memoryCandidateIds: [],
+          usedAsCheck: index === 3,
+          suggestionIds: [],
+        },
+      })),
+      isDone: true,
+      continueCursor: null,
+    };
+  }
+  if (path === "agentLogs:getJobGroups") return observabilityLogGroupsFixture();
+  if (path === "agentRuns:getRunDetail") return observabilityRunDetailFixture();
+  if (path === "agentLogs:getForRun") return observabilityRunLogFixtures();
+  if (path === "agentRuns:getAnalyticsForAgent") {
+    return observabilityAnalyticsFixture(Number(queryArgs.lookbackDays ?? 7));
+  }
+  if (path === "agents:get") {
+    return {
+      _id: "agent_e2e",
+      _creationTime: now,
+      name: "E2E Assistant",
+      description: "Deterministic agent used to inspect the agent detail screens",
+      modelId: "e2e-primary-model",
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+  // The dashboard reads every field off this object, so the generic empty-array
+  // fall-through below crashes the screen rather than rendering it empty.
+  if (path === "agentTransactions:getStatsForAgent") {
+    return {
+      totalGenerations: 0,
+      totalTokensIngested: 0,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalOpexCost: 0,
+    };
+  }
   if (path.endsWith(":get") || path.endsWith(":list") || path.includes("getAll") || path.includes("getPending")) return [];
 
   return [];
@@ -843,6 +1259,16 @@ export function useAction(functionReference: FunctionReference) {
 export function usePaginatedQuery(functionReference: FunctionReference, args?: unknown) {
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+
+  if (path === "agentRuns:getForAgent") {
+    return {
+      results: observabilityRunFixtures(),
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+
 
   if (path === "scheduler:getWorkflowExecutions") {
     return {

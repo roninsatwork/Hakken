@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { RIGHTMOVE_ACTOR_ID } from "./apifyActors";
 
 describe("Apify webhook persistence", () => {
   test("records run starts and maps terminal webhook statuses onto Apify runs", async () => {
@@ -19,7 +20,7 @@ describe("Apify webhook persistence", () => {
 
     await t.mutation(internal.webhooks.recordRunStart, {
       runId: "run-1",
-      actorId: "actor-1",
+      actorId: RIGHTMOVE_ACTOR_ID,
       startedBy: userId,
       companyId,
     });
@@ -30,12 +31,36 @@ describe("Apify webhook persistence", () => {
     );
     expect(run).toMatchObject({
       runId: "run-1",
-      actorId: "actor-1",
+      actorId: RIGHTMOVE_ACTOR_ID,
       startedBy: userId,
       companyId,
       status: "COMPLETED",
     });
     expect(run?.completedAt).toEqual(expect.any(Number));
+
+    // A job started through the generic Apify tool is not a property scrape.
+    // Its items are a shape nobody here has seen, so the run is recorded as
+    // finished and nothing is written into the properties table — a fabricated
+    // property is indistinguishable from a real one.
+    await t.mutation(internal.webhooks.recordRunStart, {
+      runId: "run-other",
+      actorId: "somebody-elses-scraper",
+      startedBy: userId,
+      companyId,
+    });
+    await t.mutation(internal.webhooks.storeRightmoveData, {
+      runId: "run-other",
+      status: "SUCCEEDED",
+      items: [JSON.stringify({ id: "x1", address: "Not a property", price: 1 })],
+    });
+    const otherRun = await t.run(async (ctx) =>
+      ctx.db.query("apifyRuns").withIndex("by_runId", (q) => q.eq("runId", "run-other")).unique()
+    );
+    expect(otherRun).toMatchObject({ status: "COMPLETED", propertiesScraped: 0 });
+    const strays = await t.run(async (ctx) =>
+      ctx.db.query("properties").filter((q) => q.eq(q.field("runId"), "run-other")).collect()
+    );
+    expect(strays).toHaveLength(0);
 
     await t.mutation(internal.webhooks.updateRunStatus, { runId: "run-1", status: "RUNNING" });
     run = await t.run(async (ctx) =>
@@ -68,7 +93,7 @@ describe("Apify webhook persistence", () => {
       });
       await ctx.db.insert("apifyRuns", {
         runId: "run-2",
-        actorId: "actor-1",
+        actorId: RIGHTMOVE_ACTOR_ID,
         status: "PENDING",
         startedBy: userId,
         companyId,

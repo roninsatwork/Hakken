@@ -1,233 +1,401 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  FileText,
-  Search,
-  DatabaseZap,
-  Loader2,
-  Trash2,
-  CheckCircle2,
-  XCircle,
-  ArrowRight
-} from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ArrowRight, ChevronDown, DatabaseZap, FileText, Loader2, Search } from "lucide-react";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { AdminPaginationFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import useDebounce from "@/src/hooks/useDebounce";
-import { formatDate, formatTime } from "@/src/lib/dates";
+import {
+  describeInteractionType,
+  describeRunStatus,
+  describeTrigger,
+  formatCount,
+  formatDuration,
+  formatMoney,
+  formatRelativeTime,
+  summariseLogContent,
+} from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
+import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
+import { classifyLogEntry, type LogCategory } from "@/convex/agentLogGroupingService";
+
+const FILTERS = [
+  { key: "ALL", label: "Everything" },
+  { key: "THINKING", label: "Thinking" },
+  { key: "TOOLS", label: "Tools" },
+  { key: "PROBLEMS", label: "Problems" },
+] as const;
+
+type FilterKey = (typeof FILTERS)[number]["key"];
 
 export default function AgentLogsDashboard() {
-  const t = useTranslations("admin.agents.details.logs");
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as Id<"agents">;
+  const now = useNow();
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
+  const [filter, setFilter] = useState<FilterKey>("ALL");
   const [page, setPage] = useState(1);
-  const pageSize = ADMIN_PAGE_SIZE;
-  const [logToDelete, setLogToDelete] = useState<Id<"agentLogs"> | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [openEntryId, setOpenEntryId] = useState<string | null>(null);
+  // Set when a reader follows "see the others" from one repeated failure.
+  const [failureKey, setFailureKey] = useState<string | null>(null);
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setPage(1);
-  };
-
-  const queryParams = {
+  const data = useQuery(api.agentLogs.getJobGroups, {
     agentId,
     searchTerm: debouncedSearch,
+    filter,
+    ...(failureKey ? { failureKey } : {}),
     page,
-    pageSize
+    pageSize: ADMIN_PAGE_SIZE,
+  });
+
+  const isLoading = data === undefined;
+  const groups = data?.groups ?? [];
+
+  const reset = (apply: () => void) => {
+    apply();
+    setPage(1);
+    setOpenEntryId(null);
   };
-
-  const logData = useQuery(api.agentLogs.getOffsetPaginated, queryParams);
-  const deleteLogMutation = useMutation(api.agentLogs.deleteLog);
-
-  const handleDelete = async () => {
-    if (!logToDelete || isDeleting) return;
-    setIsDeleting(true);
-    try {
-      await deleteLogMutation({ id: logToDelete });
-      setLogToDelete(null);
-    } catch (e) {
-      console.error("Failed to delete log", e);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-
-
-  const isLoading = logData === undefined;
-  const logs = (logData?.data || []) as Doc<"agentLogs">[];
-  const totalCount = logData?.totalCount || 0;
-  const totalPages = logData?.totalPages || 1;
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 pb-12 w-full max-w-[1400px]">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border-dim/50 pb-6 w-full mt-2">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-500" />
-            {t("title")}
+    <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[18px] font-semibold text-foreground tracking-tight flex items-center gap-2">
+            <FileText className="w-5 h-5 text-brand" />
+            Raw logs
           </h2>
-          <p className="text-[14px] text-secondary max-w-2xl">
-            {t("subtitle")}
+          <p className="text-[13px] text-secondary mt-1 max-w-3xl">
+            Word for word, what this agent was sent and what came back. Grouped by the job it
+            belonged to.
           </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="flex items-center gap-3 relative w-full md:w-[350px]">
-          <Search className="w-4 h-4 text-muted absolute left-4" />
-          <input
-            type="text"
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="w-full bg-sidebar/50 border border-border-dim rounded-full py-2.5 pl-11 pr-4 text-[13px] text-foreground placeholder:text-muted outline-none transition-all focus:border-indigo-500/50 focus:bg-sidebar shadow-sm"
-          />
+        <div className="flex gap-1 bg-white/[0.02] border border-border-dim rounded-[10px] p-1 self-start">
+          {FILTERS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => reset(() => setFilter(option.key))}
+              className={`px-3 py-1.5 rounded-[7px] text-[12px] transition-all ${
+                filter === option.key
+                  ? "bg-card text-foreground border border-border-dim"
+                  : "text-secondary hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
-      </header>
+      </div>
 
-      {/* Logs Table Container */}
-      <div className="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="border-b border-border-dim/50 bg-sidebar/40">
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[180px]">{t("table.headers.timestamp")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[150px]">{t("table.headers.status")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.headers.event")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[180px] text-right">{t("table.headers.report")}</th>
-                <th className="w-[60px] px-5 py-3.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-16 text-center text-secondary">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-500 opacity-80" />
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-4 w-full">
-                      <DatabaseZap className="w-8 h-8 text-muted/30" />
-                      <div className="flex flex-col gap-1 items-center">
-                        <span className="text-[14px] font-medium text-foreground tracking-wide">
-                          {debouncedSearch ? t("table.empty.search") : t("table.empty.index")}
-                        </span>
-                        <span className="text-muted text-[12px]">
-                          {debouncedSearch ? t("table.empty.tryDifferent") : t("table.empty.notIntercepted")}
-                        </span>
-                      </div>
-
-
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => {
-                  const isFailed = log.interactionType.toUpperCase().includes("ERROR") || log.interactionType.toUpperCase().includes("FAIL");
-                  return (
-                    <tr 
-                      key={log._id} 
-                      onClick={() => router.push(`/admin/agents/${agentId}/logs/${log._id}`)}
-                      className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
-                    >
-                      <td className="px-5 py-4 align-middle">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[13px] font-bold text-foreground tracking-wide">
-                            {formatDate(log.createdAt, { locale: "en-GB", options: { day: 'numeric', month: 'short', year: 'numeric' } })}
-                          </span>
-                          <span className="text-[11px] font-mono tracking-widest text-muted">
-                            {formatTime(log.createdAt, { locale: "en-GB", options: { hour: '2-digit', minute: '2-digit', second: '2-digit' } })}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 align-middle">
-                        {isFailed ? (
-                          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-[0.1em] text-rose-500 w-max px-2 py-1 rounded-[6px] border bg-rose-500/10 border-rose-500/20">
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>FAILED</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-[0.1em] text-[#10b981] w-max px-2 py-1 rounded-[6px] border bg-[#10b981]/10 border-[#10b981]/20">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>SUCCESS</span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 align-middle">
-                        <span className="text-[13px] font-bold text-secondary/90 tracking-wide uppercase font-mono">
-                          {log.interactionType}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 align-middle text-right">
-                        <div className="flex items-center justify-end gap-1.5 text-[11px] font-bold tracking-widest text-indigo-400 group-hover:text-indigo-300 transition-colors uppercase">
-                          <span>View Trace</span>
-                          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 align-middle text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLogToDelete(log._id);
-                          }}
-                          className="text-muted hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <AdminPaginationFooter
-          page={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          isLoading={isLoading}
-          onPageChange={setPage}
-          labels={{
-            previous: t("pagination.prev"),
-            next: t("pagination.next"),
-            empty: t("pagination.none"),
-            page: (current, total) => t("pagination.pageOf", { current, total }),
-            showing: (start, end, total) => t("pagination.showing", { start, end, total }),
-          }}
+      <div className="flex items-center gap-3 relative">
+        <Search className="w-4 h-4 text-muted absolute left-4" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(event) => reset(() => setSearchTerm(event.target.value))}
+          placeholder="Search everything this agent said or was told"
+          className="w-full bg-card border border-border-dim rounded-[11px] py-2.5 pl-11 pr-4 text-[13px] text-foreground placeholder:text-muted outline-none transition-all focus:border-brand/50"
         />
       </div>
 
-      <AdminConfirmationModal
-        isOpen={!!logToDelete}
-        onClose={() => setLogToDelete(null)}
-        title="Delete Trace"
-        size="sm"
-        cancelLabel="Cancel"
-        confirmLabel={isDeleting ? "Deleting..." : "Delete Trace"}
-        isSubmitting={isDeleting}
-        onConfirm={handleDelete}
-      >
-        <p>This trace will be removed from the agent log history.</p>
-        <p className="text-[13px] font-bold text-foreground">
-          This action cannot be undone.
+      {failureKey && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[11px] border border-rose-500/20 bg-rose-500/[0.06] px-4 py-3">
+          <span className="text-[12.5px] text-secondary">
+            Showing only the times this same thing went wrong.
+          </span>
+          <button
+            type="button"
+            onClick={() => reset(() => setFailureKey(null))}
+            className="text-[12px] text-brand hover:underline shrink-0"
+          >
+            Show everything again
+          </button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="py-20 flex items-center justify-center text-muted">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
+      ) : groups.length === 0 ? (
+        <EmptyLogs hasSearch={Boolean(debouncedSearch)} filter={filter} />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {groups.map((group) => (
+            <JobGroup
+              key={group.runId ?? `${group.startedAt}-${group.entries[0]?._id}`}
+              group={group}
+              now={now}
+              failureCounts={data.failureCounts}
+              openEntryId={openEntryId}
+              onToggleEntry={(entryId) => setOpenEntryId(openEntryId === entryId ? null : entryId)}
+              onOpenJob={(runId) => router.push(`/admin/agents/${agentId}/observability/${runId}`)}
+              onFocusFailure={failureKey ? undefined : (key) => reset(() => setFailureKey(key))}
+            />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && groups.length > 0 && (
+        <AdminPaginationFooter
+          page={page}
+          totalPages={data.totalPages}
+          totalCount={data.totalGroups}
+          pageSize={ADMIN_PAGE_SIZE}
+          isLoading={isLoading}
+          onPageChange={setPage}
+          labels={{
+            previous: "Previous",
+            next: "Next",
+            empty: "No jobs to show",
+            page: (current, total) => `Page ${current} of ${total}`,
+            showing: (start, end, total) => `Showing jobs ${start} to ${end} of ${total}`,
+          }}
+        />
+      )}
+
+      {data?.windowTruncated && (
+        <p className="text-[12px] text-muted">
+          This agent has said more than one screen can hold, so this covers its most recent
+          activity rather than everything it has ever done.
         </p>
-      </AdminConfirmationModal>
+      )}
     </div>
   );
+}
+
+function EmptyLogs({ hasSearch, filter }: { hasSearch: boolean; filter: FilterKey }) {
+  const message = hasSearch
+    ? { title: "Nothing matched that search", body: "Try a different word, or clear the search." }
+    : filter === "PROBLEMS"
+      ? { title: "Nothing has gone wrong", body: "No failures were recorded for this agent." }
+      : filter !== "ALL"
+        ? { title: "Nothing of that kind yet", body: "Try showing everything instead." }
+        : {
+            title: "This agent has not said anything yet",
+            body: "When it runs, everything it is sent and everything it replies will appear here.",
+          };
+
+  return (
+    <div className="w-full min-h-[280px] border border-border-dim bg-card rounded-[14px] flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <DatabaseZap className="w-9 h-9 text-muted/40" />
+      <div className="flex flex-col gap-1.5 items-center">
+        <span className="text-[15px] font-semibold text-foreground tracking-tight">{message.title}</span>
+        <span className="text-secondary text-[13px] max-w-md">{message.body}</span>
+      </div>
+    </div>
+  );
+}
+
+type Group = {
+  runId?: string;
+  startedAt: number;
+  lastAt: number;
+  job: {
+    objective: string;
+    status: string;
+    startedAt: number;
+    completedAt?: number;
+    costGBP?: number;
+    triggerType: string;
+  } | null;
+  entries: Array<{
+    _id: string;
+    interactionType: string;
+    promptContent: string;
+    responseContent: string;
+    outcome?: string;
+    durationMs?: number;
+    failureKey?: string;
+    createdAt: number;
+  }>;
+};
+
+function JobGroup({
+  group,
+  now,
+  failureCounts,
+  openEntryId,
+  onToggleEntry,
+  onOpenJob,
+  onFocusFailure,
+}: {
+  group: Group;
+  now: number;
+  failureCounts: Record<string, number>;
+  openEntryId: string | null;
+  onToggleEntry: (entryId: string) => void;
+  onOpenJob: (runId: Id<"agentRuns">) => void;
+  onFocusFailure?: (failureKey: string) => void;
+}) {
+  const { job } = group;
+  const durationMs = job?.completedAt ? job.completedAt - job.startedAt : undefined;
+
+  return (
+    <div className="border border-border-dim rounded-[14px] bg-card overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-3.5 bg-white/[0.02] border-b border-border-dim min-w-0">
+        <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 w-[86px] text-center ${statusTone(job?.status)}`}>
+          {job ? describeRunStatus(job.status) : "No job"}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13.5px] text-foreground truncate">
+            {job?.objective ?? "Work done outside a job"}
+          </p>
+          <p className="text-[11.5px] text-muted truncate">
+            {job ? `${describeTrigger(job.triggerType)} · ` : ""}
+            {formatRelativeTime(group.startedAt, now)} · {formatCount(group.entries.length)}{" "}
+            {group.entries.length === 1 ? "entry" : "entries"}
+            {durationMs !== undefined ? ` · ${formatDuration(durationMs)}` : ""}
+            {job?.costGBP !== undefined ? ` · ${formatMoney(job.costGBP)}` : ""}
+          </p>
+        </div>
+        {group.runId && (
+          <button
+            type="button"
+            onClick={() => onOpenJob(group.runId as Id<"agentRuns">)}
+            className="text-[11.5px] text-brand hover:underline whitespace-nowrap shrink-0 flex items-center gap-1"
+          >
+            Open this job
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col">
+        {group.entries.map((entry) => {
+          const isOpen = openEntryId === entry._id;
+          const repeats = entry.failureKey ? failureCounts[entry.failureKey] ?? 0 : 0;
+
+          return (
+            <div key={entry._id} className="border-t border-border-dim/40 first:border-t-0">
+              <button
+                type="button"
+                onClick={() => onToggleEntry(entry._id)}
+                className={`w-full flex items-center gap-3 px-5 py-2.5 text-left min-w-0 transition-colors ${
+                  isOpen ? "bg-rose-500/[0.04]" : "hover:bg-white/[0.02]"
+                }`}
+              >
+                <span className="text-[11px] font-mono text-muted tabular-nums shrink-0 w-[68px]">
+                  {new Date(entry.createdAt).toLocaleTimeString("en-GB", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </span>
+                {/* What kind of entry this is, matching the filters above it —
+                    so picking "Tools" and seeing rows chipped "Tool" is one
+                    idea rather than two. */}
+                <span className={`text-[10.5px] px-2 py-1 rounded-[6px] whitespace-nowrap shrink-0 w-[74px] text-center ${categoryTone(classifyLogEntry(entry))}`}>
+                  {categoryLabel(classifyLogEntry(entry))}
+                </span>
+                {/* What the entry was, and then what it was about. The type
+                    alone made every property search on the page identical. */}
+                <span className="flex-1 min-w-0 text-[12.5px] truncate">
+                  <span className="text-foreground">{describeInteractionType(entry.interactionType)}</span>
+                  <span className="text-muted"> — {summariseLogContent(entry.promptContent)}</span>
+                </span>
+                {/* The outcome stays on the row in words. The chip says what
+                    the entry was; this says how it went, including when that
+                    was never recorded — which is the whole point of the
+                    outcome field and must not be quietly implied. */}
+                <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0 hidden sm:flex items-center gap-1">
+                  {entry.durationMs !== undefined && (
+                    <span className="text-muted">{formatDuration(entry.durationMs)} ·</span>
+                  )}
+                  <span className={outcomeTone(entry.outcome)}>{outcomeLabel(entry.outcome)}</span>
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isOpen && (
+                <div className="px-5 pb-4 pt-1 flex flex-col gap-3">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <Pane title="What we sent" body={entry.promptContent} />
+                    <Pane
+                      title="What came back"
+                      body={entry.responseContent}
+                      isError={entry.outcome === "FAILED"}
+                    />
+                  </div>
+                  {repeats > 1 && (
+                    <p className="text-[12px] text-muted">
+                      This has happened {formatCount(repeats)} times recently.{" "}
+                      {onFocusFailure && entry.failureKey && (
+                        <button
+                          type="button"
+                          onClick={() => onFocusFailure(entry.failureKey as string)}
+                          className="text-brand hover:underline"
+                        >
+                          See the other {formatCount(repeats - 1)}
+                        </button>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Pane({ title, body, isError }: { title: string; body: string; isError?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] text-muted mb-1.5">{title}</div>
+      <pre
+        className={`text-[11.5px] leading-relaxed font-mono m-0 px-3 py-2.5 rounded-[10px] border border-border-dim bg-sidebar/60 overflow-x-auto whitespace-pre-wrap break-words max-h-[280px] ${
+          isError ? "text-rose-400" : "text-secondary"
+        }`}
+      >
+        {body}
+      </pre>
+    </div>
+  );
+}
+
+function statusTone(status: string | undefined) {
+  if (status === "SUCCESS") return "bg-emerald-500/10 text-emerald-500";
+  if (status === "FAILED") return "bg-rose-500/10 text-rose-500";
+  if (status === "PENDING_APPROVAL") return "bg-amber-500/10 text-amber-500";
+  if (status === "RUNNING" || status === "QUEUED") return "bg-brand/10 text-brand";
+  return "bg-foreground/5 text-secondary";
+}
+
+function outcomeLabel(outcome: string | undefined) {
+  if (outcome === "SUCCESS") return "worked";
+  if (outcome === "FAILED") return "failed";
+  return "outcome not recorded";
+}
+
+function outcomeTone(outcome: string | undefined) {
+  if (outcome === "SUCCESS") return "text-emerald-500";
+  if (outcome === "FAILED") return "text-rose-500";
+  return "text-muted";
+}
+
+/** The chip, using the same four words as the filters above the list. */
+function categoryLabel(category: LogCategory) {
+  if (category === "THINKING") return "Thinking";
+  if (category === "TOOL") return "Tool";
+  if (category === "PROBLEM") return "Problem";
+  return "Other";
+}
+
+function categoryTone(category: LogCategory) {
+  if (category === "TOOL") return "bg-brand/10 text-brand";
+  if (category === "PROBLEM") return "bg-rose-500/10 text-rose-500";
+  return "bg-foreground/5 text-secondary";
 }

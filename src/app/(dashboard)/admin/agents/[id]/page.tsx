@@ -36,7 +36,7 @@ export default function AgentDashboard() {
 
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 pb-12 w-full max-w-6xl">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 pb-12 w-full">
       <header className="flex flex-col gap-2 border-b border-border-dim/50 pb-6 w-full mt-2">
         <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <Activity className="w-5 h-5 text-brand" />

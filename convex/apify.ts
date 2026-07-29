@@ -6,8 +6,9 @@ import { internal, api } from "./_generated/api";
 import { ApifyClient } from "apify-client";
 import { validateSafeUrl } from "./utils/security";
 import type { ActionCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { tenantAction } from "./tenantFunctions";
+import { RIGHTMOVE_ACTOR_ID, collectUrls } from "./apifyActors";
 
 type ApifyRun = Doc<"apifyRuns">;
 
@@ -40,20 +41,61 @@ async function syncApifyRunStatus(runId: string) {
   return { client, run };
 }
 
-export const startRightmoveScrape = tenantAction({
+/**
+ * Start any Apify actor, on behalf of a known company and person.
+ *
+ * Apify is a catalogue of thousands of scrapers, so the platform exposes it as
+ * one generic tool rather than as a menu of hard-coded jobs. Which actor runs
+ * is configuration, set by an admin when the tool is added; what it is fed is
+ * the agent's decision. That split is the safety story — the same one the
+ * "Call an API" tool uses — and it is what keeps a single Rightmove use case
+ * out of a platform meant to be the baseline for other products.
+ */
+export const startApifyActorInternal = internalAction({
   args: {
-    listUrls: v.array(v.string()),
-    maxProperties: v.number(),
+    actorId: v.string(),
+    /** The actor's own input, as JSON. Its shape belongs to the actor. */
+    inputJson: v.string(),
+    companyId: v.optional(v.id("companies")),
+    startedBy: v.id("users"),
   },
-  handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getMe);
-    if (!user) throw new Error("Unauthenticated");
-
-    // SSRF Safety Check - validate all user-supplied scrape targets
-    for (const url of args.listUrls) {
-      validateSafeUrl(url, "Rightmove Scraper");
+  handler: async (ctx, args): Promise<string> => {
+    let input: unknown;
+    try {
+      input = JSON.parse(args.inputJson);
+    } catch {
+      throw new Error("The settings for this Apify job were not valid JSON.");
+    }
+    if (input === null || typeof input !== "object" || Array.isArray(input)) {
+      throw new Error("The settings for this Apify job must be a set of named values.");
     }
 
+    // Every address the actor is pointed at is checked, wherever it appears in
+    // the input. Apify actors take their targets as URLs, and an agent that can
+    // choose those targets can otherwise be talked into reaching inside our own
+    // network.
+    for (const url of collectUrls(input)) {
+      validateSafeUrl(url, "Apify");
+    }
+
+    return await startApifyActor(ctx, {
+      actorId: args.actorId,
+      input: input as Record<string, unknown>,
+      companyId: args.companyId,
+      startedBy: args.startedBy,
+    });
+  },
+});
+
+async function startApifyActor(
+  ctx: ActionCtx,
+  args: {
+    actorId: string;
+    input: Record<string, unknown>;
+    companyId?: Id<"companies">;
+    startedBy: Id<"users">;
+  }
+): Promise<string> {
     const apifyToken = process.env.APIFY_API_TOKEN;
     if (!apifyToken) throw new Error("Apify API Token not configured.");
 
@@ -65,26 +107,10 @@ export const startRightmoveScrape = tenantAction({
 
     const client = new ApifyClient({ token: apifyToken });
     const webhookUrl = `${siteUrl}/apify-webhook`;
-
-    const input = {
-        "listUrls": args.listUrls.map(url => ({ url })),
-        "propertyUrls": [],
-        "monitoringMode": false,
-        "deduplicateAtTaskLevel": false,
-        "fullPropertyDetails": true,
-        "includePriceHistory": true,
-        "includeNearestSchools": false,
-        "enableDelistingTracker": false,
-        "addEmptyTrackerRecord": false,
-        "email": "",
-        "maxProperties": args.maxProperties,
-        "proxy": {
-            "useApifyProxy": true
-        }
-    };
+    const input = args.input;
 
     // We start the actor asynchronously (fire-and-forget) with a webhook
-    const run = await client.actor("jKpgGfgRfzrGgEMa8").start(input, {
+    const run = await client.actor(args.actorId).start(input, {
         webhooks: [
             {
                 eventTypes: ["ACTOR.RUN.SUCCEEDED", "ACTOR.RUN.FAILED", "ACTOR.RUN.ABORTED"],
@@ -101,8 +127,8 @@ export const startRightmoveScrape = tenantAction({
     await ctx.runMutation(internal.webhooks.recordRunStart, {
       runId: run.id,
       actorId: run.actId,
-      startedBy: user._id,
-      companyId: user.companyId,
+      startedBy: args.startedBy,
+      companyId: args.companyId,
     });
 
     // Start the background watchdog to ensure status updates even if webhooks fail
@@ -111,6 +137,43 @@ export const startRightmoveScrape = tenantAction({
     });
 
     return run.id;
+}
+
+export const startRightmoveScrape = tenantAction({
+  args: {
+    listUrls: v.array(v.string()),
+    maxProperties: v.number(),
+  },
+  handler: async (ctx, args): Promise<string> => {
+    const user = await ctx.runQuery(api.users.getMe);
+    if (!user) throw new Error("Unauthenticated");
+
+    for (const url of args.listUrls) {
+      validateSafeUrl(url, "Rightmove Scraper");
+    }
+
+    // The Properties screen knows it wants Rightmove listings, so it keeps its
+    // own settings for that actor rather than making the person filling in a
+    // search box understand Apify.
+    return await startApifyActor(ctx, {
+      actorId: RIGHTMOVE_ACTOR_ID,
+      input: {
+        listUrls: args.listUrls.map((url) => ({ url })),
+        propertyUrls: [],
+        monitoringMode: false,
+        deduplicateAtTaskLevel: false,
+        fullPropertyDetails: true,
+        includePriceHistory: true,
+        includeNearestSchools: false,
+        enableDelistingTracker: false,
+        addEmptyTrackerRecord: false,
+        email: "",
+        maxProperties: args.maxProperties,
+        proxy: { useApifyProxy: true },
+      },
+      companyId: user.companyId,
+      startedBy: user._id,
+    });
   },
 });
 

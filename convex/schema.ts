@@ -500,10 +500,38 @@ export default defineSchema({
     promptContent: v.string(), // What the Agent was sent
     responseContent: v.string(), // What the Agent replied or did
     companyId: v.optional(v.id("companies")), // Strict tenant isolation
+    // Which run this entry belongs to. Without it the raw exchange and the
+    // durable step trail were two accounts of the same event that could not be
+    // read together: a log line could not name the run that produced it, and a
+    // run could not show what was actually said. Optional because entries
+    // written before this existed have no run to point at, and because the
+    // workflow and sales-report paths log outside any agent run.
+    runId: v.optional(v.id("agentRuns")),
+    stepId: v.optional(v.id("agentRunSteps")),
+    // What actually happened, recorded rather than inferred. The screen used to
+    // decide between a tick and a cross by testing whether interactionType
+    // contained the text "ERROR" or "FAIL", so a failed tool dispatch — whose
+    // type is "TOOL DISPATCH: <name>" — was reported as a success. UNKNOWN is
+    // for the rows written before this field existed; they are shown as not
+    // recorded rather than guessed, because guessing is the fault being fixed.
+    outcome: v.optional(v.union(
+      v.literal("SUCCESS"),
+      v.literal("FAILED"),
+      v.literal("UNKNOWN")
+    )),
+    durationMs: v.optional(v.number()),
+    // A normalised form of the failure with ids, durations, numbers and URLs
+    // stripped out, so the same fault groups no matter how the message was
+    // worded. Failures were previously counted under the raw error string, so
+    // "search timed out" and "search timed out after 24000ms" were two separate
+    // problems — and any error carrying an id never grouped at all.
+    failureKey: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
+    .index("by_run", ["runId", "createdAt"])
+    .index("by_agent_outcome", ["agentId", "outcome", "createdAt"])
     .searchIndex("search_content", {
       searchField: "promptContent",
       filterFields: ["agentId"]

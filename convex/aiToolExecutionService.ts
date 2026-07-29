@@ -29,7 +29,7 @@ export type ToolAccessRole = "ADMIN" | "SUPER_ADMIN";
 export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 export type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 export type ToolHandlerExecutionInput = {
-  ctx: Pick<ActionCtx, "runMutation" | "runQuery">;
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery" | "runAction">;
   handlerMapping: string;
   args: Record<string, unknown>;
   agentId?: Id<"agents">;
@@ -363,6 +363,64 @@ export function isNotImplementedToolResult(value: unknown): boolean {
 }
 
 const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
+  /**
+   * Read a web page.
+   *
+   * The first handler here that reaches outside the platform, which is why the
+   * context type had to admit actions: everything before this read or wrote our
+   * own database.
+   */
+  "web.scrape": async (input) => {
+    const url = getStringToolArg(input.args, "url");
+    const mainContentOnly = getOptionalStringToolArg(input.args, "mainContentOnly");
+
+    return await input.ctx.runAction(internal.webScrapeActions.scrapeUrl, {
+      url,
+      ...(mainContentOnly === undefined ? {} : { mainContentOnly: mainContentOnly !== "false" }),
+    });
+  },
+  /**
+   * Run an Apify job.
+   *
+   * The agent chooses the job and everything it is fed, so one installed tool
+   * covers any Apify scraper without the platform learning about any of them.
+   * The account token never reaches the model — it stays in the environment,
+   * where the job is started.
+   *
+   * This is deliberately wider than "Call an API", which fixes its address in
+   * configuration. Apify is billed per item collected, so an agent that picks
+   * its own jobs can spend on work nobody asked for. What is still enforced,
+   * because neither restricts a legitimate use: every address it is pointed at
+   * is checked before the job starts, and a job must be traceable to a person.
+   *
+   * It reports back the moment Apify accepts the job rather than waiting for
+   * results, which arrive later by webhook. The agent is told that outright: a
+   * tool that answers "started" while its reader hears "finished" is worse than
+   * one that is slow.
+   */
+  "apify.actor.run": async (input) => {
+    if (!input.userId) {
+      throw new Error("An Apify job has to be started by a person, so it can be traced back to one.");
+    }
+
+    const actorId = getStringToolArg(input.args, "job");
+    const settings = getOptionalStringToolArg(input.args, "settings") ?? "{}";
+
+    const runId: string = await input.ctx.runAction(internal.apify.startApifyActorInternal, {
+      actorId,
+      inputJson: settings,
+      ...(input.companyId ? { companyId: input.companyId } : {}),
+      startedBy: input.userId,
+    });
+
+    return {
+      started: true,
+      runId,
+      message:
+        "The job has started. Its results arrive separately a few minutes later; "
+        + "they are not available in this reply.",
+    };
+  },
   "knowledge.search": async (input) => {
     const query = getStringToolArg(input.args, "query") || input.fallbackQuery || "";
     const limit = getNumberToolArg(input.args, "limit");

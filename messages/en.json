@@ -1060,7 +1060,11 @@
                     "memory": "Memory",
                     "prompt": "Prompt",
                     "rules": "AI Rules",
-                    "logs": "Logs"
+                    "logs": "Logs",
+                    "observability": "Observability",
+                    "overview": "Overview",
+                    "activity": "Activity",
+                    "rawLogs": "Raw logs"
                 },
                 "dashboard": {
                     "title": "Agent Activity Dashboard",

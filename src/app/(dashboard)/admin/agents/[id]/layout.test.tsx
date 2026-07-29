@@ -16,8 +16,15 @@ vi.mock("convex/react", () => ({
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "agent_1" }),
+  useRouter: () => ({ push: vi.fn() }),
   usePathname: vi.fn(),
   useSearchParams: vi.fn(),
+}));
+
+// The header's Run button now confirms that a job started, so the layout
+// reaches for the toast provider the rest of the dashboard supplies.
+vi.mock("@/src/context/ToastContext", () => ({
+  useToast: () => ({ showToast: vi.fn(), showErrorToast: vi.fn(), dismissToast: vi.fn(), toasts: [] }),
 }));
 
 vi.mock("next/image", () => ({
@@ -53,6 +60,10 @@ vi.mock("next-intl", () => ({
       "tabs.integrations": "Integrations",
       "tabs.schemas": "I/O Schemas",
       "tabs.logs": "Logs",
+      "tabs.observability": "Observability",
+      "tabs.overview": "Overview",
+      "tabs.activity": "Activity",
+      "tabs.rawLogs": "Raw logs",
       backButton: "Back to Agents",
       loading: "Loading agent...",
       noDescription: "No description provided.",
@@ -88,7 +99,10 @@ describe("AgentDashboardLayout navigation", () => {
     expect(screen.getByRole("heading", { name: "Support Triage Agent" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/admin/agents/agent_1");
     expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/admin/agents/agent_1/settings");
-    expect(screen.getByRole("link", { name: "Logs" })).toHaveAttribute("href", "/admin/agents/agent_1/logs");
+
+    // Logs is no longer a destination of its own: it is the deepest layer of
+    // Observability, reached from a job.
+    expect(screen.queryByRole("link", { name: "Logs" })).not.toBeInTheDocument();
 
     expect(screen.queryByRole("link", { name: "Runs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Evals" })).not.toBeInTheDocument();
@@ -107,7 +121,9 @@ describe("AgentDashboardLayout navigation", () => {
     fireEvent.click(contextTrigger);
 
     let menu = screen.getByRole("menu");
-    expect(within(menu).getByRole("menuitem", { name: "Runs" })).toHaveAttribute("href", "/admin/agents/agent_1/runs");
+    // Runs left Context when Observability was created. Context now means only
+    // the things that shape the agent, not the record of what it has done.
+    expect(within(menu).queryByRole("menuitem", { name: "Runs" })).not.toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Evals" })).toHaveAttribute("href", "/admin/agents/agent_1/evals");
     expect(within(menu).getByRole("menuitem", { name: "Skills" })).toHaveAttribute("href", "/admin/agents/agent_1/skills");
     expect(within(menu).getByRole("menuitem", { name: /Knowledge/ })).toHaveAttribute("href", "/admin/agents/agent_1/knowledge");
@@ -125,6 +141,55 @@ describe("AgentDashboardLayout navigation", () => {
     // Interfaces is one screen now, so it is a plain link rather than a group.
     expect(screen.getByRole("link", { name: "Interfaces" })).toHaveAttribute("href", "/admin/agents/agent_1/interfaces");
     expect(screen.queryByRole("button", { name: "Interfaces" })).not.toBeInTheDocument();
+  });
+
+  /**
+   * The three depths of one question — is it working, what has it done, and
+   * what exactly was said — live under a single heading. Built beside each other
+   * they would be two screens answering the first question, and they would drift.
+   */
+  it("gathers the overview, the activity and the raw logs under Observability", () => {
+    render(
+      <AgentDashboardLayout>
+        <section>Agent body</section>
+      </AgentDashboardLayout>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Observability" }));
+
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Overview" })).toHaveAttribute(
+      "href",
+      "/admin/agents/agent_1/observability"
+    );
+    expect(within(menu).getByRole("menuitem", { name: "Activity" })).toHaveAttribute(
+      "href",
+      "/admin/agents/agent_1/runs"
+    );
+    expect(within(menu).getByRole("menuitem", { name: "Raw logs" })).toHaveAttribute(
+      "href",
+      "/admin/agents/agent_1/logs"
+    );
+  });
+
+  it.each([
+    ["/admin/agents/agent_1/observability", "Overview"],
+    ["/admin/agents/agent_1/runs", "Activity"],
+    ["/admin/agents/agent_1/logs", "Raw logs"],
+  ])("marks Observability active on %s", (pathname, expectedItem) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(
+      <AgentDashboardLayout>
+        <section>Agent body</section>
+      </AgentDashboardLayout>
+    );
+
+    const trigger = screen.getByRole("button", { name: "Observability" });
+    expect(trigger).toHaveClass("border-brand");
+
+    fireEvent.click(trigger);
+    expect(within(screen.getByRole("menu")).getByLabelText(`${expectedItem} selected`)).toBeInTheDocument();
   });
 
   /**

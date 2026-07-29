@@ -7,6 +7,17 @@ import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { getNextStepIndex, updateMemoryUsageOutcomeForRun } from "./agentRunStateService";
+import { buildFailureKey } from "./agentFailureKeyService";
+import {
+  buildDailySeries,
+  findVersionChangeDays,
+  groupFailures,
+  percentile,
+  splitByPeriod,
+  summariseLatency,
+  summarisePeriod,
+  type FailureGroupInput,
+} from "./agentObservabilityService";
 import {
   appendRefusedToolCall,
   buildRefusedToolCallKey,
@@ -26,6 +37,14 @@ import {
 
 const AGENT_RUN_DETAIL_LIMIT = 500;
 const AGENT_RUN_ANALYTICS_LIMIT = 500;
+
+/** Milliseconds in a day, for bounding analytics reads to the reported window. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** How many rows the overview's ranked lists return. The screen shows five. */
+const OVERVIEW_LIST_LIMIT = 8;
+/** A row shows at most a handful of markers, so it never needs more than a few. */
+const ROW_MARKER_LIMIT = 5;
 const RUN_OBSERVATORY_LIMIT = 120;
 const RUN_OBSERVATORY_TOOL_LIMIT = 300;
 /** Counting cannot be indexed away, so the badge stops here and says it did. */
@@ -449,6 +468,105 @@ function incrementCount(target: Record<string, number>, key: string, increment =
   target[key] = (target[key] ?? 0) + increment;
 }
 
+/**
+ * One page of an agent's jobs, already carrying everything the Activity table
+ * shows.
+ *
+ * The screen used to build those markers in the browser: it fetched up to two
+ * hundred reflections, two hundred memory candidates, two hundred checks, two
+ * hundred suggestions and five hundred pieces of feedback on every visit, then
+ * threw nearly all of it away to put small labels on twenty rows. Roughly
+ * thirteen hundred documents read to decorate twenty.
+ *
+ * Here the page is fetched first and only its own rows are looked up, each
+ * through that table's own by-run index. The cost is a page, not a history, so
+ * it stays flat as an agent accumulates work.
+ */
+export const getPageForAgent = adminQuery({
+  args: {
+    agentId: v.id("agents"),
+    paginationOpts: paginationOptsValidator,
+    status: v.optional(agentRunStatusValidator),
+  },
+  handler: async (ctx, args) => {
+    const { userId, user } = ctx;
+
+    const baseQuery = args.status
+      ? ctx.db
+          .query("agentRuns")
+          .withIndex("by_status_started", (q) => q.eq("status", args.status!))
+          .filter((q) => q.eq(q.field("agentId"), args.agentId))
+      : ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", args.agentId));
+
+    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
+
+    const scoped = user.role === "ADMIN"
+      ? baseQuery.filter((q) => q.eq(q.field("companyId"), user.companyId))
+      : baseQuery;
+
+    const result = await scoped.order("desc").paginate(args.paginationOpts);
+
+    const rows = await Promise.all(
+      result.page.map(async (run) => {
+        const [feedback, reflection, candidates, fixture, suggestions] = await Promise.all([
+          ctx.db
+            .query("agentRunFeedback")
+            .withIndex("by_run_created", (q) => q.eq("runId", run._id))
+            .filter((q) => q.eq(q.field("userId"), userId))
+            .first(),
+          ctx.db
+            .query("agentRunReflections")
+            .withIndex("by_run_created", (q) => q.eq("runId", run._id))
+            .first(),
+          ctx.db
+            .query("agentMemoryCandidates")
+            .withIndex("by_run_created", (q) => q.eq("sourceRunId", run._id))
+            .filter((q) => q.eq(q.field("status"), "PROPOSED"))
+            .take(ROW_MARKER_LIMIT),
+          ctx.db
+            .query("agentEvalFixtures")
+            .withIndex("by_run_created", (q) => q.eq("sourceRunId", run._id))
+            .filter((q) => q.eq(q.field("status"), "ACTIVE"))
+            .first(),
+          ctx.db
+            .query("agentImprovementSuggestions")
+            .withIndex("by_run_created", (q) => q.eq("sourceRunId", run._id))
+            .filter((q) => q.eq(q.field("status"), "PROPOSED"))
+            .take(ROW_MARKER_LIMIT),
+        ]);
+
+        return {
+          _id: run._id,
+          objective: run.objective,
+          status: run.status,
+          triggerType: run.triggerType,
+          startedAt: run.startedAt,
+          completedAt: run.completedAt,
+          costGBP: run.costGBP,
+          error: run.error,
+          finalOutput: run.finalOutput,
+          agentVersionId: run.agentVersionId,
+          markers: {
+            // The whole record, not just the rating: the rate-this-job form
+            // prefills from it, and this document has already been read.
+            feedback: feedback
+              ? { rating: feedback.rating, labels: feedback.labels, comment: feedback.comment }
+              : null,
+            reflected: reflection !== null,
+            // Ids rather than counts: the row's accept and dismiss buttons act
+            // on one, and sending the id saves a second lookup to find it.
+            memoryCandidateIds: candidates.map((candidate) => candidate._id),
+            usedAsCheck: fixture !== null,
+            suggestionIds: suggestions.map((suggestion) => suggestion._id),
+          },
+        };
+      })
+    );
+
+    return { ...result, page: rows };
+  },
+});
+
 export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
@@ -746,6 +864,8 @@ export const getRunExecutionStateInternal = internalQuery({
 export const getAnalyticsForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
+    /** The window the headline numbers report on, compared against the one before it. */
+    lookbackDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { user } = ctx;
@@ -753,16 +873,27 @@ export const getAnalyticsForAgent = adminQuery({
       throw new Error("Unauthorized");
     }
     const visibleCompanyId = user.role === "ADMIN" ? user.companyId : undefined;
+    const lookbackDays = Math.min(Math.max(args.lookbackDays ?? 7, 1), 90);
+
+    // Two windows are read, not one: the period being reported and the period
+    // before it, because every headline number is shown against its own past.
+    const windowStart = Date.now() - 2 * lookbackDays * DAY_MS;
 
     const runs = user.role === "SUPER_ADMIN"
       ? await ctx.db
           .query("agentRuns")
-          .withIndex("by_agent_started", (q) => q.eq("agentId", args.agentId))
+          // Ranged on the index rather than filtered after the fact, so a busy
+          // agent's whole history is not read to report on one week of it.
+          .withIndex("by_agent_started", (q) =>
+            q.eq("agentId", args.agentId).gte("startedAt", windowStart)
+          )
           .order("desc")
           .take(AGENT_RUN_ANALYTICS_LIMIT)
       : await ctx.db
           .query("agentRuns")
-          .withIndex("by_company_started", (q) => q.eq("companyId", visibleCompanyId))
+          .withIndex("by_company_started", (q) =>
+            q.eq("companyId", visibleCompanyId).gte("startedAt", windowStart)
+          )
           .filter((q) => q.eq(q.field("agentId"), args.agentId))
           .order("desc")
           .take(AGENT_RUN_ANALYTICS_LIMIT);
@@ -770,12 +901,16 @@ export const getAnalyticsForAgent = adminQuery({
     const toolCalls = user.role === "SUPER_ADMIN"
       ? await ctx.db
           .query("agentToolCalls")
-          .withIndex("by_agent_started", (q) => q.eq("agentId", args.agentId))
+          .withIndex("by_agent_started", (q) =>
+            q.eq("agentId", args.agentId).gte("startedAt", windowStart)
+          )
           .order("desc")
           .take(AGENT_RUN_ANALYTICS_LIMIT)
       : await ctx.db
           .query("agentToolCalls")
-          .withIndex("by_company_started", (q) => q.eq("companyId", visibleCompanyId))
+          .withIndex("by_company_started", (q) =>
+            q.eq("companyId", visibleCompanyId).gte("startedAt", windowStart)
+          )
           .filter((q) => q.eq(q.field("agentId"), args.agentId))
           .order("desc")
           .take(AGENT_RUN_ANALYTICS_LIMIT);
@@ -841,6 +976,8 @@ export const getAnalyticsForAgent = adminQuery({
     let totalOutputTokens = 0;
     let completedLatencyTotalMs = 0;
     let completedLatencyCount = 0;
+    const latencies: number[] = [];
+    const failureEntries: FailureGroupInput[] = [];
 
     for (const run of runs) {
       incrementCount(statusCounts, run.status);
@@ -853,10 +990,21 @@ export const getAnalyticsForAgent = adminQuery({
       if (latencyMs !== undefined) {
         completedLatencyTotalMs += latencyMs;
         completedLatencyCount += 1;
+        latencies.push(latencyMs);
       }
 
       if (run.status === "FAILED" || run.status === "CANCELLED") {
-        incrementCount(failureReasons, run.error || run.finalOutput || run.status);
+        const message = run.error || run.finalOutput || run.status;
+        incrementCount(failureReasons, message);
+        // Grouped on the normalised key rather than the message, so the same
+        // fault does not split across rows because one occurrence happened to
+        // carry a duration or a run id.
+        failureEntries.push({
+          failureKey: buildFailureKey(message) ?? run.status,
+          message,
+          at: run.startedAt,
+          runId: run._id,
+        });
       }
 
       const modelKey = run.modelId || run.providerModelId || "unresolved";
@@ -901,6 +1049,9 @@ export const getAnalyticsForAgent = adminQuery({
       denied: number;
       cancelled: number;
       notImplemented: number;
+      /** How long this tool usually takes — the column that shows which one is slow. */
+      typicalMs: number;
+      durations: number[];
     }> = {};
     for (const toolCall of toolCalls) {
       const key = toolCall.handlerMapping;
@@ -914,7 +1065,12 @@ export const getAnalyticsForAgent = adminQuery({
           denied: 0,
           cancelled: 0,
           notImplemented: 0,
+          typicalMs: 0,
+          durations: [],
         };
+      }
+      if (toolCall.completedAt !== undefined) {
+        toolStats[key].durations.push(toolCall.completedAt - toolCall.startedAt);
       }
       toolStats[key].calls += 1;
       if (toolCall.status === "SUCCESS") toolStats[key].successes += 1;
@@ -957,6 +1113,11 @@ export const getAnalyticsForAgent = adminQuery({
     const feedbackTotal = feedback.length;
     const positiveFeedback = feedbackCounts.POSITIVE ?? 0;
 
+    const now = Date.now();
+    const periods = splitByPeriod(runs, { days: lookbackDays, now });
+    const latency = summariseLatency(latencies);
+    const failureGroups = groupFailures(failureEntries);
+
     return {
       sampledRuns: runs.length,
       sampledToolCalls: toolCalls.length,
@@ -977,6 +1138,25 @@ export const getAnalyticsForAgent = adminQuery({
         positiveFeedbackRate: feedbackTotal > 0 ? positiveFeedback / feedbackTotal : 0,
         averageLatencyMs: completedLatencyCount > 0 ? completedLatencyTotalMs / completedLatencyCount : 0,
       },
+      lookbackDays,
+      // What a run usually takes, and what the slow tail looks like. The mean is
+      // kept alongside because the existing screens read it, but nothing new
+      // should: it is the figure that hid the slow tail in the first place.
+      latency,
+      dailySeries: buildDailySeries(runs, { days: lookbackDays, now }),
+      versionChangeDays: findVersionChangeDays(runs),
+      // Each headline number against the same span immediately before it, which
+      // is what turns a total into "better or worse than last week".
+      comparison: {
+        current: summarisePeriod(periods.current),
+        previous: summarisePeriod(periods.previous),
+      },
+      // The sample is capped, so a very busy agent's window can be cut short.
+      // Said plainly rather than left for the reader to infer from a number that
+      // stops moving.
+      sampleTruncated: runs.length >= AGENT_RUN_ANALYTICS_LIMIT,
+      failureGroups: failureGroups.slice(0, OVERVIEW_LIST_LIMIT),
+      failureGroupsOmitted: Math.max(0, failureGroups.length - OVERVIEW_LIST_LIMIT),
       statusCounts,
       triggerCounts,
       approvalCounts,
@@ -986,11 +1166,17 @@ export const getAnalyticsForAgent = adminQuery({
         .sort((a, b) => b.count - a.count),
       modelStats: Object.values(modelStats).sort((a, b) => b.runs - a.runs),
       versionStats: Object.values(versionStats).sort((a, b) => b.runs - a.runs),
-      toolStats: Object.values(toolStats).sort((a, b) => b.calls - a.calls),
-      failureReasons: Object.entries(failureReasons)
-        .map(([reason, count]) => ({ reason, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5),
+      // The middle call rather than the mean: one tool call that hung for a
+      // minute would otherwise make an ordinarily fast tool look slow.
+      toolStats: Object.values(toolStats)
+        .map(({ durations, ...tool }) => ({ ...tool, typicalMs: percentile(durations, 50) }))
+        .sort((a, b) => b.calls - a.calls)
+        .slice(0, OVERVIEW_LIST_LIMIT),
+      // Same shape as before so the existing screen keeps working, but derived
+      // from the grouped failures: two wordings of one fault are now one row.
+      failureReasons: failureGroups
+        .slice(0, 5)
+        .map((group) => ({ reason: group.label, count: group.count })),
       recentFailures: runs
         .filter((run) => run.status === "FAILED" || run.status === "CANCELLED")
         .slice(0, 5)

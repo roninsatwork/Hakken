@@ -533,6 +533,8 @@ async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
     promptContent: args.objective,
     responseContent: errorMessage,
     companyId: args.companyId,
+    runId: args.runId,
+    outcome: "FAILED",
   });
 
   if (args.runId) {
@@ -1436,17 +1438,14 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 const redactedArgsString = redactPII(rawArgsString, DEFAULT_PII_CONFIG);
                 console.log("Agent requested function call:", toolCall.name, redactedArgsString);
 
-                // Log Telemetry: Tool Dispatch
-                if (agentId) {
-                   await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
-                       agentId: agentId,
-                       threadId: threadId,
-                       interactionType: `TOOL DISPATCH: ${toolCall.name}`,
-                       promptContent: objective,
-                       responseContent: `{"functionCall": {"name": "${toolCall.name}", "args": ${redactedArgsString}}}`,
-                       companyId: companyId
-                   });
-                }
+                // The dispatch used to be logged here, before the tool had run.
+                // Nothing at this point knows whether the call will succeed, so
+                // the entry could only ever be written without an outcome — which
+                // is why the screen was left inferring one from the wording of
+                // the interaction type, and reporting every failed tool call as a
+                // success. The entry is now written once the call has resolved,
+                // below, where the result is actually known.
+                const toolStartedAt = Date.now();
 
                 const currentUser = thread.userId
                     ? await ctx.runQuery(internal.users.getUserInternal, { userId: thread.userId })
@@ -1547,6 +1546,27 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                             sideEffectLevel: toolMetadata.sideEffectLevel,
                         }),
                     });
+
+                    // This call is waiting on a person, so it has no outcome yet
+                    // and says so. Logged rather than skipped because the old
+                    // dispatch entry was written before this branch, and dropping
+                    // it silently would take a parked call out of the raw log
+                    // altogether — the one case where somebody most wants to see
+                    // why nothing is happening.
+                    if (agentId) {
+                        await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+                            agentId,
+                            threadId,
+                            interactionType: `TOOL AWAITING APPROVAL: ${toolCall.name}`,
+                            promptContent: objective,
+                            responseContent: approvalMessage,
+                            companyId,
+                            runId,
+                            stepId: approvalStepId,
+                            outcome: "UNKNOWN",
+                            durationMs: Date.now() - toolStartedAt,
+                        });
+                    }
 
                     // Queued, not parked. The rest of the batch still has to be
                     // considered: the model asked for those calls too, and
@@ -1665,6 +1685,28 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     output: JSON.stringify(toolResponsePayload),
                     error: toolError,
                 });
+
+                // Log Telemetry: Tool Dispatch, now that it has resolved.
+                //
+                // On failure the error is what gets stored, because that is what
+                // the failure key is derived from — storing the request here
+                // instead would key every failure on the arguments and group
+                // nothing with anything.
+                if (agentId) {
+                    await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+                        agentId,
+                        threadId,
+                        interactionType: `TOOL DISPATCH: ${toolCall.name}`,
+                        promptContent: objective,
+                        responseContent: toolError
+                            ?? `{"functionCall": {"name": "${toolCall.name}", "args": ${redactedArgsString}}}`,
+                        companyId,
+                        runId,
+                        stepId: toolStepId,
+                        outcome: toolStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
+                        durationMs: Date.now() - toolStartedAt,
+                    });
+                }
 
                 executedCalls.push({
                     name: toolCall.name,
@@ -1854,6 +1896,8 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             promptContent: objective,
             responseContent: assistantReply,
             companyId,
+            runId,
+            outcome: finalStepStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
         });
 
         if (thread.userId) {
@@ -2203,6 +2247,7 @@ export const runTriggeredAgentObjective = internalAction({
 
       // Plain text in, plain text out, so this goes through the registry and
       // runs on whichever provider the model belongs to.
+      const modelStartedAt = Date.now();
       const response = await generateTextWithResolvedModel({
         model: modelConfig,
         systemInstruction: buildAgentSystemInstruction(executionSystemPrompt, runtimeSkills, triggeredAlwaysMemories),
@@ -2252,6 +2297,21 @@ export const runTriggeredAgentObjective = internalAction({
         outputTokens,
         costGBP,
       });
+      // The raw exchange. This path — used by Run Agent and by every schedule —
+      // recorded its steps but never a word of what was actually said, so the
+      // raw log was empty for any agent that was not chatted with. The
+      // conversation path has always written this; this one never did.
+      await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+        agentId: args.agentId,
+        interactionType: "LLM SYNTHESIS",
+        promptContent: args.objective,
+        responseContent: output,
+        companyId: args.companyId,
+        runId,
+        outcome: "SUCCESS",
+        durationMs: Date.now() - modelStartedAt,
+      });
+
       await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
         runId,
         inputTokens,
@@ -2279,6 +2339,17 @@ export const runTriggeredAgentObjective = internalAction({
       return { output, runId };
     } catch (error: unknown) {
       const errorMessage = normalizeAiRuntimeError(error, "Triggered agent execution failed.").error;
+      // A failure on this path was equally silent: the run was marked failed but
+      // nothing recorded what went wrong in the reader's own log.
+      await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
+        agentId: args.agentId,
+        interactionType: "ERROR",
+        promptContent: args.objective,
+        responseContent: errorMessage,
+        companyId: args.companyId,
+        ...(runId ? { runId } : {}),
+        outcome: "FAILED",
+      });
       if (runId) {
         await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
           runId,
@@ -2501,12 +2572,14 @@ export const executeAgentNode = internalAction({
 
     const output = generated.text || "{}";
 
-    // Log Execution for Observability
+    // Log Execution for Observability. No run id: this path is a workflow step
+    // calling a model directly, outside any durable agent run.
     await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
         agentId: args.agentId,
         interactionType: "WORKFLOW_EXECUTION",
         promptContent: args.input,
         responseContent: output,
+        outcome: "SUCCESS",
     });
 
     return {

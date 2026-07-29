@@ -1,4 +1,4 @@
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -16,7 +16,11 @@ type ScriptRunResult = {
   metadata: Record<string, string | number | boolean>;
 };
 
-async function executeMaintenanceScript(ctx: MutationCtx, scriptId: MaintenanceScriptId): Promise<ScriptRunResult> {
+async function executeMaintenanceScript(
+  ctx: MutationCtx,
+  scriptId: MaintenanceScriptId,
+  actorId: Id<"users">,
+): Promise<ScriptRunResult> {
   if (scriptId === "inventory-rollup-rebuild") {
     const result = await rebuildGlobalInventoryRollupData(ctx);
 
@@ -29,6 +33,7 @@ async function executeMaintenanceScript(ctx: MutationCtx, scriptId: MaintenanceS
   if (scriptId === "data-migrations-apply") {
     return await startPendingDataMigrations(ctx);
   }
+
 
   throw new Error("Unknown maintenance script");
 }
@@ -170,7 +175,7 @@ export const run = superAdminMutation({
     });
 
     try {
-      const result = await executeMaintenanceScript(ctx, script.id);
+      const result = await executeMaintenanceScript(ctx, script.id, userId);
       const completedAt = Date.now();
       const metadata = JSON.stringify(result.metadata);
 

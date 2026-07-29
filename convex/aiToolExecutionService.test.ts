@@ -330,11 +330,71 @@ describe("ai tool execution service", () => {
     // Everything unbuilt is now absent from it, which is what lets the
     // marketplace derive availability instead of keeping a parallel list.
     expect(getRegisteredToolHandlerMappings()).toEqual([
+      // Runs an Apify job the admin has configured.
+      "apify.actor.run",
       "company.overview.update",
       "http.request",
       "knowledge.search",
       "notification.send",
+      // Reads a web page. The first handler here that reaches outside the
+      // platform rather than into our own database.
+      "web.scrape",
     ]);
+  });
+
+  test("an Apify job runs whichever job the agent names, with its settings", async () => {
+    const runAction = vi.fn().mockResolvedValue("apify_run_1");
+
+    await executeRegisteredTool({
+      ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
+      handlerMapping: "apify.actor.run",
+      args: { job: "apify/website-content-crawler", settings: '{"startUrls":["https://example.com"]}' },
+      companyId: "company_1" as never,
+      userId: "user_1" as never,
+    });
+
+    // One installed tool, any job on Apify. The account token never travels
+    // through the model — it is read where the job is started.
+    expect(runAction).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        actorId: "apify/website-content-crawler",
+        inputJson: '{"startUrls":["https://example.com"]}',
+        startedBy: "user_1",
+      })
+    );
+  });
+
+  test("an Apify job says it has only started, not finished", async () => {
+    const runAction = vi.fn().mockResolvedValue("apify_run_2");
+
+    const result = await executeRegisteredTool({
+      ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
+      handlerMapping: "apify.actor.run",
+      args: { job: "apify/web-scraper", settings: "{}" },
+      companyId: "company_1" as never,
+      userId: "user_1" as never,
+    });
+
+    // Results arrive by webhook minutes later. An agent told "done" would go on
+    // to summarise items that do not exist yet.
+    expect(result).toMatchObject({ started: true, runId: "apify_run_2" });
+    expect(JSON.stringify(result)).toContain("not available in this reply");
+  });
+
+  test("an Apify job refuses to run with nobody to trace it to", async () => {
+    const runAction = vi.fn();
+
+    await expect(
+      executeRegisteredTool({
+        ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
+        handlerMapping: "apify.actor.run",
+        args: { job: "apify/web-scraper", settings: "{}" },
+        companyId: "company_1" as never,
+      })
+    ).rejects.toThrow("started by a person");
+
+    expect(runAction).not.toHaveBeenCalled();
   });
 
   test("dispatches knowledge search through the registered read handler", async () => {
@@ -344,7 +404,7 @@ describe("ai tool execution service", () => {
 
     await expect(
       executeRegisteredTool({
-        ctx: { runQuery, runMutation },
+        ctx: { runQuery, runMutation, runAction: vi.fn() },
         handlerMapping: "knowledge.search",
         args: { query: " pipeline risk ", limit: 3 },
         agentId: "agent_1" as never,
@@ -369,7 +429,7 @@ describe("ai tool execution service", () => {
 
     await expect(
       executeRegisteredTool({
-        ctx: { runQuery, runMutation },
+        ctx: { runQuery, runMutation, runAction: vi.fn() },
         handlerMapping: "company.overview.update",
         args: { overview: " New overview ", idempotencyKey: "run-1:overview" },
         companyId: "company_1" as never,
@@ -399,7 +459,7 @@ describe("ai tool execution service", () => {
    */
   test("a handler mapping nothing declares reports rather than throwing", async () => {
     const result = await executeRegisteredTool({
-      ctx: { runQuery: vi.fn(), runMutation: vi.fn() },
+      ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction: vi.fn() },
       handlerMapping: "crm.lookup",
       args: {},
     });
@@ -419,7 +479,7 @@ describe("ai tool execution service", () => {
     const runMutation = vi.fn();
 
     const result = await executeRegisteredTool({
-      ctx: { runQuery, runMutation },
+      ctx: { runQuery, runMutation, runAction: vi.fn() },
       handlerMapping: "jira.issues.search",
       args: { query: "open bugs" },
     });
@@ -441,7 +501,7 @@ describe("ai tool execution service", () => {
 
     await expect(
       executeRegisteredTool({
-        ctx: { runQuery, runMutation },
+        ctx: { runQuery, runMutation, runAction: vi.fn() },
         handlerMapping: "slack.message.send",
         args: { channel: "sales", text: "hello" },
         companyId: "company_1" as never,

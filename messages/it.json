@@ -1060,7 +1060,11 @@
                     "memory": "Memoria",
                     "prompt": "Prompt di Sistema",
                     "rules": "Regole AI",
-                    "logs": "Log"
+                    "logs": "Log",
+                    "observability": "Osservabilità",
+                    "overview": "Panoramica",
+                    "activity": "Attività",
+                    "rawLogs": "Log grezzi"
                 },
                 "dashboard": {
                     "title": "Dashboard Attività Agent",

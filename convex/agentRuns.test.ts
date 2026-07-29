@@ -3,6 +3,13 @@ import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
+/**
+ * The analytics query reports on a window, so its fixtures have to sit inside
+ * one. Offsets from this base are the original fixture values, so every total
+ * and duration the test asserts is unchanged.
+ */
+const ANALYTICS_BASE = Date.now() - 60_000;
+
 const paginationOpts = { numItems: 10, cursor: null };
 
 describe("Agent Runs", () => {
@@ -302,6 +309,96 @@ describe("Agent Runs", () => {
     await expect(t.query(api.agentRuns.getForAgent, { agentId, paginationOpts })).rejects.toThrow(
       "Unauthenticated"
     );
+
+    // The table's own query keeps the same boundaries. It is a different
+    // handler from the one above, so the isolation has to be proved again
+    // rather than assumed from the pair of them looking alike.
+    const tablePage = await adminAClient.query(api.agentRuns.getPageForAgent, { agentId, paginationOpts });
+    expect(tablePage.page.map((run) => run._id)).toEqual([runAId]);
+    await expect(orphanAdminClient.query(api.agentRuns.getPageForAgent, { agentId, paginationOpts })).rejects.toThrow(
+      "Unauthorized"
+    );
+    await expect(t.query(api.agentRuns.getPageForAgent, { agentId, paginationOpts })).rejects.toThrow(
+      "Unauthenticated"
+    );
+  });
+
+  test("the activity table carries each row's markers without reading the agent's whole history", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { agentId, adminId, ratedRunId, plainRunId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Marker Co", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "marker-admin@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Rightmove Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      const ratedRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        triggerType: "SCHEDULE",
+        objective: "Find three-bed listings in Bristol",
+        status: "FAILED",
+        startedAt: 200,
+        updatedAt: 200,
+        completedAt: 260,
+      });
+      const plainRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        triggerType: "SCHEDULE",
+        objective: "Find three-bed listings in Bath",
+        status: "SUCCESS",
+        startedAt: 100,
+        updatedAt: 100,
+        completedAt: 140,
+      });
+
+      await ctx.db.insert("agentRunFeedback", {
+        runId: ratedRunId,
+        agentId,
+        companyId,
+        userId: adminId,
+        rating: "NEGATIVE",
+        labels: ["TOO_SLOW"],
+        comment: "took far too long",
+        createdAt: 300,
+        updatedAt: 300,
+      });
+
+      return { agentId, adminId, ratedRunId, plainRunId };
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const result = await client.query(api.agentRuns.getPageForAgent, { agentId, paginationOpts });
+
+    const rated = result.page.find((run) => run._id === ratedRunId);
+    const plain = result.page.find((run) => run._id === plainRunId);
+
+    // The rating and its labels ride along with the row, so the form that
+    // edits them does not need a second trip.
+    expect(rated?.markers.feedback).toMatchObject({
+      rating: "NEGATIVE",
+      labels: ["TOO_SLOW"],
+      comment: "took far too long",
+    });
+    expect(rated?.markers.usedAsCheck).toBe(false);
+    expect(rated?.markers.reflected).toBe(false);
+
+    // A row with nothing on it says so, rather than arriving undefined and
+    // leaving the table to guess.
+    expect(plain?.markers.feedback).toBeNull();
+    expect(plain?.markers.memoryCandidateIds).toEqual([]);
+    expect(plain?.markers.suggestionIds).toEqual([]);
   });
 
   test("run details include steps, tool calls, and approvals with tenant boundaries", async () => {
@@ -1146,9 +1243,9 @@ describe("Agent Runs", () => {
         inputTokens: 100,
         outputTokens: 20,
         costGBP: 0.12,
-        startedAt: 100,
-        completedAt: 160,
-        updatedAt: 160,
+        startedAt: ANALYTICS_BASE + 100,
+        completedAt: ANALYTICS_BASE + 160,
+        updatedAt: ANALYTICS_BASE + 160,
       });
       const failedRunAId = await ctx.db.insert("agentRuns", {
         agentId,
@@ -1163,9 +1260,9 @@ describe("Agent Runs", () => {
         inputTokens: 40,
         outputTokens: 10,
         costGBP: 0.02,
-        startedAt: 200,
-        completedAt: 250,
-        updatedAt: 250,
+        startedAt: ANALYTICS_BASE + 200,
+        completedAt: ANALYTICS_BASE + 250,
+        updatedAt: ANALYTICS_BASE + 250,
         error: "Tool args failed validation",
       });
       const pendingRunAId = await ctx.db.insert("agentRuns", {
@@ -1175,8 +1272,8 @@ describe("Agent Runs", () => {
         triggerType: "MANUAL",
         objective: "Needs approval",
         status: "PENDING_APPROVAL",
-        startedAt: 300,
-        updatedAt: 300,
+        startedAt: ANALYTICS_BASE + 300,
+        updatedAt: ANALYTICS_BASE + 300,
       });
       await ctx.db.insert("agentRuns", {
         agentId,
@@ -1186,9 +1283,9 @@ describe("Agent Runs", () => {
         objective: "Company B report",
         status: "SUCCESS",
         costGBP: 0.77,
-        startedAt: 400,
-        completedAt: 410,
-        updatedAt: 410,
+        startedAt: ANALYTICS_BASE + 400,
+        completedAt: ANALYTICS_BASE + 410,
+        updatedAt: ANALYTICS_BASE + 410,
       });
 
       await ctx.db.insert("agentToolCalls", {
@@ -1204,8 +1301,8 @@ describe("Agent Runs", () => {
         confirmationRequired: false,
         companyId: companyAId,
         userId: adminAId,
-        startedAt: 120,
-        completedAt: 130,
+        startedAt: ANALYTICS_BASE + 120,
+        completedAt: ANALYTICS_BASE + 130,
       });
       await ctx.db.insert("agentToolCalls", {
         runId: failedRunAId,
@@ -1219,8 +1316,8 @@ describe("Agent Runs", () => {
         confirmationRequired: true,
         companyId: companyAId,
         userId: adminAId,
-        startedAt: 220,
-        completedAt: 230,
+        startedAt: ANALYTICS_BASE + 220,
+        completedAt: ANALYTICS_BASE + 230,
       });
       const approvalToolCallId = await ctx.db.insert("agentToolCalls", {
         runId: pendingRunAId,
@@ -1234,7 +1331,7 @@ describe("Agent Runs", () => {
         confirmationRequired: true,
         companyId: companyAId,
         userId: adminAId,
-        startedAt: 310,
+        startedAt: ANALYTICS_BASE + 310,
       });
       await ctx.db.insert("agentRunApprovals", {
         runId: pendingRunAId,
@@ -1243,7 +1340,7 @@ describe("Agent Runs", () => {
         companyId: companyAId,
         requestedBy: adminAId,
         status: "PENDING",
-        requestedAt: 315,
+        requestedAt: ANALYTICS_BASE + 315,
       });
       await ctx.db.insert("agentRunFeedback", {
         runId: successRunAId,
@@ -1253,8 +1350,8 @@ describe("Agent Runs", () => {
         rating: "POSITIVE",
         labels: ["GOOD_ANSWER"],
         comment: "Useful summary.",
-        createdAt: 320,
-        updatedAt: 320,
+        createdAt: ANALYTICS_BASE + 320,
+        updatedAt: ANALYTICS_BASE + 320,
       });
       await ctx.db.insert("agentRunFeedback", {
         runId: failedRunAId,
@@ -1264,8 +1361,8 @@ describe("Agent Runs", () => {
         rating: "NEGATIVE",
         labels: ["BAD_TOOL_ARGS", "SHOULD_BECOME_EVAL"],
         comment: "Bad tool arguments.",
-        createdAt: 330,
-        updatedAt: 330,
+        createdAt: ANALYTICS_BASE + 330,
+        updatedAt: ANALYTICS_BASE + 330,
       });
       await ctx.db.insert("agentToolCalls", {
         runId: successRunAId,
@@ -1280,8 +1377,8 @@ describe("Agent Runs", () => {
         confirmationRequired: false,
         companyId: companyBId,
         userId: adminBId,
-        startedAt: 410,
-        completedAt: 415,
+        startedAt: ANALYTICS_BASE + 410,
+        completedAt: ANALYTICS_BASE + 415,
       });
       await ctx.db.insert("agentRunFeedback", {
         runId: successRunAId,
@@ -1290,8 +1387,8 @@ describe("Agent Runs", () => {
         userId: adminBId,
         rating: "POSITIVE",
         labels: ["GOOD_ANSWER"],
-        createdAt: 420,
-        updatedAt: 420,
+        createdAt: ANALYTICS_BASE + 420,
+        updatedAt: ANALYTICS_BASE + 420,
       });
 
       return { agentId, adminAId, superAdminId };

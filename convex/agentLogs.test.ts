@@ -53,14 +53,15 @@ describe("Agent Logs Authorization", () => {
     const adminAClient = t.withIdentity({ subject: adminAId });
     const adminBClient = t.withIdentity({ subject: adminBId });
 
-    const page = await adminAClient.query(api.agentLogs.getOffsetPaginated, {
+    const page = await adminAClient.query(api.agentLogs.getJobGroups, {
       agentId,
       searchTerm: "",
       page: 1,
       pageSize: 15,
     });
 
-    expect(page.data.map((log) => log._id)).toEqual([logAId]);
+    const visibleIds = page.groups.flatMap((group) => group.entries.map((entry) => entry._id));
+    expect(visibleIds).toEqual([logAId]);
 
     await expect(adminAClient.query(api.agentLogs.getLogById, { id: logBId })).rejects.toThrow("Unauthorized");
     await expect(adminBClient.mutation(api.agentLogs.deleteLog, { id: logAId })).rejects.toThrow("Unauthorized");
@@ -99,13 +100,13 @@ describe("Agent Logs Authorization", () => {
 
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    const searchPage = await superAdminClient.query(api.agentLogs.getOffsetPaginated, {
+    const searchPage = await superAdminClient.query(api.agentLogs.getJobGroups, {
       agentId,
       searchTerm: "needle",
       page: 1,
       pageSize: 15,
     });
-    expect(searchPage.data.map((log) => log._id)).toEqual([logId]);
+    expect(searchPage.groups.flatMap((group) => group.entries.map((entry) => entry._id))).toEqual([logId]);
     expect(await superAdminClient.query(api.agentLogs.getLogById, { id: logId })).toMatchObject({
       promptContent: "Find a needle in this prompt",
     });
@@ -121,14 +122,200 @@ describe("Agent Logs Authorization", () => {
     });
     await t.mutation(internal.agentLogs.seedForAgent, { agentId });
 
-    const allLogs = await superAdminClient.query(api.agentLogs.getOffsetPaginated, {
+    const allLogs = await superAdminClient.query(api.agentLogs.getJobGroups, {
       agentId,
       page: 1,
       pageSize: 100,
     });
-    expect(allLogs.totalCount).toBe(47);
+    // Every entry here was written outside a job, so each is its own group.
+    expect(allLogs.groups.flatMap((group) => group.entries)).toHaveLength(47);
 
     await expect(superAdminClient.mutation(api.agentLogs.deleteLog, { id: logId })).resolves.toBeNull();
     await expect(superAdminClient.mutation(api.agentLogs.deleteLog, { id: logId })).rejects.toThrow("Log not found");
+  });
+});
+
+describe("Agent log outcomes", () => {
+  async function setup() {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const agentId = await t.run(async (ctx) =>
+      await ctx.db.insert("agents", {
+        name: "Rightmove Agent",
+        modelId: "test-model",
+        thinkingMode: false,
+        isActive: true,
+        temperature: 1,
+        humanApprovalRequired: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+    );
+    return { t, agentId };
+  }
+
+  test("a failed tool dispatch is recorded as failed, not inferred from its name", async () => {
+    const { t, agentId } = await setup();
+
+    // The exact case the screen used to get wrong: the interaction type says
+    // "TOOL DISPATCH", which contains neither "ERROR" nor "FAIL", so the old
+    // string test reported this as a success.
+    const logId = await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Find three-bed listings in Bristol",
+      responseContent: "Property search timed out after 24000ms",
+      outcome: "FAILED",
+      durationMs: 23900,
+    });
+
+    const log = await t.run(async (ctx) => await ctx.db.get(logId));
+    expect(log?.outcome).toBe("FAILED");
+    expect(log?.durationMs).toBe(23900);
+  });
+
+  test("a successful tool dispatch carries no failure key", async () => {
+    const { t, agentId } = await setup();
+
+    const logId = await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Find three-bed listings in Bath",
+      responseContent: '{"functionCall": {"name": "property_search"}}',
+      outcome: "SUCCESS",
+    });
+
+    const log = await t.run(async (ctx) => await ctx.db.get(logId));
+    expect(log?.outcome).toBe("SUCCESS");
+    expect(log?.failureKey).toBeUndefined();
+  });
+
+  test("two wordings of the same failure share a key so they group together", async () => {
+    const { t, agentId } = await setup();
+
+    const [first, second] = await Promise.all([
+      t.mutation(internal.agentLogs.insertAgentLogInternal, {
+        agentId,
+        interactionType: "TOOL DISPATCH: property_search",
+        promptContent: "Bristol",
+        responseContent: "Property search timed out after 24000ms",
+        outcome: "FAILED",
+      }),
+      t.mutation(internal.agentLogs.insertAgentLogInternal, {
+        agentId,
+        interactionType: "TOOL DISPATCH: property_search",
+        promptContent: "Bath",
+        responseContent: "Property search timed out after 19000ms",
+        outcome: "FAILED",
+      }),
+    ]);
+
+    const [logA, logB] = await t.run(async (ctx) => [await ctx.db.get(first), await ctx.db.get(second)]);
+    expect(logA?.failureKey).toBeDefined();
+    expect(logA?.failureKey).toBe(logB?.failureKey);
+  });
+
+  test("an entry written without an outcome says so rather than claiming success", async () => {
+    const { t, agentId } = await setup();
+
+    const logId = await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "LLM SYNTHESIS",
+      promptContent: "prompt",
+      responseContent: "reply",
+    });
+
+    const log = await t.run(async (ctx) => await ctx.db.get(logId));
+    expect(log?.outcome).toBe("UNKNOWN");
+  });
+
+  test("an entry can name the run it belongs to", async () => {
+    const { t, agentId } = await setup();
+
+    const runId = await t.run(async (ctx) =>
+      await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "SCHEDULE",
+        objective: "Find three-bed listings in Bristol",
+        status: "FAILED",
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+    );
+
+    const logId = await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Bristol",
+      responseContent: "Property search timed out",
+      outcome: "FAILED",
+      runId,
+    });
+
+    const log = await t.run(async (ctx) => await ctx.db.get(logId));
+    expect(log?.runId).toBe(runId);
+  });
+
+  test("following one repeated failure shows the others and nothing else", async () => {
+    const { t, agentId } = await setup();
+
+    const superAdminId = await t.run(async (ctx) =>
+      await ctx.db.insert("users", { email: "super@example.com", role: "SUPER_ADMIN" })
+    );
+
+    // Two wordings of one fault, plus an unrelated failure and a healthy entry.
+    await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Bristol",
+      responseContent: "Property search timed out after 24000ms",
+      outcome: "FAILED",
+    });
+    await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH: property_search",
+      promptContent: "Bath",
+      responseContent: "Property search timed out after 19000ms",
+      outcome: "FAILED",
+    });
+    await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "TOOL DISPATCH: send_email",
+      promptContent: "Henderson",
+      responseContent: "The mailbox was rejected",
+      outcome: "FAILED",
+    });
+    await t.mutation(internal.agentLogs.insertAgentLogInternal, {
+      agentId,
+      interactionType: "LLM SYNTHESIS",
+      promptContent: "Bath",
+      responseContent: "Filed 14 listings",
+      outcome: "SUCCESS",
+    });
+
+    const client = t.withIdentity({ subject: superAdminId });
+
+    const everything = await client.query(api.agentLogs.getJobGroups, {
+      agentId,
+      page: 1,
+      pageSize: 50,
+    });
+    const timeouts = everything.groups
+      .flatMap((group) => group.entries)
+      .filter((entry) => entry.responseContent.startsWith("Property search timed out"));
+    const timeoutKey = timeouts[0]?.failureKey;
+    expect(timeoutKey).toBeDefined();
+    // The two wordings must already have collapsed to one fault, or narrowing
+    // by that fault would show one row where the reader expects two.
+    expect(everything.failureCounts[timeoutKey as string]).toBe(2);
+
+    const focused = await client.query(api.agentLogs.getJobGroups, {
+      agentId,
+      failureKey: timeoutKey,
+      page: 1,
+      pageSize: 50,
+    });
+    const focusedEntries = focused.groups.flatMap((group) => group.entries);
+    expect(focusedEntries).toHaveLength(2);
+    expect(focusedEntries.every((entry) => entry.failureKey === timeoutKey)).toBe(true);
   });
 });
