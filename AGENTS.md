@@ -7,7 +7,7 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 - Daily development happens on `dev`.
 - `main` is production. A push to `main` triggers `.github/workflows/deploy.yml`.
 - Before editing, run `git branch --show-current`. If it is `main`, switch to `dev` before making changes.
-- Do not push after every small task. Batch related fixes, verify them, then push only when the user asks.
+- Do not push after every small task. Batch related fixes, verify them, then push only when the user asks. Every push to `dev` runs the full check on GitHub, which is metered — see **What a push costs** below.
 - After merging or pushing to `main`, switch back to `dev` before continuing feature or cleanup work.
 
 ## Git in Codex Desktop
@@ -45,9 +45,32 @@ This is the repo-level handoff for future coding agents. Treat this file as the 
 - If feedback materially changes an already approved direction, pause and agree the revised direction before continuing implementation.
 - Read-only investigation, repo-state checks, local evidence gathering, and non-mutating diagnostics may proceed without waiting, but agents must report what they are checking and ask before acting on any material change discovered.
 
+## What A Push Costs
+
+Every push to `dev` runs lint, types and the whole test suite on GitHub. That
+is real money on a metered allowance, and in July 2026 the account reached 90%
+of its 3,000 monthly minutes with three days to go — 221 pushes to `dev`, most
+of them one-per-step rather than one-per-finished-piece.
+
+- A check takes about five to six minutes. It was nine and a half until the
+  installed packages were cached between runs; the tree is 1.1GB and was
+  refetched every time.
+- Superseded checks are cancelled, so a burst of pushes costs one check rather
+  than one each. `main` is exempt — those gate a deploy and each must stand on
+  its own.
+- Documentation-only pushes skip the suite. Pull requests never skip it.
+- The browser suite already runs only on pull requests into `main`. Leave it
+  there.
+
+**The failure mode to know about.** The cached dependency tree is keyed on the
+lockfile, and this project carries a workaround for an npm bug that installs
+the wrong rollup binary on Linux. If a check ever fails on something unrelated
+to the change, suspect a stale cache first: bump the suffix in the cache key in
+`.github/workflows/ci.yml`.
+
 ## Verification Gates
 
-Use Node `22.13.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.
+Use Node `24.18.0` (`.nvmrc` / `.node-version`) and run `npm ci` before trusting local verification. The local gate starts with `npm run verify:env`, which checks Node and installed direct dependency versions against `package-lock.json` so stale `node_modules` cannot produce misleading green tests.
 
 Run these before asking the user to merge or push:
 
