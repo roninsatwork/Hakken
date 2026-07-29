@@ -67,6 +67,7 @@ import type * as anthropicStreamService from "../anthropicStreamService.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as apify from "../apify.js";
 import type * as apifyActors from "../apifyActors.js";
+import type * as apifyRest from "../apifyRest.js";
 import type * as approvalExpiryService from "../approvalExpiryService.js";
 import type * as arcade from "../arcade.js";
 import type * as auditLogService from "../auditLogService.js";
@@ -237,6 +238,7 @@ declare const fullApi: ApiFromModules<{
   apiKeys: typeof apiKeys;
   apify: typeof apify;
   apifyActors: typeof apifyActors;
+  apifyRest: typeof apifyRest;
   approvalExpiryService: typeof approvalExpiryService;
   arcade: typeof arcade;
   auditLogService: typeof auditLogService;

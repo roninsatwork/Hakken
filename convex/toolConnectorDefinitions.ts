@@ -46,6 +46,31 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     requiredSecretRefs: [],
     toolDefinitions: [
       {
+        name: "Find an Apify job",
+        description:
+          "Looks up jobs on Apify. Give it something to search for — 'rightmove property listings' "
+          + "— to see what jobs exist, or give it a job id to see exactly what settings that job "
+          + "needs. Use this before running a job rather than guessing its settings.",
+        handlerMapping: "apify.actor.describe",
+        requiredRole: "ADMIN",
+        // Reads the public catalogue. Nothing runs and nothing is charged.
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            search: {
+              type: "string",
+              description: "What kind of job you are looking for, in plain words.",
+            },
+            job: {
+              type: "string",
+              description: "A known job id, to read its settings — for example 'apify/web-scraper'.",
+            },
+          },
+        }),
+      },
+      {
         name: "Apify",
         description:
           "Runs a job on Apify. Give it the job's id from the Apify store and the settings that "

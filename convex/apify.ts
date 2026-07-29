@@ -3,7 +3,14 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal, api } from "./_generated/api";
-import { ApifyClient } from "apify-client";
+import {
+  getActor,
+  getBuildInputSchema,
+  getRun,
+  listDatasetItems,
+  searchStore,
+  startActorRun,
+} from "./apifyRest";
 import { validateSafeUrl } from "./utils/security";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -33,12 +40,10 @@ async function syncApifyRunStatus(runId: string) {
   const apifyToken = process.env.APIFY_API_TOKEN;
   if (!apifyToken) throw new Error("Apify token not configured");
 
-  const client = new ApifyClient({ token: apifyToken });
-  const run = await client.run(runId).get();
-
+  const run = await getRun(apifyToken, runId);
   if (!run) throw new Error("Run not found on Apify");
 
-  return { client, run };
+  return { token: apifyToken, run };
 }
 
 /**
@@ -87,6 +92,85 @@ export const startApifyActorInternal = internalAction({
   },
 });
 
+/**
+ * Find an Apify job, and read what it needs.
+ *
+ * Without this, an agent can only run a job whose id and settings somebody has
+ * typed into its instructions by hand — specialist detail sitting in a text box
+ * where a single wrong character fails silently. Apify already publishes both,
+ * so the agent reads them itself and nothing job-specific has to live here.
+ *
+ * Search and describe are one tool on purpose. An agent asked to "collect from
+ * Rightmove" has a name, not an id, and splitting them would make it guess an
+ * id in order to look one up.
+ */
+export const describeApifyActorInternal = internalAction({
+  args: {
+    /** A name to look for in the Apify store, when the job is not known yet. */
+    search: v.optional(v.string()),
+    /** A known job, to read the settings of. */
+    actorId: v.optional(v.string()),
+  },
+  handler: async (_ctx, args): Promise<unknown> => {
+    const apifyToken = process.env.APIFY_API_TOKEN;
+    if (!apifyToken) throw new Error("Apify API Token not configured.");
+    if (!args.actorId) {
+      const term = (args.search ?? "").trim();
+      if (!term) throw new Error("Give either something to search for, or a job id.");
+
+      const items = await searchStore(apifyToken, term, APIFY_SEARCH_LIMIT);
+      return {
+        matches: items.map((item) => ({
+          job: item.username && item.name ? `${item.username}/${item.name}` : item.id,
+          title: item.title ?? item.name,
+          what: truncate(item.description ?? ""),
+        })),
+        next: "Choose one, then look it up again by its job id to see what settings it needs.",
+      };
+    }
+
+    const actor = await getActor(apifyToken, args.actorId);
+    if (!actor) throw new Error(`No Apify job found with the id "${args.actorId}".`);
+
+    // The settings live on the build, not the job record. Older builds expose
+    // them on a deprecated field, so both are read rather than assuming which
+    // one a given job publishes.
+    const buildId = actor.taggedBuilds?.latest?.buildId;
+    let settings: unknown;
+    if (buildId) {
+      const raw = await getBuildInputSchema(apifyToken, buildId);
+      settings = typeof raw === "string" ? safeParse(raw) : raw;
+    }
+
+    return {
+      job: args.actorId,
+      title: actor.title ?? actor.name,
+      what: truncate(actor.description ?? ""),
+      settings: settings ?? "This job does not publish its settings. Ask the person who wants it run.",
+    };
+  },
+});
+
+/** Enough to choose from without burying the answer. */
+const APIFY_SEARCH_LIMIT = 8;
+/** Store descriptions run long; the agent needs the gist, not the brochure. */
+const APIFY_DESCRIPTION_MAX = 400;
+
+function truncate(text: string) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.length > APIFY_DESCRIPTION_MAX
+    ? `${clean.slice(0, APIFY_DESCRIPTION_MAX - 1)}…`
+    : clean;
+}
+
+function safeParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
 async function startApifyActor(
   ctx: ActionCtx,
   args: {
@@ -105,22 +189,22 @@ async function startApifyActor(
     const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
     if (!webhookSecret) throw new Error("APIFY_WEBHOOK_SECRET environment variable is missing.");
 
-    const client = new ApifyClient({ token: apifyToken });
     const webhookUrl = `${siteUrl}/apify-webhook`;
-    const input = args.input;
 
-    // We start the actor asynchronously (fire-and-forget) with a webhook
-    const run = await client.actor(args.actorId).start(input, {
-        webhooks: [
-            {
-                eventTypes: ["ACTOR.RUN.SUCCEEDED", "ACTOR.RUN.FAILED", "ACTOR.RUN.ABORTED"],
-                requestUrl: webhookUrl,
-                headersTemplate: JSON.stringify({
-                    "X-Apify-Secret": webhookSecret
-                }),
-                payloadTemplate: `{"runId": "{{resource.id}}", "status": "{{resource.status}}", "actorId": "{{resource.actId}}", "datasetId": "{{resource.defaultDatasetId}}"}`,
-            }
-        ]
+    // Started and left to run: Apify calls the webhook when it finishes, which
+    // is why nothing here waits for results.
+    const run = await startActorRun({
+      token: apifyToken,
+      actorId: args.actorId,
+      input: args.input,
+      webhooks: [
+        {
+          eventTypes: ["ACTOR.RUN.SUCCEEDED", "ACTOR.RUN.FAILED", "ACTOR.RUN.ABORTED"],
+          requestUrl: webhookUrl,
+          headersTemplate: JSON.stringify({ "X-Apify-Secret": webhookSecret }),
+          payloadTemplate: `{"runId": "{{resource.id}}", "status": "{{resource.status}}", "actorId": "{{resource.actId}}", "datasetId": "{{resource.defaultDatasetId}}"}`,
+        },
+      ],
     });
 
     // Record the run in the database
@@ -183,9 +267,7 @@ export const pollRunStatus = internalAction({
     const apifyToken = process.env.APIFY_API_TOKEN;
     if (!apifyToken) return;
     
-    const client = new ApifyClient({ token: apifyToken });
-    const run = await client.run(args.runId).get();
-    
+    const run = await getRun(apifyToken, args.runId);
     if (!run) return;
 
     // If finished, sync the data
@@ -211,9 +293,7 @@ export const fetchDatasetAndStore = internalAction({
     const apifyToken = process.env.APIFY_API_TOKEN;
     if (!apifyToken) throw new Error("Apify API Token not configured.");
 
-    const client = new ApifyClient({ token: apifyToken });
-    const dataset = await client.dataset(args.datasetId).listItems();
-    const items = dataset.items;
+    const items = await listDatasetItems(apifyToken, args.datasetId);
 
     // Call internal mutation to store items
     await ctx.runMutation(internal.webhooks.storeRightmoveData, {
@@ -240,7 +320,7 @@ export const syncRunStatusInternal = internalAction({
 });
 
 async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
-  const { client, run } = await syncApifyRunStatus(runId);
+  const { token, run } = await syncApifyRunStatus(runId);
 
   // If it's still running, just update the status to PENDING
   if (run.status !== "SUCCEEDED") {
@@ -251,12 +331,13 @@ async function syncRunStatusForKnownRun(ctx: ActionCtx, runId: string) {
     return run.status;
   }
 
-  const dataset = await client.dataset(run.defaultDatasetId).listItems();
+  if (!run.defaultDatasetId) throw new Error("Apify run has no results to read.");
+  const items = await listDatasetItems(token, run.defaultDatasetId);
 
   await ctx.runMutation(internal.webhooks.storeRightmoveData, {
     runId,
     status: "SUCCEEDED",
-    items: dataset.items.map((item) => JSON.stringify(item)),
+    items: items.map((item) => JSON.stringify(item)),
   });
 
   return "SUCCEEDED";
@@ -271,11 +352,11 @@ export const debugDatasetItem = tenantAction({
     const apifyToken = process.env.APIFY_API_TOKEN;
     if (!apifyToken) throw new Error("Apify token not configured");
 
-    const client = new ApifyClient({ token: apifyToken });
-    const run = await client.run(args.runId).get();
+    const run = await getRun(apifyToken, args.runId);
     
     if (!run) throw new Error("Run not found");
-    const dataset = await client.dataset(run.defaultDatasetId).listItems({ limit: 1 });
-    return dataset.items[0];
+    if (!run.defaultDatasetId) throw new Error("Run has no results to read.");
+    const items = await listDatasetItems(apifyToken, run.defaultDatasetId, 1);
+    return items[0];
   }
 });

@@ -9,13 +9,19 @@
         "convex/properties.ts",
         "convex/properties.test.ts",
         "convex/apify.ts",
+        "convex/apifyRest.ts",
         "convex/apify.test.ts",
         "convex/webhooks.ts",
         "convex/webhooks.test.ts",
         "src/app/(dashboard)/app/properties"
       ],
-      "schemaTables": ["properties", "apifyRuns"],
-      "packageDependencies": ["apify-client"],
+      "schemaTables": [
+        "properties",
+        "apifyRuns"
+      ],
+      "packageDependencies": [
+        "apify-client"
+      ],
       "packageScripts": [],
       "localeKeys": [
         "properties",
@@ -34,7 +40,9 @@
         "convex/salesReportActions.test.ts",
         "src/app/(dashboard)/app/reports"
       ],
-      "schemaTables": ["salesReports"],
+      "schemaTables": [
+        "salesReports"
+      ],
       "packageDependencies": [],
       "packageScripts": [],
       "localeKeys": []
@@ -47,7 +55,9 @@
         "convex/arcade.test.ts",
         "src/app/(dashboard)/app/arcade"
       ],
-      "schemaTables": ["arcadeScores"],
+      "schemaTables": [
+        "arcadeScores"
+      ],
       "packageDependencies": [],
       "packageScripts": [],
       "localeKeys": []
@@ -76,7 +86,10 @@
         "docs/developer/movement-tracking.md",
         "docs/developer/temporary-posture-studio-demo.md"
       ],
-      "schemaTables": ["movements", "movementDebugSessions"],
+      "schemaTables": [
+        "movements",
+        "movementDebugSessions"
+      ],
       "packageDependencies": [
         "three",
         "three-stdlib",
@@ -91,14 +104,24 @@
         "@tensorflow/tfjs-converter",
         "@tensorflow-models/body-pix"
       ],
-      "packageScriptPrefixes": ["movement:"],
-      "packageScripts": ["test:e2e:movement", "eval:movement-avatar", "preeval:movement-avatar"],
+      "packageScriptPrefixes": [
+        "movement:"
+      ],
+      "packageScripts": [
+        "test:e2e:movement",
+        "eval:movement-avatar",
+        "preeval:movement-avatar"
+      ],
       "localeKeys": []
     }
   ],
-  "sharedVerticalPaths": ["convex/bola.verticals.test.ts"],
+  "sharedVerticalPaths": [
+    "convex/bola.verticals.test.ts"
+  ],
   "regeneratedSnapshots": {
-    "paths": ["src/ui/components/layout/__snapshots__/SidebarNavigation.characterisation.test.tsx.snap"],
+    "paths": [
+      "src/ui/components/layout/__snapshots__/SidebarNavigation.characterisation.test.tsx.snap"
+    ],
     "reason": "The sidebar characterisation snapshots record the whole navigation tree, which the template legitimately changes by dropping four sections. Copying the product's snapshot would make the template fail on a difference that is the entire point of it. The build drops the file and the first test run records the template's own."
   },
   "keptDeliberately": {

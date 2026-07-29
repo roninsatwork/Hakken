@@ -330,6 +330,9 @@ describe("ai tool execution service", () => {
     // Everything unbuilt is now absent from it, which is what lets the
     // marketplace derive availability instead of keeping a parallel list.
     expect(getRegisteredToolHandlerMappings()).toEqual([
+      // Reads the Apify catalogue so a job's settings never have to be typed
+      // into an agent's instructions by hand.
+      "apify.actor.describe",
       // Runs an Apify job the admin has configured.
       "apify.actor.run",
       "company.overview.update",
@@ -340,6 +343,39 @@ describe("ai tool execution service", () => {
       // platform rather than into our own database.
       "web.scrape",
     ]);
+  });
+
+  test("an agent can look a job up instead of being told its settings", async () => {
+    const runAction = vi.fn().mockResolvedValue({ matches: [] });
+
+    await executeRegisteredTool({
+      ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
+      handlerMapping: "apify.actor.describe",
+      args: { search: "rightmove property listings" },
+      companyId: "company_1" as never,
+      userId: "user_1" as never,
+    });
+
+    // Searching by name, because an agent asked to collect from Rightmove has
+    // a name and not an id.
+    expect(runAction).toHaveBeenCalledWith(
+      expect.anything(),
+      { search: "rightmove property listings" }
+    );
+
+    runAction.mockClear();
+    await executeRegisteredTool({
+      ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
+      handlerMapping: "apify.actor.describe",
+      args: { job: "apify/web-scraper" },
+      companyId: "company_1" as never,
+      userId: "user_1" as never,
+    });
+
+    expect(runAction).toHaveBeenCalledWith(
+      expect.anything(),
+      { actorId: "apify/web-scraper" }
+    );
   });
 
   test("an Apify job runs whichever job the agent names, with its settings", async () => {

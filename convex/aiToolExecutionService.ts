@@ -398,6 +398,22 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    * tool that answers "started" while its reader hears "finished" is worse than
    * one that is slow.
    */
+  /**
+   * Find an Apify job, or read what one needs.
+   *
+   * The reason the run tool can stay generic without a job id and a settings
+   * shape being typed into an agent's instructions by hand. Apify publishes
+   * both; the agent reads them itself.
+   */
+  "apify.actor.describe": async (input) => {
+    const search = getOptionalStringToolArg(input.args, "search");
+    const job = getOptionalStringToolArg(input.args, "job");
+
+    return await input.ctx.runAction(internal.apify.describeApifyActorInternal, {
+      ...(search ? { search } : {}),
+      ...(job ? { actorId: job } : {}),
+    });
+  },
   "apify.actor.run": async (input) => {
     if (!input.userId) {
       throw new Error("An Apify job has to be started by a person, so it can be traced back to one.");
