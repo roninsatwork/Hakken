@@ -82,15 +82,39 @@ npm run build
 git diff --check
 ```
 
-The GitHub Actions production gate also runs:
+Two different things run on GitHub, and it matters which one you are about to
+trigger.
+
+**Every push to `dev`, and every pull request** (`.github/workflows/ci.yml`):
 
 ```bash
-npm audit --audit-level=high
+npm run lint
+npm run typecheck
+npm run test:coverage
+npm run coverage:check
+```
+
+This is the one that runs constantly and costs the Actions allowance. It does
+not build the app and it does not audit dependencies, so a change that
+type-checks and passes its tests can still fail on the way to production.
+
+A pull request **into `main`** additionally runs the browser suite
+(`npm run test:e2e`) in a second job.
+
+**Only on a push to `main`** (`.github/workflows/deploy.yml`), before deploying:
+
+```bash
+npm audit --omit=dev --audit-level=high
 npm run lint
 npm run typecheck
 npm run test:run
 npm run build
+npx convex deploy
 ```
+
+`--omit=dev` is deliberate: only runtime dependencies block a release. The dev
+toolchain currently pins an unpatchable transitive advisory, which
+`.github/workflows/security-audit.yml` reports weekly without blocking.
 
 If the local frontend is running on port 3000, stop it before `npm run build`, then restart both services afterwards:
 
