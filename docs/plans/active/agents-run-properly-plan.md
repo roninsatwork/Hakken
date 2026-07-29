@@ -215,9 +215,20 @@ convenience accessor, which omits it — the signature lives on the raw
 which is why `agentToolCalls` is empty across the whole deployment.
 
 **Fix.** Read the raw parts rather than the accessor, carry the signature on
-`ExecutedAgentToolCall`, and emit it in `buildToolInteractionTurns`. Four files
-across the provider boundary. Verify with a real approved tool call reaching its
-second turn, not only with a unit test.
+`ExecutedAgentToolCall`, and emit it in `buildToolInteractionTurns`.
+
+**It is bigger than it first looks, because of approvals.** A run that parks for
+approval resumes in a later action, and `resumeApprovedToolCall` rebuilds the
+model turn from the `agentToolCalls` rows — name and arguments read back out of
+the database. Nothing in memory survives the park. So the signature has to be
+*stored* on the tool call row when the call is first recorded, not merely passed
+along in memory, or every approved call will keep failing exactly as it does
+now while unapproved ones start working.
+
+That makes it: a schema field, the writer that records a tool call, the provider
+read, the in-memory path, and the resume path. Verify with a real approved tool
+call reaching its second turn — a unit test on `buildToolInteractionTurns` alone
+would pass while the thing a user does still fails.
 
 ## Also outstanding: an approved tool call records no outcome in the raw log
 
