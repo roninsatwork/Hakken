@@ -4,10 +4,23 @@ on:
   push:
     branches:
       - dev
+    # A plan or a README cannot break lint, types or a test. These are the only
+    # paths where that is true — anything under src/ or convex/ still runs.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
     branches:
       - dev
       - main
+
+# Only the newest commit on a branch is worth testing. Without this, pushing
+# three times in ten minutes runs the whole suite three times and nobody ever
+# reads the first two results. `main` is exempt: those runs gate a deploy, so
+# each commit's result has to stand on its own.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
