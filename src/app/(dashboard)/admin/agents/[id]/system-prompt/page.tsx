@@ -21,12 +21,14 @@ export default function AgentSystemPromptPage() {
   const updateAgent = useMutation(api.agents.updateAgent);
 
   const [promptValue, setPromptValue] = useState("");
+  const [jobValue, setJobValue] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const initializedAgentIdRef = useRef<Id<"agents"> | null>(null);
 
   const currentPrompt = agent?.systemPrompt ?? "";
+  const currentJob = agent?.standingObjective ?? "";
   const isLoaded = agent !== undefined;
 
   useEffect(() => {
@@ -34,9 +36,10 @@ export default function AgentSystemPromptPage() {
 
     initializedAgentIdRef.current = agent._id;
     setPromptValue(agent.systemPrompt ?? "");
+    setJobValue(agent.standingObjective ?? "");
   }, [agent]);
 
-  const hasUnsavedChanges = isLoaded && promptValue !== currentPrompt;
+  const hasUnsavedChanges = isLoaded && (promptValue !== currentPrompt || jobValue !== currentJob);
 
   const handleSave = async () => {
     if (!hasUnsavedChanges || isSaving) return;
@@ -45,7 +48,7 @@ export default function AgentSystemPromptPage() {
     setSaveStatus("idle");
 
     try {
-      await updateAgent({ id: agentId, systemPrompt: promptValue });
+      await updateAgent({ id: agentId, systemPrompt: promptValue, standingObjective: jobValue });
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3500);
     } catch (error: unknown) {
@@ -60,6 +63,7 @@ export default function AgentSystemPromptPage() {
   const handleRevert = () => {
     if (isLoaded) {
       setPromptValue(currentPrompt);
+      setJobValue(currentJob);
       setSaveStatus("idle");
     }
   };
@@ -120,10 +124,32 @@ export default function AgentSystemPromptPage() {
       {/* Flat Content Flow Section */}
       <div className="w-full h-[1px] bg-border-dim my-2" />
 
-      <section className="flex flex-col gap-6 flex-1 min-h-[75vh] h-full relative">
+      {/* The job comes first because it is the thing that decides whether the
+          agent can be run at all. Behaviour is refinement on top of it. */}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
+          <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sections.job.title")}</span>
+        </div>
+
+        <div className="flex flex-col gap-2 group">
+          <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase ml-1">{t("sections.job.label")}</label>
+          <textarea
+            value={jobValue}
+            onChange={(e) => setJobValue(e.target.value)}
+            disabled={!isLoaded || isSaving}
+            rows={4}
+            className="w-full resize-none p-5 bg-transparent border border-border-dim rounded-[10px] text-foreground/90 font-mono text-[13px] leading-relaxed tracking-wide placeholder:text-muted/50 focus:outline-none focus:border-foreground/30 transition-colors dark:bg-[#111111]/30 custom-scrollbar"
+            placeholder={t("sections.job.placeholder")}
+            spellCheck={false}
+          />
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-6 flex-1 min-h-[50vh] h-full relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
+            <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">2</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sections.editor.title")}</span>
           </div>
 
@@ -134,6 +160,8 @@ export default function AgentSystemPromptPage() {
         </div>
 
         <div className="flex flex-col gap-2 flex-1 relative group">
+          {/* The technical name, on the field it belongs to. Somebody who knows
+              what a system prompt is should not have to guess which box it is. */}
           <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase ml-1">{t("sections.editor.label")}</label>
           <div className="relative flex-1 w-full bg-transparent border border-border-dim rounded-[10px] overflow-hidden transition-colors group-focus-within:border-foreground/30 shadow-sm dark:bg-[#111111]/30">
             {!isLoaded ? (

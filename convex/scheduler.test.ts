@@ -61,7 +61,7 @@ describe("Scheduler Authorization", () => {
   test("super admins can update, toggle, delete, manually run, and inspect schedules and executions", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    const { superAdminId, workflowId, agentId } = await t.run(async (ctx) => {
+    const { superAdminId, workflowId, agentId, agentWithNoJobId } = await t.run(async (ctx) => {
       const superAdminId = await ctx.db.insert("users", {
         name: "Super Admin",
         email: "super@example.com",
@@ -81,11 +81,22 @@ describe("Scheduler Authorization", () => {
         modelId: "safe-model",
         thinkingMode: false,
         isActive: true,
+        // What it should do. An agent without one cannot be started by the
+        // button at all, which is the case asserted further down.
+        standingObjective: "Collect new listings and file them.",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const agentWithNoJobId = await ctx.db.insert("agents", {
+        name: "Agent With No Job",
+        modelId: "safe-model",
+        thinkingMode: false,
+        isActive: true,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
 
-      return { superAdminId, workflowId, agentId };
+      return { superAdminId, workflowId, agentId, agentWithNoJobId };
     });
 
     const superAdminClient = t.withIdentity({ subject: superAdminId });
@@ -147,6 +158,13 @@ describe("Scheduler Authorization", () => {
     await expect(superAdminClient.mutation(api.scheduler.manualRunSchedule, {})).rejects.toThrow(
       "Cannot run: no target specified."
     );
+
+    // An agent with nothing to do is not started. It used to be sent its own
+    // database id as the instruction, spend money on a model call, and reply
+    // asking what was wanted.
+    await expect(
+      superAdminClient.mutation(api.scheduler.manualRunSchedule, { agentId: agentWithNoJobId })
+    ).rejects.toThrow("no job yet");
     const executionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { workflowId });
     const agentExecutionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { agentId });
     await t.mutation(internal.scheduler.completeSimulation, { executionId, success: false });
@@ -181,7 +199,7 @@ describe("Scheduler Authorization", () => {
       triggerType: "MANUAL",
       status: "QUEUED",
       userId: superAdminId,
-      objective: "Manual run: Scheduled Agent",
+      objective: "Collect new listings and file them.",
     });
     expect(execution?.state).toBe(JSON.stringify({ note: "Autonomous backend heartbeat succeeded." }));
     expect(execution?.steps).toEqual([]);

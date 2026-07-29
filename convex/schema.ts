@@ -1683,6 +1683,15 @@ export default defineSchema({
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
     thinkingMode: v.boolean(),
     systemPrompt: v.optional(v.string()),
+    /**
+     * What this agent should do when it is run with no other instruction.
+     *
+     * Separate from `systemPrompt`, which says how it behaves. Left empty, the
+     * agent can only be run by something that supplies an instruction — a
+     * conversation, or a screen passing one in — and the Run button refuses
+     * rather than spending money to ask a question back.
+     */
+    standingObjective: v.optional(v.string()),
     // Link to specific rule IDs
     ruleIds: v.optional(v.array(v.id("aiRules"))), 
     // Link to specific knowledge document IDs for RAG

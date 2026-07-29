@@ -1205,12 +1205,17 @@
                     },
                     "sections": {
                         "editor": {
-                            "title": "Come si comporta",
+                            "title": "Le indicazioni",
                             "statusUnsaved": "Unsaved",
                             "statusSynced": "Saved",
-                            "label": "Come si comporta",
                             "loading": "Caricamento...",
-                            "placeholder": "Come deve comportarsi questo agente: il tono, cosa deve sempre fare e cosa non deve mai fare."
+                            "placeholder": "Come deve comportarsi questo agente: il tono, cosa deve sempre fare e cosa non deve mai fare.",
+                            "label": "SYSTEM PROMPT"
+                        },
+                        "job": {
+                            "title": "Il lavoro",
+                            "placeholder": "Cosa deve fare questo agente a ogni esecuzione. Includi tutto ciò che gli serve: un indirizzo da cui raccogliere, quale lavoro usare, quanto raccogliere. Lascia vuoto se il compito cambia ogni volta.",
+                            "label": "COSA FA"
                         }
                     }
                 },

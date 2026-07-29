@@ -1205,12 +1205,17 @@
                     },
                     "sections": {
                         "editor": {
-                            "title": "How it behaves",
+                            "title": "The brief",
                             "statusUnsaved": "Unsaved",
                             "statusSynced": "Saved",
-                            "label": "How it behaves",
                             "loading": "Loading...",
-                            "placeholder": "How this agent should behave — its tone, what it must always do, and what it must never do."
+                            "placeholder": "How this agent should behave — its tone, what it must always do, and what it must never do.",
+                            "label": "SYSTEM PROMPT"
+                        },
+                        "job": {
+                            "title": "The job",
+                            "placeholder": "What this agent should do each time it runs. Include anything it needs — an address to collect from, which job to use, how much to gather. Leave blank if the task is different every time.",
+                            "label": "WHAT IT DOES"
                         }
                     }
                 },

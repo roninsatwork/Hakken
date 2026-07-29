@@ -963,6 +963,7 @@ export const updateAgent = superAdminMutation({
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
     thinkingMode: v.optional(v.boolean()),
     systemPrompt: v.optional(v.string()),
+    standingObjective: v.optional(v.string()),
     ruleIds: v.optional(v.array(v.id("aiRules"))),
     knowledgeDocumentIds: v.optional(v.array(v.id("knowledgeDocuments"))),
     isActive: v.optional(v.boolean()),

@@ -1,5 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -159,15 +159,29 @@ export const manualRunSchedule = superAdminMutation({
     const now = Date.now();
     const user = await ctx.db.get(userId);
     let agentRunId: Id<"agentRuns"> | undefined;
+    let standingObjective: string | undefined;
 
     if (args.agentId) {
       const agent = await ctx.db.get(args.agentId);
       if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
 
+      // The agent's standing job is the instruction. Without one there is
+      // nothing to run: the old behaviour sent the agent its own database id,
+      // so it spent money to reply asking what was wanted.
+      standingObjective = agent.standingObjective?.trim();
+      if (!standingObjective) {
+        // ConvexError rather than Error: a plain throw reaches the browser as
+        // "Server Error" with the message stripped, which is exactly the
+        // unhelpful thing this check exists to replace.
+        throw new ConvexError(
+          "This agent has no job yet. Give it one under Instructions, or start it from a conversation."
+        );
+      }
+
       agentRunId = await ctx.db.insert("agentRuns", {
         agentId: args.agentId,
         triggerType: "MANUAL",
-        objective: `Manual run: ${agent.name}`,
+        objective: standingObjective,
         status: "QUEUED",
         companyId: user?.companyId,
         userId,
@@ -193,7 +207,9 @@ export const manualRunSchedule = superAdminMutation({
     if (args.agentId) {
        await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
            agentId: args.agentId,
-           objective: `Manual run for scheduled agent ${args.agentId}`,
+           // Set above, in the same `if (args.agentId)` branch that refuses
+           // to start an agent without one.
+           objective: standingObjective as string,
            triggerType: "MANUAL",
            runId: agentRunId,
            workflowExecutionId: executionId,
