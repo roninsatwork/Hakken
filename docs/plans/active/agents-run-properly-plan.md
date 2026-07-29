@@ -191,3 +191,38 @@ nobody is there to paste anything.
 - The gate on this plan is a real agent, run from the button, calling a real
   tool, with the tool call visible in its waterfall. That single case is what
   the platform cannot do today.
+
+---
+
+## Blocked: Gemini 3 rejects the second turn of any tool call
+
+**Found 2026-07-29, by running it.** With the engine, the tools and the Apify
+credentials all in place, the Rightmove Agent asked to use Apify, was approved,
+started the job — and the run then failed with:
+
+> Function call is missing a thought_signature in functionCall parts.
+> Additional data, function call `default_api:apify_actor_run`, position 2.
+
+**Cause.** Gemini 3 attaches a `thoughtSignature` to each `functionCall` part
+and requires it back when the conversation continues.
+`buildToolInteractionTurns` in `agentRuntimeService.ts` rebuilds that turn from
+`{ name, args }` alone, so the signature is dropped. It is never captured in the
+first place: `vertexProviderService.ts` reads `chunk.functionCalls`, the SDK's
+convenience accessor, which omits it — the signature lives on the raw
+`parts[].thoughtSignature`.
+
+**Scope.** Not Apify-specific. This breaks every tool on every Gemini 3 model,
+which is why `agentToolCalls` is empty across the whole deployment.
+
+**Fix.** Read the raw parts rather than the accessor, carry the signature on
+`ExecutedAgentToolCall`, and emit it in `buildToolInteractionTurns`. Four files
+across the provider boundary. Verify with a real approved tool call reaching its
+second turn, not only with a unit test.
+
+## Also outstanding: an approved tool call records no outcome in the raw log
+
+A tool call that stops for approval resumes through `resumeApprovedToolCall`,
+which never writes an `agentLogs` entry. So the raw log shows "waiting for
+approval" and then nothing, even when the run fails seconds later — breaking
+that screen's own promise to show what came back. Ordinary tool calls were fixed
+in the observability plan's Phase A; this path was missed.
