@@ -45,6 +45,30 @@ does the only sensible thing: it replies asking for instructions.
 
 ---
 
+## The Rightmove Agent, as it actually is
+
+Checked against the live deployment on 2026-07-29, because too much of this was
+being reasoned about from code rather than from the record.
+
+- **It has no instructions at all.** Its system prompt is empty. The line under
+  its name — "Apify based Agent to scrape right move" — is a description shown
+  on screens and never sent to the model.
+- **Nothing schedules it.** The only schedules belong to the Sales Report Agent
+  and one orphaned row. The phrase "manual run for scheduled agent" in its
+  history is just misleading text.
+- **The Apify tool is attached to it.** Firecrawl is installed but not attached.
+- **It has never called a tool.** `agentToolCalls` is empty across the whole
+  deployment.
+- **Its first real tool call will park for approval.** The agent has
+  `autonomousToolExecution: false`, and anything reaching outside the platform
+  requires confirmation, so the call stops and waits for a person. It appears
+  as *Needs you* on Activity, not as a failure. Correct, but surprising.
+
+The scraping that does work is a different path entirely: Properties → Search
+takes an address from a person, starts the Apify Rightmove actor directly,
+and Apify calls our webhook when it finishes. That path never touches an agent,
+which is why none of it appears on any observability screen.
+
 ## What is already true
 
 Worth writing down, because it is what makes this tractable:
@@ -112,10 +136,35 @@ Roughly two days. Step 1 carries the rest.
 
 ### Step 3 — say what the job is (0.5 days)
 
-1. A standing job on the agent, and an optional override on a schedule.
-2. The button and the scheduler pass it as the objective.
-3. An agent with no standing job says so on screen rather than running and
-   producing a request for instructions.
+**Anthony's design, agreed 2026-07-29.** The screen at Governance → Prompt
+becomes **Instructions**, and carries two fields:
+
+| Field | What it is |
+| --- | --- |
+| How it behaves | Today's system prompt. Tone, rules, what it must never do. |
+| What it should do | The standing job. |
+
+The rule for the second field is the whole design:
+
+- **Filled in** — every run uses it as its objective.
+- **Left blank** — whatever starts the agent must supply the instruction. The
+  Run button then refuses outright and says so, rather than running, spending
+  money and coming back with "please provide the details".
+
+"Prompt" is developer vocabulary on a client-facing screen, which is why the
+screen is renamed at the same time.
+
+### Step 4 — the Search screen passes its address in (0.5 days)
+
+Properties → Search already asks a person for the one thing the agent cannot
+invent: which Rightmove search to collect. That screen can start an agent job
+with the address as its run-time instruction — the "left blank" case above.
+
+Deliberately **not** changing what the existing "Gather Properties" button
+does. It is a direct call that works, and putting a model in the middle of it
+would add cost and a new way to fail for a job where the person has already
+made every decision. The agent earns its place on the unattended case, where
+nobody is there to paste anything.
 
 ---
 

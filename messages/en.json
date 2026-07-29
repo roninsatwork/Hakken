@@ -82,7 +82,7 @@
         "hero": {
             "eyebrow": "Build on Sonae",
             "title": "We have already built the half of your AI product that nobody sees.",
-            "body": "Every AI product needs the same things underneath \u2014 knowledge, permissions, approvals, cost control, a record of what the thing actually did. Most teams spend half a year building that before they get to the part their customers care about. Sonae hands it to you built, so you start on your own product.",
+            "body": "Every AI product needs the same things underneath — knowledge, permissions, approvals, cost control, a record of what the thing actually did. Most teams spend half a year building that before they get to the part their customers care about. Sonae hands it to you built, so you start on your own product.",
             "primaryAction": "Try the assistant",
             "secondaryAction": "See what is included"
         },
@@ -1058,7 +1058,7 @@
                     "skills": "Skills",
                     "knowledge": "Knowledge",
                     "memory": "Memory",
-                    "prompt": "Prompt",
+                    "prompt": "Instructions",
                     "rules": "AI Rules",
                     "logs": "Logs",
                     "observability": "Observability",
@@ -1187,30 +1187,30 @@
                     }
                 },
                 "systemPrompt": {
-                    "title": "System Prompt",
-                    "subtitle": "The core instructions that define how {name} behaves.",
-                    "saveButton": "Save Prompt",
+                    "title": "Instructions",
+                    "subtitle": "What {name} should do, and how it should behave.",
+                    "saveButton": "Save",
                     "revertButton": "Undo Changes",
                     "feedback": {
                         "success": {
-                            "title": "Prompt Saved",
-                            "subtitle": "The agent's instructions have been successfully updated."
+                            "title": "Instructions saved",
+                            "subtitle": "This agent will use them from its next job onwards."
                         },
                         "error": {
                             "title": "Configuration Error"
                         }
                     },
                     "errors": {
-                        "saveFailed": "Failed to save the system prompt."
+                        "saveFailed": "The instructions could not be saved."
                     },
                     "sections": {
                         "editor": {
-                            "title": "Prompt Definition",
+                            "title": "How it behaves",
                             "statusUnsaved": "Unsaved",
                             "statusSynced": "Saved",
-                            "label": "System Instructions",
-                            "loading": "Loading prompt data...",
-                            "placeholder": "Enter the core system instructions that define how this agent behaves, answers, and operates..."
+                            "label": "How it behaves",
+                            "loading": "Loading...",
+                            "placeholder": "How this agent should behave — its tone, what it must always do, and what it must never do."
                         }
                     }
                 },

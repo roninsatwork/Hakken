@@ -81,8 +81,8 @@
     "dashboard": {
         "hero": {
             "eyebrow": "Costruisci su Sonae",
-            "title": "Abbiamo gi\u00e0 costruito la met\u00e0 del tuo prodotto AI che nessuno vede.",
-            "body": "Ogni prodotto AI ha bisogno delle stesse cose sotto \u2014 conoscenza, permessi, approvazioni, controllo dei costi, una registrazione di ci\u00f2 che ha realmente fatto. La maggior parte dei team passa mezzo anno a costruirlo prima di arrivare alla parte che interessa ai clienti. Sonae te lo consegna gi\u00e0 pronto, cos\u00ec parti dal tuo prodotto.",
+            "title": "Abbiamo già costruito la metà del tuo prodotto AI che nessuno vede.",
+            "body": "Ogni prodotto AI ha bisogno delle stesse cose sotto — conoscenza, permessi, approvazioni, controllo dei costi, una registrazione di ciò che ha realmente fatto. La maggior parte dei team passa mezzo anno a costruirlo prima di arrivare alla parte che interessa ai clienti. Sonae te lo consegna già pronto, così parti dal tuo prodotto.",
             "primaryAction": "Prova l'assistente",
             "secondaryAction": "Cosa è incluso"
         },
@@ -1058,7 +1058,7 @@
                     "skills": "Skill",
                     "knowledge": "Conoscenza",
                     "memory": "Memoria",
-                    "prompt": "Prompt di Sistema",
+                    "prompt": "Istruzioni",
                     "rules": "Regole AI",
                     "logs": "Log",
                     "observability": "Osservabilità",
@@ -1187,30 +1187,30 @@
                     }
                 },
                 "systemPrompt": {
-                    "title": "Direttive di Sistema Core",
-                    "subtitle": "La matrice comportamentale fondamentale che detta l'identità dell'agent e i suoi limiti operativi.",
-                    "saveButton": "Save Prompt",
+                    "title": "Istruzioni",
+                    "subtitle": "Cosa deve fare {name} e come deve comportarsi.",
+                    "saveButton": "Salva",
                     "revertButton": "Undo Changes",
                     "feedback": {
                         "success": {
-                            "title": "Prompt Saved",
-                            "subtitle": "The agent's instructions have been successfully updated."
+                            "title": "Istruzioni salvate",
+                            "subtitle": "L'agente le userà a partire dal prossimo lavoro."
                         },
                         "error": {
                             "title": "Configuration Error"
                         }
                     },
                     "errors": {
-                        "saveFailed": "Failed to save the system prompt."
+                        "saveFailed": "Non è stato possibile salvare le istruzioni."
                     },
                     "sections": {
                         "editor": {
-                            "title": "Prompt Definition",
+                            "title": "Come si comporta",
                             "statusUnsaved": "Unsaved",
                             "statusSynced": "Saved",
-                            "label": "System Instructions",
-                            "loading": "Loading prompt data...",
-                            "placeholder": "Enter the core system instructions that define how this agent behaves, answers, and operates..."
+                            "label": "Come si comporta",
+                            "loading": "Caricamento...",
+                            "placeholder": "Come deve comportarsi questo agente: il tono, cosa deve sempre fare e cosa non deve mai fare."
                         }
                     }
                 },
