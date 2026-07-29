@@ -380,24 +380,44 @@ type ObjectiveLoopState = {
  * same embeddings twice and could ground the second half of a run in different
  * knowledge from the first.
  */
+/**
+ * Who a piece of work belongs to.
+ *
+ * The loop used to read this off the conversation, which quietly made a
+ * conversation a precondition for running an agent at all — and that is the
+ * reason scheduled and manually started runs went down a separate, cut-down
+ * path that could not use tools. A run needs to know the company and the
+ * person; it does not need somebody to have been typing.
+ */
+type RunOwner = { companyId?: Id<"companies">; userId?: Id<"users"> };
+
 async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   agentId: Id<"agents">;
-  threadId: Id<"threads">;
+  /** Present when the run came from a conversation. Absent for scheduled work. */
+  threadId?: Id<"threads">;
+  /** Required when there is no conversation to read the owner from. */
+  owner?: RunOwner;
 }) {
   const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
   if (!agent) throw new Error("Agent not found.");
 
-  const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
-  if (!thread) throw new Error("Thread context missing");
+  const thread = args.threadId
+    ? await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId })
+    : null;
+  if (args.threadId && !thread) throw new Error("Thread context missing");
+
+  const owner: RunOwner = thread
+    ? { companyId: thread.companyId, userId: thread.userId }
+    : args.owner ?? {};
 
   const runtimeSkills = await ctx.runQuery(internal.agentSkills.getRuntimeSkillsInternal, {
     agentId: args.agentId,
-    companyId: thread.companyId,
+    companyId: owner.companyId,
   });
 
   const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
     requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
-    companyId: thread.companyId,
+    companyId: owner.companyId,
     useCase: "agent",
   });
   const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
@@ -445,8 +465,8 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   // widget with an agent attached.
   const [agentAlwaysMemories, companyAlwaysMemories] = await Promise.all([
     ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
-    thread.companyId
-      ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: thread.companyId })
+    owner.companyId
+      ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: owner.companyId })
       : Promise.resolve([]),
   ]);
   const alwaysMemories = [
@@ -490,7 +510,7 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   });
 
   return {
-    agent, thread, runtimeSkills, modelConfig, provider,
+    agent, thread, owner, runtimeSkills, modelConfig, provider,
     systemInstruction, temperature, toolDeclarations, providerTools,
     toolMetadataByName, modelDoc, limits,
   };
@@ -506,7 +526,8 @@ type LoopExecutionContext = Awaited<ReturnType<typeof buildLoopExecutionContext>
  */
 async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
   runId: Id<"agentRuns"> | undefined;
-  threadId: Id<"threads">;
+  /** Absent for work nobody is watching, which has no message to close. */
+  threadId?: Id<"threads">;
   agentId: Id<"agents">;
   objective: string;
   companyId?: Id<"companies">;
@@ -558,7 +579,7 @@ async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
       messageId: args.stream.messageId,
       content: failureMessage,
     });
-  } else {
+  } else if (args.threadId !== undefined) {
     await ctx.runMutation(internal.chat.saveAssistantMessage, {
       threadId: args.threadId,
       content: failureMessage,
@@ -601,8 +622,8 @@ export const runAgentObjective = internalAction({
             agentId: args.agentId,
             threadId: args.threadId,
         });
-        const { thread, runtimeSkills, modelConfig } = execution;
-        companyId = thread.companyId;
+        const { owner, runtimeSkills, modelConfig } = execution;
+        companyId = owner.companyId;
 
         agentRunId = await ctx.runMutation(internal.agentRuns.createRunInternal, {
             agentId: args.agentId,
@@ -610,8 +631,8 @@ export const runAgentObjective = internalAction({
             triggerType: "CHAT",
             objective: args.content,
             status: "RUNNING",
-            companyId: thread.companyId,
-            userId: thread.userId,
+            companyId: owner.companyId,
+            userId: owner.userId,
             modelId: modelConfig.modelId,
             providerKey: modelConfig.providerKey,
             providerModelId: modelConfig.providerModelId,
@@ -624,7 +645,7 @@ export const runAgentObjective = internalAction({
             await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                 runId,
                 agentId: args.agentId,
-                companyId: thread.companyId,
+                companyId: owner.companyId,
                 stepIndex: preLoopStepIndex,
                 kind: "OBSERVE",
                 status: "SUCCESS",
@@ -674,7 +695,7 @@ export const runAgentObjective = internalAction({
 
         const memoryMatches = await ctx.runQuery(internal.agentMemories.searchMemoryInternal, {
             agentId: args.agentId,
-            companyId: thread.companyId,
+            companyId: owner.companyId,
             queryText: args.content,
             limit: 5,
         });
@@ -682,7 +703,7 @@ export const runAgentObjective = internalAction({
             await ctx.runMutation(internal.agentMemories.recordUsageInternal, {
                 runId,
                 agentId: args.agentId,
-                companyId: thread.companyId,
+                companyId: owner.companyId,
                 queryText: args.content,
                 memories: memoryMatches.map((memory) => ({ memoryId: memory.id, score: memory.score })),
             });
@@ -690,7 +711,7 @@ export const runAgentObjective = internalAction({
             await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                 runId,
                 agentId: args.agentId,
-                companyId: thread.companyId,
+                companyId: owner.companyId,
                 stepIndex: preLoopStepIndex,
                 kind: "OBSERVE",
                 status: "SUCCESS",
@@ -705,9 +726,9 @@ export const runAgentObjective = internalAction({
         }
 
         // The company's when-relevant memories, which this path never read.
-        if (thread.companyId) {
+        if (owner.companyId) {
             const companyMemories = await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
-                companyId: thread.companyId,
+                companyId: owner.companyId,
                 queryText: args.content,
                 limit: 5,
             });
@@ -729,7 +750,7 @@ export const runAgentObjective = internalAction({
         let ragContext = "";
         try {
             const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
-                companyId: thread.companyId,
+                companyId: owner.companyId,
             });
             const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "agent RAG search");
             const userEmbeddingResp = await embedVertexContentWithRetry(embeddingAi, {
@@ -943,7 +964,15 @@ export const continueAgentObjective = internalAction({
 async function executeObjectiveLoop(ctx: ActionCtx, params: {
     runId: Id<"agentRuns">;
     agentId: Id<"agents">;
-    threadId: Id<"threads">;
+    /**
+     * The conversation to stream the reply into, when there is one.
+     *
+     * Absent for scheduled and manually started work. The loop then does its
+     * job silently rather than posting into somebody's chat history — a
+     * scheduled run appearing in Ask Sonae would read as though the agent had
+     * spoken to them unprompted.
+     */
+    threadId?: Id<"threads">;
     objective: string;
     execution: LoopExecutionContext;
     conversationHistory: Content[];
@@ -961,9 +990,9 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
 }) {
         const { runId, threadId, objective, execution, conversationHistory, stream, state, runStartedAt } = params;
         const agentId = params.agentId;
-        const { thread, modelConfig, provider, systemInstruction, temperature, toolDeclarations, providerTools, toolMetadataByName, limits } = execution;
+        const { owner, modelConfig, provider, systemInstruction, temperature, toolDeclarations, providerTools, toolMetadataByName, limits } = execution;
         const config = execution.modelDoc;
-        const companyId = thread.companyId;
+        const companyId = owner.companyId;
         const segmentStartedAt = Date.now();
 
         let assistantReply = "";
@@ -1127,7 +1156,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     providerModelId: modelConfig.providerModelId,
                 });
                 stream.messageId = undefined;
-            } else {
+            } else if (threadId !== undefined) {
                 // Nothing streamed yet, so the thread's last message is the
                 // user's and the surface is showing a thinking indicator that
                 // would otherwise never clear.
@@ -1160,7 +1189,11 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 isFinal,
             })) return;
 
-            if (stream.messageId === undefined) {
+            if (threadId === undefined) {
+                // Nowhere to stream to, and nothing to create. The reply is
+                // still recorded on the run itself, which is where anyone
+                // reading a scheduled job looks for it.
+            } else if (stream.messageId === undefined) {
                 // Created on the first fragment, not at run start: the chat
                 // surfaces infer "thinking" from the last message being the
                 // user's, so an empty row up front would swap the thinking
@@ -1447,8 +1480,8 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 // below, where the result is actually known.
                 const toolStartedAt = Date.now();
 
-                const currentUser = thread.userId
-                    ? await ctx.runQuery(internal.users.getUserInternal, { userId: thread.userId })
+                const currentUser = owner.userId
+                    ? await ctx.runQuery(internal.users.getUserInternal, { userId: owner.userId })
                     : null;
                 const toolMetadata = toolMetadataByName.get(toolCall.name);
                 const requiredRole = toolMetadata?.requiredRole ?? "SUPER_ADMIN";
@@ -1514,7 +1547,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         sideEffectLevel: toolMetadata.sideEffectLevel,
                         confirmationRequired: true,
                         companyId: companyId,
-                        userId: thread.userId,
+                        userId: owner.userId,
                         turnIndex: loopIndex,
                     });
 
@@ -1536,7 +1569,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         toolCallId,
                         agentId: agentId,
                         companyId: companyId,
-                        requestedBy: thread.userId,
+                        requestedBy: owner.userId,
                         status: "PENDING",
                         message: approvalMessage,
                         previewJson: JSON.stringify({
@@ -1611,7 +1644,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                             args: toolCall.args,
                             agentId: agentId,
                             companyId: companyId,
-                            userId: thread.userId,
+                            userId: owner.userId,
                             runId,
                             toolId: toolMetadata.toolId,
                             fallbackQuery: objective,
@@ -1668,7 +1701,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     sideEffectLevel: toolMetadata?.sideEffectLevel ?? "READ",
                     confirmationRequired: toolMetadata?.confirmationRequired ?? false,
                     companyId: companyId,
-                    userId: thread.userId,
+                    userId: owner.userId,
                     turnIndex: loopIndex,
                     error: toolError,
                 });
@@ -1768,7 +1801,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         providerModelId: modelConfig.providerModelId,
                     });
                     stream.messageId = undefined;
-                } else {
+                } else if (threadId !== undefined) {
                     await ctx.runMutation(internal.chat.saveAssistantMessage, {
                         threadId,
                         content: parkMessage,
@@ -1853,7 +1886,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 providerModelId: modelConfig.providerModelId,
             });
             stream.messageId = undefined;
-        } else {
+        } else if (threadId !== undefined) {
             await ctx.runMutation(internal.chat.saveAssistantMessage, {
                 threadId: threadId,
                 content: assistantReply,
@@ -1900,11 +1933,11 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             outcome: finalStepStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
         });
 
-        if (thread.userId) {
+        if (owner.userId) {
             await ctx.runMutation(internal.agentTransactions.insertTransactionInternal, {
                 agentId,
                 threadId,
-                userId: thread.userId,
+                userId: owner.userId,
                 companyId,
                 actionContext: "Sandbox Execution",
                 modelUsed: modelConfig.modelId,

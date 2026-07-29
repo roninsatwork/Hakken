@@ -1,0 +1,144 @@
+# Pressing Run should actually run the agent
+
+**Started 2026-07-29.** Anthony asked why the Rightmove Agent's observability
+screens never showed Firecrawl, when he remembered the agent scraping. The
+screens were right. The agent had not scraped, because the button that runs it
+cannot.
+
+---
+
+## What is actually wrong
+
+### 1. There are two engines, and the button uses the crippled one
+
+Chatting to an agent runs the real engine: `runAgentObjective` builds a loop
+context, hands the model its tools, and iterates — call something, read the
+result, decide again — up to the agent's step budget.
+
+Pressing **Run Agent**, or a schedule firing, goes somewhere else entirely.
+`runTriggeredAgentObjective` makes a single `generateTextWithResolvedModel`
+call with **no tool declarations at all**, writes a MODEL step and a FINAL step,
+and stops. It is not a shortened agent loop; it is a text generation wearing a
+run's clothes.
+
+So a triggered run cannot call Firecrawl, or Apify, or anything else, whatever
+it is asked to do. That is why every waterfall on that agent reads *read the
+request, thought about it, wrote the answer* and why `agentToolCalls` is empty
+across the whole deployment.
+
+### 2. Nothing says what the agent should do
+
+The objective handed to a manual run is the agent's own database id:
+
+    Manual run for scheduled agent mh75esr2sejpx6n4ammbv259kn86729c
+
+A schedule is no better — `Scheduled run: ${schedule.name}` — because the
+`schedules` table stores a name and an interval and nothing about the work.
+
+So even on the good engine the agent would have nothing to act on. It currently
+does the only sensible thing: it replies asking for instructions.
+
+### 3. The agent record has nowhere to put a standing job
+
+`agents` has `name`, `description` and `systemPrompt`. The system prompt shapes
+*how* it behaves; nothing states *what* it should do when nobody is typing.
+
+---
+
+## What is already true
+
+Worth writing down, because it is what makes this tractable:
+
+- The loop touches a conversation far less than its signature suggests. Across
+  `executeObjectiveLoop` and `buildLoopExecutionContext`, `thread` is used only
+  for `companyId`, `userId`, and streaming its reply into a message.
+- Streaming is already conditional — `createStreamState()` takes an optional
+  message id, and the loop guards on `stream.messageId !== undefined` in most
+  places. The exception is the point where it *creates* a message if there is
+  none.
+- Approvals, checkpoints, budgets and tool policy all live in the loop, so a
+  triggered run gets them for free once it uses it.
+- Apify and Firecrawl are already registered tools. Nothing more is needed from
+  them.
+
+---
+
+## Decisions
+
+### One engine, not two
+
+The cut-down path is deleted rather than improved. Two engines means two sets
+of behaviour for "run this agent", and the weaker one is the one every schedule
+and every button uses.
+
+### A run does not need a conversation
+
+Rather than inventing a hidden thread per run, the loop takes an **owner** —
+the company and the person the work belongs to — and a conversation becomes
+optional context rather than a precondition. A hidden thread would leave
+thousands of empty conversations behind and put scheduled work into a screen
+people read as their own chat history.
+
+### An agent gets a standing job
+
+One field, in the agent's own words, describing what it should do when run with
+no other instruction. Schedules may override it; the button uses it as-is.
+
+---
+
+## The plan
+
+Roughly two days. Step 1 carries the rest.
+
+### Step 1 — let the engine run without a conversation (1 day)
+
+1. Replace the `thread` dependency in `buildLoopExecutionContext` and
+   `executeObjectiveLoop` with an owner: `{ companyId?, userId? }`, sourced
+   from the thread when there is one.
+2. Make the streaming site that *creates* a message do nothing when the run has
+   no conversation, rather than creating one.
+3. No behaviour change for chat. This step is done when the chat path is
+   byte-for-byte equivalent in behaviour and every existing runtime test passes
+   untouched.
+
+### Step 2 — point the button and schedules at it (0.5 days)
+
+1. `runTriggeredAgentObjective` builds a loop context from the owner and runs
+   `executeObjectiveLoop`.
+2. Delete the single-shot generation, and the `maxSteps: 1` that went with it.
+3. Approvals now apply to scheduled work, which they never have. Check what a
+   parked scheduled run looks like on the Activity screen before calling this
+   done.
+
+### Step 3 — say what the job is (0.5 days)
+
+1. A standing job on the agent, and an optional override on a schedule.
+2. The button and the scheduler pass it as the objective.
+3. An agent with no standing job says so on screen rather than running and
+   producing a request for instructions.
+
+---
+
+## Not in scope
+
+- **A per-run spend ceiling on Apify.** The generic tool lets an agent choose
+  its own jobs, and Apify bills per item. Raised at the time and deliberately
+  left: it needs a limit model, not a constant.
+- **Installed tools following the catalogue.** A tool keeps whatever the
+  catalogue said on the day it was installed, so editing a built-in tool's
+  description has no effect on agents already using it. Real bug, separate fix.
+- **Live watching of an in-flight job**, and **per-agent alerting**. Both were
+  already out of scope for the observability plan and remain so.
+
+---
+
+## Verification
+
+- The gate before merge: `npm run verify:env`, `npm run lint:all`,
+  `npm run check`, `npm run build`, `git diff --check`.
+- `npx convex dev` must be running, or none of it exists on the backend. A
+  whole screen was reported broken this session for exactly that reason, and no
+  test can catch it — tests run against a simulated backend.
+- The gate on this plan is a real agent, run from the button, calling a real
+  tool, with the tool call visible in its waterfall. That single case is what
+  the platform cannot do today.
