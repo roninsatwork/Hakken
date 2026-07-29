@@ -26,12 +26,16 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const { showToast } = useToast();
   const runManualSchedule = useMutation(api.scheduler.manualRunSchedule);
   const [isManualRunning, setIsManualRunning] = useState(false);
+  // Opened only when the agent has no standing job of its own, which is the
+  // case its Instructions screen tells you means "somebody has to say".
+  const [askDraft, setAskDraft] = useState<string | null>(null);
   const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
 
-  const handleManualRun = async () => {
+  const handleManualRun = async (objective?: string) => {
     setIsManualRunning(true);
     try {
-      await runManualSchedule({ agentId });
+      await runManualSchedule({ agentId, ...(objective ? { objective } : {}) });
+      setAskDraft(null);
       // Lands on Activity rather than Overview, because Activity is where the
       // new job appears — top row, marked Running. Overview looks identical
       // the instant a job starts, so pressing the button read as doing nothing.
@@ -128,7 +132,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       actions={
         <>
             <button
-              onClick={handleManualRun}
+              onClick={() => (agent.standingObjective?.trim() ? handleManualRun() : setAskDraft(""))}
               disabled={isManualRunning}
               className="px-5 py-2 rounded-[10px] bg-brand text-white font-medium hover:opacity-90 transition-all text-[13px] flex items-center gap-2 shadow-sm disabled:opacity-50"
             >
@@ -146,6 +150,43 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       }
     >
       {children}
+
+      <SonaeModal
+        isOpen={askDraft !== null}
+        onClose={() => setAskDraft(null)}
+        title="What should it do?"
+        size="sm"
+      >
+        <div className="pt-2 pb-4 px-1 flex flex-col gap-4">
+          <p className="text-[13px] text-secondary">
+            This agent has no job of its own, so tell it what you want this time.
+          </p>
+          <textarea
+            value={askDraft ?? ""}
+            onChange={(event) => setAskDraft(event.target.value)}
+            rows={4}
+            autoFocus
+            placeholder="Collect the listings from this Rightmove search and file them."
+            className="w-full resize-none p-4 rounded-[10px] border border-border-dim bg-transparent text-foreground/90 font-mono text-[13px] leading-relaxed placeholder:text-muted/50 focus:outline-none focus:border-foreground/30 transition-colors"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setAskDraft(null)}
+              className="px-4 py-2.5 rounded-[10px] border border-border-dim text-secondary font-medium text-[13px] hover:text-foreground transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleManualRun((askDraft ?? "").trim())}
+              disabled={!askDraft?.trim() || isManualRunning}
+              className="px-5 py-2.5 rounded-[10px] bg-brand text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isManualRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              Run it
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
 
       <SonaeModal
         isOpen={!!modalState}

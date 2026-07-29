@@ -148,6 +148,13 @@ export const manualRunSchedule = superAdminMutation({
   args: {
     workflowId: v.optional(v.id("workflows")),
     agentId: v.optional(v.id("agents")),
+    /**
+     * What to do this time, when the agent has no standing job of its own.
+     *
+     * The other half of the rule on the Instructions screen: leave the job
+     * blank and whatever starts the agent has to say what it wants.
+     */
+    objective: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId } = ctx;
@@ -168,7 +175,9 @@ export const manualRunSchedule = superAdminMutation({
       // The agent's standing job is the instruction. Without one there is
       // nothing to run: the old behaviour sent the agent its own database id,
       // so it spent money to reply asking what was wanted.
-      standingObjective = agent.standingObjective?.trim();
+      // What the caller asked for wins. An agent with a standing job can still
+      // be sent somewhere else once without its settings being rewritten.
+      standingObjective = args.objective?.trim() || agent.standingObjective?.trim();
       if (!standingObjective) {
         // ConvexError rather than Error: a plain throw reaches the browser as
         // "Server Error" with the message stripped, which is exactly the
