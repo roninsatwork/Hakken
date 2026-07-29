@@ -343,6 +343,61 @@ afterEach(() => {
 });
 
 describe("agent runtime", () => {
+  test("a scheduled job gets its tools, and can act on what comes back", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bindKnowledgeSearchTool(t, agentId, userId);
+
+    // The case the platform could not do. A triggered run used to be a single
+    // text generation with no tool declarations at all, so an agent could read
+    // its instructions, understand them, and have no way to act.
+    generateMock.mockResolvedValueOnce(
+      toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }])
+    );
+    generateMock.mockResolvedValueOnce(textResponse("Filed what I found."));
+
+    const result = await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Look up our refund policy and summarise it.",
+      triggerType: "SCHEDULE",
+      companyId,
+      userId,
+    });
+
+    const { run, steps } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+    expect(steps.some((step) => step.kind === "TOOL_CALL")).toBe(true);
+    expect(result.output).toBe("Filed what I found.");
+
+    // The tool step is the proof the declaration reached the model: the runtime
+    // will not execute a call it never offered.
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls).toHaveLength(1);
+  });
+
+  test("a job with no conversation leaves no chat message behind", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    generateMock.mockResolvedValueOnce(textResponse("Done."));
+
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Do the overnight tidy-up.",
+      triggerType: "SCHEDULE",
+      companyId,
+      userId,
+    });
+
+    // Scheduled work appearing in Ask Sonae would read as the agent speaking to
+    // somebody unprompted. The answer lives on the run instead.
+    const messages = await t.run(async (ctx) => await ctx.db.query("messages").collect());
+    expect(messages).toHaveLength(0);
+
+    const { run } = await runSteps(t);
+    expect(run?.status).toBe("SUCCESS");
+    expect(run?.finalOutput).toBe("Done.");
+  });
+
   test("records a durable run and saves the reply when the model answers directly", async () => {
     const t = makeTest();
     const { agentId, threadId } = await seedAgentRun(t);

@@ -1971,6 +1971,110 @@ const triggeredAgentRunTriggerValidator = v.union(
   v.literal("EVENT")
 );
 
+/**
+ * A scheduled or manually started job, on the same engine chat uses.
+ *
+ * This is the whole point of the plan it belongs to. Triggered work used to go
+ * through a single text generation with no tool declarations at all, so an
+ * agent could read its instructions, understand exactly what was wanted, and
+ * have no way to act on it. Everything it needs — tools, several steps,
+ * approvals, budgets, checkpoints — already lived in the loop; it was simply
+ * unreachable without a conversation.
+ */
+async function runTriggeredOnAgentLoop(ctx: ActionCtx, args: {
+  agentId: Id<"agents">;
+  objective: string;
+  triggerType: "MANUAL" | "SCHEDULE" | "WEBHOOK" | "WORKFLOW" | "EVENT";
+  runId?: Id<"agentRuns">;
+  workflowId?: Id<"workflows">;
+  scheduleId?: Id<"schedules">;
+  companyId?: Id<"companies">;
+  userId?: Id<"users">;
+}): Promise<{ output: string; runId: Id<"agentRuns"> }> {
+  const stream = createStreamState();
+  const promptCache: { name?: string } = {};
+  let execution: LoopExecutionContext | undefined;
+  let runId = args.runId;
+
+  try {
+    execution = await buildLoopExecutionContext(ctx, {
+      agentId: args.agentId,
+      owner: { companyId: args.companyId, userId: args.userId },
+    });
+    const { modelConfig, limits } = execution;
+
+    if (!runId) {
+      runId = await ctx.runMutation(internal.agentRuns.createRunInternal, {
+        agentId: args.agentId,
+        workflowId: args.workflowId,
+        scheduleId: args.scheduleId,
+        triggerType: args.triggerType,
+        objective: args.objective,
+        status: "RUNNING",
+        companyId: args.companyId,
+        userId: args.userId,
+        modelId: modelConfig.modelId,
+        providerKey: modelConfig.providerKey,
+        providerModelId: modelConfig.providerModelId,
+        // The agent's real budget, not the one step the old path allowed. A
+        // single step cannot call a tool and then use what came back, which is
+        // most of what an agent is for.
+        maxSteps: limits.maxSteps,
+      });
+    } else {
+      await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
+        runId,
+        status: "RUNNING",
+      });
+    }
+
+    // The objective is the only turn. There is no conversation behind a
+    // scheduled job, so there is no history to carry.
+    const conversationHistory: Content[] = [
+      { role: "user", parts: [{ text: args.objective }] },
+    ];
+
+    await executeObjectiveLoop(ctx, {
+      runId,
+      agentId: args.agentId,
+      objective: args.objective,
+      execution,
+      conversationHistory,
+      stream,
+      promptCache,
+      state: {
+        stepIndex: 0,
+        loopIndex: 0,
+        toolCallCount: 0,
+        inTokens: 0,
+        outTokens: 0,
+        cachedInTokens: 0,
+        segmentCount: 1,
+        stablePrefixTurns: conversationHistory.length,
+      },
+      runStartedAt: Date.now(),
+    });
+
+    // Read back rather than tracked: the loop can hand over between action
+    // segments, or park on an approval, and the run row is the only thing that
+    // knows how it actually ended.
+    const state = await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, { runId });
+    return { output: state?.finalOutput ?? "", runId };
+  } catch (error: unknown) {
+    await finalizeObjectiveFailure(ctx, {
+      runId,
+      agentId: args.agentId,
+      objective: args.objective,
+      companyId: args.companyId,
+      stream,
+      promptCache,
+      provider: execution?.provider,
+      error,
+    });
+    throw error;
+  }
+}
+
 export const runTriggeredAgentObjective = internalAction({
   args: {
     agentId: v.id("agents"),
@@ -1995,6 +2099,25 @@ export const runTriggeredAgentObjective = internalAction({
       const replayExecutionContext = runId
         ? await ctx.runQuery(internal.agentRuns.getReplayExecutionContextInternal, { runId })
         : null;
+
+      // Ordinary triggered work runs on the real engine, which is what gives it
+      // its tools. Replaying a job against its historical setup deliberately
+      // does not execute tools — it records what would have been called as a
+      // dry run — so that case keeps the single-shot path below rather than
+      // quietly gaining the power to act on a snapshot of the past.
+      if (!replayExecutionContext && safetyDecision.allowed) {
+        return await runTriggeredOnAgentLoop(ctx, {
+          agentId: args.agentId,
+          objective: args.objective,
+          triggerType: args.triggerType,
+          runId,
+          workflowId: args.workflowId,
+          scheduleId: args.scheduleId,
+          companyId: args.companyId,
+          userId: args.userId,
+        });
+      }
+
       const requestedModelId = replayExecutionContext?.modelId
         ?? (agent.modelSelectionMode === "inherit" ? undefined : agent.modelId);
           const executionSystemPrompt = replayExecutionContext
