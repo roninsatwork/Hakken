@@ -44,8 +44,15 @@ function detail(overrides: Record<string, unknown> = {}) {
       step("s3", "TOOL_CALL", 5_900, "SUCCESS", "property search"),
       step("s4", "TOOL_CALL", 31_400, "FAILED", "property search"),
     ],
-    // Both are always present on the real query, so the fixture carries them
-    // too — a fixture thinner than the contract hides real render failures.
+    // The tool behind each tool step, which is the only place the chart can
+    // learn a tool's name from: the call step stores its arguments and the
+    // result step stores the runtime's name for the tool.
+    toolCalls: [
+      { _id: "tc1", stepId: "s3", normalizedToolName: "property_search", toolName: "property search" },
+      { _id: "tc2", stepId: "s4", normalizedToolName: "property_search", toolName: "property search" },
+    ],
+    // All of these are always present on the real query, so the fixture carries
+    // them too — a fixture thinner than the contract hides real render failures.
     evalFixtureContext: { canCreateFromRun: true, activeCount: 0, archivedCount: 0, fixtures: [] },
     replayContext: { sourceRun: null, replayRuns: [], comparison: null, timelineDiff: [] },
     ...overrides,
@@ -115,6 +122,29 @@ describe("AgentJobDetailPage", () => {
     expect(chart.getAllByText("Used property search")).toHaveLength(2);
     expect(screen.queryByText("TOOL_CALL")).not.toBeInTheDocument();
     expect(screen.queryByText("OBSERVE")).not.toBeInTheDocument();
+  });
+
+  /**
+   * The chart used to label the call step with the raw JSON arguments it was
+   * given, and the result step with the runtime's own `property_search`. Read
+   * together they told the reader neither which tool ran nor when.
+   */
+  it("names the tool on both tool steps, never the arguments it was called with", () => {
+    detailFixture = detail({
+      steps: [
+        step("s3", "TOOL_CALL", 5_900, "SUCCESS", '{"job":"jKpgGfgRfzrGgEM","settings":"{}"}'),
+        // The result step records only the runtime's name for the tool, so this
+        // is matched on that rather than on the step it belongs to.
+        step("s5", "TOOL_RESULT", 6_100, "SUCCESS", "property_search"),
+      ],
+    });
+    renderPage();
+
+    const chart = within(waterfall());
+    expect(chart.getByText("Used property search")).toBeInTheDocument();
+    expect(chart.getByText("Read what property search sent back")).toBeInTheDocument();
+    expect(chart.queryByText(/jKpgGfgRfzrGgEM/)).not.toBeInTheDocument();
+    expect(chart.queryByText("property_search")).not.toBeInTheDocument();
   });
 
   /**

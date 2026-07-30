@@ -231,7 +231,16 @@ function buildRunTimeline(args: {
   });
 }
 
-function buildToolCallDetail(toolCall: Doc<"agentToolCalls">, viewerRole: string | undefined) {
+/**
+ * @param toolName The tool's name as a person installed it — "Apify", not
+ * `apify_actor_run`. Absent when the tool has since been uninstalled, which is
+ * why every reader of this has to cope without it.
+ */
+function buildToolCallDetail(
+  toolCall: Doc<"agentToolCalls">,
+  viewerRole: string | undefined,
+  toolName?: string
+) {
   const canViewRawArguments = viewerRole === "SUPER_ADMIN";
   const argumentsPreview = canViewRawArguments
     ? buildPreview(toolCall.argumentsJson)
@@ -248,6 +257,7 @@ function buildToolCallDetail(toolCall: Doc<"agentToolCalls">, viewerRole: string
     agentId: toolCall.agentId,
     toolId: toolCall.toolId,
     normalizedToolName: toolCall.normalizedToolName,
+    toolName,
     handlerMapping: toolCall.handlerMapping,
     argumentsPreview,
     rawArgumentsPreview: canViewRawArguments ? buildPreview(toolCall.argumentsJson) : undefined,
@@ -632,6 +642,18 @@ export const getRunDetail = adminQuery({
         .order("desc")
         .take(10),
     ]);
+    // The installed tools behind this run's calls, looked up once each however
+    // many times they were called. Without this the screens can only show the
+    // runtime's own name for a tool — `apify_actor_run` — which is no use to
+    // the person the observability screens are for.
+    const uniqueToolIds = [...new Set(
+      toolCalls.map((toolCall) => toolCall.toolId).filter((toolId): toolId is Id<"aiTools"> => Boolean(toolId))
+    )];
+    const toolNameById = new Map(
+      (await Promise.all(uniqueToolIds.map(async (toolId) => [toolId, await ctx.db.get(toolId)] as const)))
+        .flatMap(([toolId, tool]) => (tool ? [[toolId, tool.name] as const] : []))
+    );
+
     const sourceRun = run.replayOfRunId ? await ctx.db.get(run.replayOfRunId) : null;
     const accessibleSourceRun = sourceRun && sourceRun.companyId === run.companyId ? sourceRun : null;
     const sourceSteps = accessibleSourceRun
@@ -645,7 +667,11 @@ export const getRunDetail = adminQuery({
     return {
       run,
       steps,
-      toolCalls: toolCalls.map((toolCall) => buildToolCallDetail(toolCall, user.role)),
+      toolCalls: toolCalls.map((toolCall) => buildToolCallDetail(
+        toolCall,
+        user.role,
+        toolCall.toolId ? toolNameById.get(toolCall.toolId) : undefined
+      )),
       approvals,
       timeline: buildRunTimeline({ steps, toolCalls, approvals }),
       evalFixtureContext: {

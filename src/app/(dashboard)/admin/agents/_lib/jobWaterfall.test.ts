@@ -3,6 +3,7 @@ import {
   buildWaterfall,
   describeStepKind,
   describeStepStatus,
+  humaniseToolName,
   summariseWaterfall,
   type WaterfallStepInput,
 } from "./jobWaterfall";
@@ -163,7 +164,7 @@ describe("summariseWaterfall", () => {
     const rows = buildWaterfall(
       [
         step({ _id: "a", startedAt: RUN_START + 900 }),
-        step({ _id: "slow", startedAt: RUN_START + 31_400, kind: "TOOL_CALL", input: "property search", status: "FAILED" }),
+        step({ _id: "slow", startedAt: RUN_START + 31_400, kind: "TOOL_CALL", toolName: "property search", status: "FAILED" }),
       ],
       { runStartedAt: RUN_START, runCompletedAt: RUN_START + 31_400, now: RUN_START + 31_400 }
     );
@@ -208,9 +209,33 @@ describe("describeStepKind", () => {
   });
 
   it("names the tool when it knows it", () => {
-    expect(describeStepKind("TOOL_CALL", "property search")).toBe("Used property search");
+    expect(describeStepKind("TOOL_CALL", undefined, "Apify")).toBe("Used Apify");
+    expect(describeStepKind("TOOL_RESULT", undefined, "Apify")).toBe("Read what Apify sent back");
     expect(describeStepKind("TOOL_CALL")).toBe("Used a tool");
-    expect(describeStepKind("TOOL_CALL", "   ")).toBe("Used a tool");
+    expect(describeStepKind("TOOL_CALL", undefined, "   ")).toBe("Used a tool");
+    expect(describeStepKind("TOOL_RESULT")).toBe("Read the result");
+  });
+
+  it("never labels a step with the arguments it was called with", () => {
+    // The chart used to read `Used {"job":"jKpgGfgRfzrGgEM...`, because the call
+    // step stores its arguments and the label was built from them. A reader
+    // learned nothing about which tool had run.
+    const argumentsJson = '{"job":"jKpgGfgRfzrGgEM","settings":"{}"}';
+
+    expect(describeStepKind("TOOL_CALL", argumentsJson)).toBe("Used a tool");
+    expect(describeStepKind("TOOL_CALL", argumentsJson, "Apify")).toBe("Used Apify");
+  });
+});
+
+describe("humaniseToolName", () => {
+  it("turns a runtime tool name into something readable", () => {
+    expect(humaniseToolName("apify_actor_run")).toBe("Apify actor run");
+    expect(humaniseToolName("apify.actor.describe")).toBe("Apify actor describe");
+    expect(humaniseToolName("knowledge_search")).toBe("Knowledge search");
+  });
+
+  it("gives back nothing when there is no name to read", () => {
+    expect(humaniseToolName("   ")).toBe("");
   });
 
   it("passes an unrecognised kind through rather than hiding it", () => {

@@ -31,6 +31,14 @@ export type WaterfallStepInput = {
   completedAt?: number;
   input?: string;
   error?: string;
+  /**
+   * Which tool this step used, in the words a person installed it under.
+   *
+   * Resolved by the caller, because the two tool steps hide the name in
+   * different places: the call step stores its arguments, and the result step
+   * stores the runtime's own name for the tool. Neither is worth showing.
+   */
+  toolName?: string;
 };
 
 export type WaterfallTone = "thinking" | "tool" | "waiting" | "failed";
@@ -48,17 +56,36 @@ export type WaterfallRow = {
 };
 
 /**
+ * A tool's name for reading, from the runtime's name for it.
+ *
+ * The fallback, for a tool that has since been uninstalled and so has no
+ * installed name left to read. `apify_actor_run` becomes "Apify actor run",
+ * which is at least a phrase rather than an identifier.
+ */
+export function humaniseToolName(runtimeName: string): string {
+  const words = runtimeName.trim().replace(/[_.]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!words) return "";
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
  * What a step is, in words. The stored kinds are the runtime's vocabulary and
  * mean nothing to somebody who has not read the runtime.
+ *
+ * The two tool steps used to be labelled from their stored input, which put a
+ * blob of raw JSON arguments on the chart for the call step and a truncated
+ * `apify_actor_run` on the result step. Neither told the reader the one thing
+ * they came to the chart for: which tool ran, and when.
  */
-export function describeStepKind(kind: string, input?: string): string {
+export function describeStepKind(kind: string, input?: string, toolName?: string): string {
+  const tool = toolName?.trim();
   switch (kind) {
     case "OBSERVE": return "Read the request";
     case "PLAN": return "Decided what to do";
     case "REPLAN": return "Changed its plan";
     case "MODEL": return "Thought about it";
-    case "TOOL_CALL": return input?.trim() ? `Used ${input.trim()}` : "Used a tool";
-    case "TOOL_RESULT": return input?.trim() ? `Read the result from ${input.trim()}` : "Read the result";
+    case "TOOL_CALL": return tool ? `Used ${tool}` : "Used a tool";
+    case "TOOL_RESULT": return tool ? `Read what ${tool} sent back` : "Read the result";
     case "APPROVAL_REQUEST": return "Waited for someone to approve";
     case "FINAL": return "Wrote the answer";
     default: return kind;
@@ -116,7 +143,7 @@ export function buildWaterfall(
     const rawWidth = (entry.durationMs / totalMs) * 100;
     return {
       id: entry.step._id,
-      label: describeStepKind(entry.step.kind, entry.step.input),
+      label: describeStepKind(entry.step.kind, entry.step.input, entry.step.toolName),
       offsetPercent: Math.min(((entry.startedAt - options.runStartedAt) / totalMs) * 100, 100),
       widthPercent: Math.min(Math.max(rawWidth, MIN_VISIBLE_PERCENT), 100),
       durationMs: entry.durationMs,

@@ -24,6 +24,7 @@ import {
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import {
   buildWaterfall,
+  humaniseToolName,
   summariseWaterfall,
   type WaterfallRow,
 } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
@@ -82,7 +83,27 @@ export default function AgentJobDetailPage() {
 
   const rows = useMemo(() => {
     if (!detail) return [];
-    return buildWaterfall(detail.steps, {
+
+    // Which tool each step used, in the words it was installed under. A call
+    // step is matched by the tool call recorded against it; a result step only
+    // stores the runtime's name for the tool, so it is matched on that.
+    const nameByStepId = new Map<string, string>();
+    const nameByRuntimeName = new Map<string, string>();
+    for (const toolCall of detail.toolCalls) {
+      const name = toolCall.toolName ?? humaniseToolName(toolCall.normalizedToolName);
+      if (!name) continue;
+      if (toolCall.stepId) nameByStepId.set(toolCall.stepId, name);
+      nameByRuntimeName.set(toolCall.normalizedToolName, name);
+    }
+
+    const steps = detail.steps.map((step) => ({
+      ...step,
+      toolName: nameByStepId.get(step._id)
+        ?? (step.input ? nameByRuntimeName.get(step.input.trim()) : undefined)
+        ?? (step.kind === "TOOL_RESULT" && step.input ? humaniseToolName(step.input) : undefined),
+    }));
+
+    return buildWaterfall(steps, {
       runStartedAt: detail.run.startedAt,
       runCompletedAt: detail.run.completedAt,
       now,
