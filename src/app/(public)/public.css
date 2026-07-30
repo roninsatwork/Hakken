@@ -1,0 +1,1720 @@
+/*
+ * Public marketing site — scoped cream theme and bespoke styles.
+ *
+ * Everything here is scoped under .public-site so the dashboard's dark theme
+ * is untouched. The visual reference for these styles is the Phase 0 artifact
+ * recorded in docs/plans/active/public-website-plan.md — keep them in step.
+ */
+
+/*
+ * `position: sticky` does not work anywhere in this app by default. The root
+ * layout wraps everything in a div with `overflow-x-hidden`, and
+ * `overflow-x: hidden` computes `overflow-y` to `auto` — which makes that div a
+ * scroll container. Sticky then resolves against a box that never scrolls (the
+ * window does), so it silently never sticks. That is what stopped the demo
+ * panels sliding over each other.
+ *
+ * `clip` clips identically without creating a scroll container. Scoped with
+ * :has to the wrapper that actually contains the public site, so the
+ * dashboard's own sticky headers and submenus are untouched.
+ */
+div:has(> .public-site) {
+  overflow-x: clip;
+}
+
+.public-site {
+  /* Remap the app's semantic tokens to the cream showroom, overriding .dark. */
+  --bg-main: #fbf7f0;
+  --bg-sidebar: #f3ecdf;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(27, 22, 17, 0.05);
+  --text-primary: #1b1611;
+  --text-secondary: #6f6557;
+  --text-muted: #a79b87;
+  --border-subtle: #e6ddcd;
+
+  /* Public-site-only tokens */
+  --ps-cream: #fbf7f0;
+  --ps-cream-2: #f3ecdf;
+  --ps-line: #e6ddcd;
+  --ps-ink: #1b1611;
+  --ps-ink-60: #6f6557;
+  --ps-ink-40: #a79b87;
+  --ps-orange: #ff5a1f;
+  /*
+   * Small orange text on cream measures 2.92:1 and fails WCAG AA. This deeper
+   * rust reads as the same accent and passes, so use it for type and keep
+   * --ps-orange for fills, where it is a background rather than a foreground.
+   */
+  --ps-orange-ink: #b8420f;
+  --ps-sage: #a8d4b8;
+  --ps-sand: #efd49b;
+  --ps-blush: #f5c4b2;
+  --ps-panel-ink: #201913;
+  --ps-display: var(--font-bricolage), var(--font-inter), sans-serif;
+
+  /*
+   * The hero is one deep saturated panel, cream everywhere else. Forest rather
+   * than a neutral dark on purpose: the logged-in app is dark, so the public
+   * hero has to read as a colour, not as dark mode.
+   */
+  --ps-forest: #103e33;
+  --ps-forest-2: #17564a;
+  --ps-forest-deep: #0b2b23;
+  --ps-hero-ink: #fefdfb;
+  --ps-hero-ink-70: rgba(254, 253, 251, 0.72);
+  --ps-hero-ink-45: rgba(254, 253, 251, 0.45);
+  --ps-hero-card: #0c2c24;
+  --ps-hero-edge: rgba(254, 253, 251, 0.14);
+
+  color-scheme: light;
+  background: var(--ps-cream);
+  color: var(--ps-ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  position: relative;
+  overflow-x: clip;
+}
+
+/* film grain */
+.public-site::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.45;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.52 0 0 0 0 0.47 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.public-site h1,
+.public-site h2,
+.public-site h3 {
+  text-wrap: balance;
+}
+
+.ps-display {
+  font-family: var(--ps-display);
+  font-weight: 640;
+  font-variation-settings: "opsz" 60;
+  letter-spacing: -0.035em;
+}
+
+.ps-eyebrow {
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ps-orange-ink);
+}
+
+/* ---------- buttons ---------- */
+.ps-btn-primary {
+  background: var(--ps-ink);
+  color: var(--ps-cream);
+  border: 0;
+  border-radius: 16px;
+  padding: 17px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 16px 34px -14px rgba(27, 22, 17, 0.6);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.ps-btn-primary:hover {
+  transform: translateY(-2px) scale(1.01);
+}
+.ps-btn-ghost {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--ps-ink);
+  border: 1px solid var(--ps-line);
+  border-radius: 16px;
+  padding: 17px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+  transition: background 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.ps-btn-ghost:hover {
+  background: #fff;
+}
+
+/* ---------- nav: a cream pill floating over the hero panel ---------- */
+.ps-nav {
+  position: fixed;
+  top: 0;
+  left: clamp(10px, 3.8vw, 56px);
+  right: clamp(10px, 3.8vw, 56px);
+  z-index: 70;
+  background: var(--ps-cream);
+  border-radius: 0 0 20px 20px;
+  transition: box-shadow 0.35s ease;
+}
+.ps-nav.scrolled {
+  box-shadow: 0 18px 36px -22px rgba(11, 43, 35, 0.5);
+}
+.ps-nav-row {
+  display: flex;
+  align-items: center;
+  height: 74px;
+  gap: clamp(18px, 2.6vw, 40px);
+  padding: 0 clamp(14px, 1.6vw, 24px);
+}
+/* Links sit next to the logo, not centred — the right edge is for actions. */
+.ps-nav-link {
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--ps-ink);
+  opacity: 0.68;
+  transition: opacity 0.18s ease;
+  white-space: nowrap;
+}
+.ps-nav-link:hover,
+.ps-nav-link[data-active="true"] {
+  opacity: 1;
+}
+.ps-nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--ps-ink);
+  color: var(--ps-cream);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+.ps-nav-cta:hover {
+  background: var(--ps-forest);
+}
+
+/* ---------- hero: one product screen, headline sticking over it ---------- */
+.ps-hero {
+  position: relative;
+  background: var(--ps-forest);
+  color: var(--ps-hero-ink);
+  padding-top: 104px;
+  overflow: hidden;
+}
+/* Warm light from above, and the panel deepening towards the floor. */
+.ps-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(62vw 46vh at 50% -8%, rgba(239, 212, 155, 0.26), transparent 68%),
+    radial-gradient(46vw 38vh at 84% 6%, rgba(255, 90, 31, 0.16), transparent 70%),
+    linear-gradient(180deg, transparent 40%, var(--ps-forest-deep) 92%);
+  pointer-events: none;
+}
+.ps-hero-band {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 1328px;
+  margin-inline: auto;
+  padding: clamp(30px, 3.6vw, 52px) clamp(20px, 3.4vw, 48px) clamp(20px, 2vw, 28px);
+}
+.ps-hero-stage {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1328px;
+  margin-inline: auto;
+  padding: clamp(18px, 2.4vw, 34px) clamp(20px, 3.4vw, 48px) 0;
+}
+.ps-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ps-sand);
+}
+.ps-hero-eyebrow svg {
+  transition: transform 0.2s ease;
+}
+.ps-hero-eyebrow:hover svg {
+  transform: translateX(3px);
+}
+.ps-hero-h1 {
+  /* globals.css forces h1 font-size with !important but honours this variable */
+  /* Sized so the three markup-set lines each fit the column without wrapping. */
+  --h1-size-override: clamp(32px, 4.9vw, 72px);
+  font-size: clamp(32px, 4.9vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+  /* The break is set in the markup, so let the line run to its natural width. */
+  text-wrap: normal;
+}
+.ps-hero-sub {
+  font-size: clamp(17px, 1.45vw, 21px);
+  line-height: 1.42;
+  color: var(--ps-hero-ink-70);
+  max-width: 46ch;
+}
+.ps-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+  padding: 0 26px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.ps-hero-btn svg {
+  transition: transform 0.2s ease;
+}
+.ps-hero-btn:hover svg {
+  transform: translateX(3px);
+}
+.ps-hero-btn-light {
+  background: var(--ps-hero-ink);
+  color: var(--ps-forest);
+}
+.ps-hero-btn-light:hover {
+  transform: translateY(-2px);
+}
+
+/*
+ * The cream page rising over the panel — the hero's floor and the body's roof.
+ * It carries no content, so its own height is what shows the curve.
+ */
+.ps-hero-shelf {
+  position: relative;
+  z-index: 4;
+  margin-top: clamp(26px, 3vw, 42px);
+  height: clamp(30px, 3.4vw, 48px);
+  background: var(--ps-cream);
+  color: var(--ps-ink);
+  border-radius: clamp(26px, 3vw, 44px) clamp(26px, 3vw, 44px) 0 0;
+}
+
+/* ---------- hero art: real UI objects composed as a scene ---------- */
+.ps-obj {
+  position: absolute;
+  border-radius: 16px;
+  background: var(--ps-hero-card);
+  border: 1px solid var(--ps-hero-edge);
+  box-shadow: 0 40px 70px -30px rgba(4, 20, 16, 0.75);
+  will-change: transform;
+}
+.ps-obj-label {
+  font-size: 10.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ps-hero-ink-45);
+}
+.ps-obj-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--ps-hero-ink-70);
+}
+.ps-obj-bar {
+  height: 5px;
+  border-radius: 4px;
+  background: rgba(254, 253, 251, 0.16);
+}
+/* the one bright object in the scene — the approval */
+.ps-obj-approve {
+  background: var(--ps-hero-ink);
+  color: var(--ps-forest-deep);
+  border-color: transparent;
+}
+.ps-obj-yes {
+  background: var(--ps-orange);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ps-obj-tick {
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(168, 212, 184, 0.2);
+  color: var(--ps-sage);
+}
+
+/*
+ * Narrow screens cannot hold a composed scene behind the type, so the art stops
+ * being a backdrop and becomes a single card in the flow above the headline.
+ * Every satellite object is already hidden below md/lg/xl, leaving the anchor.
+ */
+@media (max-width: 1023px) {
+  /* No pinning on small screens — the headline would cover most of the screen. */
+  .ps-hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+}
+
+/* ---------- what Sonae is: sticky thesis, scrolling detail ---------- */
+.ps-what {
+  padding: clamp(80px, 9vw, 140px) 0 clamp(52px, 5.5vw, 88px);
+}
+.ps-what-grid {
+  width: 100%;
+  max-width: 1328px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 3.4vw, 48px);
+  display: grid;
+  gap: clamp(40px, 5vw, 96px);
+}
+@media (min-width: 1000px) {
+  .ps-what-grid {
+    grid-template-columns: minmax(0, 400px) minmax(0, 1fr);
+  }
+  /*
+   * The column must stay stretched for sticky to have any travel — with
+   * align-items/align-self start the item shrinks to its content and never
+   * sticks. So the item fills the row and the inner block is what sticks.
+   */
+  .ps-what-thesis-inner {
+    position: sticky;
+    top: 132px;
+  }
+}
+.ps-what-h2 {
+  font-size: clamp(29px, 3.3vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+}
+.ps-what-lede {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ps-ink-60);
+  max-width: 42ch;
+}
+
+.ps-what-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ps-ink);
+  border-bottom: 1px solid var(--ps-line);
+  padding-bottom: 6px;
+  transition: border-color 0.2s ease;
+}
+.ps-what-link:hover {
+  border-color: var(--ps-orange);
+}
+.ps-what-link svg {
+  transition: transform 0.2s ease;
+}
+.ps-what-link:hover svg {
+  transform: translateX(3px);
+}
+
+/* the read-through counter */
+.ps-what-count {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.ps-what-count-now {
+  font-family: var(--ps-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ps-ink);
+}
+.ps-what-count-rule {
+  position: relative;
+  height: 1px;
+  width: 96px;
+  background: var(--ps-line);
+}
+.ps-what-count-rule i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ps-orange);
+  transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ps-what-count-all {
+  font-size: 12.5px;
+  color: var(--ps-ink-40);
+}
+
+/* Hairlines, not cards: this section carries the reading. */
+.ps-what-list {
+  border-top: 1px solid var(--ps-line);
+}
+.ps-what-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 0 20px;
+  padding: clamp(26px, 2.6vw, 36px) 0;
+  border-bottom: 1px solid var(--ps-line);
+}
+@media (min-width: 760px) {
+  .ps-what-row {
+    gap: 0 28px;
+  }
+}
+.ps-what-num {
+  font-family: var(--ps-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ps-ink-40);
+  padding-top: 5px;
+  transition: color 0.35s ease;
+}
+.ps-what-row[data-current="true"] .ps-what-num {
+  color: var(--ps-orange);
+}
+.ps-what-row-title {
+  font-family: var(--ps-display);
+  font-size: clamp(19px, 1.65vw, 23px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.22;
+  color: var(--ps-ink);
+}
+.ps-what-row-body {
+  margin-top: 9px;
+  font-size: 15.5px;
+  line-height: 1.58;
+  color: var(--ps-ink-60);
+  max-width: 56ch;
+}
+.ps-what-row-body {
+  max-width: 68ch;
+}
+
+/* ---------- who it's for ---------- */
+.ps-who {
+  position: relative;
+  z-index: 5;
+  background: var(--ps-cream);
+  border-radius: clamp(26px, 3vw, 44px) clamp(26px, 3vw, 44px) 0 0;
+  padding: clamp(70px, 7.6vw, 120px) 0 clamp(72px, 7.6vw, 118px);
+}
+.ps-who-inner {
+  width: 100%;
+  max-width: 1328px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 3.4vw, 48px);
+}
+.ps-who-head {
+  display: grid;
+  gap: clamp(22px, 3vw, 64px);
+}
+@media (min-width: 1000px) {
+  .ps-who-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+    align-items: start;
+  }
+}
+.ps-who-h2 {
+  font-size: clamp(28px, 3.3vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  max-width: 16ch;
+}
+.ps-who-lede {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ps-ink-60);
+}
+
+.ps-who-compare {
+  margin-top: clamp(40px, 4.6vw, 72px);
+  display: grid;
+  gap: clamp(16px, 2vw, 26px);
+}
+@media (min-width: 860px) {
+  .ps-who-compare {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+.ps-who-col {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ps-line);
+  border-radius: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.ps-who-col-sonae {
+  background: #fff;
+  border-color: rgba(62, 122, 85, 0.28);
+  box-shadow: 0 30px 60px -40px rgba(27, 22, 17, 0.4);
+}
+.ps-who-col-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ps-who-col-title {
+  font-family: var(--ps-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ps-ink);
+}
+.ps-who-col-note {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  /* was --ps-ink-40, which measured 2.65:1 on cream */
+  color: var(--ps-ink-60);
+}
+/* Both stacks are the same height, so the two columns argue against each other. */
+.ps-who-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 396px;
+}
+.ps-who-block {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--ps-line);
+  background: var(--ps-cream);
+  font-size: 15px;
+  color: var(--ps-ink-60);
+}
+.ps-who-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ps-ink-40);
+  flex: none;
+}
+.ps-who-block-mine {
+  border-style: solid;
+  border-color: rgba(255, 90, 31, 0.45);
+  background: rgba(255, 90, 31, 0.07);
+  color: var(--ps-ink);
+  font-weight: 600;
+}
+.ps-who-block-mine .ps-who-dot {
+  background: var(--ps-orange);
+}
+.ps-who-done {
+  border-radius: 12px;
+  border: 1px solid rgba(62, 122, 85, 0.22);
+  background: #eef5f0;
+  padding: 13px 15px;
+}
+.ps-who-done-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #2e6b46;
+}
+.ps-who-done-list {
+  margin-top: 9px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #35563f;
+}
+.ps-who-mine {
+  flex: 1;
+  border-radius: 12px;
+  background: var(--ps-orange);
+  color: var(--ps-ink);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+.ps-who-mine-label {
+  font-family: var(--ps-display);
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.ps-who-mine-note {
+  font-size: 15px;
+  line-height: 1.45;
+  /* solid ink: white over orange measured 2.65:1, and #3d2a12 only reached 4.38 */
+  color: var(--ps-ink);
+  max-width: 36ch;
+}
+
+/* ---------- the hero's workspace screen ---------- */
+.ps-hero-screen {
+  border-radius: 20px 20px 0 0;
+  background: #0b241d;
+  border: 1px solid var(--ps-hero-edge);
+  border-bottom: 0;
+  overflow: hidden;
+  box-shadow: 0 -2px 0 rgba(254, 253, 251, 0.06), 0 60px 120px -50px rgba(3, 16, 12, 0.9);
+}
+.ps-ws-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  background: #0e2b23;
+  border-bottom: 1px solid var(--ps-hero-edge);
+}
+.ps-ws-dots {
+  display: flex;
+  gap: 6px;
+}
+.ps-ws-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(254, 253, 251, 0.18);
+}
+.ps-ws-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ps-hero-ink-70);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-ws-user {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(254, 253, 251, 0.1);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ps-hero-ink-70);
+}
+.ps-ws-body {
+  display: grid;
+  grid-template-columns: 178px minmax(0, 1fr);
+  min-height: 470px;
+}
+@media (min-width: 1100px) {
+  .ps-ws-body {
+    grid-template-columns: 178px minmax(0, 1fr) 300px;
+  }
+}
+.ps-ws-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--ps-hero-edge);
+}
+.ps-ws-rail-item {
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--ps-hero-ink-70);
+}
+.ps-ws-rail-item[data-on="true"] {
+  background: rgba(254, 253, 251, 0.09);
+  color: var(--ps-hero-ink);
+  font-weight: 600;
+}
+.ps-ws-rail-note {
+  margin-top: auto;
+  padding: 10px 12px 0;
+  font-size: 11px;
+  color: var(--ps-hero-ink-45);
+}
+.ps-ws-main {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.ps-ws-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.ps-ws-kicker {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ps-hero-ink-45);
+}
+.ps-ws-title {
+  margin-top: 5px;
+  font-family: var(--ps-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--ps-hero-ink);
+}
+.ps-ws-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ps-sage);
+  white-space: nowrap;
+}
+.ps-ws-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--ps-sage);
+}
+.ps-ws-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ps-ws-tile {
+  border: 1px solid var(--ps-hero-edge);
+  border-radius: 12px;
+  background: rgba(254, 253, 251, 0.03);
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+}
+.ps-ws-tile-num {
+  margin-top: 5px;
+  font-family: var(--ps-display);
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--ps-hero-ink);
+  font-variant-numeric: tabular-nums;
+}
+.ps-ws-tile-num[data-accent="sand"] {
+  color: var(--ps-sand);
+}
+.ps-ws-tile-note {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--ps-hero-ink-45);
+}
+.ps-ws-chart svg {
+  display: block;
+  width: 100%;
+  height: 132px;
+  margin-top: 8px;
+  overflow: visible;
+}
+.ps-ws-runs {
+  margin-top: 2px;
+}
+.ps-ws-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 62px;
+  margin-top: 9px;
+}
+.ps-ws-barcol {
+  flex: 1;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  gap: 2px;
+  height: 100%;
+}
+.ps-ws-barcol i {
+  display: block;
+  border-radius: 2px;
+  min-height: 2px;
+}
+.ps-ws-barcol i:last-child {
+  border-radius: 4px 4px 2px 2px;
+}
+.ps-ws-approve {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 14px;
+  background: var(--ps-hero-ink);
+  color: var(--ps-forest-deep);
+  padding: 14px 16px;
+}
+.ps-ws-approve-kicker {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #5c6f66;
+}
+.ps-ws-approve-title {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.ps-ws-side {
+  display: none;
+  padding: 20px;
+  border-left: 1px solid var(--ps-hero-edge);
+  flex-direction: column;
+  gap: 12px;
+}
+@media (min-width: 1100px) {
+  .ps-ws-side {
+    display: flex;
+  }
+}
+.ps-ws-ledger {
+  display: flex;
+  flex-direction: column;
+}
+.ps-ws-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--ps-hero-edge);
+}
+.ps-ws-row-name {
+  font-size: 13px;
+  color: var(--ps-hero-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-ws-row-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ps-hero-ink-45);
+}
+.ps-ws-state {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 4px 9px;
+  white-space: nowrap;
+  background: rgba(168, 212, 184, 0.16);
+  color: var(--ps-sage);
+}
+.ps-ws-state[data-state="Waiting"] {
+  background: rgba(239, 212, 155, 0.18);
+  color: var(--ps-sand);
+}
+.ps-ws-meter {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(254, 253, 251, 0.12);
+  overflow: hidden;
+}
+.ps-ws-meter i {
+  display: block;
+  height: 100%;
+  width: 76%;
+  border-radius: 999px;
+  background: var(--ps-sand);
+}
+
+/* ---------- demos lead-in ---------- */
+/*
+ * Its own tinted slab with a rounded top, so it reads as the head of the demo
+ * region rather than the tail of the cream section above it. The demo panels
+ * then slide over it using the same rounded-top device.
+ */
+.ps-demos-intro {
+  position: relative;
+  z-index: 2;
+  background: var(--ps-cream-2);
+  border-radius: clamp(26px, 3vw, 44px) clamp(26px, 3vw, 44px) 0 0;
+  padding: clamp(66px, 7.4vw, 116px) 0 clamp(62px, 6.6vw, 100px);
+}
+.ps-demos-intro-grid {
+  width: 100%;
+  max-width: 1328px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 3.4vw, 48px);
+  display: grid;
+  gap: clamp(18px, 3vw, 64px);
+}
+@media (min-width: 1000px) {
+  .ps-demos-intro-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+    align-items: end;
+  }
+}
+.ps-demos-intro-h2 {
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+}
+.ps-demos-intro-lede {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ps-ink-60);
+  max-width: 44ch;
+}
+
+/*
+ * Demo panel variant one: full bleed, visual dominant. The copy is a compact
+ * head and the screen below it runs wide and is cropped by the panel floor, so
+ * the demo itself is the largest thing in the section.
+ */
+/* Both classes, so this beats `.ps-panel` regardless of source order. */
+.ps-panel.ps-demo-full {
+  --ps-demo-pad: clamp(56px, 5.6vw, 88px);
+  align-items: stretch;
+  padding: 0;
+  /*
+   * Content height, not 100vh. Forcing a viewport-tall panel around shorter
+   * content dumps every spare pixel below the screen as dead tint.
+   */
+  min-height: 0;
+}
+.ps-demo-full-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-top: var(--ps-demo-pad);
+}
+.ps-demo-head {
+  width: 100%;
+  max-width: 1328px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 3.4vw, 48px);
+}
+.ps-demo-metarow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ps-demo-time {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: rgba(27, 22, 17, 0.58);
+  border: 1px solid rgba(27, 22, 17, 0.16);
+  border-radius: 999px;
+  padding: 6px 13px;
+}
+.ps-demo-h2 {
+  font-size: clamp(29px, 3.8vw, 52px);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+}
+.ps-demo-lede {
+  font-size: 16px;
+  line-height: 1.58;
+  color: var(--ps-ink-60);
+  max-width: 58ch;
+}
+.ps-demo-stage {
+  /* not flex:1 — that is what turned spare panel height into a void */
+  flex: none;
+  display: flex;
+  justify-content: center;
+  /*
+   * flex-start, not the default stretch — a stretched screen grows to the full
+   * panel height and renders as a tall white void under its own content.
+   */
+  align-items: flex-start;
+  /* bottom padding matches the panel's top padding, so the screen sits evenly */
+  padding: clamp(24px, 3.2vw, 44px) clamp(20px, 3.4vw, 48px)
+    var(--ps-demo-pad);
+}
+.ps-demo-screen {
+  width: min(1240px, 100%);
+  background: #fff;
+  border: 1px solid rgba(27, 22, 17, 0.09);
+  border-radius: 18px;
+  box-shadow: 0 40px 90px -40px rgba(27, 22, 17, 0.42);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* the library screen's own furniture */
+.ps-lib-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ps-line);
+}
+.ps-lib-url {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ps-ink-60);
+  background: var(--ps-cream);
+  border: 1px solid var(--ps-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-lib-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #2e6b46;
+  white-space: nowrap;
+}
+.ps-lib-live i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #35855a;
+}
+.ps-lib-chips {
+  display: flex;
+  gap: 8px;
+  padding: 13px 18px 0;
+  flex-wrap: wrap;
+}
+.ps-lib-chip {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ps-ink-60);
+  border: 1px solid var(--ps-line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.ps-lib-chip[data-on="true"] {
+  background: #2e6b46;
+  border-color: #2e6b46;
+  color: #fff;
+}
+.ps-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  padding: 15px 18px 20px;
+}
+@media (min-width: 760px) {
+  .ps-lib-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.ps-lib-card {
+  border: 1px solid var(--ps-line);
+  border-radius: 13px;
+  overflow: hidden;
+  background: var(--ps-cream);
+}
+.ps-lib-thumb {
+  height: 68px;
+  position: relative;
+  background: linear-gradient(150deg, #d9e8dd, #eef3ea 60%, #e4ecdf);
+}
+.ps-lib-thumb span {
+  position: absolute;
+  bottom: 7px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #2e6b46;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 5px;
+  padding: 3px 6px;
+}
+.ps-lib-body {
+  padding: 9px 11px 11px;
+}
+.ps-lib-price {
+  font-family: var(--ps-display);
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ps-ink);
+  font-variant-numeric: tabular-nums;
+}
+.ps-lib-addr {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ps-ink-60);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ps-lib-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ps-ink-40);
+}
+.ps-lib-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--ps-line);
+  font-size: 11.5px;
+  color: var(--ps-ink-40);
+}
+
+/* ---------- slide-over product panels ---------- */
+.ps-panel {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  border-radius: 34px 34px 0 0;
+  padding: 60px 0;
+  box-shadow: 0 -30px 60px -40px rgba(27, 22, 17, 0.4);
+  will-change: transform;
+}
+.ps-panel-props { background: #e7f2ea; }
+.ps-panel-reports { background: #faf0da; }
+.ps-panel-studio { background: #fbe9e0; }
+
+.ps-pill {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+.ps-cta-solid {
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.18s ease;
+}
+.ps-cta-solid:hover { transform: translateY(-2px); }
+.ps-cta-quiet {
+  background: #fff;
+  border: 1px solid rgba(27, 22, 17, 0.12);
+  border-radius: 12px;
+  padding: 13px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ps-ink);
+}
+/* ---------- board report screen ---------- */
+.ps-rep-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--ps-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ps-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ps-rep-title em {
+  font-family: var(--font-inter), sans-serif;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ps-ink-40);
+}
+.ps-rep-status {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8f6a12;
+  background: rgba(239, 212, 155, 0.42);
+  border-radius: 999px;
+  padding: 6px 13px;
+  white-space: nowrap;
+}
+.ps-rep-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ps-rep-section {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ps-ink-40);
+  margin-bottom: 11px;
+}
+.ps-rep-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ps-rep-metric {
+  border: 1px solid var(--ps-line);
+  border-radius: 12px;
+  background: var(--ps-cream);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ps-rep-metric-k {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ps-ink-40);
+}
+.ps-rep-metric-v {
+  font-family: var(--ps-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.ps-rep-metric-d {
+  font-size: 11.5px;
+  color: var(--ps-ink-60);
+}
+.ps-rep-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 92px;
+  border-bottom: 1px solid var(--ps-line);
+  padding-bottom: 6px;
+}
+.ps-rep-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 6px;
+  height: 100%;
+}
+.ps-rep-bar i {
+  border-radius: 6px 6px 3px 3px;
+  min-height: 6px;
+  /* capped, or each bar stretches to a fifth of the screen and reads as a slab */
+  width: 100%;
+  max-width: 88px;
+  margin-inline: auto;
+}
+.ps-rep-bar span {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ps-ink-40);
+}
+.ps-rep-risk {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 10px 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ps-line);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .ps-rep-risk {
+    grid-template-columns: 84px minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+}
+.ps-rep-level {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 5px 9px;
+  text-align: center;
+  white-space: nowrap;
+}
+.ps-rep-level[data-level="Critical"] { background: #fbe3dc; color: #b14a2d; }
+.ps-rep-level[data-level="At risk"] { background: #faf0d4; color: #8f6a12; }
+.ps-rep-level[data-level="Healthy"] { background: #e7f2ea; color: #3e7a55; }
+.ps-rep-deal {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ps-ink);
+}
+.ps-rep-note {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ps-ink-60);
+}
+.ps-rep-action {
+  grid-column: 2;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ps-ink-60);
+  border-left: 2px solid var(--ps-line);
+  padding-left: 12px;
+}
+@media (min-width: 900px) {
+  .ps-rep-action { grid-column: 3; }
+}
+
+/* ---------- capture screen ---------- */
+.ps-cap-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b14a2d;
+  white-space: nowrap;
+}
+.ps-cap-rec i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #c05b3c;
+}
+.ps-cap-body {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+@media (min-width: 760px) {
+  .ps-cap-body {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+}
+.ps-cap-stage {
+  position: relative;
+  border-radius: 14px;
+  background: radial-gradient(70% 70% at 50% 40%, #2c211c, #171110 75%);
+  /*
+   * Definite height on purpose. With an auto-height parent the svg's own
+   * percentage height collapses, it falls back to its intrinsic 420:640 box and
+   * drags the whole screen to ~856px tall.
+   */
+  height: clamp(300px, 26vw, 400px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ps-cap-stage svg {
+  height: 90%;
+  width: 100%;
+}
+.ps-cap-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(254, 253, 251, 0.82);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 999px;
+  padding: 6px 13px;
+}
+.ps-cap-side {
+  display: flex;
+  flex-direction: column;
+}
+.ps-cap-joint {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ps-line);
+  font-size: 12.5px;
+  color: var(--ps-ink-60);
+}
+.ps-cap-joint b {
+  font-family: var(--ps-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ps-ink);
+  font-variant-numeric: tabular-nums;
+}
+.ps-cap-privacy {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a05238;
+  background: rgba(245, 196, 178, 0.28);
+  border-radius: 10px;
+  padding: 11px 13px;
+}
+
+/* ---------- story ---------- */
+.ps-story {
+  background: var(--ps-panel-ink);
+  color: var(--ps-cream);
+  border-radius: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.ps-story::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(40% 40% at 30% 60%, rgba(239, 212, 155, 0.12), transparent 70%),
+    radial-gradient(35% 35% at 75% 30%, rgba(245, 196, 178, 0.1), transparent 70%);
+  animation: ps-drift 14s ease-in-out infinite alternate;
+}
+@keyframes ps-drift {
+  to { transform: translate(6%, 4%) rotate(4deg); }
+}
+.ps-kanji {
+  font-size: clamp(130px, 19vw, 230px);
+  line-height: 0.95;
+  font-weight: 500;
+  background: linear-gradient(160deg, var(--ps-sand), var(--ps-blush) 55%, var(--ps-sage));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ps-sheen 9s ease-in-out infinite alternate;
+  position: relative;
+}
+@keyframes ps-sheen {
+  to { background-position: 100% 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-kanji, .ps-story::before { animation: none; }
+  .ps-what-count-rule i { transition: none; }
+  .ps-panel { position: static; min-height: 0; }
+  .ps-btn-primary:hover, .ps-cta-solid:hover { transform: none; }
+}
+
+/* ---------- sign in: the public site's surface, the app's auth ---------- */
+.public-site.ps-login {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 5vw, 48px) clamp(20px, 5vw, 40px);
+  background: var(--ps-forest);
+  color: var(--ps-hero-ink);
+  position: relative;
+  overflow: hidden;
+}
+/* the same warm light as the home page hero, so the two read as one site */
+.public-site.ps-login::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(62vw 46vh at 50% -8%, rgba(239, 212, 155, 0.24), transparent 68%),
+    radial-gradient(46vw 38vh at 84% 6%, rgba(255, 90, 31, 0.14), transparent 70%),
+    linear-gradient(180deg, transparent 34%, var(--ps-forest-deep) 88%);
+  pointer-events: none;
+}
+.ps-login-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(22px, 3.4vw, 34px);
+  width: 100%;
+}
+.ps-login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ps-hero-ink);
+}
+.ps-login-mark {
+  display: flex;
+  height: 30px;
+  width: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--ps-orange);
+  color: #fff;
+}
+.ps-login-card {
+  width: 100%;
+  background: var(--ps-cream);
+  color: var(--ps-ink);
+  border-radius: 24px;
+  padding: clamp(26px, 4vw, 38px);
+  box-shadow: 0 50px 90px -40px rgba(4, 20, 16, 0.75);
+}
+.ps-login-h1 {
+  /* globals.css forces h1 font-size with !important but honours this variable */
+  --h1-size-override: clamp(28px, 3.4vw, 36px);
+  font-size: clamp(28px, 3.4vw, 36px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.ps-login-h2 {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+.ps-login-input {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--ps-line);
+  border-radius: 14px;
+  padding: 15px 16px 15px 46px;
+  font-size: 15px;
+  color: var(--ps-ink);
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.ps-login-input::placeholder {
+  color: var(--ps-ink-40);
+}
+.ps-login-input:focus {
+  border-color: var(--ps-forest);
+  box-shadow: 0 0 0 4px rgba(16, 62, 51, 0.12);
+}
+.ps-login-primary,
+.ps-login-secondary {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 14px;
+  padding: 15px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+.ps-login-primary {
+  background: var(--ps-ink);
+  color: var(--ps-cream);
+  border: 0;
+}
+.ps-login-primary:hover:not(:disabled) {
+  background: var(--ps-forest);
+}
+.ps-login-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ps-login-secondary {
+  background: #fff;
+  color: var(--ps-ink);
+  border: 1px solid var(--ps-line);
+}
+.ps-login-secondary:hover:not(:disabled) {
+  background: var(--ps-cream-2);
+}
+.ps-login-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ps-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 6px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ps-ink-60);
+}
+.ps-login-divider::before,
+.ps-login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ps-line);
+}
+.ps-login-tick {
+  display: flex;
+  height: 44px;
+  width: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(62, 122, 85, 0.12);
+  color: #2e6b46;
+}
+.ps-login-note {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ps-ink-60);
+  max-width: 34ch;
+}
+.ps-login-try {
+  margin-top: 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ps-ink);
+  border-bottom: 1px solid var(--ps-line);
+  padding-bottom: 4px;
+  transition: border-color 0.2s ease;
+}
+.ps-login-try:hover {
+  border-color: var(--ps-orange);
+}
+.ps-login-foot {
+  font-size: 13px;
+  color: var(--ps-hero-ink-45);
+  text-align: center;
+}
