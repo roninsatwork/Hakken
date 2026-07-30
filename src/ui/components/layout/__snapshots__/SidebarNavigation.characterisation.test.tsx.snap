@@ -5,6 +5,8 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
   "links": [
     "Ask Sonae -> /app/assistant",
     "Dashboard -> /app/settings",
+    "Information -> /app/properties/information",
+    "Information -> /app/reports/information",
     "Information -> /demos/movements/information",
     "Logs -> /app/properties/logs",
     "Replay Alignment -> /demos/movements/replay-lab",
@@ -30,6 +32,8 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
 {
   "links": [
     "Ask Sonae -> /app/assistant",
+    "Information -> /app/properties/information",
+    "Information -> /app/reports/information",
     "Information -> /demos/movements/information",
     "Logs -> /app/properties/logs",
     "Replay Alignment -> /demos/movements/replay-lab",
@@ -52,6 +56,8 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
 {
   "links": [
     "Ask Sonae -> /app/assistant",
+    "Information -> /app/properties/information",
+    "Information -> /app/reports/information",
     "Information -> /demos/movements/information",
     "Logs -> /app/properties/logs",
     "Replay Alignment -> /demos/movements/replay-lab",

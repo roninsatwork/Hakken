@@ -339,6 +339,9 @@ describe("ai tool execution service", () => {
       "http.request",
       "knowledge.search",
       "notification.send",
+      // Writes the board report from the agent's own knowledge and memory —
+      // the one way a scheduled agent run ends in a saved report.
+      "salesReports.generate",
       // Reads a web page. The first handler here that reaches outside the
       // platform rather than into our own database.
       "web.scrape",

@@ -132,6 +132,7 @@ import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
 import type * as resendEmailService from "../resendEmailService.js";
 import type * as salesReportActions from "../salesReportActions.js";
+import type * as salesReportContextService from "../salesReportContextService.js";
 import type * as salesReports from "../salesReports.js";
 import type * as scheduler from "../scheduler.js";
 import type * as seedUsers from "../seedUsers.js";
@@ -304,6 +305,7 @@ declare const fullApi: ApiFromModules<{
   purges: typeof purges;
   resendEmailService: typeof resendEmailService;
   salesReportActions: typeof salesReportActions;
+  salesReportContextService: typeof salesReportContextService;
   salesReports: typeof salesReports;
   scheduler: typeof scheduler;
   seedUsers: typeof seedUsers;

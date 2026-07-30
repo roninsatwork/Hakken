@@ -437,6 +437,43 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
         + "they are not available in this reply.",
     };
   },
+  // template:remove:start salesReports
+  /**
+   * Write the board report.
+   *
+   * The one way a runtime agent run produces the structured report the
+   * Reports page shows. The generation itself gathers the same grounding the
+   * interactive runtime injects — the agent's memories and its knowledge base
+   * — so a scheduled "write the weekly report" objective ends in a saved,
+   * grounded report rather than a chat reply describing one.
+   */
+  "salesReports.generate": async (input) => {
+    if (!input.agentId) {
+      throw new Error("The board report is written from an agent's knowledge, so the run needs an agent.");
+    }
+
+    const focus = getOptionalStringToolArg(input.args, "focus");
+
+    const result = await input.ctx.runAction(internal.salesReportActions.generateReport, {
+      agentId: input.agentId,
+      ...(input.companyId ? { companyId: input.companyId } : {}),
+      ...(focus ? { focus } : {}),
+    });
+
+    if (!result) {
+      return {
+        saved: false,
+        message: "No pipeline document in this agent's knowledge yet. Upload one, then run again.",
+      };
+    }
+
+    return {
+      saved: true,
+      headline: result.headline,
+      message: "The board report is written and filed on the Reports page.",
+    };
+  },
+  // template:remove:end
   "knowledge.search": async (input) => {
     const query = getStringToolArg(input.args, "query") || input.fallbackQuery || "";
     const limit = getNumberToolArg(input.args, "limit");

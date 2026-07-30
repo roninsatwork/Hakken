@@ -542,7 +542,8 @@ export default function SidebarNavigation() {
                       isOpen={openSections.reports}
                       onToggle={() => toggleSection('reports')}
                     >
-                      <SubNavItem label="Sales Report" href="/app/reports" navKey="reports" isActive={activeItem === 'Reports'} onClick={() => setActiveItem('Reports')} />
+                      <SubNavItem label="Information" href="/app/reports/information" isActive={pathname.startsWith('/app/reports/information')} onClick={() => setActiveItem('Reports')} />
+                      <SubNavItem label="Sales Report" href="/app/reports" navKey="reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
                     </NavItem>
                     {/* template:remove:end */}
 
@@ -556,6 +557,7 @@ export default function SidebarNavigation() {
                       isOpen={openSections.properties}
                       onToggle={() => toggleSection('properties')}
                     >
+                      <SubNavItem label="Information" href="/app/properties/information" isActive={pathname.startsWith('/app/properties/information')} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label={t('propertiesSearch')} href="/app/properties/search" isActive={pathname === '/app/properties/search'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />

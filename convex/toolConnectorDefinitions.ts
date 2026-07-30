@@ -256,6 +256,48 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       },
     ],
   },
+  // template:remove:start salesReports
+  {
+    key: "sales-reports",
+    name: "Board Reports",
+    description:
+      "Lets an agent write the weekly board report from the pipeline it has been given, "
+      + "grounded in the company knowledge and memories it carries.",
+    category: "WORKFLOW",
+    // The report is written from what the agent already holds — its pipeline
+    // document, its knowledge base, its memories. Nothing leaves the platform
+    // and no credential is involved.
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: [],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Write the board report",
+        description:
+          "Writes the eight-section board report from the pipeline document in this agent's "
+          + "knowledge, drawing on company knowledge and what the agent remembers, and files it "
+          + "on the Reports page. Give it a focus when this run should pay particular attention "
+          + "to something — a deal, a rep, a question from the board.",
+        handlerMapping: "salesReports.generate",
+        requiredRole: "ADMIN",
+        // Writes a report into the tenant's own workspace; nothing external.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            focus: {
+              type: "string",
+              description:
+                "Anything to pay particular attention to in this run, in plain words.",
+            },
+          },
+        }),
+      },
+    ],
+  },
+  // template:remove:end
 ];
 
 export function getBuiltInToolConnector(key: string) {

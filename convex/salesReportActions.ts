@@ -3,8 +3,14 @@
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { Doc } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
+import { getGoogleVertexProviderModelId } from "./aiModelService";
+import {
+  buildReportQueryText,
+  buildSalesReportGroundingContext,
+  REPORT_KNOWLEDGE_MAX_CHARS,
+} from "./salesReportContextService";
 
 const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : "Unknown error during AI Generation";
 
@@ -12,6 +18,10 @@ export const generateReport = internalAction({
   args: {
     agentId: v.id("agents"),
     companyId: v.optional(v.id("companies")),
+    // Something to pay particular attention to this run — a deal, a rep, a
+    // question from the board. Set by whoever triggers the run; usually the
+    // agent, relaying its objective.
+    focus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // 1. Fetch the Agent to get System Prompt and Document IDs
@@ -25,7 +35,7 @@ export const generateReport = internalAction({
     
     if (docs.length === 0) {
       console.log("No documents uploaded for this agent yet. Skipping run.");
-      return;
+      return null;
     }
 
     let rawCsvContext = "";
@@ -52,6 +62,76 @@ export const generateReport = internalAction({
       companyId: args.companyId,
       useCase: "report",
     });
+
+    // 4. Grounding — the same sources the interactive runtime injects: the
+    // agent's memories, the company's memories, and the knowledge base via
+    // vector search. The pipeline document is already in the prompt in full,
+    // so its own chunks are skipped. Failures here degrade to an ungrounded
+    // report rather than no report at all.
+    const queryText = buildReportQueryText(args.focus);
+    let groundingContext = "";
+    try {
+        const [memoryMatches, companyMemories] = await Promise.all([
+            ctx.runQuery(internal.agentMemories.searchMemoryInternal, {
+                agentId: args.agentId,
+                companyId: args.companyId,
+                queryText,
+                limit: 5,
+            }),
+            args.companyId
+                ? ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+                    companyId: args.companyId,
+                    queryText,
+                    limit: 5,
+                })
+                : Promise.resolve({ relevant: [] as { title: string; content: string }[] }),
+        ]);
+
+        const knowledgeChunks: string[] = [];
+        try {
+            const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+                companyId: args.companyId,
+            });
+            const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "sales report RAG search");
+            const embeddingAi = createVertexEmbeddingClient();
+            const embeddingResp = await embedVertexContentWithRetry(embeddingAi, {
+                model: embeddingProviderModelId,
+                contents: queryText,
+            }, {
+                operation: "salesReportRagEmbedding",
+            });
+            const queryVector = embeddingResp.embeddings?.[0]?.values;
+
+            if (queryVector && queryVector.length === embeddingModel.embeddingDimensions) {
+                const vectorMatches = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
+                    vector: queryVector as number[],
+                    limit: 50,
+                    filter: (q) => q.eq("agentId", args.agentId),
+                });
+
+                let chunkTextLength = 0;
+                for (const match of vectorMatches) {
+                    if (chunkTextLength >= REPORT_KNOWLEDGE_MAX_CHARS) break;
+                    const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: match._id });
+                    // The pipeline document itself is already included in full.
+                    if (!chunk || chunk.documentId === latestDoc._id) continue;
+                    if (chunkTextLength + chunk.text.length > REPORT_KNOWLEDGE_MAX_CHARS) break;
+                    knowledgeChunks.push(chunk.text);
+                    chunkTextLength += chunk.text.length;
+                }
+            }
+        } catch (error) {
+            console.error("Sales report RAG pipeline failed to execute", getErrorMessage(error));
+        }
+
+        groundingContext = buildSalesReportGroundingContext({
+            agentMemories: memoryMatches.map((memory) => memory.content),
+            companyMemories: companyMemories.relevant,
+            knowledgeChunks,
+        });
+    } catch (error) {
+        console.error("Sales report grounding failed to assemble", getErrorMessage(error));
+    }
 
     // 5. Define the Response Schema mapped exactly to our salesReports Convex Schema
     // Plain JSON Schema rather than Vertex's `Schema` type: identical shape and
@@ -193,9 +273,11 @@ Total length: 600-900 words. Never pad.
     ----------------------
     RAW CSV PIPELINE DATA:
     ${rawCsvContext}
-    
-    Task: Read the raw CSV data above and act according to the system instructions and the SONAE PIPELINE INTELLIGENCE BRIEF. 
+    ${groundingContext}
+    ${args.focus?.trim() ? `\n    THIS RUN'S FOCUS: ${args.focus.trim()}\n` : ""}
+    Task: Read the raw CSV data above and act according to the system instructions and the SONAE PIPELINE INTELLIGENCE BRIEF.
     Calculate all values precisely. Output the exact JSON structure defined via the schema.
+    Where the reference material above — the agent's memories and the company's knowledge — is relevant, use it to sharpen observations and recommendations. Every number must still come from the CSV.
     
     CRITICAL INSTRUCTION:
     Your output must EXACTLY map to the 8 sections of the Intelligence Brief via the highly structured JSON object.
@@ -281,6 +363,13 @@ Total length: 600-900 words. Never pad.
            patterns: reportData.patterns,
            priorities: reportData.priorities,
         });
+
+        // The caller — usually the agent's tool handler — gets enough to
+        // report the outcome without re-reading the saved document.
+        return {
+            saved: true as const,
+            headline: typeof reportData.headline === "string" ? reportData.headline : "",
+        };
     } catch (error) {
         // Log the exact error
         await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
