@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useMutation, useQuery } from "convex/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,17 +76,38 @@ vi.mock("next-intl", () => ({
 }));
 
 describe("AgentDashboardLayout navigation", () => {
+  let manualRunMock: ReturnType<typeof vi.fn>;
+  let cancelRunMock: ReturnType<typeof vi.fn>;
+  let activeRunMock: unknown;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    manualRunMock = vi.fn().mockResolvedValue("execution_1");
+    cancelRunMock = vi.fn().mockResolvedValue(true);
+    activeRunMock = null;
+    let mutationCallIndex = 0;
     vi.mocked(usePathname).mockReturnValue("/admin/agents/agent_1/knowledge");
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
-    (useQuery as unknown as QueryMock).mockImplementation(() => ({
-      _id: "agent_1",
-      name: "Support Triage Agent",
-      description: "Routes support requests.",
-      avatar: "",
-    }));
-    vi.mocked(useMutation).mockReturnValue(vi.fn() as never);
+    (useQuery as unknown as QueryMock).mockImplementation((_query, args) => {
+      if (args && "paginationOpts" in args) {
+        return args.status === "RUNNING" && activeRunMock
+          ? { page: [activeRunMock], isDone: true, continueCursor: "" }
+          : { page: [], isDone: true, continueCursor: "" };
+      }
+      return {
+        _id: "agent_1",
+        name: "Support Triage Agent",
+        description: "Routes support requests.",
+        avatar: "",
+      };
+    });
+    vi.mocked(useMutation).mockImplementation(() => {
+      mutationCallIndex += 1;
+      if (mutationCallIndex % 2 === 1) {
+        return manualRunMock as never;
+      }
+      return cancelRunMock as never;
+    });
   });
 
   it("groups dense agent sections into secondary dropdown tabs", () => {
@@ -141,6 +162,47 @@ describe("AgentDashboardLayout navigation", () => {
     // Interfaces is one screen now, so it is a plain link rather than a group.
     expect(screen.getByRole("link", { name: "Interfaces" })).toHaveAttribute("href", "/admin/agents/agent_1/interfaces");
     expect(screen.queryByRole("button", { name: "Interfaces" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the header action as Run Agent when no job is active", () => {
+    render(
+      <AgentDashboardLayout>
+        <section>Agent body</section>
+      </AgentDashboardLayout>
+    );
+
+    expect(screen.getByRole("button", { name: "Run Agent" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stop Agent" })).not.toBeInTheDocument();
+  });
+
+  it("turns the header Run Agent action into Stop Agent for an active job", async () => {
+    activeRunMock = {
+      _id: "run_1",
+      objective: "Collect listings",
+      status: "RUNNING",
+      startedAt: Date.now(),
+    };
+
+    render(
+      <AgentDashboardLayout>
+        <section>Agent body</section>
+      </AgentDashboardLayout>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Stop Agent" }));
+
+    expect(screen.getByText("This will cancel the running job and any pending approvals or tool calls. It cannot be undone."))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Stop Agent" }).at(-1)!);
+
+    await waitFor(() => {
+      expect(cancelRunMock).toHaveBeenCalledWith({
+        runId: "run_1",
+        reason: "Cancelled from the agent header",
+      });
+    });
+    expect(manualRunMock).not.toHaveBeenCalled();
   });
 
   /**

@@ -125,6 +125,7 @@ import type * as platformAlertService from "../platformAlertService.js";
 import type * as platformOverview from "../platformOverview.js";
 import type * as promptCacheService from "../promptCacheService.js";
 import type * as properties from "../properties.js";
+import type * as propertyAgents from "../propertyAgents.js";
 import type * as providerHttpService from "../providerHttpService.js";
 import type * as publicApi from "../publicApi.js";
 import type * as purgeScheduleService from "../purgeScheduleService.js";
@@ -296,6 +297,7 @@ declare const fullApi: ApiFromModules<{
   platformOverview: typeof platformOverview;
   promptCacheService: typeof promptCacheService;
   properties: typeof properties;
+  propertyAgents: typeof propertyAgents;
   providerHttpService: typeof providerHttpService;
   publicApi: typeof publicApi;
   purgeScheduleService: typeof purgeScheduleService;

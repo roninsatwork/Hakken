@@ -8,7 +8,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, BrainCircuit, Timer, ClipboardCheck, Activity } from "lucide-react";
+import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Cpu, LayoutDashboard, FileText, Play, Loader2, Brain, BrainCircuit, Timer, ClipboardCheck, Activity, Ban } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -22,13 +22,31 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const router = useRouter();
   const agentId = params.id as Id<"agents">;
   const agent = useQuery(api.agents.get, { id: agentId });
+  const runningRuns = useQuery(api.agentRuns.getForAgent, {
+    agentId,
+    status: "RUNNING",
+    paginationOpts: { numItems: 1, cursor: null },
+  });
+  const pendingApprovalRuns = useQuery(api.agentRuns.getForAgent, {
+    agentId,
+    status: "PENDING_APPROVAL",
+    paginationOpts: { numItems: 1, cursor: null },
+  });
+  const queuedRuns = useQuery(api.agentRuns.getForAgent, {
+    agentId,
+    status: "QUEUED",
+    paginationOpts: { numItems: 1, cursor: null },
+  });
 
   const { showToast } = useToast();
   const runManualSchedule = useMutation(api.scheduler.manualRunSchedule);
+  const cancelRun = useMutation(api.agentRuns.cancelRun);
   const [isManualRunning, setIsManualRunning] = useState(false);
+  const [isStoppingAgent, setIsStoppingAgent] = useState(false);
   // Opened only when the agent has no standing job of its own, which is the
   // case its Instructions screen tells you means "somebody has to say".
   const [askDraft, setAskDraft] = useState<string | null>(null);
+  const [stopRunId, setStopRunId] = useState<Id<"agentRuns"> | null>(null);
   const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
 
   const handleManualRun = async (objective?: string) => {
@@ -48,6 +66,23 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       });
     } finally {
       setIsManualRunning(false);
+    }
+  };
+
+  const handleConfirmStop = async () => {
+    if (!stopRunId) return;
+    setIsStoppingAgent(true);
+    try {
+      await cancelRun({ runId: stopRunId, reason: "Cancelled from the agent header" });
+      setStopRunId(null);
+      showToast("Agent stopped. It will show as cancelled in Activity.", "success");
+    } catch (e: unknown) {
+      setModalState({
+        title: "It could not stop",
+        message: getErrorMessage(e, "Something stopped this agent from being cancelled.")
+      });
+    } finally {
+      setIsStoppingAgent(false);
     }
   };
 
@@ -103,6 +138,10 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     },
     { label: t('tabs.settings'), href: `/admin/agents/${agentId}/settings`, icon: Settings },
   ];
+  const activeRun = runningRuns?.page[0] ?? pendingApprovalRuns?.page[0] ?? queuedRuns?.page[0] ?? null;
+  const isRunStateLoading = runningRuns === undefined || pendingApprovalRuns === undefined || queuedRuns === undefined;
+  const hasActiveRun = activeRun !== undefined && activeRun !== null;
+  const isPrimaryActionBusy = isManualRunning || isStoppingAgent || isRunStateLoading;
 
   return (
     <AdminDetailLayout
@@ -132,12 +171,30 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       actions={
         <>
             <button
-              onClick={() => (agent.standingObjective?.trim() ? handleManualRun() : setAskDraft(""))}
-              disabled={isManualRunning}
-              className="px-5 py-2 rounded-[10px] bg-brand text-white font-medium hover:opacity-90 transition-all text-[13px] flex items-center gap-2 shadow-sm disabled:opacity-50"
+              onClick={() => {
+                if (hasActiveRun) {
+                  setStopRunId(activeRun._id);
+                  return;
+                }
+                if (agent.standingObjective?.trim()) {
+                  void handleManualRun();
+                  return;
+                }
+                setAskDraft("");
+              }}
+              disabled={isPrimaryActionBusy}
+              className={`px-5 py-2 rounded-[10px] text-white font-medium hover:opacity-90 transition-all text-[13px] flex items-center gap-2 shadow-sm disabled:opacity-50 ${
+                hasActiveRun ? "bg-rose-600" : "bg-brand"
+              }`}
             >
-              {isManualRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-              Run Agent
+              {isPrimaryActionBusy ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : hasActiveRun ? (
+                <Ban className="w-3.5 h-3.5" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current" />
+              )}
+              {hasActiveRun ? "Stop Agent" : "Run Agent"}
             </button>
             <Link
               href="/admin/agents"
@@ -183,6 +240,36 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
             >
               {isManualRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
               Run it
+            </button>
+          </div>
+        </div>
+      </SonaeModal>
+
+      <SonaeModal
+        isOpen={stopRunId !== null}
+        onClose={() => (isStoppingAgent ? undefined : setStopRunId(null))}
+        title="Stop this agent?"
+        size="sm"
+      >
+        <div className="pt-2 pb-4 px-1 flex flex-col gap-4">
+          <p className="text-[13px] text-secondary">
+            This will cancel the running job and any pending approvals or tool calls. It cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setStopRunId(null)}
+              disabled={isStoppingAgent}
+              className="px-4 py-2.5 rounded-[10px] border border-border-dim text-secondary font-medium text-[13px] hover:text-foreground transition-all disabled:opacity-50"
+            >
+              Keep running
+            </button>
+            <button
+              onClick={() => void handleConfirmStop()}
+              disabled={isStoppingAgent}
+              className="px-5 py-2.5 rounded-[10px] bg-rose-600 text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isStoppingAgent ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+              Stop Agent
             </button>
           </div>
         </div>

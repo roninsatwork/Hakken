@@ -112,6 +112,32 @@ describe("AgentJobDetailPage", () => {
     expect(screen.getAllByText("Failed").length).toBeGreaterThan(0);
   });
 
+  it("summarises generated Rightmove collection objectives without exposing tool instructions as the title", () => {
+    detailFixture = detail({
+      run: {
+        ...detail().run,
+        objective: [
+          "Collect property listings from this Rightmove search and file them for the team.",
+          "Rightmove search URL: https://www.rightmove.co.uk/property-for-sale/find.html?locationIdentifier=REGION%5E873",
+          "Gather up to 100 properties.",
+          "Use 100 as the maxProperties value for this request, even if an example in your instructions shows a different number.",
+          "Start the collection, report that it has started, and stop. Do not wait for every listing or guess final counts.",
+        ].join("\n"),
+        status: "SUCCESS",
+        error: undefined,
+        finalOutput: "The property collection job has successfully started.",
+      },
+    });
+    renderPage();
+
+    expect(screen.getByRole("heading", { name: "Gather Rightmove properties" })).toBeInTheDocument();
+    expect(screen.getByText("Rightmove search · up to 100 properties")).toBeInTheDocument();
+    expect(
+      screen.getByText("https://www.rightmove.co.uk/property-for-sale/find.html?locationIdentifier=REGION%5E873")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Use 100 as the maxProperties value/)).not.toBeInTheDocument();
+  });
+
   it("names each step in ordinary words rather than the runtime's own", () => {
     renderPage();
 

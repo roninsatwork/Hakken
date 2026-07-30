@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import {
   describeInteractionType,
-  describeRunStatus,
   describeTrigger,
   formatDuration,
   formatMoney,
@@ -36,6 +35,28 @@ const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
   waiting: "bg-amber-500/70",
   failed: "bg-rose-500",
 };
+
+function getRunDisplay(objective: string) {
+  const rightmoveUrl = objective.match(/^Rightmove search URL:\s*(.+)$/m)?.[1]?.trim();
+  const propertyLimit = objective.match(/^Gather up to\s+(\d+)\s+properties\./m)?.[1];
+  const isRightmoveCollection =
+    objective.startsWith("Collect property listings from this Rightmove search and file them for the team.")
+    && rightmoveUrl;
+
+  if (!isRightmoveCollection) {
+    return {
+      title: objective,
+      detail: null,
+      url: null,
+    };
+  }
+
+  return {
+    title: "Gather Rightmove properties",
+    detail: propertyLimit ? `Rightmove search · up to ${propertyLimit} properties` : "Rightmove search",
+    url: rightmoveUrl,
+  };
+}
 
 function useRunDetail(runId: Id<"agentRuns">) {
   return useQuery(api.agentRuns.getRunDetail, { runId });
@@ -139,6 +160,7 @@ export default function AgentJobDetailPage() {
   }
 
   const { run } = detail;
+  const runDisplay = getRunDisplay(run.objective);
   const durationMs = run.completedAt ? run.completedAt - run.startedAt : undefined;
   // Matches the runtime's own rule: only a job that stopped short can be
   // started again. Offering it on a job that finished would be a button that
@@ -157,7 +179,13 @@ export default function AgentJobDetailPage() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to the overview
           </button>
-          <h2 className="text-[19px] font-semibold text-foreground tracking-tight">{run.objective}</h2>
+          <h2 className="text-[19px] font-semibold text-foreground tracking-tight">{runDisplay.title}</h2>
+          {runDisplay.detail && (
+            <p className="text-[13px] text-secondary mt-1.5">{runDisplay.detail}</p>
+          )}
+          {runDisplay.url && (
+            <p className="text-[12px] text-muted mt-1 break-all">{runDisplay.url}</p>
+          )}
           {/* One sentence rather than a status pill and a row of fragments. The
               design reads "Ran Tuesday at 09:14 · took 31.4 seconds · cost
               £0.021 · failed at the last step." — the outcome is part of the

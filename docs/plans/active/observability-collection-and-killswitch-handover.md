@@ -11,16 +11,16 @@ are about to change against the live code, because line numbers drift.
 
 - **Branch `dev`, pushed.** `HEAD` is `f3e928d9d`. Working tree clean.
 - Two fixes landed this session and are already on `dev`:
-  - `703ff9d49` — the thought-signature fix. Every tool call on every Gemini
-    agent used to die one turn after it ran; it now survives. This is what
+  - `703ff9d49` — the thought-signature fix. Tool calls from the affected
+    provider used to die one turn after they ran; they now survive. This is what
     unblocked the Rightmove agent. Done and verified end to end.
   - `f3e928d9d` — the job waterfall now labels a tool step with the tool's name
     ("Used Apify") instead of raw JSON arguments or a truncated
     `apify_actor_run`. Done and verified in the browser.
 - The plan those grew out of is
-  [agents-run-properly-plan.md](agents-run-properly-plan.md). Read its
-  "Fixed: Gemini 3 rejected the second turn" section for the fix that just
-  landed; the rest of that plan is already done.
+  [agents-run-properly-plan.md](agents-run-properly-plan.md). Read the section
+  about the second-turn rejection fix that just landed; the rest of that plan is
+  already done.
 
 ### Before you touch anything on the new machine
 
@@ -150,10 +150,14 @@ what exists so you build the one missing bit, not a duplicate.
 There is **no Stop button in the UI** — grep the run detail page, `cancelRun` is
 never called from it. So the kill switch is mostly a UI job:
 
-1. On the run detail screen, when the run status is `RUNNING` (or
-   `PENDING_APPROVAL`), show a **Stop** button that calls `cancelRun`. Confirm
-   before firing — it is irreversible. Reuse the screen's existing `perform(...)`
-   action wrapper so a failure surfaces instead of silently doing nothing.
+1. Reuse the existing **Run Agent** button slot as the kill switch. When the
+   current agent has an in-flight run (`RUNNING`, and any other genuinely
+   stoppable in-progress status), that button should become **Stop Agent** and
+   call `cancelRun`. When the run reaches a finished state (`SUCCESS`,
+   `FAILED`, `CANCELLED`, etc.), the same control should turn back into
+   **Run Agent**. Confirm before firing Stop Agent — it is irreversible. Reuse
+   the screen's existing `perform(...)` action wrapper so a failure surfaces
+   instead of silently doing nothing.
 2. Check what a cancelled run then looks like on the screen and on Activity —
    `cancelRun` writes the row but the loop closes the reply; make sure the
    screen reflects "stopped by you", not "failed".

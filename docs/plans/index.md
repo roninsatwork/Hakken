@@ -33,6 +33,12 @@ completed work.
   detail and waterfall, the rebuilt raw logs, and the `agentLogs` fields that
   link a log entry back to its run. Read it before touching
   `convex/agentLogs.ts` or either of the agent logs and runs screens.
+- [Rightmove Agent Execution Plan](./active/rightmove-agent-execution-plan.md) —
+  the plan to make the Rightmove Agent the single execution path for property
+  collection, whether started from admin or from the user-facing Properties
+  Search screen. Owns the shift from direct Apify starts to agent-owned runs and
+  the link between agent runs, Apify collections, Properties Logs, and Scraped
+  Data.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
   work left outside the platform hardening plan or deliberately stopped short of
   that plan.
@@ -49,8 +55,11 @@ company evals, agent evals, or the readiness gates that read eval evidence — u
 the AI Checks Plan. If work touches how an agent's activity is displayed — the
 Observability menu, the job detail, or raw logs — use the Agent Observability
 Plan, which defers approvals behaviour to the Agent Autonomy And Approvals Plan
-and eval content to the AI Checks Plan. If work touches the other named admin UX
-screens, use the Admin UI/UX Plan.
+and eval content to the AI Checks Plan. If work touches the Rightmove property
+collection flow, especially `/app/properties/search`, Apify collection linkage,
+or whether the user frontend starts an agent or a scraper directly, use the
+Rightmove Agent Execution Plan. If work touches the other named admin UX screens,
+use the Admin UI/UX Plan.
 
 ## Retired And Completed Plans
 

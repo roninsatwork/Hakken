@@ -5,13 +5,24 @@ import { Search, Loader2, Link2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useAction } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
 
+function isRightmoveSearchUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    const hostname = parsed.hostname.toLowerCase();
+    const isRightmoveHost = hostname === "rightmove.co.uk" || hostname.endsWith(".rightmove.co.uk");
+    return parsed.protocol === "https:" && isRightmoveHost && parsed.pathname.includes("/property-for-sale/");
+  } catch {
+    return false;
+  }
+}
+
 export default function PropertiesSearchPage() {
   const t = useTranslations();
-  const startScrape = useAction(api.apify.startRightmoveScrape);
+  const startRightmoveCollection = useMutation(api.propertyAgents.startRightmoveCollection);
   
   const [baseRightmoveUrl, setBaseRightmoveUrl] = useState("");
   const [maxProperties, setMaxProperties] = useState(100);
@@ -27,8 +38,7 @@ export default function PropertiesSearchPage() {
     
     const trimmedUrl = baseRightmoveUrl.trim();
     
-    // Basic validation
-    if (!trimmedUrl.includes("rightmove.co.uk")) {
+    if (!isRightmoveSearchUrl(trimmedUrl)) {
       setMessage(t('properties.search.urlError'));
       return;
     }
@@ -37,9 +47,9 @@ export default function PropertiesSearchPage() {
     setMessage("");
 
     try {
-      await startScrape({
-        listUrls: [trimmedUrl],
-        maxProperties: maxProperties,
+      await startRightmoveCollection({
+        rightmoveUrl: trimmedUrl,
+        maxProperties,
       });
 
       setMessage(t('properties.search.searchSuccess'));
