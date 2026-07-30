@@ -49,14 +49,14 @@ vi.mock("next-intl", () => ({
       "tabs.runs": "Runs",
       "tabs.evals": "Evals",
       "tabs.context": "Context",
-      "tabs.governance": "Governance",
+      "tabs.governance": "Instructions",
       "tabs.interfaces": "Interfaces",
       "tabs.settings": "Settings",
       "tabs.skills": "Skills",
       "tabs.knowledge": "Knowledge",
       "tabs.memory": "Memory",
       "tabs.prompt": "Prompt",
-      "tabs.rules": "AI Rules",
+      "tabs.rules": "Rules",
       "tabs.integrations": "Integrations",
       "tabs.schemas": "I/O Schemas",
       "tabs.logs": "Logs",
@@ -131,7 +131,7 @@ describe("AgentDashboardLayout navigation", () => {
     expect(screen.queryByRole("link", { name: "Knowledge" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Memory" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Prompt" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "AI Rules" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Rules" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Integrations" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "I/O Schemas" })).not.toBeInTheDocument();
 
@@ -152,11 +152,11 @@ describe("AgentDashboardLayout navigation", () => {
     expect(within(menu).getByRole("menuitem", { name: /Knowledge/ })).toHaveClass("bg-brand");
     expect(within(menu).getByLabelText("Knowledge selected")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Governance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Instructions" }));
 
     menu = screen.getByRole("menu");
     expect(within(menu).getByRole("menuitem", { name: "Prompt" })).toHaveAttribute("href", "/admin/agents/agent_1/system-prompt");
-    expect(within(menu).getByRole("menuitem", { name: "AI Rules" })).toHaveAttribute("href", "/admin/agents/agent_1/rules");
+    expect(within(menu).getByRole("menuitem", { name: "Rules" })).toHaveAttribute("href", "/admin/agents/agent_1/rules");
     expect(within(menu).queryByRole("menuitem", { name: "Knowledge" })).not.toBeInTheDocument();
 
     // Interfaces is one screen now, so it is a plain link rather than a group.
