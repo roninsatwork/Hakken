@@ -213,6 +213,31 @@ export async function generateVertexContentWithRetry(
 }
 
 /**
+ * A function call as the model asked for it, signature included.
+ *
+ * Gemini 3 attaches an opaque `thoughtSignature` to each `functionCall` part and
+ * rejects the next turn if it does not come back. The SDK's `functionCalls`
+ * accessor returns `FunctionCall` objects, and `thoughtSignature` is not on
+ * `FunctionCall` — it sits beside it on the enclosing `Part`. So reading through
+ * the accessor silently drops it, and the run fails one turn later with
+ * "Function call is missing a thought_signature in functionCall parts".
+ *
+ * Carrying it on the call itself keeps one list rather than a list of calls and
+ * a parallel list of signatures to be matched up by position.
+ */
+export type VertexFunctionCall = {
+  name?: string;
+  args?: Record<string, unknown>;
+  thoughtSignature?: string;
+};
+
+export type VertexStreamResponse = {
+  text: string;
+  functionCalls?: VertexFunctionCall[];
+  usageMetadata?: GenerateContentResponse["usageMetadata"];
+};
+
+/**
  * Streaming counterpart to `generateVertexContentWithRetry`.
  *
  * Calls `onText` for each text fragment as it arrives, then returns a response
@@ -232,7 +257,7 @@ export async function streamVertexContentWithRetry(
     retryPolicy?: Partial<ProviderRetryPolicy>;
     onText?: (fragment: string) => Promise<void> | void;
   } = {}
-): Promise<GenerateContentResponse> {
+): Promise<VertexStreamResponse> {
   const operation = args.operation ?? "generateContentStream";
   let delivered = false;
 
@@ -248,13 +273,25 @@ export async function streamVertexContentWithRetry(
     const stream = await ai.models.generateContentStream(params);
 
     let text = "";
-    const functionCalls: NonNullable<GenerateContentResponse["functionCalls"]> = [];
+    const functionCalls: VertexFunctionCall[] = [];
     let usageMetadata: GenerateContentResponse["usageMetadata"];
 
     for await (const chunk of stream) {
       // Usage is reported cumulatively, so the last chunk carrying it wins.
       if (chunk.usageMetadata) usageMetadata = chunk.usageMetadata;
-      if (chunk.functionCalls?.length) functionCalls.push(...chunk.functionCalls);
+
+      // Read the raw parts rather than `chunk.functionCalls`. The accessor is
+      // the convenient one and was what this used, but it hands back only the
+      // call — the thought signature lives beside it on the part and has to
+      // come back on the next turn or the model rejects it.
+      for (const part of chunk.candidates?.[0]?.content?.parts ?? []) {
+        if (!part.functionCall) continue;
+        functionCalls.push({
+          name: part.functionCall.name,
+          args: part.functionCall.args as Record<string, unknown> | undefined,
+          thoughtSignature: part.thoughtSignature,
+        });
+      }
 
       const fragment = chunk.text ?? "";
       if (!fragment) continue;
@@ -268,7 +305,7 @@ export async function streamVertexContentWithRetry(
       text,
       functionCalls: functionCalls.length > 0 ? functionCalls : undefined,
       usageMetadata,
-    } as GenerateContentResponse;
+    };
   });
 }
 

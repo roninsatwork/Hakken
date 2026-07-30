@@ -85,6 +85,14 @@ export type AgentReasoningEffort = "LOW" | "MEDIUM" | "HIGH";
 export type AgentTurnToolCall = {
   name: string;
   args: Record<string, unknown>;
+  /**
+   * An opaque token some models attach to a call and require back verbatim when
+   * the conversation continues. A model that issues one rejects the turn that
+   * answers the call without it. Optional: only one provider issues them today,
+   * and naming it here is exactly the provider-specific knowledge this layer
+   * exists to keep out.
+   */
+  thoughtSignature?: string;
 };
 
 export type AgentTurnResponse = {

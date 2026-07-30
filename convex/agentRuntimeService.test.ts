@@ -156,6 +156,49 @@ describe("agentRuntimeService", () => {
       expect(buildToolInteractionTurns([])).toEqual([]);
     });
 
+    test("puts each call's thought signature back on its part", () => {
+      // The model requires the signature it issued to come back with the call.
+      // This turn is rebuilt rather than replayed, so dropping it here failed
+      // the next turn with "missing a thought_signature in functionCall parts".
+      const turns = buildToolInteractionTurns([
+        {
+          name: "apify_actor_run",
+          args: { actorId: "rightmove" },
+          responsePayload: { status: "success" },
+          thoughtSignature: "signature-one",
+        },
+        {
+          name: "knowledge.search",
+          args: { query: "louth" },
+          responsePayload: { status: "success" },
+          thoughtSignature: "signature-two",
+        },
+      ]);
+
+      expect(turns[0].parts).toEqual([
+        {
+          functionCall: { name: "apify_actor_run", args: { actorId: "rightmove" } },
+          thoughtSignature: "signature-one",
+        },
+        {
+          functionCall: { name: "knowledge.search", args: { query: "louth" } },
+          thoughtSignature: "signature-two",
+        },
+      ]);
+    });
+
+    test("omits the signature entirely for providers that issue none", () => {
+      // An explicit `thoughtSignature: undefined` is not the same as an absent
+      // key once the turn is serialised into a checkpoint and sent back.
+      const turns = buildToolInteractionTurns([
+        { name: "knowledge.search", args: {}, responsePayload: { status: "success" } },
+      ]);
+
+      expect(turns[0].parts).toEqual([
+        { functionCall: { name: "knowledge.search", args: {} } },
+      ]);
+    });
+
     test("keeps the call and response counts equal for any batch size", () => {
       const calls = Array.from({ length: 5 }, (_, index) => ({
         name: `tool.${index}`,

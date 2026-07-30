@@ -136,11 +136,23 @@ function textResponse(text: string) {
   };
 }
 
-/** A model turn requesting one or more tool calls. */
-function toolCallResponse(calls: Array<{ name: string; args?: Record<string, unknown> }>) {
+/**
+ * A model turn requesting one or more tool calls.
+ *
+ * The live model issues a `thoughtSignature` with every call and rejects the
+ * next turn unless it comes back, so the fixture carries one by default rather
+ * than modelling a response no live model returns.
+ */
+function toolCallResponse(
+  calls: Array<{ name: string; args?: Record<string, unknown>; thoughtSignature?: string }>
+) {
   return {
     text: "",
-    functionCalls: calls.map((call) => ({ name: call.name, args: call.args ?? {} })),
+    functionCalls: calls.map((call, index) => ({
+      name: call.name,
+      args: call.args ?? {},
+      thoughtSignature: call.thoughtSignature ?? `signature-${call.name}-${index}`,
+    })),
     usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 },
   };
 }
@@ -1339,6 +1351,45 @@ describe("human-in-the-loop approval", () => {
     // The real answer, not "Approved tool call completed".
     expect(messages.at(-1)?.content).toBe("Refunds take 14 days.");
     expect(await checkpoints(t)).toHaveLength(0);
+  });
+
+  /**
+   * The fault that stopped every tool call on the current model, and stopped
+   * approved ones twice over.
+   *
+   * The model issues a thought signature with each call and rejects the turn
+   * that answers it if the signature does not come back. A run that parks for
+   * approval resumes in a later action and rebuilds the model turn from the
+   * stored row, so keeping the signature in memory would have fixed the
+   * unapproved calls and left approved ones failing exactly as before — the
+   * worst outcome, because it looks fixed.
+   */
+  test("an approved call carries its thought signature back to the model", async () => {
+    const t = makeTest();
+    const { approval } = await runUntilApprovalRequested(t);
+
+    // Stored on the row while a person decides, because nothing in memory
+    // survives the wait.
+    const { toolCalls: parked } = await runSteps(t);
+    expect(parked[0].thoughtSignature).toBe("signature-knowledge_search-0");
+
+    const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
+    await reviewer.mutation(api.agentRuns.decideApproval, {
+      approvalId: approval!._id,
+      decision: "APPROVED",
+    });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const transcript = generateMock.mock.calls[1]?.[1] as {
+      contents: Array<{ role?: string; parts?: Array<Record<string, unknown>> }>;
+    };
+    const modelTurn = transcript.contents.findLast((turn) => turn.role === "model");
+    expect(modelTurn?.parts).toEqual([
+      {
+        functionCall: { name: "knowledge_search", args: { query: "refunds" } },
+        thoughtSignature: "signature-knowledge_search-0",
+      },
+    ]);
   });
 
   /**

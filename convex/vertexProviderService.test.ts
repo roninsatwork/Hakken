@@ -6,7 +6,19 @@ import {
   DEFAULT_VERTEX_PROJECT,
   embedVertexContentWithRetry,
   generateVertexContentWithRetry,
+  streamVertexContentWithRetry,
 } from "./vertexProviderService";
+
+/** A streaming client yielding the given chunks, shaped as the SDK yields them. */
+function streamingClient(chunks: unknown[]) {
+  return {
+    models: {
+      generateContentStream: vi.fn(async () => (async function* () {
+        for (const chunk of chunks) yield chunk;
+      })()),
+    },
+  } as unknown as GoogleGenAI;
+}
 
 describe("vertex provider service", () => {
   test("builds Vertex client config from environment values", () => {
@@ -102,5 +114,71 @@ describe("vertex provider service", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  /**
+   * The regression this suite exists to hold: the stream used to read the SDK's
+   * `functionCalls` accessor, which returns the call without the thought
+   * signature sitting beside it on the part. Gemini 3 requires that signature
+   * back on the next turn, so every tool call died one turn after it ran.
+   */
+  test("keeps the thought signature attached to each streamed function call", async () => {
+    const ai = streamingClient([
+      {
+        candidates: [{
+          content: {
+            parts: [{
+              functionCall: { name: "apify_actor_run", args: { actorId: "rightmove" } },
+              thoughtSignature: "signature-one",
+            }],
+          },
+        }],
+      },
+      {
+        candidates: [{
+          content: {
+            parts: [{
+              functionCall: { name: "firecrawl_scrape", args: { url: "https://example.com" } },
+              thoughtSignature: "signature-two",
+            }],
+          },
+        }],
+        usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 },
+      },
+    ]);
+
+    const response = await streamVertexContentWithRetry(ai, {
+      model: "model-test",
+      contents: "Collect the listings",
+    });
+
+    expect(response.functionCalls).toEqual([
+      {
+        name: "apify_actor_run",
+        args: { actorId: "rightmove" },
+        thoughtSignature: "signature-one",
+      },
+      {
+        name: "firecrawl_scrape",
+        args: { url: "https://example.com" },
+        thoughtSignature: "signature-two",
+      },
+    ]);
+  });
+
+  test("reports no function calls when a model turn only speaks", async () => {
+    const ai = streamingClient([
+      { candidates: [{ content: { parts: [{ text: "Here you go." }] } }], text: "Here you go." },
+    ]);
+
+    const fragments: string[] = [];
+    const response = await streamVertexContentWithRetry(ai, {
+      model: "model-test",
+      contents: "Say hello",
+    }, { onText: (fragment) => { fragments.push(fragment); } });
+
+    expect(response.functionCalls).toBeUndefined();
+    expect(response.text).toBe("Here you go.");
+    expect(fragments).toEqual(["Here you go."]);
   });
 });

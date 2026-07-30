@@ -194,7 +194,7 @@ nobody is there to paste anything.
 
 ---
 
-## Blocked: Gemini 3 rejects the second turn of any tool call
+## Fixed: Gemini 3 rejected the second turn of any tool call
 
 **Found 2026-07-29, by running it.** With the engine, the tools and the Apify
 credentials all in place, the Rightmove Agent asked to use Apify, was approved,
@@ -229,6 +229,25 @@ That makes it: a schema field, the writer that records a tool call, the provider
 read, the in-memory path, and the resume path. Verify with a real approved tool
 call reaching its second turn — a unit test on `buildToolInteractionTurns` alone
 would pass while the thing a user does still fails.
+
+**Done 2026-07-29.** All five, as scoped above. The provider now reads the raw
+`parts` rather than the `functionCalls` accessor, so the signature is captured;
+it is carried on `AgentTurnToolCall` and `ExecutedAgentToolCall`, stored on the
+`agentToolCalls` row, and put back on the part by `buildToolInteractionTurns` on
+both the in-memory and the resume path.
+
+Both halves were checked by removing them again rather than by reading the code:
+dropping the raw-parts read fails the provider test, and dropping the stored
+field fails the approved-call test while every other test stays green — which is
+precisely the half-fix this section warned about.
+
+The fixture in `agentRuntime.test.ts` now issues a signature with every tool call
+by default. A fixture that returned a response no live model returns is the
+reason a suite this size never caught it.
+
+Still to do: the live gate. A real Rightmove run, from the button, reaching its
+second turn. Everything below the model call is proven; nothing has yet paid
+Apify to prove the whole path end to end.
 
 ## Also outstanding: an approved tool call records no outcome in the raw log
 

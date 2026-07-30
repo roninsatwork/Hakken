@@ -140,6 +140,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
       const toolCalls = (response.functionCalls ?? []).map((call) => ({
         name: call.name ?? "",
         args: (call.args ?? {}) as Record<string, unknown>,
+        thoughtSignature: call.thoughtSignature,
       }));
 
       return {

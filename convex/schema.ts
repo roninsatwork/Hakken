@@ -770,6 +770,11 @@ export default defineSchema({
     // reassembled to answer it properly — and nothing on the row identified the
     // turn it belonged to.
     turnIndex: v.optional(v.number()),
+    // The opaque signature the model attached to this call and requires back
+    // when the conversation continues. Stored rather than held in memory because
+    // a call that parks for approval resumes in a later action and rebuilds the
+    // model turn from this row — nothing in memory survives the wait.
+    thoughtSignature: v.optional(v.string()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     error: v.optional(v.string()),

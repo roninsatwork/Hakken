@@ -86,7 +86,7 @@ type RuntimeToolMetadata = {
 type BatchSettlement = {
     settled: boolean;
     stepIndex: number;
-    batchCalls: Array<{ name: string; argumentsJson: string; resultJson?: string }>;
+    batchCalls: Array<{ name: string; argumentsJson: string; resultJson?: string; thoughtSignature?: string }>;
 };
 
 /**
@@ -134,6 +134,7 @@ async function settleBatchAndContinue(ctx: ActionCtx, args: {
                 name: call.name,
                 args: parseToolArguments(call.argumentsJson),
                 responsePayload: parseToolResult(call.resultJson),
+                thoughtSignature: call.thoughtSignature,
             })));
             transcript.push(...batchTurns as Content[]);
 
@@ -1549,6 +1550,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         companyId: companyId,
                         userId: owner.userId,
                         turnIndex: loopIndex,
+                        thoughtSignature: funcCall.thoughtSignature,
                     });
 
                     stepIndex += 1;
@@ -1703,6 +1705,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     companyId: companyId,
                     userId: owner.userId,
                     turnIndex: loopIndex,
+                    thoughtSignature: funcCall.thoughtSignature,
                     error: toolError,
                 });
 
@@ -1745,6 +1748,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     name: toolCall.name,
                     args: toolCall.args,
                     responsePayload: toolResponsePayload,
+                    thoughtSignature: funcCall.thoughtSignature,
                 });
             }
 

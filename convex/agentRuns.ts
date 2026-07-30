@@ -2037,6 +2037,8 @@ export const insertToolCallInternal = internalMutation({
     userId: v.optional(v.id("users")),
     /** The model turn that requested this call, so the batch can be reassembled. */
     turnIndex: v.optional(v.number()),
+    /** Returned to the model with the call when the run resumes. */
+    thoughtSignature: v.optional(v.string()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -2196,6 +2198,7 @@ export const recordApprovedToolResultInternal = internalMutation({
         name: call.normalizedToolName,
         argumentsJson: call.argumentsJson,
         resultJson: call.resultJson,
+        thoughtSignature: call.thoughtSignature,
       })),
     };
   },
@@ -2418,6 +2421,7 @@ export const getSettlementAfterDecisionInternal = internalQuery({
         name: call.normalizedToolName,
         argumentsJson: call.argumentsJson,
         resultJson: call.resultJson,
+        thoughtSignature: call.thoughtSignature,
       })),
     };
   },

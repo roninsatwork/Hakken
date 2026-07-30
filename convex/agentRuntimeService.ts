@@ -305,6 +305,8 @@ export type ExecutedAgentToolCall = {
   name: string;
   args: Record<string, unknown>;
   responsePayload: unknown;
+  /** See `AgentTurnToolCall.thoughtSignature`. Absent for providers that issue none. */
+  thoughtSignature?: string;
 };
 
 /**
@@ -319,6 +321,11 @@ export type ExecutedAgentToolCall = {
  * response, so whenever a model requested parallel calls the remaining ones
  * were silently dropped and the transcript no longer matched what the model had
  * asked for — a wrong answer rather than an error.
+ *
+ * The model turn is rebuilt here rather than kept as the provider returned it,
+ * which is why a thought signature has to be carried on the call and put back on
+ * the part. A model that issued one requires it back and fails the whole run
+ * without it, and a rebuilt turn is precisely where it goes missing.
  */
 export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
   if (calls.length === 0) return [];
@@ -328,6 +335,7 @@ export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
       role: "model",
       parts: calls.map((call) => ({
         functionCall: { name: call.name, args: call.args },
+        ...(call.thoughtSignature ? { thoughtSignature: call.thoughtSignature } : {}),
       })),
     },
     {

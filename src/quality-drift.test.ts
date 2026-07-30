@@ -1039,9 +1039,13 @@ describe('Quality Drift Guardrails', () => {
       'convex/aiModels.test.ts',
       'convex/seedWorkflows.ts',
       'convex/vertexProviderService.ts',
+      // Same layer as the adapter above: this is where naming the provider is
+      // the point, because the behaviour under test is that provider's.
+      'convex/vertexProviderService.test.ts',
       'docs/plans/completed/code-quality-95-plan.md',
       'docs/developer/future-agent-maintenance-plan.md',
       'docs/index.md',
+      'docs/plans/active/agents-run-properly-plan.md',
       'docs/plans/completed/model-provider-agnostic-plan.md',
       'messages/en.json',
       'messages/it.json',
