@@ -151,10 +151,10 @@ be scoped by import alone.
 
 ### Screens
 
-`/app/sales-data/import` — upload, then map, then replace. Two steps
+`/app/<workspace>/import-data` — upload, then map, then replace. Two steps
 deliberately: reading a workbook is harmless, replacing the data is not.
 
-`/app/sales-data` — one screen, three secondary tabs, active tab in the URL.
+`/app/<workspace>/spreadsheet-import` — one screen, three secondary tabs, active tab in the URL.
 Only the visible tab's query runs. Pagination is cursor-based, one page in
 memory at a time; the accumulate-and-slice pattern used elsewhere in this
 codebase would hold all 4,500 rows in the browser by the last page.
@@ -168,7 +168,7 @@ codebase would hold all 4,500 rows in the browser by the last page.
 | Schema | `convex/schema.ts` — four tables, `companies.enabledModules` |
 | Parser | `convex/salesDataImportService.ts` |
 | Import pipeline | `convex/salesDataImportActions.ts`, `convex/salesData.ts` |
-| Screens | `src/app/(dashboard)/app/sales-data/` |
+| Screens | `src/app/(dashboard)/app/[workspace]/` |
 | Nav | `src/ui/components/layout/SidebarNavigation.tsx` (fenced) |
 | Template vertical | `template.manifest.json` — `salesData` |
 

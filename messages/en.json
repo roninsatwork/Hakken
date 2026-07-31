@@ -302,7 +302,7 @@
         "health": "Health",
         "salesData": "Sales Data",
         "salesDataImport": "Import Data",
-        "salesDataTables": "Data Tables"
+        "salesDataTables": "Spreadsheet Imports"
     },
     "properties": {
         "search": {
@@ -2467,7 +2467,7 @@
         "statusSuperseded": "Replaced",
         "statusRunning": "Running",
         "statusFailed": "Failed",
-        "tablesTitle": "Data Tables",
+        "tablesTitle": "Spreadsheet Imports",
         "tablesSubtitle": "From {fileName} — {rows} sales rows.",
         "tablesSubtitleEmpty": "No data imported yet.",
         "tab": {
@@ -2515,6 +2515,9 @@
             "customerType": "Customer type",
             "account": "Account",
             "group": "Group",
+            "productCategory": "Product category",
+            "productType": "Product type",
+            "frequency": "Sale frequency",
             "all": "All",
             "narrow": "Type to narrow...",
             "noMatches": "No matches",

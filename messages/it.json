@@ -302,7 +302,7 @@
         "health": "Salute",
         "salesData": "Dati di vendita",
         "salesDataImport": "Importa dati",
-        "salesDataTables": "Tabelle dati"
+        "salesDataTables": "Importazioni da fogli di calcolo"
     },
     "properties": {
         "search": {
@@ -2467,7 +2467,7 @@
         "statusSuperseded": "Sostituita",
         "statusRunning": "In corso",
         "statusFailed": "Fallita",
-        "tablesTitle": "Tabelle dati",
+        "tablesTitle": "Importazioni da fogli di calcolo",
         "tablesSubtitle": "Da {fileName} — {rows} righe di vendita.",
         "tablesSubtitleEmpty": "Nessun dato importato.",
         "tab": {
@@ -2515,6 +2515,9 @@
             "customerType": "Tipo di cliente",
             "account": "Cliente",
             "group": "Gruppo",
+            "productCategory": "Categoria prodotto",
+            "productType": "Tipo di prodotto",
+            "frequency": "Frequenza di vendita",
             "all": "Tutti",
             "narrow": "Digita per restringere...",
             "noMatches": "Nessun risultato",

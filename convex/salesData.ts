@@ -204,6 +204,17 @@ const salesFilterArgs = {
   groupName: v.optional(v.string()),
 };
 
+/** The categories and areas-of-interest worksheets both narrow by who buys. */
+const customerTypeFilterArgs = {
+  customerType: v.optional(v.string()),
+};
+
+const frequencyFilterArgs = {
+  productCategory: v.optional(v.string()),
+  productType: v.optional(v.string()),
+  frequency: v.optional(v.string()),
+};
+
 /**
  * How the search boxes match.
  *
@@ -447,36 +458,96 @@ export const listSalesFilterOptions = tenantQuery({
       )
       .collect();
 
-    const customerTypes = new Map<string, string>();
-    const accountNames = new Map<string, string>();
-    const groupNames = new Map<string, string>();
+    return {
+      customerTypes: distinctValues(rows, (row) => row.customerType),
+      accountNames: distinctValues(rows, (row) => row.accountName),
+      groupNames: distinctValues(rows, (row) => row.groupName),
+    };
+  },
+});
 
-    const remember = (into: Map<string, string>, value: string) => {
-      const trimmed = value.trim();
-      if (!trimmed) return;
-      const key = normalizeKey(trimmed);
-      if (!into.has(key)) into.set(key, trimmed);
+/**
+ * The distinct values of one column, ready for a dropdown.
+ *
+ * Deduplicated on the normalised key and shown with the first spelling seen,
+ * matching how `matchesFilter` compares: two spellings of one value are one
+ * entry, and picking it finds the rows under both.
+ */
+function distinctValues<T>(rows: T[], select: (row: T) => string): string[] {
+  const seen = new Map<string, string>();
+
+  for (const row of rows) {
+    const trimmed = select(row).trim();
+    if (!trimmed) continue;
+    const key = normalizeKey(trimmed);
+    if (!seen.has(key)) seen.set(key, trimmed);
+  }
+
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, "en-GB"));
+}
+
+/**
+ * The values behind the dropdowns on the other three worksheets.
+ *
+ * One query rather than three, taking the tab being looked at, because only the
+ * visible tab's options are ever needed and a query per table would scan tables
+ * nobody is looking at. The shape returned is the same either way, so the
+ * screen reads whichever lists apply to its tab.
+ */
+export const listTableFilterOptions = tenantQuery({
+  args: {
+    table: v.union(v.literal("categories"), v.literal("interest"), v.literal("frequency")),
+  },
+  handler: async (ctx, args) => {
+    const empty = {
+      customerTypes: [] as string[],
+      productCategories: [] as string[],
+      productTypes: [] as string[],
+      frequencies: [] as string[],
     };
 
-    for (const row of rows) {
-      remember(customerTypes, row.customerType);
-      remember(accountNames, row.accountName);
-      remember(groupNames, row.groupName);
+    const companyId = await requireSalesDataCompany(ctx);
+    const currentImport = await getCurrentImport(ctx, companyId);
+    if (!currentImport) return empty;
+
+    if (args.table === "categories") {
+      const rows = await ctx.db
+        .query("salesDataCategoryLinks")
+        .withIndex("by_company_import", (q) =>
+          q.eq("companyId", companyId).eq("importId", currentImport._id)
+        )
+        .collect();
+      return { ...empty, customerTypes: distinctValues(rows, (row) => row.customerType) };
     }
 
-    const sorted = (values: Map<string, string>) =>
-      [...values.values()].sort((a, b) => a.localeCompare(b, "en-GB"));
+    if (args.table === "interest") {
+      const rows = await ctx.db
+        .query("salesDataAreasOfInterest")
+        .withIndex("by_company_import", (q) =>
+          q.eq("companyId", companyId).eq("importId", currentImport._id)
+        )
+        .collect();
+      return { ...empty, customerTypes: distinctValues(rows, (row) => row.customerType) };
+    }
+
+    const rows = await ctx.db
+      .query("salesDataFrequencies")
+      .withIndex("by_company_import", (q) =>
+        q.eq("companyId", companyId).eq("importId", currentImport._id)
+      )
+      .collect();
 
     return {
-      customerTypes: sorted(customerTypes),
-      accountNames: sorted(accountNames),
-      groupNames: sorted(groupNames),
+      ...empty,
+      productCategories: distinctValues(rows, (row) => row.productCategory),
+      productTypes: distinctValues(rows, (row) => row.productType),
+      frequencies: distinctValues(rows, (row) => row.frequency),
     };
   },
 });
 
 export const listCategoryLinks = tenantQuery({
-  args: tableQueryArgs,
+  args: { ...tableQueryArgs, ...customerTypeFilterArgs },
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -493,8 +564,10 @@ export const listCategoryLinks = tenantQuery({
               .withIndex("by_company_import", (q) =>
                 q.eq("companyId", companyId).eq("importId", currentImport._id)
               ),
-          (row) => matchesSearch([row.customerType, row.category], terms),
-          terms.length > 0,
+          (row) =>
+            matchesFilter(args.customerType, row.customerType) &&
+            matchesSearch([row.customerType, row.category], terms),
+          terms.length > 0 || Boolean(args.customerType),
           opts
         ),
       args.paginationOpts
@@ -503,7 +576,7 @@ export const listCategoryLinks = tenantQuery({
 });
 
 export const listAreasOfInterest = tenantQuery({
-  args: tableQueryArgs,
+  args: { ...tableQueryArgs, ...customerTypeFilterArgs },
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -520,8 +593,10 @@ export const listAreasOfInterest = tenantQuery({
               .withIndex("by_company_import", (q) =>
                 q.eq("companyId", companyId).eq("importId", currentImport._id)
               ),
-          (row) => matchesSearch([row.customerType, row.productType], terms),
-          terms.length > 0,
+          (row) =>
+            matchesFilter(args.customerType, row.customerType) &&
+            matchesSearch([row.customerType, row.productType], terms),
+          terms.length > 0 || Boolean(args.customerType),
           opts
         ),
       args.paginationOpts
@@ -529,8 +604,19 @@ export const listAreasOfInterest = tenantQuery({
   },
 });
 
+/**
+ * The frequency table, narrowable by category, product type and how often the
+ * type sells. The three combine, so Bathroom *and* Sporadic narrows to rows
+ * matching both.
+ *
+ * `frequency` is compared on the normalised key like the others even though it
+ * has no stored key column, because `matchesFilter` normalises both sides as it
+ * compares. That keeps `Regular` and `regular ` one option rather than two, and
+ * needs no change to what the importer writes — so it works on imports that are
+ * already in the database.
+ */
 export const listFrequencies = tenantQuery({
-  args: tableQueryArgs,
+  args: { ...tableQueryArgs, ...frequencyFilterArgs },
   handler: async (ctx, args) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
@@ -548,8 +634,12 @@ export const listFrequencies = tenantQuery({
                 q.eq("companyId", companyId).eq("importId", currentImport._id)
               ),
           (row) =>
+            matchesFilter(args.productCategory, row.productCategory) &&
+            matchesFilter(args.productType, row.productType) &&
+            matchesFilter(args.frequency, row.frequency) &&
             matchesSearch([row.productCategory, row.productType, row.frequency], terms),
-          terms.length > 0,
+          terms.length > 0 ||
+            Boolean(args.productCategory || args.productType || args.frequency),
           opts
         ),
       args.paginationOpts

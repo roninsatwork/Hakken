@@ -75,7 +75,7 @@ completed work.
   for the optional per-workspace spreadsheet import and its three browsable
   tables, and for the `companies.enabledModules` flag that switches any optional
   section on for one workspace without naming a client in platform code. Owns
-  `convex/salesData.ts`, the workbook parser, and `/app/sales-data`. Read it
+  `convex/salesData.ts`, the workbook parser, and `/app/<workspace>/spreadsheet-import`. Read it
   before adding another client-specific section, or before touching the module
   registry in `convex/utils/companyModules.ts`.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —

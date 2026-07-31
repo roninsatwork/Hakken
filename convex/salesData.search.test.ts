@@ -494,4 +494,116 @@ describe("the other three tables", () => {
     });
     expect(everything.page).toHaveLength(2);
   });
+
+  test("categories narrow by customer type", async () => {
+    const client = await seedSmallTables();
+
+    const result = await client.query(api.salesData.listCategoryLinks, {
+      paginationOpts: page,
+      customerType: "CARE HOMES",
+    });
+
+    expect(result.page.map((row) => row.category)).toEqual(["CHEMICALS"]);
+  });
+
+  test("areas of interest narrow by customer type", async () => {
+    const client = await seedSmallTables();
+
+    const result = await client.query(api.salesData.listAreasOfInterest, {
+      paginationOpts: page,
+      customerType: "HOTELS",
+    });
+
+    expect(result.page.map((row) => row.productType)).toEqual(["TOWEL"]);
+  });
+
+  test("search applies on top of a customer type filter", async () => {
+    const client = await seedSmallTables();
+
+    // The filter alone leaves one row, and a search that row fails empties it —
+    // which is only true if both are applied rather than the later winning.
+    const result = await client.query(api.salesData.listCategoryLinks, {
+      paginationOpts: page,
+      customerType: "CARE HOMES",
+      search: "paper",
+    });
+
+    expect(result.page).toEqual([]);
+  });
+
+  test("the three frequency filters narrow each other", async () => {
+    const client = await seedSmallTables();
+
+    const byCategory = await client.query(api.salesData.listFrequencies, {
+      paginationOpts: page,
+      productCategory: "PAPER",
+    });
+    expect(byCategory.page.map((row) => row.productType)).toEqual(["TOWEL"]);
+
+    const byType = await client.query(api.salesData.listFrequencies, {
+      paginationOpts: page,
+      productType: "CLEANER",
+    });
+    expect(byType.page.map((row) => row.productCategory)).toEqual(["CHEMICALS"]);
+
+    const bySaleFrequency = await client.query(api.salesData.listFrequencies, {
+      paginationOpts: page,
+      frequency: "Sporadic",
+    });
+    expect(bySaleFrequency.page.map((row) => row.productType)).toEqual(["TOWEL"]);
+
+    const combined = await client.query(api.salesData.listFrequencies, {
+      paginationOpts: page,
+      productCategory: "CHEMICALS",
+      frequency: "Regular",
+    });
+    expect(combined.page.map((row) => row.productType)).toEqual(["CLEANER"]);
+
+    // Each value matches a row on its own; together they match none, so both
+    // are being applied.
+    const contradictory = await client.query(api.salesData.listFrequencies, {
+      paginationOpts: page,
+      productCategory: "CHEMICALS",
+      frequency: "Sporadic",
+    });
+    expect(contradictory.page).toEqual([]);
+  });
+
+  /**
+   * `frequency` is the one filtered column with no stored key beside it, so
+   * this is the proof that it is still compared normalised rather than raw.
+   */
+  test("the frequency filter ignores case, with no stored key to lean on", async () => {
+    const client = await seedSmallTables();
+
+    const result = await client.query(api.salesData.listFrequencies, {
+      paginationOpts: page,
+      frequency: "regular",
+    });
+
+    expect(result.page.map((row) => row.productType)).toEqual(["CLEANER"]);
+  });
+
+  test("each tab gets the options for its own columns and no others", async () => {
+    const client = await seedSmallTables();
+
+    const categories = await client.query(api.salesData.listTableFilterOptions, {
+      table: "categories",
+    });
+    expect(categories.customerTypes).toEqual(["CARE HOMES", "HOTELS"]);
+    expect(categories.productCategories).toEqual([]);
+
+    const interest = await client.query(api.salesData.listTableFilterOptions, {
+      table: "interest",
+    });
+    expect(interest.customerTypes).toEqual(["CARE HOMES", "HOTELS"]);
+
+    const frequency = await client.query(api.salesData.listTableFilterOptions, {
+      table: "frequency",
+    });
+    expect(frequency.productCategories).toEqual(["CHEMICALS", "PAPER"]);
+    expect(frequency.productTypes).toEqual(["CLEANER", "TOWEL"]);
+    expect(frequency.frequencies).toEqual(["Regular", "Sporadic"]);
+    expect(frequency.customerTypes).toEqual([]);
+  });
 });

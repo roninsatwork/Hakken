@@ -46,6 +46,7 @@ import {
 import { getWhiteLabelNavigationProfiles } from "@/convex/settingsService";
 // template:remove:start salesData
 import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
+import { isWorkspaceSectionPath, workspaceSlug } from "@/src/lib/workspaceSlug";
 // template:remove:end
 
 /**
@@ -266,18 +267,25 @@ function SalesDataNavItem({
   // would flash a link at workspaces that never get one.
   if (!workspace?.enabledModules.includes(SALES_DATA_MODULE_KEY)) return null;
 
+  // The section lives under the workspace's own name, so Comax reads
+  // /app/comax/... and the next client reads their own — from the company
+  // record, never written down here.
+  const base = `/app/${workspaceSlug(workspace.companyName ?? '')}`;
+  const importHref = `${base}/import-data`;
+  const tablesHref = `${base}/spreadsheet-import`;
+
   return (
     <NavItem
       icon={Table2}
       label={workspace.companyName ?? t('salesData')}
-      isActive={activeItem === 'Sales Data' || pathname.startsWith('/app/sales-data')}
+      isActive={activeItem === 'Sales Data' || pathname.startsWith(`${base}/`)}
       onClick={onSelect}
       hasChildren
       isOpen={isOpen}
       onToggle={onToggle}
     >
-      <SubNavItem label={t('salesDataImport')} href="/app/sales-data/import" isActive={pathname === '/app/sales-data/import'} onClick={onSelect} />
-      <SubNavItem label={t('salesDataTables')} href="/app/sales-data" isActive={pathname === '/app/sales-data'} onClick={onSelect} />
+      <SubNavItem label={t('salesDataImport')} href={importHref} isActive={pathname === importHref} onClick={onSelect} />
+      <SubNavItem label={t('salesDataTables')} href={tablesHref} isActive={pathname === tablesHref} onClick={onSelect} />
     </NavItem>
   );
 }
@@ -312,7 +320,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/reports')) return 'Reports';
   // template:remove:end
   // template:remove:start salesData
-  if (pathname.startsWith('/app/sales-data')) return 'Sales Data';
+  if (isWorkspaceSectionPath(pathname)) return 'Sales Data';
   // template:remove:end
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
@@ -358,7 +366,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     properties: false,
     // template:remove:end
     // template:remove:start salesData
-    salesData: pathname.startsWith('/app/sales-data'),
+    salesData: isWorkspaceSectionPath(pathname),
     // template:remove:end
     // template:remove:start movement
     demos: false,
