@@ -66,6 +66,12 @@ jobs:
         if: steps.packages.outputs.cache-hit != 'true'
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
+      # Two faults the rest of this job cannot see: a source file made binary
+      # by a stray NUL byte, and a Convex function running a second paginated
+      # query. Both compile, lint and test clean, so they run first and cheaply.
+      - name: Run source guards
+        run: npm run check:guards
+
       - name: Run lint
         run: npm run lint
 
