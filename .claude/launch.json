@@ -6,7 +6,7 @@
       "name": "next-dev",
       "runtimeExecutable": "env",
       "runtimeArgs": [
-        "PATH=/private/tmp/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "PATH=/Users/ants/.local/nodejs/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
         "npm",
         "run",
         "dev"
@@ -18,7 +18,7 @@
       "name": "next-dev-test-auth",
       "runtimeExecutable": "env",
       "runtimeArgs": [
-        "PATH=/private/tmp/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "PATH=/Users/ants/.local/nodejs/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
         "LOCAL_TEST_AUTH_ENABLED=1",
         "npm",
         "run",
@@ -32,7 +32,7 @@
       "name": "next-dev-e2e-auth",
       "runtimeExecutable": "env",
       "runtimeArgs": [
-        "PATH=/private/tmp/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+        "PATH=/Users/ants/.local/nodejs/node-v24.18.0-darwin-arm64/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
         "E2E_AUTH_ENABLED=1",
         "npm",
         "run",

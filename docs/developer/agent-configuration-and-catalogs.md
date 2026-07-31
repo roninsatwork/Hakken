@@ -8,10 +8,10 @@ Agent configuration routes live under `src/app/(dashboard)/admin/agents/`:
 
 - `page.tsx`: agent catalogue, search, template builder, blank-agent creation, template-agent creation, and delete confirmation.
 - `[id]/page.tsx`: agent dashboard with transaction summary cards and paginated transaction history.
-- `[id]/layout.tsx`: agent detail shell, tab navigation, and the manual `Launch Run` action that calls `api.scheduler.manualRunSchedule`.
+- `[id]/layout.tsx`: agent detail shell, tab navigation, and the manual `Run Agent`/`Stop Agent` action. `Run Agent` calls `api.scheduler.manualRunSchedule`; if the agent has no standing job, the UI asks for a one-off objective first.
 - `[id]/settings/page.tsx`: agent identity, avatar upload, model mode, reasoning effort, internet access, and the draft/live switch with the one reason an agent cannot go live.
 - `[id]/knowledge/page.tsx`: per-agent knowledge library management through the shared knowledge admin surface.
-- `[id]/system-prompt/page.tsx`: system prompt editing.
+- `[id]/system-prompt/page.tsx`: Instructions editing, including `standingObjective` for the job and `systemPrompt` for behavior.
 - `[id]/rules/page.tsx`, `[id]/rules/new/page.tsx`, and `[id]/rules/[ruleId]/page.tsx`: agent rule list, creation, and editing.
 - `[id]/interfaces/page.tsx`: which tools the agent may use, and the fixed answer shape it must return, edited through `JsonSchemaBuilder`.
 - `[id]/runs/page.tsx`: run review, run detail, replay, cancellation, feedback, reflections, memory candidate generation/review, eval creation, eval-suite execution, and improvement suggestions.
@@ -20,7 +20,7 @@ Agent configuration routes live under `src/app/(dashboard)/admin/agents/`:
 - `[id]/logs/page.tsx`: searchable agent trace list with offset pagination and delete confirmation.
 - `[id]/logs/[logId]/page.tsx`: single trace detail.
 - `skills/page.tsx`: reusable skill catalogue, analytics cards, starter seeding, manual creation, and bundle import.
-- `skills/[id]/page.tsx`: skill detail, edit, archive, clone, export bundle, rollout, learning analytics, and bulk upgrade.
+- The implemented Skill Center pages handle skill detail, edit, archive, clone, export bundle, rollout, learning analytics, and bulk upgrade inside the Skill Center surface. There is no current `skills/[id]/page.tsx` route.
 - `[id]/skills/page.tsx`: attach, enable/disable, upgrade, and remove skills for one agent.
 - `approvals/page.tsx`: global pending approval queue for agent tool calls.
 
@@ -153,7 +153,7 @@ Important operations include:
 - `getForAgent` for the skill list on one agent.
 - `bindSkillToAgent` for attaching active skills.
 - `upgradeSkillBindingToLatest` for a single agent binding.
-- `upgradeSkillBindingsForSkill` for bulk rollout from a skill detail page.
+- `upgradeSkillBindingsForSkill` for bulk rollout from the Skill Center.
 
 High-risk skills need smoke evidence before activation readiness can pass. Required tool mappings must resolve before the agent can be treated as ready. Keep this relationship aligned with `agents.getAgentReadiness` and `agents.updateAgent`.
 
@@ -240,7 +240,6 @@ Focused tests include:
 - `convex/agentLogs.test.ts`
 - `convex/agentTransactions.test.ts`
 - `src/app/(dashboard)/admin/agents/skills/page.test.tsx`
-- `src/app/(dashboard)/admin/agents/skills/[id]/page.test.tsx`
 - `src/app/(dashboard)/admin/agents/[id]/skills/page.test.tsx`
 - `src/app/(dashboard)/admin/agents/[id]/settings/page.test.tsx`
 - `src/ui/components/settings/JsonSchemaBuilder.test.tsx`

@@ -8,7 +8,7 @@ Read this with [Shared Admin UI](./shared-admin-ui.md), [Architecture](./archite
 
 Primary UI lives under `src/app/`:
 
-- `src/app/page.tsx`: public landing page with localized marketing copy, the fluid background, and `/login` entry links.
+- `src/app/(public)/page.tsx`: public landing page with marketing copy, public product sections, and `/login` entry links.
 - `src/app/(dashboard)/app/**`: authenticated customer workspace routes.
 - `src/app/(dashboard)/admin/**`: super-admin platform routes.
 - `src/app/(dashboard)/demos/**`: frozen temporary movement demo routes.
@@ -66,7 +66,7 @@ Prefer existing shared components before creating page-local variants:
 
 `src/ui/components/layout/AnalyticsProvider.tsx` is mounted by the root layout and selects Google Tag Manager for ids starting with `GTM-`, or Google Analytics for ids starting with `G-` or `AW-`. `src/ui/components/layout/FluidBackground.tsx` is used by the public landing and login routes for the animated background layer.
 
-`src/ui/components/Robot.tsx` is a generated `gltfjsx` component for `public/robot.glb`; it is not currently imported by product routes. `src/ui/components/header.tsx` and `src/ui/components/footer.tsx` are legacy public-shell components and are not the authenticated dashboard header/footer. Prefer `src/ui/components/layout/Header.tsx` and the route-specific dashboard shell for active app work.
+`src/app/(dashboard)/demos/movements/_components/Robot.tsx` is the generated `gltfjsx` component for the frozen movement demo; keep it inside that demo boundary. `src/ui/components/header.tsx` and `src/ui/components/footer.tsx` are legacy public-shell components and are not the authenticated dashboard header/footer. Prefer `src/ui/components/layout/Header.tsx` and the route-specific dashboard shell for active app work.
 
 Use Lucide icons for recognizable commands and keep icon buttons labelled with `aria-label` or `title`. Avoid native `alert`, `confirm`, and `prompt`; use Sonae modal or inline feedback patterns.
 

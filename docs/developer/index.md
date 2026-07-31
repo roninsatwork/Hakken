@@ -10,14 +10,21 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Backend](./backend.md)
 - [Deployment](./deployment.md)
 - [Future Agent Maintenance Plan](./future-agent-maintenance-plan.md)
+- [Function And Feature Coverage Matrix](./function-and-feature-coverage-matrix.md)
+- [Route Reference](./route-reference.md)
+- [Convex API And Schema Reference](./convex-api-and-schema-reference.md)
+- [Operational Scripts Reference](./operational-scripts-reference.md)
 
 ## Product Areas
 
 - [Assistant Chat](./assistant-chat.md)
+- [Public Website](./public-website.md)
 - [Administration](./administration.md)
 - [Company And User Management](./company-user-management.md)
+- [Company AI Readiness And Checks](./company-ai-readiness-and-checks.md)
 - [Data Retention And Purges](./data-retention-and-purges.md)
 - [Email Branding](./email-branding.md)
+- [Email System](./email-system.md)
 - [Route Protection And Authentication](./route-protection-and-authentication.md)
 - [Tenancy Enforcement](./tenancy-enforcement.md)
 - [Shared Admin UI](./shared-admin-ui.md)
@@ -48,6 +55,7 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [Workflow Automation](./workflow-automation.md)
 - [Workflow Runtime Internals](./workflow-runtime-internals.md)
 - [Property Research And Board Reports](./property-research-and-reports.md)
+- [Sales And Board Reports](./sales-and-board-reports.md)
 
 ## Platform Development
 
@@ -79,6 +87,6 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 
 ## Coverage Status
 
-The latest implementation audits found no concrete unmentioned app route, non-generated Convex source module, shared frontend module, route-adjacent component, config/i18n file, schema table, durable documentation file, empty document, or broken local Markdown link.
+The 2026-07-30 documentation coverage audit found no high-priority missing developer guide pair for the main routed product families, non-generated Convex module families, schema-backed platform areas, shared frontend modules, or operator-facing scripts reviewed in that pass. It did find stale index coverage for active plans, which is now tracked in [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).
 
-Future documentation upkeep should still treat newly changed implementation areas and active plans as audit targets. Coverage can drift when routes, Convex modules, workflows, scripts, settings, or operator procedures change.
+Future documentation upkeep should still treat newly changed implementation areas and active plans as audit targets. Coverage can drift when routes, Convex modules, workflows, scripts, settings, public website pages, or operator procedures change.

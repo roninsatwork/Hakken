@@ -346,4 +346,110 @@ describe("OWASP: Broken Access Control - Companies", () => {
       metadata: JSON.stringify({ name: "Delete Corp" }),
     });
   });
+
+  /**
+   * Switching a module on hands a workspace a section it could not previously
+   * reach, so it is an access-control change and belongs in this file.
+   */
+  describe("optional modules", () => {
+    async function seed() {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+      const { superAdminId, adminId, companyId } = await t.run(async (ctx) => {
+        const companyId = await ctx.db.insert("companies", {
+          name: "Module Corp",
+          createdAt: Date.now(),
+        });
+        return {
+          superAdminId: await ctx.db.insert("users", {
+            name: "Super Admin",
+            email: "super@test.com",
+            role: "SUPER_ADMIN",
+            createdAt: Date.now(),
+          }),
+          adminId: await ctx.db.insert("users", {
+            name: "Company Admin",
+            email: "admin@test.com",
+            role: "ADMIN",
+            companyId,
+            createdAt: Date.now(),
+          }),
+          companyId,
+        };
+      });
+
+      return { t, superAdminId, adminId, companyId };
+    }
+
+    test("a super admin can switch a module on, and it is audited", async () => {
+      const { t, superAdminId, companyId } = await seed();
+
+      await expect(
+        t
+          .withIdentity({ subject: superAdminId })
+          .mutation(api.companies.setCompanyModules, {
+            id: companyId,
+            enabledModules: ["salesData"],
+          })
+      ).resolves.toEqual(["salesData"]);
+
+      const { company, auditLogs } = await t.run(async (ctx) => ({
+        company: await ctx.db.get(companyId),
+        auditLogs: await ctx.db.query("auditLogs").collect(),
+      }));
+
+      expect(company?.enabledModules).toEqual(["salesData"]);
+      expect(auditLogs[0]).toMatchObject({
+        actorId: superAdminId,
+        actionType: "UPDATE_COMPANY_MODULES",
+        entityId: companyId,
+        entityType: "companies",
+        metadata: JSON.stringify({ previousModules: [], newModules: ["salesData"] }),
+      });
+    });
+
+    test("a company admin cannot grant their own workspace a module", async () => {
+      const { t, adminId, companyId } = await seed();
+
+      await expect(
+        t.withIdentity({ subject: adminId }).mutation(api.companies.setCompanyModules, {
+          id: companyId,
+          enabledModules: ["salesData"],
+        })
+      ).rejects.toThrowError(/Unauthorized|Forbidden|super/i);
+
+      const company = await t.run(async (ctx) => await ctx.db.get(companyId));
+      expect(company?.enabledModules ?? []).toEqual([]);
+    });
+
+    test("an unknown module key is dropped rather than stored", async () => {
+      const { t, superAdminId, companyId } = await seed();
+
+      await expect(
+        t
+          .withIdentity({ subject: superAdminId })
+          .mutation(api.companies.setCompanyModules, {
+            id: companyId,
+            enabledModules: ["salesData", "not-a-real-module"],
+          })
+      ).resolves.toEqual(["salesData"]);
+    });
+
+    test("modules can be switched back off", async () => {
+      const { t, superAdminId, companyId } = await seed();
+      const client = t.withIdentity({ subject: superAdminId });
+
+      await client.mutation(api.companies.setCompanyModules, {
+        id: companyId,
+        enabledModules: ["salesData"],
+      });
+      await client.mutation(api.companies.setCompanyModules, {
+        id: companyId,
+        enabledModules: [],
+      });
+
+      const company = await t.run(async (ctx) => await ctx.db.get(companyId));
+      expect(company?.enabledModules).toEqual([]);
+    });
+  });
 });

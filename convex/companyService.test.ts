@@ -16,8 +16,22 @@ describe("company service helpers", () => {
     expect(buildCompanyRecord({ name: "Acme", systemPrompt: "Be helpful" }, 123)).toEqual({
       name: "Acme",
       systemPrompt: "Be helpful",
+      // A new workspace starts with no optional modules, written explicitly
+      // rather than left absent so the field always reads the same way.
+      enabledModules: [],
       createdAt: 123,
     });
+  });
+
+  test("keeps only module keys the registry knows", () => {
+    // A typo stored here would read as a module nobody can find, so it is
+    // dropped at the boundary rather than persisted.
+    const record = buildCompanyRecord(
+      { name: "Acme", enabledModules: ["salesData", "not-a-module", "salesData"] },
+      123
+    );
+
+    expect(record.enabledModules).toEqual(["salesData"]);
   });
 
   test("builds company profile patches", () => {

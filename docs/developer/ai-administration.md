@@ -16,7 +16,7 @@ Global AI routes:
 - `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget.
 - `src/app/(dashboard)/admin/ai/models/page.tsx` manages providers, model catalog rows, global defaults, sync, test, filtering, and enabled status.
 - `src/app/(dashboard)/admin/ai/models/[id]/page.tsx` edits a model friendly name and pricing configuration.
-- `src/app/(dashboard)/admin/ai/tools/page.tsx`, `tools/new/page.tsx`, `tools/[id]/page.tsx`, `tools/mcp/new/page.tsx`, and `tools/connectors/[id]/page.tsx` manage tools and connectors.
+- `src/app/(dashboard)/admin/ai/tools/page.tsx`, `tools/new/page.tsx`, `tools/[id]/page.tsx`, and `tools/connectors/[id]/page.tsx` manage tools and connectors. There is no implemented MCP tool creation route in the current app.
 
 Company AI routes use the same backend tables but pass a company id and apply company-scoped authorization:
 

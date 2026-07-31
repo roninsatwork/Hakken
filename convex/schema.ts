@@ -53,6 +53,15 @@ export default defineSchema({
     systemPrompt: v.optional(v.string()),
     planId: v.optional(v.id("plans")),
     messagesUsedThisPeriod: v.optional(v.number()),
+    /**
+     * Optional product modules switched on for this workspace.
+     *
+     * Absent or empty means the workspace sees only the platform surface,
+     * which is what every existing company gets on deploy. Keys are declared
+     * in `utils/companyModules.ts`; an unknown key here is inert rather than an
+     * error, so removing a vertical cannot break a company record.
+     */
+    enabledModules: v.optional(v.array(v.string())),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])
@@ -277,10 +286,40 @@ export default defineSchema({
     messagesUsedThisPeriod: v.optional(v.number()),
     createdAt: v.optional(v.number()),
     tokenIdentifier: v.optional(v.string()),
+    /*
+     * Denormalised login activity, for the admin user directory.
+     *
+     * Convex can only index fields on the table being paginated, so a sortable
+     * "last login" column cannot be a join onto `logins`. See
+     * docs/plans/active/user-directory-plan.md.
+     *
+     * `lastLoginAt` is exact and written inline by `recordLogin`.
+     * `loginCount30d` is a rolling window and is recomputed nightly, so it is
+     * accurate as of the last run rather than to the second.
+     */
+    lastLoginAt: v.optional(v.number()),
+    loginCount30d: v.optional(v.number()),
   }).index("email", ["email"])
     .index("by_company", ["companyId"])
     .index("by_token", ["tokenIdentifier"])
-    .searchIndex("search_email", { searchField: "email" }),
+    /*
+     * Sorting the admin user directory by login recency, within a role or a
+     * company. The trailing field is what makes the sort server-side; without
+     * it the screen would have to read every user to order fifteen.
+     */
+    .index("by_lastLogin", ["lastLoginAt"])
+    .index("by_loginCount", ["loginCount30d"])
+    .index("by_role_lastLogin", ["role", "lastLoginAt"])
+    .index("by_company_lastLogin", ["companyId", "lastLoginAt"])
+    /*
+     * `filterFields` are equality-only — Convex search indexes cannot range
+     * filter, which is why the directory disables sorting while a search term
+     * is active rather than pretending to combine the two.
+     */
+    .searchIndex("search_email", {
+      searchField: "email",
+      filterFields: ["role", "companyId"],
+    }),
   
   logins: defineTable({
     userId: v.id("users"),
@@ -2360,4 +2399,180 @@ export default defineSchema({
   })
     .index("by_script_started", ["scriptId", "startedAt"])
     .index("by_started", ["startedAt"]),
+
+  // template:remove:start salesData
+  /**
+   * A single run of the workbook importer.
+   *
+   * Every import replaces the workspace's data outright, so this row is the
+   * only record of what the current contents came from — which file, which
+   * worksheet was read as what, and which months the six revenue columns
+   * covered. Without it the numbers in `salesDataRows` are six anonymous
+   * figures.
+   *
+   * Failed imports are kept deliberately. A wipe-and-reload that dies halfway
+   * needs a visible reason, not a silently empty table.
+   */
+  salesDataImports: defineTable({
+    companyId: v.id("companies"),
+    fileName: v.string(),
+    status: v.union(
+      v.literal("RUNNING"),
+      v.literal("COMPLETED"),
+      v.literal("FAILED")
+    ),
+    /** Which worksheet the user mapped to each dataset, by zero-based index. */
+    sheetMapping: v.object({
+      sales: v.number(),
+      categories: v.number(),
+      areasOfInterest: v.number(),
+      frequency: v.number(),
+    }),
+    /**
+     * The six revenue column headings as they appeared in the file, in order.
+     * The sales rows store six numbered periods; this is what those numbers
+     * mean. A file headed `2026-01-01 … 2026-06-01` yields ISO month strings.
+     */
+    periodLabels: v.optional(v.array(v.string())),
+    salesRowCount: v.optional(v.number()),
+    categoryRowCount: v.optional(v.number()),
+    areasOfInterestRowCount: v.optional(v.number()),
+    frequencyRowCount: v.optional(v.number()),
+    error: v.optional(v.string()),
+    /**
+     * When a later import replaced this one's rows.
+     *
+     * A completed import whose data has since been dropped is still worth
+     * showing in the history, but it is not the data on screen, and the two
+     * need telling apart.
+     */
+    supersededAt: v.optional(v.number()),
+    importedBy: v.id("users"),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+  }).index("by_company_started", ["companyId", "startedAt"]),
+
+  /**
+   * The sales worksheet: one row per customer account and product.
+   *
+   * Each source category and type is stored twice — as written for display,
+   * and as a `*Key` with case, spacing and `AND`/`&` normalised for matching. The
+   * source spells the same category differently across worksheets
+   * (`DISPENSERS AND BRACKETS` against `DISPENSERS & BRACKETS`, trailing
+   * spaces on several others), so a join on the raw text silently drops rows.
+   */
+  salesDataRows: defineTable({
+    companyId: v.id("companies"),
+    importId: v.id("salesDataImports"),
+    /**
+     * The row's line number in the source worksheet, header included — so row
+     * 2 here is row 2 in Excel.
+     *
+     * Insertion order cannot stand in for it: rows are written in batches, and
+     * every document in one Convex transaction shares a `_creationTime`, so
+     * their relative order inside a batch is not the file's. Without this the
+     * table cannot be put back into the order the spreadsheet has, and nothing
+     * on screen can be traced to a line in the file.
+     *
+     * Optional only so that rows written before it existed still validate; the
+     * next import populates it for everything.
+     */
+    sourceRow: v.optional(v.number()),
+    parentAccount: v.string(),
+    groupName: v.string(),
+    accountName: v.string(),
+    customerType: v.string(),
+    productCode: v.string(),
+    /** Account code + product code. Unique per row within an import. */
+    uniqueId: v.string(),
+    productDescription: v.string(),
+    productCategory: v.string(),
+    productType: v.string(),
+    customerTypeKey: v.string(),
+    productCategoryKey: v.string(),
+    productTypeKey: v.string(),
+    /**
+     * The six revenue columns, in file order. Absent means the cell was blank,
+     * which in this source means "no sale that month" — not zero revenue on a
+     * recorded sale, and the two should stay distinguishable.
+     */
+    period1: v.optional(v.number()),
+    period2: v.optional(v.number()),
+    period3: v.optional(v.number()),
+    period4: v.optional(v.number()),
+    period5: v.optional(v.number()),
+    period6: v.optional(v.number()),
+    quantity: v.optional(v.number()),
+    /** Sum of the six periods, stored so the table can sort without scanning. */
+    totalRevenue: v.number(),
+  })
+    // `companyId` leads every index so a query can never be scoped by import
+    // alone. The same index, queried on the company prefix, finds the rows
+    // left behind by superseded imports.
+    .index("by_company_import", ["companyId", "importId"])
+    // File order — the default the table reads in, so it matches the source.
+    .index("by_company_import_row", ["companyId", "importId", "sourceRow"])
+    // Kept for sorting by value, which Phase 2 will offer as a choice.
+    .index("by_company_import_total", ["companyId", "importId", "totalRevenue"])
+    .searchIndex("search_product", {
+      searchField: "productDescription",
+      filterFields: [
+        "companyId",
+        "importId",
+        "customerTypeKey",
+        "productCategoryKey",
+        "productTypeKey",
+        "groupName",
+      ],
+    }),
+
+  /**
+   * The category worksheet: which product categories matter to a customer type.
+   *
+   * One field per source column — `CUSTOMER TYPE` and `CATEGORY` — plus the
+   * matching keys. The source used to be a grid with two stacked blocks; it is
+   * now a plain table, and the second block has its own worksheet and its own
+   * table below.
+   */
+  salesDataCategoryLinks: defineTable({
+    companyId: v.id("companies"),
+    importId: v.id("salesDataImports"),
+    customerType: v.string(),
+    customerTypeKey: v.string(),
+    category: v.string(),
+    categoryKey: v.string(),
+  }).index("by_company_import", ["companyId", "importId"]),
+
+  /**
+   * The areas-of-interest worksheet: product types a customer type especially
+   * buys. Its own table because it is its own worksheet — one tab, one table.
+   */
+  salesDataAreasOfInterest: defineTable({
+    companyId: v.id("companies"),
+    importId: v.id("salesDataImports"),
+    customerType: v.string(),
+    customerTypeKey: v.string(),
+    productType: v.string(),
+    productTypeKey: v.string(),
+  }).index("by_company_import", ["companyId", "importId"]),
+
+  /** The frequency worksheet: whether a product type sells regularly. */
+  salesDataFrequencies: defineTable({
+    companyId: v.id("companies"),
+    importId: v.id("salesDataImports"),
+    productCategory: v.string(),
+    productType: v.string(),
+    /** Free text from the source — `Regular` and `Sporadic` in the file seen. */
+    frequency: v.string(),
+    productCategoryKey: v.string(),
+    productTypeKey: v.string(),
+  })
+    .index("by_company_import", ["companyId", "importId"])
+    .index("by_company_import_lookup", [
+      "companyId",
+      "importId",
+      "productCategoryKey",
+      "productTypeKey",
+    ]),
+  // template:remove:end
 });

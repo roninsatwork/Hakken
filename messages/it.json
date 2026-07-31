@@ -5,6 +5,7 @@
         "cancel": "Annulla",
         "save": "Salva",
         "saving": "Salvataggio...",
+        "deleting": "Eliminazione...",
         "dismiss": "Chiudi",
         "back": "Indietro",
         "actions": {
@@ -280,6 +281,8 @@
         "manageUsers": "Gestisci Utenti",
         "invitations": "Inviti",
         "systemAdmins": "Admin di Sistema",
+        "userManagement": "Gestione Utenti",
+        "allUsers": "Tutti gli Utenti",
         "settings": "Impostazioni",
         "systemSettings": "Impostazioni di Sistema",
         "apiKeys": "Chiavi API",
@@ -296,7 +299,10 @@
         "impersonatingLabel": "Workspace in Impersonificazione",
         "exitWorkspace": "Esci da Workspace",
         "tools": "Strumenti",
-        "health": "Salute"
+        "health": "Salute",
+        "salesData": "Dati di vendita",
+        "salesDataImport": "Importa dati",
+        "salesDataTables": "Tabelle dati"
     },
     "properties": {
         "search": {
@@ -426,6 +432,14 @@
             "warningCascade": "Eliminazione Permanente Dati",
             "warningDesc": "Questa azione cancellerà tutti gli agent, i messaggi e le configurazioni per questo tenant. L'azione non può essere annullata.",
             "deleteTenant": "Purga Tenant",
+            "modulesLabel": "Moduli opzionali",
+            "modulesHint": "Sezioni aggiuntive visibili solo a questo spazio di lavoro",
+            "modules": {
+                "salesData": {
+                    "name": "Dati di vendita",
+                    "description": "Importazione da foglio di calcolo e tabelle consultabili di vendite, categorie e frequenza. La sezione porta il nome dello spazio di lavoro."
+                }
+            },
             "errors": {
                 "saveFailed": "Impossibile sincronizzare le direttive tenant.",
                 "deleteFailed": "Impossibile purgare il tenant dal protocollo."
@@ -2077,6 +2091,42 @@
                 "emailPlaceholder": "es. mario@sonae.ai",
                 "avatarPlaceholder": "https://..."
             }
+        },
+        "directory": {
+            "title": "Tutti gli Utenti",
+            "description": "Tutte le persone sulla piattaforma, con quanto di recente e quanto spesso accedono. Sola lettura.",
+            "searchPlaceholder": "Cerca per email",
+            "loadMore": "Carica altri",
+            "empty": "Nessun utente corrisponde a questi filtri",
+            "filters": {
+                "company": "Azienda",
+                "allCompanies": "Tutte le aziende",
+                "role": "Ruolo",
+                "allRoles": "Tutti i ruoli",
+                "roleUser": "Utente",
+                "roleAdmin": "Admin",
+                "activity": "Attività",
+                "anyActivity": "Qualsiasi attività",
+                "active7": "Attivi in 7 giorni",
+                "active30": "Attivi in 30 giorni",
+                "dormant": "Inattivi",
+                "never": "Mai acceduto",
+                "sortBy": "Ordina per",
+                "sortLastLogin": "Ultimo accesso",
+                "sortLoginCount": "Accessi (30g)",
+                "sortUnavailable": "L'ordinamento non è disponibile durante la ricerca"
+            },
+            "table": {
+                "person": "Persona",
+                "company": "Azienda",
+                "role": "Ruolo",
+                "lastLogin": "Ultimo accesso",
+                "logins30d": "Accessi (30g)",
+                "joined": "Iscritto",
+                "never": "Mai",
+                "unnamed": "Senza nome",
+                "noCompany": "—"
+            }
         }
     },
     "ai": {
@@ -2384,5 +2434,93 @@
         "detachConfirm": "Sei sicuro di voler scollegare {name} da questa azienda? Manterrà il suo account amministratore di sistema ma non sarà più assegnato a questo spazio di lavoro.",
         "detach": "Scollega",
         "detaching": "Scollegamento in corso..."
+    },
+    "salesData": {
+        "importTitle": "Importa dati",
+        "importSubtitle": "Carica un foglio di calcolo per sostituire i dati di vendita di questo spazio di lavoro.",
+        "uploadTitle": "1. Scegli il file",
+        "uploadHint": "Un file Excel (.xlsx) contenente i fogli vendite, categorie e frequenza.",
+        "chooseFile": "Scegli file",
+        "uploading": "Lettura del file...",
+        "mapTitle": "2. Indica quale foglio è quale",
+        "mapHint": "Il foglio delle vendite prende il nome dal periodo che copre, quindi cambia con ogni file. Selezionali qui sotto — le intestazioni trovate sono mostrate sotto ciascuno.",
+        "datasetSales": "Dati di vendita",
+        "datasetCategories": "Categorie per tipo di cliente",
+        "datasetFrequency": "Frequenza di vendita",
+        "rowCount": "{count, plural, =0 {nessuna riga} one {1 riga} other {# righe}}",
+        "replaceData": "Sostituisci dati",
+        "importing": "Importazione...",
+        "cancelUpload": "Annulla",
+        "replaceWarning": "L'importazione sostituisce tutto il contenuto delle tre tabelle di questo spazio di lavoro. I dati esistenti restano al loro posto finché il nuovo file non è stato letto per intero, quindi un file che fallisce non cambia nulla.",
+        "importComplete": "Importate {sales} righe di vendita, {categories} abbinamenti di categoria, {interest} aree di interesse e {frequency} righe di frequenza.",
+        "importPeriods": "Colonne di ricavo: {periods}",
+        "importSkipped": "{count, plural, one {1 riga è stata saltata perché priva di prodotto.} other {# righe sono state saltate perché prive di prodotto.}}",
+        "historyTitle": "Cronologia importazioni",
+        "historyFile": "File",
+        "historyStatus": "Stato",
+        "historyRows": "Vendite / categorie / interessi / frequenza",
+        "historyPeriods": "Periodi",
+        "historyWhen": "Avviata",
+        "historyEmptyTitle": "Nessuna importazione",
+        "historyEmptyDescription": "Carica un foglio di calcolo qui sopra per popolare le tabelle.",
+        "statusCurrent": "Attuale",
+        "statusSuperseded": "Sostituita",
+        "statusRunning": "In corso",
+        "statusFailed": "Fallita",
+        "tablesTitle": "Tabelle dati",
+        "tablesSubtitle": "Da {fileName} — {rows} righe di vendita.",
+        "tablesSubtitleEmpty": "Nessun dato importato.",
+        "tab": {
+            "sales": "Vendite",
+            "categories": "Categorie",
+            "frequency": "Frequenza",
+            "interest": "Aree di interesse"
+        },
+        "column": {
+            "sourceRow": "Riga",
+            "account": "Nome cliente",
+            "group": "Nome gruppo",
+            "customerType": "Tipo di cliente",
+            "product": "Prodotto",
+            "category": "Categoria prodotto",
+            "productType": "Tipo di prodotto",
+            "quantity": "Quantità",
+            "total": "Totale",
+            "frequency": "Frequenza di vendita",
+            "parentAccount": "Conto principale",
+            "productCode": "Codice prodotto",
+            "uniqueId": "ID univoco",
+            "productDescription": "Descrizione prodotto"
+        },
+        "pageNumber": "Pagina {page}",
+        "rowsShown": "{count, plural, =0 {nessuna riga} one {1 riga} other {# righe}}",
+        "loading": "Caricamento...",
+        "emptyTitle": "Niente da mostrare",
+        "emptyDescriptionImported": "Questa tabella non aveva righe nel file importato.",
+        "emptyDescriptionNoImport": "Importa un foglio di calcolo per popolare questa tabella.",
+        "errors": {
+            "uploadFailed": "Impossibile caricare il file. Verifica che sia un file .xlsx e riprova.",
+            "importFailed": "Importazione fallita. Nulla è stato modificato.",
+            "duplicateSheets": "Ogni set di dati richiede il proprio foglio. Scegline un altro."
+        },
+        "datasetAreasOfInterest": "Aree di interesse del cliente",
+        "searchPlaceholder": {
+            "sales": "Cerca clienti, prodotti, codici...",
+            "categories": "Cerca tipi di cliente e categorie...",
+            "interest": "Cerca tipi di cliente e tipi di prodotto...",
+            "frequency": "Cerca categorie, tipi di prodotto e frequenza..."
+        },
+        "clearSearch": "Cancella ricerca",
+        "filter": {
+            "customerType": "Tipo di cliente",
+            "account": "Cliente",
+            "group": "Gruppo",
+            "all": "Tutti",
+            "narrow": "Digita per restringere...",
+            "noMatches": "Nessun risultato",
+            "clear": "Cancella filtri"
+        },
+        "emptyTitleNarrowed": "Nessuna riga corrisponde",
+        "emptyDescriptionNarrowed": "Nessuna riga corrisponde alla ricerca e ai filtri attuali. Cancellali per vedere l'intera tabella."
     }
 }

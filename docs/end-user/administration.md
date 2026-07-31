@@ -20,9 +20,9 @@ The normal application sidebar remains different. In `/app`, users see dashboard
 
 ## Admin Dashboard
 
-The admin dashboard provides a global view of platform activity. It includes a timeframe selector with preset and custom ranges, metrics for monthly recurring revenue, registered companies, active users, active context, messages, tokens, and estimated AI cost, plus charts for activity over time and provider or model distribution. Model distribution is backed by daily analytics snapshots for historical windows; provider distribution is strongest for the live raw-data overlay because historical snapshots do not yet store provider totals. Chart areas are wrapped so they can be exported where supported. Empty chart states show when no data is available for the chosen range.
+The admin dashboard answers how the platform business is doing and which client needs attention today. It shows whether clients are healthy, projected monthly revenue against AI spend, seats in use, clients needing attention, activity over the recent window, AI spend over time, sign-in bands, plan distribution, a client table, and practical follow-up items such as unaccepted invitations or clients with no plan.
 
-Use the dashboard to understand system-wide adoption, cost movement, message volume, active usage, and company inventory. It is not a billing system by itself and should not be treated as the only source for invoice-grade financial reporting. It is an operational overview for platform administrators.
+Use the dashboard to understand business health, client adoption, cost movement, seat usage, and obvious follow-up work. It is not a billing system by itself and should not be treated as the only source for invoice-grade financial reporting. Detailed AI cost and model analytics remain in the AI cost and usage screens.
 
 ## Companies and Tenant Workspaces
 

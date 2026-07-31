@@ -1,8 +1,9 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
 import {
   assertCanCreateManagedUser,
@@ -12,6 +13,83 @@ import {
 import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { publicMutation, publicQuery, superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import {
+  type DirectoryActivity,
+  activityBound,
+  LOGIN_SCAN_LIMIT,
+  USER_SCAN_LIMIT,
+  loginWindowStart,
+  planLoginCountUpdates,
+  tallyLoginsByUser,
+} from "./userActivityService";
+
+/**
+ * How long one recorded login stands in for continued activity on a device.
+ *
+ * Governed by docs/plans/active/user-directory-plan.md. Long enough to collapse
+ * a burst of tabs into one session, short enough that returning later in the
+ * day counts separately.
+ */
+const RECENT_LOGIN_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * Remove everything that would let a deleted account come back to life.
+ *
+ * Anthony, 2026-07-31: *"deleting users and re adding them is a genuine user
+ * case, when they are deleted and we want to add them they need to be treated
+ * as a brand new user."*
+ *
+ * That only holds if deletion clears the identity rows as well as the user
+ * document. Two survived it before, and between them they made a deleted
+ * address unusable:
+ *
+ * - The Convex Auth `authAccounts` row kept pointing at a user document that no
+ *   longer existed, so the next sign-in resolved to a dangling id.
+ * - The invitation stayed `ACCEPTED`, and `createInviteRecord` treats an
+ *   accepted invitation as nothing left to do — so the address could never be
+ *   re-invited, however many times the email went out.
+ *
+ * Deliberately deletes the invitation rather than resetting it to `PENDING`: a
+ * re-add should mint a fresh invite with a fresh token, not inherit the old
+ * workspace and role.
+ */
+async function purgeAuthIdentity(ctx: MutationCtx, userId: Id<"users">, email?: string) {
+  const sessions = await ctx.db
+    .query("authSessions")
+    .withIndex("userId", (q) => q.eq("userId", userId))
+    .collect();
+  for (const session of sessions) {
+    const refreshTokens = await ctx.db
+      .query("authRefreshTokens")
+      .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+      .collect();
+    for (const refreshToken of refreshTokens) await ctx.db.delete(refreshToken._id);
+    await ctx.db.delete(session._id);
+  }
+
+  const accounts = await ctx.db
+    .query("authAccounts")
+    .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+    .collect();
+  for (const account of accounts) {
+    // Unredeemed magic links for this account. Left behind, one of them could
+    // still be clicked and sign someone in against the deleted identity.
+    const codes = await ctx.db
+      .query("authVerificationCodes")
+      .withIndex("accountId", (q) => q.eq("accountId", account._id))
+      .collect();
+    for (const code of codes) await ctx.db.delete(code._id);
+    await ctx.db.delete(account._id);
+  }
+
+  if (!email) return;
+
+  const invitations = await ctx.db
+    .query("invitations")
+    .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
+    .collect();
+  for (const invitation of invitations) await ctx.db.delete(invitation._id);
+}
 
 type UserPaginationResult = {
   page: Doc<"users">[];
@@ -45,7 +123,23 @@ export const generateUploadUrl = tenantMutation(async (ctx) => {
 export const getPaginatedUsers = tenantQuery({
   args: {
     paginationOpts: paginationOptsValidator,
-    searchTerm: v.optional(v.string())
+    searchTerm: v.optional(v.string()),
+    /**
+     * Which population the caller is asking about.
+     *
+     * `workspace` (the default) answers "who is in the workspace I am acting
+     * as", so a super admin impersonating a company sees that company. That is
+     * what the front-end team screen wants.
+     *
+     * `platform` answers "who exists at all" and ignores impersonation, because
+     * impersonation is a front-end device and has no meaning in the admin
+     * section. Anthony, 2026-07-31: *"the impersonation is user front end only
+     * not admin section."*
+     *
+     * Only a super admin may ask for `platform`; for anyone else the argument
+     * is ignored and the workspace scope still applies.
+     */
+    scope: v.optional(v.union(v.literal("workspace"), v.literal("platform"))),
   },
   handler: async (ctx, args) => {
     const { user: caller } = ctx;
@@ -79,7 +173,12 @@ export const getPaginatedUsers = tenantQuery({
       page: await enrichUsers(pageResult.page),
     });
 
-    if (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId)) {
+    // A super admin asking for the platform is never narrowed by the workspace
+    // they happen to be impersonating.
+    const platformScoped = caller.role === "SUPER_ADMIN" && args.scope === "platform";
+
+    if (!platformScoped
+      && (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId))) {
       if (!activeCompanyId) throw new Error("Unauthorized");
       // Admins are locked to their specific tenant scope
       if (args.searchTerm && args.searchTerm.trim() !== "") {
@@ -336,6 +435,10 @@ export const deleteUser = tenantMutation({
     });
 
     await ctx.scheduler.runAfter(0, internal.users.purgeUserEntitiesInternal, { userId: args.id });
+    // Inline rather than scheduled, unlike the bulk content purge above. These
+    // rows are what a sign-in reads, so leaving them alive for even one tick
+    // leaves a window where the deleted account can still authenticate.
+    await purgeAuthIdentity(ctx, args.id, targetUser.email);
     await ctx.db.delete(args.id);
     await incrementGlobalInventoryTotals(ctx, { usersDelta: -1 });
 
@@ -489,15 +592,31 @@ export const recordLogin = publicMutation({
     const current = await getCurrentUser(ctx);
     if (!current) return null;
 
-    // Prevent duplicated spam tracks logically
+    const now = Date.now();
     const lastLogin = await ctx.db
       .query("logins")
       .withIndex("by_user", q => q.eq("userId", current.userId))
       .order("desc")
       .first();
-      
-    // 60-minute identical device throttling limit to prevent spam when refreshing
-    if (lastLogin && (Date.now() - lastLogin.timestamp < 60 * 60 * 1000) && lastLogin.device === args.device && lastLogin.ip === args.ip) {
+
+    /*
+     * Collapse a burst into one session.
+     *
+     * The client calls this once per browser tab (a `sessionStorage` guard), so
+     * without a throttle a handful of tabs would each write a row.
+     *
+     * The window is keyed on the device but deliberately NOT on the IP. IP is
+     * the volatile half: a mobile connection changes it mid-session, and the
+     * geo lookup's own failure path substitutes "Concealed IP", so an
+     * IP-sensitive key produced a duplicate row every time either happened —
+     * inflating exactly the 30-day count the directory reports.
+     *
+     * Device stays in the key on purpose. A genuinely different device is a
+     * different session and worth seeing on the profile's Logins tab.
+     */
+    if (lastLogin
+      && now - lastLogin.timestamp < RECENT_LOGIN_WINDOW_MS
+      && lastLogin.device === args.device) {
       return lastLogin._id;
     }
 
@@ -507,8 +626,18 @@ export const recordLogin = publicMutation({
       ip: args.ip,
       location: args.location,
       status: "SUCCESS",
-      timestamp: Date.now(),
+      timestamp: now,
     });
+
+    /*
+     * Denormalised onto the user so the directory can sort by it.
+     *
+     * Convex indexes only fields on the table being paginated, so a sortable
+     * "last login" column cannot be a join. Written only when a row is actually
+     * inserted, which keeps the invariant the backfill also relies on:
+     * `lastLoginAt` always equals the newest `logins` row for that user.
+     */
+    await ctx.db.patch(current.userId, { lastLoginAt: now });
 
     if (current.user.role === "SUPER_ADMIN" || current.user.role === "ADMIN") {
        await ctx.db.insert("auditLogs", {
@@ -625,5 +754,279 @@ export const detachSuperAdminFromCompany = superAdminMutation({
     });
 
     return true;
+  },
+});
+
+/**
+ * Recompute every user's rolling 30-day login count.
+ *
+ * Runs nightly. `lastLoginAt` needs no job — it is exact and written inline by
+ * `recordLogin` — but a rolling window decays with the calendar, so the count
+ * has to be recalculated even on a night when nobody logged in at all.
+ *
+ * Governed by docs/plans/active/user-directory-plan.md.
+ */
+export const recomputeLoginCounts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const windowStart = loginWindowStart(now);
+
+    const rows = await ctx.db
+      .query("logins")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", windowStart))
+      .take(LOGIN_SCAN_LIMIT);
+
+    const users = await ctx.db.query("users").take(USER_SCAN_LIMIT);
+
+    const tally = tallyLoginsByUser(
+      rows.map((row) => ({ userId: row.userId, status: row.status, timestamp: row.timestamp })),
+      windowStart
+    );
+    const updates = planLoginCountUpdates(
+      users.map((user) => ({ _id: user._id, loginCount30d: user.loginCount30d })),
+      tally
+    );
+
+    for (const update of updates) {
+      await ctx.db.patch(update.id as Id<"users">, { loginCount30d: update.loginCount30d });
+    }
+
+    // Never truncate quietly. A capped scan under-counts, which reads on screen
+    // as "this person stopped using the platform" — a wrong answer that looks
+    // like a real one.
+    const truncated = rows.length >= LOGIN_SCAN_LIMIT || users.length >= USER_SCAN_LIMIT;
+    if (truncated) {
+      console.warn("[userActivity] Scan limit reached; 30-day login counts may be incomplete.", {
+        logins: rows.length,
+        users: users.length,
+      });
+    }
+
+    return { scannedLogins: rows.length, scannedUsers: users.length, updated: updates.length, truncated };
+  },
+});
+
+/**
+ * The admin user directory — read-only, platform-wide, server-side everything.
+ *
+ * Governed by docs/plans/active/user-directory-plan.md.
+ *
+ * Two things shape the implementation:
+ *
+ * 1. **Super admins are excluded.** They have their own screen at
+ *    `/admin/super-admins` in the same nav group; listing them twice makes both
+ *    screens ambiguous about what they are for.
+ *
+ * 2. **Search and sort cannot combine.** Convex search indexes support equality
+ *    filters only, never ranges, so a single query cannot both full-text search
+ *    and range-sort by `lastLoginAt`. Rather than silently ignoring one, the
+ *    query reports which mode it ran in and the screen disables the sort
+ *    control, with a reason, while a search term is active.
+ */
+export const listDirectoryUsers = superAdminQuery({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    companyId: v.optional(v.id("companies")),
+    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"))),
+    activity: v.optional(v.union(
+      v.literal("any"),
+      v.literal("active7"),
+      v.literal("active30"),
+      v.literal("dormant"),
+      v.literal("never"),
+    )),
+    searchTerm: v.optional(v.string()),
+    sortBy: v.optional(v.union(v.literal("lastLogin"), v.literal("loginCount"))),
+    direction: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
+  handler: async (ctx, args) => {
+    const search = args.searchTerm?.trim() ?? "";
+    const activity = (args.activity ?? "any") as DirectoryActivity;
+    const bound = activityBound(activity, Date.now());
+    const order = args.direction === "asc" ? "asc" : "desc";
+    const roleFilter = args.role;
+    const companyFilter = args.companyId;
+
+    const page = await (async () => {
+      if (search !== "") {
+        // Relevance ordering; sorting is unavailable in this branch by design.
+        return await ctx.db
+          .query("users")
+          .withSearchIndex("search_email", (q) => {
+            const searched = q.search("email", search);
+            if (roleFilter && companyFilter) {
+              return searched.eq("role", roleFilter).eq("companyId", companyFilter);
+            }
+            if (roleFilter) return searched.eq("role", roleFilter);
+            if (companyFilter) return searched.eq("companyId", companyFilter);
+            return searched;
+          })
+          .filter((q) => q.neq(q.field("role"), "SUPER_ADMIN"))
+          .paginate(args.paginationOpts);
+      }
+
+      if (args.sortBy === "loginCount") {
+        return await ctx.db
+          .query("users")
+          .withIndex("by_loginCount")
+          .order(order)
+          .filter((q) =>
+            roleFilter
+              ? q.eq(q.field("role"), roleFilter)
+              : q.neq(q.field("role"), "SUPER_ADMIN"))
+          .paginate(args.paginationOpts);
+      }
+
+      /*
+       * The activity filter is pushed into the index range rather than applied
+       * afterwards — that is the entire reason `lastLoginAt` is denormalised.
+       * `never` reads as an equality against `undefined`, which Convex sorts
+       * ahead of every real timestamp.
+       */
+      if (companyFilter) {
+        return await ctx.db
+          .query("users")
+          .withIndex("by_company_lastLogin", (q) => {
+            const base = q.eq("companyId", companyFilter);
+            if (bound.kind === "since") return base.gte("lastLoginAt", bound.from);
+            if (bound.kind === "before") return base.gt("lastLoginAt", undefined).lt("lastLoginAt", bound.before);
+            if (bound.kind === "never") return base.eq("lastLoginAt", undefined);
+            return base;
+          })
+          .order(order)
+          .filter((q) =>
+            roleFilter
+              ? q.eq(q.field("role"), roleFilter)
+              : q.neq(q.field("role"), "SUPER_ADMIN"))
+          .paginate(args.paginationOpts);
+      }
+
+      if (roleFilter) {
+        return await ctx.db
+          .query("users")
+          .withIndex("by_role_lastLogin", (q) => {
+            const base = q.eq("role", roleFilter);
+            if (bound.kind === "since") return base.gte("lastLoginAt", bound.from);
+            if (bound.kind === "before") return base.gt("lastLoginAt", undefined).lt("lastLoginAt", bound.before);
+            if (bound.kind === "never") return base.eq("lastLoginAt", undefined);
+            return base;
+          })
+          .order(order)
+          .paginate(args.paginationOpts);
+      }
+
+      return await ctx.db
+        .query("users")
+        .withIndex("by_lastLogin", (q) => {
+          if (bound.kind === "since") return q.gte("lastLoginAt", bound.from);
+          if (bound.kind === "before") return q.gt("lastLoginAt", undefined).lt("lastLoginAt", bound.before);
+          if (bound.kind === "never") return q.eq("lastLoginAt", undefined);
+          return q;
+        })
+        .order(order)
+        .filter((q) => q.neq(q.field("role"), "SUPER_ADMIN"))
+        .paginate(args.paginationOpts);
+    })();
+
+    // Company names for the page only — fifteen lookups, cached by id.
+    const companyNames = new Map<string, string | null>();
+    const rows = await Promise.all(page.page.map(async (user) => {
+      let companyName: string | null = null;
+      if (user.companyId) {
+        if (companyNames.has(user.companyId)) {
+          companyName = companyNames.get(user.companyId) ?? null;
+        } else {
+          const company = await ctx.db.get(user.companyId);
+          companyName = company?.name ?? null;
+          companyNames.set(user.companyId, companyName);
+        }
+      }
+
+      return {
+        _id: user._id,
+        name: user.name ?? null,
+        email: user.email ?? null,
+        image: user.image ?? null,
+        role: user.role ?? null,
+        companyId: user.companyId ?? null,
+        companyName,
+        createdAt: user.createdAt ?? null,
+        lastLoginAt: user.lastLoginAt ?? null,
+        loginCount30d: user.loginCount30d ?? 0,
+      };
+    }));
+
+    return {
+      ...page,
+      page: rows,
+      // So the screen can explain why sorting is unavailable rather than
+      // appearing to ignore the control.
+      sortingAvailable: search === "",
+    };
+  },
+});
+
+/**
+ * One-off recovery for identities orphaned before deletion purged them.
+ *
+ * `deleteUser` now calls `purgeAuthIdentity`, but rows deleted before that
+ * existed are still in the database, and they are exactly what makes an address
+ * unusable: an `authAccounts` row pointing at a missing user, or an `ACCEPTED`
+ * invitation for an account that no longer exists. Both are invisible in the
+ * admin UI, so there is no way to clear them by hand.
+ *
+ * Kept as a maintenance function rather than deleted after one run — the same
+ * orphans appear whenever a user document is removed by any route that does not
+ * go through `deleteUser`.
+ *
+ * A `PENDING` invitation with no user is not an orphan. That is the normal
+ * state of someone who has been invited and has not signed in yet.
+ */
+export const purgeOrphanedAuthIdentities = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const removed = { sessions: 0, accounts: 0, verificationCodes: 0, invitations: 0 };
+
+    const accounts = await ctx.db.query("authAccounts").collect();
+    for (const account of accounts) {
+      if (await ctx.db.get(account.userId)) continue;
+      const codes = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", account._id))
+        .collect();
+      for (const code of codes) {
+        await ctx.db.delete(code._id);
+        removed.verificationCodes += 1;
+      }
+      await ctx.db.delete(account._id);
+      removed.accounts += 1;
+    }
+
+    const sessions = await ctx.db.query("authSessions").collect();
+    for (const session of sessions) {
+      if (await ctx.db.get(session.userId)) continue;
+      const refreshTokens = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const refreshToken of refreshTokens) await ctx.db.delete(refreshToken._id);
+      await ctx.db.delete(session._id);
+      removed.sessions += 1;
+    }
+
+    const invitations = await ctx.db.query("invitations").collect();
+    for (const invitation of invitations) {
+      if (invitation.status === "PENDING") continue;
+      const user = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", invitation.email))
+        .first();
+      if (user) continue;
+      await ctx.db.delete(invitation._id);
+      removed.invitations += 1;
+    }
+
+    return removed;
   },
 });

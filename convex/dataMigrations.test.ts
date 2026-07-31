@@ -204,3 +204,87 @@ describe("migration runner", () => {
     }
   });
 });
+
+const LAST_LOGIN_MIGRATION = "2026-07-31-user-last-login-at";
+
+describe("2026-07-31-user-last-login-at", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  async function seedUsers(t: TestConvex) {
+    return await t.run(async (ctx) => {
+      const now = Date.now();
+
+      const signedIn = await ctx.db.insert("users", { email: "signed-in@example.com", role: "USER" });
+      for (const offset of [5 * DAY, 1 * DAY, 9 * DAY]) {
+        await ctx.db.insert("logins", {
+          userId: signedIn,
+          ip: "1.2.3.4",
+          device: "Chrome",
+          location: "London",
+          status: "SUCCESS",
+          timestamp: now - offset,
+        });
+      }
+
+      // Only ever failed: has genuinely never signed in.
+      const lockedOut = await ctx.db.insert("users", { email: "locked@example.com", role: "USER" });
+      await ctx.db.insert("logins", {
+        userId: lockedOut,
+        ip: "1.2.3.4",
+        device: "Chrome",
+        location: "London",
+        status: "FAILED",
+        timestamp: now,
+      });
+
+      // No login rows at all.
+      const brandNew = await ctx.db.insert("users", { email: "new@example.com", role: "USER" });
+
+      return { signedIn, lockedOut, brandNew, newest: now - DAY };
+    });
+  }
+
+  test("stamps the newest successful login onto each user", async () => {
+    const t = makeTest();
+    const { signedIn, newest } = await seedUsers(t);
+
+    await t.mutation(internal.dataMigrations.run, { name: LAST_LOGIN_MIGRATION });
+    await drainScheduler(t);
+
+    const record = await getMigration(t, LAST_LOGIN_MIGRATION);
+    expect(record?.status).toBe("COMPLETED");
+    expect(record?.updated).toBe(1);
+
+    const stamped = await t.run(async (ctx) => (await ctx.db.get(signedIn))?.lastLoginAt);
+    expect(stamped).toBe(newest);
+  });
+
+  test("a user whose only attempts failed still reads as never signed in", async () => {
+    const t = makeTest();
+    const { lockedOut, brandNew } = await seedUsers(t);
+
+    await t.mutation(internal.dataMigrations.run, { name: LAST_LOGIN_MIGRATION });
+    await drainScheduler(t);
+
+    const values = await t.run(async (ctx) => ({
+      lockedOut: (await ctx.db.get(lockedOut))?.lastLoginAt ?? null,
+      brandNew: (await ctx.db.get(brandNew))?.lastLoginAt ?? null,
+    }));
+
+    expect(values.lockedOut).toBeNull();
+    expect(values.brandNew).toBeNull();
+  });
+
+  test("is idempotent — a second run changes nothing", async () => {
+    const t = makeTest();
+    await seedUsers(t);
+
+    await t.mutation(internal.dataMigrations.run, { name: LAST_LOGIN_MIGRATION });
+    await drainScheduler(t);
+    await t.mutation(internal.dataMigrations.run, { name: LAST_LOGIN_MIGRATION, force: true });
+    await drainScheduler(t);
+
+    const record = await getMigration(t, LAST_LOGIN_MIGRATION);
+    expect(record?.updated).toBe(0);
+  });
+});

@@ -16,12 +16,11 @@ Agent administration is under the admin area:
 - `/admin/agents/[id]/skills` attaches reusable skills to one agent.
 - `/admin/agents/[id]/knowledge` connects knowledge documents to an agent.
 - `/admin/agents/[id]/memory` reviews stored memories, proposed memories, reflections, and improvement suggestions.
-- `/admin/agents/[id]/system-prompt` edits the agent's system prompt.
+- `/admin/agents/[id]/system-prompt` opens the agent Instructions screen. It stores the standing job the agent should run when launched, plus the behavior/system-prompt instructions that shape how it works.
 - `/admin/agents/[id]/rules` manages rules attached to an agent.
 - `/admin/agents/[id]/interfaces` chooses which tools the agent may use, and whether it answers in plain English or in a fixed set of fields.
 - `/admin/agents/[id]/logs` and `/admin/agents/[id]/logs/[logId]` inspect agent logs.
-- `/admin/ai/skills` manages the reusable skill catalog.
-- `/admin/ai/skills/[id]` opens one skill.
+- `/admin/ai/skills` and `/admin/agents/skills` manage the reusable skill catalog. Skill detail and edit controls currently live inside the Skill Center surface rather than a separate implemented skill-detail route.
 - `/admin/agents/approvals` shows paused agent tool calls waiting for an approval decision.
 - `/app/agentic-testing` provides a sandbox for sending prompts to a selected agent or using automatic routing.
 
@@ -37,7 +36,7 @@ Agents are useful for work such as research triage, support preparation, tool-ba
 
 The agent list shows agents in a paginated admin table with search, model information, status, and row actions. The table follows the admin pagination standard of 15 rows per page.
 
-Creating an agent opens a guided builder. The builder can start from a template or create a custom agent. It asks for mission and audience details, policy choices, model behavior preference, knowledge and tool planning choices, and readiness acknowledgement. Template-based creation can seed an agent with a system prompt, trigger type, approval settings, temperature, recommended tools, and eval fixtures. Newly created template agents can start inactive so they can be configured and tested before use.
+Creating an agent opens a guided builder. The builder can start from a template or create a custom agent. It asks for mission and audience details, policy choices, model behavior preference, knowledge and tool planning choices, and readiness acknowledgement. Template-based creation can seed an agent with a behavior prompt, trigger type, approval settings, temperature, recommended tools, and eval fixtures. Newly created template agents can start inactive so they can be configured and tested before use.
 
 Deleting an agent is a destructive admin action. Treat it as a configuration removal rather than routine cleanup. If an agent has generated runs, logs, or operational evidence, review those records before removing the agent from active use.
 
@@ -53,7 +52,7 @@ The settings tab controls agent identity and runtime behavior. It includes name,
 
 The skills tab attaches active reusable skills to one agent. A skill is a capability package with instructions, risk level, tool requirements, and suggested evals. Skill bindings can be enabled, disabled, upgraded to the latest version, or removed.
 
-The knowledge, prompt, rules, integrations, and schemas tabs define what the agent can use and how it should behave. Knowledge documents supply reference material. The system prompt sets core instructions. Rules add governance constraints. Integrations and tools define actions the agent may call. Schemas define expected input and output shapes.
+The knowledge, instructions, rules, integrations, and schemas tabs define what the agent can use and how it should behave. Knowledge documents supply reference material. The Instructions screen has two responsibilities: the standing job says what the agent should do when launched without a one-off instruction, and the system-prompt field sets core behavior. Rules add governance constraints. Integrations and tools define actions the agent may call. Schemas define expected input and output shapes.
 
 The memory tab supports controlled learning. It shows active memories, memory quality indicators, proposed memory candidates, reflections, and improvement suggestions. High-risk learning items need review before they should be treated as routine memory changes. Memory candidates can be approved or rejected; approved candidates become active memories.
 
@@ -83,7 +82,7 @@ Model choices are resolved from configured AI model settings. Users should not a
 
 ## Practical Guidance
 
-Treat agents as governed assets. Before activating an agent, confirm its mission, prompt, model, knowledge, tools, rules, schemas, and skills. Run smoke evals and review release gate evidence. For high-risk skills or external actions, verify approval behavior and tool previews. After an agent starts running, monitor runs and approvals, turn useful failures into evals, and approve memory or prompt changes deliberately.
+Treat agents as governed assets. Before activating an agent, confirm its mission, standing job if it should run unattended, behavior prompt, model, knowledge, tools, rules, schemas, and skills. Run smoke evals and review release gate evidence. For high-risk skills or external actions, verify approval behavior and tool previews. After an agent starts running, monitor runs and approvals, turn useful failures into evals, and approve memory or prompt changes deliberately.
 
 For support and customer success teams, the most useful agent evidence is usually the run history, approval history, eval status, and release state. These explain what the agent tried to do, whether it used tools, whether a human paused or rejected an action, and why the agent is considered ready or blocked.
 

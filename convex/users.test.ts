@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 describe("OWASP: Broken Access Control - Users", () => {
@@ -522,5 +522,593 @@ describe("OWASP: Broken Access Control - Users", () => {
       "DETACH_SUPER_ADMIN",
       "IMPERSONATE_COMPANY",
     ]);
+  });
+});
+
+/*
+ * Login recording — the two columns the admin user directory reports depend on
+ * this being accurate. See docs/plans/active/user-directory-plan.md.
+ */
+describe("recordLogin", () => {
+  async function seedUser(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) =>
+      await ctx.db.insert("users", { email: "person@example.com", role: "USER" })
+    );
+  }
+
+  test("collapses a burst from the same device into one session", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const userId = await seedUser(t);
+    const client = t.withIdentity({ subject: userId });
+
+    for (let i = 0; i < 4; i += 1) {
+      await client.mutation(api.users.recordLogin, {
+        device: "Chrome on macOS",
+        ip: "1.2.3.4",
+        location: "London, United Kingdom",
+      });
+    }
+
+    const rows = await t.run(async (ctx) =>
+      await ctx.db.query("logins").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  test("a changing IP no longer defeats the throttle", async () => {
+    // The old key included the IP, so a mobile connection changing address —
+    // or the geo lookup falling back to "Concealed IP" — wrote a duplicate.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const userId = await seedUser(t);
+    const client = t.withIdentity({ subject: userId });
+
+    await client.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+    await client.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "Concealed IP",
+      location: "Unknown Location",
+    });
+
+    const rows = await t.run(async (ctx) =>
+      await ctx.db.query("logins").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  test("a genuinely different device is still recorded", async () => {
+    // Device stays in the throttle key on purpose: a new device is a real
+    // session and the profile's Logins tab exists to surface it.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const userId = await seedUser(t);
+    const client = t.withIdentity({ subject: userId });
+
+    await client.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+    await client.mutation(api.users.recordLogin, {
+      device: "Safari on iPhone",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+
+    const rows = await t.run(async (ctx) =>
+      await ctx.db.query("logins").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+    );
+    expect(rows).toHaveLength(2);
+  });
+
+  test("records a session again once the window has passed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const userId = await seedUser(t);
+    const client = t.withIdentity({ subject: userId });
+
+    await client.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+
+    // Age the existing row past the one-hour window.
+    await t.run(async (ctx) => {
+      const row = await ctx.db
+        .query("logins")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      if (row) await ctx.db.patch(row._id, { timestamp: Date.now() - 2 * 60 * 60 * 1000 });
+    });
+
+    await client.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+
+    const rows = await t.run(async (ctx) =>
+      await ctx.db.query("logins").withIndex("by_user", (q) => q.eq("userId", userId)).collect()
+    );
+    expect(rows).toHaveLength(2);
+  });
+
+  test("lastLoginAt always equals the newest login row", async () => {
+    // The invariant the directory's sort and the Phase 3 backfill both rely on.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const userId = await seedUser(t);
+    const client = t.withIdentity({ subject: userId });
+
+    // Convex serialises `undefined` to `null` on the way out of `t.run`.
+    const before = await t.run(async (ctx) => (await ctx.db.get(userId))?.lastLoginAt ?? null);
+    expect(before).toBeNull();
+
+    await client.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+
+    const { lastLoginAt, newestRow } = await t.run(async (ctx) => {
+      const user = await ctx.db.get(userId);
+      const rows = await ctx.db
+        .query("logins")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      return { lastLoginAt: user?.lastLoginAt, newestRow: Math.max(...rows.map((r) => r.timestamp)) };
+    });
+
+    expect(lastLoginAt).toBe(newestRow);
+  });
+
+  test("does nothing for a caller with no session", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const result = await t.mutation(api.users.recordLogin, {
+      device: "Chrome on macOS",
+      ip: "1.2.3.4",
+      location: "London, United Kingdom",
+    });
+
+    expect(result).toBeNull();
+    const rows = await t.run(async (ctx) => await ctx.db.query("logins").collect());
+    expect(rows).toHaveLength(0);
+  });
+});
+
+describe("recomputeLoginCounts", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  test("counts the window, and resets a user who has fallen out of it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const { activeId, dormantId } = await t.run(async (ctx) => {
+      const activeId = await ctx.db.insert("users", { email: "active@example.com", role: "USER" });
+      // Already carries a stale count from when it was busy.
+      const dormantId = await ctx.db.insert("users", {
+        email: "dormant@example.com",
+        role: "USER",
+        loginCount30d: 7,
+      });
+
+      for (const daysAgo of [1, 10, 25]) {
+        await ctx.db.insert("logins", {
+          userId: activeId,
+          ip: "1.2.3.4",
+          device: "Chrome",
+          location: "London",
+          status: "SUCCESS",
+          timestamp: now - daysAgo * DAY,
+        });
+      }
+      // Outside the window entirely.
+      await ctx.db.insert("logins", {
+        userId: dormantId,
+        ip: "1.2.3.4",
+        device: "Chrome",
+        location: "London",
+        status: "SUCCESS",
+        timestamp: now - 45 * DAY,
+      });
+
+      return { activeId, dormantId };
+    });
+
+    await t.mutation(internal.users.recomputeLoginCounts, {});
+
+    const counts = await t.run(async (ctx) => ({
+      active: (await ctx.db.get(activeId))?.loginCount30d,
+      dormant: (await ctx.db.get(dormantId))?.loginCount30d,
+    }));
+
+    expect(counts.active).toBe(3);
+    expect(counts.dormant).toBe(0);
+  });
+
+  test("failed attempts do not inflate the count", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const userId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", { email: "person@example.com", role: "USER" });
+      for (const status of ["SUCCESS", "FAILED", "FAILED"] as const) {
+        await ctx.db.insert("logins", {
+          userId,
+          ip: "1.2.3.4",
+          device: "Chrome",
+          location: "London",
+          status,
+          timestamp: now - DAY,
+        });
+      }
+      return userId;
+    });
+
+    await t.mutation(internal.users.recomputeLoginCounts, {});
+
+    const count = await t.run(async (ctx) => (await ctx.db.get(userId))?.loginCount30d);
+    expect(count).toBe(1);
+  });
+
+  test("reports what it did rather than returning silently", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const result = await t.mutation(internal.users.recomputeLoginCounts, {});
+
+    expect(result).toMatchObject({ truncated: false, updated: 0 });
+  });
+});
+
+describe("listDirectoryUsers", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const page = { numItems: 50, cursor: null };
+
+  async function seed(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const now = Date.now();
+      const acme = await ctx.db.insert("companies", { name: "Acme", createdAt: now });
+      const other = await ctx.db.insert("companies", { name: "Other", createdAt: now });
+
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@example.com", role: "SUPER_ADMIN", lastLoginAt: now,
+      });
+      const recentId = await ctx.db.insert("users", {
+        email: "recent@acme.com", role: "USER", companyId: acme,
+        lastLoginAt: now - 2 * DAY, loginCount30d: 9,
+      });
+      const dormantId = await ctx.db.insert("users", {
+        email: "dormant@acme.com", role: "ADMIN", companyId: acme,
+        lastLoginAt: now - 60 * DAY, loginCount30d: 0,
+      });
+      const neverId = await ctx.db.insert("users", {
+        email: "never@other.com", role: "USER", companyId: other,
+      });
+
+      return { acme, other, superAdminId, recentId, dormantId, neverId };
+    });
+  }
+
+  test("super admins are never listed — they have their own screen", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const result = await viewer.query(api.users.listDirectoryUsers, { paginationOpts: page });
+
+    expect(result.page.map((u) => u.email)).not.toContain("super@example.com");
+    expect(result.page).toHaveLength(3);
+  });
+
+  test("a non-super-admin is rejected by the wrapper, not merely redirected", async () => {
+    // The /admin layout redirects in the browser. That is a UI convenience and
+    // not a control; the query has to refuse on its own.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await seed(t);
+    const adminId = await t.run(async (ctx) =>
+      await ctx.db.insert("users", { email: "admin@acme.com", role: "ADMIN" })
+    );
+
+    await expect(
+      t.withIdentity({ subject: adminId }).query(api.users.listDirectoryUsers, { paginationOpts: page })
+    ).rejects.toThrow();
+  });
+
+  test("unauthenticated callers get nothing", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await seed(t);
+
+    await expect(
+      t.query(api.users.listDirectoryUsers, { paginationOpts: page })
+    ).rejects.toThrow();
+  });
+
+  test("filters by company", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId, acme } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const result = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, companyId: acme,
+    });
+
+    expect(result.page.map((u) => u.email).sort()).toEqual(["dormant@acme.com", "recent@acme.com"]);
+    expect(result.page[0].companyName).toBe("Acme");
+  });
+
+  test("filters by role", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const result = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, role: "ADMIN",
+    });
+
+    expect(result.page.map((u) => u.email)).toEqual(["dormant@acme.com"]);
+  });
+
+  test("filters by activity, including never", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const active = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, activity: "active7",
+    });
+    const dormant = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, activity: "dormant",
+    });
+    const never = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, activity: "never",
+    });
+
+    expect(active.page.map((u) => u.email)).toEqual(["recent@acme.com"]);
+    expect(dormant.page.map((u) => u.email)).toEqual(["dormant@acme.com"]);
+    expect(never.page.map((u) => u.email)).toEqual(["never@other.com"]);
+  });
+
+  test("sorts by last login, newest first by default", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const result = await viewer.query(api.users.listDirectoryUsers, { paginationOpts: page });
+
+    expect(result.page.map((u) => u.email)).toEqual([
+      "recent@acme.com",
+      "dormant@acme.com",
+      "never@other.com",
+    ]);
+  });
+
+  test("sorts by the 30-day count", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const result = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, sortBy: "loginCount",
+    });
+
+    expect(result.page[0].email).toBe("recent@acme.com");
+    expect(result.page[0].loginCount30d).toBe(9);
+  });
+
+  test("reports that sorting is unavailable while searching", async () => {
+    // Convex search indexes cannot range filter, so the screen must explain the
+    // disabled sort rather than appear to ignore it.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const searched = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: page, searchTerm: "recent@acme.com",
+    });
+    const browsed = await viewer.query(api.users.listDirectoryUsers, { paginationOpts: page });
+
+    expect(searched.sortingAvailable).toBe(false);
+    expect(browsed.sortingAvailable).toBe(true);
+    expect(searched.page.map((u) => u.email)).toEqual(["recent@acme.com"]);
+  });
+
+  test("pages through every user exactly once", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+    const viewer = t.withIdentity({ subject: superAdminId });
+
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let guard = 0; guard < 10; guard += 1) {
+      const result: Awaited<ReturnType<typeof viewer.query>> = await viewer.query(
+        api.users.listDirectoryUsers,
+        { paginationOpts: { numItems: 2, cursor } }
+      );
+      seen.push(...result.page.map((u: { email: string | null }) => u.email ?? ""));
+      if (result.isDone) break;
+      cursor = result.continueCursor;
+    }
+
+    expect(seen.sort()).toEqual(["dormant@acme.com", "never@other.com", "recent@acme.com"]);
+  });
+});
+
+describe("listDirectoryUsers — dormant versus never", () => {
+  test("dormant excludes users who have never logged in", async () => {
+    /*
+     * Convex sorts `undefined` ahead of every number, so an upper bound on
+     * `lastLoginAt` silently swallowed the never-logged-in users and reported
+     * them as dormant. Those are different facts: one person stopped using the
+     * platform, the other never started.
+     */
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const DAY = 24 * 60 * 60 * 1000;
+
+    const superAdminId = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@example.com", role: "SUPER_ADMIN",
+      });
+      await ctx.db.insert("users", {
+        email: "dormant@example.com", role: "USER", lastLoginAt: Date.now() - 60 * DAY,
+      });
+      await ctx.db.insert("users", { email: "never@example.com", role: "USER" });
+      return superAdminId;
+    });
+
+    const viewer = t.withIdentity({ subject: superAdminId });
+    const dormant = await viewer.query(api.users.listDirectoryUsers, {
+      paginationOpts: { numItems: 50, cursor: null },
+      activity: "dormant",
+    });
+
+    expect(dormant.page.map((u) => u.email)).toEqual(["dormant@example.com"]);
+  });
+});
+
+describe("getPaginatedUsers scope", () => {
+  /*
+   * One query serves two screens with opposite requirements: the front-end team
+   * page must follow the impersonated workspace, the admin section must ignore
+   * it. Anthony, 2026-07-31: "the impersonation is user front end only not
+   * admin section." The scope argument makes that explicit at each call site
+   * rather than implied by whoever happens to be calling.
+   */
+  const page = { numItems: 50, cursor: null };
+
+  async function seed(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const acme = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const other = await ctx.db.insert("companies", { name: "Other", createdAt: Date.now() });
+
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        impersonatingCompanyId: acme,
+      });
+      await ctx.db.insert("users", { email: "inside@acme.com", role: "USER", companyId: acme });
+      await ctx.db.insert("users", { email: "outside@other.com", role: "USER", companyId: other });
+
+      return { superAdminId, acme, other };
+    });
+  }
+
+  test("workspace scope follows the impersonated company", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+
+    const result = await t.withIdentity({ subject: superAdminId })
+      .query(api.users.getPaginatedUsers, { paginationOpts: page, scope: "workspace" });
+
+    expect(result.page.map((u) => u.email)).toEqual(["inside@acme.com"]);
+  });
+
+  test("workspace scope is the default, so the team page is unchanged", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+
+    const result = await t.withIdentity({ subject: superAdminId })
+      .query(api.users.getPaginatedUsers, { paginationOpts: page });
+
+    expect(result.page.map((u) => u.email)).toEqual(["inside@acme.com"]);
+  });
+
+  test("platform scope ignores impersonation", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { superAdminId } = await seed(t);
+
+    const result = await t.withIdentity({ subject: superAdminId })
+      .query(api.users.getPaginatedUsers, { paginationOpts: page, scope: "platform" });
+
+    const emails = result.page.map((u) => u.email);
+    expect(emails).toContain("inside@acme.com");
+    expect(emails).toContain("outside@other.com");
+  });
+
+  test("a company admin cannot escape their tenant by asking for platform scope", async () => {
+    // The argument is a statement of intent, never a grant of access.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { acme } = await seed(t);
+    const adminId = await t.run(async (ctx) =>
+      await ctx.db.insert("users", { email: "admin@acme.com", role: "ADMIN", companyId: acme })
+    );
+
+    const result = await t.withIdentity({ subject: adminId })
+      .query(api.users.getPaginatedUsers, { paginationOpts: page, scope: "platform" });
+
+    expect(result.page.map((u) => u.email)).not.toContain("outside@other.com");
+  });
+
+  test("deleting a user clears the identity rows so the address can be invited again", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, targetId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const targetId = await ctx.db.insert("users", {
+        email: "member@test.com",
+        role: "USER",
+        companyId,
+        createdAt: Date.now(),
+      });
+
+      // The rows a sign-in reads. Before this fix, deletion left every one of
+      // them behind: the auth account went on pointing at a user document that
+      // no longer existed, and the accepted invitation made the address
+      // impossible to re-invite.
+      const accountId = await ctx.db.insert("authAccounts", {
+        userId: targetId,
+        provider: "resend",
+        providerAccountId: "member@test.com",
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        accountId,
+        provider: "resend",
+        code: "unredeemed-code",
+        expirationTime: Date.now() + 60_000,
+      });
+      const sessionId = await ctx.db.insert("authSessions", {
+        userId: targetId,
+        expirationTime: Date.now() + 60_000,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        sessionId,
+        expirationTime: Date.now() + 60_000,
+      });
+      await ctx.db.insert("invitations", {
+        email: "member@test.com",
+        companyId,
+        role: "USER",
+        status: "ACCEPTED",
+        token: "spent-token",
+        invitedAt: Date.now(),
+        acceptedAt: Date.now(),
+      });
+
+      return { superAdminId, targetId };
+    });
+
+    await expect(
+      t.withIdentity({ subject: superAdminId }).mutation(api.users.deleteUser, { id: targetId })
+    ).resolves.toBe(true);
+
+    const remaining = await t.run(async (ctx) => ({
+      accounts: await ctx.db.query("authAccounts").collect(),
+      codes: await ctx.db.query("authVerificationCodes").collect(),
+      sessions: await ctx.db.query("authSessions").collect(),
+      refreshTokens: await ctx.db.query("authRefreshTokens").collect(),
+      invitations: await ctx.db.query("invitations").collect(),
+    }));
+
+    expect(remaining.accounts).toHaveLength(0);
+    expect(remaining.codes).toHaveLength(0);
+    expect(remaining.sessions).toHaveLength(0);
+    expect(remaining.refreshTokens).toHaveLength(0);
+    expect(remaining.invitations).toHaveLength(0);
   });
 });

@@ -1,11 +1,12 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 /**
  * Tenant-isolation proofs for the product verticals — properties, the Apify
- * scraper runs behind them, and the Rightmove SSRF guard.
+ * scraper runs behind them, the Rightmove SSRF guard, and the module-gated
+ * sales data import.
  *
  * These were part of `bola.test.ts` until the template split (P4.3). They are
  * the same tests, moved: the template drops the properties vertical, so a
@@ -167,5 +168,177 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
         maxProperties: 5
       })
     ).rejects.toThrowError(/SSRF Prevention/);
+  });
+
+  /**
+   * Sales Data is the first surface gated by a company module, so there are two
+   * separate things to prove: that one workspace cannot read another's rows,
+   * and that a workspace without the module cannot reach the data at all. The
+   * second matters because hiding the navigation is not a control — someone who
+   * types the URL, or calls the query directly, must still be refused.
+   */
+  async function seedSalesData(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const withModule = await ctx.db.insert("companies", {
+        name: "With Module",
+        enabledModules: ["salesData"],
+        createdAt: Date.now(),
+      });
+      const withoutModule = await ctx.db.insert("companies", {
+        name: "Without Module",
+        createdAt: Date.now(),
+      });
+
+      const userWith = await ctx.db.insert("users", {
+        email: "with@test.com",
+        role: "ADMIN",
+        companyId: withModule,
+      });
+      const userWithout = await ctx.db.insert("users", {
+        email: "without@test.com",
+        role: "ADMIN",
+        companyId: withoutModule,
+      });
+
+      const makeImport = async (companyId: typeof withModule, userId: typeof userWith) =>
+        await ctx.db.insert("salesDataImports", {
+          companyId,
+          fileName: "sample.xlsx",
+          status: "COMPLETED" as const,
+          sheetMapping: { sales: 0, categories: 1, areasOfInterest: 2, frequency: 3 },
+          periodLabels: ["2026-01"],
+          salesRowCount: 1,
+          categoryRowCount: 0,
+          areasOfInterestRowCount: 0,
+          frequencyRowCount: 0,
+          importedBy: userId,
+          startedAt: Date.now(),
+          completedAt: Date.now(),
+        });
+
+      const importWith = await makeImport(withModule, userWith);
+      const importWithout = await makeImport(withoutModule, userWithout);
+
+      const makeRow = async (
+        companyId: typeof withModule,
+        importId: typeof importWith,
+        accountName: string
+      ) =>
+        await ctx.db.insert("salesDataRows", {
+          companyId,
+          importId,
+          parentAccount: "ACC",
+          groupName: "GROUP",
+          accountName,
+          customerType: "CARE HOMES",
+          productCode: "P1",
+          uniqueId: "ACCP1",
+          productDescription: "A PRODUCT",
+          productCategory: "CHEMICALS",
+          productType: "CLEANER",
+          customerTypeKey: "CARE HOMES",
+          productCategoryKey: "CHEMICALS",
+          productTypeKey: "CLEANER",
+          period1: 10,
+          totalRevenue: 10,
+        });
+
+      await makeRow(withModule, importWith, "mine");
+      await makeRow(withoutModule, importWithout, "not mine");
+
+      return { withModule, withoutModule, userWith, userWithout };
+    });
+  }
+
+  test("Sales data rows are strictly isolated to the tenant (BOLA)", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userWith } = await seedSalesData(t);
+
+    const client = t.withIdentity({ subject: userWith });
+    const result = await client.query(api.salesData.listSalesRows, {
+      paginationOpts: { numItems: 10, cursor: null },
+    });
+
+    // The other company's row exists and carries the same shape; only the
+    // tenant scope keeps it out.
+    expect(result.page.length).toBe(1);
+    expect(result.page[0].accountName).toBe("mine");
+  });
+
+  test("A workspace without the module cannot reach the data", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userWithout } = await seedSalesData(t);
+
+    const client = t.withIdentity({ subject: userWithout });
+
+    // Its own rows exist — the refusal is the module flag, not an empty table.
+    await expect(
+      client.query(api.salesData.listSalesRows, {
+        paginationOpts: { numItems: 10, cursor: null },
+      })
+    ).rejects.toThrowError(/not enabled/i);
+
+    await expect(
+      client.query(api.salesData.listCategoryLinks, {
+        paginationOpts: { numItems: 10, cursor: null },
+      })
+    ).rejects.toThrowError(/not enabled/i);
+
+    await expect(
+      client.query(api.salesData.listAreasOfInterest, {
+        paginationOpts: { numItems: 10, cursor: null },
+      })
+    ).rejects.toThrowError(/not enabled/i);
+
+    await expect(
+      client.query(api.salesData.listFrequencies, {
+        paginationOpts: { numItems: 10, cursor: null },
+      })
+    ).rejects.toThrowError(/not enabled/i);
+
+    await expect(client.query(api.salesData.listImports, {})).rejects.toThrowError(
+      /not enabled/i
+    );
+
+    // The upload URL is the way in, so it is gated too.
+    await expect(
+      client.mutation(api.salesData.generateUploadUrl, {})
+    ).rejects.toThrowError(/not enabled/i);
+  });
+
+  test("The section overview reports the module as off rather than throwing", async () => {
+    // The navigation asks this on every render, including for the workspaces
+    // that do not have it. That is a normal answer, not an error.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userWith, userWithout } = await seedSalesData(t);
+
+    const off = await t
+      .withIdentity({ subject: userWithout })
+      .query(api.salesData.getSectionOverview, {});
+    expect(off.enabled).toBe(false);
+    expect(off.currentImport).toBeNull();
+
+    const on = await t
+      .withIdentity({ subject: userWith })
+      .query(api.salesData.getSectionOverview, {});
+    expect(on.enabled).toBe(true);
+    expect(on.companyName).toBe("With Module");
+    expect(on.currentImport?.salesRowCount).toBe(1);
+  });
+
+  test("An import cannot be started against another workspace", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { withModule, userWithout } = await seedSalesData(t);
+
+    // The action passes the caller and their company to this mutation. A caller
+    // who names a company that is not theirs is refused here, not upstream.
+    await expect(
+      t.mutation(internal.salesData.startImportInternal, {
+        userId: userWithout,
+        companyId: withModule,
+        fileName: "stolen.xlsx",
+        sheetMapping: { sales: 0, categories: 1, areasOfInterest: 2, frequency: 3 },
+      })
+    ).rejects.toThrowError(/Unauthorized/);
   });
 });

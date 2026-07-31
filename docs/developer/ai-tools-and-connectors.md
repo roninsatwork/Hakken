@@ -11,7 +11,6 @@ Admin routes:
 - `src/app/(dashboard)/admin/ai/tools/page.tsx` renders the connector marketplace, installed connector controls, and paginated tool catalog.
 - `src/app/(dashboard)/admin/ai/tools/new/page.tsx` creates Sonae action tools.
 - `src/app/(dashboard)/admin/ai/tools/[id]/page.tsx` edits tool contracts.
-- `src/app/(dashboard)/admin/ai/tools/mcp/new/page.tsx` currently creates a generic external-action `aiTools` record for a remote MCP-style endpoint. It does not yet install a real connector record or discover remote MCP tools.
 - `src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.tsx` manages connector install details, secret references, enabled tool mappings, OAuth state, and test logs.
 
 Agent tool binding UI is part of agent administration and consumes the same `aiTools` and `agentTools` backend contracts.
@@ -22,7 +21,7 @@ Agent tool binding UI is part of agent administration and consumes the same `aiT
 
 - `getConnectorMarketplace` merges built-in connector definitions with visible install records.
 - `installConnector` installs or syncs a built-in connector and its generated tools.
-- `getConnectorInstallDetails`, `updateConnectorInstall`, `beginConnectorOAuth`, `completeConnectorOAuth`, `disconnectConnectorOAuth`, and `testConnectorConnection` manage connector state.
+- `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions exist behind an availability guard, but OAuth connections are currently disabled.
 - `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Sonae action tools.
 - `getAgentTools` supports agent tool binding reads.
 
@@ -55,7 +54,7 @@ Relevant schema areas include:
 
 Connector installs can be global or tenant-restricted. Tenant-restricted connector installs carry a company id. Global connector installs must not carry a company id.
 
-The `/admin/ai/tools/mcp/new` route is not backed by a dedicated MCP connector table or discovery job yet. It calls `api.aiTools.createTool` with a `handlerMapping` shaped as `mcp.proxy.{name}`, `SUPER_ADMIN` required role, `EXTERNAL` side-effect level, and confirmation required. Because there is no registered handler for these generated mappings today, runtime execution fails through the unknown/unimplemented handler path unless a concrete handler is added later.
+There is no implemented dedicated MCP tool creation route in the current app. Custom or connector-style behavior must go through the implemented tool creation route, connector detail pages, and the registered runtime handler system. Do not document MCP proxy creation as live behavior unless a concrete route and runtime handler are added.
 
 The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Sonae-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
 
@@ -118,7 +117,7 @@ Generated connector tools inherit required role, side-effect level, confirmation
 
 `updateConnectorInstall` can change configured secret refs, enabled mappings, active state, and, for super admins, tenant assignment and tenant availability. It resets connector test status to `UNTESTED` and resyncs generated tool activity after changes.
 
-OAuth connector state is scaffolded inside Sonae rather than delegated to a live provider callback. `beginConnectorOAuth` creates a pending `toolConnectorOAuthConnections` row and returns an internal placeholder authorization URL. `completeConnectorOAuth` validates the pending state, account reference, token reference, and required scopes before marking the connection connected. `disconnectConnectorOAuth` marks recent pending or connected rows disconnected and clears connector OAuth refs. Reference values are still validated as references, not raw secrets.
+OAuth connector state exists in the schema and functions, but it is not available on this deployment. `isConnectorOAuthAvailable()` currently returns false because there is no provider authorization flow, callback, encrypted token storage, or refresh path. `beginConnectorOAuth` and `completeConnectorOAuth` refuse with an explicit unavailable message before creating or completing an OAuth connection. Built-in connector definitions currently use `NONE` or `SECRET_REF`, not OAuth.
 
 ## Audit And Diagnostics
 

@@ -7,16 +7,16 @@ Agents are Sonae's governed AI worker implementation. The current system covers 
 The admin routes are under `src/app/(dashboard)/admin/agents/`:
 
 - `src/app/(dashboard)/admin/agents/page.tsx` lists agents, searches with paginated Convex results, starts the builder, creates agents from templates, creates custom agents, and deletes agents.
-- `src/app/(dashboard)/admin/agents/[id]/layout.tsx` renders the agent detail shell and tabs. It also exposes a `Launch Run` action that calls `api.scheduler.manualRunSchedule` with the agent id.
+- `src/app/(dashboard)/admin/agents/[id]/layout.tsx` renders the agent detail shell and tabs. It also exposes the `Run Agent`/`Stop Agent` action. `Run Agent` calls `api.scheduler.manualRunSchedule`; if the agent has no `standingObjective`, the UI asks for a one-off objective before starting.
 - `src/app/(dashboard)/admin/agents/[id]/page.tsx` shows transaction summary metrics and recent transactions.
 - `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx` shows run analytics, run lists, run details, replay, cancellation, feedback, reflections, memory candidate generation, eval creation, eval suite execution, and improvement suggestions.
 - `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages checks, smoke evals, suite presets, and which checks must pass before an agent goes live.
 - `src/app/(dashboard)/admin/agents/[id]/settings/page.tsx` manages name, description, avatar upload, model mode, reasoning effort, internet access, and the draft/live switch.
 - `src/app/(dashboard)/admin/agents/[id]/skills/page.tsx` attaches, upgrades, enables, disables, and removes skills for one agent.
-- `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx`, and `src/app/(dashboard)/admin/agents/[id]/interfaces/page.tsx` configure the agent's context, governance, tools, and answer shape.
+- `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx`, `src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx`, and `src/app/(dashboard)/admin/agents/[id]/interfaces/page.tsx` configure the agent's context, standing job, behavior prompt, governance, tools, and answer shape.
 - `src/app/(dashboard)/admin/agents/[id]/memory/page.tsx` reviews memories, memory quality, memory candidates, reflections, and improvement suggestions.
 - `src/app/(dashboard)/admin/agents/[id]/logs/page.tsx` and `src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx` show agent logs.
-- `src/app/(dashboard)/admin/agents/skills/page.tsx` and `src/app/(dashboard)/admin/agents/skills/[id]/page.tsx` manage the reusable skill catalog.
+- `src/app/(dashboard)/admin/agents/skills/page.tsx` and `src/app/(dashboard)/admin/ai/skills/page.tsx` manage the reusable skill catalog. Skill detail and edit controls currently live inside the Skill Center surface rather than a separate skill-detail route.
 - `src/app/(dashboard)/admin/agents/approvals/page.tsx` exposes pending `agentRunApprovals`.
 
 The prompt sandbox lives at `src/app/(dashboard)/app/agentic-testing/page.tsx`. It selects an agent or auto-routes through `api.orchestrator.routeAgentIntent`, creates a chat thread, and sends a message with `dynamicAgentId` when an agent is selected or routed.
@@ -40,7 +40,7 @@ Related systems include `convex/aiModels.ts`, `convex/aiModelService.ts`, `conve
 
 Agent-related schema lives in `convex/schema.ts`.
 
-`agents` stores the configurable worker record. Important fields include name, description, optional company scope, avatar, model id, model selection mode, thinking mode, reasoning effort, internet access, active state, temperature, human approval flag, trigger type, prompt/rule/knowledge ids, schemas, workflow linkage, and release-gate configuration.
+`agents` stores the configurable worker record. Important fields include name, description, optional company scope, avatar, model id, model selection mode, thinking mode, reasoning effort, internet access, active state, temperature, human approval flag, autonomous tool flag, run limits, trigger type, `systemPrompt`, optional `standingObjective`, rule/knowledge ids, schemas, workflow linkage, and release-gate configuration.
 
 `agentRuns` stores each durable run. It records the agent, optional agent version, thread, workflow, schedule, trigger type, objective, status, company/user scope, resolved provider/model data, budgets, token and cost totals, timing, errors, final output, and replay metadata.
 

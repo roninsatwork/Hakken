@@ -116,6 +116,17 @@ crons.daily(
   {}
 );
 
+// Recompute the rolling 30-day login count behind the admin user directory.
+// A rolling window decays with the calendar, so this has to run even on a night
+// when nobody logged in — otherwise a dormant account keeps yesterday's number.
+// Just before the platform alerts, so the directory and the alert agree.
+crons.daily(
+  "user-login-count-rollup",
+  { hourUTC: 0, minuteUTC: 10 },
+  internal.users.recomputeLoginCounts,
+  {}
+);
+
 // Daily Platform Alerts
 crons.daily(
   "dispatch-platform-alerts",

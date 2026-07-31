@@ -40,6 +40,17 @@ scripts, and operator procedures change.
 - [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.
 - [Platform Hardening Plan](./plans/active/platform-hardening-plan.md) — the platform hardening record for non-movement platform correctness, security, operational envelope, agent runtime, and reusability.
 - [Admin UI/UX Plan](./plans/active/admin-ux-plan.md) — active admin usability plan for the model catalogue, Skill Center, skill detail, model defaults, system options, API keys, and related admin screens.
+- [OpenRouter And Model Scale Plan](./plans/active/openrouter-and-model-scale-plan.md) — active AI provider/model catalogue scale plan for OpenRouter, provider resolution, paging, search indexes, and rollups.
+- [AI Checks Plan](./plans/active/ai-checks-plan.md) — active AI testing plan for company evals, agent evals, shared check vocabulary, and readiness gates.
+- [Agent Observability Plan](./plans/active/agent-observability-plan.md) — active observability plan for agent overview, job detail, raw logs, and linked run evidence.
+- [Agent Autonomy And Approvals Plan](./plans/active/agent-autonomy-and-approvals-plan.md) — active plan for autonomous tool execution, approval queues, and approval expiry behaviour.
+- [Pressing Run Should Actually Run The Agent](./plans/active/agents-run-properly-plan.md) — active plan/history for making manual and scheduled agent runs use the real tool-capable agent loop.
+- [Rightmove Agent Execution Plan](./plans/active/rightmove-agent-execution-plan.md) — active plan for making the Rightmove Agent the single execution path for property collection.
+- [Company AI Readiness Rebuild Plan](./plans/active/company-ai-readiness-rebuild-plan.md) — active plan for replacing the company AI readiness screen and its score/signal model.
+- [Company And Agent Model Defaults Plan](./plans/active/company-and-agent-model-defaults-plan.md) — active plan for aligning company and agent model-default controls with the platform model-defaults screen.
+- [Public Website Plan](./plans/active/public-website-plan.md) — active plan for the pre-login public website, including home, platform, showcase, trust, and contact work.
+- [Observability Collection And Killswitch Handover](./plans/active/observability-collection-and-killswitch-handover.md) — active handover for honest Apify collection reporting and a visible agent kill switch.
+- [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - [Handover](./plans/active/HANDOVER.md) — current platform-hardening handover state and verification context.
 - Retired and completed plans live in [docs/plans/completed/](./plans/index.md#retired-and-completed-plans). Historical plans are background only unless an active document explicitly reopens them.
@@ -53,9 +64,15 @@ scripts, and operator procedures change.
 - [Backend](./developer/backend.md)
 - [Deployment](./developer/deployment.md)
 - [Future Agent Maintenance Plan](./developer/future-agent-maintenance-plan.md)
+- [Function And Feature Coverage Matrix](./developer/function-and-feature-coverage-matrix.md)
+- [Route Reference](./developer/route-reference.md)
+- [Convex API And Schema Reference](./developer/convex-api-and-schema-reference.md)
+- [Operational Scripts Reference](./developer/operational-scripts-reference.md)
 - [Assistant Chat](./developer/assistant-chat.md)
+- [Public Website](./developer/public-website.md)
 - [Administration](./developer/administration.md)
 - [Company And User Management](./developer/company-user-management.md)
+- [Company AI Readiness And Checks](./developer/company-ai-readiness-and-checks.md)
 - [Data Retention And Purges](./developer/data-retention-and-purges.md)
 - [Email Branding](./developer/email-branding.md)
 - [Route Protection And Authentication](./developer/route-protection-and-authentication.md)
@@ -88,6 +105,7 @@ scripts, and operator procedures change.
 - [Workflow Automation](./developer/workflow-automation.md)
 - [Workflow Runtime Internals](./developer/workflow-runtime-internals.md)
 - [Property Research And Board Reports](./developer/property-research-and-reports.md)
+- [Sales And Board Reports](./developer/sales-and-board-reports.md)
 - [Product Extension Guide](./developer/product-extension-guide.md)
 - [Upload And Knowledge Policy](./developer/upload-and-knowledge-policy.md)
 - [AI Provider Tool Extension](./developer/ai-provider-tool-extension.md)
@@ -130,6 +148,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 
 - [End User Index](./end-user/index.md)
 - [Platform Overview](./end-user/platform-overview.md)
+- [Public Website](./end-user/public-website.md)
 - [Login, Access, And Authentication](./end-user/login-access-and-authentication.md)
 - [Assistant Chat](./end-user/assistant-chat.md)
 - [Administration](./end-user/administration.md)
@@ -146,6 +165,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Health](./end-user/health.md)
 - [Organization And Company Workspaces](./end-user/organization-and-company-workspaces.md)
 - [Company Workspace Administration](./end-user/company-workspace-administration.md)
+- [Company AI Readiness And Checks](./end-user/company-ai-readiness-and-checks.md)
 - [Platform Plans And Quotas](./end-user/platform-plans-and-quotas.md)
 - [Platform Operations Settings](./end-user/platform-operations-settings.md)
 - [System Health And Maintenance](./end-user/system-health-and-maintenance.md)
@@ -155,3 +175,4 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Temporary Posture Studio Demo](./end-user/temporary-posture-studio-demo.md)
 - [Workflow Automation](./end-user/workflow-automation.md)
 - [Property Research And Board Reports](./end-user/property-research-and-reports.md)
+- [Sales And Board Reports](./end-user/sales-and-board-reports.md)

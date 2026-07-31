@@ -106,6 +106,8 @@ const labels: Record<string, string> = {
   systemAdmins: "System Admins",
   systemPrompt: "System Prompt",
   systemSettings: "System Settings",
+  userManagement: "User Management",
+  allUsers: "All Users",
   webhookDeliveries: "Webhook Deliveries",
 };
 

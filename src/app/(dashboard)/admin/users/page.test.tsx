@@ -143,11 +143,15 @@ describe("ManageUsersPage", () => {
 
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("pending@example.com")).toBeInTheDocument();
-    expect(usePaginatedQuery).toHaveBeenLastCalledWith(expect.anything(), { searchTerm: "" }, { initialNumItems: 15 });
+    // `scope: "platform"` because the admin section ignores the impersonated
+    // workspace. See convex/users.ts.
+    expect(usePaginatedQuery).toHaveBeenLastCalledWith(expect.anything(), { searchTerm: "", scope: "platform" }, { initialNumItems: 15 });
 
     fireEvent.change(screen.getByPlaceholderText("Search users by name or email..."), { target: { value: "grace" } });
 
-    expect(usePaginatedQuery).toHaveBeenLastCalledWith(expect.anything(), { searchTerm: "grace" }, { initialNumItems: 15 });
+    // `scope: "platform"` because the admin section ignores the impersonated
+    // workspace. See convex/users.ts.
+    expect(usePaginatedQuery).toHaveBeenLastCalledWith(expect.anything(), { searchTerm: "grace", scope: "platform" }, { initialNumItems: 15 });
 
     fireEvent.click(screen.getByRole("button", { name: "Load More Identities" }));
     expect(loadMore).toHaveBeenCalledWith(15);

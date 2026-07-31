@@ -1,15 +1,17 @@
 # Rightmove Agent Execution Plan
 
-**Created 2026-07-30. Status: in progress.**
+**Created 2026-07-30. Status: partially implemented, still in progress.**
 
 This plan makes the Rightmove Agent the single way property collection runs,
 whether it is started by an admin from the agent screen or by a user from the
 Properties Search screen.
 
-The current product problem is simple: the user-facing Properties Search screen
-starts Apify directly. The admin area has a Rightmove Agent, but the frontend
-does not call it, so the agent Activity/Observability trail does not own the
-work the user actually starts.
+The first execution-path problem has been fixed: the user-facing Properties
+Search screen now queues the Rightmove Agent through
+`propertyAgents.startRightmoveCollection` instead of calling Apify directly. The
+remaining product problem is evidence linkage: the Apify collection run is still
+reported through `apifyRuns`, and the plan still needs the visible connection
+between the agent run, tool call, Properties Logs, and Scraped Data.
 
 ---
 
@@ -29,14 +31,17 @@ Observability, Properties Logs, and Scraped Data all describe the same work.
 
 ## Current behaviour
 
-- `/app/properties/search` calls `api.apify.startRightmoveScrape` directly.
-- `startRightmoveScrape` starts the known Rightmove Apify actor directly.
+- `/app/properties/search` calls `api.propertyAgents.startRightmoveCollection`.
+- `startRightmoveCollection` validates the Rightmove search URL and limit,
+  resolves the active Rightmove Agent, creates an `agentRuns` row, snapshots the
+  agent version, and schedules `internal.agentRuntime.runTriggeredAgentObjective`.
+- `startRightmoveScrape` still exists for direct Rightmove actor execution, and
+  the agent/tool path still ultimately starts the known Rightmove Apify actor.
 - `/app/properties/logs` reads `apifyRuns`, not `agentRuns`.
-- The admin Rightmove Agent can be run from its own admin page, but that is a
-  separate path from the user-facing search flow.
-- The Rightmove Agent's visible instructions currently contain technical Apify
-  details such as actor ids and JSON settings because the UI has no friendlier
-  way to express "collect from this Rightmove URL with this limit."
+- The admin Rightmove Agent can be run from its own admin page, and the
+  user-facing Search flow now starts the same agent-owned execution model.
+- The remaining gap is that `apifyRuns` does not yet visibly link back to the
+  `agentRuns` row or tool call that started collection.
 
 ---
 
@@ -69,6 +74,9 @@ console.
 
 ## Phase 1 — Backend trigger for the user frontend
 
+**Implemented.** `propertyAgents.startRightmoveCollection` now provides this
+tenant-safe start path.
+
 Add a tenant-safe backend function, for example
 `propertyAgents.startRightmoveCollection`, callable by authenticated app users.
 
@@ -89,6 +97,10 @@ signed in, so this should use the tenant-authenticated backend path.
 ---
 
 ## Phase 2 — Search screen uses the agent
+
+**Implemented for execution.** `/app/properties/search` now starts the Rightmove
+Agent. The richer run-detail link from the success state is still part of the
+remaining evidence-linking work.
 
 Update `/app/properties/search` so submit starts the Rightmove Agent instead of
 calling `api.apify.startRightmoveScrape` directly.

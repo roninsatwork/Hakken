@@ -10,18 +10,34 @@ import {
 } from "./authz";
 import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
+import { renderEmail } from "./emailLayoutService";
 import { sendResendEmail } from "./resendEmailService";
 import { adminAction, adminMutation, adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
 
-function escapeEmailText(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+/**
+ * What a dispatch actually did to the invitation table.
+ *
+ * Declared, and applied as an explicit handler return type below, because
+ * `dispatchInviteEmail` reads this value back through `internal.invites` from
+ * the same module. Without the annotation TypeScript cannot resolve the cycle,
+ * infers `any`, and the failure propagates out through the generated `internal`
+ * types into unrelated files.
+ */
+type InviteRecordOutcome = {
+  outcome: "created" | "reissued" | "alreadyActive";
+  previousStatus?: "PENDING" | "ACCEPTED" | "REVOKED";
+};
+
+/** Annotated for the same reason as {@link InviteRecordOutcome}. */
+type InviteDispatchResult = {
+  success: true;
+  id?: string;
+  simulated?: boolean;
+  outcome: InviteRecordOutcome["outcome"];
+};
 
 // --- QUERIES & MUTATIONS ---
 
@@ -166,24 +182,84 @@ export const createInviteRecord = internalMutation({
     token: v.string(),
     callerId: v.optional(v.id("users")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<InviteRecordOutcome> => {
     const email = args.email.toLowerCase();
+    const now = Date.now();
 
     const existing = await ctx.db
       .query("invitations")
       .withIndex("by_email", (q) => q.eq("email", email))
       .first();
 
+    /*
+     * An accepted invitation means one of two very different things, and the
+     * previous version treated them the same — it returned without writing
+     * anything, for both.
+     *
+     * If the account still exists, that was right: the person does not need an
+     * invitation, they need to sign in. The only thing wrong was staying quiet
+     * about it, so this now reports `alreadyActive` instead of a bare success.
+     *
+     * If the account does not exist, the invitation is a leftover from a
+     * deleted user, and doing nothing was the bug. The email is sent before
+     * this mutation runs, so the admin got a delivered invite, a success
+     * message, and no database change — the address became permanently
+     * un-invitable and the directory showed nothing pending. `deleteUser` now
+     * clears the invitation as well, so this branch only catches rows orphaned
+     * before that fix.
+     */
+    if (existing?.status === "ACCEPTED") {
+      const activeUser = await ctx.db
+        .query("users")
+        .withIndex("email", (q) => q.eq("email", email))
+        .first();
+
+      if (activeUser) {
+        return { outcome: "alreadyActive", previousStatus: existing.status };
+      }
+    }
+
+    /*
+     * Otherwise a dispatched invite always leaves a PENDING row.
+     *
+     * `companyId` and `role` are refreshed, not just the token. The lookup is
+     * by email across every workspace, so without the refresh, inviting an
+     * existing invitee into a second workspace silently left them attached to
+     * the first one.
+     *
+     * One row per email is an invariant the sign-in path depends on:
+     * `authUserProvisioning` reads `by_email` with `.first()` and no tie-break.
+     * So this patches rather than inserting a second row.
+     */
     if (existing) {
-      // Overwrite existing invite if they haven't accepted
-      if (existing.status !== "ACCEPTED") {
-        await ctx.db.patch(existing._id, {
-          token: args.token,
-          status: "PENDING",
-          invitedAt: Date.now(),
+      await ctx.db.patch(existing._id, {
+        companyId: args.companyId,
+        role: args.role,
+        token: args.token,
+        status: "PENDING",
+        invitedAt: now,
+        // Passing `undefined` removes the field, so a reissued invite does not
+        // carry the acceptance date of the account that was deleted.
+        acceptedAt: undefined,
+      });
+
+      if (args.callerId) {
+        await ctx.db.insert("auditLogs", {
+          actionType: "CREATE_INVITE",
+          actorId: args.callerId,
+          entityType: "invitations",
+          entityId: existing._id,
+          timestamp: now,
+          metadata: JSON.stringify({
+            email,
+            role: args.role,
+            reissued: true,
+            previousStatus: existing.status,
+          }),
         });
       }
-      return;
+
+      return { outcome: "reissued" as const, previousStatus: existing.status };
     }
 
     const newInviteId = await ctx.db.insert("invitations", {
@@ -192,7 +268,7 @@ export const createInviteRecord = internalMutation({
       role: args.role,
       status: "PENDING",
       token: args.token,
-      invitedAt: Date.now(),
+      invitedAt: now,
     });
 
     if (args.callerId) {
@@ -201,10 +277,12 @@ export const createInviteRecord = internalMutation({
         actorId: args.callerId,
         entityType: "invitations",
         entityId: newInviteId,
-        timestamp: Date.now(),
-        metadata: JSON.stringify({ email: args.email, role: args.role })
+        timestamp: now,
+        metadata: JSON.stringify({ email, role: args.role })
       });
     }
+
+    return { outcome: "created" as const };
   },
 });
 
@@ -224,7 +302,7 @@ export const dispatchInviteEmail = adminAction({
       ctaText: v.string(),
     }),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<InviteDispatchResult> => {
     const { userId: callerId, user: caller } = await requireActionUser(ctx);
     if (!caller.role) throw new Error("Unauthorized");
 
@@ -242,46 +320,34 @@ export const dispatchInviteEmail = adminAction({
     const token = crypto.randomUUID();
     const storedEmailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
     const emailBranding = buildEmailBranding(storedEmailBranding);
-    const footerName = escapeEmailText(emailBranding.platformName);
     
     const inviteLink = `${BASE_URL}/login`; // They just log in directly via Google matching their invite email.
 
-    // 2. Map Sonae Premium HTML (Raw Injector to ensure style compatibility across clients)
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #0A0A0A; margin: 0; padding: 40px 20px; color: #E5E5E5; }
-            .container { max-width: 600px; margin: 0 auto; background-color: #121212; border: 1px solid #1A1A1A; border-radius: 24px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-            .logo { width: 40px; height: 40px; margin-bottom: 30px; }
-            .headline { font-size: 24px; font-weight: 600; color: #FFFFFF; margin: 0 0 16px 0; letter-spacing: -0.02em; }
-            .body-text { font-size: 15px; line-height: 1.6; color: #A3A3A3; margin: 0 0 32px 0; }
-            .button { display: inline-block; background-color: #FFFFFF; color: #000000; font-weight: 500; text-decoration: none; padding: 14px 28px; border-radius: 12px; font-size: 14px; text-align: center; }
-            .footer { margin-top: 40px; border-top: 1px solid #1A1A1A; padding-top: 20px; font-size: 12px; color: #666666; font-family: monospace; letter-spacing: 0.1em; text-transform: uppercase; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-               <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707" />
-               <circle cx="12" cy="12" r="3" />
-            </svg>
-            <h1 class="headline">${args.template.headline}</h1>
-            <p class="body-text">${args.template.body.replace(/\n/g, '<br/>')}</p>
-            <a href="${inviteLink}" class="button">${args.template.ctaText}</a>
-            <div class="footer">${footerName} - to be prepared</div>
-          </div>
-        </body>
-      </html>
-    `;
+    // 2. Render through the shared shell.
+    //
+    // The previous version pasted `template.headline` and `template.body`
+    // straight into an inline HTML document. Both come from an editable record,
+    // so that was an injection hole as well as a second design to maintain.
+    // `renderEmail` escapes at the boundary because callers pass content only.
+    const email = renderEmail(
+      {
+        kind: "Invitation",
+        verdict: args.template.headline,
+        paragraphs: args.template.body.split(/\n{2,}/).filter((part) => part.trim().length > 0),
+        actions: [{ label: args.template.ctaText, url: inviteLink }],
+        footer: {
+          lines: ["Not expecting this? Ignore it — nothing happens until you sign in."],
+        },
+      },
+      { platformName: emailBranding.platformName }
+    );
 
     // 3. Dispatch through Resend
     // Skip if API key missing (dev environment graceful degradation)
     if (!process.env.RESEND_API_KEY) {
-       console.warn("No RESEND_API_KEY found. Mocking email dispatch successfully.", emailHtml);
-       await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
-       return { success: true, simulated: true };
+       console.warn("No RESEND_API_KEY found. Mocking email dispatch successfully.", email.text);
+       const simulated: InviteRecordOutcome = await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
+       return { success: true, simulated: true, outcome: simulated.outcome };
     }
 
     try {
@@ -299,14 +365,15 @@ export const dispatchInviteEmail = adminAction({
           from: fromAddress,
           to: args.email,
           subject: args.template.subject,
-          html: emailHtml
+          html: email.html,
+          text: email.text,
         },
       });
 
       // 4. Record DB mapping on successful dispatch
-      await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
+      const record: InviteRecordOutcome = await ctx.runMutation(internal.invites.createInviteRecord, { email: args.email, companyId: args.companyId, role: args.role, token, callerId });
 
-      return { success: true, id: data?.id };
+      return { success: true, id: data?.id, outcome: record.outcome };
     } catch (e: unknown) {
       console.error(e);
       const message = e instanceof Error ? e.message : "Unknown error";

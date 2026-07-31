@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { Component, createContext, useContext, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   // template:remove:start arcade
@@ -23,6 +23,9 @@ import {
   // template:remove:start properties
   Home,
   // template:remove:end
+  // template:remove:start salesData
+  Table2,
+  // template:remove:end
   Wrench
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
@@ -41,6 +44,9 @@ import {
   type NavigationProfile,
 } from "@/src/lib/navigationVisibility";
 import { getWhiteLabelNavigationProfiles } from "@/convex/settingsService";
+// template:remove:start salesData
+import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
+// template:remove:end
 
 /**
  * Navigation keys hidden for this deployment.
@@ -192,10 +198,96 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
   );
 }
 
+/**
+ * Keeps one optional nav entry from taking the dashboard down with it.
+ *
+ * Convex's `useQuery` throws during render when its function is missing or
+ * errors — and a throw inside the sidebar propagates to `DashboardLayout`,
+ * which white-screens the whole app for every user, including the ones whose
+ * workspace does not have the module at all. That is exactly what happened
+ * when the sales-data query was called before the backend had been deployed.
+ *
+ * A navigation entry is not worth a broken dashboard. A section that cannot
+ * establish whether it applies simply does not draw itself; the routes behind
+ * it still enforce their own access, so hiding it costs nothing but a link.
+ */
+class OptionalNavSection extends Component<
+  { children: React.ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    // Logged rather than swallowed: the section vanishing should be
+    // diagnosable, not mysterious.
+    console.error("Optional navigation section failed to render", error);
+  }
+
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
+// template:remove:start salesData
+/**
+ * The sales data entry, which draws only for a workspace that has the module.
+ *
+ * It runs its own query rather than receiving the answer as a prop so that the
+ * `useQuery` call sits inside `OptionalNavSection`. A hook called in the
+ * sidebar's own body is outside any boundary the sidebar renders, so a failure
+ * there cannot be contained — which is the whole point of this split.
+ *
+ * The label is the workspace's own name. Nothing here, or anywhere in the
+ * platform, holds a customer's name as a string.
+ */
+function SalesDataNavItem({
+  pathname,
+  activeItem,
+  isOpen,
+  onToggle,
+  onSelect,
+  t,
+}: {
+  pathname: string;
+  activeItem: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  onSelect: () => void;
+  t: (key: string) => string;
+}) {
+  const workspace = useQuery(api.companies.getMyWorkspaceModules);
+
+  // Undefined while loading. Drawing the section before the answer arrives
+  // would flash a link at workspaces that never get one.
+  if (!workspace?.enabledModules.includes(SALES_DATA_MODULE_KEY)) return null;
+
+  return (
+    <NavItem
+      icon={Table2}
+      label={workspace.companyName ?? t('salesData')}
+      isActive={activeItem === 'Sales Data' || pathname.startsWith('/app/sales-data')}
+      onClick={onSelect}
+      hasChildren
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
+      <SubNavItem label={t('salesDataImport')} href="/app/sales-data/import" isActive={pathname === '/app/sales-data/import'} onClick={onSelect} />
+      <SubNavItem label={t('salesDataTables')} href="/app/sales-data" isActive={pathname === '/app/sales-data'} onClick={onSelect} />
+    </NavItem>
+  );
+}
+// template:remove:end
+
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
   if (pathname.startsWith('/admin/health')) return 'Health';
   if (pathname.startsWith('/admin/companies')) return 'Companies';
+  if (pathname.startsWith('/admin/directory')) return 'All Users';
   if (pathname.startsWith('/admin/super-admins')) return 'System Admins';
   if (pathname === '/admin/users/invite') return 'Invitations';
   if (pathname.startsWith('/admin/users')) return 'Manage Users';
@@ -218,6 +310,9 @@ function getActiveItemFromPathname(pathname: string) {
   // template:remove:end
   // template:remove:start salesReports
   if (pathname.startsWith('/app/reports')) return 'Reports';
+  // template:remove:end
+  // template:remove:start salesData
+  if (pathname.startsWith('/app/sales-data')) return 'Sales Data';
   // template:remove:end
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
@@ -261,6 +356,9 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     // template:remove:end
     // template:remove:start properties
     properties: false,
+    // template:remove:end
+    // template:remove:start salesData
+    salesData: pathname.startsWith('/app/sales-data'),
     // template:remove:end
     // template:remove:start movement
     demos: false,
@@ -501,13 +599,14 @@ export default function SidebarNavigation() {
 
                         <NavItem navKey="systemAdmins"
                           icon={ShieldCheck}
-                          label={t('systemAdmins')}
+                          label={t('userManagement')}
                           isActive={activeItem === 'System Admins' || pathname.startsWith('/admin/super-admins')}
                           onClick={() => setActiveItem('System Admins')}
                           hasChildren
                           isOpen={openSections.superAdmins}
                           onToggle={() => toggleSection('superAdmins')}
                         >
+                          <SubNavItem label={t('allUsers')} href="/admin/directory" navKey="userDirectory" isActive={pathname.startsWith('/admin/directory')} onClick={() => setActiveItem('All Users')} />
                           <SubNavItem label={t('systemAdmins')} href="/admin/super-admins" navKey="systemAdmins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
                           <SubNavItem label={t('invitations')} href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
                         </NavItem>
@@ -562,6 +661,19 @@ export default function SidebarNavigation() {
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
                     </NavItem>
+                    {/* template:remove:end */}
+
+                    {/* template:remove:start salesData */}
+                    <OptionalNavSection>
+                      <SalesDataNavItem
+                        pathname={pathname}
+                        activeItem={activeItem}
+                        isOpen={openSections.salesData}
+                        onToggle={() => toggleSection('salesData')}
+                        onSelect={() => setActiveItem('Sales Data')}
+                        t={t}
+                      />
+                    </OptionalNavSection>
                     {/* template:remove:end */}
 
                     {/* template:remove:start movement */}

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import {
   buildCompanyProfilePatch,
   buildCompanyRecord,
@@ -17,6 +17,7 @@ import {
   adjustGlobalInventoryCompanyPlan,
   incrementGlobalInventoryTotals,
 } from "./utils/inventoryRollupService";
+import { normalizeEnabledModules } from "./utils/companyModules";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
 const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
@@ -111,6 +112,35 @@ export const getCompanyById = superAdminQuery({
   },
 });
 
+/**
+ * The optional modules switched on for the caller's own workspace.
+ *
+ * Every authenticated user may ask this — it is what the navigation is built
+ * from, and it discloses nothing beyond the workspace the caller is already
+ * in. A super admin impersonating a company sees that company's modules,
+ * which is the point: impersonation exists so support can see what the
+ * customer sees.
+ *
+ * The workspace name comes back with it because the section is labelled with
+ * the workspace's own name rather than a hardcoded one.
+ */
+export const getMyWorkspaceModules = tenantQuery({
+  args: {},
+  handler: async (ctx) => {
+    if (!ctx.companyId) return { companyName: null, enabledModules: [] as string[] };
+
+    const company = await ctx.db.get(ctx.companyId);
+    if (!company) return { companyName: null, enabledModules: [] as string[] };
+
+    return {
+      companyName: company.name,
+      // Normalised on read as well as on write: a key left behind by a
+      // vertical that has since been dropped must not reach the navigation.
+      enabledModules: normalizeEnabledModules(company.enabledModules),
+    };
+  },
+});
+
 export const getCompanyByIdInternal = internalQuery({
   args: { id: v.id("companies") },
   handler: async (ctx, args) => {
@@ -119,7 +149,11 @@ export const getCompanyByIdInternal = internalQuery({
 });
 
 export const createCompany = superAdminMutation({
-  args: { name: v.string(), systemPrompt: v.optional(v.string()) },
+  args: {
+    name: v.string(),
+    systemPrompt: v.optional(v.string()),
+    enabledModules: v.optional(v.array(v.string())),
+  },
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 
@@ -127,6 +161,7 @@ export const createCompany = superAdminMutation({
     const newCompanyId = await ctx.db.insert("companies", buildCompanyRecord({
       name: args.name,
       systemPrompt: args.systemPrompt,
+      enabledModules: args.enabledModules,
     }, now));
     await incrementGlobalInventoryTotals(ctx, { companiesDelta: 1 });
 
@@ -144,13 +179,27 @@ export const createCompany = superAdminMutation({
 });
 
 export const updateCompany = superAdminMutation({
-  args: { id: v.id("companies"), name: v.string(), systemPrompt: v.optional(v.string()) },
+  args: {
+    id: v.id("companies"),
+    name: v.string(),
+    systemPrompt: v.optional(v.string()),
+    enabledModules: v.optional(v.array(v.string())),
+  },
   handler: async (ctx, args) => {
     const { userId: adminId } = ctx;
 
     const previous = await ctx.db.get(args.id);
     const now = Date.now();
-    await ctx.db.patch(args.id, { name: args.name, systemPrompt: args.systemPrompt });
+    // An omitted `enabledModules` leaves the current selection alone. Callers
+    // that do not know about modules — older clients, other admin screens —
+    // must not silently switch a workspace's section off.
+    await ctx.db.patch(args.id, {
+      name: args.name,
+      systemPrompt: args.systemPrompt,
+      ...(args.enabledModules !== undefined && {
+        enabledModules: normalizeEnabledModules(args.enabledModules),
+      }),
+    });
 
     await ctx.db.insert("auditLogs", {
       actorId: adminId,
@@ -162,6 +211,50 @@ export const updateCompany = superAdminMutation({
     });
 
     return args.id;
+  },
+});
+
+/**
+ * Switch optional modules on or off for one workspace.
+ *
+ * Separate from `updateCompany` because the company overview screen has no
+ * business resending the name, tagline and system prompt in order to tick a
+ * checkbox — doing so makes a module change capable of overwriting a profile
+ * edit made in another tab.
+ *
+ * Audited: switching a module on gives a workspace a section it could not
+ * previously see, which is the kind of change someone should be able to trace.
+ */
+export const setCompanyModules = superAdminMutation({
+  args: {
+    id: v.id("companies"),
+    enabledModules: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId: adminId } = ctx;
+
+    const company = await ctx.db.get(args.id);
+    if (!company) throw new Error("Company not found");
+
+    const previous = normalizeEnabledModules(company.enabledModules);
+    const next = normalizeEnabledModules(args.enabledModules);
+
+    await ctx.db.patch(args.id, { enabledModules: next });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: adminId,
+      actionType: "UPDATE_COMPANY_MODULES",
+      entityId: args.id,
+      entityType: "companies",
+      companyId: args.id,
+      metadata: JSON.stringify({
+        previousModules: previous,
+        newModules: next,
+      }),
+      timestamp: Date.now(),
+    });
+
+    return next;
   },
 });
 

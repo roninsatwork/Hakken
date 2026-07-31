@@ -16,6 +16,8 @@
  * that has to be switched on is a policy that will be left off.
  */
 
+import { renderEmail, type RenderedEmail } from "./emailLayoutService";
+
 const MAX_RECIPIENTS = 10;
 const MAX_SUBJECT_LENGTH = 200;
 const MAX_BODY_LENGTH = 10000;
@@ -113,22 +115,34 @@ export function resolveNotificationContent(args: {
 }
 
 /**
- * Render the body as HTML.
+ * An agent's notification, rendered through the shared shell.
  *
  * The body is model-generated text, so it is escaped rather than trusted as
  * markup. An agent that could emit raw HTML into an email could be induced to
  * emit a link that does not say where it goes.
+ *
+ * The body is a model-authored string, so it is content and never markup —
+ * `renderEmail` escapes it. This replaced a local `renderNotificationHtml` that
+ * escaped correctly but emitted bare `<p>` tags with no styling at all, which
+ * is why an agent's mail looked nothing like the rest of the platform's.
+ *
+ * The footer states the recipient policy plainly. An agent that can email is a
+ * phishing surface, and someone receiving one of these should be able to see
+ * from the message itself that it could not have reached outside the tenant.
  */
-export function renderNotificationHtml(body: string) {
-  const escaped = body
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-  return escaped
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
-    .join("\n");
+export function buildAgentNotificationEmail(
+  content: { subject: string; body: string },
+  options: { platformName?: string } = {}
+): RenderedEmail {
+  return renderEmail(
+    {
+      kind: "From your agent",
+      verdict: content.subject,
+      paragraphs: content.body.split(/\n{2,}/).filter((part) => part.trim().length > 0),
+      footer: {
+        lines: ["An agent sent this. It can only email people who are already in your workspace."],
+      },
+    },
+    { platformName: options.platformName }
+  );
 }

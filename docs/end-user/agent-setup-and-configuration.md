@@ -18,7 +18,7 @@ Use these admin routes:
 - `/admin/agents/[id]`: review usage, token, cost, and transaction summaries for one agent, or launch a manual scheduled run from the agent shell.
 - `/admin/agents/[id]/settings`: edit identity, avatar, model mode, reasoning effort, internet access, and whether the agent is a draft or live.
 - `/admin/agents/[id]/knowledge`: manage the agent's tenant-scoped knowledge library.
-- `/admin/agents/[id]/system-prompt`: edit the agent's system prompt.
+- `/admin/agents/[id]/system-prompt`: edit the agent Instructions screen, including its standing job and behavior/system-prompt field.
 - `/admin/agents/[id]/rules`: list, add, and edit agent governance rules.
 - `/admin/agents/[id]/interfaces`: choose which tools the agent may use, and whether it answers in plain English or in a fixed set of fields.
 - `/admin/agents/[id]/skills`: attach reusable skills to one agent.
@@ -28,8 +28,7 @@ Use these admin routes:
 - `/admin/agents/[id]/logs`: inspect agent trace history.
 - `/admin/agents/[id]/logs/[logId]`: inspect one trace.
 - `/admin/agents/approvals`: review pending tool-call approvals across agents.
-- `/admin/ai/skills`: manage the reusable skill catalog.
-- `/admin/ai/skills/[id]`: edit, clone, archive, export, and review rollout for one skill.
+- `/admin/ai/skills` and `/admin/agents/skills`: manage the reusable skill catalog. Skill detail and edit controls currently live inside the Skill Center surface rather than a separate implemented skill-detail route.
 
 ## Create An Agent
 
@@ -42,16 +41,16 @@ Open `/admin/agents` and choose the new-agent action. The builder walks through 
 
 Template-based creation is useful when the agent resembles a common pattern. Current built-in templates include internal knowledge, support triage, sales research, document review, and reporting analyst agents. Templates can seed prompts, approval posture, trigger type, recommended tools, and starter eval fixtures.
 
-Blank creation is useful when the work does not fit a template. Blank agents still need a clear mission, prompt, model behavior, knowledge, tools, rules, schemas, and eval evidence before activation.
+Blank creation is useful when the work does not fit a template. Blank agents still need a clear mission, standing job when they should run unattended, behavior prompt, model behavior, knowledge, tools, rules, schemas, and eval evidence before activation.
 
-New agents should be treated as drafts until a human has reviewed their configuration and run evidence.
+New agents should be treated as drafts until a human has reviewed their configuration and run evidence. If an agent should be launched from the Run Agent button or a schedule without a one-off instruction, give it a standing job on the Instructions screen.
 
 ## Choose Or Adjust A Template
 
 Templates are starting points, not approval to go live. After creating a template-based agent, review:
 
 - agent name and description
-- system prompt
+- standing job and behavior prompt
 - model behavior and reasoning settings
 - knowledge connections
 - tool and integration bindings
@@ -84,7 +83,7 @@ Use `/admin/ai/skills` to:
 - create a skill manually
 - import a skill bundle
 
-Use `/admin/ai/skills/[id]` to:
+Use the Skill Center to:
 
 - edit skill content
 - clone a skill

@@ -6,7 +6,9 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Save, Loader2, PoundSterling } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Save, Loader2, PoundSterling, Blocks } from "lucide-react";
+import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 
 
 export default function CompanyOverviewPage() {
@@ -201,6 +203,137 @@ export default function CompanyOverviewPage() {
         </div>
       </div>
 
+      {isSuperAdmin && COMPANY_MODULES.length > 0 && (
+        <CompanyModulesSection companyId={companyId} enabled={company.enabledModules} />
+      )}
+
+    </div>
+  );
+}
+
+/**
+ * Optional sections this workspace can see.
+ *
+ * Saves on its own rather than through Save Profile above. The two are
+ * different kinds of change — one edits the company's own details, the other
+ * grants access to a section — and coupling them would mean a half-finished
+ * profile edit blocks switching a module on.
+ *
+ * Super admin only, matching the plan override: a workspace admin choosing
+ * which modules their own workspace has would defeat the point of the flag.
+ */
+function CompanyModulesSection({
+  companyId,
+  enabled,
+}: {
+  companyId: Id<"companies">;
+  enabled?: string[];
+}) {
+  const t = useTranslations("admin.companies");
+  const setCompanyModules = useMutation(api.companies.setCompanyModules);
+
+  const [selected, setSelected] = useState<string[]>(enabled ?? []);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState({ text: "", type: "" });
+
+  // Follows the record when it changes underneath — a save elsewhere, or the
+  // first load arriving after this mounted.
+  useEffect(() => {
+    setSelected(enabled ?? []);
+  }, [enabled]);
+
+  const toggle = (key: string) => {
+    setSelected((previous) =>
+      previous.includes(key)
+        ? previous.filter((entry) => entry !== key)
+        : [...previous, key]
+    );
+  };
+
+  const isPristine =
+    selected.length === (enabled ?? []).length &&
+    selected.every((key) => (enabled ?? []).includes(key));
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setMessage({ text: "", type: "" });
+    try {
+      await setCompanyModules({ id: companyId, enabledModules: selected });
+      setMessage({ text: "Modules updated.", type: "success" });
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+    } catch (e: unknown) {
+      setMessage({ text: getErrorMessage(e, "Failed to update modules"), type: "error" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl flex flex-col shadow-sm overflow-hidden mb-8">
+      <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Blocks className="w-5 h-5 text-brand opacity-80" />
+            <h2 className="text-[15px] font-bold text-foreground tracking-wide">Optional Modules</h2>
+          </div>
+          <span className="text-[11px] text-brand/80 font-mono tracking-widest uppercase">Super Admin Only</span>
+        </div>
+        <p className="text-[13px] text-secondary">
+          Extra sections only this workspace can see. Switching one on adds it to this
+          workspace&apos;s navigation; nobody else is affected.
+        </p>
+      </div>
+
+      <div className="p-6 flex flex-col gap-3">
+        {COMPANY_MODULES.map((module) => {
+          const isOn = selected.includes(module.key);
+          return (
+            <label
+              key={module.key}
+              className={`flex items-start gap-3 p-4 rounded-[16px] border cursor-pointer transition-all ${
+                isOn
+                  ? "border-brand/40 bg-brand/5"
+                  : "border-border-dim bg-background/30 hover:border-brand/20"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isOn}
+                onChange={() => toggle(module.key)}
+                className="mt-0.5 accent-brand"
+              />
+              <span className="flex flex-col gap-1">
+                {/* Same keys the provisioning modal uses, so the two screens
+                    cannot drift apart in how they describe a module. */}
+                <span className="text-[14px] font-bold tracking-wide text-foreground">
+                  {t(`modules.${module.key}.name`)}
+                </span>
+                <span className="text-[13px] text-secondary">
+                  {t(`modules.${module.key}.description`)}
+                </span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim/50">
+        <div className="text-[13px] font-medium">
+          {message.text && (
+            <span className={message.type === "success" ? "text-brand" : "text-red-500"}>
+              {message.text}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={isSaving || isPristine}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] bg-brand text-white font-bold tracking-wide hover:bg-brand/90 transition-all text-[13px] disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Save Modules
+        </button>
+      </div>
     </div>
   );
 }

@@ -24,7 +24,6 @@ This guide is grounded in:
 - `src/app/(dashboard)/admin/ai/tools/page.tsx`
 - `src/app/(dashboard)/admin/ai/tools/new/page.tsx`
 - `src/app/(dashboard)/admin/ai/tools/[id]/page.tsx`
-- `src/app/(dashboard)/admin/ai/tools/mcp/new/page.tsx`
 - `src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.tsx`
 
 ## Provider Boundary
@@ -146,7 +145,7 @@ Built-in connector definitions live in `convex/toolConnectorDefinitions.ts`. A d
 - `requiredSecretRefs`
 - one or more model-callable tool definitions
 
-The implemented categories are knowledge, profile, workflow, HTTP, email, and custom. The implemented auth modes are no auth, secret references, and OAuth. Built-in connector definitions include Sonae-native capabilities and external integration scaffolds such as HTTP REST, email/notification, Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, and Zendesk.
+The implemented categories are knowledge, profile, workflow, HTTP, email, and custom. Built-in connector definitions currently use no auth or secret references. OAuth schema and functions exist, but OAuth connections are disabled until the platform has provider authorization routes, callbacks, encrypted token storage, and refresh. Built-in connector definitions include Sonae-native capabilities and external integration scaffolds such as HTTP REST, email/notification, Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, and Zendesk.
 
 Most external connector definitions are scaffolds. They can be installed, tested for configuration shape, exposed in the tool catalog, and bound to agents, but most real downstream API execution is intentionally not implemented yet. The handler should return a clear not-implemented result instead of pretending an external action was completed.
 
@@ -166,13 +165,11 @@ Secret reference fields are reference keys, not raw secrets. `assertSafeSecretRe
 
 ## OAuth Connector State
 
-OAuth-backed connectors use `beginConnectorOAuth`, `completeConnectorOAuth`, and `disconnectConnectorOAuth`.
+OAuth-backed connectors are not currently available. `beginConnectorOAuth`, `completeConnectorOAuth`, and `disconnectConnectorOAuth` exist to preserve the future surface, but `beginConnectorOAuth` and `completeConnectorOAuth` call the shared availability guard first.
 
-`beginConnectorOAuth` verifies the connector, checks tenant access, confirms the connector definition uses OAuth, creates a pending `toolConnectorOAuthConnections` row, stores a generated state value, and returns a local authorization URL. The current URL is an internal placeholder route shaped as `/api/connectors/oauth/authorize?...`.
+`isConnectorOAuthAvailable()` currently returns false, so an operator cannot start or complete OAuth. This is intentional: there is no configured provider authorization flow, callback route, encrypted token storage, or refresh behavior on this deployment.
 
-`completeConnectorOAuth` validates the pending state, verifies the connector id, rejects non-pending sessions, checks required scopes, and stores only `accountRef` and `tokenRef` reference keys. It updates the connector install to `CONNECTED`, clears stale test status, and records granted scopes.
-
-`disconnectConnectorOAuth` marks pending or connected OAuth rows as disconnected and clears token/account fields from the connector install. Disconnecting also resets test status because a previously passing connector test no longer proves the current connection works.
+If OAuth is implemented later, `completeConnectorOAuth` must validate pending state, connector id, required scopes, account references, and token references without storing raw tokens. `disconnectConnectorOAuth` should mark pending or connected OAuth rows disconnected and reset connector test state.
 
 Do not store OAuth access tokens directly in connector rows. Use reference keys that point to an external vault or token store.
 
@@ -265,9 +262,10 @@ Relevant tests include:
 - `convex/aiTools.test.ts`
 - `convex/aiModels.test.ts`
 - `src/app/(dashboard)/admin/ai/tools/page.test.tsx`
-- `src/app/(dashboard)/admin/ai/tools/[id]/page.test.tsx`
 - `src/app/(dashboard)/admin/ai/tools/connectors/[id]/page.test.tsx`
 - `src/app/(dashboard)/admin/ai/models/page.test.tsx`
+
+There is currently no dedicated tool-detail page test; add one if tool detail behavior changes beyond what the list and connector tests cover.
 
 When extending this area, add or update tests for:
 

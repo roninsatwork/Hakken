@@ -113,6 +113,35 @@
         "preeval:movement-avatar"
       ],
       "localeKeys": []
+    },
+    {
+      "name": "salesData",
+      "description": "Per-workspace spreadsheet import: the workbook parser, the three imported tables, and the /app/sales-data screens. Switched on per company by the `salesData` module flag.",
+      "paths": [
+        "convex/salesData.ts",
+        "convex/salesData.search.test.ts",
+        "convex/salesDataImportActions.ts",
+        "convex/salesDataImportService.ts",
+        "convex/salesDataImportService.test.ts",
+        "convex/utils/salesDataModule.ts",
+        "src/app/(dashboard)/app/sales-data"
+      ],
+      "schemaTables": [
+        "salesDataImports",
+        "salesDataRows",
+        "salesDataCategoryLinks",
+        "salesDataAreasOfInterest",
+        "salesDataFrequencies"
+      ],
+      "packageDependencies": [],
+      "packageScripts": [],
+      "localeKeys": [
+        "salesData",
+        "sidebar.salesData",
+        "sidebar.salesDataImport",
+        "sidebar.salesDataTables",
+        "admin.companies.modules.salesData"
+      ]
     }
   ],
   "sharedVerticalPaths": [

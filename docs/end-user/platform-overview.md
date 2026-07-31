@@ -89,7 +89,7 @@ Users have a profile area for account-level information and settings.
 
 ### Admin Dashboard
 
-The admin dashboard gives platform-level visibility into usage and performance. It includes analytics charts and metrics for activity, AI costs, users, companies, provider distribution, and other operational data. Provider distribution is currently strongest for live raw-data attribution; longer historical analytics windows rely more heavily on model distribution, costs, usage, and leaderboard snapshots.
+The admin dashboard gives super admins a business and client-health overview. It shows projected monthly revenue against AI spend, seats in use, clients needing attention, recent activity, AI spend, sign-in bands, plan distribution, a client table, and follow-up items such as pending invitations or clients without a plan. Detailed provider, model, and usage analysis lives in the AI cost and usage screens.
 
 ### Company Management
 

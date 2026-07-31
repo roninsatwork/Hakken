@@ -39,6 +39,47 @@ completed work.
   Search screen. Owns the shift from direct Apify starts to agent-owned runs and
   the link between agent runs, Apify collections, Properties Logs, and Scraped
   Data.
+- [Public Website Plan](./active/public-website-plan.md) — the active plan for
+  the public pre-login website, including the home page, future platform,
+  showcase, trust, and contact pages, animation direction, public copy rules,
+  route state, and the contact backend design.
+- [User Directory Plan](./active/user-directory-plan.md) — the plan for the
+  read-only, platform-wide user directory at `/admin/directory`, and for the
+  login recording and 30-day aggregation behind its two activity columns. Owns
+  `users.lastLoginAt`, `users.loginCount30d`, and `recordLogin`. Read it before
+  touching the `logins` table or adding anything to `/admin/users`.
+- [Email Design System Plan](./active/email-design-system-plan.md) — the plan to
+  put every outbound email through one shared shell: platform alerts, invites,
+  agent notifications, and workflow email nodes. Owns the forest email palette,
+  the sender identity, the plain-text alternative, and the legacy-Outlook client
+  support matrix. Read it before touching `convex/platformAlertService.ts`,
+  `convex/invites.ts`, `convex/aiToolNotificationService.ts`, or the email node
+  in `convex/workflowRuntime.ts`.
+- [Agent Autonomy And Approvals Plan](./active/agent-autonomy-and-approvals-plan.md) —
+  the approvals and autonomous-tool-execution plan for agent runs and workflow
+  approvals. Read it before changing approval queues, tool confirmation policy,
+  parked run behaviour, or approval expiry.
+- [Pressing Run Should Actually Run The Agent](./active/agents-run-properly-plan.md) —
+  the plan/history for making manual and scheduled agent runs use the real
+  tool-capable agent loop.
+- [Company AI Readiness Rebuild Plan](./active/company-ai-readiness-rebuild-plan.md) —
+  the replacement plan for the company AI readiness screen and its score,
+  model-routing, eval, memory, widget, skill, and activity signals.
+- [Company And Agent Model Defaults Plan](./active/company-and-agent-model-defaults-plan.md) —
+  the plan for bringing company model overrides and agent engine settings up to
+  the platform Model Defaults standard.
+- [Observability Collection And Killswitch Handover](./active/observability-collection-and-killswitch-handover.md) —
+  handover context for honest Apify collection reporting and a visible agent
+  kill switch.
+- [Workspace Sales Data Plan](./active/workspace-sales-data-plan.md) — the plan
+  for the optional per-workspace spreadsheet import and its three browsable
+  tables, and for the `companies.enabledModules` flag that switches any optional
+  section on for one workspace without naming a client in platform code. Owns
+  `convex/salesData.ts`, the workbook parser, and `/app/sales-data`. Read it
+  before adding another client-specific section, or before touching the module
+  registry in `convex/utils/companyModules.ts`.
+- [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
+  the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
   work left outside the platform hardening plan or deliberately stopped short of
   that plan.
@@ -58,7 +99,9 @@ Plan, which defers approvals behaviour to the Agent Autonomy And Approvals Plan
 and eval content to the AI Checks Plan. If work touches the Rightmove property
 collection flow, especially `/app/properties/search`, Apify collection linkage,
 or whether the user frontend starts an agent or a scraper directly, use the
-Rightmove Agent Execution Plan. If work touches the other named admin UX screens,
+Rightmove Agent Execution Plan. If work touches the public pre-login site, use
+the Public Website Plan. If work touches documentation coverage, use the
+Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.
 
 ## Retired And Completed Plans

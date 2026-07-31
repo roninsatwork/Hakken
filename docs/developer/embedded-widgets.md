@@ -6,7 +6,8 @@ Embedded widgets are the public chat surface implemented by `public/embed.js`, `
 
 - `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget. It is super-admin-only through the admin layout and calls `api.widgets.getPrimaryGlobalWidget` and `api.widgets.saveWidget`.
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the primary company widget for a company workspace.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/*` contains the company widget configuration sections and embed snippet builder.
+- `src/app/(dashboard)/admin/_features/widget-config/*` contains the shared widget configuration sections, tab helpers, preview panel, empty state, and embed snippet builder used by the company widget route.
+- `src/app/(dashboard)/admin/companies/[id]/widget/_components/*` mirrors the widget section components and local tests for the company route; prefer the shared feature directory for active editor changes unless the route-local file is explicitly under test.
 - `src/app/w/[widgetId]/page.tsx` renders the public iframe chat experience.
 - `src/app/sandbox/[widgetId]/page.tsx` injects `public/embed.js` into a simulated page for manual verification.
 - `public/embed.js` is the host-page script. It injects styles, creates the fixed-position widget container, opens the iframe, receives `SONAE_WIDGET_CONFIG`, and applies popup/color behavior.
@@ -38,19 +39,19 @@ The public config query resolves system branding fallbacks from `systemSettings`
 
 The editor initializes new company widgets with the current form defaults when no widget exists. Once a widget exists, the page exposes a sticky tab rail, section-specific forms, a publish button, and an appearance preview. The publish mutation always sends `isActive: true`, `isGlobal: false`, the route company id, parsed domain allowlist, theme settings, visitor gates, greeting state, sound/popup preferences, and conversation starters.
 
-The route-specific component map is:
+The shared widget configuration component map is:
 
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConfigTabs.tsx` renders the sticky tab rail for `Appearance`, `Welcome Screen`, `Conversation Starters`, `Greeting`, and `Integration`.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPanel.tsx` is the common section frame used by the company widget editor panels.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetEmptyState.tsx` shows the unconfigured-widget state and calls the same create/update handler used by publishing.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetAppearanceSection.tsx` edits the public widget name, primary color text/color inputs, logo upload/removal, input placeholder, sound notifications, and popup preview toggle.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetWelcomeSection.tsx` controls the optional first-screen name and email fields.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConversationStartersSection.tsx` manages up to four quick-start prompts and disables adding empty entries or entries beyond the limit.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetGreetingSection.tsx` toggles the default greeting and edits its copy while disabled greetings keep the textarea inactive.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetIntegrationSection.tsx` edits authorized domains, displays the generated `<script>` snippet, handles clipboard copy feedback, and links to `/sandbox/[widgetId]` for manual testing.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPreviewPanel.tsx` renders the sticky appearance preview, including the collapsed launcher, popup greeting, visitor gate fields, greeting message, starter prompts when greetings are off, logo preview, and placeholder text.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/types.ts` defines the shared tab union and logo upload handler type.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/widgetConfigUtils.ts` owns the tab list, comma-separated domain parsing, embed snippet generation, local logo preview URL handling, and conversation starter add guard.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetConfigTabs.tsx` renders the sticky tab rail for `Appearance`, `Welcome Screen`, `Conversation Starters`, `Greeting`, and `Integration`.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetPanel.tsx` is the common section frame used by the company widget editor panels.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetEmptyState.tsx` shows the unconfigured-widget state and calls the same create/update handler used by publishing.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection.tsx` edits the public widget name, primary color text/color inputs, logo upload/removal, input placeholder, sound notifications, and popup preview toggle.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetWelcomeSection.tsx` controls the optional first-screen name and email fields.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetConversationStartersSection.tsx` manages up to four quick-start prompts and disables adding empty entries or entries beyond the limit.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSection.tsx` toggles the default greeting and edits its copy while disabled greetings keep the textarea inactive.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetIntegrationSection.tsx` edits authorized domains, displays the generated `<script>` snippet, handles clipboard copy feedback, and links to `/sandbox/[widgetId]` for manual testing.
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx` renders the sticky appearance preview, including the collapsed launcher, popup greeting, visitor gate fields, greeting message, starter prompts when greetings are off, logo preview, and placeholder text.
+- `src/app/(dashboard)/admin/_features/widget-config/types.ts` defines the shared tab union and logo upload handler type.
+- `src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils.ts` owns the tab list, comma-separated domain parsing, embed snippet generation, local logo preview URL handling, and conversation starter add guard.
 
 The company editor intentionally separates browser-only editing state from Convex validation. Frontend parsing and disabled controls improve the admin experience, but Convex remains responsible for tenant checks, global-widget restrictions, origin enforcement, audit logs, and widget-thread credentials.
 

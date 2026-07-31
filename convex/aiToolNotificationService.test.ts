@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   isPlausibleEmailAddress,
   parseRecipients,
-  renderNotificationHtml,
+  buildAgentNotificationEmail,
   resolveNotificationContent,
   resolveNotificationRecipients,
 } from "./aiToolNotificationService";
@@ -124,17 +124,49 @@ describe("notification content", () => {
 });
 
 describe("rendering the body", () => {
+  function build(body: string) {
+    return buildAgentNotificationEmail({ subject: "A notification", body });
+  }
+
   test("escapes model-generated text rather than trusting it as markup", () => {
     // An agent able to emit raw HTML could be induced to emit a link whose text
     // does not match where it goes.
-    const html = renderNotificationHtml('<a href="http://evil.test">your bank</a>');
-    expect(html).not.toContain("<a href");
+    const { html } = build('<a href="http://evil.test">your bank</a>');
+    expect(html).not.toContain('<a href="http://evil.test"');
     expect(html).toContain("&lt;a href");
   });
 
+  test("escapes a hostile subject too", () => {
+    const { html } = buildAgentNotificationEmail({
+      subject: "<img src=x onerror=alert(1)>",
+      body: "Anything.",
+    });
+    // What makes it inert is the angle brackets being escaped — the attribute
+    // text itself survives as plain characters, which is correct.
+    expect(html).not.toMatch(/<img/i);
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+  });
+
   test("keeps paragraphs and line breaks readable", () => {
-    const html = renderNotificationHtml("First line\nsecond line\n\nNew paragraph");
+    const { html, text } = build("First line\nsecond line\n\nNew paragraph");
+
     expect(html).toContain("<br />");
-    expect(html.match(/<p>/g)).toHaveLength(2);
+    expect(html).toContain("New paragraph");
+    expect(text).toContain("New paragraph");
+  });
+
+  test("says plainly that an agent sent it and where it could reach", () => {
+    const { html, text } = build("Anything.");
+
+    expect(html).toContain("An agent sent this.");
+    expect(text).toContain("already in your workspace");
+  });
+
+  test("carries the platform name from settings", () => {
+    const { html } = buildAgentNotificationEmail(
+      { subject: "s", body: "b" },
+      { platformName: "Acme Ops" }
+    );
+    expect(html).toContain("ACME OPS");
   });
 });

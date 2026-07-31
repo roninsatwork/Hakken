@@ -4,8 +4,24 @@ import { GenericActionCtx } from "convex/server";
 import type { DataModel, Id } from "../_generated/dataModel";
 // @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
 import pdfExtraction from "pdf-extraction";
-import * as ExcelJS from "exceljs";
+import * as ExcelJSNamespace from "exceljs";
 import mammoth from "mammoth";
+
+/**
+ * exceljs, whichever shape the bundler hands over.
+ *
+ * The package is plain CommonJS, so a namespace import lands either on its
+ * exports or on a wrapper holding them under `default`. Convex's bundler does
+ * the latter, which makes a bare `new ExcelJS.Workbook()` throw
+ * `_.Workbook is not a constructor` at run time despite typechecking cleanly.
+ *
+ * This path had the same latent fault as the sales data importer, where it was
+ * found: any spreadsheet uploaded as a knowledge document would have failed to
+ * parse and been recorded as unreadable.
+ */
+const ExcelJS =
+  (ExcelJSNamespace as unknown as { default?: typeof ExcelJSNamespace }).default ??
+  ExcelJSNamespace;
 
 export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: Id<"_storage">[]): Promise<string> {
   if (!fileIds || fileIds.length === 0) return "";

@@ -18,7 +18,7 @@ import {
 } from "./httpConnectorPolicy";
 import {
   parseRecipients,
-  renderNotificationHtml,
+  buildAgentNotificationEmail,
   resolveNotificationContent,
   resolveNotificationRecipients,
 } from "./aiToolNotificationService";
@@ -537,9 +537,10 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
     });
     if (!content.ok) throw new Error(content.reason);
 
+    const emailBranding = await input.ctx.runQuery(internal.settings.getEmailBranding, {});
     const fromAddress = buildEmailFromAddress({
       envFromAddress: resolveEnvFromAddress(process.env),
-      settings: await input.ctx.runQuery(internal.settings.getEmailBranding, {}),
+      settings: emailBranding,
     });
     if (fromAddress.includes(UNCONFIGURED_EMAIL_ADDRESS)) {
       // The placeholder sender exists so misconfigured deployments fail loudly
@@ -547,6 +548,10 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       // an immediate bounce reported to the agent as a success.
       throw new Error("No sender address is configured for this deployment.");
     }
+
+    const notification = buildAgentNotificationEmail(content, {
+      platformName: emailBranding?.platformName,
+    });
 
     const dispatch = await sendResendEmail({
       apiKey,
@@ -560,7 +565,8 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
         from: fromAddress,
         to: decision.recipients,
         subject: content.subject,
-        html: renderNotificationHtml(content.body),
+        html: notification.html,
+        text: notification.text,
       },
     });
 

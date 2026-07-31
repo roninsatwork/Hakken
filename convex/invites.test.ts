@@ -239,7 +239,7 @@ describe("OWASP: Broken Access Control - Invites", () => {
     });
   });
 
-  test("internal invite creation normalizes emails and refreshes pending invites only", async () => {
+  test("internal invite creation normalizes emails and re-arms invites for deleted accounts", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { companyId, callerId } = await t.run(async (ctx) => {
@@ -292,18 +292,29 @@ describe("OWASP: Broken Access Control - Invites", () => {
       auditLogs: await ctx.db.query("auditLogs").collect(),
     }));
 
+    /*
+     * An accepted invitation with no surviving user is a leftover from a
+     * deleted account, and a fresh dispatch re-arms it. It used to be left
+     * untouched, which made the address impossible to re-invite: the email went
+     * out, nothing was written, and the directory showed nothing pending.
+     */
     expect(invite).toMatchObject({
       email: "new@test.com",
       companyId,
-      role: "USER",
-      status: "ACCEPTED",
-      token: "accepted-token",
+      role: "ADMIN",
+      status: "PENDING",
+      token: "token-c",
     });
-    expect(auditLogs).toHaveLength(1);
-    expect(auditLogs[0]).toMatchObject({
+    expect(invite?.acceptedAt).toBeUndefined();
+    expect(auditLogs).toHaveLength(3);
+    expect(auditLogs[2]).toMatchObject({
       actionType: "CREATE_INVITE",
       actorId: callerId,
       entityId: inviteId,
+    });
+    expect(JSON.parse(auditLogs[2].metadata as string)).toMatchObject({
+      reissued: true,
+      previousStatus: "ACCEPTED",
     });
   });
 
@@ -361,17 +372,68 @@ describe("OWASP: Broken Access Control - Invites", () => {
         role: "USER",
         template,
       })
-    ).resolves.toEqual({ success: true, simulated: true });
+    ).resolves.toEqual({ success: true, simulated: true, outcome: "created" });
     await expect(
       superAdminClient.action(api.invites.dispatchInviteEmail, {
         email: "global-admin@test.com",
         role: "SUPER_ADMIN",
         template,
       })
-    ).resolves.toEqual({ success: true, simulated: true });
+    ).resolves.toEqual({ success: true, simulated: true, outcome: "created" });
 
     const invites = await t.run(async (ctx) => await ctx.db.query("invitations").collect());
 
     expect(invites.map((invite) => invite.email).sort()).toEqual(["global-admin@test.com", "member@test.com"]);
+  });
+
+  test("re-inviting someone who already has an account reports it instead of reissuing", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { companyId, callerId, inviteId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const callerId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("users", {
+        email: "member@test.com",
+        role: "USER",
+        companyId,
+        createdAt: Date.now(),
+      });
+      const inviteId = await ctx.db.insert("invitations", {
+        email: "member@test.com",
+        companyId,
+        role: "USER",
+        status: "ACCEPTED",
+        token: "original-token",
+        invitedAt: Date.now(),
+        acceptedAt: Date.now(),
+      });
+      return { companyId, callerId, inviteId };
+    });
+
+    // The account exists, so there is nothing to re-arm. The point of the
+    // assertion is that the caller is told which case it hit, rather than
+    // getting an indistinguishable success.
+    await expect(
+      t.mutation(internal.invites.createInviteRecord, {
+        email: "member@test.com",
+        companyId,
+        role: "ADMIN",
+        token: "new-token",
+        callerId,
+      })
+    ).resolves.toEqual({ outcome: "alreadyActive", previousStatus: "ACCEPTED" });
+
+    const { invite, auditLogs } = await t.run(async (ctx) => ({
+      invite: await ctx.db.get(inviteId),
+      auditLogs: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    expect(invite).toMatchObject({ status: "ACCEPTED", token: "original-token", role: "USER" });
+    expect(auditLogs).toHaveLength(0);
   });
 });

@@ -183,15 +183,18 @@ run it, and `executeApprovalNode`
 which `processNodeFinalization` (`convex/workflowEngine.ts:425-448`) turns into a
 step marked `PENDING_APPROVAL` with no downstream steps created.
 
-**Deciding it is impossible.** `resumeApprovalStep` has no caller anywhere in
+**Original gap.** `resumeApprovalStep` originally had no caller anywhere in
 `src/`. The screens that called it —
-`admin/workflows/logs/page.tsx` and `admin/workflows/logs/[id]/page.tsx` — were
-deleted in commit `cc5bc9558` ("Update agent admin workflows", 2026-07-02), and
-the approval node was left in the builder. No query lists steps awaiting
-approval; every step-reading function in `convex/workflowExecutions.ts` is
-internal, and the two public ones in `convex/scheduler.ts:250,274` have no caller
-either. There is no admin screen showing workflow executions at all — the
-workflows list shows definitions, the builder shows the graph, and after you press
+the deleted legacy `admin/workflows/logs/page.tsx` and
+`admin/workflows/logs/[id]/page.tsx` — were removed in commit `cc5bc9558`
+("Update agent admin workflows", 2026-07-02), and the approval node was left in
+the builder. At that point no query listed steps awaiting approval; every
+step-reading function in `convex/workflowExecutions.ts` was internal, and the
+two public ones in `convex/scheduler.ts:250,274` had no caller either. The
+current implementation now exposes workflow execution routes under
+`src/app/(dashboard)/admin/workflows/executions/`, so keep this paragraph as the
+historical diagnosis, not the current route map. Before that repair, the
+workflows list showed definitions, the builder showed the graph, and after you press
 run there is nowhere to see what happened.
 
 **And the platform still tells people to use it.** The in-app hint at
@@ -1275,7 +1278,7 @@ code with them.
     `docs/developer/workflow-runtime-internals.md:118`, `WORKFLOWS.md:68`,
     `docs/end-user/workflow-automation.md:63,121` — all corrected. One of those
     files contradicts itself twelve lines apart and both halves are now wrong.
-16. Delete the empty directory `src/app/(dashboard)/admin/workflows/logs/[id]/` and
+16. Delete the old empty admin workflow logs detail directory and
     the orphaned `scheduler:getWorkflowExecutions` mock at
     `src/e2e/convexReactMock.tsx:635`.
 

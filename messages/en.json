@@ -5,6 +5,7 @@
         "cancel": "Cancel",
         "save": "Save",
         "saving": "Saving...",
+        "deleting": "Deleting...",
         "dismiss": "Dismiss",
         "back": "Back",
         "actions": {
@@ -280,6 +281,8 @@
         "manageUsers": "Manage Users",
         "invitations": "Invitations",
         "systemAdmins": "System Admins",
+        "userManagement": "User Management",
+        "allUsers": "All Users",
         "settings": "Settings",
         "systemSettings": "System Settings",
         "apiKeys": "API Keys",
@@ -296,7 +299,10 @@
         "impersonatingLabel": "Impersonating Workspace",
         "exitWorkspace": "Exit Workspace",
         "tools": "Tools",
-        "health": "Health"
+        "health": "Health",
+        "salesData": "Sales Data",
+        "salesDataImport": "Import Data",
+        "salesDataTables": "Data Tables"
     },
     "properties": {
         "search": {
@@ -426,6 +432,14 @@
             "warningCascade": "Permanent Data Deletion",
             "warningDesc": "This action will purge all agents, messages, and configurations for this company. This cannot be undone.",
             "deleteTenant": "Delete Company",
+            "modulesLabel": "Optional Modules",
+            "modulesHint": "Extra sections only this workspace can see",
+            "modules": {
+                "salesData": {
+                    "name": "Sales Data",
+                    "description": "Spreadsheet import and browsable sales, category and frequency tables. The section is labelled with the workspace's own name."
+                }
+            },
             "errors": {
                 "saveFailed": "Failed to sync tenant directives.",
                 "deleteFailed": "Failed to purge tenant from protocol."
@@ -2077,6 +2091,42 @@
                 "emailPlaceholder": "e.g. john@sonae.ai",
                 "avatarPlaceholder": "https://..."
             }
+        },
+        "directory": {
+            "title": "All Users",
+            "description": "Everyone on the platform, with how recently and how often they sign in. Read-only — manage people from Manage Users.",
+            "searchPlaceholder": "Search by email",
+            "loadMore": "Load more",
+            "empty": "No users match these filters",
+            "filters": {
+                "company": "Company",
+                "allCompanies": "All companies",
+                "role": "Role",
+                "allRoles": "All roles",
+                "roleUser": "User",
+                "roleAdmin": "Admin",
+                "activity": "Activity",
+                "anyActivity": "Any activity",
+                "active7": "Active in 7 days",
+                "active30": "Active in 30 days",
+                "dormant": "Dormant",
+                "never": "Never signed in",
+                "sortBy": "Sort by",
+                "sortLastLogin": "Last login",
+                "sortLoginCount": "Logins (30d)",
+                "sortUnavailable": "Sorting is unavailable while searching"
+            },
+            "table": {
+                "person": "Person",
+                "company": "Company",
+                "role": "Role",
+                "lastLogin": "Last login",
+                "logins30d": "Logins (30d)",
+                "joined": "Joined",
+                "never": "Never",
+                "unnamed": "Unnamed",
+                "noCompany": "—"
+            }
         }
     },
     "ai": {
@@ -2384,5 +2434,93 @@
         "detachConfirm": "Are you sure you want to detach {name} from this company? They will retain their system admin account but will no longer be assigned to this workspace.",
         "detach": "Detach",
         "detaching": "Detaching..."
+    },
+    "salesData": {
+        "importTitle": "Import Data",
+        "importSubtitle": "Upload a workbook to replace this workspace's sales data.",
+        "uploadTitle": "1. Choose the workbook",
+        "uploadHint": "An Excel file (.xlsx) containing the sales, category and frequency worksheets.",
+        "chooseFile": "Choose file",
+        "uploading": "Reading the file...",
+        "mapTitle": "2. Say which worksheet is which",
+        "mapHint": "The sales worksheet is named for the period it covers, so it changes with every file. Pick each one below — the headings found are shown underneath.",
+        "datasetSales": "Sales figures",
+        "datasetCategories": "Categories by customer type",
+        "datasetFrequency": "Sale frequency",
+        "rowCount": "{count, plural, =0 {no rows} one {1 row} other {# rows}}",
+        "replaceData": "Replace data",
+        "importing": "Importing...",
+        "cancelUpload": "Cancel",
+        "replaceWarning": "Importing replaces everything currently in this workspace's three tables. The existing data stays in place until the new file has been read in full, so a file that fails changes nothing.",
+        "importComplete": "Imported {sales} sales rows, {categories} category pairings, {interest} areas of interest and {frequency} frequency rows.",
+        "importPeriods": "Revenue columns: {periods}",
+        "importSkipped": "{count, plural, one {1 row was skipped because it carried no product.} other {# rows were skipped because they carried no product.}}",
+        "historyTitle": "Import history",
+        "historyFile": "File",
+        "historyStatus": "Status",
+        "historyRows": "Sales / categories / interest / frequency",
+        "historyPeriods": "Periods",
+        "historyWhen": "Started",
+        "historyEmptyTitle": "No imports yet",
+        "historyEmptyDescription": "Upload a workbook above to populate the data tables.",
+        "statusCurrent": "Current",
+        "statusSuperseded": "Replaced",
+        "statusRunning": "Running",
+        "statusFailed": "Failed",
+        "tablesTitle": "Data Tables",
+        "tablesSubtitle": "From {fileName} — {rows} sales rows.",
+        "tablesSubtitleEmpty": "No data imported yet.",
+        "tab": {
+            "sales": "Sales",
+            "categories": "Categories",
+            "frequency": "Sale Frequency",
+            "interest": "Areas of Interest"
+        },
+        "column": {
+            "sourceRow": "Row",
+            "account": "Account name",
+            "group": "Group name",
+            "customerType": "Customer type",
+            "product": "Product",
+            "category": "Product category",
+            "productType": "Product type",
+            "quantity": "Quantity",
+            "total": "Total",
+            "frequency": "Sale frequency",
+            "parentAccount": "Parent account",
+            "productCode": "Product code",
+            "uniqueId": "Unique ID",
+            "productDescription": "Product description"
+        },
+        "pageNumber": "Page {page}",
+        "rowsShown": "{count, plural, =0 {no rows} one {1 row} other {# rows}}",
+        "loading": "Loading...",
+        "emptyTitle": "Nothing to show",
+        "emptyDescriptionImported": "This table had no rows in the imported file.",
+        "emptyDescriptionNoImport": "Import a workbook to populate this table.",
+        "errors": {
+            "uploadFailed": "The file could not be uploaded. Check it is an .xlsx workbook and try again.",
+            "importFailed": "The import failed. Nothing has changed.",
+            "duplicateSheets": "Each dataset needs its own worksheet. Choose a different one."
+        },
+        "datasetAreasOfInterest": "Customer areas of interest",
+        "searchPlaceholder": {
+            "sales": "Search accounts, products, codes...",
+            "categories": "Search customer types and categories...",
+            "interest": "Search customer types and product types...",
+            "frequency": "Search categories, product types and frequency..."
+        },
+        "clearSearch": "Clear search",
+        "filter": {
+            "customerType": "Customer type",
+            "account": "Account",
+            "group": "Group",
+            "all": "All",
+            "narrow": "Type to narrow...",
+            "noMatches": "No matches",
+            "clear": "Clear filters"
+        },
+        "emptyTitleNarrowed": "No rows match",
+        "emptyDescriptionNarrowed": "No rows match the current search and filters. Clear them to see the full table."
     }
 }

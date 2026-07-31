@@ -1,10 +1,15 @@
 import type { Doc } from "./_generated/dataModel";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { normalizeEnabledModules } from "./utils/companyModules";
 
-export function buildCompanyRecord(args: { name: string; systemPrompt?: string }, now = Date.now()) {
+export function buildCompanyRecord(
+  args: { name: string; systemPrompt?: string; enabledModules?: string[] },
+  now = Date.now()
+) {
   return {
     name: args.name,
     systemPrompt: args.systemPrompt,
+    enabledModules: normalizeEnabledModules(args.enabledModules),
     createdAt: now,
   };
 }

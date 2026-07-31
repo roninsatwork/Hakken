@@ -122,8 +122,9 @@ safer and avoids a second writer racing the webhook.
 - **A per-run Apify spend ceiling.** Already logged as out of scope on
   [agents-run-properly-plan.md](agents-run-properly-plan.md) — it needs a limit
   model, not a constant. Note it, don't build it.
-- Changing what the Properties → Search "Gather Properties" button does. It is a
-  direct call that works; leave it.
+- Changing the Properties → Search form design. The execution path has already
+  moved to `propertyAgents.startRightmoveCollection`; the remaining work here is
+  linking the later Apify collection evidence back to the agent job.
 
 ---
 

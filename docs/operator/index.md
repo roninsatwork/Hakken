@@ -15,3 +15,7 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 - [Movement Demo Manual Smoke Checklist](./movement-demo-manual-smoke-checklist.md)
 - [Movement Demo Live Rehearsal Notes Template](./movement-demo-live-rehearsal-notes-template.md)
 - [Movement Demo Presenter Card](./movement-demo-presenter-card.md)
+
+## Coverage Status
+
+The 2026-07-30 documentation coverage audit found the current operator docs aligned with the operator workflows visible in the repository: local auth, demo seed, white-label packaging, vertical packaging, and movement-demo operations. Add new operator runbooks only when a real internal workflow exists, and track broader documentation follow-up in [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).

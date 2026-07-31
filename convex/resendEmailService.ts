@@ -7,6 +7,16 @@ export type ResendEmailPayload = {
   to: string | string[];
   subject: string;
   html: string;
+  /**
+   * The plain-text alternative.
+   *
+   * Optional only so existing callers keep compiling while they move onto the
+   * shared shell; every new send should set it. Without a text part the message
+   * scores worse with spam filters and is unreadable on a watch or through a
+   * screen reader. `renderEmail` emits both from one content object so they
+   * cannot drift.
+   */
+  text?: string;
 };
 
 export type ResendEmailResponse = {

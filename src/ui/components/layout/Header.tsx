@@ -57,7 +57,8 @@ function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
   if (pathname.startsWith("/admin/workflows")) return [t("workflows")];
   if (pathname.startsWith("/admin/settings/scripts") || pathname.startsWith("/admin/health")) return [t("maintenance")];
   if (pathname.startsWith("/admin/settings")) return [t("settings")];
-  if (pathname.startsWith("/admin/super-admins")) return [t("systemAdmins")];
+  if (pathname.startsWith("/admin/directory")) return [t("userManagement"), t("allUsers")];
+  if (pathname.startsWith("/admin/super-admins")) return [t("userManagement"), t("systemAdmins")];
   return [t("admin")];
 }
 
@@ -120,20 +121,28 @@ export default function Header({ onOpenModal }: HeaderProps) {
   useEffect(() => {
     if (user && !sessionStorage.getItem("login_tracked")) {
       sessionStorage.setItem("login_tracked", "true");
-      fetch("https://ipapi.co/json/")
-        .then(res => res.json())
-        .then(data => {
+
+      /*
+       * The geo lookup gets a deadline, not a veto.
+       *
+       * This used to await ipapi.co before recording anything, so a slow or
+       * blocked third party delayed the login record — and its failure path
+       * substituted "Concealed IP", which used to defeat the server-side
+       * throttle and write a duplicate row. The login is the thing that must be
+       * recorded; the city is a nice-to-have.
+       */
+      const abort = new AbortController();
+      const deadline = setTimeout(() => abort.abort(), 1500);
+
+      fetch("https://ipapi.co/json/", { signal: abort.signal })
+        .then((res) => res.json())
+        .catch(() => null)
+        .then((data: { ip?: string; city?: string; country_name?: string } | null) => {
+          clearTimeout(deadline);
           recordLogin({
             device: navigator.userAgent,
-            ip: data.ip || "Unknown IP",
-            location: data.city ? `${data.city}, ${data.country_name}` : "Unknown Location"
-          });
-        })
-        .catch(() => {
-          recordLogin({
-            device: navigator.userAgent,
-            ip: "Concealed IP",
-            location: "Unknown Location"
+            ip: data?.ip || "Unknown IP",
+            location: data?.city ? `${data.city}, ${data.country_name}` : "Unknown Location",
           });
         });
     }

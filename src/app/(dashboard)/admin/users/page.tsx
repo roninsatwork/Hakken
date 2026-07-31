@@ -52,7 +52,9 @@ export default function ManageUsersPage() {
 
   const { results: filteredUsers, status, loadMore } = usePaginatedQuery(
     api.users.getPaginatedUsers,
-    { searchTerm },
+    // The admin section is not scoped by the impersonated workspace —
+    // impersonation is a front-end device. See convex/users.ts.
+    { searchTerm, scope: "platform" as const },
     { initialNumItems: ADMIN_PAGE_SIZE }
   );
 

@@ -160,11 +160,11 @@ Properties → Search already asks a person for the one thing the agent cannot
 invent: which Rightmove search to collect. That screen can start an agent job
 with the address as its run-time instruction — the "left blank" case above.
 
-Deliberately **not** changing what the existing "Gather Properties" button
-does. It is a direct call that works, and putting a model in the middle of it
-would add cost and a new way to fail for a job where the person has already
-made every decision. The agent earns its place on the unattended case, where
-nobody is there to paste anything.
+**Implementation note, 2026-07-30.** The later Rightmove work changed this
+decision: the Properties Search screen now calls
+`propertyAgents.startRightmoveCollection`, creates a Rightmove Agent run, and
+passes the pasted URL and property limit as the run objective. Keep this note
+until the Rightmove Agent plan is reconciled or retired.
 
 ---
 

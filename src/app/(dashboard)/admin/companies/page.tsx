@@ -42,9 +42,15 @@ import {
   ADMIN_PAGE_SIZE,
 } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
+import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 
 type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean };
-type CompanyFormData = { name: string; systemPrompt: string; planId: string };
+type CompanyFormData = {
+  name: string;
+  systemPrompt: string;
+  planId: string;
+  enabledModules: string[];
+};
 
 export default function CompaniesPage() {
   const router = useRouter();
@@ -61,7 +67,7 @@ export default function CompaniesPage() {
   const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<CompanyRow | null>(null);
 
-  const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "" });
+  const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "", enabledModules: [] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -84,17 +90,31 @@ export default function CompaniesPage() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", systemPrompt: "", planId: "" });
+    setFormData({ name: "", systemPrompt: "", planId: "", enabledModules: [] });
     setEditingCompany(null);
     setSubmitError("");
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (company: CompanyRow) => {
-    setFormData({ name: company.name, systemPrompt: company.systemPrompt || "", planId: company.planId || "" });
+    setFormData({
+      name: company.name,
+      systemPrompt: company.systemPrompt || "",
+      planId: company.planId || "",
+      enabledModules: company.enabledModules ?? [],
+    });
     setEditingCompany(company);
     setSubmitError("");
     setIsAddModalOpen(true);
+  };
+
+  const toggleModule = (key: string) => {
+    setFormData((previous) => ({
+      ...previous,
+      enabledModules: previous.enabledModules.includes(key)
+        ? previous.enabledModules.filter((enabled) => enabled !== key)
+        : [...previous.enabledModules, key],
+    }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -102,11 +122,20 @@ export default function CompaniesPage() {
     setIsSubmitting(true);
     try {
       if (editingCompany) {
-        await updateCompany({ id: editingCompany._id, name: formData.name, systemPrompt: formData.systemPrompt });
+        await updateCompany({
+          id: editingCompany._id,
+          name: formData.name,
+          systemPrompt: formData.systemPrompt,
+          enabledModules: formData.enabledModules,
+        });
         if (formData.planId) await assignPlanToCompany({ id: editingCompany._id, planId: formData.planId as Id<"plans"> });
         else await assignPlanToCompany({ id: editingCompany._id, planId: undefined });
       } else {
-        const newCompanyId = await createCompany({ name: formData.name, systemPrompt: formData.systemPrompt });
+        const newCompanyId = await createCompany({
+          name: formData.name,
+          systemPrompt: formData.systemPrompt,
+          enabledModules: formData.enabledModules,
+        });
         if (formData.planId) await assignPlanToCompany({ id: newCompanyId, planId: formData.planId as Id<"plans"> });
       }
       setIsAddModalOpen(false);
@@ -276,6 +305,34 @@ export default function CompaniesPage() {
                   ))}
              </select>
           </AdminModalFormField>
+
+          {COMPANY_MODULES.length > 0 && (
+            <AdminModalFormField label={t('modulesLabel')} hint={t('modulesHint')}>
+              <div className="flex flex-col gap-2">
+                {COMPANY_MODULES.map((module) => (
+                  <label
+                    key={module.key}
+                    className="flex items-start gap-3 px-3 py-2.5 rounded-[10px] border border-border-dim bg-background cursor-pointer hover:border-brand/40 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.enabledModules.includes(module.key)}
+                      onChange={() => toggleModule(module.key)}
+                      className="mt-0.5 accent-brand"
+                    />
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-[14px] text-foreground">
+                        {t(`modules.${module.key}.name`)}
+                      </span>
+                      <span className="text-[12px] text-secondary">
+                        {t(`modules.${module.key}.description`)}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </AdminModalFormField>
+          )}
 
           <AdminModalFormActions
             cancelLabel={tCommon('cancel')}

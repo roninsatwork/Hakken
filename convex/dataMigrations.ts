@@ -77,6 +77,44 @@ type MigrationRunner = (
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   /**
+   * Backfills `users.lastLoginAt` from existing `logins` rows.
+   *
+   * The field is denormalised onto the user because Convex can only index
+   * fields on the table being paginated, so the admin user directory cannot
+   * sort by a join. Users who signed in before the field existed carry nothing,
+   * and would read as "Never" on a screen whose whole job is spotting dormancy.
+   *
+   * Only a SUCCESS row counts. A user whose only attempts failed has genuinely
+   * never signed in and must keep reading as "Never".
+   */
+  "2026-07-31-user-last-login-at": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("users").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const user of page.page) {
+      const newest = await ctx.db
+        .query("logins")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .order("desc")
+        .first();
+
+      if (!newest || newest.status !== "SUCCESS") continue;
+      // Idempotent: the invariant `recordLogin` also maintains.
+      if (user.lastLoginAt === newest.timestamp) continue;
+
+      await ctx.db.patch(user._id, { lastLoginAt: newest.timestamp });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /**
    * Backfills `swarmLogs.companyId`, added alongside the swarm-log access fix
    * so the rows carry tenant provenance without a join back through threads.
    * Rows written before that change have no tenant stamped.

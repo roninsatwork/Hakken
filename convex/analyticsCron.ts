@@ -4,7 +4,7 @@ import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 import {
   buildSystemHealthPlatformAlertDecision,
-  buildSystemHealthPlatformAlertEmailHtml,
+  buildSystemHealthAlertEmail,
   parsePlatformAlertRecipients,
   type AlertRuleStatus,
   type AnalyticsHealthReport,
@@ -443,6 +443,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
       const agent = await ctx.db.get(log.agentId);
       return {
         id: log._id,
+        targetId: log.agentId,
         label: log.interactionType,
         occurredAt: log.createdAt,
         summary: truncateHealthSummary(log.responseContent),
@@ -459,6 +460,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
       const agent = await ctx.db.get(transaction.agentId);
       return {
         id: transaction._id,
+        targetId: transaction.agentId,
         label: transaction.actionContext,
         occurredAt: transaction.createdAt,
         summary: truncateHealthSummary([
@@ -487,6 +489,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     staleAgentRunCandidates.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (run): Promise<OperationalFailureExample> => ({
       id: run._id,
       label: run.status,
+      targetId: run.agentId,
       occurredAt: run.startedAt,
       summary: `${Math.max(1, Math.floor((now - run.startedAt) / 60000))} minutes old | ${truncateHealthSummary(run.objective)}`,
       targetName: await getAgentName(ctx, run.agentId),
@@ -529,6 +532,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
   const pendingApprovals = await Promise.all([
     ...pendingApprovalRows.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (approval): Promise<OperationalFailureExample> => ({
       id: approval._id,
+      targetId: approval.agentId,
       label: approval.status,
       occurredAt: approval.requestedAt,
       summary: truncateHealthSummary(approval.message),
@@ -554,6 +558,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
   const failedToolCalls = await Promise.all(
     scopedFailedToolCalls.slice(0, HEALTH_EXAMPLE_LIMIT).map(async (toolCall): Promise<OperationalFailureExample> => ({
       id: toolCall._id,
+      targetId: toolCall.agentId,
       label: toolCall.normalizedToolName,
       occurredAt: toolCall.completedAt ?? toolCall.startedAt,
       summary: truncateHealthSummary(toolCall.error ?? toolCall.handlerMapping),
@@ -1455,12 +1460,18 @@ export const dispatchPlatformAlerts = internalAction({
       };
     }
 
-    const html = buildSystemHealthPlatformAlertEmailHtml(report, decision);
+    // Branding is resolved before the email is built, because the subject line
+    // carries the platform name and must not fall back to a hardcoded one.
+    const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
+    const email = buildSystemHealthAlertEmail(report, decision, {
+      platformName: emailBranding?.platformName,
+      baseUrl: process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL,
+    });
 
     if (!process.env.RESEND_API_KEY) {
       console.warn("RESEND_API_KEY not found. Simulating platform alert dispatch.", {
         recipients,
-        subject: decision.subject,
+        subject: email.subject,
       });
       return {
         alerted: true,
@@ -1472,7 +1483,6 @@ export const dispatchPlatformAlerts = internalAction({
       };
     }
 
-    const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
     const fromAddress = buildEmailFromAddress({
       envFromAddress: resolveEnvFromAddress(process.env),
       fallbackName: "Sonae Operations",
@@ -1485,8 +1495,9 @@ export const dispatchPlatformAlerts = internalAction({
       payload: {
         from: fromAddress,
         to: recipients,
-        subject: decision.subject,
-        html,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
       },
     });
 

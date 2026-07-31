@@ -2,7 +2,7 @@
 
 This guide explains the property research and board-reporting features in Sonae. It is for client admins, operators, sales leaders, support teams, and anyone who needs to understand what users can do from the product screens. It describes the implemented product behavior only.
 
-The feature area has two connected parts. The first part helps teams collect property listings from Rightmove, review the saved listings, inspect individual property details, and monitor extraction jobs. The second part shows the latest generated sales board report, built from uploaded sales pipeline data and rendered as a visual executive dashboard. Both parts are company-aware: users normally see the data for their own company workspace, while super admins can have broader visibility depending on their active context. New Rightmove extraction jobs are recorded against the signed-in user's stored company, and later property reads use the active workspace context.
+The feature area has two connected parts. The first part helps teams collect property listings from Rightmove through the Rightmove Agent, review saved listings, inspect individual property details, and monitor extraction jobs. The second part shows the latest generated sales board report, built from uploaded sales pipeline data and rendered as a visual executive dashboard. Full report-specific behavior is documented in [Sales And Board Reports](./sales-and-board-reports.md). Both parts are company-aware: users normally see the data for their own company workspace, while super admins can have broader visibility depending on their active context.
 
 ## Where To Find It
 
@@ -10,7 +10,7 @@ Open the main Sonae app and use the left navigation.
 
 The Properties section contains three pages:
 
-- Search, which starts a new Rightmove extraction.
+- Search, which queues a Rightmove Agent collection job.
 - Scraped Data, which shows saved property listings.
 - Logs, which shows recent extraction jobs and their status.
 
@@ -22,9 +22,9 @@ These pages are part of the authenticated app experience. Access still depends o
 
 The property search page is used to start collection from Rightmove. The workflow begins outside Sonae: go to Rightmove, run the search you care about, apply filters such as location, price, property type, tenure, parking, or other Rightmove options, then copy the search URL from the browser. In Sonae, paste that Rightmove URL into the Search page.
 
-The form has two steps. Step 1 asks for the Rightmove URL. Sonae checks that the URL looks like a Rightmove link before it submits the request. Step 2 asks how many properties to gather. The screen supports a maximum of 1000 in the input. Choose a smaller number when testing a new search and a larger number when you are ready to collect a broader market sample.
+The form has two steps. Step 1 asks for the Rightmove URL. Sonae accepts HTTPS `rightmove.co.uk` property-for-sale search result links, not single property pages or unrelated Rightmove pages. Step 2 asks how many properties to gather. The screen supports 10 to 1000 properties. Choose a smaller number when testing a new search and a larger number when you are ready to collect a broader market sample.
 
-When you press the gather button, Sonae sends the job to its extraction service. The request is asynchronous. That means the button starts the job; it does not wait on the page until every listing has been collected. After a successful start, the page shows a success message and clears the URL. If the URL is invalid, the extraction service is not configured, or another error occurs, the page shows an inline error message.
+When you press the gather button, Sonae queues a manual run for the active Rightmove Agent in the current company workspace. The request is asynchronous. That means the button starts the job; it does not wait on the page until every listing has been collected. The agent receives the Rightmove search URL and the property limit as its objective, starts collection, and stops rather than waiting for every listing. After a successful start, the page shows a success message and clears the URL. If the URL is invalid, the user has no active workspace, the Rightmove Agent is not configured or active, or another error occurs, the page shows an inline error message.
 
 The search uses the filters contained in the Rightmove URL. Sonae does not provide a separate filter builder on this screen. If the resulting data looks broader or narrower than expected, check the original Rightmove URL and rerun the search with the right filters on Rightmove first.
 
@@ -68,6 +68,9 @@ If a property cannot be found or the current user does not have permission to vi
 
 ## Board Reports
 
+This section is a summary. For the complete report guide, use
+[Sales And Board Reports](./sales-and-board-reports.md).
+
 The Sales Report page shows the latest generated report for the user's accessible scope. It is intended for executive pipeline review rather than raw data entry. A generated report is created by a configured Sales Report Agent using pipeline CSV data that has been uploaded to that agent's knowledge area. The page does not upload the CSV itself and does not manually run the agent from this screen.
 
 If no report exists, the page shows No Reports Available and explains that a pipeline CSV should be uploaded and the Sales Report Agent should be scheduled. Once a report exists, the page switches to the board report dashboard.
@@ -80,7 +83,7 @@ The Export to Board button downloads a PNG image of the report dashboard. The fi
 
 ## Permissions And Company Boundaries
 
-Properties are company-scoped. A company admin or user sees property records and extraction runs for their active company. A super admin with no active company context can see records across companies in some property views. If a super admin is operating inside a company context, behavior can be scoped to that active company. Starting a new Rightmove extraction is slightly different from reading existing rows: the run record is attached to the signed-in user's stored company account, so operators should confirm the intended company before dispatching a scrape from an admin account.
+Properties are company-scoped. A company admin or user sees property records and extraction runs for their active company. A super admin with no active company context can see records across companies in some property views. If a super admin is operating inside a company context, behavior can be scoped to that active company. Starting a new Rightmove collection requires an active workspace because the Search page queues a company-scoped Rightmove Agent run. Operators should confirm the intended company before dispatching a collection from an admin account.
 
 Board reports require admin-level access. Company admins see the latest report for their company. Super admins see the latest report available globally. Standard users should not rely on access to executive reports unless their role and workspace configuration explicitly allow it.
 
@@ -88,7 +91,7 @@ The tenant boundary matters in practical use. If a colleague says they can see a
 
 ## Data Created And Changed
 
-Starting a property extraction creates an extraction run record. When the run succeeds, Sonae saves property records for the listings returned by the extraction service. If the same Rightmove listing is collected again for the same company, Sonae updates the existing saved row with fresh data instead of creating a duplicate. The same listing can still exist separately for different companies.
+Starting a property extraction from the Search page creates an agent run first. When that agent starts the underlying extraction service, Sonae records the extraction run. When the run succeeds, Sonae saves property records for the listings returned by the extraction service. If the same Rightmove listing is collected again for the same company, Sonae updates the existing saved row with fresh data instead of creating a duplicate. The same listing can still exist separately for different companies.
 
 Saved property records can include address, price, property type, bedroom and bathroom counts, original URL, images, floorplans, description, features, EPC rating, coordinates, agent details, listing dates, update reason, product label, size fields, and scrape time. Not every listing contains every field.
 

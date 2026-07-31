@@ -105,7 +105,7 @@ Do not add arbitrary shell commands, dynamic imports from script ids, or user-pr
 Focused tests include:
 
 - `convex/maintenanceScripts.test.ts` for authorization, registry listing, script execution, run history, metadata, and audit events.
-- `convex/inventoryRollups.test.ts` where inventory rollup behavior is covered.
+- `convex/inventoryRollups.ts` for the rollup implementation. Add focused tests when maintenance-script work changes inventory rollup behavior.
 - Settings page tests for script list/detail rendering where present.
 
 For documentation-only edits, run `git diff --check`. Before merging implementation changes in this area, run the full local gate from `AGENTS.md`:

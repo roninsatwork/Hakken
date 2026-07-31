@@ -11,7 +11,6 @@ AI tools and connectors are managed from:
 - `/admin/ai/tools`: connector marketplace, installed connectors, and Sonae action tools.
 - `/admin/ai/tools/new`: create a Sonae action tool.
 - `/admin/ai/tools/[id]`: edit a Sonae action tool.
-- `/admin/ai/tools/mcp/new`: create a custom external-action tool placeholder for a remote MCP-style endpoint.
 - `/admin/ai/tools/connectors/[id]`: manage an installed connector.
 
 Agent-specific tool bindings are managed from agent administration screens. A tool must exist before it can be bound to an agent.
@@ -20,9 +19,9 @@ Agent-specific tool bindings are managed from agent administration screens. A to
 
 The connector marketplace lists built-in connector definitions. Each connector shows category, authentication mode, required scopes, description, install state, and test state.
 
-Installed connectors can create or update their associated tools. The current connector categories include knowledge, profile, workflow, HTTP, email, and custom-style integrations. Authentication modes can include no authentication, secret references, or OAuth-style connection state.
+Installed connectors can create or update their associated tools. The current connector categories include knowledge, profile, workflow, HTTP, email, and custom-style integrations. Authentication modes currently used by built-in connector definitions are no authentication and secret references. OAuth schema fields exist, but OAuth connections are not available on this deployment. A separate MCP tool creation page is not implemented in the current app.
 
-Connector install and sync actions are super-admin controlled. Connector detail pages let authorized admins edit secret references, enabled tool mappings, active state, tenant assignment where allowed, OAuth state, and connection tests. Testing a connector records diagnostic state so operators can see whether the connector is untested, passing, or failing. Configuration and OAuth changes reset test state, so retest a connector after changing refs, scopes, enabled tools, active state, or OAuth connection status.
+Connector install and sync actions are super-admin controlled. Connector detail pages let authorized admins edit secret references, enabled tool mappings, active state, tenant assignment where allowed, and connection tests. Testing a connector records diagnostic state so operators can see whether the connector is untested, passing, or failing. Configuration changes reset test state, so retest a connector after changing refs, scopes, enabled tools, or active state.
 
 Secret references are reference keys, not raw secrets. Do not paste API keys, OAuth tokens, private keys, or passwords into connector reference fields unless the field is explicitly designed to store a secret reference managed elsewhere.
 
@@ -58,7 +57,7 @@ Some connector-backed tools are currently installed as governed stubs. They can 
 
 This is intentional for connector scaffolding. The marketplace can show many external-system connector definitions, including common email, calendar, chat, document, CRM, ticketing, issue-tracking, repository, billing, database, and commerce systems. Installing one of those definitions may create tools, but only the mappings with registered backend handlers can actually execute. Some scaffolded mappings return a normalized "not implemented" result, while other generated mappings fail as unknown or unimplemented until engineering registers a handler.
 
-Operators should test connector behavior before telling a customer that a connector can complete live external actions. The current custom MCP page also creates a governed external-action tool placeholder through the generic tool catalog; it does not yet discover or import remote MCP tools automatically, despite the screen copy describing that intended direction.
+Operators should test connector behavior before telling a customer that a connector can complete live external actions. Connector marketplace presence and generated tool rows are not proof that a live external action can complete.
 
 ## Practical Operating Guidance
 

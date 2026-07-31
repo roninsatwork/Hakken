@@ -82,6 +82,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "Plans -> /admin/settings/plans",
     "Sonae -> /",
     "agentApprovals -> /admin/agents/approvals",
+    "allUsers -> /admin/directory",
     "analytics -> /admin/settings/analytics",
     "apiKeys -> /admin/settings/api-keys",
     "authDiagnostics -> /admin/auth-diagnostics",
@@ -105,7 +106,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "companies",
     "maintenance",
     "settings",
-    "systemAdmins",
+    "userManagement",
   ],
 }
 `;

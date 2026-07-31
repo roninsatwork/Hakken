@@ -18,11 +18,11 @@ Global AI administration is under `/admin/ai`:
 - `/admin/ai/models` manages providers, model catalog entries, enabled status, and defaults.
 - `/admin/ai/models/[id]` edits model display and pricing configuration.
 - `/admin/ai/tools` manages the connector marketplace and Sonae action tools.
-- `/admin/ai/tools/new`, `/admin/ai/tools/[id]`, `/admin/ai/tools/mcp/new`, and `/admin/ai/tools/connectors/[id]` create or manage tool and connector records.
+- `/admin/ai/tools/new`, `/admin/ai/tools/[id]`, and `/admin/ai/tools/connectors/[id]` create or manage tool and connector records.
 
 Company-level AI administration appears inside company detail routes:
 
-- `/admin/companies/[id]/ai` redirects to the company knowledge section.
+- `/admin/companies/[id]/ai` shows the Company AI readiness overview: what the company has configured, what inherits platform defaults, and what needs attention.
 - `/admin/companies/[id]/ai/prompt` manages the company prompt.
 - `/admin/companies/[id]/ai/rules` manages company-scoped rules.
 - `/admin/companies/[id]/ai/knowledge` and `/admin/companies/[id]/knowledge` manage company knowledge.

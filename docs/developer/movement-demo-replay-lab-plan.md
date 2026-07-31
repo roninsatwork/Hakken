@@ -165,7 +165,7 @@ Goal: make stored sessions easy to inspect without manual JSON scrolling.
 
 Deliverables:
 
-- A local script, for example `scripts/movement-debug/export-replay-sessions.mjs`, that fetches recent `movementDebugSessions`.
+- A local export script, currently `scripts/movement-debug/export-replay-session.mjs` with `scripts/movement-debug/export-replay-session-cli.ts`, that fetches saved replay session data.
 - A parser module that turns `samplesJson` into typed replay frames.
 - A compact summary output for each session:
   - session id

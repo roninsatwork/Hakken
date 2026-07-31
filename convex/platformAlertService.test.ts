@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
   buildAnalyticsHealthPlatformAlertDecision,
-  buildPlatformAlertEmailHtml,
+  buildSystemHealthAlertEmail,
   buildSystemHealthPlatformAlertDecision,
-  buildSystemHealthPlatformAlertEmailHtml,
+  groupAlertOccurrences,
+  humaniseFailureSummary,
   parsePlatformAlertRecipients,
   type AnalyticsHealthReport,
   type OperationalHealthReport,
@@ -122,26 +123,6 @@ describe("platform alert service", () => {
     ]);
   });
 
-  test("renders escaped platform alert email content", () => {
-    const report = buildReport({
-      messageDimensions: {
-        examples: ["message_<script>"],
-        mismatched: 1,
-        missingDimensions: 0,
-        missingThreads: 0,
-        scanned: 10,
-        windowStartDate: "2026-05-26",
-      },
-    });
-    const decision = buildAnalyticsHealthPlatformAlertDecision(report);
-    const html = buildPlatformAlertEmailHtml(report, decision);
-
-    expect(html).toContain("Alert type: analyticsHealth");
-    expect(html).toContain("Message dimension mismatches");
-    expect(html).toContain("message_&lt;script&gt;");
-    expect(html).not.toContain("message_<script>");
-  });
-
   test("does not alert when system health report is clean", () => {
     const decision = buildSystemHealthPlatformAlertDecision(buildSystemReport());
 
@@ -227,7 +208,159 @@ describe("platform alert service", () => {
     expect(decision.subject).toBe("[Sonae] Platform alert: system health (2 signals)");
   });
 
-  test("renders escaped system health email content", () => {
+  /* ---------------------------------------------------------------------
+   * The alert Anthony received on 2026-07-31, rebuilt.
+   *
+   * These are the exact payloads from that email: four identical 400s from one
+   * agent, plus two distinct Apify faults. Everything here asserts the thing
+   * that made the original unreadable.
+   * ------------------------------------------------------------------- */
+
+  const THOUGHT_SIGNATURE_ERROR =
+    '{"error":{"message":"{\\n \\"error\\": {\\n \\"code\\": 400,\\n \\"message\\": \\"Function call is missing a thought_signature in functionCall parts. This is required for tools to work co...';
+  const APIFY_402_ERROR =
+    'Uncaught Error: Apify replied 402 to POST /acts/jKpgGfgRfzrGgEMa8/runs: { "error": { "type": "not-enough-usage-to-run-paid-actor", "message": "By launching this job you will exc...';
+  const APIFY_SECRET_ERROR =
+    "Uncaught Error: APIFY_WEBHOOK_SECRET environment variable is missing. at startApifyActor (../convex/apify.ts:191:33) at handler (../convex/apify.ts:86:20)";
+
+  function buildScreenshotReport() {
+    return buildSystemReport({
+      operations: buildOperationalReport({
+        agentFailures: {
+          count: 4,
+          examples: Array.from({ length: 4 }, (_, index) => ({
+            id: `log_${index}`,
+            label: "ERROR",
+            occurredAt: Date.UTC(2026, 6, 29, 16, 39 + index),
+            summary: THOUGHT_SIGNATURE_ERROR,
+            targetId: "agent_rightmove",
+            targetName: "Rightmove Agent",
+            targetType: "agent" as const,
+          })),
+        },
+        failedToolCalls: {
+          count: 2,
+          examples: [
+            {
+              id: "call_1",
+              label: "apify",
+              occurredAt: Date.UTC(2026, 6, 30, 7, 40),
+              summary: APIFY_402_ERROR,
+              targetId: "agent_rightmove",
+              targetName: "Rightmove Agent",
+              targetType: "agent" as const,
+            },
+            {
+              id: "call_2",
+              label: "apify",
+              occurredAt: Date.UTC(2026, 6, 29, 16, 35),
+              summary: APIFY_SECRET_ERROR,
+              targetId: "agent_rightmove",
+              targetName: "Rightmove Agent",
+              targetType: "agent" as const,
+            },
+          ],
+        },
+      }),
+    });
+  }
+
+  test("pulls the human sentence out of a nested provider payload", () => {
+    expect(humaniseFailureSummary(THOUGHT_SIGNATURE_ERROR)).toBe(
+      "Function call is missing a thought_signature in functionCall parts. This is required for tools to work co"
+    );
+  });
+
+  test("keeps the useful half of an Apify failure and drops the envelope", () => {
+    expect(humaniseFailureSummary(APIFY_402_ERROR)).toBe(
+      "Apify replied 402 to POST /acts/jKpgGfgRfzrGgEMa8/runs — not-enough-usage-to-run-paid-actor"
+    );
+  });
+
+  test("strips the stack trace from a plain error", () => {
+    expect(humaniseFailureSummary(APIFY_SECRET_ERROR)).toBe(
+      "APIFY_WEBHOOK_SECRET environment variable is missing."
+    );
+  });
+
+  test("collapses four identical faults into one group", () => {
+    const groups = groupAlertOccurrences([
+      { cause: "same", at: 3, targetName: "Rightmove Agent", targetId: "a1", targetType: "agent" },
+      { cause: "same", at: 1, targetName: "Rightmove Agent" },
+      { cause: "same", at: 5, targetName: "Rightmove Agent" },
+      { cause: "other", at: 2, targetName: "Other Agent" },
+    ]);
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toMatchObject({ cause: "same", count: 3, firstAt: 1, lastAt: 5, targetId: "a1" });
+    expect(groups[0].targetNames).toEqual(["Rightmove Agent"]);
+  });
+
+  test("the rebuilt alert shows two cards, not six rows", () => {
+    const report = buildScreenshotReport();
+    const decision = buildSystemHealthPlatformAlertDecision(report);
+    const email = buildSystemHealthAlertEmail(report, decision, {
+      platformName: "Sonae",
+      baseUrl: "https://app.test",
+    });
+
+    expect(decision.signals).toHaveLength(2);
+    expect(email.html).toContain("Agent execution errors");
+    expect(email.html).toContain("Failed agent tool calls");
+    expect(email.html).toContain("4 × SAME FAULT");
+    expect(email.html).toContain("2 CAUSES");
+  });
+
+  test("never prints a provider payload", () => {
+    const report = buildScreenshotReport();
+    const email = buildSystemHealthAlertEmail(report, buildSystemHealthPlatformAlertDecision(report));
+
+    expect(email.html).not.toContain('{"error"');
+    expect(email.html).not.toContain("\\n");
+    expect(email.html).not.toContain("../convex/apify.ts");
+    expect(email.text).not.toContain('{"error"');
+  });
+
+  test("drops every zero and says what passed instead", () => {
+    const report = buildScreenshotReport();
+    const email = buildSystemHealthAlertEmail(report, buildSystemHealthPlatformAlertDecision(report));
+
+    // The original listed eight zero rows above the two real problems.
+    expect(email.html).not.toContain("Today assistant messages");
+    expect(email.html).not.toContain("Agent budget warnings");
+    expect(email.html).toContain("Also checked and clear:");
+    expect(email.html).toContain("16"); // 18 checks minus the 2 that fired
+  });
+
+  test("gives every agent signal a way back into the app", () => {
+    const report = buildScreenshotReport();
+    const email = buildSystemHealthAlertEmail(report, buildSystemHealthPlatformAlertDecision(report), {
+      baseUrl: "https://app.test",
+    });
+
+    expect(email.html).toContain("https://app.test/admin/agents/agent_rightmove/logs");
+    expect(email.text).toContain("https://app.test/admin/agents/agent_rightmove/logs");
+  });
+
+  test("renders no links at all when the deployment has no base URL", () => {
+    const report = buildScreenshotReport();
+    const email = buildSystemHealthAlertEmail(report, buildSystemHealthPlatformAlertDecision(report));
+
+    expect(email.html).not.toContain("undefined/admin");
+    expect(email.html).not.toContain("/admin/agents");
+  });
+
+  test("counts issues in the subject, not summed occurrences", () => {
+    const report = buildScreenshotReport();
+    const decision = buildSystemHealthPlatformAlertDecision(report);
+    const email = buildSystemHealthAlertEmail(report, decision, { platformName: "Acme Ops" });
+
+    // The original said "(6 signals)" for what a person would call two problems.
+    expect(email.subject).toBe("Acme Ops · 2 issues need attention");
+    expect(email.html).toContain("Two things need you.");
+  });
+
+  test("escapes hostile content coming through a signal", () => {
     const report = buildSystemReport({
       operations: buildOperationalReport({
         overdueSchedules: {
@@ -235,20 +368,18 @@ describe("platform alert service", () => {
           examples: [{
             id: "schedule_1",
             label: "Bad <script>",
-            summary: "Overdue <script>",
+            summary: "Overdue <script>alert(1)</script>",
             targetName: "Schedule <script>",
             targetType: "schedule",
           }],
         },
       }),
     });
-    const decision = buildSystemHealthPlatformAlertDecision(report);
-    const html = buildSystemHealthPlatformAlertEmailHtml(report, decision);
+    const email = buildSystemHealthAlertEmail(report, buildSystemHealthPlatformAlertDecision(report));
 
-    expect(html).toContain("Alert type: systemHealth");
-    expect(html).toContain("Overdue active schedules");
-    expect(html).toContain("Schedule &lt;script&gt;");
-    expect(html).not.toContain("Schedule <script>");
+    expect(email.html).toContain("Overdue active schedules");
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).toContain("&lt;script&gt;");
   });
 
   test("parses comma-separated platform alert recipients", () => {

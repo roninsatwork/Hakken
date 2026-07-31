@@ -355,12 +355,10 @@ div:has(> .public-site) {
 }
 
 /*
- * Narrow screens cannot hold a composed scene behind the type, so the art stops
- * being a backdrop and becomes a single card in the flow above the headline.
- * Every satellite object is already hidden below md/lg/xl, leaving the anchor.
+ * The headline band on narrow screens. The workspace screen above it has its
+ * own reflow, kept with the rest of that component further down the file.
  */
 @media (max-width: 1023px) {
-  /* No pinning on small screens — the headline would cover most of the screen. */
   .ps-hero-eyebrow {
     font-size: 11px;
     letter-spacing: 0.1em;
@@ -954,6 +952,79 @@ div:has(> .public-site) {
   width: 76%;
   border-radius: 999px;
   background: var(--ps-sand);
+}
+
+/*
+ * Phones and small tablets: the screen stops pretending to be a desktop window.
+ *
+ * The desktop shape is a fixed 178px rail beside the dashboard, and nothing
+ * took it back off — at 393px that left the rail wider than the thing it
+ * framed, so the stat tiles came out 39px across and the run bars 5px. The
+ * rail is chrome and carries nothing the page needs, so it goes; the tiles
+ * turn from three columns into three rows; and the 470px floor is dropped
+ * because the reflowed content now sets its own height.
+ */
+@media (max-width: 900px) {
+  .ps-hero {
+    /* The nav pill ends at 74px here, so 104px was a lot of empty panel. */
+    padding-top: 88px;
+  }
+  .ps-ws-body {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .ps-ws-rail {
+    display: none;
+  }
+  .ps-ws-main {
+    padding: 14px;
+    gap: 13px;
+  }
+
+  /* Label and note on the left, the number holding the right edge. */
+  .ps-ws-tiles {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .ps-ws-tile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 14px;
+    padding: 11px 14px;
+  }
+  .ps-ws-tile .ps-ws-kicker {
+    grid-area: 1 / 1;
+  }
+  .ps-ws-tile-num {
+    grid-area: 1 / 2 / span 2 / auto;
+    margin-top: 0;
+    font-size: 23px;
+  }
+  .ps-ws-tile-note {
+    grid-area: 2 / 1;
+    margin-top: 2px;
+  }
+  /* The spend tile's meter is the only third row, and it runs the full width. */
+  .ps-ws-meter {
+    grid-area: 3 / 1 / auto / -1;
+    margin-top: 9px;
+  }
+
+  /* A 640×150 box squeezed to phone width flattens the curve into a saw. */
+  .ps-ws-chart svg {
+    height: 104px;
+  }
+  .ps-ws-bars {
+    height: 54px;
+  }
+  .ps-ws-approve {
+    gap: 12px;
+    padding: 13px 14px;
+  }
+  .ps-ws-approve-title {
+    font-size: 14px;
+  }
 }
 
 /* ---------- demos lead-in ---------- */

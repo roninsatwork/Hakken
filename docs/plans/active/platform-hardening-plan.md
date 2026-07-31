@@ -296,7 +296,7 @@ vector GC, quota resets); backup and restore are treated as out of scope here.
   `src/ui`) separately from demo coverage, and gate only on the platform number.
   This keeps the demo without letting it flatter the platform.
 - Current platform reality to target: `src/app` end-user surface **11.2% lines**,
-  `src/admin` **34.9% branches**, backend 80.1% lines.
+  `src/app/(dashboard)/admin` admin surface **34.9% branches**, backend 80.1% lines.
 - Run the full gate on `dev`, not only on PRs into `main`.
 - Drop `--quiet` from `npm run lint` so warnings are visible.
 - **Acceptance:** platform-only coverage is reported and gated; the gate fails if
@@ -378,7 +378,7 @@ not paying for the demo's weight.
 
 But that held only because nothing outside the demo imported those packages,
 which is invisible while editing. It had already drifted once:
-`src/ui/components/Robot.tsx`, a generated 3D component in the platform's
+the former `src/ui/components/Robot.tsx`, a generated 3D component in the platform's
 **shared UI folder**, imported `three`, `@react-three/fiber`,
 `@react-three/drei` and `three-stdlib`, and was rendered by nothing. One import
 away from pulling 4.3 MB into a shared chunk. Moved to

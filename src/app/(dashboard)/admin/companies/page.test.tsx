@@ -149,6 +149,30 @@ describe("CompaniesPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/admin/companies/company_2");
   });
 
+  it("switches an optional module on for a workspace", async () => {
+    // The module flag is the only thing standing between a workspace and a
+    // section built for one client, so the checkbox reaching the mutation is
+    // worth proving rather than assuming.
+    render(<CompaniesPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /New Company/i }));
+    fireEvent.change(screen.getByPlaceholderText("Enter company name"), { target: { value: "Comax" } });
+
+    const moduleToggles = screen.getAllByRole("checkbox");
+    expect(moduleToggles.length).toBeGreaterThan(0);
+    fireEvent.click(moduleToggles[0]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Provision Tenant" }));
+
+    await waitFor(() => {
+      expect(createCompany).toHaveBeenCalledWith({
+        name: "Comax",
+        systemPrompt: "",
+        enabledModules: ["salesData"],
+      });
+    });
+  });
+
   it("creates, edits, and deletes companies through page actions", async () => {
     render(<CompaniesPage />);
 
@@ -158,7 +182,11 @@ describe("CompaniesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Provision Tenant" }));
 
     await waitFor(() => {
-      expect(createCompany).toHaveBeenCalledWith({ name: "Delta", systemPrompt: "Be useful" });
+      expect(createCompany).toHaveBeenCalledWith({
+        name: "Delta",
+        systemPrompt: "Be useful",
+        enabledModules: [],
+      });
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Edit Company" })[0]);
@@ -166,7 +194,12 @@ describe("CompaniesPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Edit Company" }).at(-1) as HTMLButtonElement);
 
     await waitFor(() => {
-      expect(updateCompany).toHaveBeenCalledWith({ id: "company_1", name: "Acme Updated", systemPrompt: "" });
+      expect(updateCompany).toHaveBeenCalledWith({
+        id: "company_1",
+        name: "Acme Updated",
+        systemPrompt: "",
+        enabledModules: [],
+      });
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Delete Company & Wipe Data" })[0]);
