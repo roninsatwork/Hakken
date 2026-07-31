@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { expect, test, describe } from "vitest";
+import { expect, test, describe, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
@@ -1110,5 +1110,222 @@ describe("getPaginatedUsers scope", () => {
     expect(remaining.sessions).toHaveLength(0);
     expect(remaining.refreshTokens).toHaveLength(0);
     expect(remaining.invitations).toHaveLength(0);
+  });
+
+  /**
+   * The reads on the deletion path are batched, and a batch is a cap unless
+   * something drains it. This is the test that tells the two apart: every
+   * fixture above sits inside one batch, so a `.take(200)` that silently drops
+   * the rest would pass all of them and leave rows behind in production —
+   * which is the original bug, an auth row outliving its user.
+   */
+  test("deletion drains past a single batch, so a heavy account leaves nothing behind", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const OVER_ONE_BATCH = 201;
+
+    const { superAdminId, targetId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const targetId = await ctx.db.insert("users", {
+        email: "heavy@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+
+      for (let index = 0; index < OVER_ONE_BATCH; index += 1) {
+        await ctx.db.insert("authSessions", {
+          userId: targetId,
+          expirationTime: Date.now() + 60_000,
+        });
+        await ctx.db.insert("authAccounts", {
+          userId: targetId,
+          provider: "resend",
+          providerAccountId: `heavy@test.com#${index}`,
+        });
+      }
+
+      return { superAdminId, targetId };
+    });
+
+    await t.withIdentity({ subject: superAdminId }).mutation(api.users.deleteUser, { id: targetId });
+
+    const remaining = await t.run(async (ctx) => ({
+      sessions: await ctx.db.query("authSessions").collect(),
+      accounts: await ctx.db.query("authAccounts").collect(),
+    }));
+
+    expect(remaining.sessions).toHaveLength(0);
+    expect(remaining.accounts).toHaveLength(0);
+  });
+});
+
+/**
+ * The sweep that clears identities orphaned before deletion purged them.
+ *
+ * It walks whole tables, so it runs one page per invocation and schedules the
+ * next — Convex allows a single paginated query per function. The tests that
+ * matter here are the two ways that shape can be got wrong: stalling on rows
+ * it skips, and stopping at the first table.
+ */
+describe("purgeOrphanedAuthIdentities", () => {
+  /** An id whose document is gone — exactly what an orphan row points at. */
+  async function danglingUserId(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const id = await ctx.db.insert("users", {
+        email: "gone@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+      await ctx.db.delete(id);
+      return id;
+    });
+  }
+
+  async function runSweep(t: ReturnType<typeof convexTest>) {
+    vi.useFakeTimers();
+    try {
+      await t.mutation(internal.users.purgeOrphanedAuthIdentities, {});
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
+  /**
+   * The failure this guards against is specific. The batch-from-the-start
+   * pattern in `convex/purges.ts` works because it deletes everything it reads;
+   * this sweep keeps the healthy rows, so the same pattern would re-read them
+   * for ever. With more healthy rows than fit in one page, a cursor is the only
+   * thing that reaches the orphan sitting behind them.
+   */
+  test("steps past healthy rows to reach an orphan beyond the first page", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const orphanUserId = await danglingUserId(t);
+    const PAST_ONE_PAGE = 201;
+
+    await t.run(async (ctx) => {
+      const liveUserId = await ctx.db.insert("users", {
+        email: "live@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+
+      for (let index = 0; index < PAST_ONE_PAGE; index += 1) {
+        await ctx.db.insert("authAccounts", {
+          userId: liveUserId,
+          provider: "resend",
+          providerAccountId: `live@test.com#${index}`,
+        });
+      }
+
+      await ctx.db.insert("authAccounts", {
+        userId: orphanUserId,
+        provider: "resend",
+        providerAccountId: "gone@test.com",
+      });
+    });
+
+    await runSweep(t);
+
+    const accounts = await t.run(async (ctx) => await ctx.db.query("authAccounts").collect());
+
+    expect(accounts).toHaveLength(PAST_ONE_PAGE);
+    expect(accounts.some((account) => account.userId === orphanUserId)).toBe(false);
+  });
+
+  test("carries on through every table, not just the first", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const orphanUserId = await danglingUserId(t);
+
+    await t.run(async (ctx) => {
+      const accountId = await ctx.db.insert("authAccounts", {
+        userId: orphanUserId,
+        provider: "resend",
+        providerAccountId: "gone@test.com",
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        accountId,
+        provider: "resend",
+        code: "unredeemed",
+        expirationTime: Date.now() + 60_000,
+      });
+      const sessionId = await ctx.db.insert("authSessions", {
+        userId: orphanUserId,
+        expirationTime: Date.now() + 60_000,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        sessionId,
+        expirationTime: Date.now() + 60_000,
+      });
+      await ctx.db.insert("invitations", {
+        email: "gone@test.com",
+        role: "USER",
+        status: "ACCEPTED",
+        token: "spent",
+        invitedAt: Date.now(),
+        acceptedAt: Date.now(),
+      });
+    });
+
+    await runSweep(t);
+
+    const remaining = await t.run(async (ctx) => ({
+      accounts: await ctx.db.query("authAccounts").collect(),
+      codes: await ctx.db.query("authVerificationCodes").collect(),
+      sessions: await ctx.db.query("authSessions").collect(),
+      refreshTokens: await ctx.db.query("authRefreshTokens").collect(),
+      invitations: await ctx.db.query("invitations").collect(),
+    }));
+
+    expect(remaining.accounts).toHaveLength(0);
+    expect(remaining.codes).toHaveLength(0);
+    expect(remaining.sessions).toHaveLength(0);
+    expect(remaining.refreshTokens).toHaveLength(0);
+    expect(remaining.invitations).toHaveLength(0);
+  });
+
+  test("leaves healthy identities and pending invitations alone", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      const liveUserId = await ctx.db.insert("users", {
+        email: "live@test.com",
+        role: "USER",
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("authAccounts", {
+        userId: liveUserId,
+        provider: "resend",
+        providerAccountId: "live@test.com",
+      });
+      await ctx.db.insert("authSessions", {
+        userId: liveUserId,
+        expirationTime: Date.now() + 60_000,
+      });
+      // Invited and not yet signed in. No user document is the normal state
+      // here, not an orphan — deleting it would cancel a live invitation.
+      await ctx.db.insert("invitations", {
+        email: "invited@test.com",
+        role: "USER",
+        status: "PENDING",
+        token: "live-token",
+        invitedAt: Date.now(),
+      });
+    });
+
+    await runSweep(t);
+
+    const remaining = await t.run(async (ctx) => ({
+      accounts: await ctx.db.query("authAccounts").collect(),
+      sessions: await ctx.db.query("authSessions").collect(),
+      invitations: await ctx.db.query("invitations").collect(),
+    }));
+
+    expect(remaining.accounts).toHaveLength(1);
+    expect(remaining.sessions).toHaveLength(1);
+    expect(remaining.invitations).toHaveLength(1);
   });
 });

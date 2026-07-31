@@ -48,12 +48,6 @@ completed work.
   login recording and 30-day aggregation behind its two activity columns. Owns
   `users.lastLoginAt`, `users.loginCount30d`, and `recordLogin`. Read it before
   touching the `logins` table or adding anything to `/admin/users`.
-- [Auth Identity Purge Scale Plan](./active/auth-identity-purge-scale-plan.md) —
-  how to clear the ten unclassified broad reads in `convex/users.ts` that are
-  the sole red test on `dev`. Splits them into the index-scoped reads that only
-  need bounding and the three genuine table scans that need a cursored,
-  rescheduled sweep. Read it before allowlisting anything in
-  `src/quality-drift.test.ts`.
 - [Email Design System Plan](./active/email-design-system-plan.md) — the plan to
   put every outbound email through one shared shell: platform alerts, invites,
   agent notifications, and workflow email nodes. Owns the forest email palette,

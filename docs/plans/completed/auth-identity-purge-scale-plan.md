@@ -1,15 +1,42 @@
 # Auth Identity Purge Scale Plan
 
 Last reviewed: 2026-07-31
-Status: Active. Written on one machine, to be executed on another. Nothing in
-here is started.
+Status: Done, same day it was written. All ten reads cleared at source — the
+allowlist in `src/quality-drift.test.ts` was not touched, and no entry was
+added for any of them. Suite green: 452 files, 3,654 tests.
 Owner: Anthony
 
-## Why This Exists
+## What Was Done
+
+Both groups were fixed rather than classified, in the order set out below.
+
+- **Group A** — `purgeAuthIdentity` now drains through a shared `drainRows`
+  helper: read a bounded batch, delete it, repeat until nothing matches. The
+  helper carries the reasoning, including why a bare `.take(n)` cap is the
+  wrong repair on a deletion path.
+- **Group B** — `purgeOrphanedAuthIdentities` now sweeps one page of one table
+  per run and schedules the next, carrying a cursor and a running tally. It
+  ends by logging the total.
+- **Tests** — four added to `convex/users.test.ts` (38 → 42): deletion drains
+  past a single batch; the sweep steps past a full page of healthy rows to
+  reach an orphan behind them; it carries on through every table rather than
+  stopping at the first; and it leaves healthy identities and `PENDING`
+  invitations alone.
+- **Verified on the deployment, not just in tests.** `convex-test` does not
+  enforce the one-paginate-per-function rule, so the sweep was pushed to
+  `dev:silent-axolotl-121` and run with
+  `npx convex run users:purgeOrphanedAuthIdentities '{}'`. The
+  `[Auth purge] Orphaned identity sweep finished.` line appears in the
+  deployment logs, and it is only reachable after the scheduled chain has
+  walked all three tables. No paginate error.
+
+The original analysis follows, as the record of why it was done this way.
+
+## Why This Existed
 
 `src/quality-drift.test.ts` → *"platform broad reads stay classified by
-scale-hardening phase"* is failing, and it is the only red test in the suite —
-3,649 others pass. CI on `dev` is red for this and nothing else.
+scale-hardening phase"* was failing, and it was the only red test in the suite —
+3,649 others passed. CI on `dev` was red for this and nothing else.
 
 The guardrail scans `convex/` for `.collect()` and `.take(10000)` on a
 `ctx.db.query(...)`, and demands each one is either removed, bounded, or

@@ -33,6 +33,47 @@ import {
 const RECENT_LOGIN_WINDOW_MS = 60 * 60 * 1000;
 
 /**
+ * How many rows one read of an identity table takes at a time.
+ *
+ * Comfortably above what any real user has — the point is not to be tight, it
+ * is to have a ceiling at all, so no single read can grow without limit.
+ */
+const IDENTITY_BATCH = 200;
+
+/**
+ * Delete every row a lookup matches, a batch at a time.
+ *
+ * The obvious way to write this is `.collect()` and a loop, and that is what
+ * these purges used to do: read every matching row into memory at once, with
+ * no ceiling on how many that is.
+ *
+ * The obvious repair — `.take(200)` and delete those — is worse than it looks
+ * *here specifically*. This runs on the deletion path, and the bug it exists
+ * to prevent is an auth row left behind making a deleted address unusable. A
+ * bare cap reintroduces exactly that for anyone over the limit: rarer than
+ * before, and much harder to find.
+ *
+ * So it drains instead. Each pass deletes what it read, so the next pass sees
+ * what the last one could not reach, and the loop ends when nothing matches.
+ * Bounded per read, complete in total.
+ *
+ * `deleteRow` must delete the row it is handed, or this will not terminate.
+ */
+async function drainRows<T>(
+  readBatch: (limit: number) => Promise<T[]>,
+  deleteRow: (row: T) => Promise<void>
+): Promise<number> {
+  let removed = 0;
+
+  for (;;) {
+    const batch = await readBatch(IDENTITY_BATCH);
+    if (batch.length === 0) return removed;
+    for (const row of batch) await deleteRow(row);
+    removed += batch.length;
+  }
+}
+
+/**
  * Remove everything that would let a deleted account come back to life.
  *
  * Anthony, 2026-07-31: *"deleting users and re adding them is a genuine user
@@ -54,41 +95,56 @@ const RECENT_LOGIN_WINDOW_MS = 60 * 60 * 1000;
  * workspace and role.
  */
 async function purgeAuthIdentity(ctx: MutationCtx, userId: Id<"users">, email?: string) {
-  const sessions = await ctx.db
-    .query("authSessions")
-    .withIndex("userId", (q) => q.eq("userId", userId))
-    .collect();
-  for (const session of sessions) {
-    const refreshTokens = await ctx.db
-      .query("authRefreshTokens")
-      .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
-      .collect();
-    for (const refreshToken of refreshTokens) await ctx.db.delete(refreshToken._id);
-    await ctx.db.delete(session._id);
-  }
+  await drainRows(
+    (limit) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("userId", (q) => q.eq("userId", userId))
+        .take(limit),
+    async (session) => {
+      await drainRows(
+        (limit) =>
+          ctx.db
+            .query("authRefreshTokens")
+            .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+            .take(limit),
+        (refreshToken) => ctx.db.delete(refreshToken._id)
+      );
+      await ctx.db.delete(session._id);
+    }
+  );
 
-  const accounts = await ctx.db
-    .query("authAccounts")
-    .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
-    .collect();
-  for (const account of accounts) {
-    // Unredeemed magic links for this account. Left behind, one of them could
-    // still be clicked and sign someone in against the deleted identity.
-    const codes = await ctx.db
-      .query("authVerificationCodes")
-      .withIndex("accountId", (q) => q.eq("accountId", account._id))
-      .collect();
-    for (const code of codes) await ctx.db.delete(code._id);
-    await ctx.db.delete(account._id);
-  }
+  await drainRows(
+    (limit) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+        .take(limit),
+    async (account) => {
+      // Unredeemed magic links for this account. Left behind, one of them could
+      // still be clicked and sign someone in against the deleted identity.
+      await drainRows(
+        (limit) =>
+          ctx.db
+            .query("authVerificationCodes")
+            .withIndex("accountId", (q) => q.eq("accountId", account._id))
+            .take(limit),
+        (code) => ctx.db.delete(code._id)
+      );
+      await ctx.db.delete(account._id);
+    }
+  );
 
   if (!email) return;
 
-  const invitations = await ctx.db
-    .query("invitations")
-    .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
-    .collect();
-  for (const invitation of invitations) await ctx.db.delete(invitation._id);
+  await drainRows(
+    (limit) =>
+      ctx.db
+        .query("invitations")
+        .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
+        .take(limit),
+    (invitation) => ctx.db.delete(invitation._id)
+  );
 }
 
 type UserPaginationResult = {
@@ -983,50 +1039,173 @@ export const listDirectoryUsers = superAdminQuery({
  * A `PENDING` invitation with no user is not an orphan. That is the normal
  * state of someone who has been invited and has not signed in yet.
  */
+/**
+ * The tables the sweep walks, in the order it walks them.
+ *
+ * Ordered so the rows that make an address unusable go first: a dangling
+ * `authAccounts` row is what breaks the next sign-in, and a stale `ACCEPTED`
+ * invitation is what blocks the re-invite.
+ */
+const ORPHAN_SWEEP_TABLES = ["authAccounts", "authSessions", "invitations"] as const;
+
+type OrphanSweepTable = (typeof ORPHAN_SWEEP_TABLES)[number];
+
+/** One page of a sweep. Small: each row costs a `get` to test for an owner. */
+const ORPHAN_SWEEP_PAGE = 200;
+
+const orphanSweepTallyValidator = v.object({
+  sessions: v.number(),
+  accounts: v.number(),
+  verificationCodes: v.number(),
+  invitations: v.number(),
+});
+
+/**
+ * One-off recovery for identities orphaned before deletion purged them.
+ *
+ * `deleteUser` now calls `purgeAuthIdentity`, but rows deleted before that
+ * existed are still in the database, and they are exactly what makes an address
+ * unusable: an `authAccounts` row pointing at a missing user, or an `ACCEPTED`
+ * invitation for an account that no longer exists. Both are invisible in the
+ * admin UI, so there is no way to clear them by hand.
+ *
+ * Kept as a maintenance function rather than deleted after one run — the same
+ * orphans appear whenever a user document is removed by any route that does not
+ * go through `deleteUser`.
+ *
+ * A `PENDING` invitation with no user is not an orphan. That is the normal
+ * state of someone who has been invited and has not signed in yet.
+ *
+ * ## Why this is a chain of runs rather than one
+ *
+ * Finding orphans means looking at every row, so the read is broad by nature.
+ * It used to be broad *and* unbounded — three `.collect()` calls over tables
+ * that grow with every sign-in, in a single transaction.
+ *
+ * It now takes one page of one table per run and schedules the next. Two
+ * things forced that shape rather than the simpler loop:
+ *
+ * 1. **Convex allows one paginated query per function** and throws on the
+ *    second. Only one branch below runs per call, which is what keeps that
+ *    true. Note that `convex-test` does *not* enforce this — a version that
+ *    paginated in a loop passed every test here and failed on the deployment —
+ *    so a green suite is not evidence. This was exercised against the dev
+ *    deployment.
+ * 2. **The batch-from-the-start pattern in `convex/purges.ts` cannot be used.**
+ *    It works there because it deletes everything it reads. This sweep skips
+ *    the healthy rows, so starting from the beginning each time would re-read
+ *    them for ever and never reach the end. Hence a real cursor.
+ *
+ * Returns the tally *so far*, not the final one — the run that finishes a table
+ * hands its counts to the next run, and only the last one sees the total, which
+ * it logs. Call it with no arguments; the rest is bookkeeping between runs.
+ */
 export const purgeOrphanedAuthIdentities = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const removed = { sessions: 0, accounts: 0, verificationCodes: 0, invitations: 0 };
+  args: {
+    table: v.optional(
+      v.union(
+        v.literal("authAccounts"),
+        v.literal("authSessions"),
+        v.literal("invitations")
+      )
+    ),
+    cursor: v.optional(v.string()),
+    removed: v.optional(orphanSweepTallyValidator),
+  },
+  handler: async (ctx, args) => {
+    const table: OrphanSweepTable = args.table ?? ORPHAN_SWEEP_TABLES[0];
+    const removed = args.removed ?? {
+      sessions: 0,
+      accounts: 0,
+      verificationCodes: 0,
+      invitations: 0,
+    };
+    const cursor = args.cursor ?? null;
 
-    const accounts = await ctx.db.query("authAccounts").collect();
-    for (const account of accounts) {
-      if (await ctx.db.get(account.userId)) continue;
-      const codes = await ctx.db
-        .query("authVerificationCodes")
-        .withIndex("accountId", (q) => q.eq("accountId", account._id))
-        .collect();
-      for (const code of codes) {
-        await ctx.db.delete(code._id);
-        removed.verificationCodes += 1;
+    let isDone: boolean;
+    let continueCursor: string;
+
+    if (table === "authAccounts") {
+      const page = await ctx.db
+        .query("authAccounts")
+        .paginate({ numItems: ORPHAN_SWEEP_PAGE, cursor });
+
+      for (const account of page.page) {
+        if (await ctx.db.get(account.userId)) continue;
+        removed.verificationCodes += await drainRows(
+          (limit) =>
+            ctx.db
+              .query("authVerificationCodes")
+              .withIndex("accountId", (q) => q.eq("accountId", account._id))
+              .take(limit),
+          (code) => ctx.db.delete(code._id)
+        );
+        await ctx.db.delete(account._id);
+        removed.accounts += 1;
       }
-      await ctx.db.delete(account._id);
-      removed.accounts += 1;
+
+      isDone = page.isDone;
+      continueCursor = page.continueCursor;
+    } else if (table === "authSessions") {
+      const page = await ctx.db
+        .query("authSessions")
+        .paginate({ numItems: ORPHAN_SWEEP_PAGE, cursor });
+
+      for (const session of page.page) {
+        if (await ctx.db.get(session.userId)) continue;
+        await drainRows(
+          (limit) =>
+            ctx.db
+              .query("authRefreshTokens")
+              .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+              .take(limit),
+          (refreshToken) => ctx.db.delete(refreshToken._id)
+        );
+        await ctx.db.delete(session._id);
+        removed.sessions += 1;
+      }
+
+      isDone = page.isDone;
+      continueCursor = page.continueCursor;
+    } else {
+      const page = await ctx.db
+        .query("invitations")
+        .paginate({ numItems: ORPHAN_SWEEP_PAGE, cursor });
+
+      for (const invitation of page.page) {
+        if (invitation.status === "PENDING") continue;
+        const user = await ctx.db
+          .query("users")
+          .withIndex("email", (q) => q.eq("email", invitation.email))
+          .first();
+        if (user) continue;
+        await ctx.db.delete(invitation._id);
+        removed.invitations += 1;
+      }
+
+      isDone = page.isDone;
+      continueCursor = page.continueCursor;
     }
 
-    const sessions = await ctx.db.query("authSessions").collect();
-    for (const session of sessions) {
-      if (await ctx.db.get(session.userId)) continue;
-      const refreshTokens = await ctx.db
-        .query("authRefreshTokens")
-        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
-        .collect();
-      for (const refreshToken of refreshTokens) await ctx.db.delete(refreshToken._id);
-      await ctx.db.delete(session._id);
-      removed.sessions += 1;
+    if (!isDone) {
+      await ctx.scheduler.runAfter(0, internal.users.purgeOrphanedAuthIdentities, {
+        table,
+        cursor: continueCursor,
+        removed,
+      });
+      return removed;
     }
 
-    const invitations = await ctx.db.query("invitations").collect();
-    for (const invitation of invitations) {
-      if (invitation.status === "PENDING") continue;
-      const user = await ctx.db
-        .query("users")
-        .withIndex("email", (q) => q.eq("email", invitation.email))
-        .first();
-      if (user) continue;
-      await ctx.db.delete(invitation._id);
-      removed.invitations += 1;
+    const nextTable = ORPHAN_SWEEP_TABLES[ORPHAN_SWEEP_TABLES.indexOf(table) + 1];
+    if (nextTable) {
+      await ctx.scheduler.runAfter(0, internal.users.purgeOrphanedAuthIdentities, {
+        table: nextTable,
+        removed,
+      });
+      return removed;
     }
 
+    console.log("[Auth purge] Orphaned identity sweep finished.", removed);
     return removed;
   },
 });
