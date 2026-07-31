@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
@@ -217,7 +217,16 @@ describe("Plans Authorization", () => {
     await t.run(async (ctx) => {
       await ctx.db.patch(companyId, { planId: undefined });
     });
-    await t.mutation(internal.plans.resetBillingCycle, {});
+    // The reset schedules a paginated walk per table rather than running both
+    // itself, because Convex allows one paginated query per function call. The
+    // counters are therefore zeroed by the scheduled batches, not by the call.
+    vi.useFakeTimers();
+    try {
+      await t.mutation(internal.plans.resetBillingCycle, {});
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+    } finally {
+      vi.useRealTimers();
+    }
 
     const { companyAfterReset, userAfterReset } = await t.run(async (ctx) => ({
       companyAfterReset: await ctx.db.get(companyId),

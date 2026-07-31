@@ -228,6 +228,19 @@ matches: the cursor is how many matching rows precede the page, and the scan
 walks from the start each time. Unnarrowed, it is still the plain paginated
 query with real cursors, so the ordinary case pays nothing for the search box.
 
+Both traps are now checked rather than remembered. `npm run check:guards` runs
+two scripts, wired into `check`, `gate` and CI:
+
+- `check-convex-pagination.mjs` counts the worst single execution path through
+  every Convex function, following helper calls, and fails on a second
+  `.paginate()`. It found one live fault on its first run — the monthly billing
+  reset paginated companies and then users in one mutation, so the reset threw
+  and rolled back every time it fired. Branching queries that return from each
+  arm are not reported; a loop or a recursive helper counts as two turns.
+- `check-text-source-encoding.mjs` fails on a NUL byte in a tracked text file,
+  reading the same first 8000 bytes git reads before it decides a file is
+  binary and starts printing `Bin` instead of a diff.
+
 Filters compare on `normalizeKey`, not raw text, so a filter finds rows whose
 source spells the value differently — `DISPENSERS & BRACKETS` and
 `dispensers and brackets ` are one option in the dropdown and one filter.

@@ -190,18 +190,21 @@ async function resetUserBillingBatch(ctx: MutationCtx, cursor: string | null) {
   return users.isDone ? null : users.continueCursor;
 }
 
+/**
+ * Starts the monthly reset. Companies and users are two separate paginated
+ * walks, and Convex allows one paginated query per function call, so this
+ * schedules each chain rather than taking the first page of both itself.
+ *
+ * Taking the first page inline threw on the second `.paginate()` and rolled the
+ * whole mutation back, so no counter was ever reset. The suite could not see it
+ * because `convex-test` does not enforce the rule — `npm run check:pagination`
+ * does.
+ */
 export const resetBillingCycle = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const companyCursor = await resetCompanyBillingBatch(ctx, null);
-    const userCursor = await resetUserBillingBatch(ctx, null);
-
-    if (companyCursor) {
-      await ctx.scheduler.runAfter(0, internal.plans.resetCompanyBillingCycleBatch, { cursor: companyCursor });
-    }
-    if (userCursor) {
-      await ctx.scheduler.runAfter(0, internal.plans.resetUserBillingCycleBatch, { cursor: userCursor });
-    }
+    await ctx.scheduler.runAfter(0, internal.plans.resetCompanyBillingCycleBatch, { cursor: null });
+    await ctx.scheduler.runAfter(0, internal.plans.resetUserBillingCycleBatch, { cursor: null });
   }
 });
 
