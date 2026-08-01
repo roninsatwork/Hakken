@@ -2481,6 +2481,14 @@ export default defineSchema({
     parentAccount: v.string(),
     groupName: v.string(),
     accountName: v.string(),
+    /**
+     * The normalised account name, so one customer's rows can be read by index
+     * rather than by scanning the import for a name match.
+     *
+     * Optional only so rows written before it existed still validate; the
+     * backfill populates them and every import writes it.
+     */
+    accountNameKey: v.optional(v.string()),
     customerType: v.string(),
     productCode: v.string(),
     /** Account code + product code. Unique per row within an import. */
@@ -2514,6 +2522,9 @@ export default defineSchema({
     .index("by_company_import_row", ["companyId", "importId", "sourceRow"])
     // Kept for sorting by value, which Phase 2 will offer as a choice.
     .index("by_company_import_total", ["companyId", "importId", "totalRevenue"])
+    // One customer's rows, for their profile. Without it, showing what a single
+    // account buys means reading all 4,568 rows to find its hundred.
+    .index("by_company_import_account_name", ["companyId", "importId", "accountNameKey"])
     .searchIndex("search_product", {
       searchField: "productDescription",
       filterFields: [
@@ -2574,5 +2585,90 @@ export default defineSchema({
       "productCategoryKey",
       "productTypeKey",
     ]),
+
+  /**
+   * One row per account in the current import — the customer directory.
+   *
+   * Derived from `salesDataRows` and written as they are inserted, rather than
+   * worked out when the list is asked for. The alternative was reading every
+   * sales row to find the distinct accounts, which is 4,568 rows to produce 39
+   * names, on every page of the list. Written during the import, it is a
+   * paginated table like any other.
+   *
+   * It carries `importId` and is replaced with everything else on re-import,
+   * because it is derived: nothing here was typed by a person. What people type
+   * lives in `salesDataCustomers`, which has no `importId` for that reason.
+   */
+  salesDataAccounts: defineTable({
+    companyId: v.id("companies"),
+    importId: v.id("salesDataImports"),
+    /** The normalised account name. The customer's identity across imports. */
+    accountNameKey: v.string(),
+    accountName: v.string(),
+    /**
+     * How many rows carried each spelling of the account code.
+     *
+     * A single code cannot be trusted: eighteen rows of the file seen carry
+     * `Product - C O L0` in the code column instead of a code, and they belong
+     * to eight accounts that have a real code on their other rows. Taking the
+     * first one seen would show the wrong code for those eight. The most
+     * frequent one is right for all of them, and self-corrects when the
+     * workbook does.
+     */
+    codeTally: v.record(v.string(), v.number()),
+    groupName: v.string(),
+    groupNameKey: v.string(),
+    customerType: v.string(),
+    customerTypeKey: v.string(),
+    /** Sum of the account's rows, so the list can show spend without a scan. */
+    totalRevenue: v.number(),
+    /** How many product rows the account has, for the list. */
+    productCount: v.number(),
+  })
+    .index("by_company_import", ["companyId", "importId"])
+    // The order the list reads in: chain, then account name inside it.
+    .index("by_company_import_group_name", [
+      "companyId",
+      "importId",
+      "groupNameKey",
+      "accountNameKey",
+    ])
+    .index("by_company_import_account", ["companyId", "importId", "accountNameKey"]),
+
+  /**
+   * What staff type in about a customer: how to reach them, and the one figure
+   * their kind of business is measured by.
+   *
+   * Deliberately carries no `importId`. Re-importing the workbook deletes and
+   * rewrites everything the import owns, so details kept beside the imported
+   * rows would be destroyed by the next upload — somebody's week of phone calls
+   * gone because a fresh sales file arrived. Keyed on the account name instead,
+   * which is the only field clean across every row of the source.
+   *
+   * A row exists only once somebody has entered something. No row means nothing
+   * has been filled in yet, not that the customer is unknown.
+   */
+  salesDataCustomers: defineTable({
+    companyId: v.id("companies"),
+    accountNameKey: v.string(),
+    addressLine1: v.optional(v.string()),
+    addressLine2: v.optional(v.string()),
+    town: v.optional(v.string()),
+    postcode: v.optional(v.string()),
+    country: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    mobile: v.optional(v.string()),
+    email: v.optional(v.string()),
+    accountsEmail: v.optional(v.string()),
+    contactName: v.optional(v.string()),
+    contactRole: v.optional(v.string()),
+    /** Care homes and hotels. */
+    bedrooms: v.optional(v.number()),
+    /** Education, residential and non-residential. */
+    pupils: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  }).index("by_company_account", ["companyId", "accountNameKey"]),
   // template:remove:end
 });

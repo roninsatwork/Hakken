@@ -133,6 +133,7 @@ import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
 import type * as resendEmailService from "../resendEmailService.js";
 import type * as salesData from "../salesData.js";
+import type * as salesDataCustomers from "../salesDataCustomers.js";
 import type * as salesDataImportActions from "../salesDataImportActions.js";
 import type * as salesDataImportService from "../salesDataImportService.js";
 import type * as salesReportActions from "../salesReportActions.js";
@@ -313,6 +314,7 @@ declare const fullApi: ApiFromModules<{
   purges: typeof purges;
   resendEmailService: typeof resendEmailService;
   salesData: typeof salesData;
+  salesDataCustomers: typeof salesDataCustomers;
   salesDataImportActions: typeof salesDataImportActions;
   salesDataImportService: typeof salesDataImportService;
   salesReportActions: typeof salesReportActions;

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { normalizeKey } from "./salesDataImportService";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -41,7 +41,7 @@ const MODULE_DISABLED_MESSAGE = "Sales Data is not enabled for this workspace.";
  * data to look at; that reads as a refusal rather than as a listing of every
  * workspace's figures.
  */
-async function requireSalesDataCompany(
+export async function requireSalesDataCompany(
   ctx: TenantQueryCtx | TenantMutationCtx
 ): Promise<Id<"companies">> {
   const companyId = requireTenant(ctx, MODULE_DISABLED_MESSAGE);
@@ -61,7 +61,7 @@ async function requireSalesDataCompany(
  * backwards from the newest and stops at the first match — past the failed and
  * still-running attempts sitting above it, however many of those there are.
  */
-async function getCurrentImport(
+export async function getCurrentImport(
   ctx: TenantQueryCtx | TenantMutationCtx,
   companyId: Id<"companies">
 ) {
@@ -173,7 +173,7 @@ export const listImports = tenantQuery({
  * Falling back to the first page is the right recovery: the caller asked for
  * data and there is data to give, just not from where they last were.
  */
-async function paginateSafely<T>(
+export async function paginateSafely<T>(
   run: (opts: { numItems: number; cursor: string | null }) => Promise<T>,
   paginationOpts: { numItems: number; cursor: string | null }
 ): Promise<T> {
@@ -230,7 +230,7 @@ const frequencyFilterArgs = {
  */
 const SEARCH_TERM_LIMIT = 8;
 
-function searchTerms(search: string | undefined): string[] {
+export function searchTerms(search: string | undefined): string[] {
   if (!search) return [];
   return search
     .toLowerCase()
@@ -239,7 +239,7 @@ function searchTerms(search: string | undefined): string[] {
     .slice(0, SEARCH_TERM_LIMIT);
 }
 
-function matchesSearch(fields: Array<string | number | undefined>, terms: string[]) {
+export function matchesSearch(fields: Array<string | number | undefined>, terms: string[]) {
   if (terms.length === 0) return true;
 
   const haystack = fields
@@ -256,7 +256,7 @@ function matchesSearch(fields: Array<string | number | undefined>, terms: string
  * and a filter that misses the rows spelled differently is worse than no
  * filter — it reads as "these are all of them".
  */
-function matchesFilter(selected: string | undefined, value: string) {
+export function matchesFilter(selected: string | undefined, value: string) {
   if (!selected) return true;
   return normalizeKey(value) === normalizeKey(selected);
 }
@@ -353,7 +353,7 @@ async function paginateFiltered<T>(
  * only reached once there is a predicate to apply, so the ordinary case does
  * not pay for the search box being on the screen.
  */
-async function paginatePage<T>(
+export async function paginatePage<T>(
   buildQuery: () => ScannableQuery<T>,
   matches: (doc: T) => boolean,
   isNarrowed: boolean,
@@ -473,7 +473,7 @@ export const listSalesFilterOptions = tenantQuery({
  * matching how `matchesFilter` compares: two spellings of one value are one
  * entry, and picking it finds the rows under both.
  */
-function distinctValues<T>(rows: T[], select: (row: T) => string): string[] {
+export function distinctValues<T>(rows: T[], select: (row: T) => string): string[] {
   const seen = new Map<string, string>();
 
   for (const row of rows) {
@@ -648,7 +648,7 @@ export const listFrequencies = tenantQuery({
 });
 
 /** A workspace with no completed import yet still needs a well-formed page. */
-function emptyPage(paginationOpts: { cursor: string | null }) {
+export function emptyPage(paginationOpts: { cursor: string | null }) {
   return {
     page: [],
     isDone: true,
@@ -745,12 +745,131 @@ export const insertSalesRowsInternal = internalMutation({
       await ctx.db.insert("salesDataRows", {
         companyId: args.companyId,
         importId: args.importId,
+        // Derived here rather than asked of the caller: it must agree with the
+        // key the customer directory folds on, and one place computing it is
+        // how that stays true.
+        accountNameKey: normalizeKey(row.accountName),
         ...row,
       });
     }
+
+    await recordAccounts(ctx, args.companyId, args.importId, args.rows);
+
     return args.rows.length;
   },
 });
+
+/**
+ * Keep the customer directory in step with the rows just written.
+ *
+ * The batch is folded down first so an account appearing on two hundred rows
+ * costs one read and one write here rather than two hundred of each — the
+ * directory is 39 rows against 4,568, and the difference is what keeps the
+ * import inside Convex's per-transaction limits.
+ */
+export async function recordAccounts(
+  ctx: MutationCtx,
+  companyId: Id<"companies">,
+  importId: Id<"salesDataImports">,
+  rows: Array<{
+    accountName: string;
+    parentAccount: string;
+    groupName: string;
+    customerType: string;
+    customerTypeKey: string;
+    totalRevenue: number;
+  }>
+) {
+  const batch = new Map<
+    string,
+    {
+      accountName: string;
+      groupName: string;
+      customerType: string;
+      customerTypeKey: string;
+      codeTally: Record<string, number>;
+      totalRevenue: number;
+      productCount: number;
+    }
+  >();
+
+  for (const row of rows) {
+    const accountNameKey = normalizeKey(row.accountName);
+    if (!accountNameKey) continue;
+
+    const entry = batch.get(accountNameKey) ?? {
+      accountName: row.accountName.trim(),
+      groupName: row.groupName.trim(),
+      customerType: row.customerType.trim(),
+      customerTypeKey: row.customerTypeKey,
+      codeTally: {},
+      totalRevenue: 0,
+      productCount: 0,
+    };
+
+    const code = row.parentAccount.trim();
+    if (code) entry.codeTally[code] = (entry.codeTally[code] ?? 0) + 1;
+    entry.totalRevenue += row.totalRevenue;
+    entry.productCount += 1;
+
+    batch.set(accountNameKey, entry);
+  }
+
+  for (const [accountNameKey, entry] of batch) {
+    const existing = await ctx.db
+      .query("salesDataAccounts")
+      .withIndex("by_company_import_account", (q) =>
+        q.eq("companyId", companyId).eq("importId", importId).eq("accountNameKey", accountNameKey)
+      )
+      .unique();
+
+    if (!existing) {
+      await ctx.db.insert("salesDataAccounts", {
+        companyId,
+        importId,
+        accountNameKey,
+        accountName: entry.accountName,
+        codeTally: entry.codeTally,
+        groupName: entry.groupName,
+        groupNameKey: normalizeKey(entry.groupName),
+        customerType: entry.customerType,
+        customerTypeKey: entry.customerTypeKey,
+        totalRevenue: entry.totalRevenue,
+        productCount: entry.productCount,
+      });
+      continue;
+    }
+
+    const codeTally = { ...existing.codeTally };
+    for (const [code, count] of Object.entries(entry.codeTally)) {
+      codeTally[code] = (codeTally[code] ?? 0) + count;
+    }
+
+    await ctx.db.patch(existing._id, {
+      codeTally,
+      totalRevenue: existing.totalRevenue + entry.totalRevenue,
+      productCount: existing.productCount + entry.productCount,
+    });
+  }
+}
+
+/**
+ * The account code to show: the one most rows agree on.
+ *
+ * See the `codeTally` note on the table — a single spelling cannot be trusted
+ * while the workbook has rows carrying a stray value in the code column.
+ */
+export function preferredAccountCode(codeTally: Record<string, number>): string {
+  let best = "";
+  let bestCount = 0;
+  for (const [code, count] of Object.entries(codeTally)) {
+    if (count > bestCount || (count === bestCount && code < best)) {
+      best = code;
+      bestCount = count;
+    }
+  }
+  return best;
+}
 
 export const insertCategoryLinksInternal = internalMutation({
   args: {
@@ -853,6 +972,7 @@ export const purgeSupersededRowsInternal = internalMutation({
         | "salesDataCategoryLinks"
         | "salesDataAreasOfInterest"
         | "salesDataFrequencies"
+        | "salesDataAccounts"
     ) => {
       if (deleted >= PURGE_BATCH_SIZE) return;
 
@@ -872,6 +992,7 @@ export const purgeSupersededRowsInternal = internalMutation({
     await dropFrom("salesDataCategoryLinks");
     await dropFrom("salesDataAreasOfInterest");
     await dropFrom("salesDataFrequencies");
+    await dropFrom("salesDataAccounts");
 
     return { deleted, hasMore: deleted >= PURGE_BATCH_SIZE };
   },
@@ -941,6 +1062,7 @@ export const failImportInternal = internalMutation({
         | "salesDataCategoryLinks"
         | "salesDataAreasOfInterest"
         | "salesDataFrequencies"
+        | "salesDataAccounts"
     ) => {
       if (deleted >= PURGE_BATCH_SIZE) return;
       const written = await ctx.db
@@ -960,6 +1082,7 @@ export const failImportInternal = internalMutation({
     await dropFrom("salesDataCategoryLinks");
     await dropFrom("salesDataAreasOfInterest");
     await dropFrom("salesDataFrequencies");
+    await dropFrom("salesDataAccounts");
 
     await ctx.db.patch(args.importId, {
       status: "FAILED",

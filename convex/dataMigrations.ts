@@ -2,6 +2,10 @@ import { v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { superAdminQuery } from "./tenantFunctions";
+// template:remove:start salesData
+import { recordAccounts } from "./salesData";
+import { normalizeKey } from "./salesDataImportService";
+// template:remove:end
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
 import {
   EMBEDDING_MODEL_USE_CASE,
@@ -76,6 +80,90 @@ type MigrationRunner = (
  * dead code indefinitely.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
+  // template:remove:start salesData
+  /**
+   * Builds `salesDataAccounts` from sales rows imported before it existed.
+   *
+   * The customer directory is written as rows are inserted, so any workbook
+   * uploaded from now on populates it. Workspaces that imported earlier have
+   * the rows and no directory, which reads as a workspace with no customers —
+   * so this walks the rows and folds them down the same way the importer does.
+   *
+   * The totals accumulate page by page, so the skip test cannot be "does a
+   * directory exist" — that would stop after the first page and leave every
+   * later row uncounted. It is instead "is the directory already complete":
+   * the product rows it accounts for match what the import recorded. That is
+   * true of any import the importer built a directory for, and of a backfill
+   * that has already finished, so re-running is a no-op either way.
+   */
+  /**
+   * Stamps `salesDataRows.accountNameKey` on rows imported before it existed.
+   *
+   * The customer profile reads one account's rows by index. Rows without the
+   * key are invisible to that index, so a customer imported earlier would show
+   * an empty sales history rather than an error — the worst kind of wrong.
+   */
+  "2026-08-01-sales-data-row-account-key": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("salesDataRows").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const row of page.page) {
+      const key = normalizeKey(row.accountName);
+      // Idempotent: skip anything already stamped with the same key.
+      if (row.accountNameKey === key) continue;
+      await ctx.db.patch(row._id, { accountNameKey: key });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  "2026-08-01-sales-data-account-directory": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("salesDataRows").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    const byImport = new Map<string, typeof page.page>();
+    for (const row of page.page) {
+      const key = `${row.companyId}:${row.importId}`;
+      byImport.set(key, [...(byImport.get(key) ?? []), row]);
+    }
+
+    for (const rows of byImport.values()) {
+      const [first] = rows;
+      if (!first) continue;
+
+      const existing = await ctx.db
+        .query("salesDataAccounts")
+        .withIndex("by_company_import", (q) =>
+          q.eq("companyId", first.companyId).eq("importId", first.importId)
+        )
+        .collect();
+
+      const counted = existing.reduce((sum, account) => sum + account.productCount, 0);
+      // No recorded row count means an import that never completed, so there is
+      // no total to compare against and the directory is built unconditionally.
+      const record = await ctx.db.get(first.importId);
+      const expected = record?.salesRowCount ?? 0;
+      if (expected > 0 && counted >= expected) continue;
+
+      await recordAccounts(ctx, first.companyId, first.importId, rows);
+      updated += rows.length;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  // template:remove:end
   /**
    * Backfills `users.lastLoginAt` from existing `logins` rows.
    *

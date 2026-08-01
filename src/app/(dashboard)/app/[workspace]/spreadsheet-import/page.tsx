@@ -13,6 +13,7 @@ import {
   useCursorPagination,
 } from "../_components/CursorPagination";
 import { TableFilterSelect, TableSearchInput } from "../_components/TableControls";
+import { LAYER } from "@/src/ui/lib/layers";
 
 /**
  * The four imported worksheets, behind one screen with a secondary tab bar.
@@ -245,7 +246,7 @@ function SalesDataTables() {
             context of its own, and a later sibling with one paints over an
             earlier sibling's absolutely positioned child however high that
             child's own z-index is. The control bar has to out-rank the card. */}
-        <div className="relative z-30 flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
+        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
           <TableSearchInput
             value={search}
             onChange={setSearch}

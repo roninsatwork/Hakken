@@ -78,6 +78,19 @@ completed work.
   `convex/salesData.ts`, the workbook parser, and `/app/<workspace>/spreadsheet-import`. Read it
   before adding another client-specific section, or before touching the module
   registry in `convex/utils/companyModules.ts`.
+- [Workspace Customer CRM Plan](./active/workspace-customer-crm-plan.md) — the
+  plan for customer records inside the workspace section: a searchable customer
+  list, a profile holding the details staff type in, and the buying history the
+  import already provides. Read it before adding anything customer-shaped to
+  the sales data vertical, and for what the import does and does not hold —
+  there are no orders in it, and only 39 customers behind the 4,568 rows.
+- [Workspace Customer Research Agent Plan](./active/workspace-customer-research-agent-plan.md) —
+  the plan for the agent that searches the internet for the contact details the
+  sales import cannot supply and writes them into the customer record. Owns the
+  `salesDataCustomerResearch` table, the two customer research tools, and the
+  rule that decides whether a finding is written or parked for review. Read it
+  before giving any agent write access to workspace customer data, and defers
+  autonomy and approval behaviour to the Agent Autonomy And Approvals Plan.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -99,8 +112,10 @@ Plan, which defers approvals behaviour to the Agent Autonomy And Approvals Plan
 and eval content to the AI Checks Plan. If work touches the Rightmove property
 collection flow, especially `/app/properties/search`, Apify collection linkage,
 or whether the user frontend starts an agent or a scraper directly, use the
-Rightmove Agent Execution Plan. If work touches the public pre-login site, use
-the Public Website Plan. If work touches documentation coverage, use the
+Rightmove Agent Execution Plan. If work touches an agent filling in customer
+details from the internet, use the Workspace Customer Research Agent Plan; if it
+touches the customer screens themselves, the Workspace Customer CRM Plan wins.
+If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the
 Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.
 

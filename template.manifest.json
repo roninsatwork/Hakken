@@ -124,6 +124,8 @@
         "convex/salesDataImportService.ts",
         "convex/salesDataImportService.test.ts",
         "convex/utils/salesDataModule.ts",
+        "convex/salesDataCustomers.ts",
+        "convex/salesDataCustomers.test.ts",
         "src/app/(dashboard)/app/[workspace]",
         "src/app/(dashboard)/app/sales-data"
       ],
@@ -132,7 +134,9 @@
         "salesDataRows",
         "salesDataCategoryLinks",
         "salesDataAreasOfInterest",
-        "salesDataFrequencies"
+        "salesDataFrequencies",
+        "salesDataAccounts",
+        "salesDataCustomers"
       ],
       "packageDependencies": [],
       "packageScripts": [],

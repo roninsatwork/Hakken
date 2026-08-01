@@ -273,6 +273,7 @@ function SalesDataNavItem({
   const base = `/app/${workspaceSlug(workspace.companyName ?? '')}`;
   const importHref = `${base}/import-data`;
   const tablesHref = `${base}/spreadsheet-import`;
+  const customersHref = `${base}/customers`;
 
   return (
     <NavItem
@@ -286,6 +287,7 @@ function SalesDataNavItem({
     >
       <SubNavItem label={t('salesDataImport')} href={importHref} isActive={pathname === importHref} onClick={onSelect} />
       <SubNavItem label={t('salesDataTables')} href={tablesHref} isActive={pathname === tablesHref} onClick={onSelect} />
+      <SubNavItem label={t('salesDataCustomers')} href={customersHref} isActive={pathname.startsWith(customersHref)} onClick={onSelect} />
     </NavItem>
   );
 }
