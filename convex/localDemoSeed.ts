@@ -260,9 +260,8 @@ async function upsertDemoAgent(ctx: MutationCtx, createdBy: Id<"users">) {
       builderIntent: {
         objective: "Try the governed agentic app foundation locally.",
         audience: "Developers and demo operators",
-        modelBehavior: "inherit",
-        knowledgePlan: "seeded-demo",
-        toolPlan: "seeded-demo",
+        reasoningEffort: "MEDIUM",
+        includeRecommendedTools: true,
         smokeEvalRequired: true,
         readinessAcknowledged: false,
       },

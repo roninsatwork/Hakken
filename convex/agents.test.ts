@@ -154,7 +154,10 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const initialReadiness = await client.query(api.agents.getAgentReadiness, { id: agentId });
     expect(initialReadiness).toMatchObject({
-      isActive: true,
+      // A newly created agent is a draft. The create screen has always promised
+      // this in words; until the screen and this mutation were rebuilt together
+      // it created an active agent regardless.
+      isActive: false,
       toolBindingCount: 0,
       knowledgeDocumentCount: 0,
       modelReadiness: {
@@ -165,7 +168,9 @@ describe("OWASP: Broken Access Control - Agents", () => {
       },
       activeEvalFixtureCount: 0,
       successfulSmokeEvalRunCount: 0,
-      activationRisk: true,
+      // Risk is being live without proof. A draft is unproven but not live, so
+      // the warning below stands while the risk does not.
+      activationRisk: false,
       // Absence is not a fault. A fresh agent has no tools, no documents and no
       // checks, and only the last of those is a reason it cannot go live —
       // reported once, as "nothing has been proven", not four times.
@@ -1037,9 +1042,8 @@ describe("OWASP: Broken Access Control - Agents", () => {
       builderIntent: {
         objective: "Triage support tickets before activation.",
         audience: "Support admins",
-        modelBehavior: "balanced",
-        knowledgePlan: "template",
-        toolPlan: "template",
+        reasoningEffort: "MEDIUM",
+        includeRecommendedTools: true,
         smokeEvalRequired: true,
         readinessAcknowledged: true,
       },
@@ -1064,7 +1068,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     expect(agent).toMatchObject({
       name: "Support Triage Agent",
-      description: "Classifies inbound support requests, summarizes urgency, and proposes next actions.",
+      description: "Reads incoming support messages, says how urgent each one is, and suggests what to do next.",
       modelId: "default-agent-model",
       modelSelectionMode: "inherit",
       isActive: false,
@@ -1103,9 +1107,8 @@ describe("OWASP: Broken Access Control - Agents", () => {
       builderIntent: {
         objective: "Triage support tickets before activation.",
         audience: "Support admins",
-        modelBehavior: "balanced",
-        knowledgePlan: "template",
-        toolPlan: "template",
+        reasoningEffort: "MEDIUM",
+        includeRecommendedTools: true,
         smokeEvalRequired: true,
         readinessAcknowledged: true,
       },
@@ -1153,6 +1156,151 @@ describe("OWASP: Broken Access Control - Agents", () => {
       toolBindingCount: 0,
       missingToolMappings: ["knowledge.search"],
     });
+  });
+
+  /**
+   * The create screen's three controls used to be recorded and ignored.
+   *
+   * Every assertion here failed before the fix: the reasoning choice never left
+   * the audit log, and unticking the tools box bound the tools anyway. They are
+   * the two things the screen now promises.
+   */
+  test("the create screen's choices reach the agent: reasoning effort overrides the template, and declined tools are not bound", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      await ctx.db.insert("aiTools", {
+        name: "Knowledge Search",
+        description: "Search the knowledge base.",
+        handlerMapping: "knowledge.search",
+        requiredRole: "ADMIN",
+        isActive: true,
+        createdAt: Date.now(),
+        createdBy: userId,
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+
+    // The starting point says MEDIUM; the person creating it said HIGH.
+    const declinedToolsAgentId = await client.mutation(api.agents.createAgentFromTemplate, {
+      templateId: "support-triage-agent",
+      reasoningEffort: "HIGH",
+      includeRecommendedTools: false,
+    });
+
+    // Omitting both keeps the previous behaviour every existing caller relies on.
+    const defaultAgentId = await client.mutation(api.agents.createAgentFromTemplate, {
+      templateId: "support-triage-agent",
+    });
+
+    const blankAgentId = await client.mutation(api.agents.createAgent, {
+      name: "Blank Agent",
+      reasoningEffort: "LOW",
+    });
+
+    const { declinedAgent, declinedBindings, defaultAgent, defaultBindings, blankAgent } =
+      await t.run(async (ctx) => ({
+        declinedAgent: await ctx.db.get(declinedToolsAgentId),
+        declinedBindings: await ctx.db
+          .query("agentTools")
+          .withIndex("by_agent", (q) => q.eq("agentId", declinedToolsAgentId))
+          .collect(),
+        defaultAgent: await ctx.db.get(defaultAgentId),
+        defaultBindings: await ctx.db
+          .query("agentTools")
+          .withIndex("by_agent", (q) => q.eq("agentId", defaultAgentId))
+          .collect(),
+        blankAgent: await ctx.db.get(blankAgentId),
+      }));
+
+    expect(declinedAgent?.reasoningEffort).toBe("HIGH");
+    expect(declinedBindings).toHaveLength(0);
+
+    expect(defaultAgent?.reasoningEffort).toBe("MEDIUM");
+    expect(defaultBindings).toHaveLength(1);
+
+    expect(blankAgent?.reasoningEffort).toBe("LOW");
+  });
+
+  /**
+   * The create screen offers the settings screen's fields; this is where they land.
+   *
+   * Before the two screens were made the same, `createAgent` took a name and a
+   * description and nothing else, so every other choice on the create screen was
+   * recorded in the audit trail and thrown away.
+   */
+  test("createAgent stores every setting the create screen offers, and refuses to create a live agent", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, {
+      name: "Customer Research Agent",
+      description: "Fills in the blanks from the open web.",
+      reasoningEffort: "HIGH",
+      allowInternetAccess: true,
+      autonomousToolExecution: true,
+      approvalExpiryHours: 48,
+      maxSteps: 12,
+      // Above the ceiling, so the stored record must say what will actually run
+      // rather than a number the runtime silently overrides.
+      maxCostGBP: 500,
+      // A cleared box arrives as zero and means "follow the platform default",
+      // which is an absent field rather than a stored zero.
+      maxToolCalls: 0,
+    });
+
+    const agent = await t.run(async (ctx) => await ctx.db.get(agentId));
+
+    expect(agent).toMatchObject({
+      name: "Customer Research Agent",
+      reasoningEffort: "HIGH",
+      allowInternetAccess: true,
+      autonomousToolExecution: true,
+      approvalExpiryHours: 48,
+      maxSteps: 12,
+      maxCostGBP: 20,
+      isActive: false,
+    });
+    expect(agent?.maxToolCalls).toBeUndefined();
+
+    await expect(
+      client.mutation(api.agents.createAgent, { name: "Live On Arrival", isActive: true })
+    ).rejects.toThrow("Activation blocked");
   });
 
   test("template creation rejects unknown templates and non-super-admin users", async () => {
@@ -1232,7 +1380,8 @@ describe("OWASP: Broken Access Control - Agents", () => {
       description: "Handles support workflows.",
       modelId: "default-agent-model",
       modelSelectionMode: "inherit",
-      isActive: true,
+      // Created as a draft, never live — see the readiness test above.
+      isActive: false,
     });
 
     await expect(

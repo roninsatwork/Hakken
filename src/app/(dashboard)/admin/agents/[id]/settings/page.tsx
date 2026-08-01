@@ -3,26 +3,26 @@
 import { getErrorMessage } from "@/src/lib/errors";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
-import type { DragEvent, FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import { useParams } from "next/navigation";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import {
-  ArrowRight,
-  Bot,
-  ImagePlus,
-  Loader2,
-} from "lucide-react";
-import { cn } from "@/src/ui/lib/utils";
-import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   AdminSaveAction,
   AdminSaveError,
 } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
+// Shared with the create screen, which used to be built from a different set of
+// cards, labels and buttons entirely.
+import {
+  FieldLabel,
+  SegmentedChoice,
+  SettingSwitch,
+  SettingsCard,
+} from "@/src/app/(dashboard)/admin/_components/AdminSettingsCard";
+import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import {
   formatModelDisplayName,
   formatTokenCost,
@@ -91,87 +91,6 @@ function parseLimitInput(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-/**
- * A group of settings, with room around it.
- *
- * The page had no grouping at all: one column of controls under two numbered
- * headings, each control a full-width band with its own help line. Cards give
- * the reader somewhere to stop, and give the layout something to place in two
- * columns.
- */
-function SettingsCard({ title, className, children }: {
-  title: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className={cn("flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-6", className)}>
-      <h2 className="mb-1 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: ReactNode }) {
-  return (
-    <label htmlFor={htmlFor} className="mt-1 text-[12px] font-medium text-secondary">
-      {children}
-    </label>
-  );
-}
-
-/**
- * A yes/no setting, said once.
- *
- * Each of these was two side-by-side buttons filling the width, so the reader
- * had to read both labels to work out which state they were in. A switch states
- * the setting once and shows its state, and the sentence underneath is free to
- * describe what that state actually does.
- */
-function SettingSwitch({ label, description, checked, onChange, children }: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="py-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-[13px] font-medium text-foreground">{label}</span>
-          <p className="text-[12px] leading-relaxed text-muted">{description}</p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={label}
-          onClick={() => onChange(!checked)}
-          className="mt-0.5 shrink-0"
-        >
-          <span
-            className={cn(
-              "relative block h-5 w-9 rounded-full transition-colors",
-              checked ? "bg-brand" : "bg-foreground/15",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all",
-                checked ? "left-[18px]" : "left-0.5",
-              )}
-            />
-          </span>
-        </button>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export default function AgentOverviewPage() {
   const t = useTranslations("admin.agents.details.settings");
   const params = useParams();
@@ -193,13 +112,11 @@ export default function AgentOverviewPage() {
   // leaving the reader to guess.
   const approvalExpiry = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
   const updateAgent = useMutation(api.agents.updateAgent);
-  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
   const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [uploadError, setUploadError] = useState("");
 
   // What "follow the platform default" would actually mean, named before it is
   // chosen rather than left as a greyed-out box. The server resolves it for this
@@ -237,11 +154,6 @@ export default function AgentOverviewPage() {
     return ` · ${input} in · ${output} out`;
   };
 
-  // Avatar Upload State
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const initializedAgentIdRef = useRef<Id<"agents"> | null>(null);
 
   useEffect(() => {
@@ -321,59 +233,6 @@ export default function AgentOverviewPage() {
     }
   };
 
-  const processUpload = async (file: File) => {
-    const validation = validateUploadFile(file, "adminImage");
-    if (!validation.allowed) {
-      setUploadError(validation.reason);
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadError("");
-    try {
-      const postUrl = await generateUploadUrl();
-      const result = await fetch(postUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
-      const localPreviewUrl = URL.createObjectURL(file);
-
-      setFormData((prev) => ({
-        ...prev,
-        storageId,
-        avatar: localPreviewUrl
-      }));
-      setIsAvatarModalOpen(false);
-    } catch (error) {
-      console.error("Upload failed", error);
-      setUploadError(t("errors.uploadFailed"));
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const handleDrag = (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = async (e: DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      await processUpload(e.dataTransfer.files[0]);
-    }
-  };
-
   /**
    * Why the server would refuse to switch this agent on, said once.
    *
@@ -413,32 +272,23 @@ export default function AgentOverviewPage() {
             unused. */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <SettingsCard title={t("sections.identity.title")}>
-            <div className="flex items-center gap-5">
-              {formData.avatar ? (
-                <Image
-                  src={formData.avatar}
-                  alt=""
-                  width={64}
-                  height={64}
-                  unoptimized
-                  className="h-16 w-16 shrink-0 rounded-full border border-white/10 bg-card object-cover"
-                />
-              ) : (
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-white/20 bg-white/5">
-                  <Bot className="h-6 w-6 text-muted" />
-                </div>
-              )}
-              <div className="flex flex-col items-start gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setIsAvatarModalOpen(true)}
-                  className="rounded-[10px] border border-border-dim bg-foreground/10 px-4 py-2 text-[12px] font-medium text-foreground transition-colors hover:bg-foreground/20"
-                >
-                  {t("sections.identity.avatar.updateButton")}
-                </button>
-                <p className="text-[11px] text-muted">{t("sections.identity.avatar.hint")}</p>
-              </div>
-            </div>
+            <AdminAvatarPicker
+              avatar={formData.avatar}
+              labels={{
+                updateButton: t("sections.identity.avatar.updateButton"),
+                hint: t("sections.identity.avatar.hint"),
+                modalTitle: t("uploadModal.title"),
+                modalSubtitle: t("uploadModal.subtitle"),
+                processing: t("uploadModal.processing"),
+                dropText: t("uploadModal.dropText"),
+                dropHint: t("uploadModal.dropHint"),
+                cancel: t("uploadModal.cancel"),
+                uploadFailed: t("errors.uploadFailed"),
+              }}
+              onUploaded={({ storageId, previewUrl }) =>
+                setFormData((prev) => ({ ...prev, storageId, avatar: previewUrl }))
+              }
+            />
 
             <FieldLabel htmlFor="agent-name">{t("sections.identity.name")}</FieldLabel>
             <input
@@ -505,29 +355,15 @@ export default function AgentOverviewPage() {
 
             <div className="flex flex-col gap-2 pt-1">
               <FieldLabel>{t("sections.engine.reasoning.label")}</FieldLabel>
-              <div
-                role="radiogroup"
-                aria-label={t("sections.engine.reasoning.label")}
-                className="grid h-[46px] grid-cols-3 gap-1 rounded-[12px] border border-border-dim bg-black/20 p-1"
-              >
-                {reasoningLevels.map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    role="radio"
-                    aria-checked={formData.reasoningEffort === level}
-                    onClick={() => setFormData({ ...formData, reasoningEffort: level })}
-                    className={cn(
-                      "rounded-[9px] text-[12px] font-medium transition-colors",
-                      formData.reasoningEffort === level
-                        ? "bg-brand/20 text-brand"
-                        : "text-secondary hover:text-foreground",
-                    )}
-                  >
-                    {t(`sections.engine.reasoning.levels.${level}`)}
-                  </button>
-                ))}
-              </div>
+              <SegmentedChoice
+                label={t("sections.engine.reasoning.label")}
+                value={formData.reasoningEffort}
+                options={reasoningLevels.map((level) => ({
+                  value: level,
+                  label: t(`sections.engine.reasoning.levels.${level}`),
+                }))}
+                onChange={(level) => setFormData({ ...formData, reasoningEffort: level })}
+              />
               <p className="text-[11px] leading-relaxed text-muted">
                 {t("sections.engine.reasoning.hint")}
               </p>
@@ -650,70 +486,6 @@ export default function AgentOverviewPage() {
         </div>
       </form>
 
-      {/* Upload Drag & Drop Modal */}
-      <SonaeModal
-        isOpen={isAvatarModalOpen}
-        onClose={() => !isUploading && setIsAvatarModalOpen(false)}
-        title={t("uploadModal.title")}
-      >
-	        <div className="flex flex-col gap-6 mt-2 relative">
-	          <p className="text-[13px] text-secondary">
-	            {t("uploadModal.subtitle")}
-	          </p>
-            <AdminSaveError>{uploadError}</AdminSaveError>
-
-	          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            className={cn(
-              "w-full h-[200px] border-2 border-dashed rounded-[20px] flex flex-col items-center justify-center gap-4 transition-all relative overflow-hidden",
-              dragActive ? "border-brand bg-brand/5" : "border-border-dim bg-background/50",
-              isUploading ? "opacity-50 pointer-events-none" : ""
-            )}
-          >
-            {isUploading ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 text-brand animate-spin" />
-                <span className="text-[13px] font-medium text-foreground">{t("uploadModal.processing")}</span>
-              </div>
-            ) : (
-              <>
-                <div className="w-12 h-12 rounded-full bg-foreground/5 flex items-center justify-center pointer-events-none">
-                  <ImagePlus className="w-5 h-5 text-secondary" />
-                </div>
-                <div className="flex flex-col items-center gap-1 pointer-events-none text-center px-4">
-                  <span className="text-[14px] font-medium text-foreground">{t("uploadModal.dropText")}</span>
-                  <span className="text-[11px] text-muted font-mono uppercase tracking-widest mt-1">{t("uploadModal.dropHint")}</span>
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/png, image/jpeg, image/webp"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      processUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-              </>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-border-dim/50">
-            <button
-              type="button"
-              onClick={() => !isUploading && setIsAvatarModalOpen(false)}
-              disabled={isUploading}
-              className="px-5 py-2.5 rounded-[10px] text-[13px] font-medium text-secondary hover:text-foreground hover:bg-white/5 transition-all disabled:opacity-50"
-            >
-              {t("uploadModal.cancel")}
-            </button>
-          </div>
-        </div>
-      </SonaeModal>
     </div>
   );
 }

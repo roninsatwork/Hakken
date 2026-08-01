@@ -81,20 +81,29 @@ export function buildCreateAgentAuditMetadata(name: string) {
 }
 
 /**
- * `approvalPolicy` is gone from here.
+ * `approvalPolicy`, `modelBehavior` and `knowledgePlan` are gone from here.
  *
- * The agent builder offered a template/always/read-only choice that was serialised
- * into this metadata and read by nothing — choosing "always require approval" never
- * made an agent require approval. The real control lives on agent settings, where a
- * single switch writes `autonomousToolExecution` and the runtime reads it. Existing
- * audit rows keep their stored copy; nothing reads it back.
+ * All three were the same fault. The agent builder offered a choice, serialised it
+ * into this metadata, and nothing ever read it back — so choosing "always require
+ * approval" never made an agent require approval, and choosing "more thorough"
+ * never made one think harder. Anthony, 2026-08-01, reading the create screen
+ * beside the settings screen: *"there is massive inconsistencies between the edit
+ * and the add ... the add is terrible."* The controls were the inconsistency.
+ *
+ * Each is now either real or gone. Approval is a switch on agent settings that
+ * writes `autonomousToolExecution`. Thinking depth is `reasoningEffort`, chosen at
+ * creation with the same three levels and the same words the settings screen uses.
+ * Suggested documents were never a thing at all — no template carries any — so the
+ * control was removed rather than wired.
+ *
+ * `toolPlan` survives as `includeRecommendedTools`, an argument that actually skips
+ * the binding. Existing audit rows keep their stored copies; nothing reads them back.
  */
 export type AgentBuilderIntentAuditMetadata = {
   objective?: string;
   audience?: string;
-  modelBehavior?: string;
-  knowledgePlan?: string;
-  toolPlan?: string;
+  reasoningEffort?: string;
+  includeRecommendedTools?: boolean;
   smokeEvalRequired?: boolean;
   readinessAcknowledged?: boolean;
 };
@@ -105,9 +114,10 @@ function normalizeBuilderIntentAuditMetadata(intent?: AgentBuilderIntentAuditMet
   return {
     ...(intent.objective ? { objective: intent.objective.slice(0, 500) } : {}),
     ...(intent.audience ? { audience: intent.audience.slice(0, 160) } : {}),
-    ...(intent.modelBehavior ? { modelBehavior: intent.modelBehavior } : {}),
-    ...(intent.knowledgePlan ? { knowledgePlan: intent.knowledgePlan } : {}),
-    ...(intent.toolPlan ? { toolPlan: intent.toolPlan } : {}),
+    ...(intent.reasoningEffort ? { reasoningEffort: intent.reasoningEffort } : {}),
+    ...(intent.includeRecommendedTools !== undefined
+      ? { includeRecommendedTools: intent.includeRecommendedTools }
+      : {}),
     ...(intent.smokeEvalRequired !== undefined ? { smokeEvalRequired: intent.smokeEvalRequired } : {}),
     ...(intent.readinessAcknowledged !== undefined ? { readinessAcknowledged: intent.readinessAcknowledged } : {}),
   };

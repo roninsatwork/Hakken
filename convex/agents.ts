@@ -92,12 +92,17 @@ const agentBuilderIntentValidator = v.object({
   objective: v.optional(v.string()),
   audience: v.optional(v.string()),
   approvalPolicy: v.optional(v.string()),
-  modelBehavior: v.optional(v.string()),
-  knowledgePlan: v.optional(v.string()),
-  toolPlan: v.optional(v.string()),
+  reasoningEffort: v.optional(v.string()),
+  includeRecommendedTools: v.optional(v.boolean()),
   smokeEvalRequired: v.optional(v.boolean()),
   readinessAcknowledged: v.optional(v.boolean()),
 });
+
+const reasoningEffortValidator = v.union(
+  v.literal("LOW"),
+  v.literal("MEDIUM"),
+  v.literal("HIGH")
+);
 
 const releaseGateModeValidator = v.union(
   v.literal("TAG"),
@@ -853,24 +858,103 @@ export const getAgentReadiness = adminQuery({
   },
 });
 
+/**
+ * Create an agent, with everything its settings screen would let you set.
+ *
+ * The create screen used to offer a different, smaller set of choices in a
+ * different shape, and most of them were never applied. Anthony, 2026-08-01:
+ * *"these are missing and the add has more fields than we need — make it like
+ * the edit."* So the two screens now take the same fields, and this mutation
+ * accepts what `updateAgent` accepts, applying the same clamps and the same
+ * model resolution rather than a second interpretation of them.
+ */
 export const createAgent = superAdminMutation({
-  args: { 
-    name: v.string(), 
+  args: {
+    name: v.string(),
     description: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+    storageId: v.optional(v.id("_storage")),
+    modelId: v.optional(v.string()),
+    modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
+    reasoningEffort: v.optional(reasoningEffortValidator),
+    allowInternetAccess: v.optional(v.boolean()),
+    autonomousToolExecution: v.optional(v.boolean()),
+    approvalExpiryHours: v.optional(v.number()),
+    maxSteps: v.optional(v.number()),
+    maxToolCalls: v.optional(v.number()),
+    maxRuntimeMs: v.optional(v.number()),
+    maxCostGBP: v.optional(v.number()),
+    isActive: v.optional(v.boolean()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
   handler: async (ctx, args) => {
     const { userId } = ctx;
 
     const now = Date.now();
-    const defaultModelId = await resolveDefaultModelIdForUseCase(ctx, "agent");
 
-    const newAgentId = await ctx.db.insert("agents", buildGlobalAgentRecord({
-      name: args.name,
-      description: args.description,
-      modelId: defaultModelId,
-      modelSelectionMode: "inherit",
-    }, now));
+    // The same gate the settings screen meets when the switch is flipped, said
+    // at the only moment it can be true here: an agent created a millisecond ago
+    // has never run a check, so it can never be switched on at creation.
+    if (args.isActive === true) {
+      throw new Error(
+        "Activation blocked: a new agent has not passed a check yet. "
+        + "Create it, run a check, then turn it on.",
+      );
+    }
+
+    // Inherit resolves to whatever the platform default is now; an override is
+    // checked against the same rule the update path uses, so a model that cannot
+    // run an agent is refused here rather than discovered on the first run.
+    const modelSelectionMode = args.modelSelectionMode ?? "inherit";
+    let modelId: string;
+    if (modelSelectionMode === "override" && args.modelId) {
+      await assertModelOverrideAllowed(ctx, { modelId: args.modelId, useCase: "agent" });
+      modelId = args.modelId;
+    } else {
+      modelId = await resolveDefaultModelIdForUseCase(ctx, "agent");
+    }
+
+    let resolvedAvatarUrl = args.avatar;
+    if (args.storageId) {
+      await validateStoredUpload(ctx, args.storageId, validateAdminImageMetadata);
+      resolvedAvatarUrl = (await ctx.storage.getUrl(args.storageId)) ?? args.avatar;
+    }
+
+    // A cleared box arrives as 0 and must mean "follow the platform default",
+    // which is an absent field — the same reading the update path gives it.
+    const limits = {
+      maxSteps: clampAgentLimitOverride("maxSteps", args.maxSteps),
+      maxToolCalls: clampAgentLimitOverride("maxToolCalls", args.maxToolCalls),
+      maxRuntimeMs: clampAgentLimitOverride("maxRuntimeMs", args.maxRuntimeMs),
+      maxCostGBP: clampAgentLimitOverride("maxCostGBP", args.maxCostGBP),
+    };
+    const approvalExpiryHours = clampAgentApprovalExpiryHours(args.approvalExpiryHours);
+
+    const newAgentId = await ctx.db.insert("agents", {
+      ...buildGlobalAgentRecord({
+        name: args.name,
+        description: args.description,
+        modelId,
+        modelSelectionMode,
+        // Never on at creation, for the reason above.
+        isActive: false,
+        ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
+      }, now),
+      ...(resolvedAvatarUrl ? { avatar: resolvedAvatarUrl } : {}),
+      ...(args.allowInternetAccess !== undefined
+        ? { allowInternetAccess: args.allowInternetAccess }
+        : {}),
+      // Absent means gated, exactly as the runtime reads it, so only a deliberate
+      // true makes a new agent autonomous.
+      ...(args.autonomousToolExecution !== undefined
+        ? { autonomousToolExecution: args.autonomousToolExecution }
+        : {}),
+      ...(approvalExpiryHours !== undefined ? { approvalExpiryHours } : {}),
+      ...(limits.maxSteps !== undefined ? { maxSteps: limits.maxSteps } : {}),
+      ...(limits.maxToolCalls !== undefined ? { maxToolCalls: limits.maxToolCalls } : {}),
+      ...(limits.maxRuntimeMs !== undefined ? { maxRuntimeMs: limits.maxRuntimeMs } : {}),
+      ...(limits.maxCostGBP !== undefined ? { maxCostGBP: limits.maxCostGBP } : {}),
+    });
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_AGENT",
@@ -898,6 +982,18 @@ export const createAgentFromTemplate = superAdminMutation({
   args: {
     templateId: v.string(),
     name: v.optional(v.string()),
+    // Overrides the starting point's own level. The create screen pre-fills the
+    // control with the template's value, so leaving it alone sends that back.
+    reasoningEffort: v.optional(reasoningEffortValidator),
+    /**
+     * Whether the starting point's suggested tools come with it.
+     *
+     * Absent means yes, which is what every existing caller expects and what the
+     * screen ticks by default. Unticking it now actually skips the binding — the
+     * box used to be recorded in the audit trail and ignored, so an agent arrived
+     * holding tools its creator had explicitly declined.
+     */
+    includeRecommendedTools: v.optional(v.boolean()),
     builderIntent: v.optional(agentBuilderIntentValidator),
   },
   handler: async (ctx, args) => {
@@ -918,7 +1014,7 @@ export const createAgentFromTemplate = superAdminMutation({
       isActive: false,
       temperature: template.temperature,
       humanApprovalRequired: template.humanApprovalRequired,
-      reasoningEffort: template.reasoningEffort,
+      reasoningEffort: args.reasoningEffort ?? template.reasoningEffort,
       triggerType: template.triggerType,
     }, now));
     const seededEvalFixtures = await seedFixturesForTemplate({
@@ -927,11 +1023,13 @@ export const createAgentFromTemplate = superAdminMutation({
       createdBy: userId,
       template,
     });
-    const recommendedToolBindings = await bindRecommendedTemplateTools(ctx, {
-      agentId: newAgentId,
-      recommendedToolMappings: template.recommendedToolMappings,
-      assignedAt: now,
-    });
+    const recommendedToolBindings = args.includeRecommendedTools === false
+      ? { toolBindingCount: 0, missingToolMappings: [] as string[] }
+      : await bindRecommendedTemplateTools(ctx, {
+          agentId: newAgentId,
+          recommendedToolMappings: template.recommendedToolMappings,
+          assignedAt: now,
+        });
 
     await ctx.db.insert("auditLogs", {
       actionType: "CREATE_AGENT",
