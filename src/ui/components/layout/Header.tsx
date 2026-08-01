@@ -24,6 +24,7 @@ import { useUI } from "@/src/context/UIContext";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { LAYER } from "@/src/ui/lib/layers";
 
 interface HeaderProps {
   onOpenModal?: () => void;
@@ -162,7 +163,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 -mx-8 -mt-8 px-8 py-4 mb-8 bg-sidebar/40 backdrop-blur-xl border-b border-border-dim flex items-center justify-between shadow-sm transition-all duration-300">
+    <header className={`sticky top-0 ${LAYER.HEADER} -mx-8 -mt-8 px-8 py-4 mb-8 bg-sidebar/40 backdrop-blur-xl border-b border-border-dim flex items-center justify-between shadow-sm transition-all duration-300`}>
       <nav className="flex items-center gap-4 text-[13px]">
         <AnimatePresence mode="wait">
           {!isSidebarOpen && (
@@ -227,7 +228,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute right-0 top-full mt-4 w-52 bg-card border border-border-dim rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-[999] overflow-hidden"
+                className="absolute right-0 top-full mt-4 w-52 bg-card border border-border-dim rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden"
               >
                 <div className="p-2 flex flex-col gap-0.5">
                   <Link
