@@ -165,6 +165,19 @@ export const manualRunSchedule = superAdminMutation({
 
     const now = Date.now();
     const user = await ctx.db.get(userId);
+    /**
+     * The workspace this run belongs to.
+     *
+     * The caller's *active* company, which for a super admin is the one they
+     * are impersonating. Reading it off the user record gave a super admin's
+     * run no workspace at all — they have no company of their own — and every
+     * tenant-scoped tool in that run then failed with "this run has none",
+     * from a screen that was plainly inside a workspace at the time.
+     *
+     * Resolved once and used for both the run record and the dispatch below.
+     * They were written separately and only one of them was right.
+     */
+    const runCompanyId = ctx.companyId ?? user?.companyId;
     let agentRunId: Id<"agentRuns"> | undefined;
     let standingObjective: string | undefined;
 
@@ -192,7 +205,7 @@ export const manualRunSchedule = superAdminMutation({
         triggerType: "MANUAL",
         objective: standingObjective,
         status: "QUEUED",
-        companyId: user?.companyId,
+        companyId: runCompanyId,
         userId,
         startedAt: now,
         updatedAt: now,
@@ -222,7 +235,7 @@ export const manualRunSchedule = superAdminMutation({
            triggerType: "MANUAL",
            runId: agentRunId,
            workflowExecutionId: executionId,
-           companyId: user?.companyId,
+           companyId: runCompanyId,
            userId,
        });
        return executionId;

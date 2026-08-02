@@ -159,6 +159,42 @@ describe("Scheduler Authorization", () => {
       "Cannot run: no target specified."
     );
 
+    // A super admin has no company of their own, so a run started while
+    // impersonating one used to carry no workspace at all — and every
+    // tenant-scoped tool in it then failed with "this run has none", from a
+    // screen that was plainly inside a workspace at the time.
+    const impersonatedCompanyId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", {
+        name: "Impersonated Co",
+        createdAt: Date.now(),
+      });
+      await ctx.db.patch(superAdminId, { impersonatingCompanyId: companyId });
+      return companyId;
+    });
+
+    const impersonatedExecutionId = await superAdminClient.mutation(
+      api.scheduler.manualRunSchedule,
+      { agentId }
+    );
+    const impersonatedRun = await t.run(async (ctx) => {
+      const execution = await ctx.db.get(impersonatedExecutionId);
+      return execution?.agentRunId ? await ctx.db.get(execution.agentRunId) : null;
+    });
+    expect(impersonatedRun).toMatchObject({ companyId: impersonatedCompanyId });
+
+    // The run record and the dispatch were written separately and only one of
+    // them was fixed first, so the run carried the workspace while the engine
+    // it handed off to did not. Both are asserted.
+    const dispatched = await t.run(async (ctx) => {
+      const scheduled = await ctx.db.system.query("_scheduled_functions").collect();
+      return scheduled.find((entry) => entry.name.includes("runTriggeredAgentObjective"));
+    });
+    expect(dispatched?.args?.[0]).toMatchObject({ companyId: impersonatedCompanyId });
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(superAdminId, { impersonatingCompanyId: undefined });
+    });
+
     // An agent with nothing to do is not started. It used to be sent its own
     // database id as the instruction, spend money on a model call, and reply
     // asking what was wanted.
