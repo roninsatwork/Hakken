@@ -58,12 +58,19 @@ export const AGENT_RUN_MAX_RESUME_ATTEMPTS = 3;
 /**
  * Backstop on the number of continuation segments for one run.
  *
- * The runtime budget should always stop a run long before this: reaching twenty
- * segments means twenty separate three-minute windows, far past any configured
- * `maxRuntimeMs`. It exists so a bug in the handover cannot produce a run that
- * reschedules itself indefinitely.
+ * The runtime budget should always stop a run long before this, and that is the
+ * whole point: hitting the backstop *fails* a run, where the runtime budget
+ * ends it cleanly with its work recorded.
+ *
+ * Sized against the runtime ceiling, not chosen freely. Twenty segments of
+ * three minutes is sixty minutes — exactly the ceiling in
+ * `AGENT_OBJECTIVE_LIMIT_CEILINGS`, so an agent configured for the full hour
+ * would have died on this instead, and looked like a crash rather than an agent
+ * that ran out of time. Thirty leaves room for the scheduling gap between
+ * segments as well. It exists so a bug in the handover cannot produce a run
+ * that reschedules itself indefinitely, not to bound a legitimate long run.
  */
-export const AGENT_RUN_MAX_SEGMENTS = 20;
+export const AGENT_RUN_MAX_SEGMENTS = 30;
 
 /**
  * Cap on the stored transcript, in characters of serialised JSON.

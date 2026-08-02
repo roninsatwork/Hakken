@@ -40,8 +40,21 @@ export function calculateModelCostGBP(args: {
   if (!rates) return 0;
 
   const isLargeContext = args.inputTokens > LARGE_CONTEXT_TOKEN_THRESHOLD;
-  const standardRate = (isLargeContext
+  // The above-200k rate falls back to the standard one when it is missing or
+  // zero, for the same reason the cached rate does below.
+  //
+  // Provider sync leaves it at zero for models it has no tiered price for, and
+  // "zero" was then read as free rather than as unknown: every input token past
+  // two hundred thousand cost nothing. That was invisible while runs stopped at
+  // a two hundred thousand token budget — no run ever reached the tier. Raising
+  // the budget to ten million makes it the normal case, and it would have
+  // hollowed out the spend ceiling exactly where that ceiling is the only thing
+  // left holding a long run.
+  const configuredStandardRate = isLargeContext
     ? rates.standardInputCostAbove200k
+    : rates.standardInputCostBelow200k;
+  const standardRate = (typeof configuredStandardRate === "number" && configuredStandardRate > 0
+    ? configuredStandardRate
     : rates.standardInputCostBelow200k) || 0;
 
   // An unset cached rate falls back to the standard rate rather than to zero.

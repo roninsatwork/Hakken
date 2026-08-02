@@ -312,8 +312,8 @@ describe("AgentOverviewPage approval and run budget", () => {
     expect(limitInput("maxSteps").value).toBe("");
     expect(limitInput("maxCostGBP").value).toBe("");
     // The placeholder names what a blank box will actually do.
-    expect(limitInput("maxSteps").placeholder).toBe("10");
-    expect(limitInput("maxCostGBP").placeholder).toBe("1");
+    expect(limitInput("maxSteps").placeholder).toBe("25");
+    expect(limitInput("maxCostGBP").placeholder).toBe("10");
 
     const payload = await save();
     // Zero rather than omitted: an omitted argument means "leave the stored value
@@ -387,19 +387,41 @@ describe("AgentOverviewPage activation", () => {
   it("says nothing about readiness while the agent is left as a draft", () => {
     renderDraft(["smokeEval"]);
 
-    expect(screen.queryByText(/blockedReason/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/unprovenReason/)).not.toBeInTheDocument();
   });
 
-  it("names the one reason a draft cannot go live, and links to where it is fixed", () => {
+  it("names what has not been proven when a draft is switched on, and links to where it is settled", () => {
     renderDraft(["smokeEval"]);
 
     fireEvent.click(screen.getByRole("switch", { name: "Draft" }));
 
-    expect(screen.getByText("sections.engine.status.blockedReason.smokeEval")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /blockedLink/ })).toHaveAttribute(
+    expect(screen.getByText("sections.engine.status.unprovenReason.smokeEval")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /unprovenLink/ })).toHaveAttribute(
       "href",
       "/admin/agents/agent_1/evals",
     );
+  });
+
+  /**
+   * The warning is a warning.
+   *
+   * It used to refuse the save outright. Anthony, 2026-08-01: *"i dotn want eval
+   * checks on agent to be blocker before goign live."* So the sentence is still
+   * shown, and the agent still goes live.
+   */
+  it("saves the agent as active even while the warning stands", async () => {
+    renderDraft(["smokeEval"]);
+
+    fireEvent.click(screen.getByRole("switch", { name: "Draft" }));
+    expect(screen.getByText("sections.engine.status.unprovenReason.smokeEval")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "sections.identity.saveButton" }));
+
+    await waitFor(() => expect(mutationMock).toHaveBeenCalled());
+    const call = mutationMock.mock.calls
+      .map(([args]) => args as Record<string, unknown>)
+      .find((args) => "isActive" in args);
+    expect(call).toMatchObject({ isActive: true });
   });
 
   it("does not warn about tools or knowledge that are simply absent", () => {
@@ -409,6 +431,6 @@ describe("AgentOverviewPage activation", () => {
 
     fireEvent.click(screen.getByRole("switch", { name: "Draft" }));
 
-    expect(screen.queryByText(/blockedReason/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/unprovenReason/)).not.toBeInTheDocument();
   });
 });

@@ -479,6 +479,36 @@ describe("agent runtime", () => {
     expect(run?.status).toBeDefined();
   });
 
+  test("says it ran out of steps, not tool calls, when the step budget is what stopped it", async () => {
+    // The step loop is the one budget with no explicit stop — it just runs out
+    // of iterations — and the fallback message blamed the tool-call limit. An
+    // agent given plenty of tool calls and few steps therefore reported a bound
+    // it had nowhere near reached, and raising that bound changed nothing.
+    const t = makeTest();
+    const { agentId, threadId, userId } = await seedAgentRun(t);
+    await bindKnowledgeSearchTool(t, agentId, userId);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(agentId, { maxSteps: 2, maxToolCalls: 50 });
+    });
+
+    // Never answers; every turn asks for another tool call.
+    generateMock.mockResolvedValue(toolCallResponse([{ name: "knowledge_search", args: { query: "x" } }]));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId,
+      agentId,
+      content: "Keep going",
+    });
+
+    const { run, steps, toolCalls } = await runSteps(t);
+    expect(run?.status).toBe("FAILED");
+    expect(steps.at(-1)?.output).toMatch(/step limit of 2/i);
+    expect(steps.at(-1)?.output).not.toMatch(/tool-call limit/i);
+    // The step budget stopped it well short of the tool budget it was given.
+    expect(toolCalls.length).toBeLessThan(50);
+  });
+
   test("refuses unsafe input without calling the model at all", async () => {
     const t = makeTest();
     const { agentId, threadId } = await seedAgentRun(t);
@@ -584,6 +614,31 @@ describe("agent runtime", () => {
     const { run, steps } = await runSteps(t);
     expect(run?.status).toBe("FAILED");
     expect(steps.at(-1)?.output).toMatch(/runtime limit/i);
+  });
+
+  test("stops on the token budget the agent was given, and says so", async () => {
+    // The bound that actually ends a research run: everything the agent reads is
+    // re-sent on every turn after it. It is settable per agent now, so a run
+    // stopping on it has to name it rather than ending with an unexplained
+    // failure.
+    const t = makeTest();
+    const { agentId, threadId } = await seedAgentRun(t);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(agentId, { maxInputTokens: 1 });
+    });
+
+    generateMock.mockResolvedValue(textResponse("A direct answer."));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId,
+      agentId,
+      content: "Answer directly",
+    });
+
+    const { run, steps } = await runSteps(t);
+    expect(run?.status).toBe("FAILED");
+    expect(steps.at(-1)?.output).toMatch(/token budget/i);
   });
 
   test("streams the reply into one message row and closes it when done", async () => {

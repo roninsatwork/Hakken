@@ -78,6 +78,27 @@ describe("model cost", () => {
     expect(cost).toBeCloseTo(0.8, 6);
   });
 
+  test("a missing large-context rate charges the standard rate, not nothing", () => {
+    // Provider sync leaves the above-200k rate at zero for models it has no
+    // tiered price for — the rates below are a real catalogue row — and zero was
+    // read as free rather than as unknown. Every token past two hundred thousand
+    // cost nothing, so a long run's spend stopped climbing at exactly the point
+    // the spend ceiling becomes the only bound still holding it.
+    const cost = calculateModelCostGBP({
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+      rates: { standardInputCostBelow200k: 1.5, standardInputCostAbove200k: 0 },
+    });
+    expect(cost).toBeCloseTo(1.5, 6);
+
+    // An explicitly dearer large-context rate is still respected.
+    expect(calculateModelCostGBP({
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+      rates: { standardInputCostBelow200k: 1.5, standardInputCostAbove200k: 3 },
+    })).toBeCloseTo(3, 6);
+  });
+
   test("reports zero when the model has no pricing at all", () => {
     // This is the case P3.1 had to work around: most enabled models carry no
     // rates, so the cost ceiling cannot fire and tighter step budgets apply.

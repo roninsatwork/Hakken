@@ -47,6 +47,7 @@ type AgentSettingsFormData = {
   /** Blank means inherit the platform default. Held as text so a box can be empty. */
   maxSteps: string;
   maxToolCalls: string;
+  maxInputTokens: string;
   maxRuntimeMinutes: string;
   maxCostGBP: string;
   storageId?: Id<"_storage">;
@@ -66,6 +67,7 @@ const emptyFormData: AgentSettingsFormData = {
   approvalExpiryHours: "",
   maxSteps: "",
   maxToolCalls: "",
+  maxInputTokens: "",
   maxRuntimeMinutes: "",
   maxCostGBP: "",
 };
@@ -80,8 +82,23 @@ const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
  * rather than imported because these live in a Convex module; the drift guard in
  * `quality-drift.test.ts` pins them to the runtime values.
  */
-const AGENT_LIMIT_DEFAULTS = { maxSteps: 10, maxToolCalls: 8, maxRuntimeMinutes: 5, maxCostGBP: 1 } as const;
-const AGENT_LIMIT_CEILINGS = { maxSteps: 24, maxToolCalls: 20, maxRuntimeMinutes: 8, maxCostGBP: 20 } as const;
+/**
+ * The token budget is shown as the number the runtime actually uses.
+ *
+ * Named for what a stopped run reports — "reached the configured token budget"
+ * — so the message and the setting can be joined up by whoever reads them, and
+ * shown in whole tokens rather than thousands so the number on screen is the
+ * number that applies.
+ */
+/** A limit as it should read on screen: grouped, and empty while it is empty. */
+function formatLimitNumber(raw: string) {
+  if (!raw) return "";
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed.toLocaleString("en-GB") : raw;
+}
+
+const AGENT_LIMIT_DEFAULTS = { maxSteps: 25, maxToolCalls: 25, maxRuntimeMinutes: 30, maxInputTokens: 1000000, maxCostGBP: 10 } as const;
+const AGENT_LIMIT_CEILINGS = { maxSteps: 100, maxToolCalls: 100, maxRuntimeMinutes: 60, maxInputTokens: 10000000, maxCostGBP: 50 } as const;
 
 /** Empty, zero and nonsense all mean "inherit the default", matching the server. */
 function parseLimitInput(value: string) {
@@ -184,6 +201,7 @@ export default function AgentOverviewPage() {
       approvalExpiryHours: agent.approvalExpiryHours ? String(agent.approvalExpiryHours) : "",
       maxSteps: agent.maxSteps ? String(agent.maxSteps) : "",
       maxToolCalls: agent.maxToolCalls ? String(agent.maxToolCalls) : "",
+      maxInputTokens: agent.maxInputTokens ? String(agent.maxInputTokens) : "",
       maxRuntimeMinutes: agent.maxRuntimeMs ? String(Math.round(agent.maxRuntimeMs / 60000)) : "",
       maxCostGBP: agent.maxCostGBP ? String(agent.maxCostGBP) : "",
       storageId: undefined,
@@ -193,10 +211,6 @@ export default function AgentOverviewPage() {
   const handleSave = async (e?: FormEvent) => {
     if (e) {
       e.preventDefault();
-    }
-    if (activationBlocker) {
-      setSaveError(t(`sections.engine.status.blockedReason.${activationBlocker}`));
-      return;
     }
     setIsSaving(true);
     setSaveError("");
@@ -219,6 +233,7 @@ export default function AgentOverviewPage() {
         // platform default". The server turns anything unusable into a removal.
         maxSteps: parseLimitInput(formData.maxSteps) ?? 0,
         maxToolCalls: parseLimitInput(formData.maxToolCalls) ?? 0,
+        maxInputTokens: parseLimitInput(formData.maxInputTokens) ?? 0,
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
         maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
         storageId: formData.storageId
@@ -234,16 +249,20 @@ export default function AgentOverviewPage() {
   };
 
   /**
-   * Why the server would refuse to switch this agent on, said once.
+   * What has not been proven about this agent, said once.
    *
    * This replaces a checklist of eight boxes that sat at the foot of the page
    * whether or not anything was wrong. Six of the eight could never stop
    * anything, so the panel spent most of its life reporting problems that did
-   * not exist. The server decides; the screen says which reason it gave and
-   * where to go about it, and only at the moment the switch is flipped.
+   * not exist.
+   *
+   * It no longer stops anything either. Anthony, 2026-08-01: *"i dotn want eval
+   * checks on agent to be blocker before goign live."* So this is shown at the
+   * moment the switch is flipped, with the link to go and settle it, and then
+   * the agent goes live anyway if that is what was asked for.
    */
   const isActivatingDraft = agent?.isActive === false && formData.isActive;
-  const activationBlocker = isActivatingDraft
+  const activationWarning = isActivatingDraft
     ? readiness?.activationWarnings?.[0]
     : undefined;
   if (agent === undefined) return <div className="p-8 text-secondary">{t("loading")}</div>;
@@ -425,36 +444,48 @@ export default function AgentOverviewPage() {
             <p className="-mt-1 text-[12px] leading-relaxed text-secondary">
               {t("sections.engine.budget.hint")}
             </p>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               {([
                 { key: "maxSteps", limit: "maxSteps" },
                 { key: "maxToolCalls", limit: "maxToolCalls" },
+                { key: "maxInputTokens", limit: "maxInputTokens" },
                 { key: "maxRuntimeMinutes", limit: "maxRuntimeMinutes" },
                 { key: "maxCostGBP", limit: "maxCostGBP" },
-              ] as const).map(({ key, limit }) => (
-                <div key={key} className="flex flex-col gap-1.5">
-                  <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
-                    {t(`sections.engine.budget.fields.${key}`)}
-                  </label>
-                  <input
-                    id={`agent-limit-${key}`}
-                    type="number"
-                    min={0}
-                    step={key === "maxCostGBP" ? "0.01" : "1"}
-                    max={AGENT_LIMIT_CEILINGS[limit]}
-                    value={formData[key]}
-                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                    placeholder={String(AGENT_LIMIT_DEFAULTS[limit])}
-                    className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
-                  />
-                  <p className="text-[11px] text-muted">
-                    {t("sections.engine.budget.inherits", {
-                      value: AGENT_LIMIT_DEFAULTS[limit],
-                      ceiling: AGENT_LIMIT_CEILINGS[limit],
-                    })}
-                  </p>
-                </div>
-              ))}
+              ] as const).map(({ key, limit }) => {
+                // A number input cannot carry separators, so the token budget —
+                // the only limit here in the millions — is a text box that
+                // formats what is typed and strips the commas on the way out.
+                const grouped = key === "maxInputTokens";
+                return (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
+                      {t(`sections.engine.budget.fields.${key}`)}
+                    </label>
+                    <input
+                      id={`agent-limit-${key}`}
+                      type={grouped ? "text" : "number"}
+                      inputMode={grouped ? "numeric" : undefined}
+                      {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
+                      step={key === "maxCostGBP" ? "0.01" : "1"}
+                      value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
+                        })
+                      }
+                      placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
+                      className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
+                    />
+                    <p className="text-[11px] text-muted">
+                      {t("sections.engine.budget.inherits", {
+                        value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
+                        ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
+                      })}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="mt-2 border-t border-border-dim/40">
@@ -468,14 +499,14 @@ export default function AgentOverviewPage() {
                 checked={formData.isActive}
                 onChange={(next) => setFormData({ ...formData, isActive: next })}
               >
-                {activationBlocker ? (
+                {activationWarning ? (
                   <div className="mt-3 flex flex-col gap-2 rounded-[10px] border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-[13px] leading-relaxed text-amber-200 sm:flex-row sm:items-center sm:justify-between">
-                    <span>{t(`sections.engine.status.blockedReason.${activationBlocker}`)}</span>
+                    <span>{t(`sections.engine.status.unprovenReason.${activationWarning}`)}</span>
                     <Link
                       href={`/admin/agents/${agentId}/evals`}
                       className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-amber-100 underline-offset-4 hover:underline"
                     >
-                      {t("sections.engine.status.blockedLink")}
+                      {t("sections.engine.status.unprovenLink")}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>

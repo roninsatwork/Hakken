@@ -1158,10 +1158,11 @@ describe("agent skills", () => {
       fixtureId: manualFixture.fixtureId,
     })).resolves.toMatchObject({ status: "SUCCESS" });
 
-    await expect(client.mutation(api.agents.updateAgent, {
-      id: agentId,
-      isActive: true,
-    })).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Readiness still reports that nothing has proven this agent; since
+    // 2026-08-01 it reports rather than refuses.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
 
     const skillFixtureId = await t.run(async (ctx) => {
       const fixtures = await ctx.db
@@ -1357,10 +1358,11 @@ describe("agent skills", () => {
       }),
     }));
 
-    await expect(client.mutation(api.agents.updateAgent, {
-      id: agentId,
-      isActive: true,
-    })).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Readiness still reports that nothing has proven this agent; since
+    // 2026-08-01 it reports rather than refuses.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
 
     const refreshedSkillSmokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, {
       agentId,

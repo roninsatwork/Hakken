@@ -3,6 +3,7 @@ import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
+import { AGENT_OBJECTIVE_LIMIT_CEILINGS } from "./agentRuntimeService";
 
 describe("OWASP: Broken Access Control - Agents", () => {
   test("Standard USER cannot execute any Agent CRUD operations", async () => {
@@ -241,12 +242,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
       });
     });
 
-    await expect(
-      client.mutation(api.agents.updateAgent, {
-        id: agentId,
-        isActive: true,
-      })
-    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Not evidence that the agent works. Readiness says so, and since
+    // 2026-08-01 it says it rather than refusing — whether an untested agent
+    // goes live is the operator's call.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
 
     const smokeEval = await client.mutation(api.agentEvalFixtures.runSmokeEval, { agentId });
     expect(smokeEval.runId).toBeDefined();
@@ -431,12 +432,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
       blockedCriticalFixtureCount: 1,
     });
 
-    await expect(
-      client.mutation(api.agents.updateAgent, {
-        id: agentId,
-        isActive: true,
-      })
-    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Not evidence that the agent works. Readiness says so, and since
+    // 2026-08-01 it says it rather than refusing — whether an untested agent
+    // goes live is the operator's call.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
 
     await expect(
       client.mutation(api.agentEvalFixtures.runSmokeEval, {
@@ -445,15 +446,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
       })
     ).resolves.toMatchObject({ status: "SUCCESS" });
 
-    await expect(
-      client.mutation(api.agents.updateAgent, {
-        id: agentId,
-        isActive: true,
-      })
-    // Still only configuration checks have run, so the missing model-graded
-    // eval is the accurate blocker — the critical suite is unsatisfied for the
-    // same underlying reason.
-    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Not evidence that the agent works. Readiness says so, and since
+    // 2026-08-01 it says it rather than refusing — whether an untested agent
+    // goes live is the operator's call.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
 
     await t.run(async (ctx) => {
       const now = Date.now();
@@ -734,12 +732,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
       failures: ["Missing required tool mapping(s): crm.lookup."],
     });
 
-    await expect(
-      client.mutation(api.agents.updateAgent, {
-        id: agentId,
-        isActive: true,
-      })
-    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Not evidence that the agent works. Readiness says so, and since
+    // 2026-08-01 it says it rather than refusing — whether an untested agent
+    // goes live is the operator's call.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
   });
 
   test("model-graded smoke evals queue without unlocking activation until grading succeeds", async () => {
@@ -850,12 +848,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
       },
     });
 
-    await expect(
-      client.mutation(api.agents.updateAgent, {
-        id: agentId,
-        isActive: true,
-      })
-    ).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Not evidence that the agent works. Readiness says so, and since
+    // 2026-08-01 it says it rather than refusing — whether an untested agent
+    // goes live is the operator's call.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
   });
 
   test("release gates can require current model-graded eval success", async () => {
@@ -943,10 +941,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
     // A configuration check is not evidence the agent works, so the missing
     // model-graded eval is the accurate blocker and reported first. The critical
     // suite is blocked for the same underlying reason.
-    await expect(client.mutation(api.agents.updateAgent, {
-      id: agentId,
-      isActive: true,
-    })).rejects.toThrow("Activation blocked: run a model-graded eval before activating this agent.");
+    // Not evidence that the agent works. Readiness says so, and since
+    // 2026-08-01 it says it rather than refusing — whether an untested agent
+    // goes live is the operator's call.
+    expect(
+      (await client.query(api.agents.getAgentReadiness, { id: agentId })).activationWarnings
+    ).toContain("smokeEval");
 
     await t.run(async (ctx) => {
       const now = Date.now() + 10;
@@ -1293,14 +1293,64 @@ describe("OWASP: Broken Access Control - Agents", () => {
       autonomousToolExecution: true,
       approvalExpiryHours: 48,
       maxSteps: 12,
-      maxCostGBP: 20,
+      maxCostGBP: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
       isActive: false,
     });
     expect(agent?.maxToolCalls).toBeUndefined();
 
-    await expect(
-      client.mutation(api.agents.createAgent, { name: "Live On Arrival", isActive: true })
-    ).rejects.toThrow("Activation blocked");
+    // Live on arrival is allowed. Checks report; they do not decide.
+    const liveAgentId = await client.mutation(api.agents.createAgent, {
+      name: "Live On Arrival",
+      isActive: true,
+    });
+    const liveAgent = await t.run(async (ctx) => await ctx.db.get(liveAgentId));
+    expect(liveAgent?.isActive).toBe(true);
+  });
+
+  /**
+   * Switching an agent on used to be refused unless it had passed its checks.
+   *
+   * Anthony, 2026-08-01: *"i dotn want eval checks on agent to be blocker before
+   * goign live."* The readiness warning is still computed and still shown beside
+   * the switch; it no longer stands in the way.
+   */
+  test("an agent that has never passed a check can still be switched on", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const adminId = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "SUPER_ADMIN",
+      });
+
+      await ctx.db.insert("aiModels", {
+        modelId: "default-agent-model",
+        displayName: "Default Agent Model",
+        isEnabled: true,
+        isDefault: true,
+        supportedUseCases: ["agent"],
+        lastSyncedAt: Date.now(),
+      });
+
+      return userId;
+    });
+
+    const client = t.withIdentity({ subject: adminId });
+    const agentId = await client.mutation(api.agents.createAgent, { name: "Untested Agent" });
+
+    const beforeActivation = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(beforeActivation.activationWarnings).toContain("smokeEval");
+
+    await client.mutation(api.agents.updateAgent, { id: agentId, isActive: true });
+
+    const agent = await t.run(async (ctx) => await ctx.db.get(agentId));
+    expect(agent?.isActive).toBe(true);
+
+    // The warning does not disappear because it was overruled — it is still
+    // there to be read, now reported as a live agent nothing has tested.
+    const afterActivation = await client.query(api.agents.getAgentReadiness, { id: agentId });
+    expect(afterActivation.activationWarnings).toContain("smokeEval");
+    expect(afterActivation.activationRisk).toBe(true);
   });
 
   test("template creation rejects unknown templates and non-super-admin users", async () => {
@@ -1714,7 +1764,10 @@ describe("OWASP: Broken Access Control - Agents", () => {
       maxSteps: 5_000,
       maxCostGBP: 9_999,
     });
-    expect(await readAgent()).toMatchObject({ maxSteps: 24, maxCostGBP: 20 });
+    expect(await readAgent()).toMatchObject({
+      maxSteps: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps,
+      maxCostGBP: AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP,
+    });
 
     // Zero is how a cleared box arrives, and it has to restore the default rather
     // than store a limit of nothing.

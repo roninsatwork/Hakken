@@ -56,8 +56,8 @@ import {
  *   nothing. The description carries what they were reaching for.
  * - **The readiness checklist.** Four reassurances, one of which — that test
  *   questions had been set up — was only ever true for a template. The Active
- *   switch now says the same thing where it matters, and the server refuses to
- *   create an agent switched on.
+ *   switch carries what is left of it: a new agent is a draft by default, and
+ *   turning it on here says plainly that nothing has tested it yet.
  * - **"How should it work?"** — Balanced, Faster, More thorough. Recorded and
  *   read by nothing, so picking More thorough changed nothing. It is now
  *   Reasoning Effort, saved onto the agent.
@@ -75,8 +75,23 @@ const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
  * box has to say what it will do. The drift guard in `quality-drift.test.ts`
  * pins them to the runtime values.
  */
-const AGENT_LIMIT_DEFAULTS = { maxSteps: 10, maxToolCalls: 8, maxRuntimeMinutes: 5, maxCostGBP: 1 } as const;
-const AGENT_LIMIT_CEILINGS = { maxSteps: 24, maxToolCalls: 20, maxRuntimeMinutes: 8, maxCostGBP: 20 } as const;
+/**
+ * The token budget is shown as the number the runtime actually uses.
+ *
+ * Named for what a stopped run reports — "reached the configured token budget"
+ * — so the message and the setting can be joined up by whoever reads them, and
+ * shown in whole tokens rather than thousands so the number on screen is the
+ * number that applies.
+ */
+/** A limit as it should read on screen: grouped, and empty while it is empty. */
+function formatLimitNumber(raw: string) {
+  if (!raw) return "";
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed.toLocaleString("en-GB") : raw;
+}
+
+const AGENT_LIMIT_DEFAULTS = { maxSteps: 25, maxToolCalls: 25, maxRuntimeMinutes: 30, maxInputTokens: 1000000, maxCostGBP: 10 } as const;
+const AGENT_LIMIT_CEILINGS = { maxSteps: 100, maxToolCalls: 100, maxRuntimeMinutes: 60, maxInputTokens: 10000000, maxCostGBP: 50 } as const;
 
 /** Empty, zero and nonsense all mean "inherit the default", matching the server. */
 function parseLimitInput(value: string) {
@@ -99,8 +114,10 @@ type NewAgentForm = {
   approvalExpiryHours: string;
   maxSteps: string;
   maxToolCalls: string;
+  maxInputTokens: string;
   maxRuntimeMinutes: string;
   maxCostGBP: string;
+  isActive: boolean;
   storageId?: Id<"_storage">;
 };
 
@@ -117,8 +134,11 @@ const emptyForm: NewAgentForm = {
   approvalExpiryHours: "",
   maxSteps: "",
   maxToolCalls: "",
+  maxInputTokens: "",
   maxRuntimeMinutes: "",
   maxCostGBP: "",
+  // A draft by default: worth a look before it can be run, but not a rule.
+  isActive: false,
 };
 
 export default function NewAgentPage() {
@@ -181,8 +201,10 @@ export default function NewAgentPage() {
         approvalExpiryHours: parseLimitInput(formData.approvalExpiryHours) ?? 0,
         maxSteps: parseLimitInput(formData.maxSteps) ?? 0,
         maxToolCalls: parseLimitInput(formData.maxToolCalls) ?? 0,
+        maxInputTokens: parseLimitInput(formData.maxInputTokens) ?? 0,
         maxRuntimeMs: (parseLimitInput(formData.maxRuntimeMinutes) ?? 0) * 60000,
         maxCostGBP: parseLimitInput(formData.maxCostGBP) ?? 0,
+        isActive: formData.isActive,
         ...(formData.storageId ? { storageId: formData.storageId } : {}),
       });
 
@@ -346,64 +368,65 @@ export default function NewAgentPage() {
             <p className="-mt-1 text-[12px] leading-relaxed text-secondary">
               {ts("sections.engine.budget.hint")}
             </p>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               {([
                 { key: "maxSteps", limit: "maxSteps" },
                 { key: "maxToolCalls", limit: "maxToolCalls" },
+                { key: "maxInputTokens", limit: "maxInputTokens" },
                 { key: "maxRuntimeMinutes", limit: "maxRuntimeMinutes" },
                 { key: "maxCostGBP", limit: "maxCostGBP" },
-              ] as const).map(({ key, limit }) => (
-                <div key={key} className="flex flex-col gap-1.5">
-                  <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
-                    {ts(`sections.engine.budget.fields.${key}`)}
-                  </label>
-                  <input
-                    id={`agent-limit-${key}`}
-                    type="number"
-                    min={0}
-                    step={key === "maxCostGBP" ? "0.01" : "1"}
-                    max={AGENT_LIMIT_CEILINGS[limit]}
-                    value={formData[key]}
-                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                    placeholder={String(AGENT_LIMIT_DEFAULTS[limit])}
-                    className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
-                  />
-                  <p className="text-[11px] text-muted">
-                    {ts("sections.engine.budget.inherits", {
-                      value: AGENT_LIMIT_DEFAULTS[limit],
-                      ceiling: AGENT_LIMIT_CEILINGS[limit],
-                    })}
-                  </p>
-                </div>
-              ))}
+              ] as const).map(({ key, limit }) => {
+                // A number input cannot carry separators, so the token budget —
+                // the only limit here in the millions — is a text box that
+                // formats what is typed and strips the commas on the way out.
+                const grouped = key === "maxInputTokens";
+                return (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
+                      {ts(`sections.engine.budget.fields.${key}`)}
+                    </label>
+                    <input
+                      id={`agent-limit-${key}`}
+                      type={grouped ? "text" : "number"}
+                      inputMode={grouped ? "numeric" : undefined}
+                      {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
+                      step={key === "maxCostGBP" ? "0.01" : "1"}
+                      value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
+                        })
+                      }
+                      placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
+                      className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
+                    />
+                    <p className="text-[11px] text-muted">
+                      {ts("sections.engine.budget.inherits", {
+                        value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
+                        ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
+                      })}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* The Active switch's place on the settings screen, holding the one
-                thing that cannot be true yet. Shown rather than hidden, because
-                its absence here was half of what made the two screens read as
-                different products. */}
-            <div className="mt-2 border-t border-border-dim/40 pt-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[13px] font-medium text-foreground">
-                    {ts("sections.engine.status.inactive")}
-                  </span>
-                  <p className="text-[12px] leading-relaxed text-muted">
-                    {t("builder.startsOff")}
-                  </p>
-                </div>
-                <span
-                  role="switch"
-                  aria-checked={false}
-                  aria-disabled
-                  aria-label={ts("sections.engine.status.inactive")}
-                  className="mt-0.5 block h-5 w-9 shrink-0 rounded-full bg-foreground/15 opacity-50"
-                >
-                  <span className="relative block h-full w-full">
-                    <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white" />
-                  </span>
-                </span>
-              </div>
+            {/* The same switch the settings screen carries, and it works here
+                for the same reason it works there: checks report, they do not
+                decide. A new agent still defaults to a draft, because most are
+                worth a look before they can be run. */}
+            <div className="mt-2 border-t border-border-dim/40">
+              <SettingSwitch
+                label={formData.isActive
+                  ? ts("sections.engine.status.active")
+                  : ts("sections.engine.status.inactive")}
+                description={formData.isActive
+                  ? t("builder.startsOnWarning")
+                  : ts("sections.engine.status.hintInactive")}
+                checked={formData.isActive}
+                onChange={(next) => setFormData({ ...formData, isActive: next })}
+              />
             </div>
           </SettingsCard>
         </div>

@@ -1720,6 +1720,16 @@ export default defineSchema({
     // one hardcoded budget.
     maxSteps: v.optional(v.number()),
     maxToolCalls: v.optional(v.number()),
+    /**
+     * How much the run may read before it stops.
+     *
+     * Every page an agent fetches is fed back into the model and re-sent on
+     * every turn after it, so a run that reads half a dozen pages exhausts this
+     * long before it comes near its step, tool, minute or spend budget. It was
+     * a platform constant, which meant a research agent and a classifier got
+     * the same room and neither could be given more.
+     */
+    maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
     maxCostGBP: v.optional(v.number()),
     avatar: v.optional(v.string()), // Optional icon/avatar
@@ -2660,6 +2670,15 @@ export default defineSchema({
     mobile: v.optional(v.string()),
     email: v.optional(v.string()),
     accountsEmail: v.optional(v.string()),
+    /**
+     * The business's own site.
+     *
+     * Worth its own field rather than living in the notes: it is where every
+     * other detail on this record came from or could be checked against, and
+     * the research agent finds it first and for free on the way to everything
+     * else.
+     */
+    website: v.optional(v.string()),
     contactName: v.optional(v.string()),
     contactRole: v.optional(v.string()),
     /** Care homes and hotels. */
@@ -2670,5 +2689,123 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.id("users"),
   }).index("by_company_account", ["companyId", "accountNameKey"]),
+
+  /**
+   * What the research agent found, one row per detail it reported.
+   *
+   * Two jobs in one table, deliberately. An `APPLIED` row is the provenance
+   * behind a filled field — the page it came from and when — and a
+   * `NEEDS_CHECK` row is a finding waiting for a person to accept or discard.
+   * They are the same record at different stages, and splitting them would mean
+   * keeping two tables honest with each other.
+   *
+   * Nothing is added to `salesDataCustomers` to mark a value as researched.
+   * Whether a detail was found or typed is answered by whether an `APPLIED` row
+   * exists for that field, which keeps the CRM's own table unchanged and leaves
+   * a workspace that never runs the agent carrying no trace of it.
+   *
+   * Carries no `importId`. Like the typed-in details it survives a re-import,
+   * because nothing in it came from the workbook.
+   */
+  salesDataCustomerResearch: defineTable({
+    companyId: v.id("companies"),
+    /**
+     * Who this is about, keyed as the CRM keys them.
+     *
+     * Named `subjectKey` rather than `accountNameKey` because the prospecting
+     * half of this feature files findings against businesses that are not
+     * accounts in the workbook. `subjectType` says which.
+     */
+    subjectKey: v.string(),
+    subjectType: v.union(v.literal("CUSTOMER"), v.literal("PROSPECT")),
+    /** Which detail: `phone`, `postcode`, `bedrooms`, and so on. */
+    field: v.string(),
+    /** As found, kept as text; parsed on apply for the two numeric fields. */
+    value: v.string(),
+    /** The agent's own judgement. What is done with it is decided in code. */
+    confidence: v.union(v.literal("HIGH"), v.literal("MEDIUM"), v.literal("LOW")),
+    status: v.union(
+      v.literal("APPLIED"),
+      v.literal("NEEDS_CHECK"),
+      v.literal("REJECTED"),
+      v.literal("SUPERSEDED"),
+      v.literal("NOT_FOUND")
+    ),
+    /** Where it came from. A finding without one is refused, so both are set. */
+    sourceUrl: v.optional(v.string()),
+    sourceName: v.optional(v.string()),
+    /** One line: why the agent believes this is the right business. */
+    reasoning: v.optional(v.string()),
+    runId: v.optional(v.id("agentRuns")),
+    agentId: v.optional(v.id("agents")),
+    foundAt: v.number(),
+    decidedBy: v.optional(v.id("users")),
+    decidedAt: v.optional(v.number()),
+  })
+    // Serves the profile on its first two columns and the supersede lookup on
+    // all three, so one index covers both reads.
+    .index("by_company_subject_field", ["companyId", "subjectKey", "field"])
+    .index("by_company_status_found", ["companyId", "status", "foundAt"]),
+
+  /**
+   * A site in a group the workspace supplies, that it does not supply yet.
+   *
+   * The output of the prospecting half. The workbook holds six Colten Care
+   * homes; Colten Care runs more than six, and the rest are businesses the
+   * workspace is already a known supplier to the parent of. Nothing in the
+   * platform surfaced them before this table.
+   *
+   * Carries no `importId`, for the same reason the typed-in details do not: an
+   * import must not delete work the import did not create. This is the point
+   * that would be lost by adding prospects to `salesDataAccounts`, which is
+   * derived and is replaced wholesale on every upload.
+   *
+   * The contact details a prospect eventually gets live in
+   * `salesDataCustomers`, keyed on `prospectKey` exactly as a customer's are on
+   * their account key. One record shape, one save path, one set of provenance
+   * rules — and conversion becomes a status change rather than a data move.
+   */
+  salesDataProspects: defineTable({
+    companyId: v.id("companies"),
+    /** The normalised site name, keyed as accounts are. The identity. */
+    prospectKey: v.string(),
+    /** As the register or the group's own site publishes it. */
+    siteName: v.string(),
+    groupName: v.string(),
+    groupNameKey: v.string(),
+    /** Inherited from the group's members, so the extra figure rule applies. */
+    customerTypeKey: v.string(),
+    customerType: v.string(),
+    town: v.optional(v.string()),
+    postcode: v.optional(v.string()),
+    status: v.union(
+      v.literal("NEW"),
+      v.literal("DISMISSED"),
+      /** The workbook now contains it: it became a customer. */
+      v.literal("CONVERTED")
+    ),
+    /**
+     * Recorded when the site matched an existing customer by name but disagreed
+     * on postcode.
+     *
+     * Filed as a prospect rather than silently assumed to be the same business,
+     * because the alternative is a rep telephoning an account the workspace has
+     * supplied for a decade. The text names what it clashed with, so the person
+     * deciding can see the clash rather than being told the answer.
+     */
+    conflictNote: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    sourceName: v.optional(v.string()),
+    reasoning: v.optional(v.string()),
+    runId: v.optional(v.id("agentRuns")),
+    agentId: v.optional(v.id("agents")),
+    foundAt: v.number(),
+    decidedBy: v.optional(v.id("users")),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_company_prospect", ["companyId", "prospectKey"])
+    // The group view, and the coverage line that counts against it.
+    .index("by_company_group", ["companyId", "groupNameKey", "prospectKey"])
+    .index("by_company_status", ["companyId", "status", "foundAt"]),
   // template:remove:end
 });

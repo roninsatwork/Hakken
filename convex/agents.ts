@@ -882,6 +882,7 @@ export const createAgent = superAdminMutation({
     approvalExpiryHours: v.optional(v.number()),
     maxSteps: v.optional(v.number()),
     maxToolCalls: v.optional(v.number()),
+    maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
     maxCostGBP: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
@@ -891,16 +892,6 @@ export const createAgent = superAdminMutation({
     const { userId } = ctx;
 
     const now = Date.now();
-
-    // The same gate the settings screen meets when the switch is flipped, said
-    // at the only moment it can be true here: an agent created a millisecond ago
-    // has never run a check, so it can never be switched on at creation.
-    if (args.isActive === true) {
-      throw new Error(
-        "Activation blocked: a new agent has not passed a check yet. "
-        + "Create it, run a check, then turn it on.",
-      );
-    }
 
     // Inherit resolves to whatever the platform default is now; an override is
     // checked against the same rule the update path uses, so a model that cannot
@@ -925,6 +916,7 @@ export const createAgent = superAdminMutation({
     const limits = {
       maxSteps: clampAgentLimitOverride("maxSteps", args.maxSteps),
       maxToolCalls: clampAgentLimitOverride("maxToolCalls", args.maxToolCalls),
+      maxInputTokens: clampAgentLimitOverride("maxInputTokens", args.maxInputTokens),
       maxRuntimeMs: clampAgentLimitOverride("maxRuntimeMs", args.maxRuntimeMs),
       maxCostGBP: clampAgentLimitOverride("maxCostGBP", args.maxCostGBP),
     };
@@ -936,8 +928,9 @@ export const createAgent = superAdminMutation({
         description: args.description,
         modelId,
         modelSelectionMode,
-        // Never on at creation, for the reason above.
-        isActive: false,
+        // A draft unless asked otherwise. Most agents are worth a look before
+        // they can be run, but nothing here refuses to create a live one.
+        isActive: args.isActive ?? false,
         ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
       }, now),
       ...(resolvedAvatarUrl ? { avatar: resolvedAvatarUrl } : {}),
@@ -952,6 +945,7 @@ export const createAgent = superAdminMutation({
       ...(approvalExpiryHours !== undefined ? { approvalExpiryHours } : {}),
       ...(limits.maxSteps !== undefined ? { maxSteps: limits.maxSteps } : {}),
       ...(limits.maxToolCalls !== undefined ? { maxToolCalls: limits.maxToolCalls } : {}),
+      ...(limits.maxInputTokens !== undefined ? { maxInputTokens: limits.maxInputTokens } : {}),
       ...(limits.maxRuntimeMs !== undefined ? { maxRuntimeMs: limits.maxRuntimeMs } : {}),
       ...(limits.maxCostGBP !== undefined ? { maxCostGBP: limits.maxCostGBP } : {}),
     });
@@ -1074,6 +1068,7 @@ export const updateAgent = superAdminMutation({
     approvalExpiryHours: v.optional(v.number()),
     maxSteps: v.optional(v.number()),
     maxToolCalls: v.optional(v.number()),
+    maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
     maxCostGBP: v.optional(v.number()),
     inputSchema: v.optional(v.string()),
@@ -1126,33 +1121,25 @@ export const updateAgent = superAdminMutation({
       updates.releaseGateRequiresModelGrading = false;
     }
 
-    if (updates.isActive === true && existingAgent.isActive === false) {
-      const readiness = await buildAgentReadiness(ctx, id);
-      if (readiness.successfulModelGradedEvalCount === 0) {
-        // The gate used to accept a configuration check, which writes a
-        // synthetic successful run without calling a model — so an agent could
-        // be activated having never produced a token.
-        throw new Error(
-          "Activation blocked: run a model-graded eval before activating this agent. "
-          + "A configuration check confirms the agent is wired up correctly, but does not test what it says.",
-        );
-      }
-      if (readiness.latestSmokeEvalRun?.status !== "SUCCESS") {
-        throw new Error("Activation blocked: latest smoke eval must pass before activating this agent.");
-      }
-      if (readiness.releaseGatePolicy.blockedCriticalFixtureCount > 0) {
-        throw new Error("Activation blocked: critical eval suite must pass before activating this agent.");
-      }
-      if (readiness.releaseGatePolicy.warning) {
-        throw new Error("Activation blocked: release gate policy must be configured before activating this agent.");
-      }
-      if (
-        readiness.skillReadiness.missingRequiredToolCount > 0
-        || readiness.skillReadiness.missingHighRiskEvalCount > 0
-      ) {
-        throw new Error("Activation blocked: enabled skills are missing required tools or high-risk skill smoke evals.");
-      }
-    }
+    /**
+     * Checks report; they do not decide.
+     *
+     * Switching an agent on used to be refused outright unless it had run a
+     * model-graded eval, passed its latest smoke eval, cleared its critical eval
+     * suite and had a release gate configured. Anthony, 2026-08-01: *"i dotn
+     * want eval checks on agent to be blocker before goign live."*
+     *
+     * Nothing is hidden by this — readiness still computes every check and the
+     * settings screen still says, beside the switch, what has not been proven.
+     * The difference is that it is a warning to read rather than a door to be
+     * let through, and whether an untested agent goes live is the operator's
+     * call rather than the platform's.
+     *
+     * Deliberately still enforced elsewhere: an agent has no licence to write
+     * without approval unless `autonomousToolExecution` is set, and every run is
+     * bounded by its own budget. Those are what stop a live agent doing damage;
+     * a passing eval never was.
+     */
 
     if (modelSelectionMode === "inherit") {
       updates.modelId = await resolveDefaultModelIdForUseCase(ctx, useCase);

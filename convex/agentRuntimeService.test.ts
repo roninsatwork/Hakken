@@ -18,16 +18,20 @@ import {
   shouldStopForTokenBudget,
   shouldStopForToolBudget,
 } from "./agentRuntimeService";
+import {
+  AGENT_RUN_MAX_SEGMENTS,
+  AGENT_RUN_SEGMENT_BUDGET_MS,
+} from "./agentRunContinuationService";
 
 describe("agentRuntimeService", () => {
   test("exposes default loop budgets with room for real work", () => {
     expect(DEFAULT_AGENT_OBJECTIVE_LIMITS).toEqual({
-      maxSteps: 10,
-      maxToolCalls: 8,
-      maxRuntimeMs: 5 * 60 * 1000,
-      maxInputTokens: 200000,
-      maxOutputTokens: 20000,
-      maxCostGBP: 1,
+      maxSteps: 25,
+      maxToolCalls: 25,
+      maxRuntimeMs: 30 * 60 * 1000,
+      maxInputTokens: 1000000,
+      maxOutputTokens: 100000,
+      maxCostGBP: 10,
     });
   });
 
@@ -47,6 +51,34 @@ describe("agentRuntimeService", () => {
 
     // A deliberately smaller budget is still respected.
     expect(resolveAgentObjectiveLimits({ maxSteps: 2 }, { costMeasurable: false }).maxSteps).toBe(2);
+  });
+
+  /**
+   * The ceiling that actually stops a research run.
+   *
+   * Every page an agent reads is fed back into the model and re-sent on each
+   * turn after it, so half a dozen pages exhaust this while steps, tool calls,
+   * minutes and spend are all still far from theirs. It was a platform constant
+   * with no way to raise it, and it was absent from the screen headed "What
+   * bounds it" — so a run that stopped on it looked like a run that stopped for
+   * no reason.
+   */
+  test("an agent can be given more room to read, up to the platform ceiling", () => {
+    expect(resolveAgentObjectiveLimits(null).maxInputTokens).toBe(
+      DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens
+    );
+
+    expect(resolveAgentObjectiveLimits({ maxInputTokens: 600000 }).maxInputTokens).toBe(600000);
+
+    // Clamped rather than rejected, as every other limit is.
+    expect(resolveAgentObjectiveLimits({ maxInputTokens: 90_000_000 }).maxInputTokens).toBe(
+      AGENT_OBJECTIVE_LIMIT_CEILINGS.maxInputTokens
+    );
+
+    // A cleared box means "use the platform default", not "no reading at all".
+    expect(resolveAgentObjectiveLimits({ maxInputTokens: 0 }).maxInputTokens).toBe(
+      DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens
+    );
   });
 
   test("maps tool execution outcomes onto persisted step status", () => {
@@ -237,16 +269,29 @@ describe("agentRuntimeService", () => {
       const resolved = resolveAgentObjectiveLimits({
         maxSteps: 10_000,
         maxToolCalls: 10_000,
-        maxRuntimeMs: 60 * 60 * 1000,
+        maxRuntimeMs: 24 * 60 * 60 * 1000,
         maxCostGBP: 5_000,
       });
 
       expect(resolved.maxSteps).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps);
       expect(resolved.maxToolCalls).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxToolCalls);
       expect(resolved.maxCostGBP).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxCostGBP);
-      // Must stay inside the Convex action execution window.
       expect(resolved.maxRuntimeMs).toBe(AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs);
-      expect(resolved.maxRuntimeMs).toBeLessThan(10 * 60 * 1000);
+    });
+
+    /**
+     * The runtime ceiling used to be held under the Convex action window
+     * because a run was one action. It no longer is — it checkpoints and hands
+     * over — so the constraint moved: the longest permitted run has to fit
+     * inside the segment backstop, or a run configured for the full hour dies
+     * as a failure ("exceeded the maximum number of continuation segments")
+     * instead of stopping cleanly on the limit its owner set.
+     */
+    test("the longest permitted run fits inside the continuation backstop", () => {
+      const segmentsNeeded =
+        AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs / AGENT_RUN_SEGMENT_BUDGET_MS;
+
+      expect(segmentsNeeded).toBeLessThan(AGENT_RUN_MAX_SEGMENTS);
     });
 
     test("ignores unusable values rather than failing the run", () => {
@@ -304,6 +349,7 @@ describe("agentRuntimeService", () => {
           "maxSteps",
           "maxToolCalls",
           "maxRuntimeMs",
+          "maxInputTokens",
           "maxCostGBP",
         ]);
       });

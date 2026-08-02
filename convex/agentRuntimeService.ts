@@ -3,17 +3,44 @@
  *
  * Four steps and three tool calls was too tight for real work: an agent that
  * looks something up, checks a second source and then answers had no room left.
- * Ten steps and eight tool calls is in line with what agent loops normally
- * need, and the £1 cost ceiling — not the step count — is what actually bounds
- * spend, so this is not a licence to run away.
+ * Ten was better and still short — a research agent that reads a handful of
+ * pages and writes them up spends its whole budget on the reading. Raised to
+ * twenty-five steps, twenty-five tool calls and thirty minutes at Anthony's
+ * instruction, 2026-08-02.
+ *
+ * Spend is what actually bounds a run, not the step count: the £10 cost ceiling
+ * stops a runaway long before a hundred steps could. The counts are there to
+ * catch a loop that is cheap and going nowhere.
  */
 export const DEFAULT_AGENT_OBJECTIVE_LIMITS = {
-  maxSteps: 10,
-  maxToolCalls: 8,
-  maxRuntimeMs: 5 * 60 * 1000,
-  maxInputTokens: 200000,
-  maxOutputTokens: 20000,
-  maxCostGBP: 1,
+  maxSteps: 25,
+  maxToolCalls: 25,
+  maxRuntimeMs: 30 * 60 * 1000,
+  /**
+   * A million, at Anthony's instruction, 2026-08-02.
+   *
+   * It was 200,000, which sounds generous and is not: every page an agent reads
+   * is re-sent on every turn after it, so half a dozen pages exhaust it while
+   * steps, tool calls, minutes and spend are all still far from theirs. Runs
+   * were stopping on a ceiling nobody could see or raise.
+   *
+   * This is the same number as the platform ceiling, so an agent gets the full
+   * room unless it is deliberately given less. What still bounds a runaway is
+   * spend, steps, tool calls and minutes — the four that were doing the work
+   * all along.
+   */
+  maxInputTokens: 1000000,
+  /**
+   * Cumulative across the whole run, not per reply.
+   *
+   * Twenty thousand was the same trap as the old input budget: eight or nine
+   * substantial replies exhaust it, so a long run stopped on a number that
+   * appears on no screen and can be set by nobody. Held at a tenth of the input
+   * budget, which is the shape these runs actually have — they read far more
+   * than they write.
+   */
+  maxOutputTokens: 100000,
+  maxCostGBP: 10,
 } as const;
 
 /**
@@ -43,14 +70,17 @@ export const UNPRICED_MODEL_OBJECTIVE_LIMITS = {
  * maximum instead of failing the run.
  */
 export const AGENT_OBJECTIVE_LIMIT_CEILINGS = {
-  maxSteps: 24,
-  maxToolCalls: 20,
-  // Convex actions have a ~10 minute ceiling; stop well inside it so the
-  // runtime ends the run itself rather than being killed mid-step.
-  maxRuntimeMs: 8 * 60 * 1000,
-  maxInputTokens: 1000000,
-  maxOutputTokens: 100000,
-  maxCostGBP: 20,
+  maxSteps: 100,
+  maxToolCalls: 100,
+  // A single Convex action is capped at about ten minutes, but a run is no
+  // longer one action: it checkpoints every three minutes and resumes in a
+  // fresh one (`agentRunContinuationService.ts`), so the hour below is spent
+  // across roughly twenty handovers rather than in one window. The segment
+  // backstop there has to stay above that count or it, not this, ends the run.
+  maxRuntimeMs: 60 * 60 * 1000,
+  maxInputTokens: 10000000,
+  maxOutputTokens: 1000000,
+  maxCostGBP: 50,
 } as const;
 
 export type AgentObjectiveLimits = {
@@ -67,6 +97,7 @@ export type AgentLimitOverrides = {
   maxSteps?: number;
   maxToolCalls?: number;
   maxRuntimeMs?: number;
+  maxInputTokens?: number;
   maxCostGBP?: number;
 };
 
@@ -88,7 +119,21 @@ function clampLimit(
 }
 
 /** The per-agent limits an admin may override, and the ceiling for each. */
-export const AGENT_LIMIT_OVERRIDE_FIELDS = ["maxSteps", "maxToolCalls", "maxRuntimeMs", "maxCostGBP"] as const;
+export const AGENT_LIMIT_OVERRIDE_FIELDS = [
+  "maxSteps",
+  "maxToolCalls",
+  "maxRuntimeMs",
+  // The ceiling that actually stops a research run, and the one nobody could
+  // see. Every page an agent reads is fed back into the model and re-sent on
+  // every turn after it, so reading half a dozen pages exhausts the input
+  // budget long before steps, tool calls, minutes or spend come near theirs.
+  // It was fixed in the platform, absent from the agent record, and absent
+  // from the screen headed "What bounds it" — so a run that stopped on it
+  // looked, to anyone reading that screen, as though it had stopped for no
+  // reason at all.
+  "maxInputTokens",
+  "maxCostGBP",
+] as const;
 
 export type AgentLimitOverrideField = (typeof AGENT_LIMIT_OVERRIDE_FIELDS)[number];
 
@@ -163,7 +208,11 @@ export function resolveAgentObjectiveLimits(
     maxSteps: clampLimit(overrides?.maxSteps, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxSteps, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxSteps),
     maxToolCalls: clampLimit(overrides?.maxToolCalls, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxToolCalls, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxToolCalls),
     maxRuntimeMs: clampLimit(overrides?.maxRuntimeMs, DEFAULT_AGENT_OBJECTIVE_LIMITS.maxRuntimeMs, AGENT_OBJECTIVE_LIMIT_CEILINGS.maxRuntimeMs),
-    maxInputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens,
+    maxInputTokens: clampLimit(
+      overrides?.maxInputTokens,
+      DEFAULT_AGENT_OBJECTIVE_LIMITS.maxInputTokens,
+      AGENT_OBJECTIVE_LIMIT_CEILINGS.maxInputTokens,
+    ),
     maxOutputTokens: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxOutputTokens,
     maxCostGBP: clampLimit(
       overrides?.maxCostGBP,
@@ -217,6 +266,19 @@ export function shouldStopForCostBudget(args: { costGBP: number; maxCostGBP: num
 
 export function getToolBudgetStopMessage(maxToolCalls: number) {
   return `Agent stopped after reaching the maximum tool-call limit of ${maxToolCalls}.`;
+}
+
+/**
+ * Why a run that used every step it had ended.
+ *
+ * The step loop is the one budget with no explicit stop: it simply runs out of
+ * iterations. That left the run with no reason recorded, and the fallback said
+ * it had hit the tool-call limit — a bound it may not have touched. Someone
+ * raising tool calls to fix it would see no change, because the tool calls were
+ * never the problem.
+ */
+export function getStepBudgetStopMessage(maxSteps: number) {
+  return `Agent stopped after reaching the maximum step limit of ${maxSteps}.`;
 }
 
 export function getRuntimeBudgetStopMessage(maxRuntimeMs: number) {

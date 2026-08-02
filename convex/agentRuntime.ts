@@ -63,6 +63,7 @@ import {
   getCostBudgetStopMessage,
   getRuntimeBudgetStopMessage,
   getTokenBudgetStopMessage,
+  getStepBudgetStopMessage,
   getToolBudgetStopMessage,
   shouldStopForCostBudget,
   shouldStopForRuntimeBudget,
@@ -1847,8 +1848,10 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             await saveCheckpoint("ACTIVE", loopIndex + 1);
         }
 
+        // Falling out of the loop without a reply means the step budget ran out:
+        // every other stop sets its own message and breaks.
         if (!assistantReply) {
-            assistantReply = getToolBudgetStopMessage(limits.maxToolCalls);
+            assistantReply = getStepBudgetStopMessage(limits.maxSteps);
             finalStepStatus = "FAILED";
         }
 
