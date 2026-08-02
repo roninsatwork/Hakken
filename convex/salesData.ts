@@ -62,7 +62,11 @@ export async function requireSalesDataCompany(
  * still-running attempts sitting above it, however many of those there are.
  */
 export async function getCurrentImport(
-  ctx: TenantQueryCtx | TenantMutationCtx,
+  // Only the reader is needed, and widening it to that is what lets the agent's
+  // internal functions reuse this. They are handed a company by the tool
+  // context rather than resolving one from a signed-in person, so they never
+  // hold a tenant context.
+  ctx: Pick<TenantQueryCtx, "db"> | Pick<TenantMutationCtx, "db">,
   companyId: Id<"companies">
 ) {
   return await ctx.db
@@ -850,6 +854,38 @@ export async function recordAccounts(
       totalRevenue: existing.totalRevenue + entry.totalRevenue,
       productCount: existing.productCount + entry.productCount,
     });
+  }
+
+  await promoteProspects(ctx, companyId, [...batch.keys()]);
+}
+
+/**
+ * A prospect that starts buying becomes a customer.
+ *
+ * Run on the same pass that writes the account directory. Whatever was
+ * researched about the site carries straight onto the customer record, because
+ * the details are keyed on the same normalised name either way — so nobody
+ * re-types an address, and no duplicate row appears on the list.
+ *
+ * Idempotent like the rest of the import: a prospect already marked converted
+ * is left alone, and a re-import of the same workbook changes nothing.
+ */
+async function promoteProspects(
+  ctx: MutationCtx,
+  companyId: Id<"companies">,
+  accountNameKeys: string[]
+) {
+  for (const accountNameKey of accountNameKeys) {
+    const prospect = await ctx.db
+      .query("salesDataProspects")
+      .withIndex("by_company_prospect", (q) =>
+        q.eq("companyId", companyId).eq("prospectKey", accountNameKey)
+      )
+      .unique();
+
+    if (!prospect || prospect.status === "CONVERTED") continue;
+
+    await ctx.db.patch(prospect._id, { status: "CONVERTED", decidedAt: Date.now() });
   }
 }
 

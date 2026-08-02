@@ -1133,6 +1133,7 @@
                                 "fields": {
                                     "maxSteps": "Passaggi",
                                     "maxToolCalls": "Chiamate strumenti",
+                                    "maxInputTokens": "Budget token",
                                     "maxRuntimeMinutes": "Minuti",
                                     "maxCostGBP": "Spesa (£)"
                                 }
@@ -1149,7 +1150,14 @@
                                     "releaseGate": "Questo agente non può ancora essere attivato: un controllo obbligatorio non è superato."
                                 },
                                 "hintActive": "L'agente può essere eseguito, da te o da ciò a cui è collegato.",
-                                "hintInactive": "Una bozza non può essere eseguita. Anche Launch Run viene rifiutato."
+                                "hintInactive": "Una bozza non può essere eseguita. Anche Launch Run viene rifiutato.",
+                                "unprovenLink": "Imposta un controllo",
+                                "unprovenReason": {
+                                    "smokeEval": "Va in produzione senza aver superato un controllo. Nulla ha ancora verificato ciò che dice.",
+                                    "modelDefault": "Va in produzione senza un modello definito per questo tipo di lavoro.",
+                                    "skills": "Va in produzione senza competenze attive, quindi non ha nulla su cui basarsi.",
+                                    "releaseGate": "Va in produzione senza un controllo di rilascio: nulla impedisce una versione difettosa."
+                                }
                             },
                             "groups": {
                                 "behaviour": "Come si comporta",
@@ -2449,6 +2457,20 @@
             "filterAll": "Tutti",
             "filterNarrow": "Digita per restringere...",
             "filterNoMatches": "Nessun risultato",
+            "filterMissingDetails": "Dettagli mancanti",
+            "recordProspect": "Potenziale",
+            "filterRecordCUSTOMERS": "Clienti",
+            "filterRecordPROSPECTS": "Potenziali",
+            "filterRecordALL": "Tutti",
+            "subtitleProspects": "· {count} potenziali trovati.",
+            "sweepStart": "Completa i dati mancanti",
+            "sweepStarting": "Avvio…",
+            "sweepQueued": "Ricerca su {count} clienti",
+            "sweepNothingToDo": "Non c'è più nulla da completare",
+            "findSites": "Trova altri siti",
+            "findSitesStarting": "Avvio…",
+            "findSitesQueued": "Analisi di {count} gruppi",
+            "findSitesNothingToDo": "Tutti i gruppi sono stati analizzati",
             "filterClear": "Cancella filtri",
             "columnName": "Cliente",
             "columnCode": "Codice",
@@ -2463,7 +2485,8 @@
             "emptyNarrowedTitle": "Nessun cliente corrisponde",
             "emptyNarrowedDescription": "Prova una ricerca diversa o cancella i filtri.",
             "pageNumber": "Pagina {page}",
-            "rowsShown": "{count} clienti"
+            "rowsShown": "{count} clienti",
+            "rowsShownProspects": "{count} potenziali"
         },
         "customerProfile": {
             "back": "Tutti i clienti",
@@ -2486,6 +2509,23 @@
             "mobile": "Cellulare",
             "email": "Email",
             "accountsEmail": "Email amministrazione",
+            "website": "Sito web",
+            "notRight": "Non corretto",
+            "recordProspect": "Potenziale",
+            "prospectFound": "Da dove arriva",
+            "recordType": "Cliente o potenziale",
+            "recordCustomer": "Cliente",
+            "backToList": "Torna all'elenco",
+            "notInterested": "Non interessa",
+            "prospectDismissed": "Segnato come non interessante. Non verrà più riproposto.",
+            "groupProspects": "Altri {count} siti di questo gruppo che non servi",
+            "findDetails": "Trova i dettagli",
+            "findDetailsStarting": "Avvio…",
+            "findDetailsStarted": "Avviato — i dettagli compariranno qui man mano",
+            "needsChecking": "Da verificare ({count})",
+            "needsCheckingHint": "Trovato online, ma non abbastanza certo da inserire",
+            "useIt": "Usa",
+            "discard": "Scarta",
             "contactName": "Nome contatto",
             "contactRole": "Ruolo contatto",
             "bedrooms": "Camere",

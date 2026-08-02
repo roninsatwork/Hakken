@@ -339,6 +339,18 @@ describe("ai tool execution service", () => {
       "http.request",
       "knowledge.search",
       "notification.send",
+      // Reads a group and the sites in it already supplied, so the prospecting
+      // half does not re-report the customers it was told about.
+      "salesCustomers.prospects.read",
+      // Files a site found in a group. It can only write a prospect, and a site
+      // that is already a customer is refused rather than merged.
+      "salesCustomers.prospects.record",
+      // Reads one customer and says which of their details are still missing.
+      "salesCustomers.research.read",
+      // Records one detail the research agent found, with the page it came
+      // from. Whether that detail reaches the customer record is decided in
+      // code, not by the agent.
+      "salesCustomers.research.record",
       // Writes the board report from the agent's own knowledge and memory —
       // the one way a scheduled agent run ends in a saved report.
       "salesReports.generate",
@@ -346,6 +358,53 @@ describe("ai tool execution service", () => {
       // platform rather than into our own database.
       "web.scrape",
     ]);
+  });
+
+  describe("reading a page", () => {
+    /**
+     * The setting had been read as a string only, so a model that sent the
+     * boolean `false` — which is what a boolean field in the schema invites —
+     * silently got the default back. It was found against the Care Quality
+     * Commission register, where the list of a provider's homes sits outside
+     * the main article and is dropped unless this is off. The tool reported
+     * success and returned a page with no homes on it.
+     */
+    const scrapeWith = async (args: Record<string, unknown>) => {
+      const runAction = vi.fn().mockResolvedValue({ status: "success" });
+      await executeRegisteredTool({
+        ctx: { runQuery: vi.fn(), runMutation: vi.fn(), runAction },
+        handlerMapping: "web.scrape",
+        args: { url: "https://www.cqc.org.uk/provider/1-101657781/services", ...args },
+        companyId: "company_1" as never,
+        userId: "user_1" as never,
+      });
+      return runAction.mock.calls[0]?.[1] as Record<string, unknown>;
+    };
+
+    test("a boolean false reaches the fetcher", async () => {
+      expect(await scrapeWith({ mainContentOnly: false })).toMatchObject({
+        mainContentOnly: false,
+      });
+    });
+
+    test("the string form still works", async () => {
+      expect(await scrapeWith({ mainContentOnly: "false" })).toMatchObject({
+        mainContentOnly: false,
+      });
+      expect(await scrapeWith({ mainContentOnly: "true" })).toMatchObject({
+        mainContentOnly: true,
+      });
+    });
+
+    test("leaving it out leaves the default alone", async () => {
+      expect(await scrapeWith({})).not.toHaveProperty("mainContentOnly");
+    });
+
+    test("something unreadable is treated as not asked for", async () => {
+      expect(await scrapeWith({ mainContentOnly: "perhaps" })).not.toHaveProperty(
+        "mainContentOnly"
+      );
+    });
   });
 
   test("an agent can look a job up instead of being told its settings", async () => {

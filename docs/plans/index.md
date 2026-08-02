@@ -85,12 +85,16 @@ completed work.
   the sales data vertical, and for what the import does and does not hold —
   there are no orders in it, and only 39 customers behind the 4,568 rows.
 - [Workspace Customer Research Agent Plan](./active/workspace-customer-research-agent-plan.md) —
-  the plan for the agent that searches the internet for the contact details the
-  sales import cannot supply and writes them into the customer record. Owns the
-  `salesDataCustomerResearch` table, the two customer research tools, and the
-  rule that decides whether a finding is written or parked for review. Read it
-  before giving any agent write access to workspace customer data, and defers
-  autonomy and approval behaviour to the Agent Autonomy And Approvals Plan.
+  the plan for the agent that searches the internet for what the sales import
+  cannot supply: the contact details behind each customer, and the other sites
+  in a group the workspace does not yet sell to. Owns the
+  `salesDataCustomerResearch` and `salesDataProspects` tables, the three
+  customer research tools, the rule that decides whether a finding is written or
+  parked for review, and the rules that stop a discovered site being filed as a
+  prospect when it is already a customer. Read it before giving any agent write
+  access to workspace customer data, before adding anything to the customer
+  list that is not an imported account, and it defers autonomy and approval
+  behaviour to the Agent Autonomy And Approvals Plan.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of

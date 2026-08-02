@@ -1,5 +1,5 @@
 {
-  "note": "What the platform template drops. Read scripts/build-template.mjs and src/template-boundary.test.ts alongside this file — the test proves every entry here is real, and the script is the only thing that consumes it. Adding a product vertical means adding it here in the same commit; the boundary test fails otherwise.",
+  "note": "What the platform template drops. Read scripts/build-template.mjs and src/template-boundary.test.ts alongside this file \u2014 the test proves every entry here is real, and the script is the only thing that consumes it. Adding a product vertical means adding it here in the same commit; the boundary test fails otherwise.",
   "templateName": "sonae-template",
   "verticals": [
     {
@@ -64,7 +64,7 @@
     },
     {
       "name": "movement",
-      "description": "Posture Studio: webcam pose capture, avatar replay, and the replay-alignment lab. The heaviest vertical by far — three.js, MediaPipe and TensorFlow are its dependencies alone.",
+      "description": "Posture Studio: webcam pose capture, avatar replay, and the replay-alignment lab. The heaviest vertical by far \u2014 three.js, MediaPipe and TensorFlow are its dependencies alone.",
       "paths": [
         "convex/movements.ts",
         "convex/movements.test.ts",
@@ -126,8 +126,15 @@
         "convex/utils/salesDataModule.ts",
         "convex/salesDataCustomers.ts",
         "convex/salesDataCustomers.test.ts",
+        "convex/salesDataCustomerFields.ts",
+        "convex/salesDataResearch.ts",
+        "convex/salesDataResearch.test.ts",
+        "convex/salesDataResearchService.ts",
+        "convex/salesDataResearchService.test.ts",
         "src/app/(dashboard)/app/[workspace]",
-        "src/app/(dashboard)/app/sales-data"
+        "src/app/(dashboard)/app/sales-data",
+        "convex/salesDataProspectMatching.ts",
+        "convex/salesDataProspectMatching.test.ts"
       ],
       "schemaTables": [
         "salesDataImports",
@@ -136,7 +143,9 @@
         "salesDataAreasOfInterest",
         "salesDataFrequencies",
         "salesDataAccounts",
-        "salesDataCustomers"
+        "salesDataCustomers",
+        "salesDataCustomerResearch",
+        "salesDataProspects"
       ],
       "packageDependencies": [],
       "packageScripts": [],

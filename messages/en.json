@@ -1133,6 +1133,7 @@
                                 "fields": {
                                     "maxSteps": "Steps",
                                     "maxToolCalls": "Tool calls",
+                                    "maxInputTokens": "Token budget",
                                     "maxRuntimeMinutes": "Minutes",
                                     "maxCostGBP": "Spend (£)"
                                 }
@@ -1149,7 +1150,14 @@
                                     "releaseGate": "This agent can't go live yet — a must-pass check is failing."
                                 },
                                 "hintActive": "The agent can be run — by you, or by anything it is wired into.",
-                                "hintInactive": "A draft cannot run at all. Launch Run is refused too."
+                                "hintInactive": "A draft cannot run at all. Launch Run is refused too.",
+                                "unprovenLink": "Set up a check",
+                                "unprovenReason": {
+                                    "smokeEval": "Going live without having passed a check. Nothing has tested what it says yet.",
+                                    "modelDefault": "Going live without a model settled for this kind of work.",
+                                    "skills": "Going live with no skills switched on, so it has nothing to draw on.",
+                                    "releaseGate": "Going live with no release check, so nothing stops a bad version shipping."
+                                }
                             },
                             "groups": {
                                 "behaviour": "How it behaves",
@@ -2449,6 +2457,20 @@
             "filterAll": "All",
             "filterNarrow": "Type to narrow...",
             "filterNoMatches": "No matches",
+            "filterMissingDetails": "Missing details",
+            "recordProspect": "Prospect",
+            "filterRecordCUSTOMERS": "Customers",
+            "filterRecordPROSPECTS": "Prospects",
+            "filterRecordALL": "All",
+            "subtitleProspects": "· {count} prospects found.",
+            "sweepStart": "Fill in what's missing",
+            "sweepStarting": "Starting…",
+            "sweepQueued": "Researching {count} customers",
+            "sweepNothingToDo": "Nothing left to fill in",
+            "findSites": "Find more sites",
+            "findSitesStarting": "Starting…",
+            "findSitesQueued": "Looking through {count} groups",
+            "findSitesNothingToDo": "Every group has been looked through",
             "filterClear": "Clear filters",
             "columnName": "Customer",
             "columnCode": "Code",
@@ -2463,7 +2485,8 @@
             "emptyNarrowedTitle": "No customers match",
             "emptyNarrowedDescription": "Try a different search, or clear the filters.",
             "pageNumber": "Page {page}",
-            "rowsShown": "{count} customers"
+            "rowsShown": "{count} customers",
+            "rowsShownProspects": "{count} prospects"
         },
         "customerProfile": {
             "back": "All customers",
@@ -2486,6 +2509,23 @@
             "mobile": "Mobile",
             "email": "Email",
             "accountsEmail": "Accounts email",
+            "website": "Website",
+            "notRight": "Not right",
+            "recordProspect": "Prospect",
+            "prospectFound": "Where this came from",
+            "recordType": "Customer or prospect",
+            "recordCustomer": "Customer",
+            "backToList": "Back to the list",
+            "notInterested": "Not interested",
+            "prospectDismissed": "Marked not interested. It will not be reported again.",
+            "groupProspects": "{count} more sites in this group you do not supply",
+            "findDetails": "Find details",
+            "findDetailsStarting": "Starting…",
+            "findDetailsStarted": "Started — details will appear here as they are found",
+            "needsChecking": "Needs checking ({count})",
+            "needsCheckingHint": "Found online, but not certain enough to fill in",
+            "useIt": "Use it",
+            "discard": "Discard",
             "contactName": "Contact name",
             "contactRole": "Contact role",
             "bedrooms": "Bedrooms",

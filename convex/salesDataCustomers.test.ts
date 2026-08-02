@@ -284,6 +284,7 @@ describe("customer list", () => {
     expect(await client.query(api.salesDataCustomers.countCustomers, {})).toEqual({
       total: 3,
       withDetails: 0,
+      prospects: 0,
     });
 
     await addDetails(t, companyId, userId, "Barrowfield Hotel Ltd", { phone: "01323 410222" });
@@ -291,7 +292,116 @@ describe("customer list", () => {
     expect(await client.query(api.salesDataCustomers.countCustomers, {})).toEqual({
       total: 3,
       withDetails: 1,
+      prospects: 0,
     });
+  });
+
+  test("the missing-details filter narrows to who the sweep would research", async () => {
+    const { t, client, companyId, userId } = await seed();
+
+    // Everything a hotel is asked for. A customer type's own extra figure
+    // counts, so bedrooms is required here and pupils is not.
+    await addDetails(t, companyId, userId, "The Devonshire Hotel Ltd", {
+      addressLine1: "1 Anywhere",
+      addressLine2: "Second line",
+      town: "Torquay",
+      postcode: "TQ1 1AA",
+      country: "United Kingdom",
+      phone: "01803 555000",
+      mobile: "07000 000000",
+      email: "info@example.com",
+      accountsEmail: "accounts@example.com",
+      website: "https://example.com",
+      contactName: "A Person",
+      contactRole: "Manager",
+      bedrooms: 40,
+    });
+
+    const filtered = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      missingDetailsOnly: true,
+    });
+    const all = await client.query(api.salesDataCustomers.listCustomers, { paginationOpts: page });
+
+    expect(all.page).toHaveLength(3);
+    expect(filtered.page.map((row) => row.accountName).sort()).toEqual([
+      "Barrowfield Hotel Ltd",
+      "Priory School Catering",
+    ]);
+  });
+
+  test("a detail already searched for and not published stops counting as missing", async () => {
+    const { t, client, companyId, userId } = await seed();
+
+    // Everything a hotel is asked for except country — the field that is
+    // almost never printed on a British contact page, and which would
+    // otherwise leave every customer permanently incomplete.
+    await addDetails(t, companyId, userId, "The Devonshire Hotel Ltd", {
+      addressLine1: "1 Anywhere",
+      addressLine2: "Second line",
+      town: "Torquay",
+      postcode: "TQ1 1AA",
+      phone: "01803 555000",
+      mobile: "07000 000000",
+      email: "info@example.com",
+      accountsEmail: "accounts@example.com",
+      website: "https://example.com",
+      contactName: "A Person",
+      contactRole: "Manager",
+      bedrooms: 40,
+    });
+
+    const stillListed = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      missingDetailsOnly: true,
+    });
+    expect(stillListed.page.map((row) => row.accountName)).toContain("The Devonshire Hotel Ltd");
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("salesDataCustomerResearch", {
+        companyId,
+        subjectKey: key("The Devonshire Hotel Ltd"),
+        subjectType: "CUSTOMER" as const,
+        field: "country",
+        value: "",
+        confidence: "LOW" as const,
+        status: "NOT_FOUND" as const,
+        foundAt: Date.now(),
+      });
+    });
+
+    const filtered = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      missingDetailsOnly: true,
+    });
+    expect(filtered.page.map((row) => row.accountName)).not.toContain("The Devonshire Hotel Ltd");
+  });
+
+  test("a customer missing only its type's extra figure still counts as incomplete", async () => {
+    const { t, client, companyId, userId } = await seed();
+
+    await addDetails(t, companyId, userId, "Priory School Catering", {
+      addressLine1: "1 Anywhere",
+      addressLine2: "Second line",
+      town: "Southsea",
+      postcode: "PO4 1AA",
+      country: "United Kingdom",
+      phone: "023 9200 0000",
+      mobile: "07000 000000",
+      email: "info@example.com",
+      accountsEmail: "accounts@example.com",
+      website: "https://example.com",
+      contactName: "A Person",
+      contactRole: "Bursar",
+      // pupils deliberately absent — the one thing a school is measured by.
+    });
+
+    const filtered = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      missingDetailsOnly: true,
+    });
+
+    expect(filtered.page.map((row) => row.accountName)).toContain("Priory School Catering");
   });
 
   test("a workspace without the module is refused", async () => {

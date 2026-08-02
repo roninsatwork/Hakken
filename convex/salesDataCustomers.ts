@@ -14,6 +14,9 @@ import {
   requireSalesDataCompany,
   searchTerms,
 } from "./salesData";
+import { extraFieldForType } from "./salesDataCustomerFields";
+import { supersedeResearchForFields } from "./salesDataResearch";
+import { RESEARCHABLE_FIELDS, type ResearchField } from "./salesDataResearchService";
 
 /**
  * The customer side of the workspace section.
@@ -34,7 +37,60 @@ const customerFilterArgs = {
   search: v.optional(v.string()),
   customerType: v.optional(v.string()),
   groupName: v.optional(v.string()),
+  /**
+   * Narrow to customers still missing something worth researching.
+   *
+   * The list already knew `hasDetails`; this is what makes it actionable — it
+   * is the set the sweep will actually run against, so somebody can see who is
+   * about to be researched before pressing the button.
+   */
+  missingDetailsOnly: v.optional(v.boolean()),
+  /**
+   * Which kind of record to list.
+   *
+   * Defaults to customers. Anthony, 2026-08-01: *"we need a filter for customer
+   * or prospect on the customer table too."* The list is used every day to look
+   * up an account somebody is dealing with, and thirty-nine rows becoming three
+   * hundred overnight would break that job to serve a different one — so
+   * prospects are one click away rather than mixed in by default.
+   */
+  record: v.optional(
+    v.union(v.literal("CUSTOMERS"), v.literal("PROSPECTS"), v.literal("ALL"))
+  ),
 };
+
+/**
+ * Where a page of the combined list is reading from.
+ *
+ * Convex allows one paginated query per call, so `ALL` cannot fold two tables
+ * together inside a single page. It reads one source at a time instead and the
+ * cursor carries which: accounts until they run out, then prospects from the
+ * start. One `.paginate()` per invocation, and the guard still passes.
+ */
+type ListStage = { source: "ACCOUNTS" | "PROSPECTS"; cursor: string | null };
+
+function decodeListStage(cursor: string | null, record: "CUSTOMERS" | "PROSPECTS" | "ALL"): ListStage {
+  const first: ListStage["source"] = record === "PROSPECTS" ? "PROSPECTS" : "ACCOUNTS";
+  if (!cursor) return { source: first, cursor: null };
+
+  try {
+    const parsed = JSON.parse(cursor) as { s?: unknown; c?: unknown };
+    if (parsed.s === "PROSPECTS" || parsed.s === "ACCOUNTS") {
+      return {
+        source: parsed.s,
+        cursor: typeof parsed.c === "string" ? parsed.c : null,
+      };
+    }
+  } catch {
+    // A cursor from before this shape existed, or a mangled one. Starting over
+    // is the same recovery `paginateSafely` makes for an invalid cursor.
+  }
+  return { source: first, cursor: null };
+}
+
+function encodeListStage(stage: ListStage) {
+  return JSON.stringify({ s: stage.source, c: stage.cursor });
+}
 
 /** The typed-in details, as the list and the profile want them. */
 type CustomerDetails = Doc<"salesDataCustomers"> | undefined;
@@ -60,6 +116,65 @@ async function loadDetails(
   return new Map(rows.map((row) => [row.accountNameKey, row]));
 }
 
+/**
+ * Which details the agent has already searched for and found unpublished.
+ *
+ * Read in one go, like the typed-in details and for the same reason: the filter
+ * runs as a predicate on an ordered scan and cannot go back to the database
+ * mid-scan. Bounded by customers times fields — a few hundred rows on the file
+ * seen — and classified in the scale plan on that basis.
+ */
+async function loadExhaustedFields(
+  ctx: TenantQueryCtx,
+  companyId: Id<"companies">
+): Promise<Map<string, Set<string>>> {
+  const rows = await ctx.db
+    .query("salesDataCustomerResearch")
+    .withIndex("by_company_status_found", (q) =>
+      q.eq("companyId", companyId).eq("status", "NOT_FOUND")
+    )
+    .collect();
+
+  const exhausted = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const fields = exhausted.get(row.subjectKey) ?? new Set<string>();
+    fields.add(row.field);
+    exhausted.set(row.subjectKey, fields);
+  }
+  return exhausted;
+}
+
+/**
+ * Is there anything left worth researching on this customer?
+ *
+ * The same question the sweep asks, deliberately — the filter exists so
+ * somebody can see who is about to be researched before pressing the button,
+ * and a filter that disagreed with the button would be worse than none.
+ *
+ * That is why a detail already searched for and found unpublished does not
+ * count as missing. Country is almost never printed on a British contact page;
+ * counting it would leave every customer permanently "incomplete" and the
+ * filter would select all thirty-nine for ever.
+ */
+function hasMissingDetails(
+  // Only the type key is read, so a prospect answers this question as well as a
+  // customer does. It has to: a prospect is exactly the kind of record somebody
+  // filters for, being the half of the list with nothing filled in yet.
+  subject: { customerTypeKey: string },
+  details: CustomerDetails,
+  exhausted: Set<string> | undefined
+): boolean {
+  const extraField = extraFieldForType(subject.customerTypeKey);
+
+  return (Object.keys(RESEARCHABLE_FIELDS) as ResearchField[]).some((field) => {
+    if ((field === "bedrooms" || field === "pupils") && extraField !== field) return false;
+    if (exhausted?.has(field)) return false;
+    const value = details?.[field];
+    if (typeof value === "number") return !Number.isFinite(value);
+    return typeof value !== "string" || value.trim().length === 0;
+  });
+}
+
 /** What both the list and the profile show for one customer. */
 function toCustomer(account: Doc<"salesDataAccounts">, details: CustomerDetails) {
   return {
@@ -80,6 +195,108 @@ function toCustomer(account: Doc<"salesDataAccounts">, details: CustomerDetails)
     pupils: details?.pupils ?? null,
     /** Whether anybody has filled anything in yet. Drives the "needs details" hint. */
     hasDetails: details !== undefined,
+    /** What this row is. Present on every row, so no row is ever ambiguous. */
+    record: "CUSTOMER" as const,
+  };
+}
+
+/**
+ * A prospect, in the same shape as a customer.
+ *
+ * Same shape deliberately: the list renders one kind of row, and a screen that
+ * had to branch per row is a screen that will eventually show a prospect a
+ * customer's six-month spend. There is no spend — it is a business the
+ * workspace does not sell to — so the figures are zero and the row says which
+ * kind it is.
+ */
+function toProspectRow(prospect: Doc<"salesDataProspects">, details: CustomerDetails) {
+  return {
+    accountNameKey: prospect.prospectKey,
+    accountName: prospect.siteName,
+    accountCode: "",
+    groupName: prospect.groupName,
+    customerType: prospect.customerType,
+    customerTypeKey: prospect.customerTypeKey,
+    totalRevenue: 0,
+    productCount: 0,
+    town: prospect.town ?? details?.town ?? null,
+    postcode: prospect.postcode ?? details?.postcode ?? null,
+    phone: details?.phone ?? null,
+    email: details?.email ?? null,
+    contactName: details?.contactName ?? null,
+    bedrooms: details?.bedrooms ?? null,
+    pupils: details?.pupils ?? null,
+    hasDetails: details !== undefined,
+    record: "PROSPECT" as const,
+  };
+}
+
+/**
+ * The business behind a key, whether it is a customer or a prospect.
+ *
+ * Anthony, 2026-08-01: *"we have a set of fields in the CRM and i want each of
+ * these for customers and prospects."* So there is one record shape and one
+ * screen, and the only differences are the two things a prospect genuinely does
+ * not have — an account in the workbook, and a buying history.
+ *
+ * Returns null when the key is neither, which is what lets the profile say
+ * "not in this import" rather than rendering an empty form.
+ */
+export async function resolveSubject(
+  ctx: TenantQueryCtx,
+  companyId: Id<"companies">,
+  importId: Id<"salesDataImports">,
+  key: string
+) {
+  const account = await ctx.db
+    .query("salesDataAccounts")
+    .withIndex("by_company_import_account", (q) =>
+      q.eq("companyId", companyId).eq("importId", importId).eq("accountNameKey", key)
+    )
+    .unique();
+
+  if (account) {
+    return {
+      record: "CUSTOMER" as const,
+      key: account.accountNameKey,
+      name: account.accountName,
+      accountCode: preferredAccountCode(account.codeTally),
+      groupName: account.groupName,
+      customerType: account.customerType,
+      customerTypeKey: account.customerTypeKey,
+      totalRevenue: account.totalRevenue,
+      productCount: account.productCount,
+      prospect: null,
+    };
+  }
+
+  const prospect = await ctx.db
+    .query("salesDataProspects")
+    .withIndex("by_company_prospect", (q) => q.eq("companyId", companyId).eq("prospectKey", key))
+    .unique();
+
+  if (!prospect) return null;
+
+  return {
+    record: "PROSPECT" as const,
+    key: prospect.prospectKey,
+    name: prospect.siteName,
+    accountCode: "",
+    groupName: prospect.groupName,
+    customerType: prospect.customerType,
+    customerTypeKey: prospect.customerTypeKey,
+    totalRevenue: 0,
+    productCount: 0,
+    prospect: {
+      status: prospect.status,
+      town: prospect.town ?? null,
+      postcode: prospect.postcode ?? null,
+      conflictNote: prospect.conflictNote ?? null,
+      sourceUrl: prospect.sourceUrl ?? null,
+      sourceName: prospect.sourceName ?? null,
+      reasoning: prospect.reasoning ?? null,
+      foundAt: prospect.foundAt,
+    },
   };
 }
 
@@ -101,6 +318,71 @@ export const listCustomers = tenantQuery({
 
     const terms = searchTerms(args.search);
     const details = await loadDetails(ctx, companyId);
+    const exhausted = args.missingDetailsOnly
+      ? await loadExhaustedFields(ctx, companyId)
+      : new Map<string, Set<string>>();
+
+    const record = args.record ?? "CUSTOMERS";
+    const stage = decodeListStage(args.paginationOpts.cursor, record);
+    const isNarrowed =
+      terms.length > 0
+      || Boolean(args.customerType || args.groupName || args.missingDetailsOnly);
+
+    // One `.paginate()` runs per invocation. This branch and the accounts scan
+    // below are alternatives, never a sequence.
+    if (stage.source === "PROSPECTS") {
+      const prospectPage = await paginateSafely(
+        (opts) =>
+          paginatePage(
+            () =>
+              ctx.db
+                .query("salesDataProspects")
+                .withIndex("by_company_group", (q) => q.eq("companyId", companyId)),
+            (prospect: Doc<"salesDataProspects">) => {
+              // A prospect that started buying is a customer now, and appears in
+              // the accounts half. Showing it here as well would double it.
+              if (prospect.status !== "NEW") return false;
+              const typed = details.get(prospect.prospectKey);
+              return (
+                matchesFilter(args.customerType, prospect.customerType) &&
+                matchesFilter(args.groupName, prospect.groupName) &&
+                (!args.missingDetailsOnly
+                  || hasMissingDetails(prospect, typed, exhausted.get(prospect.prospectKey))) &&
+                matchesSearch(
+                  [
+                    prospect.siteName,
+                    prospect.groupName,
+                    prospect.customerType,
+                    prospect.town,
+                    prospect.postcode,
+                    typed?.phone,
+                    typed?.email,
+                    typed?.contactName,
+                  ],
+                  terms
+                )
+              );
+            },
+            // Always the filtered path, whatever the dropdowns say: converted
+            // and dismissed prospects have to be dropped, and an unfiltered
+            // scan would return them.
+            true,
+            opts
+          ),
+        { ...args.paginationOpts, cursor: stage.cursor }
+      );
+
+      return {
+        ...prospectPage,
+        continueCursor: encodeListStage({
+          source: "PROSPECTS",
+          cursor: prospectPage.continueCursor,
+        }),
+        page: prospectPage.page.map((prospect) =>
+          toProspectRow(prospect, details.get(prospect.prospectKey))
+        ),
+      };
+    }
 
     const page = await paginateSafely(
       (opts) =>
@@ -116,6 +398,8 @@ export const listCustomers = tenantQuery({
             return (
               matchesFilter(args.customerType, account.customerType) &&
               matchesFilter(args.groupName, account.groupName) &&
+              (!args.missingDetailsOnly
+                || hasMissingDetails(account, typed, exhausted.get(account.accountNameKey))) &&
               matchesSearch(
                 [
                   account.accountName,
@@ -134,14 +418,26 @@ export const listCustomers = tenantQuery({
               )
             );
           },
-          terms.length > 0 || Boolean(args.customerType || args.groupName),
+          isNarrowed,
           opts
         ),
-      args.paginationOpts
+      { ...args.paginationOpts, cursor: stage.cursor }
     );
+
+    // The last page of accounts is not the end of an `ALL` listing — it is the
+    // handover. Reporting done here would hide every prospect.
+    if (record === "ALL" && page.isDone) {
+      return {
+        ...page,
+        isDone: false,
+        continueCursor: encodeListStage({ source: "PROSPECTS", cursor: null }),
+        page: page.page.map((account) => toCustomer(account, details.get(account.accountNameKey))),
+      };
+    }
 
     return {
       ...page,
+      continueCursor: encodeListStage({ source: "ACCOUNTS", cursor: page.continueCursor }),
       page: page.page.map((account) => toCustomer(account, details.get(account.accountNameKey))),
     };
   },
@@ -172,25 +468,14 @@ export const listCustomerFilterOptions = tenantQuery({
 /**
  * Which extra figure a customer type is measured by.
  *
- * Care homes and hotels count bedrooms; schools count pupils. Written here
- * against the type rather than configured, because Anthony asked for exactly
- * these two and said a third should come back to a developer. A type matching
- * neither — and any type a later workbook introduces — simply shows no extra
- * field rather than guessing at one.
+ * Care homes and hotels count bedrooms; schools count pupils. Matched on the
+ * normalised key, so a workbook that respells a type keeps its field.
  *
- * Matched on the normalised key, so a workbook that respells a type keeps its
- * field.
+ * The rule moved to its own file once the research agent needed it too — this
+ * file and that one cannot import each other — and is re-exported here so the
+ * screens and tests that already read it from this module still do.
  */
-const EXTRA_FIELD_BY_TYPE: Record<string, "bedrooms" | "pupils"> = {
-  "CARE HOMES": "bedrooms",
-  HOTELS: "bedrooms",
-  "EDUCATION - RESIDENTIAL": "pupils",
-  "EDUCATION - NON RESIDENTIAL": "pupils",
-};
-
-export function extraFieldForType(customerTypeKey: string): "bedrooms" | "pupils" | null {
-  return EXTRA_FIELD_BY_TYPE[customerTypeKey] ?? null;
-}
+export { extraFieldForType };
 
 /**
  * One customer: the imported side, the typed-in side, and which extra figure
@@ -207,22 +492,13 @@ export const getCustomer = tenantQuery({
     const currentImport = await getCurrentImport(ctx, companyId);
     if (!currentImport) return null;
 
-    const account = await ctx.db
-      .query("salesDataAccounts")
-      .withIndex("by_company_import_account", (q) =>
-        q
-          .eq("companyId", companyId)
-          .eq("importId", currentImport._id)
-          .eq("accountNameKey", args.accountNameKey)
-      )
-      .unique();
-
-    if (!account) return null;
+    const subject = await resolveSubject(ctx, companyId, currentImport._id, args.accountNameKey);
+    if (!subject) return null;
 
     const details = await ctx.db
       .query("salesDataCustomers")
       .withIndex("by_company_account", (q) =>
-        q.eq("companyId", companyId).eq("accountNameKey", args.accountNameKey)
+        q.eq("companyId", companyId).eq("accountNameKey", subject.key)
       )
       .unique();
 
@@ -233,13 +509,34 @@ export const getCustomer = tenantQuery({
     }
 
     return {
-      ...toCustomer(account, details ?? undefined),
-      extraField: extraFieldForType(account.customerTypeKey),
+      accountNameKey: subject.key,
+      accountName: subject.name,
+      accountCode: subject.accountCode,
+      groupName: subject.groupName,
+      customerType: subject.customerType,
+      customerTypeKey: subject.customerTypeKey,
+      totalRevenue: subject.totalRevenue,
+      productCount: subject.productCount,
+      record: subject.record,
+      /** Where a prospect came from. Null for a customer, which came from the workbook. */
+      prospect: subject.prospect,
+      extraField: extraFieldForType(subject.customerTypeKey),
+      // A prospect's town and postcode are known from the page that listed it,
+      // so the form is not empty before anybody researches it.
+      town: details?.town ?? subject.prospect?.town ?? null,
+      postcode: details?.postcode ?? subject.prospect?.postcode ?? null,
+      phone: details?.phone ?? null,
+      email: details?.email ?? null,
+      contactName: details?.contactName ?? null,
+      bedrooms: details?.bedrooms ?? null,
+      pupils: details?.pupils ?? null,
+      hasDetails: details !== null,
       addressLine1: details?.addressLine1 ?? null,
       addressLine2: details?.addressLine2 ?? null,
       country: details?.country ?? null,
       mobile: details?.mobile ?? null,
       accountsEmail: details?.accountsEmail ?? null,
+      website: details?.website ?? null,
       contactRole: details?.contactRole ?? null,
       notes: details?.notes ?? null,
       updatedAt: details?.updatedAt ?? null,
@@ -313,6 +610,7 @@ export const saveCustomerDetails = tenantMutation({
     mobile: v.optional(v.string()),
     email: v.optional(v.string()),
     accountsEmail: v.optional(v.string()),
+    website: v.optional(v.string()),
     contactName: v.optional(v.string()),
     contactRole: v.optional(v.string()),
     bedrooms: v.optional(v.number()),
@@ -325,23 +623,16 @@ export const saveCustomerDetails = tenantMutation({
     const currentImport = await getCurrentImport(ctx, companyId);
     if (!currentImport) throw new Error("There is no imported data to attach details to.");
 
-    const account = await ctx.db
-      .query("salesDataAccounts")
-      .withIndex("by_company_import_account", (q) =>
-        q
-          .eq("companyId", companyId)
-          .eq("importId", currentImport._id)
-          .eq("accountNameKey", args.accountNameKey)
-      )
-      .unique();
-
-    if (!account) throw new Error("That customer is not in the current import.");
+    // A prospect has the same record as a customer and the same form, so the
+    // save has to accept its key too — it simply has no account behind it.
+    const subject = await resolveSubject(ctx, companyId, currentImport._id, args.accountNameKey);
+    if (!subject) throw new Error("That customer is not in the current import.");
 
     const { accountNameKey, bedrooms, pupils, ...text } = args;
 
     // The extra figure belongs to the customer type. Accepting a bedroom count
     // for a school would store a number nothing ever shows again.
-    const extraField = extraFieldForType(account.customerTypeKey);
+    const extraField = extraFieldForType(subject.customerTypeKey);
 
     // An empty box clears the field rather than storing whitespace, so a
     // cleared postcode reads as absent everywhere instead of as a blank string.
@@ -357,6 +648,7 @@ export const saveCustomerDetails = tenantMutation({
       mobile: trimmed(text.mobile),
       email: trimmed(text.email),
       accountsEmail: trimmed(text.accountsEmail),
+      website: trimmed(text.website),
       contactName: trimmed(text.contactName),
       contactRole: trimmed(text.contactRole),
       notes: trimmed(text.notes),
@@ -372,6 +664,27 @@ export const saveCustomerDetails = tenantMutation({
         q.eq("companyId", companyId).eq("accountNameKey", accountNameKey)
       )
       .unique();
+
+    // A person's edit outranks anything the research agent found. Only the
+    // fields whose value actually moved are superseded: the form re-submits
+    // every box on every save, so comparing against what was there is what
+    // stops one corrected phone number stripping the source marker off ten
+    // other fields.
+    const changedFields = (Object.keys(RESEARCHABLE_FIELDS) as ResearchField[]).filter((field) => {
+      const next = fields[field];
+      const previous = existing?.[field];
+      return (next ?? undefined) !== (previous ?? undefined);
+    });
+
+    if (changedFields.length > 0) {
+      await supersedeResearchForFields(ctx, {
+        companyId,
+        subjectKey: accountNameKey,
+        fields: changedFields,
+        actorId: userId,
+        now: fields.updatedAt,
+      });
+    }
 
     if (existing) {
       await ctx.db.patch(existing._id, fields);
@@ -511,7 +824,7 @@ export const countCustomers = tenantQuery({
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) return { total: 0, withDetails: 0 };
+    if (!currentImport) return { total: 0, withDetails: 0, prospects: 0 };
 
     const accounts = await ctx.db
       .query("salesDataAccounts")
@@ -523,6 +836,13 @@ export const countCustomers = tenantQuery({
     const details = await loadDetails(ctx, companyId);
     const withDetails = accounts.filter((a) => details.has(a.accountNameKey)).length;
 
-    return { total: accounts.length, withDetails };
+    // Counted here so the gap is visible above the list without anybody
+    // changing the filter to find out it exists.
+    const prospects = await ctx.db
+      .query("salesDataProspects")
+      .withIndex("by_company_status", (q) => q.eq("companyId", companyId).eq("status", "NEW"))
+      .collect();
+
+    return { total: accounts.length, withDetails, prospects: prospects.length };
   },
 });

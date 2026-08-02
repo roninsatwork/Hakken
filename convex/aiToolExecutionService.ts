@@ -119,6 +119,25 @@ function getOptionalStringToolArg(args: Record<string, unknown>, key: string) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+/**
+ * A yes/no argument, however the model chose to spell it.
+ *
+ * Models send `false` for a boolean and `"false"` for a string, and which one
+ * arrives varies by provider even when the schema is explicit. Reading only one
+ * form meant a setting the agent believed it had changed silently kept its
+ * default — found when a page reader instructed to include navigation returned
+ * main content anyway, which is the whole page for some sites.
+ */
+function getOptionalBooleanToolArg(args: Record<string, unknown>, key: string) {
+  const value = args[key];
+  if (typeof value === "boolean") return value;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  return undefined;
+}
+
 export function normalizeToolFunctionName(value: string) {
   const normalized = value.replace(/[^a-zA-Z0-9_]/g, "_").replace(/^([^a-zA-Z_])/, "_$1");
   return normalized.length > 0 ? normalized : "tool";
@@ -372,11 +391,11 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    */
   "web.scrape": async (input) => {
     const url = getStringToolArg(input.args, "url");
-    const mainContentOnly = getOptionalStringToolArg(input.args, "mainContentOnly");
+    const mainContentOnly = getOptionalBooleanToolArg(input.args, "mainContentOnly");
 
     return await input.ctx.runAction(internal.webScrapeActions.scrapeUrl, {
       url,
-      ...(mainContentOnly === undefined ? {} : { mainContentOnly: mainContentOnly !== "false" }),
+      ...(mainContentOnly === undefined ? {} : { mainContentOnly }),
     });
   },
   /**
@@ -472,6 +491,104 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       headline: result.headline,
       message: "The board report is written and filed on the Reports page.",
     };
+  },
+  // template:remove:end
+  // template:remove:start salesData
+  /**
+   * Read a customer, so the agent knows what it is looking for.
+   *
+   * The company comes from the run's tenant context and never from the model,
+   * which is what keeps one workspace's agent inside one workspace's customers
+   * however it is instructed.
+   */
+  "salesCustomers.research.read": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Customer research needs a workspace, and this run has none.");
+    }
+
+    const accountNameKey = getOptionalStringToolArg(input.args, "accountNameKey");
+
+    return await input.ctx.runQuery(internal.salesDataResearch.readCustomerForResearch, {
+      companyId: input.companyId,
+      ...(accountNameKey ? { accountNameKey } : {}),
+    });
+  },
+  /**
+   * Record one detail the agent found.
+   *
+   * Deliberately narrow. It writes one named field on one customer in one
+   * workspace, only when that field is empty, and only with a source — which is
+   * why the agent can be left to run without stopping for approval on each
+   * write. A general "update the database" tool could not be.
+   */
+  "salesCustomers.research.record": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Customer research needs a workspace, and this run has none.");
+    }
+
+    const notFound = input.args.notFound === true || input.args.notFound === "true";
+
+    return await input.ctx.runMutation(internal.salesDataResearch.recordResearchFinding, {
+      companyId: input.companyId,
+      accountNameKey: getStringToolArg(input.args, "accountNameKey"),
+      field: getStringToolArg(input.args, "field"),
+      value: getOptionalStringToolArg(input.args, "value"),
+      confidence: getOptionalStringToolArg(input.args, "confidence"),
+      sourceUrl: getOptionalStringToolArg(input.args, "sourceUrl"),
+      sourceName: getOptionalStringToolArg(input.args, "sourceName"),
+      reasoning: getOptionalStringToolArg(input.args, "reasoning"),
+      notFound,
+      // The person who started the run authors the write. An agent's edit still
+      // needs a name against it, and this is the honest one.
+      ...(input.userId ? { actorId: input.userId } : {}),
+      ...(input.agentId ? { agentId: input.agentId } : {}),
+      ...(input.runId ? { runId: input.runId } : {}),
+      ...(input.toolCallId ? { toolCallId: input.toolCallId } : {}),
+    });
+  },
+  /**
+   * Read a group, so the agent knows what it is looking for and what it
+   * already has.
+   */
+  "salesCustomers.prospects.read": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Customer research needs a workspace, and this run has none.");
+    }
+
+    const groupName = getOptionalStringToolArg(input.args, "groupName");
+
+    return await input.ctx.runQuery(internal.salesDataResearch.readGroupForProspecting, {
+      companyId: input.companyId,
+      ...(groupName ? { groupName } : {}),
+    });
+  },
+  /**
+   * File a site the agent found in a group the workspace supplies.
+   *
+   * Narrower than it looks. It can only write a prospect, only in a group the
+   * workspace already sells to, and only for a site that is not already a
+   * customer — the matching rules refuse the rest rather than merging them,
+   * because a wrongly merged record is the one mistake here that reaches a
+   * customer by telephone.
+   */
+  "salesCustomers.prospects.record": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Customer research needs a workspace, and this run has none.");
+    }
+
+    return await input.ctx.runMutation(internal.salesDataResearch.recordProspect, {
+      companyId: input.companyId,
+      groupName: getStringToolArg(input.args, "groupName"),
+      siteName: getStringToolArg(input.args, "siteName"),
+      town: getOptionalStringToolArg(input.args, "town"),
+      postcode: getOptionalStringToolArg(input.args, "postcode"),
+      sourceUrl: getOptionalStringToolArg(input.args, "sourceUrl"),
+      sourceName: getOptionalStringToolArg(input.args, "sourceName"),
+      reasoning: getOptionalStringToolArg(input.args, "reasoning"),
+      ...(input.agentId ? { agentId: input.agentId } : {}),
+      ...(input.runId ? { runId: input.runId } : {}),
+      ...(input.toolCallId ? { toolCallId: input.toolCallId } : {}),
+    });
   },
   // template:remove:end
   "knowledge.search": async (input) => {

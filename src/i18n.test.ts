@@ -56,3 +56,57 @@ describe("UX Layer: Internationalization (i18n) Parity", () => {
     }
   });
 });
+
+/**
+ * Every key a screen asks for has to exist in the namespace it declared.
+ *
+ * The parity test above only proves English and Italian agree. It says nothing
+ * about whether a key exists at all, so a label added to the wrong section
+ * passes both files and renders its own key path on screen — which happened
+ * three times in one sitting, once destroying keys another branch had added.
+ *
+ * Only files declaring exactly one namespace are checked, and only literal
+ * keys: a template key like `t(`filterRecord${option}`)` cannot be resolved
+ * without running the component, and guessing at its shape would trade a real
+ * check for a flaky one.
+ */
+describe("UX Layer: Internationalization (i18n) Coverage", () => {
+  const collectFiles = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return collectFiles(full);
+      return entry.name.endsWith('.tsx') && !entry.name.includes('.test.') ? [full] : [];
+    });
+
+  test("every translation key a component asks for exists in its namespace", () => {
+    const messages = JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), 'messages/en.json'), 'utf-8')
+    ) as Record<string, unknown>;
+
+    const has = (dotted: string) => {
+      let node: unknown = messages;
+      for (const part of dotted.split('.')) {
+        if (typeof node !== 'object' || node === null || !(part in node)) return false;
+        node = (node as Record<string, unknown>)[part];
+      }
+      return true;
+    };
+
+    const missing: string[] = [];
+    for (const file of collectFiles(path.join(process.cwd(), 'src'))) {
+      const source = fs.readFileSync(file, 'utf-8');
+      const namespaces = [...source.matchAll(/useTranslations\(\s*"([^"]+)"\s*\)/g)].map((m) => m[1]);
+      if (namespaces.length !== 1) continue;
+
+      for (const match of source.matchAll(/\bt\(\s*"([^"]+)"/g)) {
+        const dotted = `${namespaces[0]}.${match[1]}`;
+        if (!has(dotted)) missing.push(`${path.relative(process.cwd(), file)}: ${dotted}`);
+      }
+    }
+
+    expect(
+      missing,
+      `Translation keys used but not defined in messages/en.json:\n${missing.join('\n')}`
+    ).toEqual([]);
+  });
+});

@@ -133,8 +133,11 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           properties: {
             url: { type: "string", description: "The full address of the page to read." },
             mainContentOnly: {
-              type: "string",
-              description: '"false" to include navigation and footers. Defaults to main content only.',
+              type: "boolean",
+              description:
+                "Defaults to true, which returns the article and drops navigation. Set it to "
+                + "false when the page's real content is a list or a directory — on some sites "
+                + "those sit outside the main article and are dropped otherwise.",
             },
           },
         }),
@@ -291,6 +294,183 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
               type: "string",
               description:
                 "Anything to pay particular attention to in this run, in plain words.",
+            },
+          },
+        }),
+      },
+    ],
+  },
+  // template:remove:end
+  // template:remove:start salesData
+  {
+    key: "sales-customer-research",
+    // Named for the client at Anthony's request, 2026-08-01. It sits inside the
+    // `salesData` fence, so the framework template strips it wholesale rather
+    // than shipping a client's name to the next product built on this.
+    name: "Comax Customer Research",
+    description:
+      "Lets an agent read a customer's record to see which details are missing, and record what "
+      + "it finds on the web against that customer — with the page it came from.",
+    category: "WORKFLOW",
+    // Reads and writes the workspace's own customer records. Reaching the web
+    // is a separate capability: search comes from the model provider, and
+    // pages are read through Firecrawl.
+    authMode: "NONE",
+    // Restricted rather than global: these tools read and write one client's
+    // customer records, and the screens they serve only exist for a workspace
+    // with the sales data section switched on. Offering them to every company
+    // would put a tool in the marketplace that most of them cannot use.
+    tenantAvailability: "TENANT_RESTRICTED",
+    requiredScopes: [],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Comax — Read a customer's record",
+        description:
+          "Returns one customer or prospect: the individual business name, its account code, the "
+          + "chain it belongs to, its type, the details already known, the details still missing, "
+          + "and the details already searched for and not published anywhere. Give it an account "
+          + "name key for a particular one, or call it with nothing to get the next record that "
+          + "still has gaps. A prospect needs the same details as a customer — it is a site "
+          + "somebody has to be able to ring — so both kinds come back from this.",
+        handlerMapping: "salesCustomers.research.read",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            accountNameKey: {
+              type: "string",
+              description:
+                "The customer or prospect to read. Leave it out to be given the next record with "
+                + "gaps, of either kind.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Record a customer detail",
+        description:
+          "Records one detail you found about a customer, with the page you took it from. One "
+          + "call per detail. A confident value on an empty field is saved to the record; "
+          + "anything less certain, or anything contradicting what is already there, is kept for "
+          + "a person to check. Set notFound when the detail is not published anywhere you "
+          + "looked — that is a useful answer and stops the customer being searched again.",
+        handlerMapping: "salesCustomers.research.record",
+        requiredRole: "ADMIN",
+        // Writes into the workspace's own customer records, and only into
+        // fields that are empty. Nothing external, and nothing overwritten.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["accountNameKey", "field"],
+          properties: {
+            accountNameKey: {
+              type: "string",
+              description: "The customer this detail belongs to, exactly as you were given it.",
+            },
+            field: {
+              type: "string",
+              description:
+                "Which detail: addressLine1, addressLine2, town, postcode, country, phone, "
+                + "mobile, email, accountsEmail, website, contactName, contactRole, bedrooms "
+                + "or pupils.",
+            },
+            value: {
+              type: "string",
+              description: "What you found, as it appears on the page. Omit when notFound is true.",
+            },
+            confidence: {
+              type: "string",
+              enum: ["HIGH", "MEDIUM", "LOW"],
+              description:
+                "HIGH only when the page names this exact business and this exact detail with no "
+                + "ambiguity. Anything less is not a failure — it goes to a person instead.",
+            },
+            sourceUrl: {
+              type: "string",
+              description:
+                "The web address of the page you took this from. Required for every value.",
+            },
+            sourceName: {
+              type: "string",
+              description: "What to call that page on screen, for example the site's name.",
+            },
+            reasoning: {
+              type: "string",
+              description:
+                "One line: why you believe this page is about this individual business and not "
+                + "its parent chain.",
+            },
+            notFound: {
+              type: "boolean",
+              description: "True when this detail is not published anywhere you looked.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Read a group",
+        description:
+          "Returns one group the workspace supplies: its name, its customer type, the sites in "
+          + "it already supplied, and the sites an earlier run already found. Give it a group "
+          + "name, or call it with nothing to get the next group nobody has looked through yet.",
+        handlerMapping: "salesCustomers.prospects.read",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            groupName: {
+              type: "string",
+              description: "The group to look through. Leave it out to be given the next one.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Record a site in a group",
+        description:
+          "Records one site you found in a group the workspace supplies. Report every site you "
+          + "find, including ones you think are already supplied — you will be told which those "
+          + "are, and that is how the count stays honest. A site that is already a customer is "
+          + "refused and named back to you, so you can stop offering it.",
+        handlerMapping: "salesCustomers.prospects.record",
+        requiredRole: "ADMIN",
+        // Writes a prospect into the workspace's own records. It cannot touch a
+        // customer: a site that matches one is refused rather than merged.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["groupName", "siteName"],
+          properties: {
+            groupName: {
+              type: "string",
+              description: "The group this site belongs to, exactly as you were given it.",
+            },
+            siteName: {
+              type: "string",
+              description: "The site's name, as the register or the group's own page publishes it.",
+            },
+            town: { type: "string", description: "The town it is in." },
+            postcode: {
+              type: "string",
+              description:
+                "Its postcode. Worth finding: it is the strongest signal that a site is or is "
+                + "not one the workspace already supplies.",
+            },
+            sourceUrl: {
+              type: "string",
+              description: "The web address of the page that lists this site. Required.",
+            },
+            sourceName: { type: "string", description: "What to call that page on screen." },
+            reasoning: {
+              type: "string",
+              description: "One line: why you believe this site belongs to this group.",
             },
           },
         }),
