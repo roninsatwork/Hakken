@@ -13,15 +13,6 @@ import {
   ShoppingCart,
   Sparkles,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { api } from "@/convex/_generated/api";
 import Header from "@/src/ui/components/layout/Header";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
@@ -690,6 +681,10 @@ function ChainGaps({ chain, exporting }: { chain: Chain; exporting: boolean }) {
  * The one chart that survived the redesign: gaps rolled up by product,
  * because "which products keep going unsold" crosses chain lines and no
  * card above can say it. Grouping sums stored rows; nothing new is priced.
+ *
+ * Drawn in the leaderboard's own idiom — name, bar, exact pounds on the end
+ * of every line — not recharts, whose end-of-bar labels collapsed the bars
+ * to slivers under v3 and whose axis ticks made the reader do the reading.
  */
 function CategoryChart({ report }: { report: Report }) {
   const t = useTranslations("salesData.opportunityReport");
@@ -703,52 +698,30 @@ function CategoryChart({ report }: { report: Report }) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
   if (data.length === 0) return null;
+  const largest = data[0].value;
 
   return (
     <ChartExportWrapper exportName="gap-revenue-by-category">
       <div className="bg-sidebar/40 border border-border-dim rounded-[20px] backdrop-blur-xl p-5 flex flex-col gap-4">
         <h3 className="text-[13px] font-medium text-secondary">{t("chartByCategory")}</h3>
-        <div className="h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24 }}>
-              <CartesianGrid
-                horizontal={false}
-                stroke="var(--color-border-dim)"
-                strokeDasharray="3 3"
-              />
-              <XAxis
-                type="number"
-                tick={{ fill: "var(--color-muted)", fontSize: 11 }}
-                tickFormatter={(value: number) => formatPounds(value)}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                width={140}
-                tick={{ fill: "var(--color-secondary)", fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <RechartsTooltip
-                cursor={{ fill: "var(--color-border-dim)", opacity: 0.3 }}
-                contentStyle={{
-                  background: "var(--color-sidebar)",
-                  border: "1px solid var(--color-border-dim)",
-                  borderRadius: 12,
-                  fontSize: 12,
-                }}
-                formatter={(value) => [formatPounds(Number(value)), ""]}
-              />
-              <Bar
-                dataKey="value"
-                fill="var(--color-brand)"
-                radius={[0, 4, 4, 0]}
-                barSize={14}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="flex flex-col gap-3.5">
+          {data.map((row) => (
+            <div
+              key={row.name}
+              className="grid grid-cols-[minmax(140px,220px)_minmax(0,1fr)_110px] items-center gap-3"
+            >
+              <span className="text-[13px] text-foreground truncate">{row.name}</span>
+              <div className="h-4 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-brand rounded-full"
+                  style={{ width: `${Math.max((row.value / largest) * 100, 1)}%` }}
+                />
+              </div>
+              <span className="text-right text-[13px] text-foreground tabular-nums">
+                {formatPounds(row.value)}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </ChartExportWrapper>
