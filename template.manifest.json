@@ -156,7 +156,8 @@
         "salesDataProspects",
         "salesDataResearchJobs",
         "salesDataResearchJobItems",
-        "salesOpportunityReports"
+        "salesOpportunityReports",
+        "salesOpportunityReportGapProducts"
       ],
       "packageDependencies": [],
       "packageScripts": [],

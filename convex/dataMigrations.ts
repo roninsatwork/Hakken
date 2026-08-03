@@ -7,6 +7,7 @@ import { calculateModelCostGBP } from "./aiCostService";
 // template:remove:start salesData
 import { recordAccounts } from "./salesData";
 import { normalizeKey } from "./salesDataImportService";
+import { buildGapProducts } from "./salesOpportunityService";
 // template:remove:end
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
 import {
@@ -162,6 +163,106 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
 
       await recordAccounts(ctx, first.companyId, first.importId, rows);
       updated += rows.length;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /*
+   * A migration lived here for an hour and was superseded before it shipped:
+   * `2026-08-03-opportunity-report-category-examples` stamped three example
+   * products per category onto finished reports. Anthony read the result and
+   * called it — the report educates per gap, so per-gap product lists in
+   * their own table replaced it (the backfill below). It ran on dev only;
+   * the ledger row stays, the field it stamped stays validatable in the
+   * schema, and the name must not be reused.
+   */
+  /**
+   * Builds each finished report's gap order sheets — the products the sister
+   * accounts buy in every gapped category — for reports written before the
+   * `salesOpportunityReportGapProducts` table existed.
+   *
+   * A finished report is a paid run's output; asking Anthony to pay for
+   * another one just so the gaps can name their products would be the wrong
+   * kind of thrift. The sweep mirrors the gaps pass: accounts by index, each
+   * account's rows by index, bounded the same way. Idempotent: a report
+   * whose order sheets exist — every report from now on — is skipped.
+   */
+  "2026-08-03-opportunity-report-gap-products": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db
+      .query("salesOpportunityReports")
+      .paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const report of page.page) {
+      if (!report.gaps || report.gaps.length === 0) continue;
+
+      const existing = await ctx.db
+        .query("salesOpportunityReportGapProducts")
+        .withIndex("by_company_report", (q) =>
+          q.eq("companyId", report.companyId).eq("reportId", report._id)
+        )
+        .take(1);
+      if (existing.length > 0) continue;
+
+      const accounts = await ctx.db
+        .query("salesDataAccounts")
+        .withIndex("by_company_import", (q) =>
+          q.eq("companyId", report.companyId).eq("importId", report.importId)
+        )
+        .take(500);
+
+      const productRows: Array<{
+        groupNameKey: string;
+        categoryKey: string;
+        productDescription: string;
+        spendGBP: number;
+      }> = [];
+      const groupKeyOf = new Map<string, string>();
+      for (const account of accounts) {
+        groupKeyOf.set(account.accountNameKey, account.groupNameKey);
+        const rows = await ctx.db
+          .query("salesDataRows")
+          .withIndex("by_company_import_account_name", (q) =>
+            q
+              .eq("companyId", report.companyId)
+              .eq("importId", report.importId)
+              .eq("accountNameKey", account.accountNameKey)
+          )
+          .take(1000);
+        for (const row of rows) {
+          productRows.push({
+            groupNameKey: account.groupNameKey,
+            categoryKey: row.productCategoryKey,
+            productDescription: row.productDescription,
+            spendGBP: row.totalRevenue,
+          });
+        }
+      }
+
+      const gapProducts = buildGapProducts(
+        productRows,
+        report.gaps.map((gap) => ({
+          accountNameKey: gap.accountNameKey,
+          categoryKey: gap.categoryKey,
+          groupNameKey: groupKeyOf.get(gap.accountNameKey) ?? "",
+        }))
+      );
+      for (const entry of gapProducts) {
+        await ctx.db.insert("salesOpportunityReportGapProducts", {
+          companyId: report.companyId,
+          reportId: report._id,
+          accountNameKey: entry.accountNameKey,
+          categoryKey: entry.categoryKey,
+          products: entry.products,
+        });
+      }
+      updated += 1;
     }
 
     return {

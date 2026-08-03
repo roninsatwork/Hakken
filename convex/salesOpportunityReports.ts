@@ -7,6 +7,7 @@ import { getCurrentImport, requireSalesDataCompany } from "./salesData";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { extraFieldForType } from "./salesDataCustomerFields";
 import {
+  buildGapProducts,
   collectReportFigures,
   estimateProspect,
   findGroupGaps,
@@ -34,6 +35,9 @@ import {
 
 const OPPORTUNITY_CONNECTOR_KEY = "sales-opportunity-report";
 const SAVE_HANDLER_MAPPING = "opportunityReport.saveSummary";
+
+/** One doc per gap; far above any real report, well under the read cap. */
+const GAP_PRODUCT_DOC_LIMIT = 2000;
 
 /** Plenty for a workspace of tens of accounts; a guard, not a target. */
 const ACCOUNT_SCAN_LIMIT = 500;
@@ -72,6 +76,14 @@ export const getLatestOpportunityReport = tenantQuery({
     const reportImport = await ctx.db.get(report.importId);
     const currentImport = await getCurrentImport(ctx, companyId);
 
+    // Each gap's order sheet, one doc per gap in its own table.
+    const gapProducts = await ctx.db
+      .query("salesOpportunityReportGapProducts")
+      .withIndex("by_company_report", (q) =>
+        q.eq("companyId", companyId).eq("reportId", report._id)
+      )
+      .take(GAP_PRODUCT_DOC_LIMIT);
+
     return {
       status: report.status,
       phase: report.phase,
@@ -81,6 +93,11 @@ export const getLatestOpportunityReport = tenantQuery({
       headline: report.headline ?? null,
       prospects: report.prospects ?? [],
       gaps: report.gaps ?? [],
+      gapProducts: gapProducts.map((entry) => ({
+        accountNameKey: entry.accountNameKey,
+        categoryKey: entry.categoryKey,
+        products: entry.products,
+      })),
       summary: report.summary ?? null,
       exceptions: report.exceptions ?? [],
       importFileName: reportImport?.fileName ?? null,
@@ -491,6 +508,15 @@ export const runGapsPassInternal = internalMutation({
       .take(ACCOUNT_SCAN_LIMIT);
 
     const members: GroupMemberSpend[] = [];
+    // The same sweep that prices the gaps also gathers every product each
+    // account buys, so each gap can carry its order sheet: what the sister
+    // accounts actually purchase in the category the account is missing.
+    const productRows: Array<{
+      groupNameKey: string;
+      categoryKey: string;
+      productDescription: string;
+      spendGBP: number;
+    }> = [];
     for (const account of accounts) {
       const rows = await ctx.db
         .query("salesDataRows")
@@ -510,6 +536,12 @@ export const runGapsPassInternal = internalMutation({
         };
         entry.spendGBP += row.totalRevenue;
         byCategory.set(row.productCategoryKey, entry);
+        productRows.push({
+          groupNameKey: account.groupNameKey,
+          categoryKey: row.productCategoryKey,
+          productDescription: row.productDescription,
+          spendGBP: row.totalRevenue,
+        });
       }
 
       members.push({
@@ -529,7 +561,36 @@ export const runGapsPassInternal = internalMutation({
     const { gaps, groupsExamined } = findGroupGaps(members);
     const headline = summariseOpportunities(report.prospects ?? [], gaps, groupsExamined);
 
-    await ctx.db.patch(report._id, { gaps, headline, phase: "SUMMARY", updatedAt: now });
+    // Each gap's order sheet, in its own table so the report row stays small.
+    // The group key comes from the member sweep — gap rows carry only the
+    // display name.
+    const groupKeyOf = new Map(
+      members.map((member) => [member.accountNameKey, member.groupNameKey])
+    );
+    const gapProducts = buildGapProducts(
+      productRows,
+      gaps.map((gap) => ({
+        accountNameKey: gap.accountNameKey,
+        categoryKey: gap.categoryKey,
+        groupNameKey: groupKeyOf.get(gap.accountNameKey) ?? "",
+      }))
+    );
+    for (const entry of gapProducts) {
+      await ctx.db.insert("salesOpportunityReportGapProducts", {
+        companyId: args.companyId,
+        reportId: report._id,
+        accountNameKey: entry.accountNameKey,
+        categoryKey: entry.categoryKey,
+        products: entry.products,
+      });
+    }
+
+    await ctx.db.patch(report._id, {
+      gaps,
+      headline,
+      phase: "SUMMARY",
+      updatedAt: now,
+    });
 
     return {
       gapCount: gaps.length,

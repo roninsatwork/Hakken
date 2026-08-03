@@ -247,6 +247,60 @@ function unitWord(sizeUnit: "bedrooms" | "pupils"): string {
   return sizeUnit === "bedrooms" ? "bedroom" : "pupil";
 }
 
+export type GapProductLine = { description: string; spendGBP: number };
+
+export type GapProducts = {
+  accountNameKey: string;
+  categoryKey: string;
+  products: GapProductLine[];
+};
+
+/**
+ * The order sheet behind every gap: the actual products the sister accounts
+ * buy in the gapped category, with what they spend on each, biggest first.
+ *
+ * A gap row alone says "no chemicals" — Anthony, 2026-08-03: *"the whole
+ * point of this report is to educate them on where the opportunities are and
+ * for what."* The answer to "so what exactly do we sell them?" is what the
+ * siblings already buy, so that is what each gap carries: the full list, not
+ * a sample, pooled by description across the group's buyers.
+ *
+ * Only rows with real revenue join the pool — a zero-revenue line is the
+ * workbook's way of writing "bought nothing", and it must not put a £0
+ * product on an order sheet. That same rule keeps the gapped account itself
+ * out of its own pool: by the gap's definition it has no revenue there.
+ */
+export function buildGapProducts(
+  productRows: Array<{
+    groupNameKey: string;
+    categoryKey: string;
+    productDescription: string;
+    spendGBP: number;
+  }>,
+  gaps: Array<{ accountNameKey: string; categoryKey: string; groupNameKey: string }>
+): GapProducts[] {
+  const poolKey = (groupNameKey: string, categoryKey: string) =>
+    `${groupNameKey} ${categoryKey}`;
+
+  const pools = new Map<string, Map<string, number>>();
+  for (const row of productRows) {
+    const description = row.productDescription.trim();
+    if (!description || row.spendGBP <= 0) continue;
+    const key = poolKey(row.groupNameKey, row.categoryKey);
+    const pool = pools.get(key) ?? new Map<string, number>();
+    pool.set(description, (pool.get(description) ?? 0) + row.spendGBP);
+    pools.set(key, pool);
+  }
+
+  return gaps.map((gap) => ({
+    accountNameKey: gap.accountNameKey,
+    categoryKey: gap.categoryKey,
+    products: [...(pools.get(poolKey(gap.groupNameKey, gap.categoryKey)) ?? new Map()).entries()]
+      .map(([description, spendGBP]) => ({ description, spendGBP: round2(spendGBP) }))
+      .sort((a, b) => b.spendGBP - a.spendGBP),
+  }));
+}
+
 /**
  * Every gap inside every chain: categories a member's siblings buy that it
  * does not.

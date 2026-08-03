@@ -3087,6 +3087,22 @@ export default defineSchema({
         })
       )
     ),
+    /**
+     * A dead field from a superseded idea — three example products per
+     * category, workbook-wide. Replaced within the hour by the per-gap
+     * product lists in `salesOpportunityReportGapProducts`, but one dev
+     * report row was stamped before the replacement, so the field must stay
+     * validatable. Nothing writes or reads it.
+     */
+    categoryExamples: v.optional(
+      v.array(
+        v.object({
+          categoryKey: v.string(),
+          category: v.string(),
+          examples: v.array(v.string()),
+        })
+      )
+    ),
     /** The agent's reading of the sections, as markdown. Prose, not figures. */
     summary: v.optional(v.string()),
     /** What could not be done and why, shown on the report, not in logs. */
@@ -3097,5 +3113,28 @@ export default defineSchema({
     // The screen leads with the newest report.
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_run", ["runId"]),
+
+  /**
+   * The order sheet behind each gap: the products the buying sister accounts
+   * actually purchase in the gapped category, and what they spend on each.
+   *
+   * One row per gap, keyed the way the report's gap rows are keyed, in a
+   * table of its own because 200 gaps × their full product lists would crowd
+   * the report document toward its size limit. The screen shows every line —
+   * the report's job is to educate on where the opportunities are and for
+   * what, so nothing here is sampled or capped.
+   */
+  salesOpportunityReportGapProducts: defineTable({
+    companyId: v.id("companies"),
+    reportId: v.id("salesOpportunityReports"),
+    accountNameKey: v.string(),
+    categoryKey: v.string(),
+    products: v.array(
+      v.object({
+        description: v.string(),
+        spendGBP: v.number(),
+      })
+    ),
+  }).index("by_company_report", ["companyId", "reportId"]),
   // template:remove:end
 });

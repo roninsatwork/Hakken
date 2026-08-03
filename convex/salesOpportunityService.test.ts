@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildGapProducts,
   collectReportFigures,
   estimateProspect,
   findGroupGaps,
@@ -325,5 +326,80 @@ describe("median", () => {
     expect(median([3, 1, 2])).toBe(2);
     expect(median([1, 2, 3, 4])).toBe(2.5);
     expect(median([])).toBe(0);
+  });
+});
+
+describe("buildGapProducts", () => {
+  const row = (
+    group: string,
+    category: string,
+    productDescription: string,
+    spendGBP: number
+  ) => ({
+    groupNameKey: group.toUpperCase(),
+    categoryKey: category.toUpperCase(),
+    productDescription,
+    spendGBP,
+  });
+  const gap = (account: string, category: string, group: string) => ({
+    accountNameKey: account.toUpperCase(),
+    categoryKey: category.toUpperCase(),
+    groupNameKey: group.toUpperCase(),
+  });
+
+  test("a gap carries the full order sheet, biggest sellers first", () => {
+    const [sheet] = buildGapProducts(
+      [
+        row("Colten", "Chemicals", "Bleach 5L", 100),
+        row("Colten", "Chemicals", "Degreaser", 400),
+        row("Colten", "Chemicals", "Sanitiser gel", 300),
+      ],
+      [gap("Colten Uniform", "Chemicals", "Colten")]
+    );
+    // Every product, not a sample — the report educates, it does not tease.
+    expect(sheet.products).toEqual([
+      { description: "Degreaser", spendGBP: 400 },
+      { description: "Sanitiser gel", spendGBP: 300 },
+      { description: "Bleach 5L", spendGBP: 100 },
+    ]);
+  });
+
+  test("one product bought by two sisters pools its spend under one line", () => {
+    const [sheet] = buildGapProducts(
+      [
+        row("Colten", "Chemicals", "Bleach 5L", 60),
+        row("Colten", "Chemicals", "Bleach 5L", 60),
+        row("Colten", "Chemicals", "Degreaser", 100),
+      ],
+      [gap("Colten Uniform", "Chemicals", "Colten")]
+    );
+    expect(sheet.products).toEqual([
+      { description: "Bleach 5L", spendGBP: 120 },
+      { description: "Degreaser", spendGBP: 100 },
+    ]);
+  });
+
+  test("another group's products cannot leak onto the sheet", () => {
+    const [sheet] = buildGapProducts(
+      [
+        row("Colten", "Chemicals", "Bleach 5L", 100),
+        row("Daish's", "Chemicals", "Pool chlorine", 900),
+      ],
+      [gap("Colten Uniform", "Chemicals", "Colten")]
+    );
+    expect(sheet.products).toEqual([{ description: "Bleach 5L", spendGBP: 100 }]);
+  });
+
+  test("zero-revenue and blank rows put nothing on an order sheet", () => {
+    const [sheet] = buildGapProducts(
+      [
+        // The workbook's "bought nothing" — a row with no money on it.
+        row("Colten", "Chemicals", "Bleach 5L", 0),
+        row("Colten", "Chemicals", "   ", 500),
+        row("Colten", "Chemicals", "Degreaser", 50),
+      ],
+      [gap("Colten Uniform", "Chemicals", "Colten")]
+    );
+    expect(sheet.products).toEqual([{ description: "Degreaser", spendGBP: 50 }]);
   });
 });

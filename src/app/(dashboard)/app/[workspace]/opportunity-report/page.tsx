@@ -7,6 +7,7 @@ import html2canvas from "html2canvas";
 import {
   BadgePoundSterling,
   Building2,
+  ChevronRight,
   Download,
   Loader2,
   Play,
@@ -71,8 +72,7 @@ const PHASE_PROGRESS: Record<Report["phase"], { step: number; percent: number }>
 };
 const PHASE_STEPS = 3;
 
-/** Gap rows shown per chain before the reader has to ask for the tail. */
-const GAP_PREVIEW = 5;
+type GapProductLine = Report["gapProducts"][number]["products"][number];
 
 export default function OpportunityReportPage() {
   const t = useTranslations("salesData.opportunityReport");
@@ -114,6 +114,7 @@ export default function OpportunityReportPage() {
 
   const isRunning = report?.status === "RUNNING";
   const hasSections = Boolean(report?.headline) && report?.phase === "DONE";
+  const productsFor = report ? productsMapOf(report) : new Map<string, GapProductLine[]>();
 
   return (
     <>
@@ -150,7 +151,12 @@ export default function OpportunityReportPage() {
             <ImportLine report={report} />
             <TotalCard report={report} headline={report.headline} />
             {chainsOf(report).map((chain) => (
-              <ChainCard key={chain.name} chain={chain} exporting={exporting} />
+              <ChainCard
+                key={chain.name}
+                chain={chain}
+                productsFor={productsFor}
+                exporting={exporting}
+              />
             ))}
             <CategoryChart report={report} />
             {report.summary && <AgentSummary summary={report.summary} exporting={exporting} />}
@@ -439,13 +445,46 @@ function TotalCard({
   );
 }
 
+/** Each gap's order sheet, keyed the way the gap rows are keyed. */
+function productsMapOf(report: Report): Map<string, GapProductLine[]> {
+  return new Map(
+    report.gapProducts.map((entry) => [
+      `${entry.accountNameKey} ${entry.categoryKey}`,
+      entry.products,
+    ])
+  );
+}
+
+/**
+ * A workbook description, read aloud: "KATRIN PLUS Z-FOLD 2PLY 135SHTS"
+ * shouts, so plain words lose their capitals — but a token with a digit in
+ * it is a size or a code, and rewriting those would corrupt the one part a
+ * buyer needs verbatim to place an order.
+ */
+function humaniseProduct(description: string): string {
+  return description
+    .split(/\s+/)
+    .map((word) =>
+      /\d/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    )
+    .join(" ");
+}
+
 /**
  * One chain's card: a plain sentence saying what is on the table, then the
  * sites to win and the product gaps. What is identical across rows — the
  * comparison pool, the "no size on file" story — is said once above or below
  * the table, so the rows only carry what differs: site, size, price.
  */
-function ChainCard({ chain, exporting }: { chain: Chain; exporting: boolean }) {
+function ChainCard({
+  chain,
+  productsFor,
+  exporting,
+}: {
+  chain: Chain;
+  productsFor: Map<string, GapProductLine[]>;
+  exporting: boolean;
+}) {
   const t = useTranslations("salesData.opportunityReport");
 
   const summary =
@@ -479,7 +518,9 @@ function ChainCard({ chain, exporting }: { chain: Chain; exporting: boolean }) {
       </div>
 
       {chain.prospects.length > 0 && <ChainProspects chain={chain} />}
-      {chain.gaps.length > 0 && <ChainGaps chain={chain} exporting={exporting} />}
+      {chain.gaps.length > 0 && (
+        <ChainGaps chain={chain} productsFor={productsFor} exporting={exporting} />
+      )}
     </section>
   );
 }
@@ -609,15 +650,36 @@ function PricingCell({ prospect }: { prospect: Prospect }) {
 }
 
 /**
- * The chain's product gaps, biggest first. The tail folds away behind a
- * count — 174 near-identical rows was most of what made the flat table
- * unreadable — but the export always carries the lot.
+ * The chain's product gaps, account by account, every gap on show. Each gap
+ * is a visible accordion — the chevron and the product count say there is an
+ * order sheet inside, one press opens it, and the export opens every one.
+ * Only the category wears the bright foreground: "they don't need to be in
+ * white, maybe only the product category is" (Anthony, 2026-08-03).
  */
-function ChainGaps({ chain, exporting }: { chain: Chain; exporting: boolean }) {
+function ChainGaps({
+  chain,
+  productsFor,
+  exporting,
+}: {
+  chain: Chain;
+  productsFor: Map<string, GapProductLine[]>;
+  exporting: boolean;
+}) {
   const t = useTranslations("salesData.opportunityReport");
-  const [showAll, setShowAll] = useState(false);
-  const expanded = showAll || exporting;
-  const rows = expanded ? chain.gaps : chain.gaps.slice(0, GAP_PREVIEW);
+
+  // chain.gaps arrive sorted by estimate, so each account's list inherits it.
+  const byAccount = new Map<string, { accountName: string; gaps: Gap[]; totalGBP: number }>();
+  for (const gap of chain.gaps) {
+    const entry = byAccount.get(gap.accountNameKey) ?? {
+      accountName: gap.accountName,
+      gaps: [],
+      totalGBP: 0,
+    };
+    entry.gaps.push(gap);
+    entry.totalGBP += gap.estimateGBP;
+    byAccount.set(gap.accountNameKey, entry);
+  }
+  const accounts = [...byAccount.values()].sort((a, b) => b.totalGBP - a.totalGBP);
 
   return (
     <div className="border-t border-border-dim/60 pt-4">
@@ -630,48 +692,98 @@ function ChainGaps({ chain, exporting }: { chain: Chain; exporting: boolean }) {
           {formatPounds(chain.gapTotalGBP)}
         </span>
       </div>
-      <p className="text-[12.5px] text-muted mb-3">{t("gapsPricingNote")}</p>
+      <p className="text-[12.5px] text-muted mb-4">{t("gapsPricingNote")}</p>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr>
-              <Th>{t("thAccount")}</Th>
-              <Th>{t("thProduct")}</Th>
-              <Th>{t("thSisters")}</Th>
-              <Th className="text-right">{t("thEstimate")}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((gap) => (
-              <tr
-                key={`${gap.accountNameKey}-${gap.categoryKey}`}
-                title={gap.basis}
-                className="border-t border-border-dim/60"
-              >
-                <Td className="text-foreground">{gap.accountName}</Td>
-                <Td>{gap.category}</Td>
-                <Td className="tabular-nums">
-                  {t("sistersValue", { buyers: gap.buyersCount, siblings: gap.siblingCount })}
-                </Td>
-                <Td className="text-right tabular-nums text-foreground">
-                  {formatPounds(gap.estimateGBP)}
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-col gap-6">
+        {accounts.map((account) => (
+          <div key={account.accountName}>
+            <div className="flex items-baseline justify-between gap-3 border-b border-border-dim/60 pb-2 mb-3">
+              <span className="text-[13px] font-medium text-secondary">
+                {account.accountName}
+              </span>
+              <span className="text-[13px] font-medium text-secondary tabular-nums">
+                {formatPounds(account.totalGBP)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {account.gaps.map((gap) => (
+                <GapRow
+                  key={gap.categoryKey}
+                  gap={gap}
+                  products={productsFor.get(`${gap.accountNameKey} ${gap.categoryKey}`) ?? []}
+                  exporting={exporting}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
-      {chain.gaps.length > GAP_PREVIEW && !exporting && (
-        <button
-          type="button"
-          onClick={() => setShowAll(!showAll)}
-          className="mt-2 px-2.5 py-1 rounded-[10px] border border-border-dim text-[12px] text-secondary hover:bg-white/[0.04] transition-colors"
-        >
-          {showAll
-            ? t("showFewerGaps", { count: GAP_PREVIEW })
-            : t("showAllGaps", { count: chain.gaps.length })}
-        </button>
+    </div>
+  );
+}
+
+/** One gap: a category, its worth, and the order sheet folded underneath. */
+function GapRow({
+  gap,
+  products,
+  exporting,
+}: {
+  gap: Gap;
+  products: GapProductLine[];
+  exporting: boolean;
+}) {
+  const t = useTranslations("salesData.opportunityReport");
+  const [open, setOpen] = useState(false);
+  const expanded = (open || exporting) && products.length > 0;
+
+  return (
+    <div title={gap.basis}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        disabled={products.length === 0}
+        className="w-full text-left rounded-[8px] -mx-1.5 px-1.5 py-0.5 hover:bg-white/[0.03] transition-colors disabled:cursor-default"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <span className="flex items-center gap-1.5 text-[13px] text-foreground">
+            {products.length > 0 && (
+              <ChevronRight
+                className={`w-3.5 h-3.5 text-brand shrink-0 transition-transform ${
+                  expanded ? "rotate-90" : ""
+                }`}
+              />
+            )}
+            {gap.category}
+          </span>
+          <span className="text-[13px] text-secondary tabular-nums">
+            {formatPounds(gap.estimateGBP)}
+          </span>
+        </div>
+        <div className={`text-[11.5px] text-muted ${products.length > 0 ? "pl-5" : ""}`}>
+          {[
+            t("sistersBuyThis", { buyers: gap.buyersCount, siblings: gap.siblingCount }),
+            products.length > 0 ? t("productCount", { count: products.length }) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      </button>
+      {expanded && (
+        <div className="mt-1.5 ml-1.5 border-l-2 border-brand/25 pl-4 flex flex-col gap-1 pb-1">
+          {products.map((product) => (
+            <div
+              key={product.description}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <span className="text-[12.5px] text-secondary">
+                {humaniseProduct(product.description)}
+              </span>
+              <span className="text-[12px] text-muted tabular-nums shrink-0">
+                {formatPounds(product.spendGBP)}
+              </span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -693,17 +805,25 @@ function CategoryChart({ report }: { report: Report }) {
   for (const gap of report.gaps) {
     byCategory.set(gap.category, (byCategory.get(gap.category) ?? 0) + gap.estimateGBP);
   }
+  // Every category, not a top slice, and the grand total beside the title —
+  // "why is this not grand totalled" (Anthony, 2026-08-03). The sum equals
+  // the headline's gap figure because nothing is left out of the list.
   const data = [...byCategory.entries()]
     .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+    .sort((a, b) => b.value - a.value);
   if (data.length === 0) return null;
   const largest = data[0].value;
+  const totalGBP = data.reduce((sum, row) => sum + row.value, 0);
 
   return (
     <ChartExportWrapper exportName="gap-revenue-by-category">
       <div className="bg-sidebar/40 border border-border-dim rounded-[20px] backdrop-blur-xl p-5 flex flex-col gap-4">
-        <h3 className="text-[13px] font-medium text-secondary">{t("chartByCategory")}</h3>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h3 className="text-[13px] font-medium text-secondary">{t("chartByCategory")}</h3>
+          <span className="text-[14px] font-medium text-foreground tabular-nums">
+            {formatPounds(totalGBP)}
+          </span>
+        </div>
         <div className="flex flex-col gap-3.5">
           {data.map((row) => (
             <div
