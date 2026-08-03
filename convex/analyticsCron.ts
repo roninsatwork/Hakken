@@ -610,7 +610,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
       id: agentId,
       label: "Cost threshold",
       occurredAt: row.lastSeenAt,
-      summary: `£${row.costGBP.toFixed(2)} across ${row.transactions} transaction${row.transactions === 1 ? "" : "s"}`,
+      summary: `$${row.costGBP.toFixed(2)} across ${row.transactions} transaction${row.transactions === 1 ? "" : "s"}`,
       targetName: await getAgentName(ctx, agentId),
       targetType: "agent",
     }))
@@ -762,7 +762,7 @@ async function getBudgetHealthReport(ctx: QueryCtx, args: { daysBack?: number; s
         limit,
         occurredAt: run.completedAt ?? run.updatedAt,
         percentUsed: getBudgetPercent(used, limit),
-        summary: `£${used.toFixed(2)} of £${limit.toFixed(2)} run budget`,
+        summary: `$${used.toFixed(2)} of $${limit.toFixed(2)} run budget`,
         targetName: await getAgentName(ctx, run.agentId),
         targetType: "agent",
         used,
@@ -856,7 +856,7 @@ function buildAlertRules(args: { budgetHealth: BudgetHealthReport; operations: O
       label: "Cost and budget pressure",
       nextAction: "Review model choice, run budget, tenant plan usage, and retrieval/tool breadth.",
       status: getRuleStatus(costPressureCount, 1),
-      threshold: `Agent spend above £${HIGH_COST_AGENT_THRESHOLD_GBP.toFixed(2)} or any budget above ${BUDGET_WARNING_PERCENT}%`,
+      threshold: `Agent spend above $${HIGH_COST_AGENT_THRESHOLD_GBP.toFixed(2)} or any budget above ${BUDGET_WARNING_PERCENT}%`,
     },
     {
       count: operations.failedToolCalls.count,
@@ -1213,7 +1213,7 @@ export const generateDailySnapshots = internalMutation({
     for (const msg of unifiedInteractions) {
        const inputs = msg.inputTokens;
        const outputs = msg.outputTokens;
-       const costGBP = computeCostFromMap(msg.modelUsed, inputs, outputs, modelMap) * 0.78;
+       const costGBP = computeCostFromMap(msg.modelUsed, inputs, outputs, modelMap);
 
        const activeCompanyId = msg.companyId || (msg.userId ? userMap.get(msg.userId)?.companyId : undefined);
 

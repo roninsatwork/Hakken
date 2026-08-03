@@ -23,6 +23,7 @@ import {
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import {
   buildWaterfall,
+  describeToolCallSubject,
   humaniseToolName,
   summariseWaterfall,
   type WaterfallRow,
@@ -36,6 +37,15 @@ const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
   failed: "bg-rose-500",
 };
 
+/**
+ * What to call this run.
+ *
+ * A run now carries its own title, written by whatever started it. What is left
+ * here is the fallback for runs recorded before that existed — including the
+ * Rightmove special case below, which was the reason one agent had a readable
+ * heading and every other agent had its instructions shouted at title size.
+ * Nothing new should be added to it; give the run a title where it is created.
+ */
 function getRunDisplay(objective: string) {
   const rightmoveUrl = objective.match(/^Rightmove search URL:\s*(.+)$/m)?.[1]?.trim();
   const propertyLimit = objective.match(/^Gather up to\s+(\d+)\s+properties\./m)?.[1];
@@ -110,7 +120,12 @@ export default function AgentJobDetailPage() {
     // stores the runtime's name for the tool, so it is matched on that.
     const nameByStepId = new Map<string, string>();
     const nameByRuntimeName = new Map<string, string>();
+    const subjectByStepId = new Map<string, string>();
     for (const toolCall of detail.toolCalls) {
+      if (toolCall.stepId) {
+        const subject = describeToolCallSubject(toolCall.argumentsPreview);
+        if (subject) subjectByStepId.set(toolCall.stepId, subject);
+      }
       const name = toolCall.toolName ?? humaniseToolName(toolCall.normalizedToolName);
       if (!name) continue;
       if (toolCall.stepId) nameByStepId.set(toolCall.stepId, name);
@@ -122,6 +137,7 @@ export default function AgentJobDetailPage() {
       toolName: nameByStepId.get(step._id)
         ?? (step.input ? nameByRuntimeName.get(step.input.trim()) : undefined)
         ?? (step.kind === "TOOL_RESULT" && step.input ? humaniseToolName(step.input) : undefined),
+      toolSubject: subjectByStepId.get(step._id),
     }));
 
     return buildWaterfall(steps, {
@@ -160,7 +176,10 @@ export default function AgentJobDetailPage() {
   }
 
   const { run } = detail;
-  const runDisplay = getRunDisplay(run.objective);
+  // The run's own title wins. Deriving one is only for runs recorded before
+  // runs carried a title.
+  const derived = getRunDisplay(run.objective);
+  const runDisplay = run.title ? { ...derived, title: run.title } : derived;
   const durationMs = run.completedAt ? run.completedAt - run.startedAt : undefined;
   // Matches the runtime's own rule: only a job that stopped short can be
   // started again. Offering it on a job that finished would be a button that
@@ -188,14 +207,19 @@ export default function AgentJobDetailPage() {
           )}
           {/* One sentence rather than a status pill and a row of fragments. The
               design reads "Ran Tuesday at 09:14 · took 31.4 seconds · cost
-              £0.021 · failed at the last step." — the outcome is part of the
+              $0.021 · failed at the last step." — the outcome is part of the
               sentence, not a badge off to one side. */}
           <p className="text-[13px] text-secondary mt-1.5">
             {describeTrigger(run.triggerType)} {formatRelativeTime(run.startedAt, now)}
             {durationMs === undefined ? " · still running" : ` · took ${formatDuration(durationMs)}`}
             {run.costGBP !== undefined ? ` · cost ${formatMoney(run.costGBP)}` : ""}
+            {/* A run that worked to its ceiling and was picked up by the next
+                run is the job working as designed, and must not read as a
+                death. Only a run nothing continued gets the failure wording. */}
             {run.status === "FAILED"
-              ? " · it did not finish"
+              ? run.continuedByRunId
+                ? " · worked its stint, then handed the queue to the next run"
+                : " · it did not finish"
               : run.status === "PENDING_APPROVAL"
                 ? " · waiting for someone to approve it"
                 : run.status === "SUCCESS"
@@ -297,19 +321,24 @@ export default function AgentJobDetailPage() {
         onOpenRun={(other) => router.push(`/admin/agents/${agentId}/observability/${other}`)}
       />
 
-      {(run.error || run.finalOutput) && (
-        <div
-          className={`rounded-[12px] border px-4 py-3 ${
-            run.error ? "border-rose-500/20 bg-rose-500/[0.06]" : "border-border-dim bg-white/[0.02]"
-          }`}
-        >
-          <div className="text-[11.5px] text-muted mb-1">
-            {run.error ? "Why it stopped" : "What it came back with"}
-          </div>
-          <p className={`text-[13px] leading-relaxed whitespace-pre-wrap ${run.error ? "text-rose-400" : "text-secondary"}`}>
-            {run.error || run.finalOutput}
-          </p>
+      {run.error && (
+        <div className="rounded-[12px] border border-rose-500/20 bg-rose-500/[0.06] px-4 py-3">
+          <div className="text-[11.5px] text-muted mb-1">Why it stopped</div>
+          <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-rose-400">{run.error}</p>
         </div>
+      )}
+
+      {/* template:remove:start salesData */}
+      <RunRecord runId={runId} />
+      {/* template:remove:end */}
+
+      {/* The model's own closing prose, demoted from the top of the page. It is
+          the agent narrating itself, written before anything checked it against
+          the database — the recorded rows above are the facts. It stays because
+          it sometimes explains a decision, but collapsed and labelled as an
+          account, never presented as the result. */}
+      {run.finalOutput && !run.error && (
+        <CollapsedAccount finalOutput={run.finalOutput} />
       )}
 
       <section
@@ -357,6 +386,139 @@ export default function AgentJobDetailPage() {
       </section>
 
       <RawExchange logs={logs} />
+    </div>
+  );
+}
+
+// template:remove:start salesData
+/**
+ * What this run actually recorded, from the rows it created — not from what the
+ * model says it did. Renders nothing for agents whose runs record nothing this
+ * screen knows how to read.
+ */
+function RunRecord({ runId }: { runId: Id<"agentRuns"> }) {
+  const record = useQuery(api.salesDataResearchJobs.getRunRecord, { runId });
+  if (!record) return null;
+
+  const total = record.details.length + record.prospects.length;
+  // A run that recorded nothing while claiming otherwise is the case this
+  // panel exists to expose, so an empty record is said outright rather than
+  // the panel quietly disappearing.
+  return (
+    <section
+      aria-label="What it recorded"
+      className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-3"
+    >
+      <div>
+        <h3 className="text-[14px] font-semibold text-foreground tracking-tight">What it recorded</h3>
+        <p className="text-[12px] text-secondary mt-1">
+          Built from the rows this run wrote, not from what the agent says it did.
+        </p>
+      </div>
+
+      {total === 0 ? (
+        <div className="rounded-[10px] border border-border-dim bg-white/[0.02] px-4 py-6 text-center">
+          <p className="text-[13px] text-foreground font-medium">This run recorded nothing</p>
+          <p className="text-[12px] text-muted mt-1">
+            If the account below says it did, that claim has nothing behind it.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {record.prospects.map((prospect, index) => (
+            <RecordLine
+              key={`prospect-${index}`}
+              subject={prospect.siteName}
+              detail={`${prospect.groupName} · ${prospect.outcome}`}
+              note={prospect.conflictNote}
+              sourceName={prospect.sourceName}
+              sourceUrl={prospect.sourceUrl}
+              good
+            />
+          ))}
+          {record.details.map((finding, index) => (
+            <RecordLine
+              key={`detail-${index}`}
+              subject={finding.subject}
+              detail={
+                finding.value !== null
+                  ? `${finding.field} · ${finding.outcome} · ${finding.value}`
+                  : `${finding.field} · ${finding.outcome}`
+              }
+              sourceName={finding.sourceName}
+              sourceUrl={finding.sourceUrl}
+              good={finding.saved}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RecordLine({
+  subject,
+  detail,
+  note,
+  sourceName,
+  sourceUrl,
+  good,
+}: {
+  subject: string;
+  detail: string;
+  note?: string | null;
+  sourceName: string | null;
+  sourceUrl: string | null;
+  good: boolean;
+}) {
+  return (
+    <div className="border-t border-border-dim/40 first:border-t-0 py-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+      <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${good ? "bg-emerald-500" : "bg-foreground/25"}`} />
+      <span className="text-[12.5px] font-medium text-foreground">{subject}</span>
+      <span className="text-[12.5px] text-secondary min-w-0">{detail}</span>
+      {note && <span className="text-[12px] text-amber-500 basis-full pl-4">{note}</span>}
+      {(sourceName || sourceUrl) && (
+        sourceUrl ? (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[11.5px] text-muted hover:text-foreground transition-colors truncate max-w-[260px] ml-auto"
+          >
+            {sourceName ?? sourceUrl.replace(/^https?:\/\/(www\.)?/, "")}
+          </a>
+        ) : (
+          <span className="text-[11.5px] text-muted truncate max-w-[260px] ml-auto">{sourceName}</span>
+        )
+      )}
+    </div>
+  );
+}
+// template:remove:end
+
+/** The agent's closing prose, collapsed, labelled as its account of its work. */
+function CollapsedAccount({ finalOutput }: { finalOutput: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-[12px] border border-border-dim bg-white/[0.02]">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left"
+      >
+        <span className="text-[12.5px] font-medium text-foreground flex-1">
+          The agent&apos;s own account of its work
+        </span>
+        <span className="text-[11.5px] text-muted">written by the agent, unchecked</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <p className="px-4 pb-4 text-[13px] leading-relaxed whitespace-pre-wrap text-secondary">
+          {finalOutput}
+        </p>
+      )}
     </div>
   );
 }

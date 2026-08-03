@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { isOpenAITextGenerationModel } from "./aiModelsActions";
-import { isUsableVertexModel, parseVertexModelId } from "./vertexProviderService";
+import { getMediaCapabilities, isOpenAITextGenerationModel } from "./aiModelsActions";
+import { isVertexTextGenerationModel, parseVertexModelId } from "./vertexProviderService";
 
 /**
  * The catalogue is whatever the provider says it is.
@@ -8,8 +8,10 @@ import { isUsableVertexModel, parseVertexModelId } from "./vertexProviderService
  * Both sync paths used to carry a list of model ids written into the source —
  * six for Vertex, twelve curated for OpenAI. Each one silently decided what
  * existed, went stale without saying so, and turned a failed sync into one that
- * looked successful. What is left is rules applied to whatever the provider
- * returns, and those rules are what these tests pin down.
+ * looked successful. A later filter repeated the fault in miniature: models
+ * whose names matched no known prefix were dropped without a trace. What is
+ * left is rules applied to whatever the provider returns — every model is
+ * catalogued, and the rules only decide what tags it carries.
  */
 describe("vertex catalogue listing", () => {
   test("takes the model id off the end of the resource name", () => {
@@ -18,31 +20,31 @@ describe("vertex catalogue listing", () => {
     expect(parseVertexModelId(undefined)).toBe("");
   });
 
-  test("keeps the models this platform can call and drops the rest", () => {
-    // Text generation and embeddings are the two things the runtime does.
-    expect(isUsableVertexModel("gemini-3.1-pro-preview")).toBe(true);
-    expect(isUsableVertexModel("gemini-2.5-flash")).toBe(true);
-    expect(isUsableVertexModel("text-embedding-004")).toBe(true);
+  test("tags text generation by what the id is not", () => {
+    expect(isVertexTextGenerationModel("gemini-3.1-pro-preview")).toBe(true);
+    expect(isVertexTextGenerationModel("gemini-2.5-flash")).toBe(true);
+    // A text model outside the Gemini family is still a text model — the
+    // gemini prefix requirement was an allowlist by another name.
+    expect(isVertexTextGenerationModel("medlm-large")).toBe(true);
 
-    // Vertex publishes far more than that from the same call. Listing these
-    // would fill the catalogue with models nothing here can reach.
-    expect(isUsableVertexModel("imagen-3.0-generate-001")).toBe(false);
-    expect(isUsableVertexModel("veo-2.0-generate-001")).toBe(false);
-    expect(isUsableVertexModel("gemini-2.5-flash-tts")).toBe(false);
-    expect(isUsableVertexModel("gemini-live-2.5-flash")).toBe(false);
-    expect(isUsableVertexModel("medlm-large")).toBe(false);
-    expect(isUsableVertexModel("")).toBe(false);
+    // These are catalogued too, but as what they are, not as chat models.
+    expect(isVertexTextGenerationModel("text-embedding-004")).toBe(false);
+    expect(isVertexTextGenerationModel("imagen-3.0-generate-001")).toBe(false);
+    expect(isVertexTextGenerationModel("veo-2.0-generate-001")).toBe(false);
+    expect(isVertexTextGenerationModel("gemini-2.5-flash-tts")).toBe(false);
+    expect(isVertexTextGenerationModel("gemini-live-2.5-flash")).toBe(false);
+    expect(isVertexTextGenerationModel("")).toBe(false);
   });
 
   test("a model Google releases tomorrow is picked up by the rule", () => {
     // The whole point of removing the list: nothing has to be edited here for a
-    // new Gemini to appear in the catalogue.
-    expect(isUsableVertexModel("gemini-4.0-ultra")).toBe(true);
+    // new Gemini — or a newly named family — to appear in the catalogue.
+    expect(isVertexTextGenerationModel("gemini-4.0-ultra")).toBe(true);
   });
 });
 
 describe("openai catalogue listing", () => {
-  test("keeps text generation models and drops every other kind", () => {
+  test("tags text generation by what the id is not", () => {
     expect(isOpenAITextGenerationModel("gpt-5-mini")).toBe(true);
     expect(isOpenAITextGenerationModel("o3")).toBe(true);
     expect(isOpenAITextGenerationModel("chatgpt-4o-latest")).toBe(true);
@@ -53,7 +55,20 @@ describe("openai catalogue listing", () => {
     expect(isOpenAITextGenerationModel("tts-1")).toBe(false);
   });
 
-  test("a model the curated list never knew about is kept", () => {
+  test("a model family with a brand-new name is text generation by default", () => {
+    // The old rule ended with a prefix allowlist — gpt-, o1, o3, o4, chatgpt- —
+    // so a family named without one would have vanished from the sync. Unknown
+    // names now default in rather than out.
     expect(isOpenAITextGenerationModel("gpt-6-turbo")).toBe(true);
+    expect(isOpenAITextGenerationModel("sol-1")).toBe(true);
+    expect(isOpenAITextGenerationModel("luna-preview")).toBe(true);
+  });
+
+  test("non-text models are tagged by their markers", () => {
+    expect(getMediaCapabilities("dall-e-3")).toEqual(["image"]);
+    expect(getMediaCapabilities("sora-2")).toEqual(["video"]);
+    expect(getMediaCapabilities("whisper-1")).toEqual(["audio"]);
+    expect(getMediaCapabilities("gpt-4o-mini-tts")).toEqual(["audio"]);
+    expect(getMediaCapabilities("omni-moderation-latest")).toEqual(["moderation"]);
   });
 });

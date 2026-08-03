@@ -145,7 +145,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                         border: "1px solid rgba(255,255,255,0.1)",
                       }}
                       itemStyle={{ color: "#ffffff", fontSize: "13px", fontWeight: 600 }}
-                      formatter={(value: unknown) => `£${Number(value).toFixed(4)}`}
+                      formatter={(value: unknown) => `$${Number(value).toFixed(4)}`}
                     />
                     <Legend
                       iconType="circle"

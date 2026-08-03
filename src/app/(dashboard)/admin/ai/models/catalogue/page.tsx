@@ -72,11 +72,17 @@ export default function AIModelCataloguePage() {
   const pageStart = (page - 1) * pageSize;
   const models = fetchedModels.slice(pageStart, pageStart + pageSize);
   const isFiltered = Boolean(debouncedSearch.trim()) || providerFilter !== "all";
-  const knownTotal = !isFiltered && counts?.computedAt && !counts.isPartial
+  const totalIsKnown = !isFiltered && Boolean(counts?.computedAt) && !counts?.isPartial;
+  const knownTotal = totalIsKnown && counts
     ? (statusFilter === "active" ? counts.enabledModels : counts.totalModels - counts.enabledModels)
     : fetchedModels.length;
   const totalCount = knownTotal;
-  const totalPages = Math.max(1, Math.ceil(knownTotal / pageSize));
+  // When no rollup can answer, the only total anyone has is how much has been
+  // fetched — which once made ceil(fetched / pageSize) the last page and greyed
+  // out Next, so nothing past the first page could ever be reached. While the
+  // database says there is more, there is at least one more page than that.
+  const hasMore = paginationStatus === "CanLoadMore" || paginationStatus === "LoadingMore";
+  const totalPages = Math.max(1, Math.ceil(knownTotal / pageSize) + (!totalIsKnown && hasMore ? 1 : 0));
 
   // Stepping past what has been fetched pulls the next page in first.
   const goToPage = (next: number) => {
@@ -185,10 +191,15 @@ export default function AIModelCataloguePage() {
             onPageChange={goToPage}
             labels={{
               empty: "No models found",
-              showing: (start, end, total) =>
-                isFiltered
-                  ? `Showing ${start}-${end} of ${total} matching`
-                  : `Showing ${start}-${end} of ${total} models`,
+              // While more pages exist than have been fetched, the total is a
+              // floor, not a count — the "+" keeps the pager from claiming a
+              // finished number it does not have.
+              showing: (start, end, total) => {
+                const shownTotal = !totalIsKnown && hasMore ? `${total}+` : `${total}`;
+                return isFiltered
+                  ? `Showing ${start}-${end} of ${shownTotal} matching`
+                  : `Showing ${start}-${end} of ${shownTotal} models`;
+              },
             }}
           />
         }
@@ -206,7 +217,7 @@ export default function AIModelCataloguePage() {
           </tr>
         </thead>
         <tbody>
-          {isLoading ? (
+          {isLoading || (paginationStatus === "LoadingMore" && models.length === 0) ? (
             <AdminTableLoadingRow colSpan={5} />
           ) : models.length === 0 ? (
             <AdminTableEmptyRow

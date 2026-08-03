@@ -33,14 +33,14 @@ describe("formatDuration", () => {
 
 describe("formatMoney", () => {
   it("keeps a per-job cost readable without making a weekly total unreadable", () => {
-    expect(formatMoney(0.014)).toBe("£0.014");
-    expect(formatMoney(0.0001)).toBe("£0.0001");
-    expect(formatMoney(17.98)).toBe("£17.98");
-    expect(formatMoney(1234.5)).toBe("£1,234.50");
+    expect(formatMoney(0.014)).toBe("$0.014");
+    expect(formatMoney(0.0001)).toBe("$0.0001");
+    expect(formatMoney(17.98)).toBe("$17.98");
+    expect(formatMoney(1234.5)).toBe("$1,234.50");
   });
 
   it("shows nothing spent as zero, not as a dash", () => {
-    expect(formatMoney(0)).toBe("£0.00");
+    expect(formatMoney(0)).toBe("$0.00");
   });
 
   it("shows a dash when there is no figure at all", () => {

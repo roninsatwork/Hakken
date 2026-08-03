@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { superAdminQuery } from "./tenantFunctions";
+import { calculateModelCostGBP } from "./aiCostService";
 // template:remove:start salesData
 import { recordAccounts } from "./salesData";
 import { normalizeKey } from "./salesDataImportService";
@@ -16,6 +18,13 @@ import {
 
 /** The model Google retired, kept here only so the migration can retire the row. */
 const RETIRED_EMBEDDING_MODEL_ID = "text-embedding-004";
+
+/**
+ * Below this, a difference between a stored and a recomputed cost is floating
+ * point noise rather than a mispriced row. Costs run to six decimal places on
+ * screen, so the tolerance sits an order of magnitude below what anyone reads.
+ */
+const REPRICE_TOLERANCE = 1e-9;
 
 /**
  * Data migrations and backfills.
@@ -388,6 +397,72 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     for (const memory of page.page) {
       if (memory.applyMode !== undefined) continue;
       await ctx.db.patch(memory._id, { applyMode: agentKindToApplyMode(memory.kind) });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /**
+   * Re-prices `agentTransactions` rows that were charged nothing for their input.
+   *
+   * A model whose catalogue record left `standardInputCostAbove200k` at zero had
+   * that read as "free" rather than "unknown", so every call sending more than
+   * two hundred thousand tokens was billed for its output alone. On one agent
+   * that was twenty-two calls recorded at under a cent each against a real cost
+   * of about a third of a dollar, and the agent's headline spend was seven
+   * dollars light. `calculateModelCostGBP` now falls back to the standard rate,
+   * so new rows are right; the rows already written keep the old number.
+   *
+   * Only rows the catalogue can still price are touched, and only where the
+   * stored figure is materially below the recomputed one. A row that already
+   * agrees, or whose model has since left the catalogue, is left exactly as it
+   * is — this corrects an undercharge, it does not restate history downward.
+   *
+   * Cached input cannot be recovered: the proportion a provider served from
+   * cache was never stored on the row, so these are re-priced at the full
+   * standard rate. That over-states them slightly, which is the safe direction
+   * for a figure a spend ceiling is enforced against.
+   */
+  "2026-08-03-reprice-unpriced-agent-transactions": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("agentTransactions").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    // One lookup per distinct model rather than per row: a batch is usually all
+    // the same model, and the catalogue read is the expensive part.
+    const rateCache = new Map<string, Doc<"aiModels"> | null>();
+    const getRates = async (modelId: string) => {
+      if (!rateCache.has(modelId)) {
+        rateCache.set(
+          modelId,
+          await ctx.db
+            .query("aiModels")
+            .withIndex("by_model_id", (q) => q.eq("modelId", modelId))
+            .first()
+        );
+      }
+      return rateCache.get(modelId) ?? null;
+    };
+
+    for (const transaction of page.page) {
+      const rates = await getRates(transaction.modelUsed);
+      if (!rates) continue;
+
+      const recomputed = calculateModelCostGBP({
+        inputTokens: transaction.inputTokens,
+        outputTokens: transaction.outputTokens,
+        rates,
+      });
+      // Idempotent, and one-directional: a second run finds nothing left below
+      // its recomputed price and changes nothing.
+      if (recomputed <= transaction.costGBP + REPRICE_TOLERANCE) continue;
+
+      await ctx.db.patch(transaction._id, { costGBP: recomputed });
       updated += 1;
     }
 

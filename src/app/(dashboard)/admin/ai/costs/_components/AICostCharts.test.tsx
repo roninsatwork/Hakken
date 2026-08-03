@@ -72,7 +72,7 @@ describe("AI cost charts", () => {
       </>
     );
 
-    expect(screen.getByText("Daily Cost (£ GBP)")).toBeInTheDocument();
+    expect(screen.getByText("Daily Cost (USD)")).toBeInTheDocument();
     expect(screen.getByText("No spend yet")).toBeInTheDocument();
     expect(screen.getAllByText("No Data")).toHaveLength(3);
   });

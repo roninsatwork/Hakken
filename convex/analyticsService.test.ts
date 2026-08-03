@@ -2,12 +2,10 @@ import { describe, expect, test } from "vitest";
 import {
   buildModelCostContext,
   computeCostFromMap,
-  convertUsdToGbp,
   createTimelineMap,
   formatAnalyticsDateGroup,
   getAggregationType,
   roundMetric,
-  USD_TO_GBP_RATE,
 } from "./analyticsService";
 
 describe("analytics service helpers", () => {
@@ -68,9 +66,10 @@ describe("analytics service helpers", () => {
     expect(computeCostFromMap("missing-model", 300000, 500000, modelMap)).toBe(0);
   });
 
-  test("converts and rounds analytics currency metrics", () => {
-    expect(USD_TO_GBP_RATE).toBe(0.78);
-    expect(convertUsdToGbp(10)).toBeCloseTo(7.8);
+  test("rounds analytics metrics without converting currency", () => {
+    // Spend is reported in the provider's own currency. There is no exchange
+    // rate to apply, and the hardcoded 0.78 that used to live here was a guess
+    // printed under a pound sign.
     expect(roundMetric(1.23456, 2)).toBe(1.23);
   });
 });

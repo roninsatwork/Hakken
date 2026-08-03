@@ -119,6 +119,17 @@ function getOptionalStringToolArg(args: Record<string, unknown>, key: string) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+/** A list of lines, dropping whatever in it is not a usable line. */
+function getOptionalStringArrayToolArg(args: Record<string, unknown>, key: string) {
+  const value = args[key];
+  if (!Array.isArray(value)) return undefined;
+  const lines = value
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+  return lines.length > 0 ? lines : undefined;
+}
+
 /**
  * A yes/no argument, however the model chose to spell it.
  *
@@ -576,10 +587,11 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       throw new Error("Customer research needs a workspace, and this run has none.");
     }
 
-    return await input.ctx.runMutation(internal.salesDataResearch.recordProspect, {
+    const siteName = getStringToolArg(input.args, "siteName");
+    const recorded = await input.ctx.runMutation(internal.salesDataResearch.recordProspect, {
       companyId: input.companyId,
       groupName: getStringToolArg(input.args, "groupName"),
-      siteName: getStringToolArg(input.args, "siteName"),
+      siteName,
       town: getOptionalStringToolArg(input.args, "town"),
       postcode: getOptionalStringToolArg(input.args, "postcode"),
       sourceUrl: getOptionalStringToolArg(input.args, "sourceUrl"),
@@ -588,6 +600,80 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       ...(input.agentId ? { agentId: input.agentId } : {}),
       ...(input.runId ? { runId: input.runId } : {}),
       ...(input.toolCallId ? { toolCallId: input.toolCallId } : {}),
+    });
+
+    // A prospect found by the chain pass is the third pass's work, and it is
+    // queued the moment it is filed rather than waiting for somebody to press
+    // anything. Only when a job is running: a one-off prospecting run outside a
+    // job leaves the queue alone.
+    const prospectKey = (recorded as { prospectKey?: string } | null)?.prospectKey;
+    if (prospectKey) {
+      await input.ctx.runMutation(internal.salesDataResearchJobs.appendProspectItemInternal, {
+        companyId: input.companyId,
+        prospectKey,
+        siteName,
+      });
+    }
+
+    return recorded;
+  },
+  /**
+   * Hand the run its next piece of work.
+   *
+   * The only tool that knows there is a job at all. Everything else the agent
+   * does is the same whether it was started by a person or by the queue, which
+   * is what keeps a single manual run working exactly as it did.
+   */
+  "salesCustomers.job.next": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Customer research needs a workspace, and this run has none.");
+    }
+
+    const couldNot = input.args.couldNot === true || input.args.couldNot === "true";
+
+    return await input.ctx.runMutation(internal.salesDataResearchJobs.claimNextTaskInternal, {
+      companyId: input.companyId,
+      previousOutcome: couldNot ? "COULD_NOT" : "DONE",
+      note: getOptionalStringToolArg(input.args, "note"),
+      ...(input.runId ? { runId: input.runId } : {}),
+    });
+  },
+  /**
+   * The opportunity report's three passes, in their fixed order.
+   *
+   * Each one runs a deterministic pass from `salesOpportunityService.ts` and
+   * writes what it computed onto the report row. The agent orders the calls
+   * and writes the prose; it never supplies a number, and the save pass
+   * refuses prose naming a figure the passes did not compute.
+   */
+  "opportunityReport.matchProspects": async (input) => {
+    if (!input.companyId) {
+      throw new Error("The opportunity report needs a workspace, and this run has none.");
+    }
+    return await input.ctx.runMutation(internal.salesOpportunityReports.runMatchingPassInternal, {
+      companyId: input.companyId,
+      ...(input.runId ? { runId: input.runId } : {}),
+      ...(input.userId ? { userId: input.userId } : {}),
+    });
+  },
+  "opportunityReport.findGroupGaps": async (input) => {
+    if (!input.companyId) {
+      throw new Error("The opportunity report needs a workspace, and this run has none.");
+    }
+    return await input.ctx.runMutation(internal.salesOpportunityReports.runGapsPassInternal, {
+      companyId: input.companyId,
+      ...(input.runId ? { runId: input.runId } : {}),
+    });
+  },
+  "opportunityReport.saveSummary": async (input) => {
+    if (!input.companyId) {
+      throw new Error("The opportunity report needs a workspace, and this run has none.");
+    }
+    return await input.ctx.runMutation(internal.salesOpportunityReports.saveSummaryInternal, {
+      companyId: input.companyId,
+      summary: getStringToolArg(input.args, "summary"),
+      exceptions: getOptionalStringArrayToolArg(input.args, "exceptions"),
+      ...(input.runId ? { runId: input.runId } : {}),
     });
   },
   // template:remove:end

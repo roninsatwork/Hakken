@@ -475,6 +475,117 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
           },
         }),
       },
+      {
+        name: "Comax — Ask for the next research task",
+        description:
+          "Gives you the next thing to research and closes off the last one. Each task is one "
+          + "customer, one chain, or one prospect, and it says which and what to do. Call it "
+          + "again the moment you have finished a task; keep going until it tells you there is "
+          + "nothing left, then stop. Say couldNot if you could not finish a task — it will be "
+          + "given to another run rather than lost, and saying so is better than moving on "
+          + "quietly.",
+        handlerMapping: "salesCustomers.job.next",
+        requiredRole: "ADMIN",
+        // Writes only to the job's own queue — which item is in hand, which is
+        // finished. It cannot touch a customer, a prospect or a finding.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            couldNot: {
+              type: "boolean",
+              description:
+                "True when you could not finish the task you were last given. Leave it out when "
+                + "you finished it.",
+            },
+            note: {
+              type: "string",
+              description:
+                "One line on why you could not finish it. Only read when couldNot is true.",
+            },
+          },
+        }),
+      },
+    ],
+  },
+  {
+    key: "sales-opportunity-report",
+    // Named for the client, like the research connector above, and inside the
+    // same `salesData` fence so the framework template strips it wholesale.
+    name: "Comax Opportunity Report",
+    description:
+      "Lets an agent build the opportunity report: price every prospect from the spend of "
+      + "similar customers, find the categories a chain member is not buying that its siblings "
+      + "are, and file the report with its own summary on top.",
+    category: "WORKFLOW",
+    // Reads the workspace's own sales data and writes one report row. Every
+    // figure comes from a deterministic pass in code; nothing external.
+    authMode: "NONE",
+    // Restricted for the same reason as the research connector: these tools
+    // serve screens that only exist for a workspace with the sales data
+    // section switched on.
+    tenantAvailability: "TENANT_RESTRICTED",
+    requiredScopes: [],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Comax — Price the prospects",
+        description:
+          "Prices every prospect on file against the customers most like it — same kind of "
+          + "business, similar size in beds or pupils, its own chain first — and writes the "
+          + "report's first section. Returns every priced row with the customers it was "
+          + "compared to, so you can read the results. Call this first; it opens the report.",
+        handlerMapping: "opportunityReport.matchProspects",
+        requiredRole: "ADMIN",
+        // Writes the computed section onto the workspace's own report row.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+      {
+        name: "Comax — Find the gaps inside the chains",
+        description:
+          "Finds every product category a chain member's siblings buy that it does not, prices "
+          + "each gap from what the siblings spend, and writes the report's second section and "
+          + "its headline totals. Call it after the prospects are priced.",
+        handlerMapping: "opportunityReport.findGroupGaps",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+      {
+        name: "Comax — Save the report summary",
+        description:
+          "Saves your executive summary onto the report and finishes it. Quote every pound "
+          + "figure exactly as the pricing tools returned it — a summary naming a figure the "
+          + "report does not hold is refused, with the offending figures listed so you can "
+          + "correct it. List anything that could not be priced as an exception.",
+        handlerMapping: "opportunityReport.saveSummary",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["summary"],
+          properties: {
+            summary: {
+              type: "string",
+              description:
+                "The executive summary as markdown: which opportunities matter most and why, "
+                + "naming chains and sites, in plain sentences a salesperson can act on.",
+            },
+            exceptions: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "One line each for anything the report could not do — a prospect that could "
+                + "not be priced, a chain too small to compare.",
+            },
+          },
+        }),
+      },
     ],
   },
   // template:remove:end

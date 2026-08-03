@@ -22,7 +22,7 @@ import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { formatEstimatedChatCostGbp, getChatTokenTotal } from "@/src/lib/chatTelemetry";
+import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 
@@ -239,7 +239,7 @@ export default function ChatLogsDashboard() {
                       <div className="flex flex-col items-start">
                         <span className="text-[9px] uppercase font-mono tracking-widest text-muted mb-0.5">{t("viewer.estCost")}</span>
                         <span className="text-[14px] font-bold text-brand tracking-wider">
-                          £{formatEstimatedChatCostGbp(messages)}
+                          ${formatEstimatedChatCostUsd(messages)}
                         </span>
                       </div>
                     </div>

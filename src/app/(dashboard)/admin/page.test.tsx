@@ -85,7 +85,7 @@ describe("AdminDashboardPage", () => {
     render(<AdminDashboardPage />);
 
     expect(screen.getByText("£400.00")).toBeInTheDocument();
-    expect(screen.getByText("AI spend £12.50 · 3.1% of it")).toBeInTheDocument();
+    expect(screen.getByText("AI spend $12.50 · 3.1% of it")).toBeInTheDocument();
   });
 
   it("says how many seats are actually used", () => {

@@ -140,10 +140,18 @@ export function buildModelSearchText(model: {
  * it could not run when it did not.
  */
 const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription"]);
-const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow"]);
-const AGENT_CAPABLE_PROVIDER_KEYS = new Set([
+export const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow"]);
+/**
+ * The providers the agent runtime has an adapter for.
+ *
+ * One list, shared by the registry (which throws for anything else) and the
+ * screens (which must not offer what would throw). Two lists drifted once: the
+ * dropdown offered a provider's model, and the run refused at its first step.
+ */
+export const AGENT_CAPABLE_PROVIDER_KEYS = new Set([
   GOOGLE_VERTEX_PROVIDER_KEY,
   ANTHROPIC_PROVIDER_KEY,
+  OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
 ]);
 

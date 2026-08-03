@@ -86,7 +86,7 @@ export default function AgentDashboard() {
             <TerminalSquare className="w-3.5 h-3.5" /> {t("stats.opex")}
           </div>
           <div className="text-3xl font-bold text-foreground font-mono mt-1">
-            {stats === undefined ? <Loader2 className="w-5 h-5 animate-spin text-muted/50 mt-1" /> : `£${stats.totalOpexCost < 0.00001 && stats.totalOpexCost > 0 ? "< 0.00001" : stats.totalOpexCost.toFixed(5)}`}
+            {stats === undefined ? <Loader2 className="w-5 h-5 animate-spin text-muted/50 mt-1" /> : `$${stats.totalOpexCost < 0.00001 && stats.totalOpexCost > 0 ? "< 0.00001" : stats.totalOpexCost.toFixed(5)}`}
           </div>
         </div>
       </div>
@@ -164,7 +164,7 @@ export default function AgentDashboard() {
                   </td>
                   <td className="px-5 py-4 text-right">
                     <span className="text-[13px] font-mono font-medium text-foreground tracking-tight">
-                      £{tx.costGBP.toFixed(6)}
+                      ${tx.costGBP.toFixed(6)}
                     </span>
                   </td>
                   <td className="px-5 py-4 pr-6 flex justify-end">

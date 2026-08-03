@@ -298,7 +298,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">Gross AI Cost</span>
-          <span className="text-2xl font-medium text-foreground">£{costs.totalCostGBP.toFixed(4)}</span>
+          <span className="text-2xl font-medium text-foreground">${costs.totalCostGBP.toFixed(4)}</span>
         </div>
         <div className="p-5 border border-border-dim/50 rounded-[12px] bg-background/30 flex flex-col gap-2">
           <span className="text-[11px] font-medium text-secondary uppercase tracking-widest">Total Tokens Executed</span>
@@ -335,7 +335,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                 <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Date Started</th>
                 <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Messages</th>
                 <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Tokens Used</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">Cost (£)</th>
+                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">Cost ($)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-dim/30">
@@ -363,7 +363,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                       <span className="text-[13px] text-secondary">{thread.threadTokens.toLocaleString()}</span>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <span className="text-[13px] font-medium text-brand">£{thread.costGBP.toFixed(4)}</span>
+                      <span className="text-[13px] font-medium text-brand">${thread.costGBP.toFixed(4)}</span>
                     </td>
                   </tr>
                 ))

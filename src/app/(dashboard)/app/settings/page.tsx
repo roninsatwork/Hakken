@@ -122,7 +122,7 @@ const ProviderUsageList = ({ providers }: { providers?: CompanyMetricsData["prov
               </span>
             </div>
             <span className="text-[13px] font-bold text-foreground tracking-tight">
-              £{provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+              ${provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
             </span>
           </div>
         ))
@@ -227,7 +227,7 @@ export default function CompanySettingsDashboard() {
             <MetricBlock
               icon={PoundSterling}
               title={t('metrics.logisticBurn')}
-              value={`£${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
+              value={`$${(data.aggregates.totalCostGBP ?? 0).toLocaleString('en-GB', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}`}
               sub={t('metrics.burnSub')}
               delay={0.2}
             />
@@ -271,7 +271,7 @@ export default function CompanySettingsDashboard() {
                         </linearGradient>
                       </defs>
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888888' }} dy={10} />
-                      <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888888' }} tickFormatter={(val) => `£${Number(val || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`} width={80} />
+                      <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888888' }} tickFormatter={(val) => `$${Number(val || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`} width={80} />
                       <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888888' }} tickFormatter={(val) => val.toLocaleString()} width={40} />
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                       <Tooltip
@@ -279,7 +279,7 @@ export default function CompanySettingsDashboard() {
                         itemStyle={{ color: '#ffffff', fontSize: '13px', fontWeight: 600 }}
                         labelStyle={{ color: '#888888', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}
                         formatter={(value: ValueType | undefined, name: NameType | undefined) => [
-                          name === 'cost' ? `£${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}` : value,
+                          name === 'cost' ? `$${Number(value || 0).toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}` : value,
                           name === 'cost' ? t('charts.estimatedCost') : t('charts.globalMessages')
                         ]}
                       />
@@ -332,7 +332,7 @@ export default function CompanySettingsDashboard() {
                         </div>
                         <div className="flex flex-col items-end w-[65px]">
                           <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">${u.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                         </div>
                       </div>
                     </div>
@@ -372,7 +372,7 @@ export default function CompanySettingsDashboard() {
                         </div>
                         <div className="flex flex-col items-end w-[65px]">
                           <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
-                          <span className="text-[13px] font-bold text-foreground tracking-tight">£{a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                          <span className="text-[13px] font-bold text-foreground tracking-tight">${a.cost.toLocaleString('en-GB', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                         </div>
                       </div>
                     </div>

@@ -22,8 +22,11 @@ type CheckRun = {
  */
 function formatRunCost(costGBP: number | undefined) {
   if (typeof costGBP !== "number" || !Number.isFinite(costGBP) || costGBP <= 0) return null;
-  const pence = costGBP * 100;
-  return pence < 1 ? `${pence.toFixed(2)}p` : `£${costGBP.toFixed(2)}`;
+  // Dollars: the stored figure is the provider's own price and nothing converts
+  // it. Sub-cent runs are the norm here, so cents read better than a string of
+  // zeros after a currency sign.
+  const cents = costGBP * 100;
+  return cents < 1 ? `${cents.toFixed(2)}¢` : `$${costGBP.toFixed(2)}`;
 }
 
 function describeStatus(entry: CheckRun | undefined) {

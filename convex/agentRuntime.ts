@@ -874,12 +874,6 @@ export const continueAgentObjective = internalAction({
       runId: args.runId,
     });
     if (!checkpoint || checkpoint.status !== "ACTIVE") return;
-    if (!checkpoint.threadId) {
-      // Only chat-triggered runs use this loop; anything else has no reply to
-      // write and nothing to resume into.
-      await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId: args.runId });
-      return;
-    }
 
     const runState = await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, {
       runId: args.runId,
@@ -891,6 +885,12 @@ export const continueAgentObjective = internalAction({
       return;
     }
 
+    // Absent for triggered work: a run started by a schedule or a job has no
+    // conversation, and the loop below already writes nothing in that case.
+    // This function used to treat a missing thread as "not resumable" and
+    // delete the checkpoint — which silently killed every triggered run at its
+    // first segment handover, leaving it marked RUNNING with nothing left for
+    // the stall sweeper to find.
     const threadId = checkpoint.threadId;
     const stream = createStreamState(checkpoint.streamMessageId);
     const promptCache: { name?: string } = { name: checkpoint.promptCacheName };
@@ -904,6 +904,10 @@ export const continueAgentObjective = internalAction({
       execution = await buildLoopExecutionContext(ctx, {
         agentId: checkpoint.agentId,
         threadId,
+        // With no thread to read the owner from, the run row is the record of
+        // whose work this is. Without it a resumed segment would rebuild its
+        // tools with no company, and every workspace-scoped tool would fail.
+        owner: { companyId: runState.companyId, userId: runState.userId },
       });
 
       const conversationHistory = JSON.parse(checkpoint.transcriptJson) as Content[];

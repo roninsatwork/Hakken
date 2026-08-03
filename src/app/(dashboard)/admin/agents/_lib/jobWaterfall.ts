@@ -39,6 +39,12 @@ export type WaterfallStepInput = {
    * stores the runtime's own name for the tool. Neither is worth showing.
    */
   toolName?: string;
+  /**
+   * What the call was about — "postcode · FAIRMILE GRANGE", a URL — so forty
+   * calls to the same tool read as forty different pieces of work rather than
+   * forty identical lines. Resolved by the caller from the call's arguments.
+   */
+  toolSubject?: string;
 };
 
 export type WaterfallTone = "thinking" | "tool" | "waiting" | "failed";
@@ -77,19 +83,80 @@ export function humaniseToolName(runtimeName: string): string {
  * `apify_actor_run` on the result step. Neither told the reader the one thing
  * they came to the chart for: which tool ran, and when.
  */
-export function describeStepKind(kind: string, input?: string, toolName?: string): string {
+export function describeStepKind(
+  kind: string,
+  input?: string,
+  toolName?: string,
+  toolSubject?: string,
+): string {
   const tool = toolName?.trim();
+  const subject = toolSubject?.trim();
   switch (kind) {
     case "OBSERVE": return "Read the request";
     case "PLAN": return "Decided what to do";
     case "REPLAN": return "Changed its plan";
     case "MODEL": return "Thought about it";
-    case "TOOL_CALL": return tool ? `Used ${tool}` : "Used a tool";
+    case "TOOL_CALL":
+      if (tool && subject) return `Used ${tool} · ${subject}`;
+      return tool ? `Used ${tool}` : "Used a tool";
     case "TOOL_RESULT": return tool ? `Read what ${tool} sent back` : "Read the result";
     case "APPROVAL_REQUEST": return "Waited for someone to approve";
     case "FINAL": return "Wrote the answer";
     default: return kind;
   }
+}
+
+/**
+ * Which argument keys are worth putting on the chart, most telling first.
+ *
+ * `field` before the account: "postcode · FAIRMILE GRANGE" answers "doing
+ * what, to whom" in that order. URLs and queries are what the reading tools
+ * carry. Values are deliberately not shown — the chart says what a step was
+ * doing, and the recorded rows are where what it found belongs.
+ */
+const SUBJECT_ARGUMENT_KEYS = [
+  "field",
+  "accountNameKey",
+  "groupNameKey",
+  "siteName",
+  "groupName",
+  "url",
+  "query",
+] as const;
+
+/**
+ * What a tool call was about, from its recorded arguments.
+ *
+ * Best-effort by design: arguments may be redacted, truncated for preview, or
+ * shaped in a way this has never seen, and a chart label is not worth an error
+ * state. Anything unreadable simply gets no subject.
+ */
+export function describeToolCallSubject(argumentsPreview?: string): string | undefined {
+  if (!argumentsPreview) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(argumentsPreview);
+  } catch {
+    return undefined;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+
+  const record = parsed as Record<string, unknown>;
+  const parts: string[] = [];
+  for (const key of SUBJECT_ARGUMENT_KEYS) {
+    const value = record[key];
+    if (typeof value !== "string") continue;
+    const cleaned = key === "url"
+      ? value.trim().replace(/^https?:\/\/(www\.)?/, "")
+      : value.trim();
+    if (!cleaned) continue;
+    parts.push(cleaned);
+    if (parts.length === 2) break;
+  }
+  if (parts.length === 0) return undefined;
+
+  const subject = parts.join(" · ");
+  return subject.length > 60 ? `${subject.slice(0, 57)}...` : subject;
 }
 
 /** How a step ended, in words rather than the runtime's own states. */
@@ -143,7 +210,7 @@ export function buildWaterfall(
     const rawWidth = (entry.durationMs / totalMs) * 100;
     return {
       id: entry.step._id,
-      label: describeStepKind(entry.step.kind, entry.step.input, entry.step.toolName),
+      label: describeStepKind(entry.step.kind, entry.step.input, entry.step.toolName, entry.step.toolSubject),
       offsetPercent: Math.min(((entry.startedAt - options.runStartedAt) / totalMs) * 100, 100),
       widthPercent: Math.min(Math.max(rawWidth, MIN_VISIBLE_PERCENT), 100),
       durationMs: entry.durationMs,

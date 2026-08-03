@@ -683,7 +683,7 @@ describe("analytics cron snapshots", () => {
     });
     expect(health.operations.highCostAgents).toMatchObject({ count: 1 });
     expect(health.operations.highCostAgents.examples[0]).toMatchObject({
-      summary: expect.stringContaining("£6.50"),
+      summary: expect.stringContaining("$6.50"),
       targetName: "Ops Agent",
     });
     expect(health.operations.failedScheduledExecutions).toMatchObject({ count: 1 });

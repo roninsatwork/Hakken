@@ -1,6 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import { superAdminQuery } from "./tenantFunctions";
-import { buildModelCostContext, computeCostFromMap, convertUsdToGbp } from "./analyticsService";
+import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 30;
@@ -130,12 +130,12 @@ export const getPlatformOverview = superAdminQuery({
       // Every message is an AI call; only the ones a person typed are questions.
       // The gap between the two lines is automation running unasked.
       bucket.aiCalls += 1;
-      const cost = convertUsdToGbp(computeCostFromMap(
+      const cost = computeCostFromMap(
         message.modelUsed ?? "",
         message.inputTokens ?? 0,
         message.outputTokens ?? 0,
         modelMap,
-      ));
+      );
       bucket.spendGBP += cost;
       aiSpendGBP += cost;
       if (message.role !== "user") continue;
@@ -156,6 +156,16 @@ export const getPlatformOverview = superAdminQuery({
       const bucket = daily.get(dayKey(run.startedAt));
       if (bucket) bucket.aiCalls += 1;
       noteActivity(run.userId, run.startedAt);
+      // A run attached to a thread has already written its tokens onto the reply
+      // it left there, so the message loop above has priced it; adding the run
+      // again would charge that work twice. What is left is the work nobody was
+      // sitting in front of — scheduled agents, webhooks, workflows — which had
+      // no message to be counted through and so cost the platform nothing on
+      // paper, however long it ran.
+      if (run.threadId) continue;
+      const runCost = run.costGBP ?? 0;
+      if (bucket) bucket.spendGBP += runCost;
+      aiSpendGBP += runCost;
     }
 
     const signInBands = dayKeys.map((key) => {

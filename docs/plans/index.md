@@ -95,6 +95,20 @@ completed work.
   access to workspace customer data, before adding anything to the customer
   list that is not an imported account, and it defers autonomy and approval
   behaviour to the Agent Autonomy And Approvals Plan.
+- [Comax Opportunity Report Plan](./active/comax-opportunity-report-plan.md) —
+  the plan for the Comax - Opportunity Report Agent and its screen: pricing
+  every prospect from the spend of similar-sized customers (bedrooms for care
+  homes, pupils for schools, same parent group first), pricing the product
+  categories a chain member is not buying that its siblings are, and the
+  report screen with the run button and progress bar. Owns the
+  `salesOpportunityReports` table, the `opportunityReport.*` tools, and
+  `/app/<workspace>/opportunity-report`. Read it before adding anything
+  opportunity-or-revenue-shaped to the sales data vertical.
+- [Research Agent Autopilot Plan](./active/research-agent-autopilot-plan.md) —
+  turning the customer research and prospecting sweeps into one job that runs all
+  three tasks to completion under a single press, replacing the fan-out of one
+  agent run per customer and per chain. Read it before touching the sweeps in
+  `convex/salesDataResearch.ts`.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -119,6 +133,8 @@ or whether the user frontend starts an agent or a scraper directly, use the
 Rightmove Agent Execution Plan. If work touches an agent filling in customer
 details from the internet, use the Workspace Customer Research Agent Plan; if it
 touches the customer screens themselves, the Workspace Customer CRM Plan wins.
+If work touches revenue opportunities — prospect valuation, group gap analysis,
+or the opportunity report screen — use the Comax Opportunity Report Plan.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the
 Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.

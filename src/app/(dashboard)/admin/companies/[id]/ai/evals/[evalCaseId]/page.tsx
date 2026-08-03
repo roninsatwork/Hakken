@@ -60,10 +60,11 @@ function formatRunCost(run: CompanyEvalRun | undefined) {
   try {
     const parsed = JSON.parse(run.costJson) as { totalGBP?: unknown };
     if (typeof parsed.totalGBP !== "number" || !Number.isFinite(parsed.totalGBP) || parsed.totalGBP <= 0) return null;
-    // Sub-penny runs are the norm here, so pence with two decimals reads better than
-    // a string of zeros after a pound sign.
-    const pence = parsed.totalGBP * 100;
-    return pence < 1 ? `${pence.toFixed(2)}p` : `£${parsed.totalGBP.toFixed(2)}`;
+    // Sub-cent runs are the norm here, so cents with two decimals read better than
+    // a string of zeros after a currency sign. Dollars, because the stored figure
+    // is the provider's own price and nothing converts it.
+    const cents = parsed.totalGBP * 100;
+    return cents < 1 ? `${cents.toFixed(2)}¢` : `$${parsed.totalGBP.toFixed(2)}`;
   } catch {
     return null;
   }

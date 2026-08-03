@@ -58,6 +58,118 @@ function useAnalytics(agentId: Id<"agents">, lookbackDays: number) {
   return useQuery(api.agentRuns.getAnalyticsForAgent, { agentId, lookbackDays });
 }
 
+// template:remove:start salesData
+/**
+ * The job this agent is working, above the runs that carry it out.
+ *
+ * A run list answers "what did it do at 09:14". It cannot answer "is the list
+ * finished", because no run knows about the list — which is the whole reason the
+ * job exists. Anthony, 2026-08-03: *"what is the purpose of building
+ * observability tools if you hide stuff from it."*
+ *
+ * Shows nothing at all for an agent that has never had a job, rather than an
+ * empty panel every other agent has to scroll past.
+ */
+function ResearchJobPanel({ agentId }: { agentId: Id<"agents"> }) {
+  const job = useQuery(api.salesDataResearchJobs.getResearchJobForAgent, { agentId });
+  if (!job) return null;
+
+  const isRunning = job.status === "RUNNING";
+  const tone =
+    job.status === "COMPLETE"
+      ? "text-emerald-500"
+      : job.status === "RUNNING"
+        ? "text-brand"
+        : job.status === "COMPLETE_WITH_EXCEPTIONS"
+          ? "text-amber-500"
+          : "text-secondary";
+
+  return (
+    <section
+      aria-label="The research job"
+      className="border border-border-dim rounded-[14px] bg-card px-5 py-4 flex flex-col gap-3"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-[14px] font-semibold text-foreground tracking-tight">
+            {isRunning ? job.progress : "The last research job"}
+          </h3>
+          <p className={`text-[12.5px] mt-1 ${tone}`}>
+            {isRunning
+              ? `${job.done} done · ${job.remaining} to go${job.failed > 0 ? ` · ${job.failed} could not be done` : ""}`
+              : job.endedReason}
+          </p>
+        </div>
+        <div className="text-[12px] text-muted tabular-nums text-right">
+          <div>
+            ${job.spentGBP.toFixed(2)} of ${job.maxCostGBP}
+          </div>
+          {/* The run count is the mechanism, not the work — small, and last. */}
+          <div className="mt-0.5">
+            {job.runsStarted} {job.runsStarted === 1 ? "run" : "runs"}
+          </div>
+        </div>
+      </div>
+
+      {/* What the queue is made of, so "39 of 49" is not a mystery. */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-secondary">
+        <span>{job.customers} customers</span>
+        <span>{job.chains} chains</span>
+        <span>{job.prospects} prospects found</span>
+      </div>
+
+      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div
+          className="h-full bg-brand transition-all"
+          style={{
+            width: `${job.total === 0 ? 0 : Math.round(((job.done + job.failed) / job.total) * 100)}%`,
+          }}
+        />
+      </div>
+
+      {/* The two things a person watching actually wants: what it has in hand
+          this second, and the newest things it has genuinely recorded — from
+          the job, so this never goes stale when a run hands over. */}
+      {isRunning && job.workingOn && (
+        <p className="text-[12.5px] text-foreground">
+          <span className="text-muted">Right now: </span>
+          {job.workingOn.kind === "CHAIN"
+            ? `looking through the ${job.workingOn.label} group for sites`
+            : `researching ${job.workingOn.label}`}
+        </p>
+      )}
+
+      {job.records.length > 0 && (
+        <div className="flex flex-col">
+          <p className="text-[11.5px] text-muted mb-1">Latest recorded</p>
+          {job.records.map((record, index) => (
+            <div
+              key={`${record.subject}-${record.at}-${index}`}
+              className="border-t border-border-dim/40 first:border-t-0 py-1.5 flex items-baseline gap-x-3"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${record.saved ? "bg-emerald-500" : "bg-foreground/25"}`} />
+              <span className="text-[12px] font-medium text-foreground whitespace-nowrap">{record.subject}</span>
+              <span className="text-[12px] text-secondary truncate min-w-0">{record.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {job.exceptions.length > 0 && (
+        <div className="flex flex-col gap-1 pt-1">
+          <p className="text-[12px] text-amber-500">What it could not do</p>
+          {job.exceptions.slice(0, 8).map((exception) => (
+            <p key={exception.name} className="text-[12px] text-secondary">
+              {exception.name} — {exception.reason}
+            </p>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+// template:remove:end
+
 export default function AgentObservabilityPage() {
   const params = useParams();
   const router = useRouter();
@@ -129,6 +241,10 @@ export default function AgentObservabilityPage() {
           ))}
         </div>
       </div>
+
+      {/* template:remove:start salesData */}
+      <ResearchJobPanel agentId={agentId} />
+      {/* template:remove:end */}
 
       {!hasHistory ? (
         <EmptyHistory />
@@ -614,7 +730,7 @@ function LatestJobs({
               onClick={() => onOpenRun(run._id)}
               className="flex items-center gap-3 py-3 border-t border-border-dim/40 first:border-t-0 first:pt-0 text-left group min-w-0"
             >
-              <StatusPill status={run.status} />
+              <StatusPill status={run.status} continued={Boolean(run.continuedByRunId)} />
               <span className="flex-1 min-w-0">
                 <span className="block text-[13.5px] text-foreground truncate">{run.objective}</span>
                 <span className="block text-[11.5px] text-muted truncate">
@@ -648,24 +764,28 @@ function LatestJobs({
   );
 }
 
-function StatusPill({ status }: { status: string }) {
+function StatusPill({ status, continued = false }: { status: string; continued?: boolean }) {
   const tone =
     status === "SUCCESS"
       ? "bg-emerald-500/10 text-emerald-500"
-      : status === "FAILED"
-        ? "bg-rose-500/10 text-rose-500"
-        : status === "PENDING_APPROVAL"
-          ? "bg-amber-500/10 text-amber-500"
-          : status === "RUNNING" || status === "QUEUED"
-            ? "bg-brand/10 text-brand"
-            : "bg-foreground/5 text-secondary";
+      // A handover wears a working colour: the queue moved to the next run by
+      // design, and red here taught people to distrust a healthy job.
+      : status === "FAILED" && continued
+        ? "bg-sky-500/10 text-sky-500"
+        : status === "FAILED"
+          ? "bg-rose-500/10 text-rose-500"
+          : status === "PENDING_APPROVAL"
+            ? "bg-amber-500/10 text-amber-500"
+            : status === "RUNNING" || status === "QUEUED"
+              ? "bg-brand/10 text-brand"
+              : "bg-foreground/5 text-secondary";
 
   return (
     // Fixed width so every job title on the list starts at the same place. Pills
     // sized to their own text made the column ragged and the list hard to scan.
     <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 w-[86px] text-center ${tone}`}>
       {status === "PENDING_APPROVAL" && <UserCheck className="w-3 h-3 inline-block mr-1 -mt-px" />}
-      {describeRunStatus(status)}
+      {describeRunStatus(status, continued)}
     </span>
   );
 }

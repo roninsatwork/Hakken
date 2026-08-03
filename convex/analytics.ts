@@ -131,12 +131,11 @@ export const getGlobalAICosts = superAdminQuery({
        const dateString = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType, { includeWeekYear: true });
 
        if (!timelineMap[dateString]) timelineMap[dateString] = { costGBP: 0 };
-       timelineMap[dateString].costGBP += (msgCost * 0.78);
+       timelineMap[dateString].costGBP += msgCost;
     });
 
-    const periodCostGBP = periodCostUSD * 0.78;
-    const avgCostPerUser = periodUniqueUsers.size > 0 ? (periodCostGBP / periodUniqueUsers.size) : 0;
-    const avgCostPerThread = periodUniqueThreads.size > 0 ? (periodCostGBP / periodUniqueThreads.size) : 0;
+    const avgCostPerUser = periodUniqueUsers.size > 0 ? (periodCostUSD / periodUniqueUsers.size) : 0;
+    const avgCostPerThread = periodUniqueThreads.size > 0 ? (periodCostUSD / periodUniqueThreads.size) : 0;
 
     // Convert map to array
     const timeline = Object.keys(timelineMap).map(date => ({
@@ -148,7 +147,7 @@ export const getGlobalAICosts = superAdminQuery({
        periodInputTokens,
        periodOutputTokens,
        periodTokens: periodInputTokens + periodOutputTokens,
-       periodCostGBP: Number(periodCostGBP.toFixed(6)),
+       periodCostUSD: Number(periodCostUSD.toFixed(6)),
        avgCostPerUser: Number(avgCostPerUser.toFixed(6)),
        avgCostPerThread: Number(avgCostPerThread.toFixed(6)),
        periodProcessed,
@@ -209,13 +208,12 @@ export const getPlatformOverview = superAdminQuery({
           };
           userLeaderboardMap.set(msg.userId, leader);
         }
-        leader.costGBP += (msgCost * 0.78);
+        leader.costGBP += msgCost;
         leader.messageCount += 1;
       }
     }
 
-    const cost30DGBP = total30DCostUSD * 0.78;
-    const costPerActiveUserGBP = userLeaderboardMap.size > 0 ? (cost30DGBP / userLeaderboardMap.size) : 0;
+    const costPerActiveUserGBP = userLeaderboardMap.size > 0 ? (total30DCostUSD / userLeaderboardMap.size) : 0;
     const avgInteractionDepth = periodUniqueThreads.size > 0 ? (recentMessages.length / periodUniqueThreads.size) : 1.0;
 
     const topUsers = Array.from(userLeaderboardMap.values()).sort((a,b) => b.costGBP - a.costGBP);
@@ -225,7 +223,7 @@ export const getPlatformOverview = superAdminQuery({
        wauCount: activeWeeklyUsers.size,
        totalThreads: periodUniqueThreads.size,
        avgInteractionDepth: Number(avgInteractionDepth.toFixed(1)),
-       cost30DGBP: Number(cost30DGBP.toFixed(5)),
+       total30DCostUSD: Number(total30DCostUSD.toFixed(5)),
        costPerActiveUserGBP: Number(costPerActiveUserGBP.toFixed(5)),
        topUsers
     };
@@ -274,7 +272,7 @@ export const getUserCostOverview = adminQuery({
       const inputs = message.inputTokens || 0;
       const outputs = message.outputTokens || 0;
       const model = message.modelUsed || defaultModelId;
-      const msgCostGBP = computeCostFromMap(model, inputs, outputs, modelMap) * 0.78;
+      const msgCostGBP = computeCostFromMap(model, inputs, outputs, modelMap);
 
       totalCostGBP += msgCostGBP;
       totalInputTokens += inputs;
@@ -339,7 +337,7 @@ export const getUserCostThreads = adminQuery({
           createdAt: thread.createdAt,
           messageCount,
           threadTokens,
-          costGBP: threadCostUSD * 0.78
+          costGBP: threadCostUSD
         };
       })
     );
@@ -549,18 +547,17 @@ export const getCompanyMetrics = adminQuery({
        const modelConfig = modelMap.get(model);
        const providerKey = msg.providerKey ?? modelConfig?.providerKey ?? "unknown";
        const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
-       const gbpCost = msgCost * 0.78;
 
        totalMessages += 1;
        totalTokens += (inputs + outputs);
        totalInputTokens += inputs;
        totalOutputTokens += outputs;
-       totalCostGBP += gbpCost;
+       totalCostGBP += msgCost;
 
        const dateGroup = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType);
 
        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, internalMessages: 0, externalMessages: 0, inputTokens: 0, outputTokens: 0 };
-       timelineMap[dateGroup].cost += gbpCost;
+       timelineMap[dateGroup].cost += msgCost;
        timelineMap[dateGroup].messages += 1;
        
        if (msg.widgetId) {
@@ -575,13 +572,13 @@ export const getCompanyMetrics = adminQuery({
        if (!modelDistribution[model]) {
           modelDistribution[model] = { name: modelConfig?.friendlyName || modelConfig?.displayName || model, cost: 0, calls: 0 };
        }
-       modelDistribution[model].cost += gbpCost;
+       modelDistribution[model].cost += msgCost;
        modelDistribution[model].calls += 1;
 
        if (!providerDistribution[providerKey]) {
           providerDistribution[providerKey] = { providerKey, cost: 0, calls: 0 };
        }
-       providerDistribution[providerKey].cost += gbpCost;
+       providerDistribution[providerKey].cost += msgCost;
        providerDistribution[providerKey].calls += 1;
 
        if (msg.userId) {
@@ -602,7 +599,7 @@ export const getCompanyMetrics = adminQuery({
                 messages: 0
              };
           }
-          userLeaderboard[targetLeaderId].cost += gbpCost;
+          userLeaderboard[targetLeaderId].cost += msgCost;
           userLeaderboard[targetLeaderId].messages += 1;
        }
 
@@ -627,7 +624,7 @@ export const getCompanyMetrics = adminQuery({
                  };
              }
           }
-          agentLeaderboard[msg.agentId].cost += gbpCost;
+          agentLeaderboard[msg.agentId].cost += msgCost;
           agentLeaderboard[msg.agentId].interactions += 1;
        }
     }
@@ -915,18 +912,17 @@ export const getGlobalAnalytics = superAdminQuery({
        const modelObj = modelMap.get(model);
        const providerKey = msg.providerKey ?? modelObj?.providerKey ?? "unknown";
        const msgCost = computeCostFromMap(model, inputs, outputs, modelMap);
-       const gbpCost = msgCost * 0.78;
 
        totalMessages += 1;
        totalTokens += (inputs + outputs);
        totalInputTokens += inputs;
        totalOutputTokens += outputs;
-       totalCostGBP += gbpCost;
+       totalCostGBP += msgCost;
 
        const dateGroup = formatAnalyticsDateGroup(new Date(msg.createdAt), aggregationType);
 
        if (!timelineMap[dateGroup]) timelineMap[dateGroup] = { cost: 0, messages: 0, inputTokens: 0, outputTokens: 0 };
-       timelineMap[dateGroup].cost += gbpCost;
+       timelineMap[dateGroup].cost += msgCost;
        timelineMap[dateGroup].messages += 1;
        timelineMap[dateGroup].inputTokens += inputs;
        timelineMap[dateGroup].outputTokens += outputs;
@@ -935,14 +931,14 @@ export const getGlobalAnalytics = superAdminQuery({
            if (!modelDistribution[model]) {
               modelDistribution[model] = { name: modelObj.friendlyName || modelObj.displayName || model, cost: 0, calls: 0 };
            }
-           modelDistribution[model].cost += gbpCost;
+           modelDistribution[model].cost += msgCost;
            modelDistribution[model].calls += 1;
        }
 
        if (!providerDistribution[providerKey]) {
           providerDistribution[providerKey] = { providerKey, cost: 0, calls: 0 };
        }
-       providerDistribution[providerKey].cost += gbpCost;
+       providerDistribution[providerKey].cost += msgCost;
        providerDistribution[providerKey].calls += 1;
 
        if (msg.userId) {
@@ -966,7 +962,7 @@ export const getGlobalAnalytics = superAdminQuery({
                 messages: 0
              };
           }
-          userLeaderboard[targetLeaderId].cost += gbpCost;
+          userLeaderboard[targetLeaderId].cost += msgCost;
           userLeaderboard[targetLeaderId].messages += 1;
        }
 
@@ -982,7 +978,7 @@ export const getGlobalAnalytics = superAdminQuery({
                 messages: 0
              };
           }
-          companyLeaderboard[activeCompanyId].cost += gbpCost;
+          companyLeaderboard[activeCompanyId].cost += msgCost;
           companyLeaderboard[activeCompanyId].messages += 1;
        }
 
@@ -1007,7 +1003,7 @@ export const getGlobalAnalytics = superAdminQuery({
                  };
              }
           }
-          agentLeaderboard[msg.agentId].cost += gbpCost;
+          agentLeaderboard[msg.agentId].cost += msgCost;
           agentLeaderboard[msg.agentId].interactions += 1;
        }
     }

@@ -1,4 +1,5 @@
 import type { Doc } from "./_generated/dataModel";
+import { calculateModelCostGBP } from "./aiCostService";
 import { getDefaultModelId } from "./aiModelService";
 
 type DashboardTimeframe =
@@ -31,7 +32,6 @@ export type AiModelCostConfig = Pick<
 export type ModelCostMap = Map<string, AiModelCostConfig>;
 
 const dayMs = 24 * 60 * 60 * 1000;
-export const USD_TO_GBP_RATE = 0.78;
 
 export function resolveTimestampRange(args: {
   timeframe: DashboardTimeframe;
@@ -155,21 +155,34 @@ export function buildModelCostContext(aiModelsFetch: AiModelCostConfig[]) {
   return { modelMap, defaultModelId };
 }
 
+/**
+ * What a set of tokens cost, in **US dollars**.
+ *
+ * Every rate in the model catalogue is the provider's own published dollar
+ * price — the synced records carry `currency: "USD"` — and nothing converts.
+ * The callers of this used to multiply the result by a hardcoded 0.78 and print
+ * a "£" in front of it, which was wrong twice over: the rate was a guess that
+ * went stale the day it was written, and it disagreed with the model pricing
+ * screen, which had already settled on showing dollars. Spend is reported in
+ * the currency the provider bills in.
+ *
+ * The rates themselves are applied by `calculateModelCostGBP` rather than here.
+ * This function used to carry its own copy of the tiering rule, and the copies
+ * disagreed: the runtime learned to fall back to the standard rate when a model
+ * has no separate above-200k price, and this one kept reading that missing price
+ * as zero — as free. Every call over two hundred thousand tokens therefore cost
+ * nothing on the analytics screens and in the daily snapshots, which is most of
+ * what a long agent run is. One rule, in one place, is the only way those two
+ * numbers stay the same number.
+ */
 export function computeCostFromMap(model: string, inputs: number, outputs: number, modelMap: ModelCostMap) {
-  const config = modelMap.get(model);
-  const inRate = config
-    ? inputs > 200000
-      ? config.standardInputCostAbove200k || 0
-      : config.standardInputCostBelow200k || 0
-    : 0;
-  const outRate = config ? config.outputResponseCost || 0 : 0;
-
-  return (inputs / 1000000) * inRate + (outputs / 1000000) * outRate;
+  return calculateModelCostGBP({
+    inputTokens: inputs,
+    outputTokens: outputs,
+    rates: modelMap.get(model),
+  });
 }
 
-export function convertUsdToGbp(value: number) {
-  return value * USD_TO_GBP_RATE;
-}
 
 export function roundMetric(value: number, decimals: number) {
   return Number(value.toFixed(decimals));

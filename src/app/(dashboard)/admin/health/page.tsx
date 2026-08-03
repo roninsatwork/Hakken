@@ -113,9 +113,9 @@ function buildAttention(health: SystemHealth): Attention[] {
   return rows;
 }
 
-/** Pounds to the penny. The old screen printed £0.0000. */
+/** Dollars to the cent. The old screen printed £0.0000, in the wrong currency. */
 function formatSpend(value: number) {
-  return `£${value.toFixed(2)}`;
+  return `$${value.toFixed(2)}`;
 }
 
 /** Seconds, because nobody reads an agent run in milliseconds. */

@@ -111,7 +111,7 @@ describe("AgentLogsDashboard", () => {
     // they belong to the job rather than to one of its entries.
     const header = screen.getByText(/Scheduled ·/);
     expect(header).toHaveTextContent("31.4s");
-    expect(header).toHaveTextContent("£0.021");
+    expect(header).toHaveTextContent("$0.021");
 
     // The job's own status pill. Its entries carry their outcomes separately.
     expect(screen.getAllByText("Failed")).toHaveLength(1);

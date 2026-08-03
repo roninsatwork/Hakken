@@ -339,6 +339,15 @@ describe("ai tool execution service", () => {
       "http.request",
       "knowledge.search",
       "notification.send",
+      // The opportunity report's three passes, in their fixed order: price the
+      // prospects, find the chain gaps, then save the agent's summary — which
+      // is refused if it names a figure the computed sections do not hold.
+      "opportunityReport.findGroupGaps",
+      "opportunityReport.matchProspects",
+      "opportunityReport.saveSummary",
+      // Hands a run its next piece of work from the research job's queue, and
+      // closes off the last one. The only tool that knows a job exists.
+      "salesCustomers.job.next",
       // Reads a group and the sites in it already supplied, so the prospecting
       // half does not re-report the customers it was told about.
       "salesCustomers.prospects.read",

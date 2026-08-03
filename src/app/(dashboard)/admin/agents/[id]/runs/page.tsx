@@ -78,8 +78,11 @@ function formatSignedCurrencyDelta(value: number | undefined) {
   return `${prefix}${formatMoney(value)}`;
 }
 
-function getStatusTone(status: RunStatus) {
+function getStatusTone(status: RunStatus, continued = false) {
   if (status === "SUCCESS") return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+  // A handover wears a working colour, not a failure's: the queue moved on to
+  // the next run by design.
+  if (status === "FAILED" && continued) return "text-sky-500 bg-sky-500/10 border-sky-500/20";
   if (status === "FAILED") return "text-red-500 bg-red-500/10 border-red-500/20";
   if (status === "CANCELLED") return "text-amber-500 bg-amber-500/10 border-amber-500/20";
   if (status === "PENDING_APPROVAL") return "text-indigo-500 bg-indigo-500/10 border-indigo-500/20";
@@ -457,8 +460,8 @@ export default function AgentRunsPage() {
                   className="group border-b border-border-dim/40 last:border-b-0 hover:bg-white/[0.02] transition-colors"
                 >
                   <td className="px-4 py-3 align-top">
-                    <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${getStatusTone(run.status)}`}>
-                      {describeRunStatus(run.status)}
+                    <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${getStatusTone(run.status, Boolean(run.continuedByRunId))}`}>
+                      {describeRunStatus(run.status, Boolean(run.continuedByRunId))}
                     </span>
                   </td>
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  estimateMessageCostGbp,
-  formatEstimatedChatCostGbp,
+  estimateMessageCostUsd,
+  formatEstimatedChatCostUsd,
   getChatTokenTotal,
   getMessageTokenTotal,
 } from "./chatTelemetry";
@@ -16,25 +16,25 @@ describe("chat telemetry helpers", () => {
     ])).toBe(185);
   });
 
-  test("estimates standard model message cost in GBP", () => {
-    expect(estimateMessageCostGbp({
+  test("estimates standard model message cost in USD", () => {
+    expect(estimateMessageCostUsd({
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
       modelUsed: "model-flash",
-    })).toBeCloseTo(0.2925);
+    })).toBeCloseTo(0.375);
   });
 
-  test("estimates pro model message cost in GBP", () => {
-    expect(estimateMessageCostGbp({
+  test("estimates pro model message cost in USD", () => {
+    expect(estimateMessageCostUsd({
       inputTokens: 1_000_000,
       outputTokens: 1_000_000,
       modelUsed: "model-pro",
-    })).toBeCloseTo(10.92);
+    })).toBeCloseTo(14);
   });
 
   test("formats chat estimates for display", () => {
-    expect(formatEstimatedChatCostGbp([
+    expect(formatEstimatedChatCostUsd([
       { inputTokens: 1000, outputTokens: 500, modelUsed: "flash" },
-    ])).toBe("0.00018");
+    ])).toBe("0.00022");
   });
 });

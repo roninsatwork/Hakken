@@ -144,6 +144,65 @@ describe("platform overview", () => {
     expect(overview.money.spendAsPercentOfRevenue).toBe(0);
   });
 
+  /**
+   * An agent left to run on its own writes no message, so spend read from
+   * messages alone showed nothing however much the agent cost — a research
+   * agent could run all day against a dashboard reporting no spend.
+   */
+  test("charges the platform for agents that ran with nobody watching", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { paying, active, superAdmin } = await seedPlatform(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const agentId = await ctx.db.insert("agents", {
+        name: "Research Agent", modelId: "model-test", thinkingMode: false,
+        isActive: true, createdAt: now, updatedAt: now,
+      });
+      await ctx.db.insert("agentRuns", {
+        agentId, triggerType: "SCHEDULE", objective: "Fill in the group",
+        status: "SUCCESS", companyId: paying, userId: active,
+        costGBP: 1.25, startedAt: now - 1000, updatedAt: now,
+      });
+    });
+
+    const client = t.withIdentity({ subject: superAdmin });
+    const overview = await client.query(api.platformOverview.getPlatformOverview, {});
+
+    expect(overview.money.aiSpendGBP).toBe(1.25);
+    expect(overview.daily.at(-1)!.spendGBP).toBeCloseTo(1.25);
+  });
+
+  /**
+   * A run that answered someone in a conversation already wrote its tokens onto
+   * the reply, so counting the run as well would bill that work twice.
+   */
+  test("does not charge a conversation twice for the run behind it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { paying, active, superAdmin } = await seedPlatform(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const agentId = await ctx.db.insert("agents", {
+        name: "Chat Agent", modelId: "model-test", thinkingMode: false,
+        isActive: true, createdAt: now, updatedAt: now,
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId: active, companyId: paying, createdAt: now, updatedAt: now,
+      });
+      await ctx.db.insert("agentRuns", {
+        agentId, threadId, triggerType: "CHAT", objective: "Answer them",
+        status: "SUCCESS", companyId: paying, userId: active,
+        costGBP: 1.25, startedAt: now - 1000, updatedAt: now,
+      });
+    });
+
+    const client = t.withIdentity({ subject: superAdmin });
+    const overview = await client.query(api.platformOverview.getPlatformOverview, {});
+
+    expect(overview.money.aiSpendGBP).toBe(0);
+  });
+
   test("bands sign-ins per day against the whole seat count", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { active, superAdmin } = await seedPlatform(t);

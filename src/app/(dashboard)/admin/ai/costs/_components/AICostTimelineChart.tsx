@@ -30,7 +30,7 @@ export function AICostTimelineChart({
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <TrendingUp className="w-5 h-5 text-brand" />
-              <h3 className="text-[15px] font-bold tracking-wide">{aggregationLabel} (£ GBP)</h3>
+              <h3 className="text-[15px] font-bold tracking-wide">{aggregationLabel} (USD)</h3>
             </div>
           </div>
 

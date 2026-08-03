@@ -44,6 +44,10 @@ export default function AgentsPage() {
   const deleteAgent = useMutation(api.agents.deleteAgent);
   // Asked once for the whole page, not once per row.
   const inheritedModels = useQuery(api.agents.getInheritedAgentModels);
+  // Live, so the list changes while an agent works instead of saying
+  // "Active" identically for a working agent and an idle one.
+  const workingAgentIds = useQuery(api.agentRuns.getWorkingAgentIds);
+  const isWorking = (agentId: string) => (workingAgentIds ?? []).includes(agentId as Agent["_id"]);
 
   /**
    * What this agent actually runs.
@@ -209,9 +213,11 @@ export default function AgentsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className={`flex items-center gap-2 text-[12px] font-medium ${agent.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${agent.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
-                            {agent.isActive ? t('table.active') : t('table.draft')}
+                          <div className={`flex items-center gap-2 text-[12px] font-medium ${isWorking(agent._id) ? 'text-brand' : agent.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${isWorking(agent._id) ? 'bg-brand animate-pulse' : agent.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
+                            {isWorking(agent._id)
+                              ? t('table.working')
+                              : agent.isActive ? t('table.active') : t('table.draft')}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">

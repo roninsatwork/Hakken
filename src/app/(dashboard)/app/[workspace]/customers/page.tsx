@@ -1,11 +1,11 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Sparkles, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { api } from "@/convex/_generated/api";
@@ -40,15 +40,15 @@ function CustomerList() {
   const t = useTranslations("salesData.customers");
   const params = useParams<{ workspace: string }>();
   const workspace = params?.workspace ?? "";
+  const router = useRouter();
 
   const [search, setSearch] = useState("");
   const [customerType, setCustomerType] = useState<string | null>(null);
   const [groupName, setGroupName] = useState<string | null>(null);
-  const [missingDetailsOnly, setMissingDetailsOnly] = useState(false);
   const [record, setRecord] = useState<"CUSTOMERS" | "PROSPECTS" | "ALL">("CUSTOMERS");
 
   const pagination = useCursorPagination(
-    JSON.stringify([search, customerType, groupName, missingDetailsOnly, record])
+    JSON.stringify([search, customerType, groupName, record])
   );
 
   const counts = useQuery(api.salesDataCustomers.countCustomers);
@@ -58,13 +58,11 @@ function CustomerList() {
     ...(search ? { search } : {}),
     ...(customerType ? { customerType } : {}),
     ...(groupName ? { groupName } : {}),
-    ...(missingDetailsOnly ? { missingDetailsOnly } : {}),
     record,
   });
 
   const isLoading = result === undefined;
-  const hasFilters = Boolean(customerType || groupName || missingDetailsOnly)
-    || record !== "CUSTOMERS";
+  const hasFilters = Boolean(customerType || groupName) || record !== "CUSTOMERS";
   const isNarrowed = Boolean(search) || hasFilters;
 
   return (
@@ -140,7 +138,6 @@ function CustomerList() {
               onClick={() => {
                 setCustomerType(null);
                 setGroupName(null);
-                setMissingDetailsOnly(false);
                 setRecord("CUSTOMERS");
               }}
               className="px-3 py-2 text-[13px] text-secondary hover:text-foreground transition-colors"
@@ -151,28 +148,22 @@ function CustomerList() {
         </div>
 
         {/*
-          Narrowing the list and setting work going are two different intents,
-          and they were sharing one bar. The two sweeps each report back in
-          words — "Researching 44 customers" — which then sat inside the search
-          row and pushed the filters onto a second line as soon as either was
-          pressed. Anthony, 2026-08-02: *"you keep adding buttons into the
-          search boxes."* Their own row, with room for what they say.
+          The second row now holds the two ends of the demo and nothing else.
+          Anthony, 2026-08-03: *"in the second box all we need is clear and an
+          import spreadsheet button."* The missing-details filter and the two
+          AI sweeps that used to sit here are gone.
         */}
         <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
-          <button
-            type="button"
-            onClick={() => setMissingDetailsOnly((current) => !current)}
-            className={`px-3 py-2 rounded-[12px] border text-[13px] transition-colors ${
-              missingDetailsOnly
-                ? "border-brand text-brand bg-brand/10"
-                : "border-border-dim text-secondary hover:text-foreground"
-            }`}
+          <ClearDatabaseButton />
+          <Link
+            href={`/app/${workspace}/spreadsheet-import`}
+            className="px-3 py-2 rounded-[12px] border border-border-dim text-[13px] text-secondary hover:text-foreground hover:border-border transition-colors"
           >
-            {t("filterMissingDetails")}
-          </button>
-          <ResearchSweepButton />
-          <ProspectingSweepButton />
+            {t("importSpreadsheet")}
+          </Link>
         </div>
+
+        <ResearchRow />
 
         <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -211,7 +202,14 @@ function CustomerList() {
                     return (
                       <tr
                         key={customer.accountNameKey}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02]"
+                        // The whole row is the link, not just the name — the
+                        // name's own Link stays for middle-click and keyboards.
+                        onClick={() =>
+                          router.push(
+                            `/app/${workspace}/customers/${encodeURIComponent(customer.accountNameKey)}`
+                          )
+                        }
+                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] cursor-pointer"
                       >
                         <Td>
                           {/* The mark sits before the name, not after it. A list
@@ -323,49 +321,70 @@ function Td({
 }
 
 /**
- * Fill in what is missing, across every customer that still has gaps.
+ * Empty the workspace, so the process can be shown from the beginning.
  *
- * One run per customer, started a few seconds apart rather than all at once:
- * thirty-nine runs fired together compete for the same budget and make the run
- * history unreadable. What it reports back is how many were queued, because
- * pressing a button that silently does nothing is worse than one that refuses.
+ * A re-import replaces the workbook's rows but deliberately keeps the contact
+ * details, the agent's findings and the prospects, because a customer importing
+ * a fresh file every month would be furious to lose a year of typed-in work to
+ * it. That rule makes a second demo unwatchable: everything is already filled
+ * in, both sweeps report there is nothing to do, and the part worth seeing
+ * never happens. This is the deliberate exception.
  *
- * It costs money each time, which is why this is a button somebody presses and
- * not a nightly job.
+ * It asks twice. Nothing it deletes can be recovered, and it sits one press
+ * away from a list somebody is only reading.
  */
-function ResearchSweepButton() {
+function ClearDatabaseButton() {
   const t = useTranslations("salesData.customers");
-  const startSweep = useMutation(api.salesDataResearch.startCustomerResearchSweep);
-  const [state, setState] = useState<"idle" | "starting" | "started" | "error">("idle");
+  const clearDatabase = useAction(api.salesDataReset.resetSalesData);
+  const [state, setState] = useState<"idle" | "confirming" | "clearing" | "cleared" | "error">(
+    "idle"
+  );
   const [message, setMessage] = useState<string | null>(null);
 
-  const onClick = async () => {
-    setState("starting");
+  const onConfirm = async () => {
+    setState("clearing");
     setMessage(null);
     try {
-      const result = await startSweep({});
-      setState("started");
-      setMessage(
-        result.queued === 0
-          ? t("sweepNothingToDo")
-          : t("sweepQueued", { count: result.queued })
-      );
+      await clearDatabase({});
+      setState("cleared");
+      setMessage(t("clearDone"));
     } catch (caught) {
       setState("error");
       setMessage(caught instanceof Error ? caught.message : String(caught));
     }
   };
 
+  if (state === "confirming") {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void onConfirm()}
+          className="px-3 py-2 rounded-[12px] border border-[#ef4444]/40 bg-[#ef4444]/10 text-[13px] text-[#ef4444] hover:bg-[#ef4444]/20 transition-colors"
+        >
+          {t("clearConfirm")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setState("idle")}
+          className="px-3 py-2 text-[13px] text-secondary hover:text-foreground transition-colors"
+        >
+          {t("clearCancel")}
+        </button>
+        <span className="text-[12px] text-muted">{t("clearWarning")}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <button
         type="button"
-        onClick={onClick}
-        disabled={state === "starting"}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[12px] border border-border-dim text-[13px] text-secondary hover:text-foreground hover:border-border transition-colors disabled:opacity-60"
+        onClick={() => setState("confirming")}
+        disabled={state === "clearing"}
+        className="px-3 py-2 rounded-[12px] border border-border-dim text-[13px] text-secondary hover:text-foreground hover:border-border transition-colors disabled:opacity-60"
       >
-        <Sparkles className="w-3.5 h-3.5 text-brand" />
-        {state === "starting" ? t("sweepStarting") : t("sweepStart")}
+        {state === "clearing" ? t("clearRunning") : t("clearStart")}
       </button>
       {message && (
         <span className={`text-[12px] ${state === "error" ? "text-red-400" : "text-secondary"}`}>
@@ -377,52 +396,116 @@ function ResearchSweepButton() {
 }
 
 /**
- * Look through every group for sites the workspace does not supply.
+ * The agents' own row: two buttons, one per worker, and the progress bar.
  *
- * One run per group, four seconds apart. Groups already looked through are
- * skipped, so pressing it again picks up the ones that ran out of budget rather
- * than paying for the whole estate twice.
+ * Anthony, 2026-08-03: a new row below the clear-database row, with the two
+ * buttons that trigger the agents and the progress bar on that same row, so
+ * the user sees it working. "Find new prospects" hunts the chains and files
+ * what it finds; "Research the missing details" fills in customers and
+ * prospects already on the books. One job runs at a time, so while either
+ * works both buttons rest and the bar carries the story.
  */
-function ProspectingSweepButton() {
+function ResearchRow() {
   const t = useTranslations("salesData.customers");
-  const startSweep = useMutation(api.salesDataResearch.startProspectingSweep);
-  const [state, setState] = useState<"idle" | "starting" | "started" | "error">("idle");
+  const startResearch = useMutation(api.salesDataResearchJobs.startResearchJob);
+  const job = useQuery(api.salesDataResearchJobs.getResearchJob, {});
   const [message, setMessage] = useState<string | null>(null);
+  const isRunning = job?.status === "RUNNING";
 
-  const onClick = async () => {
-    setState("starting");
+  // The finish deserves more than a quiet line: a job watched from this screen
+  // announces its ending and waits for an OK. Anthony, 2026-08-03: "show a
+  // modal to say complete with an OK button so we know something has
+  // happened." Only a RUNNING → finished transition seen by this page opens
+  // it, so an old finished job does not greet every visit with a modal.
+  // The transition is caught during render, the React previous-render
+  // pattern, because an effect doing it re-rendered twice.
+  const [finishedNotice, setFinishedNotice] = useState<string | null>(null);
+  const [sawRunning, setSawRunning] = useState(false);
+  if (isRunning && !sawRunning) setSawRunning(true);
+  if (!isRunning && sawRunning && job && job.status !== "RUNNING") {
+    setSawRunning(false);
+    setFinishedNotice(job.endedReason ?? t("researchWorking"));
+  }
+
+  const onPress = async (mode: "DETAILS" | "PROSPECTS") => {
     setMessage(null);
     try {
-      const result = await startSweep({});
-      setState("started");
-      setMessage(
-        result.queued === 0
-          ? t("findSitesNothingToDo")
-          : t("findSitesQueued", { count: result.queued })
-      );
+      const result = await startResearch({ mode });
+      if (result.nothingToDo) setMessage(t("researchNothingToDo"));
     } catch (caught) {
-      setState("error");
       setMessage(caught instanceof Error ? caught.message : String(caught));
     }
   };
 
+  const finished = (job?.done ?? 0) + (job?.failed ?? 0);
+  const percent = !job || job.total === 0 ? 0 : Math.round((finished / job.total) * 100);
+
   return (
-    <div className="flex items-center gap-2">
+    <>
+    {finishedNotice && (
+      <div className={`fixed inset-0 ${LAYER.OVERLAY} flex items-center justify-center bg-black/50 backdrop-blur-sm`}>
+        <div className="w-[min(420px,90vw)] rounded-[16px] border border-border-dim bg-sidebar p-6 flex flex-col gap-4 shadow-xl">
+          <h2 className="text-[16px] font-semibold text-foreground">{t("researchDoneTitle")}</h2>
+          <p className="text-[13.5px] text-secondary leading-relaxed">{finishedNotice}</p>
+          <button
+            type="button"
+            onClick={() => setFinishedNotice(null)}
+            className="self-end px-4 py-2 rounded-[10px] border border-brand/40 bg-brand/10 text-[13px] text-brand hover:bg-brand/20 transition-colors"
+          >
+            {t("researchDoneOk")}
+          </button>
+        </div>
+      </div>
+    )}
+    <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
       <button
         type="button"
-        onClick={onClick}
-        disabled={state === "starting"}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[12px] border border-border-dim text-[13px] text-secondary hover:text-foreground hover:border-border transition-colors disabled:opacity-60"
+        onClick={() => void onPress("PROSPECTS")}
+        disabled={isRunning}
+        className="px-3 py-2 rounded-[12px] border border-brand/40 bg-brand/10 text-[13px] text-brand hover:bg-brand/20 transition-colors disabled:opacity-60"
       >
-        <Sparkles className="w-3.5 h-3.5 text-brand" />
-        {state === "starting" ? t("findSitesStarting") : t("findSites")}
+        {t("prospectsStart")}
       </button>
-      {message && (
-        <span className={`text-[12px] ${state === "error" ? "text-red-400" : "text-secondary"}`}>
-          {message}
-        </span>
-      )}
+      <button
+        type="button"
+        onClick={() => void onPress("DETAILS")}
+        disabled={isRunning}
+        className="px-3 py-2 rounded-[12px] border border-brand/40 bg-brand/10 text-[13px] text-brand hover:bg-brand/20 transition-colors disabled:opacity-60"
+      >
+        {t("researchStart")}
+      </button>
+
+      <div className="flex-1 min-w-[220px] flex flex-col gap-1.5 px-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          {/* A job that finished says so, in the job's own closing words, until
+              the next press — finishing silently read as never finishing.
+              Anthony, 2026-08-03: "did the agent complete? I never got a
+              message." */}
+          <span className={`text-[12.5px] ${isRunning ? "text-foreground" : "text-muted"}`}>
+            {isRunning
+              ? job?.workingOn
+                ? t("researchWorkingOn", { name: job.workingOn.label })
+                : t("researchWorking")
+              : message
+                ?? (job?.endedReason
+                  ? t("researchFinished", { reason: job.endedReason })
+                  : t("researchIdle"))}
+          </span>
+          {isRunning && (
+            <span className="text-[12px] text-secondary tabular-nums">
+              {t("researchProgress", { done: finished, total: job?.total ?? 0 })}
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div
+            className="h-full bg-brand transition-all"
+            style={{ width: `${isRunning ? percent : 0}%` }}
+          />
+        </div>
+      </div>
     </div>
+    </>
   );
 }
 

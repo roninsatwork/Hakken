@@ -13,7 +13,7 @@ import {
 import { listAnthropicModels } from "./anthropicProviderService";
 import { listOpenAIModels } from "./openaiProviderService";
 import { listOpenRouterModels } from "./openrouterProviderService";
-import { buildVertexProviderConfig, createVertexGenAIClient, listVertexModels } from "./vertexProviderService";
+import { buildVertexProviderConfig, createVertexGenAIClient, isVertexTextGenerationModel, listVertexModels } from "./vertexProviderService";
 import { superAdminAction } from "./tenantFunctions";
 
 function getErrorMessage(error: unknown): string {
@@ -55,9 +55,19 @@ function getTextGenerationCapabilities(modelId: string) {
   return capabilities;
 }
 
+/**
+ * Text generation unless the id says otherwise.
+ *
+ * This used to end with an allowlist of name prefixes — `gpt-`, `o1`, `o3`,
+ * `o4`, `chatgpt-` — which was the curated list back in one more coat: a model
+ * family with a new name would have been dropped from the catalogue without a
+ * trace. A name that matches no known non-text marker is text generation, so
+ * a family OpenAI names tomorrow arrives without an edit here.
+ */
 export function isOpenAITextGenerationModel(modelId: string) {
   const normalized = modelId.toLowerCase();
-  if (
+  if (!normalized) return false;
+  return !(
     normalized.includes("embedding") ||
     normalized.includes("transcribe") ||
     normalized.includes("tts") ||
@@ -68,27 +78,47 @@ export function isOpenAITextGenerationModel(modelId: string) {
     normalized.includes("sora") ||
     normalized.includes("whisper") ||
     normalized.includes("dall")
-  ) {
-    return false;
-  }
-
-  return normalized.startsWith("gpt-") ||
-    normalized.startsWith("o1") ||
-    normalized.startsWith("o3") ||
-    normalized.startsWith("o4") ||
-    normalized.startsWith("chatgpt-");
+  );
 }
 
-async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
+/**
+ * What a non-text model is, read off its id.
+ *
+ * These models used to be dropped from the sync entirely. The catalogue now
+ * lists everything the provider owns up to — a model that cannot serve a text
+ * job is still a fact about the account — so the id's markers become tags
+ * instead of a reason to disappear.
+ */
+export function getMediaCapabilities(modelId: string) {
+  const normalized = modelId.toLowerCase();
+  const capabilities: string[] = [];
+  if (normalized.includes("image") || normalized.includes("dall")) capabilities.push("image");
+  if (normalized.includes("sora") || normalized.includes("veo")) capabilities.push("video");
+  if (
+    normalized.includes("whisper") ||
+    normalized.includes("transcribe") ||
+    normalized.includes("tts") ||
+    normalized.includes("audio") ||
+    normalized.includes("realtime") ||
+    normalized.includes("live")
+  ) {
+    capabilities.push("audio");
+  }
+  if (normalized.includes("moderation")) capabilities.push("moderation");
+  return capabilities;
+}
+
+export async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
   const ai = createVertexGenAIClient();
   const listed = await listVertexModels(ai);
 
   if (listed.length === 0) {
-    throw new Error("Vertex AI returned no usable models.");
+    throw new Error("Vertex AI returned no models.");
   }
 
   const formattedModels = listed.map((model) => {
     const isEmbedding = model.modelId.toLowerCase().includes("embedding");
+    const isTextGeneration = !isEmbedding && isVertexTextGenerationModel(model.modelId);
     return {
       modelId: model.modelId,
       providerModelId: model.modelId,
@@ -101,14 +131,22 @@ async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
       // Vertex does not report what a model can do in a form this catalogue
       // uses, so capabilities are derived from the model id — again a rule
       // rather than a list of models to maintain.
-      capabilities: isEmbedding ? ["embeddings"] : getTextGenerationCapabilities(model.modelId),
+      capabilities: isEmbedding
+        ? ["embeddings"]
+        : isTextGeneration
+          ? getTextGenerationCapabilities(model.modelId)
+          : getMediaCapabilities(model.modelId),
       // Vertex text models also take audio and images, which the generic
       // text-generation list does not claim. The hardcoded catalogue this
       // replaced said so; dropping it meant no model could be chosen to turn
-      // speech into text, and that row became unsettable.
+      // speech into text, and that row became unsettable. Image, video and
+      // speech models carry no use cases: they are catalogued as facts about
+      // the account, but no platform job can run on them.
       supportedUseCases: isEmbedding
         ? [EMBEDDING_MODEL_USE_CASE]
-        : [...getTextGenerationUseCases(model.modelId), "transcription", "vision"],
+        : isTextGeneration
+          ? [...getTextGenerationUseCases(model.modelId), "transcription", "vision"]
+          : [],
       // Vertex leaves these unset on the listing. Passing undefined through
       // would clear whatever a model already had, so they are only sent when
       // Vertex actually reports them.
@@ -138,29 +176,54 @@ async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
 }
 
 /**
- * The OpenAI catalogue, asked of OpenAI.
+ * The OpenAI catalogue, asked of OpenAI — all of it.
  *
  * A curated list of twelve model ids used to be merged into whatever the live
  * call returned, and substituted wholesale when the call failed. Same fault as
  * the Vertex list: it silently decided what existed, went stale without saying
  * so, and made a failed sync look like a successful one.
+ *
+ * The filter that then kept only text-generation models is gone for the same
+ * reason. Every model the key can see is catalogued; what kind it is becomes
+ * its tags, and models arrive switched off, so listing everything costs
+ * nothing but honesty gained.
  */
-async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
+export async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
   const modelIds = await listOpenAIModels();
-  const textModelIds = modelIds.filter(isOpenAITextGenerationModel);
 
-  if (textModelIds.length === 0) {
-    throw new Error("OpenAI returned no text-generation models.");
+  if (modelIds.length === 0) {
+    throw new Error("OpenAI returned no models.");
   }
 
-  const formattedModels = textModelIds.map((modelId) => ({
-    modelId,
-    providerModelId: modelId,
-    displayName: titleizeModelId(modelId),
-    description: "OpenAI text generation model available to this API key.",
-    capabilities: getTextGenerationCapabilities(modelId),
-    supportedUseCases: getTextGenerationUseCases(modelId),
-  }));
+  const formattedModels = modelIds.map((modelId) => {
+    const base = {
+      modelId,
+      providerModelId: modelId,
+      displayName: titleizeModelId(modelId),
+    };
+    if (modelId.toLowerCase().includes("embedding")) {
+      return {
+        ...base,
+        description: "OpenAI embedding model available to this API key.",
+        capabilities: ["embeddings"],
+        supportedUseCases: [EMBEDDING_MODEL_USE_CASE],
+      };
+    }
+    if (!isOpenAITextGenerationModel(modelId)) {
+      return {
+        ...base,
+        description: "OpenAI model available to this API key. Not a text-generation model, so no platform job can run on it.",
+        capabilities: getMediaCapabilities(modelId),
+        supportedUseCases: [],
+      };
+    }
+    return {
+      ...base,
+      description: "OpenAI text generation model available to this API key.",
+      capabilities: getTextGenerationCapabilities(modelId),
+      supportedUseCases: getTextGenerationUseCases(modelId),
+    };
+  });
 
   await ctx.runMutation(internal.aiModels.internalBatchUpsert, {
     providerKey: OPENAI_PROVIDER_KEY,
@@ -174,7 +237,7 @@ async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
     status: "healthy",
     syncStatus: "catalog-synced",
     settings: JSON.stringify({
-      lastHealthMessage: `Listed ${formattedModels.length} text models from OpenAI.`,
+      lastHealthMessage: `Listed ${formattedModels.length} models from OpenAI.`,
     }),
   });
 
@@ -195,7 +258,7 @@ async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
  * in a different coat; models arrive switched off, and the catalogue's search
  * and paging are what make a large list navigable.
  */
-async function syncOpenRouterModelCatalogue(ctx: ActionCtx) {
+export async function syncOpenRouterModelCatalogue(ctx: ActionCtx) {
   const listed = await listOpenRouterModels();
 
   if (listed.length === 0) {
@@ -237,7 +300,7 @@ async function syncOpenRouterModelCatalogue(ctx: ActionCtx) {
   return formattedModels;
 }
 
-async function syncAnthropicModelCatalogue(ctx: ActionCtx) {
+export async function syncAnthropicModelCatalogue(ctx: ActionCtx) {
   const models = await listAnthropicModels();
   const formattedModels = models.map((model) => ({
     modelId: model.id,

@@ -12,6 +12,7 @@ import {
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_EMBEDDING_DIMENSIONS,
   GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
+  AGENT_CAPABLE_USE_CASES,
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
@@ -102,6 +103,14 @@ export const getActiveModels = tenantQuery({
         if (!model.supportedUseCases || model.supportedUseCases.length === 0) return true;
         return model.supportedUseCases.includes(args.useCase as string);
       });
+    }
+
+    // The agent screen must only offer models an agent can actually run. The
+    // dropdown once offered a model whose provider the agent runtime had no
+    // adapter for, and the run refused at its first step — a choice that looks
+    // valid on the screen and fails at execution time is a trap, not a choice.
+    if (args.useCase && AGENT_CAPABLE_USE_CASES.has(args.useCase)) {
+      models = models.filter((model) => canProviderServeUseCase(model.providerKey, args.useCase!));
     }
 
     models.sort((a, b) => {

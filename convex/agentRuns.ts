@@ -556,6 +556,8 @@ export const getPageForAgent = adminQuery({
           error: run.error,
           finalOutput: run.finalOutput,
           agentVersionId: run.agentVersionId,
+          // So a planned handover is not dressed as a failure on the list.
+          continuedByRunId: run.continuedByRunId,
           markers: {
             // The whole record, not just the rating: the rate-this-job form
             // prefills from it, and this document has already been read.
@@ -604,6 +606,38 @@ export const getForAgent = adminQuery({
   },
 });
 
+/**
+ * Which agents have a run in flight right now.
+ *
+ * The agents list said "Active" whether an agent was flat out or idle —
+ * active is a setting, not a state, and nothing on that screen changed while
+ * an agent worked. Anthony, 2026-08-03: *"nothing changed on the agent screen
+ * when it's running."* One bounded read serves the whole list.
+ */
+export const getWorkingAgentIds = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const { user } = ctx;
+    const live = (
+      await Promise.all(
+        (["RUNNING", "QUEUED", "PENDING_APPROVAL"] as const).map((status) =>
+          ctx.db
+            .query("agentRuns")
+            .withIndex("by_status_started", (q) => q.eq("status", status))
+            .order("desc")
+            .take(100)
+        )
+      )
+    ).flat();
+
+    const visible = user.role === "ADMIN"
+      ? live.filter((run) => run.companyId === user.companyId)
+      : live;
+
+    return [...new Set(visible.map((run) => run.agentId))];
+  },
+});
+
 export const getRunDetail = adminQuery({
   args: {
     runId: v.id("agentRuns"),
@@ -615,17 +649,24 @@ export const getRunDetail = adminQuery({
 
     assertAdminCanAccessCompany(user, run.companyId);
 
+    // The newest rows, not the oldest. Reading ascending filled the cap with
+    // the start of a long run, and a live page then froze mid-run while the
+    // run kept working — the reader was told "not moving" by a screen whose
+    // window had simply stopped following. Read the tail and put it back in
+    // order.
     const [steps, toolCalls, approvals, replayRuns, evalFixtures] = await Promise.all([
       ctx.db
         .query("agentRunSteps")
         .withIndex("by_run_step", (q) => q.eq("runId", args.runId))
-        .order("asc")
-        .take(AGENT_RUN_DETAIL_LIMIT),
+        .order("desc")
+        .take(AGENT_RUN_DETAIL_LIMIT)
+        .then((rows) => rows.reverse()),
       ctx.db
         .query("agentToolCalls")
         .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
-        .order("asc")
-        .take(AGENT_RUN_DETAIL_LIMIT),
+        .order("desc")
+        .take(AGENT_RUN_DETAIL_LIMIT)
+        .then((rows) => rows.reverse()),
       ctx.db
         .query("agentRunApprovals")
         .withIndex("by_run_requested", (q) => q.eq("runId", args.runId))

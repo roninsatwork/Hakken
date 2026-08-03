@@ -96,7 +96,7 @@ const ProviderUsageList = ({ providers }: { providers?: ProviderDistributionRow[
               </span>
             </div>
             <span className="text-[13px] font-bold text-foreground tracking-tight">
-              £{(provider.cost ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+              ${(provider.cost ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
             </span>
           </div>
         ))

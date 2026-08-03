@@ -98,7 +98,7 @@ function formatLimitNumber(raw: string) {
 }
 
 const AGENT_LIMIT_DEFAULTS = { maxSteps: 25, maxToolCalls: 25, maxRuntimeMinutes: 30, maxInputTokens: 1000000, maxCostGBP: 10 } as const;
-const AGENT_LIMIT_CEILINGS = { maxSteps: 100, maxToolCalls: 100, maxRuntimeMinutes: 60, maxInputTokens: 10000000, maxCostGBP: 50 } as const;
+const AGENT_LIMIT_CEILINGS = { maxSteps: 500, maxToolCalls: 500, maxRuntimeMinutes: 60, maxInputTokens: 10000000, maxCostGBP: 50 } as const;
 
 /** Empty, zero and nonsense all mean "inherit the default", matching the server. */
 function parseLimitInput(value: string) {

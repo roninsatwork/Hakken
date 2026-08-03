@@ -118,6 +118,10 @@ function describeGaps(
     research.filter((row) => row.status === "NOT_FOUND").map((row) => row.field)
   );
   const parked = research.filter((row) => row.status === "NEEDS_CHECK");
+  // A parked finding is a person's decision pending, not a gap. Counting it as
+  // missing re-queued every customer with one on every job, and each re-visit
+  // spent money to discover there was nothing to do.
+  const parkedFields = new Set(parked.map((row) => row.field));
 
   const known: Record<string, string | number> = {};
   const missing: string[] = [];
@@ -129,7 +133,7 @@ function describeGaps(
       known[field] = value;
       continue;
     }
-    if (notFound.has(field)) {
+    if (notFound.has(field) || parkedFields.has(field)) {
       alreadySearched.push(field);
       continue;
     }
@@ -953,6 +957,10 @@ export const recordProspect = internalMutation({
     return {
       recorded: true as const,
       prospectId,
+      // Returned so the research job can put this site straight onto its own
+      // queue: a prospect found at half past two is researched by the same job
+      // rather than waiting for a second press.
+      prospectKey: normalizeKey(siteName),
       conflict: match.outcome === "CONFLICT",
       message:
         match.outcome === "CONFLICT"
@@ -1091,7 +1099,20 @@ const SWEEP_STAGGER_MS = 4_000;
 /** One press of the button is a sweep, not an open tab. */
 const SWEEP_MAX_RUNS = 60;
 
-async function resolveResearchAgent(ctx: TenantMutationCtx, companyId: Id<"companies">) {
+/**
+ * The agent bound to one of the research tools, by the tool's handler.
+ *
+ * Which agent does a job's work is decided by tool bindings, not by name:
+ * the agent holding the detail-recording tool is the record filler, and the
+ * agent holding the site-filing tool is the prospect finder. One agent
+ * holding both is a workspace that has not split the skills, and that is a
+ * supported shape, not an error.
+ */
+async function resolveAgentBoundTo(
+  ctx: Pick<TenantMutationCtx, "db">,
+  companyId: Id<"companies">,
+  handlerMapping: string
+) {
   const tools = await ctx.db
     .query("aiTools")
     .withIndex("by_connector_key", (q) => q.eq("connectorKey", RESEARCH_CONNECTOR_KEY))
@@ -1103,17 +1124,14 @@ async function resolveResearchAgent(ctx: TenantMutationCtx, companyId: Id<"compa
     );
   }
 
-  const seen = new Set<string>();
   for (const tool of tools) {
+    if (tool.handlerMapping !== handlerMapping) continue;
     const bindings = await ctx.db
       .query("agentTools")
       .withIndex("by_tool", (q) => q.eq("toolId", tool._id))
       .take(AGENT_BINDING_LOOKUP_LIMIT);
 
     for (const binding of bindings) {
-      if (seen.has(binding.agentId)) continue;
-      seen.add(binding.agentId);
-
       const agent = await ctx.db.get(binding.agentId);
       if (!agent || agent.isActive === false) continue;
       // A global agent serves any workspace; a tenant's own agent serves only
@@ -1123,10 +1141,40 @@ async function resolveResearchAgent(ctx: TenantMutationCtx, companyId: Id<"compa
     }
   }
 
+  return null;
+}
+
+async function resolveResearchAgent(ctx: TenantMutationCtx, companyId: Id<"companies">) {
+  const agent = await resolveAgentBoundTo(ctx, companyId, "salesCustomers.research.record");
+  if (agent) return agent;
+
   throw new ConvexError(
     "No active agent in this workspace has the customer research tools switched on. "
       + "Add them to an agent under its Interfaces screen, then try again."
   );
+}
+
+/**
+ * Both of the job's workers: the record filler, and the prospect finder.
+ *
+ * The finder falls back to the filler when no second agent holds the
+ * site-filing tool, so a workspace with one agent keeps today's behaviour
+ * and a workspace that has split the skills gets the split without a
+ * setting anywhere.
+ */
+export async function resolveResearchWorkers(
+  ctx: Pick<TenantMutationCtx, "db">,
+  companyId: Id<"companies">
+) {
+  const filler = await resolveAgentBoundTo(ctx, companyId, "salesCustomers.research.record");
+  if (!filler) {
+    throw new ConvexError(
+      "No active agent in this workspace has the customer research tools switched on. "
+        + "Add them to an agent under its Interfaces screen, then try again."
+    );
+  }
+  const finder = await resolveAgentBoundTo(ctx, companyId, "salesCustomers.prospects.record");
+  return { filler, finder: finder ?? filler };
 }
 
 function buildResearchObjective(accountNameKey: string) {
@@ -1157,6 +1205,7 @@ async function queueResearchRun(
     agentVersionId,
     triggerType: "MANUAL",
     objective,
+    title: `${args.accountNameKey} · fill in details`,
     status: "QUEUED",
     companyId: args.companyId,
     userId: ctx.userId,
@@ -1205,6 +1254,252 @@ export const startCustomerResearch = tenantMutation({
 });
 
 /**
+ * Everything in this workspace that still needs researching, as a work list.
+ *
+ * Exported for the research job, which needs the same "what is still missing"
+ * judgement the sweeps used but has to write it down as a queue rather than act
+ * on it immediately. The gap rules stay here, next to the fields they are about,
+ * rather than being reimplemented against the same tables somewhere else.
+ *
+ * Prospects on the books with gaps are returned as their own list: the
+ * detail-filling job researches them alongside customers — one skill, two
+ * subject kinds — while prospects a chain pass is *about* to find join the
+ * queue as they are filed.
+ */
+export async function collectPendingResearchWork(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  args: { companyId: Id<"companies">; importId: Id<"salesDataImports"> }
+): Promise<{
+  customers: { key: string; label: string }[];
+  chains: { key: string; label: string }[];
+  prospects: { key: string; label: string }[];
+}> {
+  const subjects = await collectResearchSubjects(ctx, args);
+
+  const customers: { key: string; label: string }[] = [];
+  const prospects: { key: string; label: string }[] = [];
+  for (const subject of subjects) {
+    const details = await loadDetailsRow(ctx, args.companyId, subject.key);
+    const research = await loadResearchRows(ctx, args.companyId, subject.key);
+    // Already filled in, or every remaining gap already searched for and found
+    // unpublished. Either way there is nothing to spend money on.
+    if (describeGaps(subject, details, research).missing.length === 0) continue;
+    (subject.subjectType === "CUSTOMER" ? customers : prospects)
+      .push({ key: subject.key, label: subject.name });
+  }
+
+  const accounts = await ctx.db
+    .query("salesDataAccounts")
+    .withIndex("by_company_import_group_name", (q) =>
+      q.eq("companyId", args.companyId).eq("importId", args.importId)
+    )
+    .take(NEXT_CUSTOMER_SCAN_LIMIT);
+
+  // Every chain is looked through on every job, including ones that already have
+  // prospects against them: a chain cut short by a budget records two sites out
+  // of twenty and then looks exactly like a chain that was finished.
+  const chains = new Map<string, string>();
+  for (const account of accounts) {
+    if (!chains.has(account.groupNameKey)) chains.set(account.groupNameKey, account.groupName);
+  }
+
+  return {
+    customers,
+    chains: [...chains].map(([key, label]) => ({ key, label })),
+    prospects,
+  };
+}
+
+/** The research agent this workspace's job will use. Exported for the job. */
+export async function resolveResearchAgentForCompany(
+  ctx: TenantMutationCtx,
+  companyId: Id<"companies">
+) {
+  return await resolveResearchAgent(ctx, companyId);
+}
+
+/**
+ * The prospect finder's own instruction sheet.
+ *
+ * Written to the same standard as the record filler's, for one skill only:
+ * how a group hunt goes, where the truth about a group's sites lives, and the
+ * honesty rules for filing one. A finder run never pays to carry the
+ * detail-filling rules, and cannot be argued into detail work it has no tools
+ * for.
+ */
+const FINDER_SYSTEM_PROMPT = `You find the sites in the groups Comax supplies — the ones their sales spreadsheet does not hold — and file each one as a prospect.
+
+HOW A RUN GOES
+1. Call "Comax — Read a group" to get a group. Call it with no group name to be given the next one nobody has looked through yet.
+2. You will be told the group's name, its customer type, the sites already supplied, and the sites already found. Your job is the sites in neither list.
+3. Find the group's own website and its list of its sites — usually a page called Our Homes, Our Hotels, Our Schools or similar. That list is the truth about what the group runs. Prefer it over any register or directory page.
+4. FILE AS YOU GO. The moment you are sure a site belongs to the group, call "Comax — Record a site in a group" for it, before you read anything else. Do not read several pages first and file at the end — you will run out of budget before writing anything down, and the whole run is wasted.
+5. Report every site you find, including ones you think are already supplied — you will be told which those are, and that is how the count stays honest. A site that is already a customer is refused and named back to you; stop offering it and move on.
+6. A town and a postcode make a filed site worth far more — the postcode is the strongest signal for telling a new site from one already supplied. Take them from the group's own page for that site when they are shown.
+7. When the group's list is exhausted, say what you did and stop.
+
+WHERE TO LOOK
+- The group's own website first, always. Its list of its sites is usually complete and current.
+- For a care group, the Care Quality Commission register at cqc.org.uk lists every registered location under the provider. Use it to check you have not missed a site the group's own pages do not show.
+- When you read a register or any listing page, ask Firecrawl for the whole page by setting mainContentOnly to false. Those lists sit outside the main article, and you will otherwise get the navigation and nothing else.
+
+BEING HONEST
+- Every site needs the address of the page that lists it. If you cannot name the page, you have not found the site.
+- One line of reasoning per site: why you believe it belongs to this group.
+- Never infer a site from a name pattern, and never file a site you have not seen listed on a page you read this run.
+- A group whose list shows nothing new is a finished group, not a failure. Say so and ask for the next task.`;
+
+/**
+ * The record filler's instruction sheet, owned here since 2026-08-03.
+ *
+ * Originally tuned by hand on the agent's settings screen; brought into code
+ * the day Anthony named the priority — *"the client is looking for number of
+ * pupils for schools and number of bedrooms for care homes, this is the key
+ * metric for the next phase"* — so the priority section below travels with
+ * the template instead of living only in one deployment's database.
+ */
+const FILLER_SYSTEM_PROMPT = `You research Comax's customers on the open web and fill in the contact details their sales spreadsheet does not hold.
+
+THE FIGURE THAT MATTERS MOST
+Comax's next phase is sized on one number per business: pupils for a school, bedrooms for a care home or a hotel. Treat that figure as the most valuable single detail on the record.
+- It is worth a page read of its own. For a school, the government's schools register carries the roll. For a care home or a hotel, the business's own site is the only source — an "about us", "our rooms" or "our home" page usually carries it.
+- The honesty rules do not soften for it. A figure you did not read on a page about this exact business is not a finding: never estimate, never count photographs, never take the chain's total for one of its sites. Record it as not found rather than guessing — that is a useful answer.
+
+HOW A RUN GOES
+1. Call "Comax — Read a customer's record" to get a customer. Call it with no account name to be given the next one that still has gaps.
+2. You will be told the business name, the chain it belongs to, its type, what is already known, and exactly which details are missing. Work only on the missing ones.
+3. Find the business's own contact page. That one page usually carries the address, the postcode and the telephone number together.
+4. RECORD AS YOU GO. The moment a page gives you a detail, call "Comax — Record a customer detail" for it, before you read anything else. Do not read several pages first and record at the end — you will run out of budget before writing anything down, and the whole run is wasted.
+5. Two or three pages is normally enough. Stop reading once the missing details are found or you have run out of places that would carry them.
+6. When there is nothing left you can find for that customer, say what you did and stop.
+
+IDENTIFY THE INDIVIDUAL BUSINESS, NEVER THE CHAIN
+Most of these customers belong to a group — nine are Daish's hotels, six are Colten Care homes. Head office's address and switchboard are not the customer's, and writing them onto nine records looks like success while being entirely wrong.
+- Search the business name. Use the chain only as a tiebreaker, never on its own.
+- If the business name and the chain name lead you to the same page, you have not found the individual site. Record nothing.
+- A chain's own website usually has one page per site. That page is what you want, not the chain's contact page.
+- Before you record anything, be able to say in one line why that page is about that one site.
+
+WHERE TO LOOK
+- The business's own website is best for address, phone, email and named contacts. Directory listings carry numbers that stopped working years ago.
+- For a care home, the Care Quality Commission register at cqc.org.uk carries the individual home's address and telephone number. It does NOT publish bed counts — do not look for one there.
+- For a school, the government's schools register carries the roll.
+- A bed count for a care home or a hotel comes from the business's own site or it does not exist. Record it as not found rather than estimating.
+- When you read a register or any listing page, ask Firecrawl for the whole page by setting mainContentOnly to false. Those lists sit outside the main article, and you will otherwise get the navigation and nothing else.
+- Do not spend a call on country. It is almost never printed on a British business's contact page. Record it as not found straight away, or leave it.
+
+BEING HONEST
+- Report confidence honestly. HIGH means the page names this exact business and states this exact detail plainly. Anything less is routed to a person, which is a normal outcome and not a failure.
+- Every detail needs the address of the page you took it from. If you cannot name the page, you have not found the detail.
+- If a detail is not published anywhere you looked, record it with notFound set. That is useful — it stops this customer being searched for the same thing every month.
+- Never infer. Do not guess a postcode from a town, an email address from a domain, a phone number from a pattern, or a room count from photographs.
+- Take only contact details a business publishes about itself. Never assemble them from social profiles or people-search sites.`;
+
+/** Which of the connector's tools each worker holds. The boundary, as data. */
+const FILLER_TOOL_MAPPINGS = [
+  "salesCustomers.research.read",
+  "salesCustomers.research.record",
+  "salesCustomers.job.next",
+] as const;
+const FINDER_TOOL_MAPPINGS = [
+  "salesCustomers.prospects.read",
+  "salesCustomers.prospects.record",
+  "salesCustomers.job.next",
+] as const;
+/** Both workers read the web the same way. */
+const SHARED_TOOL_MAPPINGS = ["web.scrape"] as const;
+
+/**
+ * Set the two workers up: one skill each, tools to match.
+ *
+ * Idempotent on purpose — run it again after creating a fresh agent, or after
+ * a binding has been fiddled with by hand, and it converges on the same
+ * state. It moves the group tools off the filler and onto the finder, which
+ * is the moment the two-agent shape becomes real for a workspace: worker
+ * resolution goes by these bindings, not by agent names.
+ *
+ * Prompts: both workers' sheets are owned here and set on every run, so a
+ * priority stated in one conversation becomes part of the product rather
+ * than one deployment's database tuning.
+ */
+export const provisionResearchWorkers = internalMutation({
+  args: {
+    fillerAgentId: v.id("agents"),
+    finderAgentId: v.id("agents"),
+  },
+  handler: async (ctx, args) => {
+    const [filler, finder] = await Promise.all([
+      ctx.db.get(args.fillerAgentId),
+      ctx.db.get(args.finderAgentId),
+    ]);
+    if (!filler || !finder) throw new ConvexError("Both agents must exist.");
+    if (args.fillerAgentId === args.finderAgentId) {
+      throw new ConvexError("The two workers must be different agents.");
+    }
+
+    const tools = await ctx.db.query("aiTools").take(500);
+    const byMapping = new Map(tools.map((tool) => [tool.handlerMapping, tool]));
+
+    const ensureBinding = async (agentId: Id<"agents">, mapping: string) => {
+      const tool = byMapping.get(mapping);
+      if (!tool) throw new ConvexError(`No tool is installed for ${mapping}.`);
+      const existing = await ctx.db
+        .query("agentTools")
+        .withIndex("by_tool", (q) => q.eq("toolId", tool._id))
+        .take(200);
+      if (existing.some((binding) => binding.agentId === agentId)) return;
+      await ctx.db.insert("agentTools", { agentId, toolId: tool._id, assignedAt: Date.now() });
+    };
+
+    const removeBinding = async (agentId: Id<"agents">, mapping: string) => {
+      const tool = byMapping.get(mapping);
+      if (!tool) return;
+      const existing = await ctx.db
+        .query("agentTools")
+        .withIndex("by_tool", (q) => q.eq("toolId", tool._id))
+        .take(200);
+      for (const binding of existing) {
+        if (binding.agentId === agentId) await ctx.db.delete(binding._id);
+      }
+    };
+
+    for (const mapping of [...FILLER_TOOL_MAPPINGS, ...SHARED_TOOL_MAPPINGS]) {
+      await ensureBinding(args.fillerAgentId, mapping);
+    }
+    // Only the other skill's own tools are taken away — the queue tool and the
+    // web reader are shared, and stripping them would leave a worker mute.
+    for (const mapping of ["salesCustomers.prospects.read", "salesCustomers.prospects.record"]) {
+      await removeBinding(args.fillerAgentId, mapping);
+    }
+    for (const mapping of [...FINDER_TOOL_MAPPINGS, ...SHARED_TOOL_MAPPINGS]) {
+      await ensureBinding(args.finderAgentId, mapping);
+    }
+    for (const mapping of ["salesCustomers.research.read", "salesCustomers.research.record"]) {
+      await removeBinding(args.finderAgentId, mapping);
+    }
+
+    await ctx.db.patch(args.fillerAgentId, {
+      systemPrompt: FILLER_SYSTEM_PROMPT,
+      updatedAt: Date.now(),
+    });
+    await ctx.db.patch(args.finderAgentId, {
+      systemPrompt: FINDER_SYSTEM_PROMPT,
+      // A fresh agent carries the platform's cautious defaults, which are
+      // sized for a question, not a queue. Only unset bounds are filled in —
+      // bounds somebody has tuned on the settings screen are theirs.
+      ...(finder.maxSteps === undefined ? { maxSteps: 500 } : {}),
+      ...(finder.maxToolCalls === undefined ? { maxToolCalls: 500 } : {}),
+      ...(finder.maxRuntimeMs === undefined ? { maxRuntimeMs: 3_600_000 } : {}),
+      ...(finder.maxInputTokens === undefined ? { maxInputTokens: 5_000_000 } : {}),
+      ...(finder.maxCostGBP === undefined ? { maxCostGBP: 25 } : {}),
+      updatedAt: Date.now(),
+    });
+
+    return { configured: true };
+  },
+});
+
+/**
  * Research every customer that still has gaps.
  *
  * One run per customer rather than one run for all of them: a run is bounded,
@@ -1214,6 +1509,9 @@ export const startCustomerResearch = tenantMutation({
  * Customers already filled in, and customers whose remaining gaps have all been
  * searched for and found unpublished, are skipped — which is what makes pressing
  * this a second time cheap rather than a repeat of the bill.
+ *
+ * Superseded by the research job, which does all three passes under one press
+ * and knows when they are finished. Kept until that lands.
  */
 export const startCustomerResearchSweep = tenantMutation({
   args: {},
@@ -1346,6 +1644,7 @@ export const startProspectingSweep = tenantMutation({
         agentVersionId,
         triggerType: "MANUAL",
         objective,
+        title: `${groupName} · find sites`,
         status: "QUEUED",
         companyId,
         userId: ctx.userId,

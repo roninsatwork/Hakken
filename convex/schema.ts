@@ -599,6 +599,21 @@ export default defineSchema({
     // reading every one's steps, then parsing each blob. Stamped on the run it is a
     // single indexed range read.
     evalFixtureId: v.optional(v.id("agentEvalFixtures")),
+    /**
+     * What this run was working on, in a few words.
+     *
+     * The run screen used to head itself with the whole objective, set in the
+     * page-title style — for the research agent that is a paragraph of
+     * instructions, three lines of large bold text where a name should be. One
+     * agent, Rightmove collection, had a short title because that screen
+     * special-cased it; everything else was left wearing its orders. Anthony,
+     * 2026-08-03: *"what is this and why is the font so large."*
+     *
+     * Written by whatever starts the run, because only that knows what the run
+     * is about. Optional so runs recorded before it existed still validate; the
+     * screen falls back to deriving something for those.
+     */
+    title: v.optional(v.string()),
     status: v.union(
       v.literal("QUEUED"),
       v.literal("RUNNING"),
@@ -630,6 +645,15 @@ export default defineSchema({
     // another approval, and burns the reviewer's attention in a loop. Lives on the
     // run because it is read and written only by that run and dies with it.
     refusedToolCallsJson: v.optional(v.string()),
+    /**
+     * The run that picked this run's queue up after it ended.
+     *
+     * Set by the research job when it starts a successor. A run that worked to
+     * its per-run ceiling and handed the queue on is the system working, and
+     * without this the screens dressed every planned handover as a failure —
+     * "it did not finish" over a job that finished fine.
+     */
+    continuedByRunId: v.optional(v.id("agentRuns")),
     replayOfRunId: v.optional(v.id("agentRuns")),
     replayMode: v.optional(v.union(
       v.literal("CURRENT_ACTIVE"),
@@ -2745,7 +2769,10 @@ export default defineSchema({
     // Serves the profile on its first two columns and the supersede lookup on
     // all three, so one index covers both reads.
     .index("by_company_subject_field", ["companyId", "subjectKey", "field"])
-    .index("by_company_status_found", ["companyId", "status", "foundAt"]),
+    .index("by_company_status_found", ["companyId", "status", "foundAt"])
+    // The run screen leads with what a run actually recorded, which is this
+    // table read by run rather than by subject.
+    .index("by_run", ["runId"]),
 
   /**
    * A site in a group the workspace supplies, that it does not supply yet.
@@ -2806,6 +2833,269 @@ export default defineSchema({
     .index("by_company_prospect", ["companyId", "prospectKey"])
     // The group view, and the coverage line that counts against it.
     .index("by_company_group", ["companyId", "groupNameKey", "prospectKey"])
-    .index("by_company_status", ["companyId", "status", "foundAt"]),
+    .index("by_company_status", ["companyId", "status", "foundAt"])
+    // The run screen leads with what a run actually recorded, which includes
+    // the prospects it filed.
+    .index("by_run", ["runId"]),
+
+  /**
+   * One press of "research everything", and how far through it is.
+   *
+   * The thing that was missing. Research used to be started as one agent run per
+   * customer and one per chain — 141 runs on this workspace, a quarter of them
+   * dying on their own ceilings — with nothing anywhere holding the sentence
+   * "there are 39 customers and 12 are done". Nothing could say whether the work
+   * had finished, nothing retried what died, and a sweep that had covered a
+   * third of the list read on screen exactly like one that had covered all of
+   * it.
+   *
+   * This row is that sentence. It owns the queue below, survives the runs it
+   * starts, and is what the screen reads. A run is now a unit of work the job
+   * hands out, not the job.
+   */
+  salesDataResearchJobs: defineTable({
+    companyId: v.id("companies"),
+    /** Researching is always against one import; a new upload starts a new job. */
+    importId: v.id("salesDataImports"),
+    status: v.union(
+      v.literal("RUNNING"),
+      v.literal("COMPLETE"),
+      /** Finished the queue, but some items could not be done. */
+      v.literal("COMPLETE_WITH_EXCEPTIONS"),
+      /** A person pressed stop, or the job reached its spend ceiling. */
+      v.literal("STOPPED"),
+      v.literal("FAILED")
+    ),
+    /**
+     * Which pass it is on. The order is fixed in code, not chosen by the model:
+     * customers, then chains, then the prospects those chains produced. Phase
+     * three cannot be a separate press because its work does not exist until
+     * phase two has run.
+     */
+    phase: v.union(
+      v.literal("CUSTOMERS"),
+      v.literal("CHAINS"),
+      v.literal("PROSPECTS"),
+      v.literal("DONE")
+    ),
+    /**
+     * The agent doing the work, fixed when the job starts.
+     *
+     * Held here rather than resolved again for each run: which agent has the
+     * research tools switched on can change mid-job, and a job that swapped
+     * agents halfway would produce findings from two different configurations
+     * with nothing on screen to say so.
+     */
+    agentId: v.id("agents"),
+    /** The run currently working the queue, if one is. */
+    currentRunId: v.optional(v.id("agentRuns")),
+    /** How many runs this job has started. Diagnostic, not a limit. */
+    runsStarted: v.number(),
+    /**
+     * What the job may spend across every run it starts.
+     *
+     * The bound that matters for an autopilot. Per-run ceilings stop one run
+     * going mad; only this stops a job quietly costing fifty pounds by starting
+     * twenty runs that each stayed politely under their own limit.
+     */
+    maxCostGBP: v.number(),
+    spentGBP: v.number(),
+    /**
+     * The second worker, when the workspace splits the job's two skills.
+     *
+     * `agentId` is the record filler (customers and prospects); this is the
+     * prospect finder (chains). Absent, one agent does both — which is how a
+     * fresh deployment behaves until somebody creates the second agent, and
+     * how the template ships.
+     */
+    prospectAgentId: v.optional(v.id("agents")),
+    /**
+     * Which button this job answers to.
+     *
+     * DETAILS fills in customers and prospects already on the books;
+     * PROSPECTS hunts the chains and files what it finds, without researching
+     * it. Absent means the original everything job, which a workspace with a
+     * single agent still gets.
+     */
+    mode: v.optional(v.union(v.literal("DETAILS"), v.literal("PROSPECTS"))),
+    /** Spend split by skill, so the report can say what each worker cost. */
+    findingSpentGBP: v.optional(v.number()),
+    fillingSpentGBP: v.optional(v.number()),
+    startedBy: v.id("users"),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    /** Why it ended, in words, for the line the screen shows when it stops. */
+    endedReason: v.optional(v.string()),
+  })
+    // At most one job per workspace is RUNNING; this is how that is checked.
+    .index("by_company_status", ["companyId", "status"])
+    .index("by_company_started", ["companyId", "startedAt"])
+    // The observability screen asks by agent. A global agent belongs to no
+    // workspace, so asking "which workspace is this agent's" returned nothing
+    // and hid the job panel for exactly the agent it was built for. Two
+    // indexes because either worker's screen must find the job.
+    .index("by_agent_started", ["agentId", "startedAt"])
+    .index("by_prospect_agent_started", ["prospectAgentId", "startedAt"]),
+
+  /**
+   * One row per thing the job has to research, and whether it has been.
+   *
+   * Materialised rather than recomputed each time because it carries state a
+   * derived list cannot: how many attempts an item has had, and why it was given
+   * up on. Without those, an item that fails deterministically is retried for
+   * ever, and an item that was skipped leaves no trace of having been skipped.
+   */
+  salesDataResearchJobItems: defineTable({
+    jobId: v.id("salesDataResearchJobs"),
+    companyId: v.id("companies"),
+    kind: v.union(
+      v.literal("CUSTOMER"),
+      v.literal("CHAIN"),
+      /** Added while the job runs, as the chain phase turns them up. */
+      v.literal("PROSPECT")
+    ),
+    /** The account, group or prospect key. Unique per job with `kind`. */
+    key: v.string(),
+    /** As a person would say it, for the progress line and the exception list. */
+    label: v.string(),
+    status: v.union(
+      v.literal("PENDING"),
+      v.literal("IN_PROGRESS"),
+      v.literal("DONE"),
+      /** Attempted twice and still not done. The job carries on without it. */
+      v.literal("FAILED")
+    ),
+    attempts: v.number(),
+    lastError: v.optional(v.string()),
+    /** The run that last worked this item, so a row can be traced to a run. */
+    runId: v.optional(v.id("agentRuns")),
+    updatedAt: v.number(),
+  })
+    // Handing out the next piece of work: the job's items of one kind, by state.
+    .index("by_job_kind_status", ["jobId", "kind", "status"])
+    .index("by_job_status", ["jobId", "status"])
+    // Refusing to queue the same subject twice when the chain phase finds a
+    // prospect the job already knows about.
+    .index("by_job_kind_key", ["jobId", "kind", "key"]),
+
+  /**
+   * One press of the opportunity report, and everything it computed.
+   *
+   * The whole report lives in one row — headline, both sections, the agent's
+   * summary — because the screen shows exactly one report at a time and the
+   * workspace holds tens of accounts, not thousands. Every figure in it was
+   * written by the deterministic pass in `salesOpportunityService.ts`; the
+   * agent contributes only `summary` and `exceptions`, and the save path
+   * refuses a summary naming a figure the sections do not hold.
+   *
+   * Keyed to an import because the estimates are sums over one workbook's six
+   * months. A re-import does not delete old reports — they remain readable,
+   * labelled with the import they describe — but the screen leads with the
+   * newest, and a fresh press prices the new data.
+   */
+  salesOpportunityReports: defineTable({
+    companyId: v.id("companies"),
+    importId: v.id("salesDataImports"),
+    status: v.union(
+      v.literal("RUNNING"),
+      v.literal("COMPLETE"),
+      /** Finished, but something could not be priced. The list says what. */
+      v.literal("COMPLETE_WITH_EXCEPTIONS"),
+      v.literal("FAILED")
+    ),
+    /**
+     * How far through the pass it is, for the progress bar. The order is
+     * fixed in code: price the prospects, find the gaps, write the summary.
+     */
+    phase: v.union(
+      v.literal("MATCHING"),
+      v.literal("GAPS"),
+      v.literal("SUMMARY"),
+      v.literal("DONE")
+    ),
+    agentId: v.optional(v.id("agents")),
+    /** The run doing the work, so the report can be traced to its run. */
+    runId: v.optional(v.id("agentRuns")),
+    requestedBy: v.id("users"),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    /** Why a FAILED report failed, in words, for the line the screen shows. */
+    failureReason: v.optional(v.string()),
+    /** The hero boxes, computed once with the sections, never re-derived. */
+    headline: v.optional(
+      v.object({
+        totalOpportunityGBP: v.number(),
+        prospectOpportunityGBP: v.number(),
+        gapOpportunityGBP: v.number(),
+        prospectCount: v.number(),
+        prospectsSized: v.number(),
+        prospectsUnsized: v.number(),
+        prospectsUnpriced: v.number(),
+        gapCount: v.number(),
+        groupsExamined: v.number(),
+      })
+    ),
+    /** Section one: what each prospect would be worth, with its working. */
+    prospects: v.optional(
+      v.array(
+        v.object({
+          prospectKey: v.string(),
+          siteName: v.string(),
+          groupName: v.string(),
+          customerType: v.string(),
+          sizeUnit: v.union(v.literal("bedrooms"), v.literal("pupils"), v.null()),
+          size: v.union(v.number(), v.null()),
+          estimateGBP: v.union(v.number(), v.null()),
+          confidence: v.union(
+            v.literal("GROUP_SIZED"),
+            v.literal("TYPE_SIZED"),
+            v.literal("GROUP_AVERAGE"),
+            v.literal("TYPE_AVERAGE"),
+            v.literal("NONE")
+          ),
+          ratePerUnitGBP: v.union(v.number(), v.null()),
+          comparedTo: v.array(
+            v.object({
+              accountName: v.string(),
+              totalRevenueGBP: v.number(),
+              size: v.union(v.number(), v.null()),
+            })
+          ),
+          basis: v.string(),
+        })
+      )
+    ),
+    /** Section two: what each chain member is not buying, with its working. */
+    gaps: v.optional(
+      v.array(
+        v.object({
+          accountNameKey: v.string(),
+          accountName: v.string(),
+          groupName: v.string(),
+          categoryKey: v.string(),
+          category: v.string(),
+          buyersCount: v.number(),
+          siblingCount: v.number(),
+          estimateGBP: v.number(),
+          scaledBySize: v.boolean(),
+          comparedTo: v.array(
+            v.object({ accountName: v.string(), spendGBP: v.number() })
+          ),
+          basis: v.string(),
+        })
+      )
+    ),
+    /** The agent's reading of the sections, as markdown. Prose, not figures. */
+    summary: v.optional(v.string()),
+    /** What could not be done and why, shown on the report, not in logs. */
+    exceptions: v.optional(v.array(v.string())),
+  })
+    // At most one report per workspace is RUNNING; this is how that is checked.
+    .index("by_company_status", ["companyId", "status"])
+    // The screen leads with the newest report.
+    .index("by_company_started", ["companyId", "startedAt"])
+    .index("by_run", ["runId"]),
   // template:remove:end
 });

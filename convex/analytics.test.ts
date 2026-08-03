@@ -249,11 +249,11 @@ describe("Analytics MRR Strict Isolation", () => {
     expect(costs.periodInputTokens).toBe(1_000_000);
     expect(costs.periodOutputTokens).toBe(500_000);
     expect(costs.periodTokens).toBe(1_500_000);
-    expect(costs.periodCostGBP).toBe(1.56);
-    expect(costs.avgCostPerUser).toBe(1.56);
-    expect(costs.avgCostPerThread).toBe(1.56);
+    expect(costs.periodCostUSD).toBe(2);
+    expect(costs.avgCostPerUser).toBe(2);
+    expect(costs.avgCostPerThread).toBe(2);
     expect(costs.aggregationType).toBe("day");
-    expect(costs.timeline.reduce((sum, point) => sum + point.costGBP, 0)).toBeCloseTo(1.56, 6);
+    expect(costs.timeline.reduce((sum, point) => sum + point.costGBP, 0)).toBeCloseTo(2, 6);
   });
 
   test("user cost overview is tenant-isolated and includes assistant thread costs", async () => {
@@ -332,7 +332,7 @@ describe("Analytics MRR Strict Isolation", () => {
 
     const overview = await adminAClient.query(api.analytics.getUserCostOverview, { userId: userAId });
 
-    expect(overview.totalCostGBP).toBe(1.812);
+    expect(overview.totalCostGBP).toBe(1.9);
     expect(overview.totalTokens).toBe(300_030);
     expect(overview.totalInputTokens).toBe(200_010);
     expect(overview.totalOutputTokens).toBe(100_020);
@@ -349,7 +349,7 @@ describe("Analytics MRR Strict Isolation", () => {
       messageCount: 2,
       threadTokens: 300_000,
     });
-    expect(threadCosts.page[0].costGBP).toBeCloseTo(0.312, 6);
+    expect(threadCosts.page[0].costGBP).toBeCloseTo(0.4, 6);
     expect(companyAId).toBeDefined();
   });
 
@@ -510,16 +510,16 @@ describe("Analytics MRR Strict Isolation", () => {
       totalTokens: 700_030,
       totalInputTokens: 400_010,
       totalOutputTokens: 300_020,
-      totalCostGBP: 3.78,
-      costPerActiveUser: 3.78,
-      avgCostPerMessage: 0.945,
+      totalCostGBP: 4,
+      costPerActiveUser: 4,
+      avgCostPerMessage: 1,
       aggregationType: "day",
       mrr: 80,
       knowledgeDocuments: 1,
       mau: 0,
     });
-    expect(metrics.topUsers[0]).toMatchObject({ id: userAId, cost: 3.234, messages: 3 });
-    expect(metrics.topAgents[0]).toMatchObject({ id: agentId, interactions: 4, cost: 3.78 });
+    expect(metrics.topUsers[0]).toMatchObject({ id: userAId, cost: 3.3, messages: 3 });
+    expect(metrics.topAgents[0]).toMatchObject({ id: agentId, interactions: 4, cost: 4 });
     expect(metrics.timeline.reduce((sum, point) => sum + point.messages, 0)).toBe(4);
   });
 
@@ -611,7 +611,7 @@ describe("Analytics MRR Strict Isolation", () => {
       wauCount: 0,
       totalThreads: 0,
       avgInteractionDepth: 1,
-      cost30DGBP: 0,
+      total30DCostUSD: 0,
       costPerActiveUserGBP: 0,
       topUsers: [],
     });

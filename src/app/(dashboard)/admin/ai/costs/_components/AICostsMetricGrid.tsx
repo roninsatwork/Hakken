@@ -1,6 +1,6 @@
 import { Cpu, MessageSquare, PoundSterling, Users } from "lucide-react";
 import type { AnalyticsAggregates, Translate } from "./types";
-import { formatSmallGbpAmount } from "./costFormatters";
+import { formatSmallUsdAmount } from "./costFormatters";
 import { MetricBlock } from "./MetricBlock";
 
 type AICostsMetricGridProps = {
@@ -16,21 +16,21 @@ export function AICostsMetricGrid({ aggregates, t }: AICostsMetricGridProps) {
         largeText
         icon={PoundSterling}
         title={t("metrics.periodCost")}
-        value={formatSmallGbpAmount(aggregates.totalCostGBP, 5)}
+        value={formatSmallUsdAmount(aggregates.totalCostGBP, 5)}
         sub={t("metrics.exchangeSub") || "TOTAL GBP BURNED"}
         delay={0}
       />
       <MetricBlock
         icon={MessageSquare}
         title={t("metrics.avgCostConv")}
-        value={formatSmallGbpAmount(aggregates.avgCostPerMessage, 5)}
+        value={formatSmallUsdAmount(aggregates.avgCostPerMessage, 5)}
         sub={t("metrics.avgCostConvSub") || "COST PER MESSAGE"}
         delay={0.1}
       />
       <MetricBlock
         icon={Users}
         title={t("metrics.avgCostUser")}
-        value={formatSmallGbpAmount(aggregates.costPerActiveUser, 5)}
+        value={formatSmallUsdAmount(aggregates.costPerActiveUser, 5)}
         sub={t("metrics.avgCostUserSub") || "COST PER ACTIVE USER"}
         delay={0.15}
       />

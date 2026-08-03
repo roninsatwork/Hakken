@@ -1006,6 +1006,72 @@ describe("durable runs", () => {
     expect(await checkpoints(t)).toHaveLength(0);
   });
 
+  test("resumes a triggered run that has no conversation at all", async () => {
+    // The research job's runs are triggered, not chatted: they have no thread.
+    // The continuation used to treat that as "nothing to resume into", delete
+    // the checkpoint and return — so every triggered run died silently at its
+    // first three-minute handover, still marked RUNNING, invisible to the
+    // sweeper. That is the failure that stalled the first live research job.
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bindKnowledgeSearchTool(t, agentId, userId);
+
+    const runId = await t.run(async (ctx) => {
+      const id = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        userId,
+        triggerType: "MANUAL",
+        objective: "Work the research queue",
+        status: "RUNNING",
+        modelId: "test-model",
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await ctx.db.insert("agentRunCheckpoints", {
+        runId: id,
+        agentId,
+        companyId,
+        status: "ACTIVE",
+        transcriptJson: JSON.stringify([
+          { role: "user", parts: [{ text: "Work the research queue" }] },
+          { role: "model", parts: [{ functionCall: { name: "knowledge_search", args: { query: "x" } } }] },
+          { role: "function", parts: [{ functionResponse: { name: "knowledge_search", response: {} } }] },
+        ]),
+        stepIndex: 3,
+        loopIndex: 1,
+        toolCallCount: 1,
+        inputTokens: 40,
+        outputTokens: 12,
+        segmentCount: 1,
+        resumeAttempts: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return id;
+    });
+
+    // The resumed segment must still be able to act, not just speak: its tools
+    // are rebuilt from the run's owner, since there is no thread to read one
+    // from.
+    generateMock.mockResolvedValueOnce(
+      toolCallResponse([{ name: "knowledge_search", args: { query: "next item" } }])
+    );
+    generateMock.mockResolvedValueOnce(textResponse("Queue worked."));
+
+    await t.action(internal.agentRuntime.continueAgentObjective, { runId });
+
+    const { run, steps } = await runSteps(t, runId);
+    expect(run?.status).toBe("SUCCESS");
+    expect(run?.finalOutput).toBe("Queue worked.");
+    expect(steps.some((step) => step.kind === "TOOL_CALL")).toBe(true);
+
+    // No conversation existed, so none may be invented for it.
+    const messages = await t.run(async (ctx) => await ctx.db.query("messages").collect());
+    expect(messages).toHaveLength(0);
+    expect(await checkpoints(t)).toHaveLength(0);
+  });
+
   test("refuses to resume a run that has been cancelled", async () => {
     // The sweeper and a scheduled handover both race against an operator
     // cancelling. Resuming here would execute tools for an answer nobody wants.
@@ -2463,9 +2529,12 @@ describe("provider selection", () => {
     const t = makeTest();
     const { agentId, threadId } = await seedAgentRun(t);
 
+    // A provider the registry has never heard of. This fixture was `openai`
+    // until 2026-08-03, when a live run found the missing adapter and it was
+    // built — openai now routes rather than refusing.
     await t.run(async (ctx) => {
       const model = (await ctx.db.query("aiModels").collect())[0];
-      await ctx.db.patch(model._id, { providerKey: "openai" });
+      await ctx.db.patch(model._id, { providerKey: "acme-models" });
     });
 
     await t.action(internal.agentRuntime.runAgentObjective, {
@@ -2487,7 +2556,7 @@ describe("provider selection", () => {
     // agent. The old failure came from deeper down and said the runtime
     // "requires a Google Vertex model" — true, but it pointed the reader at
     // Vertex for a model that had nothing to do with it.
-    expect(errorLog?.responseContent).toContain("cannot run models from provider 'openai'");
+    expect(errorLog?.responseContent).toContain("cannot run models from provider 'acme-models'");
     expect(errorLog?.responseContent).not.toContain("requires a Google Vertex model");
   });
 });

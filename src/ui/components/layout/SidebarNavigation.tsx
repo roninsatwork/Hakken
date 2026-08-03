@@ -274,6 +274,7 @@ function SalesDataNavItem({
   const importHref = `${base}/import-data`;
   const tablesHref = `${base}/spreadsheet-import`;
   const customersHref = `${base}/customers`;
+  const opportunityHref = `${base}/opportunity-report`;
 
   return (
     <NavItem
@@ -288,6 +289,9 @@ function SalesDataNavItem({
       <SubNavItem label={t('salesDataImport')} href={importHref} isActive={pathname === importHref} onClick={onSelect} />
       <SubNavItem label={t('salesDataTables')} href={tablesHref} isActive={pathname === tablesHref} onClick={onSelect} />
       <SubNavItem label={t('salesDataCustomers')} href={customersHref} isActive={pathname.startsWith(customersHref)} onClick={onSelect} />
+      {/* Lives here, not under Reports: Anthony went looking for it beside
+          Customers, and where a person looks is where a screen belongs. */}
+      <SubNavItem label={t('salesDataOpportunityReport')} href={opportunityHref} isActive={pathname === opportunityHref} onClick={onSelect} />
     </NavItem>
   );
 }

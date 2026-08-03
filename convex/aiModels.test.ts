@@ -191,12 +191,23 @@ describe("OWASP: Broken Access Control - AI Models", () => {
 
     const adminId = await t.run(async (ctx) => {
       const adminId = await ctx.db.insert("users", { email: "admin@test.com", role: "SUPER_ADMIN" });
-      // OpenAI has a text adapter but no agent adapter, so it cannot run agents.
+      // A provider the agent runtime has no adapter for cannot run agents.
+      // (This was `openai` until 2026-08-03, when a live run found the gap and
+      // the adapter was built — so the fixture is now a fictional provider.)
       await ctx.db.insert("aiModels", {
-        modelId: "openai:text-only",
-        providerKey: "openai",
+        modelId: "acme:text-only",
+        providerKey: "acme",
         providerModelId: "text-only",
         displayName: "Text Only",
+        isEnabled: true,
+        isDefault: false,
+        lastSyncedAt: Date.now(),
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "openai:agent-capable",
+        providerKey: "openai",
+        providerModelId: "agent-capable",
+        displayName: "Agent Capable",
         isEnabled: true,
         isDefault: false,
         lastSyncedAt: Date.now(),
@@ -206,15 +217,19 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     const client = t.withIdentity({ subject: adminId });
 
     await expect(
-      client.mutation(api.aiModels.setGlobalModelDefault, { useCase: "agent", modelId: "openai:text-only" })
+      client.mutation(api.aiModels.setGlobalModelDefault, { useCase: "agent", modelId: "acme:text-only" })
     ).rejects.toThrow(/cannot handle the agent job/);
 
+    // The regression the live run found: an OpenAI model must be acceptable
+    // for agents now that the runtime carries an adapter for it.
+    await client.mutation(api.aiModels.setGlobalModelDefault, { useCase: "agent", modelId: "openai:agent-capable" });
+
     // The same model is perfectly fine for a job that is only text.
-    await client.mutation(api.aiModels.setGlobalModelDefault, { useCase: "chat", modelId: "openai:text-only" });
+    await client.mutation(api.aiModels.setGlobalModelDefault, { useCase: "chat", modelId: "acme:text-only" });
     const stored = await t.run(async (ctx) =>
       await ctx.db.query("aiModelDefaults").withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", "chat")).first()
     );
-    expect(stored?.modelId).toBe("openai:text-only");
+    expect(stored?.modelId).toBe("acme:text-only");
   });
 
   test("an OpenRouter model can run agents, because it has an agent adapter", async () => {

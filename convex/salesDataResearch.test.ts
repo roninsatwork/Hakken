@@ -1630,3 +1630,113 @@ describe("a person's edit outranks the agent's", () => {
     expect((await detailsFor(t, comax.companyId, HOTEL))?.phone).toBeUndefined();
   });
 });
+
+describe("provisioning the two workers", () => {
+  /**
+   * The boundary made real: after provisioning, the finder holds the group
+   * tools and cannot record a customer detail; the filler holds the customer
+   * tools and cannot file a site. Running it twice converges rather than
+   * doubling bindings, because it will be run again every time an agent is
+   * recreated.
+   */
+  test("splits the tools one skill each, and converges when run twice", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const seeded = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", { email: "admin@test.com", role: "SUPER_ADMIN" });
+      const mappings = [
+        "salesCustomers.research.read",
+        "salesCustomers.research.record",
+        "salesCustomers.prospects.read",
+        "salesCustomers.prospects.record",
+        "salesCustomers.job.next",
+        "web.scrape",
+      ];
+      const toolIds: Record<string, Id<"aiTools">> = {};
+      for (const handlerMapping of mappings) {
+        toolIds[handlerMapping] = await ctx.db.insert("aiTools", {
+          name: handlerMapping,
+          description: "Research tooling.",
+          handlerMapping,
+          connectorKey: handlerMapping === "web.scrape" ? "web-reader" : "sales-customer-research",
+          requiredRole: "ADMIN" as const,
+          createdAt: Date.now(),
+          createdBy: userId,
+        });
+      }
+
+      const fillerId = await ctx.db.insert("agents", {
+        name: "Company Research Agent",
+        systemPrompt: "Fill in details.",
+        modelId: "test-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const finderId = await ctx.db.insert("agents", {
+        name: "Prospect Search Agent",
+        modelId: "test-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      // The filler starts holding everything — today's single-agent shape.
+      for (const handlerMapping of mappings) {
+        await ctx.db.insert("agentTools", {
+          agentId: fillerId,
+          toolId: toolIds[handlerMapping],
+          assignedAt: Date.now(),
+        });
+      }
+
+      return { fillerId, finderId };
+    });
+
+    await t.mutation(internal.salesDataResearch.provisionResearchWorkers, {
+      fillerAgentId: seeded.fillerId,
+      finderAgentId: seeded.finderId,
+    });
+    // Second run must converge, not double up.
+    await t.mutation(internal.salesDataResearch.provisionResearchWorkers, {
+      fillerAgentId: seeded.fillerId,
+      finderAgentId: seeded.finderId,
+    });
+
+    const state = await t.run(async (ctx) => {
+      const bindings = await ctx.db.query("agentTools").collect();
+      const tools = await ctx.db.query("aiTools").collect();
+      const nameById = new Map(tools.map((tool) => [tool._id, tool.handlerMapping]));
+      const held = (agentId: Id<"agents">) =>
+        bindings
+          .filter((binding) => binding.agentId === agentId)
+          .map((binding) => nameById.get(binding.toolId))
+          .sort();
+      return {
+        filler: held(seeded.fillerId),
+        finder: held(seeded.finderId),
+        finderPrompt: (await ctx.db.get(seeded.finderId))?.systemPrompt ?? "",
+        fillerPrompt: (await ctx.db.get(seeded.fillerId))?.systemPrompt ?? "",
+      };
+    });
+
+    expect(state.filler).toEqual([
+      "salesCustomers.job.next",
+      "salesCustomers.research.read",
+      "salesCustomers.research.record",
+      "web.scrape",
+    ]);
+    expect(state.finder).toEqual([
+      "salesCustomers.job.next",
+      "salesCustomers.prospects.read",
+      "salesCustomers.prospects.record",
+      "web.scrape",
+    ]);
+    // Both workers get their sheets from code, priority section included.
+    expect(state.finderPrompt).toContain("file each one as a prospect");
+    expect(state.fillerPrompt).toContain("THE FIGURE THAT MATTERS MOST");
+    expect(state.fillerPrompt).toContain("pupils for a school, bedrooms for a care home");
+  });
+});

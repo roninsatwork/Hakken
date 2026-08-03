@@ -106,18 +106,20 @@ export function parseVertexModelId(resourceName: string | undefined) {
 }
 
 /**
- * A model Sonae can actually use.
+ * Text generation unless the id says otherwise.
  *
- * Vertex publishes far more than text generation and embeddings — image, video,
- * speech and tuning-only entries all come back from the same call. Listing them
- * would fill the catalogue with models nothing in this codebase can call.
+ * This used to be `isUsableVertexModel`, and its `false` meant the model was
+ * dropped from the sync — image, video, speech and non-Gemini entries never
+ * reached the catalogue. The catalogue now lists everything Vertex returns, so
+ * this answers a smaller question: which tags a model gets, not whether it
+ * exists. It also no longer requires the `gemini` prefix — that was an
+ * allowlist by another name, and a family Google renames tomorrow would have
+ * silently vanished.
  */
-export function isUsableVertexModel(modelId: string) {
+export function isVertexTextGenerationModel(modelId: string) {
   const normalized = modelId.toLowerCase();
   if (!normalized) return false;
-  if (normalized.includes("embedding")) return true;
-  if (!normalized.startsWith("gemini")) return false;
-  // Gemini variants this platform has no code path for.
+  if (normalized.includes("embedding")) return false;
   return !(
     normalized.includes("image")
     || normalized.includes("vision-tuning")
@@ -125,12 +127,11 @@ export function isUsableVertexModel(modelId: string) {
     || normalized.includes("tts")
     || normalized.includes("audio")
     || normalized.includes("veo")
-    || normalized.includes("imagen")
   );
 }
 
 /**
- * The models this project can actually reach on Vertex, asked of Vertex.
+ * Every model Vertex will admit to, asked of Vertex.
  *
  * This did not exist. `syncGoogleVertexModelCatalogue` carried a list of six
  * model ids typed into the source, above a comment explaining that the SDK's
@@ -155,7 +156,7 @@ export async function listVertexModels(
   for (let pageCount = 0; pageCount < pageLimit; pageCount += 1) {
     for (const model of pager.page) {
       const modelId = parseVertexModelId(model.name);
-      if (!modelId || seen.has(modelId) || !isUsableVertexModel(modelId)) continue;
+      if (!modelId || seen.has(modelId)) continue;
       seen.add(modelId);
       collected.push({
         modelId,

@@ -107,11 +107,11 @@ describe("HealthPage", () => {
     expect(screen.getByText("2 things need attention")).toBeInTheDocument();
   });
 
-  /** The old screens printed £0.0000 and 0ms. */
+  /** The old screens printed £0.0000 — in the wrong currency — and 0ms. */
   it("shows money to the penny and time in seconds", () => {
     render(<HealthPage />);
 
-    expect(screen.getByText(/1 run, 0 failed, £0.02 spent, 4.2s on average/)).toBeInTheDocument();
+    expect(screen.getByText(/1 run, 0 failed, \$0.02 spent, 4.2s on average/)).toBeInTheDocument();
   });
 
   it("lists recent runs in words, linking each to its timeline", () => {

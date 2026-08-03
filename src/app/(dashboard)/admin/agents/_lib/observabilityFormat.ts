@@ -35,15 +35,19 @@ export function formatDuration(ms: number | undefined): string {
 
 /**
  * Money at a precision that survives both ends of the range. A per-job cost is
- * fractions of a penny and a weekly total is pounds; one fixed precision makes
+ * fractions of a cent and a weekly total is dollars; one fixed precision makes
  * one of them unreadable.
+ *
+ * Dollars, not pounds. Every rate in the model catalogue is the provider's own
+ * published dollar price and nothing converts, so the "£" this used to print was
+ * simply the wrong sign in front of the number.
  */
-export function formatMoney(gbp: number | undefined): string {
-  if (gbp === undefined || !Number.isFinite(gbp)) return "—";
-  if (gbp === 0) return "£0.00";
-  if (gbp < 0.01) return `£${gbp.toFixed(4)}`;
-  if (gbp < 1) return `£${gbp.toFixed(3)}`;
-  return `£${gbp.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export function formatMoney(usd: number | undefined): string {
+  if (usd === undefined || !Number.isFinite(usd)) return "—";
+  if (usd === 0) return "$0.00";
+  if (usd < 0.01) return `$${usd.toFixed(4)}`;
+  if (usd < 1) return `$${usd.toFixed(3)}`;
+  return `$${usd.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatPercent(rate: number | undefined): string {
@@ -133,10 +137,13 @@ export function formatDayLabel(dayStartMs: number): string {
  * to somebody who has not been told what an approval gate is, and it is the one
  * status that requires the reader to go and do something.
  */
-export function describeRunStatus(status: string): string {
+export function describeRunStatus(status: string, continued = false): string {
   switch (status) {
     case "SUCCESS": return "Done";
-    case "FAILED": return "Failed";
+    // A run that worked to its per-run ceiling and whose queue the next run
+    // picked up is the system pacing itself, not a fault. Only a run nothing
+    // continued reads as failed.
+    case "FAILED": return continued ? "Handed over" : "Failed";
     case "CANCELLED": return "Stopped";
     case "RUNNING": return "Running";
     case "QUEUED": return "Queued";

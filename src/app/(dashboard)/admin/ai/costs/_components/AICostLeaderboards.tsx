@@ -2,7 +2,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Bot, Building2, TrendingUp } from "lucide-react";
 import type { AgentLeaderboardRow, CompanyLeaderboardRow, Translate, UserLeaderboardRow } from "./types";
-import { formatGbpAmount, getAgentMessageCount } from "./costFormatters";
+import { formatUsdAmount, getAgentMessageCount } from "./costFormatters";
 
 type AICostLeaderboardsProps = {
   adminOverview: Translate;
@@ -168,7 +168,7 @@ function LeaderboardStats({ cost, messages }: { cost: number; messages: number }
       </div>
       <div className="flex flex-col items-end min-w-[65px]">
         <span className="text-[10px] text-secondary/60 font-mono tracking-widest uppercase mb-1">Cost</span>
-        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">{formatGbpAmount(cost, 4)}</span>
+        <span className="text-[13px] font-bold text-[#f43f5e] tracking-tight">{formatUsdAmount(cost, 4)}</span>
       </div>
     </div>
   );

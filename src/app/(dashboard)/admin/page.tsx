@@ -105,8 +105,25 @@ function formatDay(day: string) {
     .toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-function formatMoney(value: number) {
+/**
+ * Two currencies meet on this screen, and only this screen.
+ *
+ * Plan prices are set in pounds (`plans.priceGBP`) and are genuinely pounds.
+ * Model spend is the provider's own published dollar price and nothing converts
+ * it. They used to agree only because spend was multiplied by a hardcoded 0.78
+ * on the way here — a guessed rate, in front of a figure the rest of the product
+ * already showed in dollars.
+ *
+ * So each number now carries the sign it is actually denominated in. The
+ * percentage beside them is the one thing that cannot be made honest without a
+ * real exchange rate; it is flagged rather than quietly restated.
+ */
+function formatRevenue(value: number) {
   return `£${value.toFixed(2)}`;
+}
+
+function formatSpend(value: number) {
+  return `$${value.toFixed(2)}`;
 }
 
 function ChartCard({ title, description, action, children }: {
@@ -198,7 +215,7 @@ function SpendTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   return (
     <TooltipShell title={label ? formatDay(label) : ""}>
-      <div className="mt-1 text-[12px] text-secondary">{formatMoney(payload[0]?.value ?? 0)} spent</div>
+      <div className="mt-1 text-[12px] text-secondary">{formatSpend(payload[0]?.value ?? 0)} spent</div>
     </TooltipShell>
   );
 }
@@ -263,12 +280,12 @@ export default function AdminDashboardPage() {
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
             <div className="text-[12px] font-medium text-secondary">Projected monthly revenue</div>
             <div className="mt-1 text-[28px] font-semibold text-foreground">
-              {formatMoney(overview.money.projectedMrrGBP)}
+              {formatRevenue(overview.money.projectedMrrGBP)}
             </div>
             <div className="mt-1 text-[12px] text-muted">
               {overview.money.spendAsPercentOfRevenue === null
-                ? `AI spend ${formatMoney(overview.money.aiSpendGBP)} · no plans priced yet`
-                : `AI spend ${formatMoney(overview.money.aiSpendGBP)} · ${overview.money.spendAsPercentOfRevenue}% of it`}
+                ? `AI spend ${formatSpend(overview.money.aiSpendGBP)} · no plans priced yet`
+                : `AI spend ${formatSpend(overview.money.aiSpendGBP)} · ${overview.money.spendAsPercentOfRevenue}% of it`}
             </div>
           </div>
           <div className="rounded-[16px] border border-border-dim bg-card/40 p-5">
@@ -339,7 +356,7 @@ export default function AdminDashboardPage() {
                   </defs>
                   <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="day" tickFormatter={formatDay} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
-                  <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value: number) => `£${value.toFixed(2)}`} />
+                  <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value: number) => `$${value.toFixed(2)}`} />
                   <Tooltip content={<SpendTooltip />} />
                   {/* One series, so the title names it and no legend is needed. */}
                   <Area
@@ -456,7 +473,7 @@ export default function AdminDashboardPage() {
                     {client.activeRecently} of {client.people}
                   </td>
                   <td className="px-4 py-3 align-top text-[13px] text-secondary">{client.quiet}</td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{formatMoney(client.mrrGBP)}</td>
+                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{formatRevenue(client.mrrGBP)}</td>
                   <td className="px-4 py-3 align-top text-right">
                     <Link
                       href={`/admin/companies/${client.companyId}`}

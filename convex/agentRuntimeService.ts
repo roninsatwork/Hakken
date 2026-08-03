@@ -8,7 +8,7 @@
  * twenty-five steps, twenty-five tool calls and thirty minutes at Anthony's
  * instruction, 2026-08-02.
  *
- * Spend is what actually bounds a run, not the step count: the £10 cost ceiling
+ * Spend is what actually bounds a run, not the step count: the $10 cost ceiling
  * stops a runaway long before a hundred steps could. The counts are there to
  * catch a loop that is cheap and going nowhere.
  */
@@ -70,8 +70,22 @@ export const UNPRICED_MODEL_OBJECTIVE_LIMITS = {
  * maximum instead of failing the run.
  */
 export const AGENT_OBJECTIVE_LIMIT_CEILINGS = {
-  maxSteps: 100,
-  maxToolCalls: 100,
+  /**
+   * Five hundred, at Anthony's instruction, 2026-08-03.
+   *
+   * A hundred was set when a run meant one customer or one chain. A research
+   * run works a queue of them, and the count is what would end it first: the
+   * one clean chain measured used thirteen tool calls for nine sites, so ten
+   * customers or a large estate is already most of a hundred.
+   *
+   * Raising these does not raise what a run may spend. Cost, minutes and the
+   * token budget are untouched, and on current pricing the $50 spend ceiling
+   * is reached long before five hundred calls — which is the intended order:
+   * spend bounds a runaway, the counts catch a loop that is cheap and going
+   * nowhere.
+   */
+  maxSteps: 500,
+  maxToolCalls: 500,
   // A single Convex action is capped at about ten minutes, but a run is no
   // longer one action: it checkpoints every three minutes and resumes in a
   // fresh one (`agentRunContinuationService.ts`), so the hour below is spent
@@ -112,7 +126,7 @@ function clampLimit(
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return fallback;
   const bounded = Math.min(value, ceiling);
   // Counts and milliseconds are whole numbers; money is not. Flooring a cost
-  // limit turned every budget under £1 into £0, which is a budget no run can
+  // limit turned every budget under $1 into $0, which is a budget no run can
   // start under. Harmless while these fields were unreachable; a foot-gun the
   // moment they appear on a screen.
   return options.integer === false ? bounded : Math.floor(bounded);
