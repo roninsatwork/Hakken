@@ -74,6 +74,28 @@ const PHASE_STEPS = 3;
 
 type GapProductLine = Report["gapProducts"][number]["products"][number];
 
+/**
+ * The two kinds of money, told apart at a glance: brand orange for winning
+ * new sites, green for growing accounts already on the books. The same two
+ * colours mark every badge, dot, chevron and rail on the page — "how do we
+ * visually know which section is for prospects and which sections are for
+ * upsells to existing clients?" (Anthony, 2026-08-03).
+ */
+function SectionBadge({ kind }: { kind: "new" | "upsell" }) {
+  const t = useTranslations("salesData.opportunityReport");
+  return (
+    <span
+      className={`inline-block px-2 py-0.5 rounded-full text-[10.5px] font-medium uppercase tracking-wider border ${
+        kind === "new"
+          ? "border-brand/30 bg-brand/10 text-brand"
+          : "border-[#10b981]/30 bg-[#10b981]/10 text-[#10b981]"
+      }`}
+    >
+      {t(kind === "new" ? "badgeNewBusiness" : "badgeUpsell")}
+    </span>
+  );
+}
+
 export default function OpportunityReportPage() {
   const t = useTranslations("salesData.opportunityReport");
   const report = useQuery(api.salesOpportunityReports.getLatestOpportunityReport, {});
@@ -382,12 +404,18 @@ function TotalCard({
         <div className="text-4xl lg:text-5xl font-semibold tracking-tight text-foreground tabular-nums mt-2">
           {formatPounds(headline.totalOpportunityGBP)}
         </div>
-        <p className="text-[12.5px] text-muted mt-2">
-          {t("totalSplit", {
-            prospects: formatPounds(headline.prospectOpportunityGBP),
-            gaps: formatPounds(headline.gapOpportunityGBP),
-          })}
-        </p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted mt-2">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-brand shrink-0" />
+            {t("totalSplitProspects", {
+              value: formatPounds(headline.prospectOpportunityGBP),
+            })}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#10b981] shrink-0" />
+            {t("totalSplitGaps", { value: formatPounds(headline.gapOpportunityGBP) })}
+          </span>
+        </div>
       </div>
 
       <div className="border-t border-border-dim/60 pt-4">
@@ -415,17 +443,19 @@ function TotalCard({
             >
               <div className="min-w-0">
                 <div className="text-[13px] text-foreground truncate">{chain.name}</div>
-                <div className="text-[11px] text-muted truncate">
-                  {[
-                    chain.prospects.length > 0
-                      ? t("leaderboardSites", { count: chain.prospects.length })
-                      : null,
-                    chain.gaps.length > 0
-                      ? t("leaderboardGaps", { count: chain.gaps.length })
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                <div className="text-[11px] text-muted flex items-center gap-x-2.5 flex-wrap">
+                  {chain.prospects.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
+                      {t("leaderboardSites", { count: chain.prospects.length })}
+                    </span>
+                  )}
+                  {chain.gaps.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                      {t("leaderboardGaps", { count: chain.gaps.length })}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
@@ -548,6 +578,7 @@ function ChainProspects({ chain }: { chain: Chain }) {
         <h3 className="text-[14px] font-medium text-foreground flex items-center gap-2">
           <Building2 className="w-4 h-4 text-brand" />
           {t("chainProspectsTitle")}
+          <SectionBadge kind="new" />
         </h3>
         <span className="text-[14px] font-medium text-foreground tabular-nums">
           {formatPounds(chain.prospectTotalGBP)}
@@ -685,8 +716,9 @@ function ChainGaps({
     <div className="border-t border-border-dim/60 pt-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
         <h3 className="text-[14px] font-medium text-foreground flex items-center gap-2">
-          <ShoppingCart className="w-4 h-4 text-brand" />
+          <ShoppingCart className="w-4 h-4 text-[#10b981]" />
           {t("chainGapsTitle")}
+          <SectionBadge kind="upsell" />
         </h3>
         <span className="text-[14px] font-medium text-foreground tabular-nums">
           {formatPounds(chain.gapTotalGBP)}
@@ -748,7 +780,7 @@ function GapRow({
           <span className="flex items-center gap-1.5 text-[13px] text-foreground">
             {products.length > 0 && (
               <ChevronRight
-                className={`w-3.5 h-3.5 text-brand shrink-0 transition-transform ${
+                className={`w-3.5 h-3.5 text-[#10b981] shrink-0 transition-transform ${
                   expanded ? "rotate-90" : ""
                 }`}
               />
@@ -769,7 +801,7 @@ function GapRow({
         </div>
       </button>
       {expanded && (
-        <div className="mt-1.5 ml-1.5 border-l-2 border-brand/25 pl-4 flex flex-col gap-1 pb-1">
+        <div className="mt-1.5 ml-1.5 border-l-2 border-[#10b981]/25 pl-4 flex flex-col gap-1 pb-1">
           {products.map((product) => (
             <div
               key={product.description}
@@ -819,7 +851,10 @@ function CategoryChart({ report }: { report: Report }) {
     <ChartExportWrapper exportName="gap-revenue-by-category">
       <div className="bg-sidebar/40 border border-border-dim rounded-[20px] backdrop-blur-xl p-5 flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-3 flex-wrap">
-          <h3 className="text-[13px] font-medium text-secondary">{t("chartByCategory")}</h3>
+          <h3 className="text-[13px] font-medium text-secondary flex items-center gap-2">
+            {t("chartByCategory")}
+            <SectionBadge kind="upsell" />
+          </h3>
           <span className="text-[14px] font-medium text-foreground tabular-nums">
             {formatPounds(totalGBP)}
           </span>
@@ -833,7 +868,7 @@ function CategoryChart({ report }: { report: Report }) {
               <span className="text-[13px] text-foreground truncate">{row.name}</span>
               <div className="h-4 rounded-full bg-white/[0.06] overflow-hidden">
                 <div
-                  className="h-full bg-brand rounded-full"
+                  className="h-full bg-[#10b981] rounded-full"
                   style={{ width: `${Math.max((row.value / largest) * 100, 1)}%` }}
                 />
               </div>
