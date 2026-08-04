@@ -14,16 +14,15 @@ already supply your sister sites".
 
 Market discovery is different. It searches outside the imported customer list:
 
-1. Pick one customer type, such as care homes, hotels, residential education, or
-   non-residential education.
-2. Find up to 12 parent companies in that type that the workspace does not
+1. Read every customer type in the current import.
+2. Find 2 parent companies per customer type that the workspace does not
    already sell to.
-3. Prove each parent company exists and belongs to that type.
+3. Prove each parent company exists and belongs to its type.
 4. Find that parent company's locations.
 5. Add those locations as prospects, clearly marked as market-discovery
    prospects rather than existing-chain prospects.
 
-This is a good demo because it turns a known customer type into a visible
+This is a good demo because it turns the imported customer mix into a visible
 growth list. It must not be squeezed into the current "Find new prospects"
 button, because that button's safety rule is exactly the opposite: it refuses
 groups that are not already in the spreadsheet.
@@ -36,15 +35,12 @@ Add a separate button beside the existing research controls:
 
 `Find new groups`
 
-Pressing it opens a compact setup modal:
+The button starts immediately. No setup modal:
 
-- customer type selector;
-- target parent group count, default 12;
-- optional max spend;
-- start button.
-
-For v1, run one customer type at a time. Batch-across-all-types can come later
-once the proof and cost profile are known.
+- customer types are read automatically from the current import;
+- the v1 target is 2 parent groups per customer type;
+- spend is governed by the Market Discovery Agent's own live runtime limits;
+- the progress bar is the user's control surface.
 
 ### Clear prospect source labels
 
@@ -104,8 +100,9 @@ Fields:
 | Field | Meaning |
 | --- | --- |
 | `companyId` | Workspace scope |
-| `customerTypeKey`, `customerType` | The type being searched |
-| `targetGroupCount` | Default 12 |
+| `customerTypeKey`, `customerType` | Summary label; v1 uses all customer types |
+| `customerTypes` | The imported customer types and target of 2 groups each |
+| `targetGroupCount` | Total target across all customer types |
 | `status` | `RUNNING`, `COMPLETE`, `COMPLETE_WITH_EXCEPTIONS`, `STOPPED`, `FAILED` |
 | `phase` | `SETUP`, `FIND_GROUPS`, `VERIFY_GROUPS`, `FIND_LOCATIONS`, `DONE` |
 | `agentId`, `runId`, `startedBy` | Ownership and traceability |
@@ -187,15 +184,16 @@ Tool set:
 
 The agent's prompt must say:
 
-- search one customer type only;
+- work through the customer types the job hands out;
 - do not use groups already in the workspace;
 - do not infer parent companies from search snippets;
 - prove the parent company exists from a page the run opened;
-- prove it belongs to the selected type;
+- prove it belongs to the active customer type;
 - prefer official/provider-owned location lists;
 - file locations as you find them;
-- stop when 12 accepted parent groups have been found and their locations have
-  been attempted, or when the job tells you to stop.
+- stop when 2 accepted parent groups have been found for every imported
+  customer type and their locations have been attempted, or when the job tells
+  you to stop.
 
 ## Reliability rules
 
@@ -221,8 +219,8 @@ higher:
 Add a market-discovery control next to the existing research controls:
 
 - `Find new groups` button;
-- setup modal with customer type and target count;
-- progress bar row while running;
+- starts immediately for all imported customer types;
+- progress bar row while running, with the active type or group named;
 - final modal with groups found, locations filed, duplicates skipped and
   exceptions.
 
@@ -268,9 +266,9 @@ stronger while staying honest.
 - Add latest/running job query for the Customers screen.
 - Add watchdog and stop path.
 - Add progress fields and percentage calculation.
-- UI: button, setup modal, progress bar, final state.
+- UI: direct-start button, progress bar, final state.
 - Tests: start joins running job, progress counts update, stop leaves a clear
-  ended reason, and no job starts without a selected customer type.
+  ended reason, and no job starts without imported customer types.
 
 ### Phase 3 - Agent tools and prompt
 
@@ -298,7 +296,7 @@ stronger while staying honest.
 
 ### Phase 6 - Demo proof
 
-- Run one customer type locally.
+- Run all imported customer types locally.
 - Verify progress bar movement in the browser.
 - Verify created groups and prospects in the list.
 - Verify opportunity report labels and totals.
@@ -306,7 +304,7 @@ stronger while staying honest.
 
 ## Acceptance checklist
 
-- The agent can find 12 new parent groups for one selected customer type.
+- The agent can find 2 new parent groups for each imported customer type.
 - The progress bar shows phase, percent, current item, group count, location
   count, duplicate count, review count and spend.
 - The job can be stopped and reports a plain ended reason.
@@ -323,17 +321,43 @@ stronger while staying honest.
 ## Open decisions
 
 1. Should v1 include only one customer type per run, or allow a multi-type batch?
-   Recommendation: one type per run.
+   Decision: multi-type batch, using every customer type in the current import.
 2. Should market-discovery prospects be included in the opportunity report by
    default? Recommendation: yes, with a separate label and subtotal.
 3. Should uncertain parent groups require human review before their locations
    are searched? Recommendation: yes for low-confidence groups, no for
    high-confidence groups with strong source proof.
-4. Should the target stay fixed at 12 or be adjustable? Recommendation: default
-   12, editable with a safe maximum.
+4. Should the target stay fixed or be adjustable?
+   Decision for v1: fixed at 2 parent groups per imported customer type.
 
 ## Current status
 
-Planned only. No implementation has started.
+Phase 1 and the first usable vertical slice of Phases 2 to 5 are implemented.
 
-Progress: 0%.
+Built so far:
+
+- `salesDataMarketDiscoveryJobs` and `salesDataMarketDiscoveryGroups`;
+- optional market-discovery origin fields on `salesDataProspects`;
+- separate market-discovery connector tools;
+- Customers screen direct-start `Find new groups` button;
+- visible market-discovery progress strip with phase, count, spend and stop;
+- automatic binding of the blank Market Discovery Agent when the tools are
+  installed;
+- source-opened-this-run checks for parent groups and locations;
+- duplicate checks against current customers and existing prospects;
+- market-discovery labels in the customer list and opportunity report;
+- focused backend coverage for job start/progress, source proof, duplicate
+  parent groups and market-discovery prospect origin.
+- local verification passing for Convex codegen, focused market-discovery
+  tests, full project check, whitespace check and production build.
+
+Still to prove or deepen:
+
+- run the all-types job live and inspect the browser-visible progress movement;
+- decide whether low-confidence parent groups should require manual review
+  before location search in every case;
+- add richer opportunity-report subtotals for market-discovery prospects;
+- add a small admin/operator view for discovered parent groups if review volume
+  grows.
+
+Progress: 70%.

@@ -197,6 +197,7 @@ function toCustomer(account: Doc<"salesDataAccounts">, details: CustomerDetails)
     hasDetails: details !== undefined,
     /** What this row is. Present on every row, so no row is ever ambiguous. */
     record: "CUSTOMER" as const,
+    origin: null,
   };
 }
 
@@ -228,6 +229,7 @@ function toProspectRow(prospect: Doc<"salesDataProspects">, details: CustomerDet
     pupils: details?.pupils ?? null,
     hasDetails: details !== undefined,
     record: "PROSPECT" as const,
+    origin: prospect.origin ?? "EXISTING_CHAIN",
   };
 }
 
@@ -296,6 +298,7 @@ export async function resolveSubject(
       sourceName: prospect.sourceName ?? null,
       reasoning: prospect.reasoning ?? null,
       foundAt: prospect.foundAt,
+      origin: prospect.origin ?? "EXISTING_CHAIN",
     },
   };
 }

@@ -138,6 +138,7 @@ import type * as salesDataCustomerFields from "../salesDataCustomerFields.js";
 import type * as salesDataCustomers from "../salesDataCustomers.js";
 import type * as salesDataImportActions from "../salesDataImportActions.js";
 import type * as salesDataImportService from "../salesDataImportService.js";
+import type * as salesDataMarketDiscovery from "../salesDataMarketDiscovery.js";
 import type * as salesDataProspectMatching from "../salesDataProspectMatching.js";
 import type * as salesDataResearch from "../salesDataResearch.js";
 import type * as salesDataResearchJobService from "../salesDataResearchJobService.js";
@@ -329,6 +330,7 @@ declare const fullApi: ApiFromModules<{
   salesDataCustomers: typeof salesDataCustomers;
   salesDataImportActions: typeof salesDataImportActions;
   salesDataImportService: typeof salesDataImportService;
+  salesDataMarketDiscovery: typeof salesDataMarketDiscovery;
   salesDataProspectMatching: typeof salesDataProspectMatching;
   salesDataResearch: typeof salesDataResearch;
   salesDataResearchJobService: typeof salesDataResearchJobService;

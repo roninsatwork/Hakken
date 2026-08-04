@@ -431,6 +431,7 @@ export const runMatchingPassInternal = internalMutation({
         groupName: row.groupName,
         customerTypeKey: row.customerTypeKey,
         customerType: row.customerType,
+        origin: row.origin ?? "EXISTING_CHAIN",
         size: await sizeOnFile(ctx, args.companyId, row.prospectKey, row.customerTypeKey),
       }))
     );

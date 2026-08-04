@@ -639,6 +639,78 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       ...(input.runId ? { runId: input.runId } : {}),
     });
   },
+  "marketDiscovery.job.next": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Market discovery needs a workspace, and this run has none.");
+    }
+
+    const couldNot = input.args.couldNot === true || input.args.couldNot === "true";
+
+    return await input.ctx.runMutation(internal.salesDataMarketDiscovery.nextTaskInternal, {
+      companyId: input.companyId,
+      previousOutcome: couldNot ? "COULD_NOT" : "DONE",
+      note: getOptionalStringToolArg(input.args, "note"),
+      ...(input.runId ? { runId: input.runId } : {}),
+    });
+  },
+  "marketDiscovery.groups.record": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Market discovery needs a workspace, and this run has none.");
+    }
+
+    return await input.ctx.runMutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+      companyId: input.companyId,
+      groupName: getStringToolArg(input.args, "groupName"),
+      customerType: getStringToolArg(input.args, "customerType"),
+      website: getOptionalStringToolArg(input.args, "website"),
+      sourceUrl: getStringToolArg(input.args, "sourceUrl"),
+      sourceName: getOptionalStringToolArg(input.args, "sourceName"),
+      reasoning: getStringToolArg(input.args, "reasoning"),
+      confidence: getOptionalStringToolArg(input.args, "confidence") as "HIGH" | "MEDIUM" | "LOW" | undefined,
+      ...(input.agentId ? { agentId: input.agentId } : {}),
+      ...(input.runId ? { runId: input.runId } : {}),
+    });
+  },
+  "marketDiscovery.groups.review": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Market discovery needs a workspace, and this run has none.");
+    }
+
+    return await input.ctx.runMutation(internal.salesDataMarketDiscovery.reviewGroupInternal, {
+      companyId: input.companyId,
+      groupName: getStringToolArg(input.args, "groupName"),
+      status: getStringToolArg(input.args, "status") as "ACCEPTED" | "NEEDS_CHECK" | "DUPLICATE" | "REJECTED",
+    });
+  },
+  "marketDiscovery.locations.read": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Market discovery needs a workspace, and this run has none.");
+    }
+
+    const groupName = getOptionalStringToolArg(input.args, "groupName");
+    return await input.ctx.runQuery(internal.salesDataMarketDiscovery.readLocationsTaskInternal, {
+      companyId: input.companyId,
+      ...(groupName ? { groupName } : {}),
+    });
+  },
+  "marketDiscovery.locations.record": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Market discovery needs a workspace, and this run has none.");
+    }
+
+    return await input.ctx.runMutation(internal.salesDataMarketDiscovery.recordLocationInternal, {
+      companyId: input.companyId,
+      groupName: getStringToolArg(input.args, "groupName"),
+      siteName: getStringToolArg(input.args, "siteName"),
+      town: getOptionalStringToolArg(input.args, "town"),
+      postcode: getOptionalStringToolArg(input.args, "postcode"),
+      sourceUrl: getStringToolArg(input.args, "sourceUrl"),
+      sourceName: getOptionalStringToolArg(input.args, "sourceName"),
+      reasoning: getStringToolArg(input.args, "reasoning"),
+      ...(input.agentId ? { agentId: input.agentId } : {}),
+      ...(input.runId ? { runId: input.runId } : {}),
+    });
+  },
   /**
    * The opportunity report's three passes, in their fixed order.
    *

@@ -613,7 +613,16 @@ function ChainProspects({ chain }: { chain: Chain }) {
                 title={prospect.basis}
                 className="border-t border-border-dim/60"
               >
-                <Td className="text-foreground">{prospect.siteName}</Td>
+                <Td className="text-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    {prospect.siteName}
+                    {prospect.origin === "MARKET_DISCOVERY" && (
+                      <span className="px-1.5 py-0.5 rounded-[6px] bg-amber-500/10 text-[10px] uppercase tracking-wide text-amber-300">
+                        {t("marketDiscovery")}
+                      </span>
+                    )}
+                  </span>
+                </Td>
                 <Td>
                   {prospect.size !== null && prospect.sizeUnit
                     ? t(prospect.sizeUnit === "bedrooms" ? "beds" : "pupils", {

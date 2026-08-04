@@ -1149,6 +1149,7 @@ export const getProspect = tenantQuery({
       sourceUrl: prospect.sourceUrl ?? null,
       sourceName: prospect.sourceName ?? null,
       reasoning: prospect.reasoning ?? null,
+      origin: prospect.origin ?? "EXISTING_CHAIN",
       foundAt: prospect.foundAt,
     };
   },

@@ -338,6 +338,11 @@ describe("ai tool execution service", () => {
       "company.overview.update",
       "http.request",
       "knowledge.search",
+      "marketDiscovery.groups.record",
+      "marketDiscovery.groups.review",
+      "marketDiscovery.job.next",
+      "marketDiscovery.locations.read",
+      "marketDiscovery.locations.record",
       "notification.send",
       // The opportunity report's three passes, in their fixed order: price the
       // prospects, find the chain gaps, then save the agent's summary — which

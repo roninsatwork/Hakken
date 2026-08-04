@@ -2824,6 +2824,17 @@ export default defineSchema({
     sourceUrl: v.optional(v.string()),
     sourceName: v.optional(v.string()),
     reasoning: v.optional(v.string()),
+    /**
+     * Where the prospect came from.
+     *
+     * Absent means the original warm-chain flow: a site inside a group the
+     * workspace already supplies. Market discovery writes the explicit value so
+     * cold prospects can be labelled and reported without pretending they carry
+     * the same sales story.
+     */
+    origin: v.optional(v.union(v.literal("EXISTING_CHAIN"), v.literal("MARKET_DISCOVERY"))),
+    marketDiscoveryGroupId: v.optional(v.id("salesDataMarketDiscoveryGroups")),
+    marketDiscoveryJobId: v.optional(v.id("salesDataMarketDiscoveryJobs")),
     runId: v.optional(v.id("agentRuns")),
     agentId: v.optional(v.id("agents")),
     foundAt: v.number(),
@@ -2836,6 +2847,103 @@ export default defineSchema({
     .index("by_company_status", ["companyId", "status", "foundAt"])
     // The run screen leads with what a run actually recorded, which includes
     // the prospects it filed.
+    .index("by_run", ["runId"]),
+
+  /**
+   * One press of "Find new groups".
+   *
+   * This is deliberately separate from `salesDataResearchJobs`. The research
+   * job works warm leads inside known groups; this job searches outside the
+   * import and therefore carries colder-proof counters: accepted parent groups,
+   * skipped duplicates, filed locations and rows left for a person to check.
+   */
+  salesDataMarketDiscoveryJobs: defineTable({
+    companyId: v.id("companies"),
+    customerTypeKey: v.string(),
+    customerType: v.string(),
+    targetGroupCount: v.number(),
+    customerTypes: v.optional(v.array(v.object({
+      customerTypeKey: v.string(),
+      customerType: v.string(),
+      targetGroupCount: v.number(),
+    }))),
+    status: v.union(
+      v.literal("RUNNING"),
+      v.literal("COMPLETE"),
+      v.literal("COMPLETE_WITH_EXCEPTIONS"),
+      v.literal("STOPPED"),
+      v.literal("FAILED")
+    ),
+    phase: v.union(
+      v.literal("SETUP"),
+      v.literal("FIND_GROUPS"),
+      v.literal("VERIFY_GROUPS"),
+      v.literal("FIND_LOCATIONS"),
+      v.literal("DONE")
+    ),
+    agentId: v.id("agents"),
+    runId: v.optional(v.id("agentRuns")),
+    startedBy: v.id("users"),
+    groupsAccepted: v.number(),
+    groupsRejected: v.number(),
+    groupsDuplicate: v.number(),
+    groupsNeedsCheck: v.number(),
+    locationsFiled: v.number(),
+    locationsDuplicate: v.number(),
+    locationsNeedsCheck: v.number(),
+    currentLabel: v.optional(v.string()),
+    maxCostGBP: v.number(),
+    spentGBP: v.number(),
+    startedAt: v.number(),
+    updatedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    endedReason: v.optional(v.string()),
+  })
+    .index("by_company_status", ["companyId", "status"])
+    .index("by_company_started", ["companyId", "startedAt"])
+    .index("by_agent_started", ["agentId", "startedAt"])
+    .index("by_run", ["runId"]),
+
+  /**
+   * Parent companies found by the market discovery job.
+   *
+   * Accepted rows become the location-finding queue. Duplicate, rejected and
+   * needs-check rows are kept too because their counts are part of the visible
+   * progress bar and proof trail.
+   */
+  salesDataMarketDiscoveryGroups: defineTable({
+    companyId: v.id("companies"),
+    jobId: v.id("salesDataMarketDiscoveryJobs"),
+    groupName: v.string(),
+    groupNameKey: v.string(),
+    customerType: v.string(),
+    customerTypeKey: v.string(),
+    website: v.optional(v.string()),
+    sourceUrl: v.string(),
+    sourceName: v.optional(v.string()),
+    reasoning: v.string(),
+    status: v.union(
+      v.literal("ACCEPTED"),
+      v.literal("NEEDS_CHECK"),
+      v.literal("DUPLICATE"),
+      v.literal("REJECTED")
+    ),
+    locationsStatus: v.union(
+      v.literal("PENDING"),
+      v.literal("IN_PROGRESS"),
+      v.literal("DONE")
+    ),
+    locationsAttemptedAt: v.optional(v.number()),
+    locationsEndedReason: v.optional(v.string()),
+    runId: v.optional(v.id("agentRuns")),
+    agentId: v.optional(v.id("agents")),
+    foundAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_company_group", ["companyId", "groupNameKey"])
+    .index("by_company_job_status", ["companyId", "jobId", "status"])
+    .index("by_job_locations_status", ["jobId", "locationsStatus"])
+    .index("by_job_status", ["jobId", "status"])
     .index("by_run", ["runId"]),
 
   /**
@@ -3045,6 +3153,7 @@ export default defineSchema({
           siteName: v.string(),
           groupName: v.string(),
           customerType: v.string(),
+          origin: v.optional(v.union(v.literal("EXISTING_CHAIN"), v.literal("MARKET_DISCOVERY"))),
           sizeUnit: v.union(v.literal("bedrooms"), v.literal("pupils"), v.null()),
           size: v.union(v.number(), v.null()),
           estimateGBP: v.union(v.number(), v.null()),

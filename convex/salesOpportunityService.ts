@@ -37,6 +37,7 @@ export type ProspectSubject = {
   groupName: string;
   customerTypeKey: string;
   customerType: string;
+  origin?: "EXISTING_CHAIN" | "MARKET_DISCOVERY";
   size: number | null;
 };
 
@@ -62,6 +63,7 @@ export type ProspectOpportunity = {
   siteName: string;
   groupName: string;
   customerType: string;
+  origin?: "EXISTING_CHAIN" | "MARKET_DISCOVERY";
   /** What the type is measured in. Null for types with no size rule. */
   sizeUnit: "bedrooms" | "pupils" | null;
   size: number | null;
@@ -180,6 +182,7 @@ export function estimateProspect(
     siteName: prospect.siteName,
     groupName: prospect.groupName,
     customerType: prospect.customerType,
+    origin: prospect.origin,
     sizeUnit,
     size: prospect.size,
   };

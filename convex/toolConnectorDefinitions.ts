@@ -514,6 +514,160 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    key: "sales-market-discovery",
+    name: "Comax Market Discovery",
+    description:
+      "Lets an agent find new parent companies outside the current customer import, prove them, "
+      + "and file their locations as clearly labelled market-discovery prospects.",
+    category: "WORKFLOW",
+    authMode: "NONE",
+    tenantAvailability: "TENANT_RESTRICTED",
+    requiredScopes: [],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Comax — Market discovery next task",
+        description:
+          "Gives the next market-discovery task for the running job. It says whether to find "
+          + "more parent groups or locations for an accepted group. Call it first, then call it "
+          + "again after each group or group-location pass until it says the job is complete.",
+        handlerMapping: "marketDiscovery.job.next",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            couldNot: {
+              type: "boolean",
+              description:
+                "True when the task you were last given could not be finished. Leave it out "
+                + "when it was completed.",
+            },
+            note: {
+              type: "string",
+              description: "One line explaining what could not be completed.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Record a market parent group",
+        description:
+          "Records one parent company candidate for the selected customer type. The source page "
+          + "must have been opened in this run and must prove the parent exists and belongs to "
+          + "that customer type. High-confidence groups are accepted; lower confidence is parked "
+          + "for review.",
+        handlerMapping: "marketDiscovery.groups.record",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["groupName", "customerType", "sourceUrl", "reasoning"],
+          properties: {
+            groupName: { type: "string", description: "The parent company name." },
+            customerType: {
+              type: "string",
+              description: "The selected customer type this parent company belongs to.",
+            },
+            website: { type: "string", description: "The parent company's website, when known." },
+            sourceUrl: {
+              type: "string",
+              description:
+                "The exact page opened in this run that proves the parent company and type.",
+            },
+            sourceName: { type: "string", description: "What to call that source on screen." },
+            reasoning: {
+              type: "string",
+              description:
+                "One line explaining why this is a real parent company of the selected type.",
+            },
+            confidence: {
+              type: "string",
+              enum: ["HIGH", "MEDIUM", "LOW"],
+              description:
+                "HIGH only when the source page plainly proves the parent and customer type.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Review a market parent group",
+        description:
+          "Changes a discovered parent group's outcome: accepted, needs check, duplicate or "
+          + "rejected. Use this only when later evidence changes the first outcome.",
+        handlerMapping: "marketDiscovery.groups.review",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["groupName", "status"],
+          properties: {
+            groupName: { type: "string" },
+            status: {
+              type: "string",
+              enum: ["ACCEPTED", "NEEDS_CHECK", "DUPLICATE", "REJECTED"],
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Read a market parent group's locations task",
+        description:
+          "Returns the accepted parent group currently being expanded, plus the customers and "
+          + "prospects already on file so duplicate locations are not re-filed.",
+        handlerMapping: "marketDiscovery.locations.read",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            groupName: {
+              type: "string",
+              description: "The accepted parent group to read. Leave it out for the current task.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Comax — Record a market-discovery location",
+        description:
+          "Records one location under an accepted market-discovery parent group. The location "
+          + "source page must have been opened in this run. Existing customers and existing "
+          + "prospects are skipped and counted as duplicates.",
+        handlerMapping: "marketDiscovery.locations.record",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["groupName", "siteName", "sourceUrl", "reasoning"],
+          properties: {
+            groupName: { type: "string", description: "The accepted parent group name." },
+            siteName: { type: "string", description: "The location name as published." },
+            town: { type: "string", description: "The town it is in." },
+            postcode: {
+              type: "string",
+              description: "The postcode, when published. It is the best duplicate signal.",
+            },
+            sourceUrl: {
+              type: "string",
+              description: "The exact page opened in this run that lists this location.",
+            },
+            sourceName: { type: "string", description: "What to call that source on screen." },
+            reasoning: {
+              type: "string",
+              description: "One line explaining why this location belongs to this parent group.",
+            },
+          },
+        }),
+      },
+    ],
+  },
+  {
     key: "sales-opportunity-report",
     // Named for the client, like the research connector above, and inside the
     // same `salesData` fence so the framework template strips it wholesale.

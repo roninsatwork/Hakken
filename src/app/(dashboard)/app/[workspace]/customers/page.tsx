@@ -199,6 +199,7 @@ function CustomerList() {
                 ) : (
                   result.page.map((customer) => {
                     const isProspect = customer.record === "PROSPECT";
+                    const isMarketDiscovery = customer.origin === "MARKET_DISCOVERY";
                     return (
                       <tr
                         key={customer.accountNameKey}
@@ -234,8 +235,12 @@ function CustomerList() {
                               {customer.accountName}
                             </Link>
                             {isProspect && (
-                              <span className="px-1.5 py-0.5 rounded-[6px] bg-brand/10 text-[10px] uppercase tracking-wide text-brand">
-                                {t("recordProspect")}
+                              <span className={`px-1.5 py-0.5 rounded-[6px] text-[10px] uppercase tracking-wide ${
+                                isMarketDiscovery
+                                  ? "bg-amber-500/10 text-amber-300"
+                                  : "bg-brand/10 text-brand"
+                              }`}>
+                                {t(isMarketDiscovery ? "recordMarketProspect" : "recordProspect")}
                               </span>
                             )}
                             {!customer.hasDetails && (
@@ -408,9 +413,15 @@ function ClearDatabaseButton() {
 function ResearchRow() {
   const t = useTranslations("salesData.customers");
   const startResearch = useMutation(api.salesDataResearchJobs.startResearchJob);
+  const startMarketDiscovery = useMutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob);
+  const stopMarketDiscovery = useMutation(api.salesDataMarketDiscovery.stopMarketDiscoveryJob);
   const job = useQuery(api.salesDataResearchJobs.getResearchJob, {});
+  const marketJob = useQuery(api.salesDataMarketDiscovery.getMarketDiscoveryJob, {});
   const [message, setMessage] = useState<string | null>(null);
+  const [marketMessage, setMarketMessage] = useState<string | null>(null);
   const isRunning = job?.status === "RUNNING";
+  const marketIsRunning = marketJob?.status === "RUNNING";
+  const anyRunning = isRunning || marketIsRunning;
 
   // The finish deserves more than a quiet line: a job watched from this screen
   // announces its ending and waits for an OK. Anthony, 2026-08-03: "show a
@@ -426,6 +437,13 @@ function ResearchRow() {
     setSawRunning(false);
     setFinishedNotice(job.endedReason ?? t("researchWorking"));
   }
+  const [marketFinishedNotice, setMarketFinishedNotice] = useState<string | null>(null);
+  const [sawMarketRunning, setSawMarketRunning] = useState(false);
+  if (marketIsRunning && !sawMarketRunning) setSawMarketRunning(true);
+  if (!marketIsRunning && sawMarketRunning && marketJob && marketJob.status !== "RUNNING") {
+    setSawMarketRunning(false);
+    setMarketFinishedNotice(marketJob.endedReason ?? t("marketWorking"));
+  }
 
   const onPress = async (mode: "DETAILS" | "PROSPECTS") => {
     setMessage(null);
@@ -434,6 +452,24 @@ function ResearchRow() {
       if (result.nothingToDo) setMessage(t("researchNothingToDo"));
     } catch (caught) {
       setMessage(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
+
+  const onStartMarketDiscovery = async () => {
+    setMarketMessage(null);
+    try {
+      await startMarketDiscovery({});
+    } catch (caught) {
+      setMarketMessage(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
+
+  const onStopMarketDiscovery = async () => {
+    setMarketMessage(null);
+    try {
+      await stopMarketDiscovery({});
+    } catch (caught) {
+      setMarketMessage(caught instanceof Error ? caught.message : String(caught));
     }
   };
 
@@ -457,11 +493,26 @@ function ResearchRow() {
         </div>
       </div>
     )}
+    {marketFinishedNotice && (
+      <div className={`fixed inset-0 ${LAYER.OVERLAY} flex items-center justify-center bg-black/50 backdrop-blur-sm`}>
+        <div className="w-[min(420px,90vw)] rounded-[16px] border border-border-dim bg-sidebar p-6 flex flex-col gap-4 shadow-xl">
+          <h2 className="text-[16px] font-semibold text-foreground">{t("marketDoneTitle")}</h2>
+          <p className="text-[13.5px] text-secondary leading-relaxed">{marketFinishedNotice}</p>
+          <button
+            type="button"
+            onClick={() => setMarketFinishedNotice(null)}
+            className="self-end px-4 py-2 rounded-[10px] border border-brand/40 bg-brand/10 text-[13px] text-brand hover:bg-brand/20 transition-colors"
+          >
+            {t("researchDoneOk")}
+          </button>
+        </div>
+      </div>
+    )}
     <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
       <button
         type="button"
         onClick={() => void onPress("PROSPECTS")}
-        disabled={isRunning}
+        disabled={anyRunning}
         className="px-3 py-2 rounded-[12px] border border-brand/40 bg-brand/10 text-[13px] text-brand hover:bg-brand/20 transition-colors disabled:opacity-60"
       >
         {t("prospectsStart")}
@@ -469,10 +520,18 @@ function ResearchRow() {
       <button
         type="button"
         onClick={() => void onPress("DETAILS")}
-        disabled={isRunning}
+        disabled={anyRunning}
         className="px-3 py-2 rounded-[12px] border border-brand/40 bg-brand/10 text-[13px] text-brand hover:bg-brand/20 transition-colors disabled:opacity-60"
       >
         {t("researchStart")}
+      </button>
+      <button
+        type="button"
+        onClick={() => void onStartMarketDiscovery()}
+        disabled={anyRunning}
+        className="px-3 py-2 rounded-[12px] border border-amber-500/40 bg-amber-500/10 text-[13px] text-amber-300 hover:bg-amber-500/20 transition-colors disabled:opacity-60"
+      >
+        {t("marketSetupButton")}
       </button>
 
       <div className="flex-1 min-w-[220px] flex flex-col gap-1.5 px-2">
@@ -504,6 +563,53 @@ function ResearchRow() {
           />
         </div>
       </div>
+      {(marketIsRunning || marketJob || marketMessage) && (
+        <div className="basis-full flex flex-col gap-1.5 px-2 pb-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className={`text-[12.5px] ${marketIsRunning ? "text-foreground" : "text-muted"}`}>
+              {marketIsRunning
+                ? t("marketWorkingOn", {
+                    phase: marketJob?.phaseLabel ?? t("marketWorking"),
+                    name: marketJob?.currentLabel ?? marketJob?.customerType ?? "",
+                  })
+                : marketMessage
+                  ?? (marketJob?.endedReason
+                    ? t("marketFinished", { reason: marketJob.endedReason })
+                    : t("marketIdle"))}
+            </span>
+            {marketJob && (
+              <span className="text-[12px] text-secondary tabular-nums">
+                {t("marketProgress", {
+                  accepted: marketJob.groupsAccepted,
+                  target: marketJob.targetGroupCount,
+                  locations: marketJob.locationsFiled,
+                  duplicates: marketJob.groupsDuplicate + marketJob.locationsDuplicate,
+                  review: marketJob.groupsNeedsCheck + marketJob.locationsNeedsCheck,
+                  spend: marketJob.spentGBP.toFixed(2),
+                  max: marketJob.maxCostGBP.toFixed(2),
+                })}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
+              <div
+                className="h-full bg-amber-400 transition-all"
+                style={{ width: `${marketIsRunning ? marketJob?.percent ?? 0 : 0}%` }}
+              />
+            </div>
+            {marketIsRunning && (
+              <button
+                type="button"
+                onClick={() => void onStopMarketDiscovery()}
+                className="px-2.5 py-1 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:border-border transition-colors"
+              >
+                {t("marketStop")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
