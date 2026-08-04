@@ -288,3 +288,74 @@ describe("2026-07-31-user-last-login-at", () => {
     expect(record?.updated).toBe(0);
   });
 });
+
+const REOPEN_FIGURES_MIGRATION = "2026-08-04-reopen-key-figure-not-founds";
+
+describe("2026-08-04-reopen-key-figure-not-founds", () => {
+  async function seedResearchRows(t: TestConvex) {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Comax", createdAt: Date.now() });
+
+      const insert = async (
+        field: string,
+        status: "APPLIED" | "NEEDS_CHECK" | "REJECTED" | "SUPERSEDED" | "NOT_FOUND"
+      ) =>
+        await ctx.db.insert("salesDataCustomerResearch", {
+          companyId,
+          subjectKey: "WOODPECKERS",
+          subjectType: "CUSTOMER" as const,
+          field,
+          value: status === "APPLIED" ? "41" : "",
+          confidence: "LOW" as const,
+          status,
+          foundAt: Date.now(),
+        });
+
+      return {
+        companyId,
+        bedroomsNotFound: await insert("bedrooms", "NOT_FOUND"),
+        pupilsNotFound: await insert("pupils", "NOT_FOUND"),
+        // A phone nobody publishes stays closed — the note is doing its job.
+        phoneNotFound: await insert("phone", "NOT_FOUND"),
+        // A bed count actually found is history to keep, not a note to reopen.
+        bedroomsApplied: await insert("bedrooms", "APPLIED"),
+      };
+    });
+  }
+
+  test("reopens the two figures' not-found notes and nothing else", async () => {
+    const t = makeTest();
+    const seeded = await seedResearchRows(t);
+
+    await t.mutation(internal.dataMigrations.run, { name: REOPEN_FIGURES_MIGRATION });
+    await drainScheduler(t);
+
+    const record = await getMigration(t, REOPEN_FIGURES_MIGRATION);
+    expect(record?.status).toBe("COMPLETED");
+    expect(record?.updated).toBe(2);
+
+    const statuses = await t.run(async (ctx) => ({
+      bedroomsNotFound: (await ctx.db.get(seeded.bedroomsNotFound))?.status,
+      pupilsNotFound: (await ctx.db.get(seeded.pupilsNotFound))?.status,
+      phoneNotFound: (await ctx.db.get(seeded.phoneNotFound))?.status,
+      bedroomsApplied: (await ctx.db.get(seeded.bedroomsApplied))?.status,
+    }));
+    expect(statuses.bedroomsNotFound).toBe("SUPERSEDED");
+    expect(statuses.pupilsNotFound).toBe("SUPERSEDED");
+    expect(statuses.phoneNotFound).toBe("NOT_FOUND");
+    expect(statuses.bedroomsApplied).toBe("APPLIED");
+  });
+
+  test("is idempotent — a second run changes nothing", async () => {
+    const t = makeTest();
+    await seedResearchRows(t);
+
+    await t.mutation(internal.dataMigrations.run, { name: REOPEN_FIGURES_MIGRATION });
+    await drainScheduler(t);
+    await t.mutation(internal.dataMigrations.run, { name: REOPEN_FIGURES_MIGRATION, force: true });
+    await drainScheduler(t);
+
+    const record = await getMigration(t, REOPEN_FIGURES_MIGRATION);
+    expect(record?.updated).toBe(0);
+  });
+});

@@ -132,6 +132,33 @@ const nextTask = async (
     ...args,
   });
 
+/**
+ * Answer the sizing figure for every seeded account.
+ *
+ * The queue does not accept a customer back while its bedrooms or pupils
+ * question is open. Tests about queue mechanics answer it up front so their
+ * arithmetic stays about the queue; the gate itself is tested in "the figure
+ * the next phase is sized on".
+ */
+const answerKeyFigures = async (
+  t: Awaited<ReturnType<typeof seed>>["t"],
+  companyId: Id<"companies">
+) =>
+  await t.run(async (ctx) => {
+    for (const account of ACCOUNTS) {
+      await ctx.db.insert("salesDataCustomerResearch", {
+        companyId,
+        subjectKey: key(account.accountName),
+        subjectType: "CUSTOMER" as const,
+        field: "bedrooms",
+        value: "",
+        confidence: "HIGH" as const,
+        status: "NOT_FOUND" as const,
+        foundAt: Date.now(),
+      });
+    }
+  });
+
 describe("starting a job", () => {
   test("the first ask builds the queue: every customer with gaps, every chain", async () => {
     const { t, companyId, userId, agentId } = await seed();
@@ -245,6 +272,7 @@ describe("working the queue", () => {
    */
   test("hands out customers first, then chains", async () => {
     const { t, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
 
     // The first ask both builds the queue and hands out the first task.
@@ -262,6 +290,7 @@ describe("working the queue", () => {
 
   test("says there is nothing left once the queue is empty", async () => {
     const { t, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
     await nextTask(t, companyId, { runId });
 
@@ -331,6 +360,95 @@ describe("working the queue", () => {
   });
 });
 
+describe("the figure the next phase is sized on", () => {
+  /**
+   * The first live job said "Researched 83 of 83 — nothing left" while seventy
+   * of them had no bedrooms answer of any kind: the run visited, recorded
+   * nothing, and asked for the next one, and asking was all it took. "Done" is
+   * now a claim the queue checks rather than a word it takes.
+   */
+  test("a customer is not accepted as done while its bedrooms question is open", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    const runId = await seedRun(t, { agentId, userId, companyId });
+
+    const first = await nextTask(t, companyId, { runId });
+    expect(first.task?.kind).toBe("CUSTOMER");
+    // Said at hand-out, not left for the model to infer from a list of eleven
+    // equal-looking gaps.
+    expect(first.task?.instruction).toContain("bedrooms");
+    expect(first.task?.instruction).toContain("not accepted without it");
+
+    const second = await nextTask(t, companyId, { previousOutcome: "DONE" });
+    // Not handed straight back — it goes to the back of the queue for a fresh go.
+    expect(second.task?.key).not.toBe(first.task?.key);
+
+    const items = await t.run(
+      async (ctx) => await ctx.db.query("salesDataResearchJobItems").collect()
+    );
+    const bounced = items.find((item) => item.key === first.task?.key);
+    expect(bounced).toMatchObject({ status: "PENDING", attempts: 1 });
+    expect(bounced?.lastError).toContain("bedrooms");
+  });
+
+  test("after its goes, it is recorded as undone with the reason", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    const runId = await seedRun(t, { agentId, userId, companyId });
+    await nextTask(t, companyId, { runId });
+
+    // The run keeps claiming done without ever answering the figure.
+    for (let call = 0; call < 12; call += 1) {
+      await nextTask(t, companyId, { previousOutcome: "DONE" });
+    }
+
+    const items = await t.run(
+      async (ctx) => await ctx.db.query("salesDataResearchJobItems").collect()
+    );
+    const customers = items.filter((item) => item.kind === "CUSTOMER");
+    expect(customers.length).toBeGreaterThan(0);
+    for (const item of customers) {
+      expect(item.status).toBe("FAILED");
+      expect(item.lastError).toContain("was never recorded");
+    }
+    // The chains carry no figure and settle as they always did.
+    expect(items.filter((item) => item.kind === "CHAIN").every((i) => i.status === "DONE")).toBe(
+      true
+    );
+  });
+
+  /**
+   * "Looked, and it is not published" is an answer. The gate demands the
+   * question be closed, not that every hotel confess its room count.
+   */
+  test("a not-found note answers the question, and done stands", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    const runId = await seedRun(t, { agentId, userId, companyId });
+
+    const first = await nextTask(t, companyId, { runId });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("salesDataCustomerResearch", {
+        companyId,
+        subjectKey: first.task!.key,
+        subjectType: "CUSTOMER" as const,
+        field: "bedrooms",
+        value: "",
+        confidence: "LOW" as const,
+        status: "NOT_FOUND" as const,
+        foundAt: Date.now(),
+      });
+    });
+
+    await nextTask(t, companyId, { previousOutcome: "DONE" });
+
+    const items = await t.run(
+      async (ctx) => await ctx.db.query("salesDataResearchJobItems").collect()
+    );
+    expect(items.find((item) => item.key === first.task?.key)).toMatchObject({
+      status: "DONE",
+      attempts: 1,
+    });
+  });
+});
+
 describe("prospects found while it runs", () => {
   /**
    * The third pass is fed by the second, inside the same job. Before this, a
@@ -339,6 +457,7 @@ describe("prospects found while it runs", () => {
    */
   test("a prospect found by the chain pass joins the queue", async () => {
     const { t, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
     await nextTask(t, companyId, { runId });
 
@@ -698,6 +817,7 @@ describe("when a run ends", () => {
 
   test("finishes cleanly once every item is done", async () => {
     const { t, client, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
     await nextTask(t, companyId, { runId });
 
