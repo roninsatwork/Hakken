@@ -140,7 +140,27 @@ function describeGaps(
     missing.push(field);
   }
 
-  return { extraField, known, missing, alreadySearched, parkedCount: parked.length };
+  const priorityMissing = extraField && missing.includes(extraField) ? [extraField] : [];
+  const priorityNote =
+    priorityMissing.length > 0
+      ? `${extraField} is the key number for the opportunity report. Search it first, cite the page checked, and only mark it not found after checking the best source for this customer type.`
+      : null;
+
+  return {
+    extraField,
+    known,
+    missing,
+    alreadySearched,
+    parkedCount: parked.length,
+    priorityMissing,
+    priorityNote,
+  };
+}
+
+type ResearchGapDescription = ReturnType<typeof describeGaps>;
+
+function hasSizePriorityGap(gaps: ResearchGapDescription): boolean {
+  return gaps.priorityMissing.length > 0;
 }
 
 /** A run reads a bounded number of pages; its whole tool history fits in this. */
@@ -286,13 +306,30 @@ export const readCustomerForResearch = internalQuery({
       importId: currentImport._id,
     });
 
+    let firstSubjectWithGaps:
+      | {
+          subjectType: "CUSTOMER" | "PROSPECT";
+          key: string;
+          name: string;
+          accountCode: string;
+          groupName: string;
+          customerType: string;
+          customerTypeKey: string;
+        }
+      | null = null;
+
     for (const subject of subjects) {
       const details = await loadDetailsRow(ctx, args.companyId, subject.key);
       const research = await loadResearchRows(ctx, args.companyId, subject.key);
-      if (describeGaps(subject, details, research).missing.length > 0) {
+      const gaps = describeGaps(subject, details, research);
+      if (gaps.missing.length === 0) continue;
+      if (hasSizePriorityGap(gaps)) {
         return await describe(subject);
       }
+      firstSubjectWithGaps ??= subject;
     }
+
+    if (firstSubjectWithGaps) return await describe(firstSubjectWithGaps);
 
     return {
       found: false as const,
@@ -383,6 +420,7 @@ export const recordResearchFinding = internalMutation({
     }
 
     const details = await loadDetailsRow(ctx, args.companyId, args.accountNameKey);
+    const extraFieldForCustomer = extraFieldForType(subject.customerTypeKey);
 
     const decision = routeResearchFinding({
       field: args.field,
@@ -392,7 +430,7 @@ export const recordResearchFinding = internalMutation({
       notFound: args.notFound,
       fieldHasValue:
         detailValue(details, args.field as ResearchField) !== undefined,
-      extraFieldForCustomer: extraFieldForType(subject.customerTypeKey),
+      extraFieldForCustomer,
     });
 
     if (!decision.ok) {
@@ -405,6 +443,19 @@ export const recordResearchFinding = internalMutation({
     // The cited page has to be one this run opened. See `pagesReadInRun`: a
     // plausible address is not evidence, and a finding whose source cannot be
     // clicked is worth less than no finding at all.
+    if (decision.status === "NOT_FOUND" && args.runId && decision.field === extraFieldForCustomer) {
+      const pagesRead = await pagesReadInRun(ctx, args.runId);
+      const cited = canonicalSourceUrl(args.sourceUrl);
+      if (pagesRead.size === 0 || !cited || !pagesRead.has(cited)) {
+        return {
+          recorded: false as const,
+          reason:
+            `${decision.field} is the key number for the opportunity report. `
+            + "Before marking it not found, cite the exact page you checked in this run.",
+        };
+      }
+    }
+
     if (decision.status !== "NOT_FOUND" && args.runId) {
       const pagesRead = await pagesReadInRun(ctx, args.runId);
       const cited = canonicalSourceUrl(args.sourceUrl);
@@ -709,6 +760,48 @@ async function resolveResearchSubject(
   };
 }
 
+type ClaimedProspectingChain =
+  | { state: "CLAIMED"; groupNameKey: string; groupName: string }
+  | { state: "NEEDS_TASK" };
+
+/**
+ * Which chain this run is allowed to prospect, if it is working a job.
+ *
+ * A prospecting run has two ways to name a group: the queue item it claimed, and
+ * the argument it passes to the group/prospect tools. The queue is the authority.
+ * Without this, a no-name "read a group" call can drift to some other group
+ * while the job still shows the claimed chain as in progress.
+ */
+async function claimedProspectingChainForRun(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  args: { companyId: Id<"companies">; runId?: Id<"agentRuns"> }
+): Promise<ClaimedProspectingChain | null> {
+  if (!args.runId) return null;
+
+  const job = await ctx.db
+    .query("salesDataResearchJobs")
+    .withIndex("by_company_status", (q) =>
+      q.eq("companyId", args.companyId).eq("status", "RUNNING")
+    )
+    .first();
+  if (!job) return null;
+
+  const inProgress = await ctx.db
+    .query("salesDataResearchJobItems")
+    .withIndex("by_job_status", (q) => q.eq("jobId", job._id).eq("status", "IN_PROGRESS"))
+    .take(NEXT_CUSTOMER_SCAN_LIMIT);
+
+  const claimed = inProgress.find(
+    (item) => item.kind === "CHAIN" && item.runId === args.runId
+  );
+  if (claimed) {
+    return { state: "CLAIMED", groupNameKey: claimed.key, groupName: claimed.label };
+  }
+
+  if (job.currentRunId === args.runId) return { state: "NEEDS_TASK" };
+  return null;
+}
+
 /**
  * A group to go looking through, and the sites in it already supplied.
  *
@@ -720,6 +813,7 @@ export const readGroupForProspecting = internalQuery({
   args: {
     companyId: v.id("companies"),
     groupName: v.optional(v.string()),
+    runId: v.optional(v.id("agentRuns")),
   },
   handler: async (ctx, args) => {
     await assertSalesDataCompany(ctx, args.companyId);
@@ -727,6 +821,19 @@ export const readGroupForProspecting = internalQuery({
     const currentImport = await getCurrentImport(ctx, args.companyId);
     if (!currentImport) {
       return { found: false as const, message: "This workspace has no imported sales data." };
+    }
+
+    const claimed = await claimedProspectingChainForRun(ctx, {
+      companyId: args.companyId,
+      runId: args.runId,
+    });
+    const requestedGroupNameKey = args.groupName ? normalizeKey(args.groupName) : null;
+
+    if (claimed?.state === "NEEDS_TASK") {
+      return {
+        found: false as const,
+        message: "Ask for your next prospecting task before reading a group.",
+      };
     }
 
     const accounts = await ctx.db
@@ -759,6 +866,27 @@ export const readGroupForProspecting = internalQuery({
         alreadyFound: found.map((prospect) => prospect.siteName),
       };
     };
+
+    if (claimed?.state === "CLAIMED") {
+      if (requestedGroupNameKey && requestedGroupNameKey !== claimed.groupNameKey) {
+        return {
+          found: false as const,
+          message:
+            `Your current prospecting task is "${claimed.groupName}". `
+            + "Read that group before moving on.",
+        };
+      }
+
+      const members = groups.get(claimed.groupNameKey);
+      if (!members) {
+        return {
+          found: false as const,
+          message:
+            `"${claimed.groupName}" is not a group this workspace supplies in the current import.`,
+        };
+      }
+      return await describe(members);
+    }
 
     if (args.groupName) {
       const members = groups.get(normalizeKey(args.groupName));
@@ -883,6 +1011,25 @@ export const recordProspect = internalMutation({
     }
 
     const groupNameKey = normalizeKey(args.groupName);
+    const claimed = await claimedProspectingChainForRun(ctx, {
+      companyId: args.companyId,
+      runId: args.runId,
+    });
+    if (claimed?.state === "NEEDS_TASK") {
+      return {
+        recorded: false as const,
+        reason: "Ask for your next prospecting task before recording a site.",
+      };
+    }
+    if (claimed?.state === "CLAIMED" && groupNameKey !== claimed.groupNameKey) {
+      return {
+        recorded: false as const,
+        reason:
+          `Your current prospecting task is "${claimed.groupName}". `
+          + "Record sites for that group only.",
+      };
+    }
+
     // The group has to be one the workspace already sells to. Searching groups
     // it has never dealt with is a different product with a different cost, and
     // this is that decision enforced in code rather than in the prompt.
@@ -1276,16 +1423,21 @@ export async function collectPendingResearchWork(
 }> {
   const subjects = await collectResearchSubjects(ctx, args);
 
-  const customers: { key: string; label: string }[] = [];
-  const prospects: { key: string; label: string }[] = [];
+  const customers: Array<{ key: string; label: string; priority: boolean }> = [];
+  const prospects: Array<{ key: string; label: string; priority: boolean }> = [];
   for (const subject of subjects) {
     const details = await loadDetailsRow(ctx, args.companyId, subject.key);
     const research = await loadResearchRows(ctx, args.companyId, subject.key);
     // Already filled in, or every remaining gap already searched for and found
     // unpublished. Either way there is nothing to spend money on.
-    if (describeGaps(subject, details, research).missing.length === 0) continue;
+    const gaps = describeGaps(subject, details, research);
+    if (gaps.missing.length === 0) continue;
     (subject.subjectType === "CUSTOMER" ? customers : prospects)
-      .push({ key: subject.key, label: subject.name });
+      .push({
+        key: subject.key,
+        label: subject.name,
+        priority: hasSizePriorityGap(gaps),
+      });
   }
 
   const accounts = await ctx.db
@@ -1304,10 +1456,22 @@ export async function collectPendingResearchWork(
   }
 
   return {
-    customers,
+    customers: prioritizeSizeGaps(customers),
     chains: [...chains].map(([key, label]) => ({ key, label })),
-    prospects,
+    prospects: prioritizeSizeGaps(prospects),
   };
+}
+
+function prioritizeSizeGaps(
+  items: Array<{ key: string; label: string; priority: boolean }>
+): { key: string; label: string }[] {
+  return items
+    .map((item, index) => ({ ...item, index }))
+    .sort((first, second) => {
+      if (first.priority !== second.priority) return first.priority ? -1 : 1;
+      return first.index - second.index;
+    })
+    .map(({ key, label }) => ({ key, label }));
 }
 
 /** The research agent this workspace's job will use. Exported for the job. */
@@ -1370,7 +1534,7 @@ HOW A RUN GOES
 2. You will be told the business name, the chain it belongs to, its type, what is already known, and exactly which details are missing. Work only on the missing ones.
 3. Find the business's own contact page. That one page usually carries the address, the postcode and the telephone number together.
 4. RECORD AS YOU GO. The moment a page gives you a detail, call "Comax — Record a customer detail" for it, before you read anything else. Do not read several pages first and record at the end — you will run out of budget before writing anything down, and the whole run is wasted.
-5. Two or three pages is normally enough. Stop reading once the missing details are found or you have run out of places that would carry them.
+5. Two or three pages is normally enough for contact details. For bedrooms or pupils, do not stop until you have checked the strongest likely source and can cite the exact page you checked.
 6. When there is nothing left you can find for that customer, say what you did and stop.
 
 IDENTIFY THE INDIVIDUAL BUSINESS, NEVER THE CHAIN
@@ -1391,7 +1555,7 @@ WHERE TO LOOK
 BEING HONEST
 - Report confidence honestly. HIGH means the page names this exact business and states this exact detail plainly. Anything less is routed to a person, which is a normal outcome and not a failure.
 - Every detail needs the address of the page you took it from. If you cannot name the page, you have not found the detail.
-- If a detail is not published anywhere you looked, record it with notFound set. That is useful — it stops this customer being searched for the same thing every month.
+- If a detail is not published anywhere you looked, record it with notFound set. For bedrooms or pupils, include the exact page you checked as the source. That is useful — it stops this customer being searched for the same thing every month.
 - Never infer. Do not guess a postcode from a town, an email address from a domain, a phone number from a pattern, or a room count from photographs.
 - Take only contact details a business publishes about itself. Never assemble them from social profiles or people-search sites.`;
 

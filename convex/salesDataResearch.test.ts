@@ -147,6 +147,51 @@ async function researchFor(
   );
 }
 
+async function addEarlierHotelWithOnlyPhoneMissing(
+  t: TestConvex,
+  workspace: Workspace
+) {
+  await t.run(async (ctx) => {
+    const currentImport = await ctx.db
+      .query("salesDataImports")
+      .withIndex("by_company_started", (q) => q.eq("companyId", workspace.companyId))
+      .first();
+    if (!currentImport) throw new Error("Missing test import.");
+    const accountName = "Alpha Hotel";
+    await ctx.db.insert("salesDataAccounts", {
+      companyId: workspace.companyId,
+      importId: currentImport._id,
+      accountNameKey: key(accountName),
+      accountName,
+      codeTally: { ALPHA: 1 },
+      groupName: "AAA Group",
+      groupNameKey: key("AAA Group"),
+      customerType: "HOTELS",
+      customerTypeKey: "HOTELS",
+      totalRevenue: 100,
+      productCount: 1,
+    });
+    await ctx.db.insert("salesDataCustomers", {
+      companyId: workspace.companyId,
+      accountNameKey: key(accountName),
+      addressLine1: "1 Promenade",
+      addressLine2: "Seafront",
+      town: "Torquay",
+      postcode: "TQ1 1AA",
+      country: "United Kingdom",
+      mobile: "07000 000000",
+      email: "info@alpha.example",
+      accountsEmail: "accounts@alpha.example",
+      website: "https://alpha.example",
+      contactName: "A Manager",
+      contactRole: "Manager",
+      bedrooms: 20,
+      updatedAt: Date.now(),
+      updatedBy: workspace.userId,
+    });
+  });
+}
+
 describe("reading a customer to research", () => {
   test("names the individual business, its chain, and what is missing", async () => {
     const { t, comax } = await seed();
@@ -171,6 +216,8 @@ describe("reading a customer to research", () => {
     expect(result).toHaveProperty("missing", expect.arrayContaining(["phone", "postcode"]));
     expect((result as { missing: string[] }).missing).toContain("bedrooms");
     expect((result as { missing: string[] }).missing).not.toContain("pupils");
+    expect((result as { priorityMissing: string[] }).priorityMissing).toEqual(["bedrooms"]);
+    expect((result as { priorityNote: string }).priorityNote).toContain("opportunity report");
   });
 
   test("a school is asked for pupils, never bedrooms", async () => {
@@ -223,6 +270,25 @@ describe("reading a customer to research", () => {
     );
 
     expect(result).toMatchObject({ found: true });
+  });
+
+  test("called with nothing it prioritises records missing bedrooms or pupils", async () => {
+    const { t, comax } = await seed();
+    await addEarlierHotelWithOnlyPhoneMissing(t, comax);
+
+    const result = await t.run(
+      async (ctx) =>
+        await ctx.runQuery(internal.salesDataResearch.readCustomerForResearch, {
+          companyId: comax.companyId,
+        })
+    );
+
+    expect(result).toMatchObject({
+      found: true,
+      accountName: SCHOOL,
+      extraField: "pupils",
+      priorityMissing: ["pupils"],
+    });
   });
 
   test("called with nothing it hands back prospects too, not only customers", async () => {
@@ -565,6 +631,53 @@ describe("recording what the agent found", () => {
       );
 
       expect(result).toMatchObject({ recorded: true, status: "NOT_FOUND" });
+    });
+
+    test("reporting bedrooms not found must cite a page the run opened", async () => {
+      const { t, comax } = await seed();
+      const runId = await seedRunThatRead(t, comax, "https://devonshirehotel.co.uk/rooms");
+
+      const missingSource = await t.run(
+        async (ctx) =>
+          await ctx.runMutation(internal.salesDataResearch.recordResearchFinding, {
+            ...finding(comax, {
+              field: "bedrooms",
+              notFound: true,
+              value: "",
+              sourceUrl: undefined,
+            }),
+            runId,
+          })
+      );
+      expect(missingSource).toMatchObject({ recorded: false });
+
+      const unreadSource = await t.run(
+        async (ctx) =>
+          await ctx.runMutation(internal.salesDataResearch.recordResearchFinding, {
+            ...finding(comax, {
+              field: "bedrooms",
+              notFound: true,
+              value: "",
+              sourceUrl: "https://devonshirehotel.co.uk/contact",
+            }),
+            runId,
+          })
+      );
+      expect(unreadSource).toMatchObject({ recorded: false });
+
+      const checkedSource = await t.run(
+        async (ctx) =>
+          await ctx.runMutation(internal.salesDataResearch.recordResearchFinding, {
+            ...finding(comax, {
+              field: "bedrooms",
+              notFound: true,
+              value: "",
+              sourceUrl: "https://www.devonshirehotel.co.uk/rooms?from=search",
+            }),
+            runId,
+          })
+      );
+      expect(checkedSource).toMatchObject({ recorded: true, status: "NOT_FOUND" });
     });
   });
 

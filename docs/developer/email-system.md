@@ -53,6 +53,37 @@ All four pass `{ html, text }` to `sendResendEmail`. A send without a text part
 scores worse with spam filters and is unreadable on a watch or through a screen
 reader, so do not add a fifth caller that omits it.
 
+## Accessible status colour contract
+
+`EMAIL_PALETTE` in `convex/emailLayoutService.ts` is part of the implementation
+contract, not decoration. The current shell is neutral charcoal and the status
+signals are:
+
+| Meaning | Token | Hex | Notes |
+| --- | --- | --- | --- |
+| Healthy / link | `blue` | `#8fc6ff` | Used for good stats and all links. |
+| Warning | `gold` | `#fae19e` | Deliberately the brightest signal. |
+| Critical | `red` | `#ee6352` | Darker than warning so severity survives without hue. |
+
+Do not reintroduce a green-vs-red status ramp. The 2026-08-04 email accessibility
+fix removed the previous forest green/red signalling because red/green colour
+blindness made the healthy and failed states collapse into the same perceived
+signal. Warning and critical must differ by brightness, not only hue, and colour
+must never be the only carrier of severity.
+
+The renderer enforces this in two ways:
+
+- `tone` and severity helpers return both a colour and a dark-mode lock class,
+  so clients that rewrite inline colours still preserve the signal.
+- A warning or critical card without a caller-supplied badge renders the severity
+  as text (`Needs attention` or `Critical`) in both HTML and plain text.
+
+Tests in `convex/emailLayoutService.test.ts` assert WCAG AA contrast, pairwise
+signal separation under deuteranopia and protanopia simulation, a brightness gap
+between warning and critical, and the no-green signal rule. If a product change
+needs new status language or a new tone, update the renderer, preview fixtures,
+plain-text output, and those tests together.
+
 ## Why the markup looks like 2005
 
 Legacy Outlook renders through Microsoft Word, not a browser. That is not an old

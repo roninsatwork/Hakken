@@ -8,22 +8,33 @@ Sales and board reports are separate from property research. Property research
 collects and reviews Rightmove listings. Sales reports turn a sales pipeline CSV
 and supporting knowledge into the latest board-ready pipeline report.
 
+Workspace opportunity reports are part of the sales-data workspace area. They
+use the imported customer spend, researched customer or prospect sizes, and
+found prospects to estimate where more revenue may exist inside known groups.
+
 ## Where To Find It
 
 Open the authenticated Sonae app and use the Reports section.
 
-There are two report pages:
+There are three report pages:
 
 - **How Board Reports Work** at `/app/reports/information`, which explains what
   the report reads, remembers, and produces.
 - **Sales Report** at `/app/reports`, which shows the latest generated report
   available to the current workspace.
+- **Opportunity Report** at `/app/<workspace>/opportunity-report`, which sits
+  beside the workspace customer area for workspaces with the sales-data section
+  enabled.
 
 The report viewer is not a data-upload screen and it is not the place where
 agent schedules are configured. It displays the latest report that already
 exists. If no report has been generated yet, the page shows `No Reports
 Available` and tells the user to upload a pipeline CSV and schedule the Sales
 Report Agent.
+
+The Opportunity Report page is different: it has its own run button because it
+builds a report from the workspace sales-data import and the current prospect
+list, rather than from the Sales Report Agent's pipeline CSV.
 
 ## What The Report Uses
 
@@ -88,6 +99,32 @@ Older reports may not contain every structured section. When Sonae finds a
 legacy report with only the older report shape, it still shows a safe reduced
 view instead of hiding the report completely.
 
+## Opportunity Report Page
+
+The Opportunity Report answers two practical questions for a sales-data
+workspace:
+
+- which known prospects might be worth most if they became customers;
+- which products are being bought by sister accounts in the same group but not
+  by a specific customer.
+
+The page starts with headline totals and progress or status for the current
+opportunity-report run. It then shows ranked sections for prospect opportunities
+and group gaps. Prospect rows explain how each estimate was priced: ideally from
+similar-sized customers in the same group, otherwise from customers of the same
+type, and with weaker confidence when the prospect has no bedrooms or pupils on
+file.
+
+Group gap rows show which product categories a customer is missing, how many
+sister accounts buy them, and which sister accounts were used as the comparison.
+That named comparison matters: it lets a sales user check the recommendation
+against real accounts instead of seeing only a count.
+
+The report is most useful after the customer research job has filled or checked
+bedrooms for hotels and care homes, and pupils for schools. If those numbers are
+missing, Sonae still shows the opportunity, but the estimate falls back to a
+less precise average and should be treated as weaker.
+
 ## Export To Board
 
 The `Export to Board` button downloads a PNG image of the visible report
@@ -113,6 +150,10 @@ role. A generated report is stored against the company context used when the
 agent ran. Changing a CSV, rule, model, or memory later does not rewrite old
 reports; a new agent run is needed to generate a new result.
 
+The Opportunity Report is scoped to the active workspace and current sales-data
+import. It should not be used across companies, and a re-import changes the
+customer spend snapshot the next report will use.
+
 ## Common Operating Guidance
 
 Keep the source pipeline CSV current before a scheduled board cadence. If the
@@ -130,6 +171,10 @@ They should support the pipeline; they should not replace clean pipeline data.
 When the page says there are no reports, check that the Sales Report Agent has a
 pipeline CSV in its knowledge area and that the relevant schedule or manual run
 has completed.
+
+When an opportunity report looks thin, check whether prospects have been found
+and whether the customer research job has filled bedrooms or pupils. Those fields
+drive the stronger per-unit pricing.
 
 ## Caveats
 

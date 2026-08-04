@@ -50,9 +50,11 @@ completed work.
   touching the `logins` table or adding anything to `/admin/users`.
 - [Email Design System Plan](./active/email-design-system-plan.md) — the plan to
   put every outbound email through one shared shell: platform alerts, invites,
-  agent notifications, and workflow email nodes. Owns the forest email palette,
-  the sender identity, the plain-text alternative, and the legacy-Outlook client
-  support matrix. Read it before touching `convex/platformAlertService.ts`,
+  agent notifications, and workflow email nodes. Owns the neutral charcoal
+  shell, the blue/gold/red accessible signal ramp, the sender identity, the
+  plain-text alternative, and the legacy-Outlook client support matrix. Read it
+  before touching `convex/emailLayoutService.ts`,
+  `convex/platformAlertService.ts`,
   `convex/invites.ts`, `convex/aiToolNotificationService.ts`, or the email node
   in `convex/workflowRuntime.ts`.
 - [Agent Autonomy And Approvals Plan](./active/agent-autonomy-and-approvals-plan.md) —
@@ -95,6 +97,13 @@ completed work.
   access to workspace customer data, before adding anything to the customer
   list that is not an imported account, and it defers autonomy and approval
   behaviour to the Agent Autonomy And Approvals Plan.
+- [Market Discovery Agent Plan](./active/market-discovery-agent-plan.md) —
+  the plan for the separate agent lane that finds new parent companies outside
+  imported customer groups, then files their locations as clearly labelled
+  market-discovery prospects. Owns the future `Find new groups` button, its
+  queue-backed progress bar, discovered-parent-company records, prospect origin
+  labels, and opportunity-report separation between warm existing-chain
+  prospects and colder market-discovery prospects.
 - [Comax Opportunity Report Plan](./active/comax-opportunity-report-plan.md) —
   the plan for the Comax - Opportunity Report Agent and its screen: pricing
   every prospect from the spend of similar-sized customers (bedrooms for care
@@ -131,8 +140,10 @@ and eval content to the AI Checks Plan. If work touches the Rightmove property
 collection flow, especially `/app/properties/search`, Apify collection linkage,
 or whether the user frontend starts an agent or a scraper directly, use the
 Rightmove Agent Execution Plan. If work touches an agent filling in customer
-details from the internet, use the Workspace Customer Research Agent Plan; if it
-touches the customer screens themselves, the Workspace Customer CRM Plan wins.
+details from the internet, use the Workspace Customer Research Agent Plan. If
+work touches new parent-company discovery outside imported groups, use the
+Market Discovery Agent Plan. If it touches the customer screens themselves, the
+Workspace Customer CRM Plan wins.
 If work touches revenue opportunities — prospect valuation, group gap analysis,
 or the opportunity report screen — use the Comax Opportunity Report Plan.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the

@@ -793,7 +793,11 @@ function GapRow({
         </div>
         <div className={`text-[11.5px] text-muted ${products.length > 0 ? "pl-5" : ""}`}>
           {[
-            t("sistersBuyThis", { buyers: gap.buyersCount, siblings: gap.siblingCount }),
+            t("sistersBuyThisNamed", {
+              buyers: gap.buyersCount,
+              siblings: gap.siblingCount,
+              accounts: formatAccountList(gap.comparedTo.map((account) => account.accountName)),
+            }),
             products.length > 0 ? t("productCount", { count: products.length }) : null,
           ]
             .filter(Boolean)
@@ -819,6 +823,10 @@ function GapRow({
       )}
     </div>
   );
+}
+
+function formatAccountList(accounts: string[]): string {
+  return [...new Set(accounts.map((account) => account.trim()).filter(Boolean))].join(", ");
 }
 
 /**

@@ -2657,6 +2657,7 @@
             "thPricing": "Come è valutato",
             "thEstimate": "Stima su sei mesi",
             "sistersBuyThis": "{buyers} account gemelli su {siblings} lo acquistano",
+            "sistersBuyThisNamed": "{buyers} account gemelli su {siblings} lo acquistano: {accounts}",
             "productCount": "{count, plural, one {# prodotto da proporre} other {# prodotti da proporre}}",
             "beds": "{count} letti",
             "pupils": "{count} alunni",

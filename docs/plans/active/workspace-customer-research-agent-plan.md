@@ -182,6 +182,23 @@ Taken 2026-08-01 with Anthony, recorded so they are not relitigated.
     town, postcode and size. Contact details are researched when somebody asks
     for them, using the same backfill run a customer gets.
 
+13. **The job owns the chain being prospected.** "Find new prospects" is too
+    important to rely on the model choosing the right group from memory. When
+    the job hands out a chain, every prospecting tool call in that run is bound
+    to that chain. Calling "Read a group" with no group name returns the chain
+    the job has already claimed; calling it with another group is refused and
+    names the current task. Recording a site is checked the same way, so a run
+    cannot file prospects against a different chain while the progress bar says
+    it is working on this one.
+
+14. **Bedrooms and pupils are report-critical details.** The opportunity report
+    can price a prospect per bed or per pupil only when this size number is on
+    file; without it, the report drops to a weaker average. Detail jobs therefore
+    put customers and prospects missing their size field ahead of lower-value
+    contact gaps, the read tool names the size field as the priority, and an
+    agent run may only record that bedrooms or pupils are not found when it cites
+    a page it actually opened in that run.
+
 ## The Trap This Plan Is Mostly About
 
 Ten of the 39 customers belong to a chain. `DAISH'S HOTELS` is nine separate
@@ -392,6 +409,11 @@ is what stops it re-reporting the same six Colten Care homes on every run.
 It refuses a group that is not in the current import, which is *Decision 11*
 enforced in code rather than in the prompt.
 
+It also refuses a group that is not the chain currently claimed by the running
+research job item. The no-name read path resolves from the job item for the run,
+not from "the next unsearched group", so the queue, the progress line and the
+agent's tools all agree about which chain is being worked.
+
 **Retries do not double-write.** Every tool invocation is keyed on subject, field
 and value in the existing `agentToolInvocations` idempotency table, so a step
 replayed after a crash records once.
@@ -563,6 +585,12 @@ Unit tests, at minimum:
 - A person's edit supersedes the `APPLIED` row for that field only.
 - The read tool returns the empty fields, and skips fields already marked
   `NOT_FOUND`.
+- The read tool identifies bedrooms or pupils as the priority missing field
+  when that number is absent.
+- The details job hands out bedroom and pupil gaps before lower-value contact
+  gaps.
+- An agent run cannot mark bedrooms or pupils as not found unless it cites a page
+  it opened in that run.
 - A discovered site matching an existing account by name is not written.
 - A discovered site matching an existing account by postcode is not written,
   even when the names differ.
@@ -570,6 +598,12 @@ Unit tests, at minimum:
   the conflict recorded.
 - A second prospecting run over the same group adds nothing.
 - A group not in the current import is refused.
+- During a "Find new prospects" job, a no-name group read returns the chain
+  currently claimed by that run.
+- During that job, asking to read a different group is refused and names the
+  current chain.
+- During that job, recording a site against a different group is refused, so the
+  prospect list cannot drift from the job queue.
 - An import containing a prospect's name promotes it and carries its researched
   details onto the customer record.
 - A re-import leaves prospects and their details standing.

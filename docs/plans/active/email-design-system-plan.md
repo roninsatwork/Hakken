@@ -92,21 +92,32 @@ Fixed structure, top to bottom. A caller supplies content for slots 2–4 and
 | 4 | Action | Exactly one primary route back into the app, deep-linked to the record. |
 | 5 | Footer | Scope covered, how to change or stop these, "Powered by Ronins". |
 
-**Palette** — all values already exist in `src/app/(public)/public.css`:
+**Palette** — revised 2026-08-04 for red/green colour blindness. Anthony, on
+the system health alert: *"the colours are terrible, they are not accessible, I
+cannot read half of it because of the colours. I am colour blind red/green."*
+The forest palette signalled healthy in green and failed in red — the exact
+pair his vision merges (simulated deuteranopia put sage and blush at a 1.06
+contrast ratio: the same colour). The shell is now neutral charcoal with **no
+green anywhere**, and status runs on the blue/yellow axis, which every form of
+red/green colour blindness preserves. Critical is also markedly darker than
+warning, so that distinction survives even in greyscale.
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| Forest | `#103e33` | Card ground |
-| Forest deep | `#0b2b23` | Outer page |
-| Card inset | `#0c2c24` | Tiles, signal cards |
-| Cream | `#fbf7f0` | Type, secondary buttons |
-| Sage | `#a8d4b8` | Passed / healthy |
-| Sand | `#efd49b` | Needs attention |
-| Blush | `#f5c4b2` | Failed |
+| Card | `#1a1c21` | Card ground |
+| Ground | `#101114` | Outer page |
+| Inset | `#14161a` | Tiles, signal cards |
+| Ink | `#f7f8fa` | Type |
+| Blue | `#8fc6ff` | Passed / healthy, and every link |
+| Gold | `#fae19e` | Needs attention |
+| Red | `#ee6352` | Failed — deep on purpose; brightness carries the difference from gold |
 | Orange | `#ff5a1f` | The one action per email |
 
-The sage/sand/blush ramp is not new — it is the three-band colouring already used
-on the runs chart in the website hero (`ProductHero.tsx:36`).
+Colour is never the only carrier: stat tiles have text labels, and a card with
+a severity but no badge renders the severity word in the badge slot.
+`emailLayoutService.test.ts` enforces both AA contrast and colour-blind
+separation (Viénot deuteranopia/protanopia simulation, every signal pair ≥ 1.25
+apart), so a future palette change cannot quietly reintroduce the failure.
 
 ## Client Support Matrix
 
@@ -244,15 +255,15 @@ DNS on `ronins.co.uk`:
 
 ### Phase 1 — The shell — DONE 2026-07-31
 
-Built as `convex/emailLayoutService.ts` with 26 tests in
+Built as `convex/emailLayoutService.ts` with 31 tests in
 `convex/emailLayoutService.test.ts`. Typecheck and lint clean; the existing
 alert, notification and Resend tests still pass.
 
 - [x] Add `convex/emailLayoutService.ts` exporting `renderEmail(content)`, where
       `content` is structured data: `{ kind, verdict, lede, stats[], cards[],
       actions[], quiet[], footer }`. It returns `{ html, text }`.
-- [x] Table-based layout, inline style attributes, 600px, forest palette resolved
-      to literal hex at render time. Nested
+- [x] Table-based layout, inline style attributes, 600px, accessible neutral
+      palette resolved to literal hex at render time. Nested
       `<table role="presentation" cellpadding="0" cellspacing="0" border="0">`
       throughout; spacing on `<td>` only.
 - [x] Ship the Word-engine head block: the
@@ -443,6 +454,18 @@ preview route gives us the source to hand to a render service at that point.
   Phase 0.
 
 ## Decisions Log
+
+- **2026-08-04 — forest palette replaced with neutral charcoal; signals moved
+  to the blue/yellow axis.** Anthony is red/green colour blind and could not
+  read the system health alert: green-vs-red status colouring is invisible
+  information to him, and the measured deuteranopia simulation confirmed it
+  (sage vs blush: 1.06 — identical). "Forest, not cream, not neutral dark"
+  below is superseded on the colour question; the *dark* half of that decision
+  stands, because dark-mode survival (the original reason 3) still holds.
+  The layout is unchanged — Anthony: "the layout is OK but the colours are
+  terrible." New tests pin AA contrast, colour-blind pair separation, and
+  no-green-in-signals, and the severity word now renders in text when a card
+  has no badge, so colour is never the only carrier.
 
 - **2026-07-31 — dark ink on the orange button, not white.** White measured
   3.12 against `#ff5a1f`. Darkening the fill until white passed would have

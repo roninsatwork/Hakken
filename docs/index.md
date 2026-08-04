@@ -49,7 +49,15 @@ scripts, and operator procedures change.
 - [Company AI Readiness Rebuild Plan](./plans/active/company-ai-readiness-rebuild-plan.md) — active plan for replacing the company AI readiness screen and its score/signal model.
 - [Company And Agent Model Defaults Plan](./plans/active/company-and-agent-model-defaults-plan.md) — active plan for aligning company and agent model-default controls with the platform model-defaults screen.
 - [Public Website Plan](./plans/active/public-website-plan.md) — active plan for the pre-login public website, including home, platform, showcase, trust, and contact work.
+- [User Directory Plan](./plans/active/user-directory-plan.md) — active plan for the platform-wide user directory, login recording, and user activity aggregation.
+- [Email Design System Plan](./plans/active/email-design-system-plan.md) — active plan for the shared outbound email shell, plain-text parity, sender identity, and accessible colour contract.
 - [Observability Collection And Killswitch Handover](./plans/active/observability-collection-and-killswitch-handover.md) — active handover for honest Apify collection reporting and a visible agent kill switch.
+- [Workspace Sales Data Plan](./plans/active/workspace-sales-data-plan.md) — active plan for the optional workspace spreadsheet-import vertical and module gating.
+- [Workspace Customer CRM Plan](./plans/active/workspace-customer-crm-plan.md) — active plan for customer records, profiles, typed-in details, and sales history inside workspace sections.
+- [Workspace Customer Research Agent Plan](./plans/active/workspace-customer-research-agent-plan.md) — active plan for internet backfill, prospect discovery, researched-field provenance, and customer/prospect write boundaries.
+- [Market Discovery Agent Plan](./plans/active/market-discovery-agent-plan.md) — active plan for finding new parent companies outside imported groups, filing their locations as market-discovery prospects, and tracking the job with a visible progress bar.
+- [Comax Opportunity Report Plan](./plans/active/comax-opportunity-report-plan.md) — active plan for prospect valuation, chain gap analysis, opportunity-report tools, and the workspace opportunity report screen.
+- [Research Agent Autopilot Plan](./plans/active/research-agent-autopilot-plan.md) — active plan for turning customer research and prospecting sweeps into a supervised queue-backed job.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - [Handover](./plans/active/HANDOVER.md) — current platform-hardening handover state and verification context.
@@ -75,6 +83,7 @@ scripts, and operator procedures change.
 - [Company AI Readiness And Checks](./developer/company-ai-readiness-and-checks.md)
 - [Data Retention And Purges](./developer/data-retention-and-purges.md)
 - [Email Branding](./developer/email-branding.md)
+- [Email System](./developer/email-system.md)
 - [Route Protection And Authentication](./developer/route-protection-and-authentication.md)
 - [Tenancy Enforcement](./developer/tenancy-enforcement.md)
 - [Shared Admin UI](./developer/shared-admin-ui.md)
@@ -161,6 +170,7 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Agent Operations And Review](./end-user/agent-operations-and-review.md)
 - [Auxiliary App Experiences](./end-user/auxiliary-app-experiences.md)
 - [Embedded Widgets](./end-user/embedded-widgets.md)
+- [Emails From Sonae](./end-user/emails.md)
 - [Knowledge Management](./end-user/knowledge-management.md)
 - [Health](./end-user/health.md)
 - [Organization And Company Workspaces](./end-user/organization-and-company-workspaces.md)

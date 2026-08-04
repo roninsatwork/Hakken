@@ -132,6 +132,51 @@ const nextTask = async (
     ...args,
   });
 
+async function addEarlierHotelWithOnlyPhoneMissing(
+  t: Awaited<ReturnType<typeof seed>>["t"],
+  args: { companyId: Id<"companies">; userId: Id<"users"> }
+) {
+  await t.run(async (ctx) => {
+    const currentImport = await ctx.db
+      .query("salesDataImports")
+      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
+      .first();
+    if (!currentImport) throw new Error("Missing test import.");
+    const accountName = "Alpha Hotel";
+    await ctx.db.insert("salesDataAccounts", {
+      companyId: args.companyId,
+      importId: currentImport._id,
+      accountNameKey: key(accountName),
+      accountName,
+      codeTally: { ALPHA: 1 },
+      groupName: "AAA Group",
+      groupNameKey: key("AAA Group"),
+      customerType: "HOTELS",
+      customerTypeKey: "HOTELS",
+      totalRevenue: 100,
+      productCount: 1,
+    });
+    await ctx.db.insert("salesDataCustomers", {
+      companyId: args.companyId,
+      accountNameKey: key(accountName),
+      addressLine1: "1 Promenade",
+      addressLine2: "Seafront",
+      town: "Torquay",
+      postcode: "TQ1 1AA",
+      country: "United Kingdom",
+      mobile: "07000 000000",
+      email: "info@alpha.example",
+      accountsEmail: "accounts@alpha.example",
+      website: "https://alpha.example",
+      contactName: "A Manager",
+      contactRole: "Manager",
+      bedrooms: 20,
+      updatedAt: Date.now(),
+      updatedBy: args.userId,
+    });
+  });
+}
+
 describe("starting a job", () => {
   test("the first ask builds the queue: every customer with gaps, every chain", async () => {
     const { t, companyId, userId, agentId } = await seed();
@@ -159,6 +204,19 @@ describe("starting a job", () => {
       agentId,
     });
     expect(job?.companyId).toBe(companyId);
+  });
+
+  test("detail jobs hand out bedroom and pupil gaps before lower-value gaps", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    await addEarlierHotelWithOnlyPhoneMissing(t, { companyId, userId });
+    const runId = await seedRun(t, { agentId, userId, companyId });
+
+    const first = await nextTask(t, companyId, { runId });
+
+    expect(first.task).toMatchObject({
+      kind: "CUSTOMER",
+      key: key("Fairmile Grange"),
+    });
   });
 
   /**
@@ -369,6 +427,124 @@ describe("prospects found while it runs", () => {
       kinds.push(result.task?.kind ?? "NONE");
     }
     expect(kinds).toEqual(["CUSTOMER", "CUSTOMER", "CHAIN", "CHAIN", "PROSPECT"]);
+  });
+});
+
+describe("prospecting tools follow the claimed chain", () => {
+  async function startProspectingJob(
+    seeded: Awaited<ReturnType<typeof seed>>
+  ) {
+    await seeded.client.mutation(api.salesDataResearchJobs.startResearchJob, {
+      mode: "PROSPECTS",
+    });
+
+    return await seeded.t.run(async (ctx) => {
+      const run = await ctx.db.query("agentRuns").first();
+      if (!run) throw new Error("prospecting run was not queued");
+      return run._id;
+    });
+  }
+
+  test("asks the run to claim its prospecting task before reading or recording", async () => {
+    const seeded = await seed();
+    const runId = await startProspectingJob(seeded);
+
+    const read = await seeded.t.run(
+      async (ctx) =>
+        await ctx.runQuery(internal.salesDataResearch.readGroupForProspecting, {
+          companyId: seeded.companyId,
+          runId,
+        })
+    );
+    expect(read).toMatchObject({ found: false });
+    if (read.found) throw new Error("read should have been refused before a task was claimed");
+    expect(read.message).toContain("next prospecting task");
+
+    const recorded = await seeded.t.run(
+      async (ctx) =>
+        await ctx.runMutation(internal.salesDataResearch.recordProspect, {
+          companyId: seeded.companyId,
+          runId,
+          groupName: "Allegra Care",
+          siteName: "Wentworth Court",
+          sourceUrl: "https://allegracare.co.uk/our-homes/wentworth-court",
+          reasoning: "Listed on Allegra Care's own homes page.",
+        })
+    );
+    expect(recorded).toMatchObject({ recorded: false });
+    expect(recorded.reason).toContain("next prospecting task");
+  });
+
+  test("a no-name group read returns the chain claimed by this run", async () => {
+    const seeded = await seed();
+    const runId = await startProspectingJob(seeded);
+    const claimed = await nextTask(seeded.t, seeded.companyId, { runId });
+    expect(claimed.task?.kind).toBe("CHAIN");
+
+    const read = await seeded.t.run(
+      async (ctx) =>
+        await ctx.runQuery(internal.salesDataResearch.readGroupForProspecting, {
+          companyId: seeded.companyId,
+          runId,
+        })
+    );
+
+    expect(read).toMatchObject({ found: true, groupName: claimed.task?.name });
+  });
+
+  test("wrong-chain reads and writes are refused while the claimed chain still writes", async () => {
+    const seeded = await seed();
+    const runId = await startProspectingJob(seeded);
+    const claimed = await nextTask(seeded.t, seeded.companyId, { runId });
+    const task = claimed.task;
+    if (!task || task.kind !== "CHAIN") throw new Error("expected a chain task");
+
+    const otherGroup = task.name === "Allegra Care" ? "Daish's Hotels" : "Allegra Care";
+
+    const refusedRead = await seeded.t.run(
+      async (ctx) =>
+        await ctx.runQuery(internal.salesDataResearch.readGroupForProspecting, {
+          companyId: seeded.companyId,
+          runId,
+          groupName: otherGroup,
+        })
+    );
+    expect(refusedRead).toMatchObject({ found: false });
+    if (refusedRead.found) throw new Error("wrong-chain read should have been refused");
+    expect(refusedRead.message).toContain(task.name);
+
+    const refusedWrite = await seeded.t.run(
+      async (ctx) =>
+        await ctx.runMutation(internal.salesDataResearch.recordProspect, {
+          companyId: seeded.companyId,
+          runId,
+          groupName: otherGroup,
+          siteName: "Wrong Chain Site",
+          sourceUrl: "https://example.com/wrong-chain-site",
+          reasoning: "Listed on the wrong group's site.",
+        })
+    );
+    expect(refusedWrite).toMatchObject({ recorded: false });
+    expect(refusedWrite.reason).toContain(task.name);
+
+    const recorded = await seeded.t.run(
+      async (ctx) =>
+        await ctx.runMutation(internal.salesDataResearch.recordProspect, {
+          companyId: seeded.companyId,
+          runId,
+          groupName: task.name,
+          siteName: "New Claimed Chain Site",
+          sourceUrl: "https://example.com/new-claimed-chain-site",
+          reasoning: "Listed on the claimed group's site.",
+        })
+    );
+    expect(recorded).toMatchObject({ recorded: true });
+
+    const prospects = await seeded.t.run(
+      async (ctx) => await ctx.db.query("salesDataProspects").collect()
+    );
+    expect(prospects).toHaveLength(1);
+    expect(prospects[0]).toMatchObject({ groupName: task.name });
   });
 });
 

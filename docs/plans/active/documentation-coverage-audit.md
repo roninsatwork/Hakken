@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-07-30 18:32 BST +0100
+Last reviewed: 2026-08-04 10:59 UTC
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -99,6 +99,21 @@ as the durable documentation work queue.
   readiness routing, agent instructions/standing-job wording, public/frontend
   route paths, widget configuration component paths, workflow execution route
   history, and public-site screenshot asset notes.
+- Refresh active-plan coverage after the August sales-data and email work:
+  `docs/index.md` now links every current file under `docs/plans/active/`, and
+  the plan index names the email system's neutral charcoal shell and accessible
+  blue/gold/red signal ramp instead of the superseded forest palette.
+- Refresh the email documentation pair for the implemented colour-blind-safe
+  status contract: `docs/developer/email-system.md` records the palette tokens,
+  dark-mode lock classes, severity text fallback, and tests; `docs/end-user/emails.md`
+  explains that alerts carry status in words as well as colour.
+- Refresh the sales and board reports documentation pair for the implemented
+  workspace Opportunity Report: `docs/end-user/sales-and-board-reports.md`
+  covers `/app/<workspace>/opportunity-report`, prospect valuation, group gaps,
+  named sister-account comparisons, and size-field caveats; `docs/developer/sales-and-board-reports.md`
+  covers `convex/salesOpportunityReports.ts`, deterministic pricing ownership,
+  schema role, watchdog completion, and the localisation contract for named
+  sister-account evidence.
 
 ### Remaining Follow-Up
 
@@ -112,9 +127,10 @@ as the durable documentation work queue.
    are now documented, but the active Company AI readiness rebuild and AI Checks
    plans still own follow-up semantics. Refresh the pair when those plans settle.
 3. Sales and board reports follow-up: the current information page, latest
-   report dashboard, generation action, schema, export behavior, and tenancy are
-   now documented. Refresh the pair when report history, manual regeneration,
-   source selection, or formal document export ships.
+   report dashboard, generation action, schema, export behavior, tenancy, and
+   workspace Opportunity Report are now documented. Refresh the pair when report
+   history, manual regeneration, source selection, formal document export, or a
+   materially different opportunity-report workflow ships.
 4. Thin-doc review: some audience guides are concise by design, but future
    runs should review the shorter end-user and developer documents when their
    implementation areas change. A short guide is not automatically wrong, but

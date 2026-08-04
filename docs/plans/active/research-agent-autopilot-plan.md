@@ -172,6 +172,27 @@ Recording results uses the tools that already exist and already hold the rules
 about what a finding is worth (`recordResearchFinding`, `recordProspect`). None
 of that judgement moves into the model.
 
+For customer and prospect detail work, the queue is ordinary except for one
+priority: the size field for the customer type. Bedrooms for care homes and
+hotels, and pupils for schools, feed the opportunity report's per-unit pricing.
+A record missing that field is handed out before a record whose only gaps are
+lower-value contact details. If an agent says the size field is not published,
+it must cite a page it actually opened in that run; a bare "not found" is refused
+for that field so the report-critical number is not closed after a shallow
+search.
+
+For prospecting, the queue is the authority. When a run claims a chain item, the
+prospecting read and write tools must be bound to that item:
+
+- a no-name "Read a group" call returns the chain already claimed by this run;
+- asking to read another group is refused and tells the agent which chain it is
+  currently working;
+- recording a site against another group is refused before anything is written.
+
+This closes the reliability gap where the progress line could say the job was
+working one chain while the model asked the tool for a different "next" group.
+The prompt still helps the model, but the backend owns the checklist.
+
 ### Running to completion
 
 - The run uses the existing checkpoint-and-continue machinery rather than being

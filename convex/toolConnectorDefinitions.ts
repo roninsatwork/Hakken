@@ -392,7 +392,8 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
             sourceUrl: {
               type: "string",
               description:
-                "The web address of the page you took this from. Required for every value.",
+                "The web address of the page you took this from. Required for every value. "
+                + "When bedrooms or pupils are not found, give the exact page you checked.",
             },
             sourceName: {
               type: "string",
@@ -406,7 +407,10 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
             },
             notFound: {
               type: "boolean",
-              description: "True when this detail is not published anywhere you looked.",
+              description:
+                "True when this detail is not published anywhere you looked. For bedrooms or "
+                + "pupils, only use this after checking the strongest likely source for that "
+                + "site and citing the page in sourceUrl.",
             },
           },
         }),

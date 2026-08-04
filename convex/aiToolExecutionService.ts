@@ -571,6 +571,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
     return await input.ctx.runQuery(internal.salesDataResearch.readGroupForProspecting, {
       companyId: input.companyId,
       ...(groupName ? { groupName } : {}),
+      ...(input.runId ? { runId: input.runId } : {}),
     });
   },
   /**

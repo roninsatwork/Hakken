@@ -7,6 +7,11 @@ Every message is designed to be read on a phone, and every one of them tells you
 what happened in its first line. If you only read the subject and the first
 sentence, you should still know whether you need to do something.
 
+Status is shown with words as well as colour. Important alert cards say things
+like `Critical` or `Needs attention`, and the colours avoid green-vs-red
+signalling so people with red/green colour blindness can still tell healthy,
+warning, and failed states apart.
+
 ## Platform alert
 
 **You get this when:** something on the platform needs attention — an agent

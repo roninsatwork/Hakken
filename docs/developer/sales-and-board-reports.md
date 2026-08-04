@@ -6,10 +6,15 @@ latest-report dashboard, Convex report storage, and internal report-generation
 action. The related user-facing documentation is
 `docs/end-user/sales-and-board-reports.md`.
 
-This feature is not a generic report builder. It currently has one concrete
-product loop: a Sales Report Agent reads its latest pipeline knowledge document,
-uses configured AI context, saves a structured report record, and the app shows
-the latest accessible report as a board-ready dashboard.
+This feature is not a generic report builder. It currently has two concrete
+product loops:
+
+- a Sales Report Agent reads its latest pipeline knowledge document, uses
+  configured AI context, saves a structured report record, and the app shows the
+  latest accessible report as a board-ready dashboard;
+- a workspace opportunity-report agent and deterministic backend tools read the
+  current sales-data import, prospects, customer sizes, and group category spend
+  to price prospect opportunities and chain product gaps.
 
 ## Product Surface
 
@@ -36,6 +41,25 @@ The page-level `Export to Board` action uses `html2canvas` against the report
 container and downloads `sonae-board-report-YYYY-MM-DD.png`. This is client-side
 image export only. There is no server-side PDF, slide, or editable workbook
 generation in this route.
+
+`src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx` is the
+workspace Opportunity Report. It is behind the workspace sales-data area rather
+than the top-level Reports section. The page reads
+`api.salesOpportunityReports.getOpportunityReport`, starts work through
+`api.salesOpportunityReports.startOpportunityReport`, and renders phase/status
+copy from the report row rather than trusting the agent's prose.
+
+The opportunity-report screen has two ranked business sections:
+
+- prospect opportunities, priced from comparable customer spend and the
+  prospect's bedrooms or pupils when present;
+- chain gaps, priced from products bought by sister accounts in the same group
+  but not by the target customer.
+
+Chain gap rows now render the named sister-account comparison as well as the
+buyer count: `GapRow` formats `gap.comparedTo[].accountName` through
+`formatAccountList` and uses the `salesData.opportunityReport.sistersBuyThisNamed`
+message. Keep English and Italian locale keys in parity if this row copy changes.
 
 ## Data Model
 
@@ -64,6 +88,13 @@ The viewer intentionally tolerates optional structured fields because older
 rows can exist with the legacy report shape. Be careful when tightening schema
 or rendering assumptions: a schema migration may be needed before removing
 fallback UI.
+
+`convex/schema.ts` also defines `salesOpportunityReports` for the workspace
+opportunity report. A row is a snapshot against one company and import, with
+phase/status fields, prospect opportunity rows, chain gap rows, headline totals,
+exceptions, and the agent-written summary where available. Do not treat the
+agent summary as the source of truth for numbers; the deterministic tool passes
+own the figures saved on the row.
 
 ## Query And Storage Functions
 
@@ -115,6 +146,33 @@ run.
 The action uses the shared model-resolution path instead of hardcoding a runtime
 model literal. Keep that behavior when changing providers or report-specific
 model defaults.
+
+## Opportunity Report Generation Flow
+
+`convex/salesOpportunityReports.ts` owns the workspace opportunity report. The
+public mutation starts one report run per workspace and prevents duplicate active
+runs. The agent is the conductor, but the calculations are backend-owned:
+
+1. Price prospects from `salesDataProspects`, `salesDataCustomers`, and
+   `salesDataAccounts`, using bedrooms or pupils from
+   `extraFieldForType` where available.
+2. Price group gaps from `salesDataRows` category spend across customers sharing
+   the same `groupNameKey`.
+3. Write the summary and mark the report complete, or let the watchdog finish a
+   report with exceptions when the computed rows already exist but the agent did
+   not produce prose.
+
+The matching rules and pricing rules should stay deterministic and tested. A
+model may narrate what matters, but it must not invent a prospect value, product
+gap, comparable account, or six-month total.
+
+The opportunity report relies on the customer research job for stronger pricing:
+hotels and care homes need bedrooms; schools need pupils. If those values are
+missing, the report falls back to weaker averages and records that weaker basis.
+Changes to the research queue, prospect filing, or not-found handling should be
+checked against [Workspace Customer Research Agent Plan](../plans/active/workspace-customer-research-agent-plan.md),
+[Research Agent Autopilot Plan](../plans/active/research-agent-autopilot-plan.md),
+and [Comax Opportunity Report Plan](../plans/active/comax-opportunity-report-plan.md).
 
 ## Report Contract
 

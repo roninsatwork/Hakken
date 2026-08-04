@@ -2657,6 +2657,7 @@
             "thPricing": "How it's priced",
             "thEstimate": "Six-month estimate",
             "sistersBuyThis": "{buyers} of {siblings} sister accounts buy this",
+            "sistersBuyThisNamed": "{buyers} of {siblings} sister accounts buy this: {accounts}",
             "productCount": "{count, plural, one {# product to offer} other {# products to offer}}",
             "beds": "{count} beds",
             "pupils": "{count} pupils",

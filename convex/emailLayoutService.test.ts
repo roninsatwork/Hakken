@@ -341,6 +341,24 @@ describe("renderEmail — branding", () => {
 });
 
 describe("renderEmail — optional sections", () => {
+  test("a card with a severity but no badge says the severity in words", () => {
+    // Colour must never be the only carrier of how bad a card is — a stripe
+    // alone is invisible information to a colour-blind reader.
+    const { html, text } = renderEmail(
+      buildContent({
+        cards: [
+          { title: "Backup failed", severity: "critical", body: "The nightly export did not run." },
+          { title: "Queue slow", severity: "warning", body: "Jobs are taking twice as long." },
+        ],
+      })
+    );
+
+    expect(html).toContain("CRITICAL");
+    expect(html).toContain("NEEDS ATTENTION");
+    expect(text).toContain("Backup failed (Critical)");
+    expect(text).toContain("Queue slow (Needs attention)");
+  });
+
   test("renders a minimal message with only a verdict", () => {
     const { html, text } = renderEmail({ kind: "Invitation", verdict: "You're in." });
 
@@ -441,15 +459,72 @@ describe("renderEmail — contrast", () => {
     ["small print on the card", P.ink45, P.card],
     ["small print on an inset block", P.ink45, P.inset],
     ["body copy on an inset block", P.ink70, P.inset],
-    ["links and stat values", P.sand, P.card],
-    ["healthy tone", P.sage, P.card],
-    ["warning tone", P.blush, P.card],
+    ["links and the healthy tone", P.blue, P.card],
+    ["the healthy tone on an inset tile", P.blue, P.inset],
+    ["the warning tone", P.gold, P.card],
+    ["the warning tone on an inset tile", P.gold, P.inset],
+    ["the critical tone", P.red, P.card],
+    ["the critical tone on an inset tile", P.red, P.inset],
     ["the primary button label", P.onOrange, P.orange],
     ["the wordmark initial", P.onOrange, P.orange],
   ];
 
   test.each(pairs)("%s meets WCAG AA", (_name, foreground, background) => {
     expect(contrastRatio(foreground, background)).toBeGreaterThanOrEqual(AA);
+  });
+
+  test("the signal colours survive red/green colour blindness", () => {
+    /*
+     * Anthony, 2026-08-04, on the system health alert: "the colours are
+     * terrible, they are not accessible, I cannot read half of it because of
+     * the colours. I am colour blind red/green."
+     *
+     * The forest palette failed him measurably: under simulated deuteranopia
+     * its healthy green and failed red landed at a 1.06 contrast ratio —
+     * the same colour. This test renders the three signal colours through
+     * the standard Viénot dichromacy matrices and requires every pair to
+     * keep a visible brightness or blue-axis gap, so a future palette
+     * change cannot quietly reintroduce the failure.
+     */
+    const linear = (channel: number) => {
+      const c = channel / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    const toSrgb = (c: number) =>
+      Math.round(255 * (Math.min(1, Math.max(0, c)) <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055));
+    const simulate = (hex: string, matrix: number[][]) => {
+      const [r, g, b] = [1, 3, 5].map((offset) => linear(parseInt(hex.slice(offset, offset + 2), 16)));
+      return (
+        "#" +
+        matrix
+          .map(([mr, mg, mb]) => toSrgb(mr * r + mg * g + mb * b))
+          .map((channel) => channel.toString(16).padStart(2, "0"))
+          .join("")
+      );
+    };
+    const deuteranopia = [
+      [0.625, 0.375, 0],
+      [0.7, 0.3, 0],
+      [0, 0.3, 0.7],
+    ];
+    const protanopia = [
+      [0.170557, 0.829443, 0],
+      [0.170557, 0.829443, 0],
+      [-0.004517, 0.004517, 1],
+    ];
+
+    for (const matrix of [deuteranopia, protanopia]) {
+      const [good, warning, critical] = [P.blue, P.gold, P.red].map((hex) => simulate(hex, matrix));
+      expect(contrastRatio(good, warning)).toBeGreaterThanOrEqual(1.25);
+      expect(contrastRatio(good, critical)).toBeGreaterThanOrEqual(1.25);
+      expect(contrastRatio(warning, critical)).toBeGreaterThanOrEqual(1.25);
+    }
+  });
+
+  test("warning and critical differ in brightness, not just hue", () => {
+    // Brightness survives every kind of colour vision including greyscale.
+    // Warning is deliberately the lighter of the two.
+    expect(contrastRatio(P.gold, P.red)).toBeGreaterThanOrEqual(1.8);
   });
 
   test("the muted tone is still visibly muted, not just legible", () => {
@@ -470,6 +545,17 @@ describe("renderEmail — contrast", () => {
 
     expect(sizes.length).toBeGreaterThan(0);
     expect(Math.min(...sizes)).toBeGreaterThanOrEqual(11);
+  });
+
+  test("no signal colour is green, and none is a red a green could be mistaken for", () => {
+    // Anthony, 2026-08-04: "I am colour blind red/green and this is nasty."
+    // The forest palette signalled healthy in green and failed in red — the
+    // exact pair his vision merges. No signal colour may lean green again:
+    // in every signal hex the green channel must not dominate.
+    for (const hex of [P.blue, P.gold, P.red]) {
+      const [r, g, b] = [1, 3, 5].map((o) => parseInt(hex.slice(o, o + 2), 16));
+      expect(g).toBeLessThanOrEqual(Math.max(r, b));
+    }
   });
 
   test("white is never placed on the orange fill", () => {

@@ -43,28 +43,49 @@ const WIDTH = 600;
 export const MAX_CARDS = 8;
 
 /**
- * Lifted from src/app/(public)/public.css, then adjusted where the web values
- * did not survive as email type.
+ * Neutral charcoal with a blue/gold/red signal ramp.
  *
- * Exported so `emailLayoutService.test.ts` can assert every foreground/ground
- * pair against WCAG AA. Contrast is not a matter of taste here: an email is
- * read once, on someone else's screen, at whatever brightness they happen to
- * have — there is no hover state or zoom to recover from a bad choice.
+ * This replaced the forest-green palette on 2026-08-04. Anthony, on the system
+ * health alert: *"the colours are terrible, they are not accessible, I cannot
+ * read half of it because of the colours. I am colour blind red/green."* The
+ * forest design signalled healthy in pale green and failed in pale red — the
+ * two colours red/green colour blindness merges. Simulated deuteranopia puts
+ * the old sage/blush pair at a 1.06 contrast ratio: literally the same colour.
+ *
+ * The replacement removes green entirely and signals on the blue/yellow axis,
+ * which every form of red/green colour blindness preserves:
+ *
+ * - **good** is blue, **warning** is gold — opposite ends of the surviving axis.
+ * - **critical** is a deep red that is also markedly *darker* than gold, so the
+ *   warning/critical distinction is carried by brightness, which survives any
+ *   colour vision including greyscale.
+ * - Colour is never the only carrier: stats have text labels, and a card with
+ *   no badge renders its severity as a word instead.
+ *
+ * `emailLayoutService.test.ts` asserts every foreground/ground pair against
+ * WCAG AA *and* asserts the signal colours stay distinguishable under
+ * simulated deuteranopia and protanopia. Contrast is not a matter of taste
+ * here: an email is read once, on someone else's screen, at whatever
+ * brightness they happen to have.
  */
 export const EMAIL_PALETTE = {
-  ground: "#0b2b23",
-  card: "#103e33",
-  inset: "#0c2c24",
-  edge: "#2b5147",
-  ink: "#fefdfb",
-  ink70: "#c4cfc9",
-  // Was #8ba099, which measured 4.31 against the card ground and failed AA.
-  // It carries the footer, the meta lines and every small-print row — the
-  // text most likely to be read on a phone in daylight. This measures 5.65.
-  ink45: "#a3b7ae",
-  sage: "#a8d4b8",
-  sand: "#efd49b",
-  blush: "#f5c4b2",
+  ground: "#101114",
+  card: "#1a1c21",
+  inset: "#14161a",
+  edge: "#3a3e48",
+  ink: "#f7f8fa",
+  ink70: "#c6cad3",
+  // Small print: footer, meta lines. Measures 6.57 on the card — comfortably
+  // past AA while staying visibly quieter than body copy.
+  ink45: "#9ba1ad",
+  // Healthy, and every link. 9.49 on the card.
+  blue: "#8fc6ff",
+  // Needs attention. 13.25 on the card — deliberately the brightest signal.
+  gold: "#fae19e",
+  // Failed. 5.31 on the card: past AA, but far darker than gold on purpose —
+  // the brightness gap is what keeps warning and critical apart when hue
+  // cannot.
+  red: "#ee6352",
   orange: "#ff5a1f",
   // Label colour for the orange fill. White on #ff5a1f measures 3.12 and
   // fails AA on the one element the whole email exists to get clicked.
@@ -136,8 +157,12 @@ const COLOUR_LOCK =
     [".e-ink", `color:${C.ink}!important;`],
     [".e-ink70", `color:${C.ink70}!important;`],
     [".e-ink45", `color:${C.ink45}!important;`],
-    [".e-sand", `color:${C.sand}!important;`],
-    [".e-sage", `color:${C.sage}!important;`],
+    [".e-blue", `color:${C.blue}!important;`],
+    [".e-gold", `color:${C.gold}!important;`],
+    [".e-red", `color:${C.red}!important;`],
+    [".e-stripe-red", `background-color:${C.red}!important;`],
+    [".e-stripe-gold", `background-color:${C.gold}!important;`],
+    [".e-stripe-edge", `background-color:${C.edge}!important;`],
   ]
     .map(([selector, declarations]) =>
       `@media (prefers-color-scheme:dark){${selector}{${declarations}}}` +
@@ -241,17 +266,40 @@ function safeUrl(value: string) {
   return /^(https?:|mailto:)/i.test(trimmed) ? trimmed : "#";
 }
 
-function toneColour(tone: EmailTone | undefined) {
-  if (tone === "good") return C.sage;
-  if (tone === "warning") return C.sand;
-  if (tone === "critical") return C.blush;
-  return C.ink;
+/**
+ * Tone and severity resolve to a colour *and* the dark-mode lock class that
+ * restores it, so a client that rewrites the inline value cannot strip the
+ * signal.
+ */
+function tone(value: EmailTone | undefined): { colour: string; cls: string } {
+  if (value === "good") return { colour: C.blue, cls: "e-blue" };
+  if (value === "warning") return { colour: C.gold, cls: "e-gold" };
+  if (value === "critical") return { colour: C.red, cls: "e-red" };
+  return { colour: C.ink, cls: "e-ink" };
 }
 
-function severityColour(severity: EmailSeverity | undefined) {
-  if (severity === "critical") return C.blush;
-  if (severity === "warning") return C.sand;
-  return C.edge;
+function severityStripe(severity: EmailSeverity | undefined): { colour: string; cls: string } {
+  if (severity === "critical") return { colour: C.red, cls: "e-stripe-red" };
+  if (severity === "warning") return { colour: C.gold, cls: "e-stripe-gold" };
+  return { colour: C.edge, cls: "e-stripe-edge" };
+}
+
+function severityText(severity: EmailSeverity | undefined) {
+  if (severity === "critical") return { colour: C.red, cls: "e-red" };
+  if (severity === "warning") return { colour: C.gold, cls: "e-gold" };
+  return { colour: C.ink45, cls: "e-ink45" };
+}
+
+/**
+ * The badge a card renders. When the caller supplied none but marked the card
+ * warning or critical, the severity itself becomes the badge — colour must
+ * never be the only thing saying how bad a card is.
+ */
+function badgeText(card: EmailCard) {
+  if (card.badge) return card.badge;
+  if (card.severity === "critical") return "Critical";
+  if (card.severity === "warning") return "Needs attention";
+  return undefined;
 }
 
 /** Every text cell needs this or Word re-leads it. */
@@ -281,11 +329,12 @@ function renderStats(stats: EmailStat[]) {
   const cells = stats
     .map((stat, index) => {
       const spacer = index === 0 ? "" : `<td width="8" style="width:8px;font-size:0;">&nbsp;</td>`;
+      const statTone = tone(stat.tone);
       return (
         `${spacer}<td width="${width}" valign="top" class="e-inset" bgcolor="${C.inset}" ` +
         `style="width:${width}px;background-color:${C.inset};border:1px solid ${C.edge};padding:11px 12px;">` +
         `<div class="e-ink45" style="${line(11, 15, C.ink45, 700)}">${up(stat.label)}</div>` +
-        `<div style="${line(25, 29, toneColour(stat.tone), 700, "padding-top:5px;")}">${esc(stat.value)}</div>` +
+        `<div class="${statTone.cls}" style="${line(25, 29, statTone.colour, 700, "padding-top:5px;")}">${esc(stat.value)}</div>` +
         `</td>`
       );
     })
@@ -295,9 +344,11 @@ function renderStats(stats: EmailStat[]) {
 }
 
 function renderCard(card: EmailCard) {
-  const stripe = severityColour(card.severity);
-  const badge = card.badge
-    ? `<td align="right" valign="top" style="${line(11, 15, stripe, 700, "padding-left:12px;")}">${up(card.badge)}</td>`
+  const stripe = severityStripe(card.severity);
+  const badgeTone = severityText(card.severity);
+  const label = badgeText(card);
+  const badge = label
+    ? `<td align="right" valign="top" class="${badgeTone.cls}" style="${line(11, 15, badgeTone.colour, 700, "padding-left:12px;")}">${up(label)}</td>`
     : "";
 
   const meta = card.meta
@@ -312,18 +363,18 @@ function renderCard(card: EmailCard) {
     : "";
 
   const link = card.link
-    ? `<tr><td class="e-sand" style="${line(12, 17, C.sand, 700, "padding-top:9px;")}">` +
-      `<a href="${esc(safeUrl(card.link.url))}" style="color:${C.sand};">${esc(card.link.label)}</a>` +
+    ? `<tr><td class="e-blue" style="${line(12, 17, C.blue, 700, "padding-top:9px;")}">` +
+      `<a href="${esc(safeUrl(card.link.url))}" class="e-blue" style="color:${C.blue};">${esc(card.link.label)}</a>` +
       `</td></tr>`
     : "";
 
   return (
     `${openTable(`width="${WIDTH - 44}"`)}<tr>` +
-    `<td width="3" bgcolor="${stripe}" style="width:3px;background-color:${stripe};font-size:0;line-height:0;">&nbsp;</td>` +
+    `<td width="3" class="${stripe.cls}" bgcolor="${stripe.colour}" style="width:3px;background-color:${stripe.colour};font-size:0;line-height:0;">&nbsp;</td>` +
     `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};border-left:0;padding:13px 15px;">` +
     `${openTable(`width="100%"`)}` +
     `<tr><td class="e-ink" style="${line(14, 19, C.ink, 700)}">${esc(card.title)}</td>${badge}</tr>` +
-    `<tr><td colspan="${card.badge ? 2 : 1}" class="e-ink70" style="${line(13, 19, C.ink70, 400, "padding-top:7px;")}">${esc(card.body)}</td></tr>` +
+    `<tr><td colspan="${label ? 2 : 1}" class="e-ink70" style="${line(13, 19, C.ink70, 400, "padding-top:7px;")}">${esc(card.body)}</td></tr>` +
     meta +
     fix +
     link +
@@ -364,13 +415,15 @@ function renderButton(action: EmailAction) {
 
 function renderFacts(facts: EmailFact[]) {
   const rows = facts
-    .map(
-      (fact) =>
+    .map((fact) => {
+      const factTone = tone(fact.tone);
+      return (
         `<tr>` +
         `<td class="e-ink70" style="${line(13, 19, C.ink70, 400, "padding:4px 0;")}">${esc(fact.term)}</td>` +
-        `<td align="right" style="${line(13, 19, toneColour(fact.tone), 700, "padding:4px 0 4px 14px;")}">${esc(fact.value)}</td>` +
+        `<td align="right" class="${factTone.cls}" style="${line(13, 19, factTone.colour, 700, "padding:4px 0 4px 14px;")}">${esc(fact.value)}</td>` +
         `</tr>`
-    )
+      );
+    })
     .join("");
 
   return (
@@ -430,7 +483,7 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
     body.push(
       `<tr><td class="e-ink45" style="${line(13, 19, C.ink45, 400, "padding:0 22px;")}">` +
         `${esc(`${hidden} more not shown.`)} ` +
-        `<a href="${esc(safeUrl(content.overflow.url))}" style="color:${C.sand};">${esc(content.overflow.label)}</a>` +
+        `<a href="${esc(safeUrl(content.overflow.url))}" class="e-blue" style="color:${C.blue};">${esc(content.overflow.label)}</a>` +
         `</td></tr>`
     );
   }
@@ -461,7 +514,7 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
       content.footer.links
         .map(
           (link) =>
-            `<a href="${esc(safeUrl(link.url))}" style="color:${C.ink70};">${esc(link.label)}</a>`
+            `<a href="${esc(safeUrl(link.url))}" class="e-blue" style="color:${C.blue};">${esc(link.label)}</a>`
         )
         .join(" &middot; ") +
       `</td></tr>`
@@ -546,7 +599,8 @@ function renderText(
   const cards = content.cards ?? [];
   for (const card of cards.slice(0, MAX_CARDS)) {
     out.push(rule);
-    out.push(card.badge ? `${card.title} (${card.badge})` : card.title);
+    const badge = badgeText(card);
+    out.push(badge ? `${card.title} (${badge})` : card.title);
     out.push(card.body);
     if (card.meta) out.push(card.meta);
     if (card.fix) out.push(`Fix: ${card.fix}`);
