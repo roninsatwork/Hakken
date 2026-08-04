@@ -2815,7 +2815,7 @@ export default defineSchema({
       v.literal("PROVIDER_NOT_FOUND"),
       /** The register could not be read. The error says why. */
       v.literal("CHECK_FAILED"),
-      /** No web-reading key on this deployment. Named, not hidden. */
+      /** No register key on this deployment. Named, not hidden. */
       v.literal("NOT_CONFIGURED")
     ),
     registerCount: v.optional(v.number()),
@@ -2826,13 +2826,6 @@ export default defineSchema({
     ),
     /** The registered company names counted, so a person can audit the sweep. */
     providerNames: v.optional(v.array(v.string())),
-    /**
-     * The register ids of those companies, remembered so the next check
-     * starts from every company ever confirmed rather than from whatever a
-     * search happens to surface that day — the first live runs each found a
-     * different three of Colten Care's four.
-     */
-    providerIds: v.optional(v.array(v.string())),
     error: v.optional(v.string()),
     checkedAt: v.number(),
   }).index("by_company_group", ["companyId", "groupNameKey"]),

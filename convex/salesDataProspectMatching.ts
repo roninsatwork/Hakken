@@ -52,17 +52,11 @@ export function normalizePostcode(value: string | undefined): string | null {
  * thing that happens to care homes.
  */
 export function nameFingerprint(siteName: string, groupName?: string): string {
-  // An apostrophe folds into its word rather than splitting it: the register
-  // prints "St Catherine's View" where the workbook holds "St Catherines
-  // View", and "Daish's" against "Daishs" is the same trap. Split apart, one
-  // business reads as two.
-  const foldApostrophes = (value: string) => normalizeKey(value).replace(/['’]/g, "");
-
   const groupWords = new Set(
-    groupName ? foldApostrophes(groupName).split(/[^A-Z0-9]+/).filter(Boolean) : []
+    groupName ? normalizeKey(groupName).split(/[^A-Z0-9]+/).filter(Boolean) : []
   );
 
-  const words = foldApostrophes(siteName)
+  const words = normalizeKey(siteName)
     .split(/[^A-Z0-9]+/)
     .filter(Boolean)
     .filter((word) => !NOISE_WORDS.has(word))

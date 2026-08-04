@@ -5,190 +5,104 @@
  * The finder's gate proves a group's list was opened; nothing proved it was
  * read to the end. Allegra Care was the live case: eleven registered homes,
  * seven on file, and every per-site check passing. The referee for care groups
- * is the Care Quality Commission's register, read the way everything else on
- * this platform reads the web — search finds the group's provider pages on
- * cqc.org.uk, the page reader fetches them, and this file turns their text
- * into a count. Anthony, 2026-08-04: *"we have google search, we have places
- * api and we have firecrawl"* — no separate keyed feed.
+ * is the Care Quality Commission's register, which lists every location a
+ * provider is registered to run — so coverage becomes a count against an
+ * outside authority rather than a promise.
  *
  * Kept pure and out of the Convex functions so the parsing and the arithmetic
- * can be tested against captured pages. A page shape this code does not
- * recognise becomes a named failure on the coverage row, never a silent zero.
+ * can be tested against captured payloads. The register's API answers are
+ * parsed defensively: a shape this code does not recognise becomes a named
+ * failure on the coverage row, never a silent zero.
  */
 
-import { matchDiscoveredSite, nameFingerprint, type KnownSite } from "./salesDataProspectMatching";
-import { normalizeKey } from "./salesDataImportService";
+import { matchDiscoveredSite, type KnownSite } from "./salesDataProspectMatching";
+import { nameFingerprint } from "./salesDataProspectMatching";
 
-/** One location as the register's page describes it, reduced to what counts. */
+/** One location as the register describes it, reduced to what coverage needs. */
 export type RegisterLocation = {
   name: string;
   postcode?: string;
-  /** Still registered — an archived profile is history, not a gap. */
+  /** Still registered — deregistered locations are history, not gaps. */
   registered: boolean;
+  /** The register also lists offices and agencies; only care homes count. */
+  careHome: boolean;
 };
 
+export type ProviderCandidate = { providerId: string; providerName: string };
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+
+const asString = (value: unknown): string | null =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
 /**
- * The register's provider ids among a search's answers.
+ * The provider-search answer: every provider the register knows by that name.
  *
- * A search for a group surfaces its provider pages in every flavour —
- * overview, contact, services — and groups whose homes each sit in their own
- * registered company surface several providers. The ids are what matter; the
- * flavours collapse.
+ * Returns null when the payload is not the shape the register documents, so
+ * the caller can record a check failure instead of "no providers".
  */
-export function extractProviderIds(results: { url: string }[]): string[] {
-  const ids: string[] = [];
-  for (const result of results) {
-    const match = result.url.match(/cqc\.org\.uk\/provider\/(1-[0-9]+)/);
-    if (match && !ids.includes(match[1])) ids.push(match[1]);
+export function parseProviderSearch(payload: unknown): ProviderCandidate[] | null {
+  const record = asRecord(payload);
+  const list = record?.providers;
+  if (!Array.isArray(list)) return null;
+
+  const candidates: ProviderCandidate[] = [];
+  for (const entry of list) {
+    const provider = asRecord(entry);
+    const providerId = asString(provider?.providerId);
+    const providerName = asString(provider?.providerName);
+    if (providerId && providerName) candidates.push({ providerId, providerName });
   }
-  return ids;
+  return candidates;
 }
 
 /**
- * Words that open many businesses' names without identifying any of them.
- * Ordered stripping, unlike the matcher's sorted fingerprints, because here
- * order is the whole signal.
- */
-const GENERIC_NAME_WORDS = new Set(["THE", "LTD", "LIMITED", "PLC", "AND", "CARE", "HOMES", "HOME", "GROUP", "NURSING"]);
-
-function identifyingPrefix(name: string): string[] {
-  return normalizeKey(name)
-    .split(/[^A-Z0-9]+/)
-    .filter(Boolean)
-    .filter((word) => !GENERIC_NAME_WORDS.has(word));
-}
-
-/**
- * Does this registered company belong to the group?
+ * Does this registered provider belong to the group?
  *
- * The company's name must open with the group's distinctive words, in order.
- * The register knows Colten Care as four companies — "Colten Care Limited"
- * and three numbered siblings — and Allegra registers each home as its own
- * company, "Allegra Fairmile Grange Limited": all open with their brand.
- * Containing the words was the first rule, and the first live run showed why
- * order matters: "Acorn Luxury Care Limited" and "London Luxury care LTD"
- * both contain "Luxury Care" and are somebody else entirely. A group that
- * has renamed outright is not claimed, and says so on its coverage row.
+ * By identifying words rather than equality: the register knows Colten Care as
+ * "Colten Care (1993) Limited", and a group whose homes each sit in their own
+ * company — "Kanesbury Care (Kingsman House Care Home) Limited" — still reads
+ * as its brand when the brand's words appear in every company name. A group
+ * that has renamed outright is not found, and says so on its coverage row.
  */
 export function providerBelongsToGroup(providerName: string, groupName: string): boolean {
-  const groupWords = identifyingPrefix(groupName);
+  const groupWords = nameFingerprint(groupName).split(" ").filter(Boolean);
   if (groupWords.length === 0) return false;
-  const providerWords = identifyingPrefix(providerName);
-  return groupWords.every((word, index) => providerWords[index] === word);
+  const providerWords = new Set(nameFingerprint(providerName).split(" ").filter(Boolean));
+  return groupWords.every((word) => providerWords.has(word));
+}
+
+/** The location ids a provider's detail record names. Null on an alien shape. */
+export function parseProviderLocationIds(payload: unknown): string[] | null {
+  const record = asRecord(payload);
+  const list = record?.locationIds;
+  if (!Array.isArray(list)) return null;
+  return list.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
 }
 
 /**
- * The register page's own furniture, never a care home's name. Compared
- * case-insensitively — the first live run met a lowercase "see old profile".
- */
-const NOISE_LABELS = new Set(["full details", "see new profile", "see old profile"]);
-
-const LOCATION_LINK = /\[([^\]]+)\]\(https:\/\/www\.cqc\.org\.uk\/location\/(1-[0-9]+)[^)]*\)/g;
-
-/** As the Royal Mail prints one, anywhere in a location's block of text. */
-const POSTCODE = /\b[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}\b/;
-
-/**
- * The locations named on a provider's services page.
+ * One location's detail record, reduced.
  *
- * The page lists each location as a link to its profile, followed by its
- * address and, for closed registrations, an "Archived" marker — Newstone House
- * appears twice on Colten's page, once archived and once live, and must count
- * once. Each link opens a block that runs to the next link; the block is where
- * the address and the marker live.
+ * The register says "Y" for a care home and "Registered" for a live
+ * registration; anything else — offices, agencies, deregistered rows — is kept
+ * but marked, so the arithmetic (not the parsing) decides what counts.
  */
-export function parseProviderPage(markdown: string): RegisterLocation[] {
-  const matches = [...markdown.matchAll(LOCATION_LINK)].filter(
-    (match) => !NOISE_LABELS.has(match[1].trim().toLowerCase())
-  );
+export function parseLocation(payload: unknown): RegisterLocation | null {
+  const record = asRecord(payload);
+  const name = asString(record?.name) ?? asString(record?.locationName);
+  if (!name) return null;
 
-  const byId = new Map<string, RegisterLocation>();
-  for (let index = 0; index < matches.length; index += 1) {
-    const match = matches[index];
-    const locationId = match[2];
-    if (byId.has(locationId)) continue;
-
-    const blockStart = match.index ?? 0;
-    const blockEnd =
-      index + 1 < matches.length ? (matches[index + 1].index ?? markdown.length) : markdown.length;
-    const block = markdown.slice(blockStart, blockEnd);
-
-    const postcode = block.match(POSTCODE)?.[0];
-    byId.set(locationId, {
-      name: match[1].trim(),
-      ...(postcode ? { postcode } : {}),
-      registered: !/\bArchived\b/i.test(block),
-    });
-  }
-
-  return dedupeRegisterLocations([...byId.values()]);
-}
-
-/**
- * One entry per home, across re-registrations and across providers.
- *
- * The same home under an old and a new registration is one home; live beats
- * archived, so a re-registered home counts as registered rather than as its
- * own ghost.
- */
-export function dedupeRegisterLocations(locations: RegisterLocation[]): RegisterLocation[] {
-  const byFingerprint = new Map<string, RegisterLocation>();
-  for (const location of locations) {
-    const fingerprint = nameFingerprint(location.name);
-    const existing = byFingerprint.get(fingerprint);
-    if (!existing || (!existing.registered && location.registered)) {
-      byFingerprint.set(fingerprint, location);
-    }
-  }
-  return [...byFingerprint.values()];
-}
-
-/**
- * The provider a location's own page names.
- *
- * Every location profile links "Provided and run by" to its registered
- * company, which is how a company no search surfaced is still found: a home
- * the workspace holds leads to its page, and its page leads to its company.
- */
-export function extractProviderIdFromLocationPage(markdown: string): string | null {
-  return markdown.match(/cqc\.org\.uk\/provider\/(1-[0-9]+)/)?.[1] ?? null;
-}
-
-/**
- * The known sites the register picture does not yet explain.
- *
- * When a home on file matches no register location, the register picture is
- * missing that home's company — Allegra registers every home separately, and
- * a search that surfaces one company makes "covered" a lie unless the others
- * are hunted down. These are the homes to hunt.
- */
-export function unmatchedKnownSites(
-  groupName: string,
-  register: RegisterLocation[],
-  known: KnownSite[]
-): KnownSite[] {
-  const registerAsKnown: KnownSite[] = register.map((location) => ({
-    key: normalizeKey(location.name),
-    name: location.name,
-    groupName,
-    ...(location.postcode ? { postcode: location.postcode } : {}),
-  }));
-
-  return known.filter(
-    (site) =>
-      matchDiscoveredSite(
-        {
-          siteName: site.name,
-          groupName,
-          ...(site.postcode ? { postcode: site.postcode } : {}),
-        },
-        registerAsKnown
-      ).outcome === "NEW"
-  );
+  return {
+    name,
+    ...(asString(record?.postalCode) ? { postcode: asString(record?.postalCode)! } : {}),
+    registered: asString(record?.registrationStatus)?.toUpperCase() === "REGISTERED",
+    careHome: asString(record?.careHome)?.toUpperCase() === "Y",
+  };
 }
 
 export type CoverageArithmetic = {
-  /** Live registered locations the register holds for the group. */
+  /** Registered care homes the register holds for the group. */
   registerCount: number;
   /** Of those, how many are on file — as a customer or a prospect. */
   accountedFor: number;
@@ -211,7 +125,7 @@ export function computeCoverage(
   register: RegisterLocation[],
   known: KnownSite[]
 ): CoverageArithmetic {
-  const counted = dedupeRegisterLocations(register).filter((location) => location.registered);
+  const counted = register.filter((location) => location.registered && location.careHome);
 
   const missing: { name: string; postcode?: string }[] = [];
   let accountedFor = 0;

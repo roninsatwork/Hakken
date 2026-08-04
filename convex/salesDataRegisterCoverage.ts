@@ -24,8 +24,6 @@ export type CoverageChain = {
   groupNameKey: string;
   groupName: string;
   knownSites: KnownSite[];
-  /** Register ids confirmed by earlier checks, so no company is ever unlearned. */
-  rememberedProviderIds: string[];
 };
 
 /**
@@ -53,12 +51,6 @@ export const listCareChainsForCoverage = internalQuery({
 
     const chains: CoverageChain[] = [];
     for (const [groupNameKey, groupName] of groups) {
-      const existing = await ctx.db
-        .query("salesDataChainCoverage")
-        .withIndex("by_company_group", (q) =>
-          q.eq("companyId", args.companyId).eq("groupNameKey", groupNameKey)
-        )
-        .unique();
       chains.push({
         groupNameKey,
         groupName,
@@ -67,7 +59,6 @@ export const listCareChainsForCoverage = internalQuery({
           importId: currentImport._id,
           groupNameKey,
         }),
-        rememberedProviderIds: existing?.providerIds ?? [],
       });
     }
     return chains;
@@ -89,7 +80,6 @@ const coverageRowValidator = {
   accountedFor: v.optional(v.number()),
   missing: v.optional(v.array(v.object({ name: v.string(), postcode: v.optional(v.string()) }))),
   providerNames: v.optional(v.array(v.string())),
-  providerIds: v.optional(v.array(v.string())),
   error: v.optional(v.string()),
 };
 

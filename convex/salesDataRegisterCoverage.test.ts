@@ -157,7 +157,7 @@ describe("verdicts", () => {
   });
 });
 
-describe("a deployment without the web-reading key", () => {
+describe("a deployment without the register key", () => {
   test("says so on every care group's row instead of silently not checking", async () => {
     const { t, companyId, client } = await seed();
 
@@ -170,6 +170,6 @@ describe("a deployment without the web-reading key", () => {
     const listed = await client.query(api.salesDataRegisterCoverage.listChainCoverage, {});
     expect(listed).toHaveLength(1);
     expect(listed[0].status).toBe("NOT_CONFIGURED");
-    expect(listed[0].error).toContain("web reading service");
+    expect(listed[0].error).toContain("CQC_API_KEY");
   });
 });
