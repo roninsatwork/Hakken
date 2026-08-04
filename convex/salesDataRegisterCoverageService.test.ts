@@ -89,10 +89,20 @@ describe("reading a provider's page", () => {
     const locations = parseProviderPage(PROVIDER_PAGE);
 
     expect(locations).toEqual([
-      { name: "Avon Reach", postcode: "BH23 4AH", registered: true },
+      { name: "Avon Reach", postcode: "BH23 4AH", registered: true, locationId: "1-135837598" },
       // The archived registration and the live one are one home, and live wins.
-      { name: "Newstone House", postcode: "DT9 4HG", registered: true },
-      { name: "St Catherine's View", postcode: "SP1 3JH", registered: true },
+      {
+        name: "Newstone House",
+        postcode: "DT9 4HG",
+        registered: true,
+        locationId: "1-11415643531",
+      },
+      {
+        name: "St Catherine's View",
+        postcode: "SP1 3JH",
+        registered: true,
+        locationId: "1-415673085",
+      },
     ]);
   });
 

@@ -157,6 +157,28 @@ describe("verdicts", () => {
   });
 });
 
+describe("dismissing prospects in bulk", () => {
+  test("named prospects are dismissed, everything else is left alone", async () => {
+    const { t, companyId } = await seed();
+
+    const result = await t.mutation(internal.salesDataResearch.dismissProspectsInternal, {
+      companyId,
+      prospectKeys: [key("Linden House"), key("No Such Prospect")],
+    });
+    expect(result).toEqual({ dismissed: 1 });
+
+    const prospect = await t.run(async (ctx) =>
+      await ctx.db
+        .query("salesDataProspects")
+        .withIndex("by_company_prospect", (q) =>
+          q.eq("companyId", companyId).eq("prospectKey", key("Linden House"))
+        )
+        .unique()
+    );
+    expect(prospect?.status).toBe("DISMISSED");
+  });
+});
+
 describe("a deployment without the web-reading key", () => {
   test("says so on every care group's row instead of silently not checking", async () => {
     const { t, companyId, client } = await seed();

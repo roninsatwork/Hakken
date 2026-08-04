@@ -25,6 +25,8 @@ export type RegisterLocation = {
   postcode?: string;
   /** Still registered — an archived profile is history, not a gap. */
   registered: boolean;
+  /** The register's own id, so a filed prospect can cite its exact page. */
+  locationId?: string;
 };
 
 /**
@@ -118,6 +120,7 @@ export function parseProviderPage(markdown: string): RegisterLocation[] {
       name: match[1].trim(),
       ...(postcode ? { postcode } : {}),
       registered: !/\bArchived\b/i.test(block),
+      locationId,
     });
   }
 
@@ -192,8 +195,8 @@ export type CoverageArithmetic = {
   registerCount: number;
   /** Of those, how many are on file — as a customer or a prospect. */
   accountedFor: number;
-  /** The ones that are not, named so a person can see what is owed. */
-  missing: { name: string; postcode?: string }[];
+  /** The ones that are not, named so they can be filed as prospects. */
+  missing: { name: string; postcode?: string; locationId?: string }[];
 };
 
 /**
@@ -228,6 +231,7 @@ export function computeCoverage(
       missing.push({
         name: location.name,
         ...(location.postcode ? { postcode: location.postcode } : {}),
+        ...(location.locationId ? { locationId: location.locationId } : {}),
       });
     } else {
       accountedFor += 1;

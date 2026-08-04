@@ -87,7 +87,16 @@ const coverageRowValidator = {
   ),
   registerCount: v.optional(v.number()),
   accountedFor: v.optional(v.number()),
-  missing: v.optional(v.array(v.object({ name: v.string(), postcode: v.optional(v.string()) }))),
+  missing: v.optional(
+    v.array(
+      v.object({
+        name: v.string(),
+        postcode: v.optional(v.string()),
+        locationId: v.optional(v.string()),
+      })
+    )
+  ),
+  filedFromRegister: v.optional(v.number()),
   providerNames: v.optional(v.array(v.string())),
   providerIds: v.optional(v.array(v.string())),
   error: v.optional(v.string()),
@@ -163,6 +172,7 @@ export const listChainCoverage = tenantQuery({
         registerCount: row.registerCount ?? null,
         accountedFor: row.accountedFor ?? null,
         missing: row.missing ?? [],
+        filedFromRegister: row.filedFromRegister ?? 0,
         providerNames: row.providerNames ?? [],
         error: row.error ?? null,
         checkedAt: row.checkedAt,

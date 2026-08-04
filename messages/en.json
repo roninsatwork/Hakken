@@ -2502,6 +2502,7 @@
             "coverageHint": "each care group, counted against the official register",
             "coverageCovered": "{accountedFor} of {registerCount} registered homes accounted for",
             "coverageGaps": "{accountedFor} of {registerCount} registered homes accounted for — missing: {missing}",
+            "coverageFiled": " ({count} filed as prospects straight from the register)",
             "coverageProviderNotFound": "Not found on the register under this name — check by hand once",
             "coverageCheckFailed": "The register could not be read — {error}",
             "coverageNotConfigured": "The web reading service is not set up on this deployment, so the register cannot be read"

@@ -526,18 +526,26 @@ function RegisterCoverageRow() {
   if (!coverage || coverage.length === 0) return null;
 
   const describe = (row: (typeof coverage)[number]) => {
+    // A gap the check could file became a prospect, and the line says so;
+    // "missing" is reserved for what still needs a person.
+    const filedNote =
+      row.filedFromRegister > 0 ? t("coverageFiled", { count: row.filedFromRegister }) : "";
     if (row.status === "COVERED") {
-      return t("coverageCovered", {
-        accountedFor: row.accountedFor ?? 0,
-        registerCount: row.registerCount ?? 0,
-      });
+      return (
+        t("coverageCovered", {
+          accountedFor: row.accountedFor ?? 0,
+          registerCount: row.registerCount ?? 0,
+        }) + filedNote
+      );
     }
     if (row.status === "GAPS") {
-      return t("coverageGaps", {
-        accountedFor: row.accountedFor ?? 0,
-        registerCount: row.registerCount ?? 0,
-        missing: row.missing.map((site) => site.name).join(", "),
-      });
+      return (
+        t("coverageGaps", {
+          accountedFor: row.accountedFor ?? 0,
+          registerCount: row.registerCount ?? 0,
+          missing: row.missing.map((site) => site.name).join(", "),
+        }) + filedNote
+      );
     }
     if (row.status === "PROVIDER_NOT_FOUND") return t("coverageProviderNotFound");
     if (row.status === "CHECK_FAILED") return t("coverageCheckFailed", { error: row.error ?? "" });
