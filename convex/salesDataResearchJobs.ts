@@ -5,11 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getCurrentImport, requireSalesDataCompany } from "./salesData";
-import {
-  collectPendingResearchWork,
-  resolveResearchWorkers,
-  unansweredKeyFigure,
-} from "./salesDataResearch";
+import { collectPendingResearchWork, resolveResearchWorkers } from "./salesDataResearch";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import {
   DEFAULT_JOB_MAX_COST_GBP,
@@ -449,44 +445,16 @@ export const claimNextTaskInternal = internalMutation({
 
     const inProgress = items.filter((item) => item.status === "IN_PROGRESS");
     for (const item of inProgress) {
-      let settled =
+      const settled =
         args.previousOutcome === "COULD_NOT"
           ? decideItemRetry(item.attempts) === "GIVE_UP"
             ? { status: "FAILED" as const }
             : { status: "PENDING" as const }
           : { status: "DONE" as const };
-      let figureNote: string | undefined;
-
-      // "Done" is not the run's word to have the last say on. The next phase is
-      // sized on one figure per business — pupils for a school, bedrooms for a
-      // care home or a hotel — and the first live job accepted seventy customers
-      // as researched with that figure never looked for. A record still owing
-      // its figure goes back on the queue for another go, and a record that has
-      // had its goes is recorded as undone with the reason, so the job's final
-      // count is a count of answered questions rather than of visits.
-      if (settled.status === "DONE" && item.kind !== "CHAIN") {
-        const owedFigure = await unansweredKeyFigure(ctx, {
-          companyId: args.companyId,
-          key: item.key,
-        });
-        if (owedFigure) {
-          settled =
-            decideItemRetry(item.attempts) === "GIVE_UP"
-              ? { status: "FAILED" as const }
-              : { status: "PENDING" as const };
-          figureNote =
-            `${owedFigure} was never recorded for ${item.label} — `
-            + "it needs a figure, or a not-found note saying where was looked.";
-        }
-      }
 
       await ctx.db.patch(item._id, {
         ...settled,
-        ...(figureNote
-          ? { lastError: figureNote.slice(0, 500) }
-          : args.note
-            ? { lastError: args.note.slice(0, 500) }
-            : {}),
+        ...(args.note ? { lastError: args.note.slice(0, 500) } : {}),
         updatedAt: now,
       });
       item.status = settled.status;
@@ -538,14 +506,6 @@ export const claimNextTaskInternal = internalMutation({
       (item) => item.status === "PENDING" && item._id !== next._id
     ).length;
 
-    // Said at hand-out rather than left for the read tool's gap list, because
-    // the gap list names eleven fields and the model treats them as equals.
-    // This one is not an equal: the task is not accepted back without it.
-    const owedFigure =
-      next.kind === "CHAIN"
-        ? null
-        : await unansweredKeyFigure(ctx, { companyId: args.companyId, key: next.key });
-
     return {
       done: false,
       task: {
@@ -556,11 +516,7 @@ export const claimNextTaskInternal = internalMutation({
         instruction:
           next.kind === "CHAIN"
             ? `Find every site in the ${next.label} chain and record each one.`
-            : `Fill in the missing details for ${next.label}.`
-              + (owedFigure
-                ? ` The ${owedFigure} figure is required: record it, or record it as not found,`
-                  + " before you ask for the next task — the task is not accepted without it."
-                : ""),
+            : `Fill in the missing details for ${next.label}.`,
       },
       remaining,
     };

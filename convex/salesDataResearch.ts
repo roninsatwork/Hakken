@@ -1310,39 +1310,6 @@ export async function collectPendingResearchWork(
   };
 }
 
-/**
- * The one figure the next phase is sized on, if this record still owes it.
- *
- * Exported for the research job, which refuses to accept a customer or
- * prospect as done while this is unanswered. "Answered" is the same judgement
- * `describeGaps` makes everywhere else: a value on the record, a not-found
- * note, or a parked finding awaiting a person all count; silence does not.
- * The first live job said "Researched 83 of 83" while seventy of them had no
- * bedrooms answer of any kind — this is what makes that impossible to say.
- */
-export async function unansweredKeyFigure(
-  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
-  args: { companyId: Id<"companies">; key: string }
-): Promise<"bedrooms" | "pupils" | null> {
-  const currentImport = await getCurrentImport(ctx, args.companyId);
-  if (!currentImport) return null;
-
-  const subject = await resolveResearchSubject(ctx, {
-    companyId: args.companyId,
-    importId: currentImport._id,
-    key: args.key,
-  });
-  if (!subject) return null;
-
-  const extraField = extraFieldForType(subject.customerTypeKey);
-  if (!extraField) return null;
-
-  const details = await loadDetailsRow(ctx, args.companyId, subject.key);
-  const research = await loadResearchRows(ctx, args.companyId, subject.key);
-  const gaps = describeGaps(subject, details, research);
-  return gaps.missing.includes(extraField) ? extraField : null;
-}
-
 /** The research agent this workspace's job will use. Exported for the job. */
 export async function resolveResearchAgentForCompany(
   ctx: TenantMutationCtx,
@@ -1390,23 +1357,13 @@ BEING HONEST
  * pupils for schools and number of bedrooms for care homes, this is the key
  * metric for the next phase"* — so the priority section below travels with
  * the template instead of living only in one deployment's database.
- *
- * The sources for that figure were widened on 2026-08-04. The first pass told
- * the agent a bed count lives on the business's own site or nowhere, and it
- * duly filed "not found" for homes whose counts sit in plain sight on the
- * care directories — Woodpeckers is listed at 41 beds on three of them. Care
- * homes almost never publish their own bed count; the directories publish
- * nearly everyone's.
  */
 const FILLER_SYSTEM_PROMPT = `You research Comax's customers on the open web and fill in the contact details their sales spreadsheet does not hold.
 
 THE FIGURE THAT MATTERS MOST
 Comax's next phase is sized on one number per business: pupils for a school, bedrooms for a care home or a hotel. Treat that figure as the most valuable single detail on the record.
-- It is worth page reads of its own, and it decides whether the task is finished: the queue does not accept a customer back until the figure is recorded — found, or not found after the sources below have been tried.
-- For a school, the government's schools register carries the roll.
-- For a care home, the big care directories publish the bed count for nearly every home — carehome.co.uk, autumna.co.uk and the NHS care services directory at nhs.uk all state it plainly. Trust a directory page only when it names this exact home and its address or postcode matches the record.
-- For a hotel, the hotel's own site is best — an "our rooms" or "about" page. When it does not say, a booking site's page for this exact hotel stating its number of rooms is an acceptable source.
-- The honesty rules do not soften for it. A figure you did not read on a page about this exact business is not a finding: never estimate, never count photographs, never take the chain's total for one of its sites. Record it as not found rather than guessing — that is a useful answer, but only after the sources above have been tried.
+- It is worth a page read of its own. For a school, the government's schools register carries the roll. For a care home or a hotel, the business's own site is the only source — an "about us", "our rooms" or "our home" page usually carries it.
+- The honesty rules do not soften for it. A figure you did not read on a page about this exact business is not a finding: never estimate, never count photographs, never take the chain's total for one of its sites. Record it as not found rather than guessing — that is a useful answer.
 
 HOW A RUN GOES
 1. Call "Comax — Read a customer's record" to get a customer. Call it with no account name to be given the next one that still has gaps.
@@ -1424,9 +1381,10 @@ Most of these customers belong to a group — nine are Daish's hotels, six are C
 - Before you record anything, be able to say in one line why that page is about that one site.
 
 WHERE TO LOOK
-- The business's own website is best for address, phone, email and named contacts. Directory listings carry phone numbers that stopped working years ago — but the care directories named above are trustworthy for one thing, the bed count, when the page names the exact home.
-- For a care home, the Care Quality Commission register at cqc.org.uk carries the individual home's address and telephone number. For its bed count, go to the care directories named above.
+- The business's own website is best for address, phone, email and named contacts. Directory listings carry numbers that stopped working years ago.
+- For a care home, the Care Quality Commission register at cqc.org.uk carries the individual home's address and telephone number. It does NOT publish bed counts — do not look for one there.
 - For a school, the government's schools register carries the roll.
+- A bed count for a care home or a hotel comes from the business's own site or it does not exist. Record it as not found rather than estimating.
 - When you read a register or any listing page, ask Firecrawl for the whole page by setting mainContentOnly to false. Those lists sit outside the main article, and you will otherwise get the navigation and nothing else.
 - Do not spend a call on country. It is almost never printed on a British business's contact page. Record it as not found straight away, or leave it.
 

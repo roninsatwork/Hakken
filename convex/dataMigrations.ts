@@ -273,39 +273,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     };
   },
 
-  /**
-   * Reopens the bedrooms and pupils questions closed under the old source rules.
-   *
-   * A not-found note is deliberately permanent — it is what stops a customer
-   * being re-searched for the same phone number every month. But the notes for
-   * the two sizing figures were filed by an agent forbidden from the places
-   * those figures actually live: it was told a bed count comes from the
-   * business's own site or nowhere, while the care directories publish nearly
-   * every home's. Woodpeckers, filed "not found", is listed at 41 beds on three
-   * of them. Marking those notes superseded lets the widened agent look again;
-   * every other field's notes stand.
-   */
-  "2026-08-04-reopen-key-figure-not-founds": async (ctx, cursor, batchSize) => {
-    const page = await ctx.db
-      .query("salesDataCustomerResearch")
-      .paginate({ cursor, numItems: batchSize });
-    let updated = 0;
-
-    for (const row of page.page) {
-      if (row.field !== "bedrooms" && row.field !== "pupils") continue;
-      if (row.status !== "NOT_FOUND") continue;
-      await ctx.db.patch(row._id, { status: "SUPERSEDED" });
-      updated += 1;
-    }
-
-    return {
-      cursor: page.continueCursor,
-      isDone: page.isDone,
-      processed: page.page.length,
-      updated,
-    };
-  },
-
   // template:remove:end
   /**
    * Backfills `users.lastLoginAt` from existing `logins` rows.
