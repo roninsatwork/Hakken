@@ -2504,7 +2504,7 @@
             "coverageGaps": "{accountedFor} su {registerCount} strutture registrate censite — mancano: {missing}",
             "coverageProviderNotFound": "Non trovato sul registro con questo nome — da verificare a mano una volta",
             "coverageCheckFailed": "Il registro non è leggibile — {error}",
-            "coverageNotConfigured": "Serve la chiave gratuita del registro CQC prima di poter funzionare"
+            "coverageNotConfigured": "Il servizio di lettura web non è configurato su questa installazione, quindi il registro non è leggibile"
         },
         "customerProfile": {
             "back": "Tutti i clienti",
