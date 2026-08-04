@@ -244,6 +244,17 @@ async function endJob(
     finishedAt: now,
     updatedAt: now,
   });
+
+  // Every ending of a job that hunted chains is followed by the register
+  // check, stopped and failed endings included — coverage measures what is on
+  // file now, and a hunt cut short is exactly when the answer matters.
+  if (args.job.mode !== "DETAILS") {
+    await ctx.scheduler.runAfter(
+      0,
+      internal.salesDataRegisterCoverageActions.checkCareRegisterCoverage,
+      { companyId: args.job.companyId }
+    );
+  }
 }
 
 /**

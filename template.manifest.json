@@ -142,7 +142,12 @@
         "convex/salesOpportunityService.ts",
         "convex/salesOpportunityService.test.ts",
         "convex/salesOpportunityReports.ts",
-        "convex/salesOpportunityReports.test.ts"
+        "convex/salesOpportunityReports.test.ts",
+        "convex/salesDataRegisterCoverage.ts",
+        "convex/salesDataRegisterCoverage.test.ts",
+        "convex/salesDataRegisterCoverageActions.ts",
+        "convex/salesDataRegisterCoverageService.ts",
+        "convex/salesDataRegisterCoverageService.test.ts"
       ],
       "schemaTables": [
         "salesDataImports",
@@ -156,6 +161,7 @@
         "salesDataProspects",
         "salesDataResearchJobs",
         "salesDataResearchJobItems",
+        "salesDataChainCoverage",
         "salesOpportunityReports",
         "salesOpportunityReportGapProducts"
       ],

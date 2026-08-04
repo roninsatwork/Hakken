@@ -2792,6 +2792,44 @@ export default defineSchema({
    * their account key. One record shape, one save path, one set of provenance
    * rules — and conversion becomes a status change rather than a data move.
    */
+  /**
+   * One care group's holdings measured against the official register.
+   *
+   * The answer to "did the finder read the whole list?", counted against an
+   * outside authority rather than the agent's own account of itself. One row
+   * per group, replaced on every check; the register is the source of truth,
+   * so history lives there, not here.
+   */
+  salesDataChainCoverage: defineTable({
+    companyId: v.id("companies"),
+    groupNameKey: v.string(),
+    groupName: v.string(),
+    /** Which referee. Only "CQC" today; schools will bring their own. */
+    registerName: v.string(),
+    status: v.union(
+      /** Every registered location is on file. */
+      v.literal("COVERED"),
+      /** The register names locations the workspace does not hold. */
+      v.literal("GAPS"),
+      /** No registered provider reads as this group. Renames land here. */
+      v.literal("PROVIDER_NOT_FOUND"),
+      /** The register could not be read. The error says why. */
+      v.literal("CHECK_FAILED"),
+      /** No register key on this deployment. Named, not hidden. */
+      v.literal("NOT_CONFIGURED")
+    ),
+    registerCount: v.optional(v.number()),
+    accountedFor: v.optional(v.number()),
+    /** Bounded by a group's size; the register does not run to hundreds. */
+    missing: v.optional(
+      v.array(v.object({ name: v.string(), postcode: v.optional(v.string()) }))
+    ),
+    /** The registered company names counted, so a person can audit the sweep. */
+    providerNames: v.optional(v.array(v.string())),
+    error: v.optional(v.string()),
+    checkedAt: v.number(),
+  }).index("by_company_group", ["companyId", "groupNameKey"]),
+
   salesDataProspects: defineTable({
     companyId: v.id("companies"),
     /** The normalised site name, keyed as accounts are. The identity. */

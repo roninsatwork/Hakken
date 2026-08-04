@@ -505,7 +505,67 @@ function ResearchRow() {
         </div>
       </div>
     </div>
+    <RegisterCoverageRow />
     </>
+  );
+}
+
+/**
+ * Each care group's holdings, counted against the official register.
+ *
+ * The referee's verdict, not the agent's own account of itself: after every
+ * prospect hunt the platform reads the CQC register and compares. Anthony,
+ * 2026-08-04: *"if we keep shortcutting this then we fail"* — a chain that
+ * looks finished but is short on the register says so here, with the missing
+ * homes named. Absent until the first hunt completes, so the screen carries no
+ * empty box before there is anything to say.
+ */
+function RegisterCoverageRow() {
+  const t = useTranslations("salesData.customers");
+  const coverage = useQuery(api.salesDataRegisterCoverage.listChainCoverage, {});
+  if (!coverage || coverage.length === 0) return null;
+
+  const describe = (row: (typeof coverage)[number]) => {
+    if (row.status === "COVERED") {
+      return t("coverageCovered", {
+        accountedFor: row.accountedFor ?? 0,
+        registerCount: row.registerCount ?? 0,
+      });
+    }
+    if (row.status === "GAPS") {
+      return t("coverageGaps", {
+        accountedFor: row.accountedFor ?? 0,
+        registerCount: row.registerCount ?? 0,
+        missing: row.missing.map((site) => site.name).join(", "),
+      });
+    }
+    if (row.status === "PROVIDER_NOT_FOUND") return t("coverageProviderNotFound");
+    if (row.status === "CHECK_FAILED") return t("coverageCheckFailed", { error: row.error ?? "" });
+    return t("coverageNotConfigured");
+  };
+
+  const tone = (status: (typeof coverage)[number]["status"]) =>
+    status === "COVERED"
+      ? "text-emerald-400"
+      : status === "GAPS"
+        ? "text-amber-400"
+        : "text-muted";
+
+  return (
+    <div className={`relative ${LAYER.PAGE_CHROME} flex flex-col gap-1.5 bg-sidebar/40 border border-border-dim rounded-[16px] p-3 backdrop-blur-xl`}>
+      <div className="flex items-baseline gap-2">
+        <span className="text-[13px] font-semibold text-foreground">{t("coverageTitle")}</span>
+        <span className="text-[12px] text-muted">{t("coverageHint")}</span>
+      </div>
+      <ul className="flex flex-col gap-1">
+        {coverage.map((row) => (
+          <li key={row.groupNameKey} className="flex flex-wrap items-baseline gap-x-2 text-[12.5px]">
+            <span className="text-secondary">{row.groupName}</span>
+            <span className={tone(row.status)}>{describe(row)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
