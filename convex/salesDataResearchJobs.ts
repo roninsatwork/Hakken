@@ -480,22 +480,6 @@ export const claimNextTaskInternal = internalMutation({
         }
       }
 
-      // A chain's version of the same rule. "Finished" for a chain means its
-      // list of sites was read, and a run that read a list always offered at
-      // least one site from it — a new one filed, or a known one refused. A
-      // chain settled done with no site ever offered was skipped, not
-      // exhausted; two of the ten in the first hunt could not be told apart
-      // from finished ones until they were checked by hand.
-      if (settled.status === "DONE" && item.kind === "CHAIN" && !(item.sitesOffered ?? 0)) {
-        settled =
-          decideItemRetry(item.attempts) === "GIVE_UP"
-            ? { status: "FAILED" as const }
-            : { status: "PENDING" as const };
-        figureNote =
-          `No site was ever offered for ${item.label} — read the group's own list `
-          + "and offer every site on it, including the ones already supplied.";
-      }
-
       await ctx.db.patch(item._id, {
         ...settled,
         ...(figureNote
@@ -571,9 +555,7 @@ export const claimNextTaskInternal = internalMutation({
         name: next.label,
         instruction:
           next.kind === "CHAIN"
-            ? `Find every site in the ${next.label} chain and record each one. `
-              + "Offer every site on the group's own list, including ones already supplied — "
-              + "a chain with no sites offered is not accepted as finished."
+            ? `Find every site in the ${next.label} chain and record each one.`
             : `Fill in the missing details for ${next.label}.`
               + (owedFigure
                 ? ` The ${owedFigure} figure is required: record it, or record it as not found,`
