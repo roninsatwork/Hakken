@@ -2968,6 +2968,12 @@ export default defineSchema({
     ),
     attempts: v.number(),
     lastError: v.optional(v.string()),
+    /**
+     * Chain items only: sites offered for this group while the job ran —
+     * filed as prospects, or refused as already supplied. The proof the finder
+     * read the group's list; a chain is not accepted as done without one.
+     */
+    sitesOffered: v.optional(v.number()),
     /** The run that last worked this item, so a row can be traced to a run. */
     runId: v.optional(v.id("agentRuns")),
     updatedAt: v.number(),

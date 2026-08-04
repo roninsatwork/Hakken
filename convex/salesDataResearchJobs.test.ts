@@ -140,6 +140,22 @@ const nextTask = async (
  * arithmetic stays about the queue; the gate itself is tested in "the figure
  * the next phase is sized on".
  */
+/**
+ * Mark every chain as having had a site offered, once the job exists.
+ *
+ * The queue does not accept a chain as done until a site has been offered for
+ * it. Queue-mechanics tests satisfy that up front, the way `answerKeyFigures`
+ * satisfies the customer gate; the chain gate itself is tested in "a chain is
+ * not taken at its word".
+ */
+const offerChainSites = async (t: Awaited<ReturnType<typeof seed>>["t"]) =>
+  await t.run(async (ctx) => {
+    const items = await ctx.db.query("salesDataResearchJobItems").collect();
+    for (const item of items) {
+      if (item.kind === "CHAIN") await ctx.db.patch(item._id, { sitesOffered: 1 });
+    }
+  });
+
 const answerKeyFigures = async (
   t: Awaited<ReturnType<typeof seed>>["t"],
   companyId: Id<"companies">
@@ -293,6 +309,7 @@ describe("working the queue", () => {
     await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
     await nextTask(t, companyId, { runId });
+    await offerChainSites(t);
 
     for (let call = 0; call < 5; call += 1) {
       await nextTask(t, companyId, call === 0 ? {} : { previousOutcome: "DONE" });
@@ -409,10 +426,12 @@ describe("the figure the next phase is sized on", () => {
       expect(item.status).toBe("FAILED");
       expect(item.lastError).toContain("was never recorded");
     }
-    // The chains carry no figure and settle as they always did.
-    expect(items.filter((item) => item.kind === "CHAIN").every((i) => i.status === "DONE")).toBe(
-      true
-    );
+    // The chains have their own gate — nothing was offered for them either,
+    // so they end recorded as undone too, with their own reason.
+    for (const item of items.filter((i) => i.kind === "CHAIN")) {
+      expect(item.status).toBe("FAILED");
+      expect(item.lastError).toContain("No site was ever offered");
+    }
   });
 
   /**
@@ -449,6 +468,109 @@ describe("the figure the next phase is sized on", () => {
   });
 });
 
+describe("a chain is not taken at its word", () => {
+  /** Claims through the customers (figures answered) until a chain is handed out. */
+  const claimUntilChain = async (
+    t: Awaited<ReturnType<typeof seed>>["t"],
+    companyId: Id<"companies">,
+    runId: Id<"agentRuns">
+  ) => {
+    let result = await nextTask(t, companyId, { runId });
+    for (let call = 0; call < 6 && result.task?.kind !== "CHAIN"; call += 1) {
+      result = await nextTask(t, companyId, { previousOutcome: "DONE" });
+    }
+    return result;
+  };
+
+  /**
+   * Two of the first hunt's ten chains produced nothing, and there was no way
+   * to tell "this group runs no sites we do not supply" from "nobody looked"
+   * without checking by hand. A run that read a group's list always offered at
+   * least one site from it; a chain with none offered was skipped.
+   */
+  test("a chain with no site ever offered is not accepted as done", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
+    const runId = await seedRun(t, { agentId, userId, companyId });
+
+    const chain = await claimUntilChain(t, companyId, runId);
+    expect(chain.task?.kind).toBe("CHAIN");
+    expect(chain.task?.instruction).toContain("not accepted as finished");
+
+    await nextTask(t, companyId, { previousOutcome: "DONE" });
+
+    const items = await t.run(
+      async (ctx) => await ctx.db.query("salesDataResearchJobItems").collect()
+    );
+    const bounced = items.find((item) => item.key === chain.task?.key);
+    expect(bounced).toMatchObject({ status: "PENDING", attempts: 1 });
+    expect(bounced?.lastError).toContain("No site was ever offered");
+  });
+
+  /**
+   * A group whose every site is already supplied still proves itself: the
+   * refused offers are the evidence the list was read.
+   */
+  test("an offer refused as already supplied counts, and done stands", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
+    const runId = await seedRun(t, { agentId, userId, companyId });
+
+    const chain = await claimUntilChain(t, companyId, runId);
+    // Chains queue in index order, so Allegra Care is handed first.
+    expect(chain.task?.key).toBe(key("Allegra Care"));
+
+    const offered = await t.mutation(internal.salesDataResearch.recordProspect, {
+      companyId,
+      groupName: "Allegra Care",
+      siteName: "Fairmile Grange",
+      sourceUrl: "https://allegracare.co.uk/our-homes/",
+      sourceName: "Allegra Care",
+    });
+    expect(offered).toMatchObject({ recorded: false, alreadyKnown: true });
+
+    await nextTask(t, companyId, { previousOutcome: "DONE" });
+
+    const items = await t.run(
+      async (ctx) => await ctx.db.query("salesDataResearchJobItems").collect()
+    );
+    expect(items.find((item) => item.key === chain.task?.key)).toMatchObject({
+      status: "DONE",
+      sitesOffered: 1,
+    });
+  });
+
+  test("a newly filed prospect counts, and done stands", async () => {
+    const { t, companyId, userId, agentId } = await seed();
+    await answerKeyFigures(t, companyId);
+    const runId = await seedRun(t, { agentId, userId, companyId });
+
+    const chain = await claimUntilChain(t, companyId, runId);
+    expect(chain.task?.key).toBe(key("Allegra Care"));
+
+    const filed = await t.mutation(internal.salesDataResearch.recordProspect, {
+      companyId,
+      groupName: "Allegra Care",
+      siteName: "Brook View Care Home",
+      town: "West Moors",
+      postcode: "BH22 0JW",
+      sourceUrl: "https://allegracare.co.uk/our-homes/",
+      sourceName: "Allegra Care",
+    });
+    expect(filed).toMatchObject({ recorded: true });
+
+    await nextTask(t, companyId, { previousOutcome: "DONE" });
+
+    const items = await t.run(
+      async (ctx) => await ctx.db.query("salesDataResearchJobItems").collect()
+    );
+    expect(items.find((item) => item.key === chain.task?.key)).toMatchObject({
+      status: "DONE",
+      sitesOffered: 1,
+    });
+  });
+});
+
 describe("prospects found while it runs", () => {
   /**
    * The third pass is fed by the second, inside the same job. Before this, a
@@ -460,6 +582,7 @@ describe("prospects found while it runs", () => {
     await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
     await nextTask(t, companyId, { runId });
+    await offerChainSites(t);
 
     await t.mutation(internal.salesDataResearchJobs.appendProspectItemInternal, {
       companyId,
@@ -820,6 +943,7 @@ describe("when a run ends", () => {
     await answerKeyFigures(t, companyId);
     const runId = await seedRun(t, { agentId, userId, companyId });
     await nextTask(t, companyId, { runId });
+    await offerChainSites(t);
 
     for (let call = 0; call < 5; call += 1) {
       await nextTask(t, companyId, { previousOutcome: "DONE" });

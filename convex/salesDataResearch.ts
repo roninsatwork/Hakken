@@ -839,6 +839,45 @@ async function loadKnownSites(
   return known;
 }
 
+/** Matches the job's own item scan bound; a job holds nowhere near this many. */
+const OFFER_ITEM_SCAN_LIMIT = 2000;
+
+/**
+ * Count an offer against the running job's chain item.
+ *
+ * The proof-of-work behind the chain gate: the queue refuses to accept a chain
+ * as finished until at least one site has been offered for it, and this is
+ * where offers are counted. Both outcomes of a usable offer count — filed as a
+ * prospect, or refused because the site is already supplied — since either
+ * proves a list was actually read. An offer thrown out for having no source
+ * page proves nothing and is not counted. Lives here rather than in the job
+ * file because the job file already imports from this one.
+ */
+async function countSiteOffer(
+  ctx: Pick<MutationCtx, "db">,
+  args: { companyId: Id<"companies">; groupNameKey: string }
+) {
+  const job = await ctx.db
+    .query("salesDataResearchJobs")
+    .withIndex("by_company_status", (q) =>
+      q.eq("companyId", args.companyId).eq("status", "RUNNING")
+    )
+    .first();
+  if (!job) return;
+
+  const items = await ctx.db
+    .query("salesDataResearchJobItems")
+    .withIndex("by_job_status", (q) => q.eq("jobId", job._id))
+    .take(OFFER_ITEM_SCAN_LIMIT);
+  const item = items.find((row) => row.kind === "CHAIN" && row.key === args.groupNameKey);
+  if (!item) return;
+
+  await ctx.db.patch(item._id, {
+    sitesOffered: (item.sitesOffered ?? 0) + 1,
+    updatedAt: Date.now(),
+  });
+}
+
 /**
  * Record a site the agent found in a group the workspace already supplies.
  *
@@ -921,6 +960,8 @@ export const recordProspect = internalMutation({
     );
 
     if (match.outcome === "KNOWN") {
+      // A refused offer is still proof the group's list was read.
+      await countSiteOffer(ctx, { companyId: args.companyId, groupNameKey });
       // Said plainly so the agent stops offering it. A silent no-op reads as a
       // success and the same site comes back on the next run.
       return {
@@ -953,6 +994,8 @@ export const recordProspect = internalMutation({
       ...(args.agentId ? { agentId: args.agentId } : {}),
       foundAt: Date.now(),
     });
+
+    await countSiteOffer(ctx, { companyId: args.companyId, groupNameKey });
 
     return {
       recorded: true as const,
@@ -1367,7 +1410,7 @@ HOW A RUN GOES
 2. You will be told the group's name, its customer type, the sites already supplied, and the sites already found. Your job is the sites in neither list.
 3. Find the group's own website and its list of its sites — usually a page called Our Homes, Our Hotels, Our Schools or similar. That list is the truth about what the group runs. Prefer it over any register or directory page.
 4. FILE AS YOU GO. The moment you are sure a site belongs to the group, call "Comax — Record a site in a group" for it, before you read anything else. Do not read several pages first and file at the end — you will run out of budget before writing anything down, and the whole run is wasted.
-5. Report every site you find, including ones you think are already supplied — you will be told which those are, and that is how the count stays honest. A site that is already a customer is refused and named back to you; stop offering it and move on.
+5. Report every site you find, including ones you think are already supplied — you will be told which those are, and that is how the count stays honest. A site that is already a customer is refused and named back to you; stop offering it and move on. This is also how a finished group is proved: the queue does not accept a group as done until at least one of its sites has been offered, so a group whose every site is already supplied still needs those sites reported.
 6. A town and a postcode make a filed site worth far more — the postcode is the strongest signal for telling a new site from one already supplied. Take them from the group's own page for that site when they are shown.
 7. When the group's list is exhausted, say what you did and stop.
 
