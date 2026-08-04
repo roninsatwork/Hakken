@@ -2497,14 +2497,7 @@
             "researchIdle": "Ready — press a button to put the agents to work.",
             "researchFinished": "Finished — {reason}",
             "researchDoneTitle": "The research job has finished",
-            "researchDoneOk": "OK",
-            "coverageTitle": "Register check",
-            "coverageHint": "each care group, counted against the official register",
-            "coverageCovered": "{accountedFor} of {registerCount} registered homes accounted for",
-            "coverageGaps": "{accountedFor} of {registerCount} registered homes accounted for — missing: {missing}",
-            "coverageProviderNotFound": "Not found on the register under this name — check by hand once",
-            "coverageCheckFailed": "The register could not be read — {error}",
-            "coverageNotConfigured": "Needs the free CQC register key before it can run"
+            "researchDoneOk": "OK"
         },
         "customerProfile": {
             "back": "All customers",

@@ -794,11 +794,8 @@ export const readGroupForProspecting = internalQuery({
  * Both sides of it: the accounts in the current import, and the prospects
  * already found. A run that re-reported the six Colten Care homes it was told
  * about, or the fifteen it found last month, would look like it was working.
- *
- * Exported for the register coverage check, which measures this same list
- * against the official register's — one definition of "on file", not two.
  */
-export async function loadKnownSites(
+async function loadKnownSites(
   ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
   args: { companyId: Id<"companies">; importId: Id<"salesDataImports">; groupNameKey: string }
 ): Promise<KnownSite[]> {
