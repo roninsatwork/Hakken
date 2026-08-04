@@ -924,23 +924,6 @@ export const recordProspect = internalMutation({
       };
     }
 
-    // The cited page has to be one this run opened — the rule the record
-    // filler has always lived under, applied here the morning a cheap hunt
-    // filed fourteen homes under Colten Care against pages it never fetched.
-    // A plausible address is not evidence; only a fetched one is.
-    if (args.runId) {
-      const pagesRead = await pagesReadInRun(ctx, args.runId);
-      const cited = canonicalSourceUrl(args.sourceUrl);
-      if (pagesRead.size > 0 && (!cited || !pagesRead.has(cited))) {
-        return {
-          recorded: false as const,
-          reason:
-            `You have not read ${args.sourceUrl} in this run, so it cannot be the source. `
-            + "Cite the exact address you fetched, or fetch the page you are citing.",
-        };
-      }
-    }
-
     const groupNameKey = normalizeKey(args.groupName);
     // The group has to be one the workspace already sells to. Searching groups
     // it has never dealt with is a different product with a different cost, and
@@ -1133,37 +1116,6 @@ export const dismissProspect = tenantMutation({
     });
 
     return { status: "DISMISSED" as const };
-  },
-});
-
-/**
- * Dismiss prospects in bulk, from maintenance rather than a screen.
- *
- * Born for the phantom Colten homes of 2026-08-04: a cheap hunt filed
- * fourteen sites the register proves the group does not run, and fourteen
- * clicks is not a cleanup. Dismissed rather than deleted, for the same reason
- * the screen's dismissal keeps them: a site the finder re-offers is refused
- * by the record of the decision.
- */
-export const dismissProspectsInternal = internalMutation({
-  args: {
-    companyId: v.id("companies"),
-    prospectKeys: v.array(v.string()),
-  },
-  handler: async (ctx, args) => {
-    let dismissed = 0;
-    for (const prospectKey of args.prospectKeys) {
-      const prospect = await ctx.db
-        .query("salesDataProspects")
-        .withIndex("by_company_prospect", (q) =>
-          q.eq("companyId", args.companyId).eq("prospectKey", prospectKey)
-        )
-        .unique();
-      if (!prospect || prospect.status !== "NEW") continue;
-      await ctx.db.patch(prospect._id, { status: "DISMISSED", decidedAt: Date.now() });
-      dismissed += 1;
-    }
-    return { dismissed };
   },
 });
 
@@ -1472,7 +1424,6 @@ WHERE TO LOOK
 
 BEING HONEST
 - Every site needs the address of the page that lists it. If you cannot name the page, you have not found the site.
-- The page you cite must be one you fetched this run. A site filed against a page you did not read is refused, however plausible the address looks.
 - One line of reasoning per site: why you believe it belongs to this group.
 - Never infer a site from a name pattern, and never file a site you have not seen listed on a page you read this run.
 - A group whose list shows nothing new is a finished group, not a failure. Say so and ask for the next task.`;

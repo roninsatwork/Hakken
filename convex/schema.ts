@@ -2820,22 +2820,10 @@ export default defineSchema({
     ),
     registerCount: v.optional(v.number()),
     accountedFor: v.optional(v.number()),
-    /**
-     * Bounded by a group's size; the register does not run to hundreds. Only
-     * homes the check could not file itself — a registered home that is not a
-     * customer is filed as a prospect, not reported.
-     */
+    /** Bounded by a group's size; the register does not run to hundreds. */
     missing: v.optional(
-      v.array(
-        v.object({
-          name: v.string(),
-          postcode: v.optional(v.string()),
-          locationId: v.optional(v.string()),
-        })
-      )
+      v.array(v.object({ name: v.string(), postcode: v.optional(v.string()) }))
     ),
-    /** Prospects this check filed straight from the register. */
-    filedFromRegister: v.optional(v.number()),
     /** The registered company names counted, so a person can audit the sweep. */
     providerNames: v.optional(v.array(v.string())),
     /**

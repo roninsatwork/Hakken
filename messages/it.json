@@ -2502,7 +2502,6 @@
             "coverageHint": "ogni gruppo di case di cura, contato sul registro ufficiale",
             "coverageCovered": "{accountedFor} su {registerCount} strutture registrate censite",
             "coverageGaps": "{accountedFor} su {registerCount} strutture registrate censite — mancano: {missing}",
-            "coverageFiled": " ({count} inserite come prospect direttamente dal registro)",
             "coverageProviderNotFound": "Non trovato sul registro con questo nome — da verificare a mano una volta",
             "coverageCheckFailed": "Il registro non è leggibile — {error}",
             "coverageNotConfigured": "Il servizio di lettura web non è configurato su questa installazione, quindi il registro non è leggibile"

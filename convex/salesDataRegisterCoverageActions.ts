@@ -229,43 +229,16 @@ export const checkCareRegisterCoverage = internalAction({
           dedupeRegisterLocations(locations),
           chain.knownSites
         );
-
-        // A registered home that is not a customer is a prospect — Anthony,
-        // 2026-08-04: "if they exist and not a customer then they are a
-        // prospect". The register names it, places it, and is a better
-        // witness than any search, so the gap is filed rather than reported.
-        // What cannot be filed (a name clash the matcher refuses, say) stays
-        // on the row as missing, for a person.
-        const stillMissing: typeof coverage.missing = [];
-        let filedFromRegister = 0;
-        for (const home of coverage.missing) {
-          const filed = await ctx.runMutation(internal.salesDataResearch.recordProspect, {
-            companyId: args.companyId,
-            groupName: chain.groupName,
-            siteName: home.name,
-            ...(home.postcode ? { postcode: home.postcode } : {}),
-            sourceUrl: home.locationId
-              ? `https://www.cqc.org.uk/location/${home.locationId}`
-              : `https://www.cqc.org.uk/provider/${acceptedIds[0]}/services`,
-            sourceName: "CQC register",
-            reasoning:
-              "On the official register as this group's, and not on file — filed by the register check.",
-          });
-          if (filed.recorded) filedFromRegister += 1;
-          else if (!("alreadyKnown" in filed && filed.alreadyKnown)) stillMissing.push(home);
-        }
-
         await ctx.runMutation(internal.salesDataRegisterCoverage.upsertChainCoverage, {
           companyId: args.companyId,
           row: {
             groupNameKey: chain.groupNameKey,
             groupName: chain.groupName,
             registerName: REGISTER_NAME,
-            status: stillMissing.length === 0 ? ("COVERED" as const) : ("GAPS" as const),
+            status: coverage.missing.length === 0 ? ("COVERED" as const) : ("GAPS" as const),
             registerCount: coverage.registerCount,
-            accountedFor: coverage.accountedFor + filedFromRegister,
-            missing: stillMissing,
-            filedFromRegister,
+            accountedFor: coverage.accountedFor,
+            missing: coverage.missing,
             providerNames,
             // Confirmed this run or any earlier one: a company whose page did
             // not read today stays known for tomorrow's check.
