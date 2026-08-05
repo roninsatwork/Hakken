@@ -118,6 +118,13 @@ completed work.
   three tasks to completion under a single press, replacing the fan-out of one
   agent run per customer and per chain. Read it before touching the sweeps in
   `convex/salesDataResearch.ts`.
+- [Governance And Trust Plan](./active/governance-and-trust-plan.md) — the
+  phased plan for the AI register, risk classification, evidence export,
+  governance navigation, and the access-control and personal-data-rights work a
+  serious enterprise buyer checks for. Owns the Governance section, the auditor
+  and read-only roles, one-time-code sign-in, and anything claiming compliance
+  evidence. Records the decision not to build single sign-on. Read it before
+  adding a governance surface, a new role, or a sign-in method.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -146,6 +153,10 @@ Market Discovery Agent Plan. If it touches the customer screens themselves, the
 Workspace Customer CRM Plan wins.
 If work touches revenue opportunities — prospect valuation, group gap analysis,
 or the opportunity report screen — use the Comax Opportunity Report Plan.
+If work touches the AI register, risk classification, compliance evidence, the
+Governance section, roles, sign-in methods, or personal data rights, use the
+Governance And Trust Plan. It owns approvals and audit-trail *placement*; the
+Agent Autonomy And Approvals Plan still owns approvals *behaviour*.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the
 Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.
