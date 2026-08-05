@@ -90,7 +90,7 @@ describe("HealthPage", () => {
     expect(screen.getByText("1 thing needs attention")).toBeInTheDocument();
     expect(screen.getByText("Approvals waiting on a person")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Approvals waiting on a person/ }))
-      .toHaveAttribute("href", "/admin/agents/approvals");
+      .toHaveAttribute("href", "/admin/governance/approvals");
   });
 
   it("counts every separate thing that needs attention", () => {

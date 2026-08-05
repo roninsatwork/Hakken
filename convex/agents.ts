@@ -1,3 +1,4 @@
+import { assertPurposeAndOwner } from "./agentAccountabilityService";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery } from "./_generated/server";
@@ -871,7 +872,11 @@ export const getAgentReadiness = adminQuery({
 export const createAgent = superAdminMutation({
   args: {
     name: v.string(),
+    // Both required, though the schema keeps them optional so the assistants
+    // that predate the register still validate. Nothing new arrives without a
+    // purpose and a person answerable for it.
     description: v.optional(v.string()),
+    ownerId: v.optional(v.id("users")),
     avatar: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
     modelId: v.optional(v.string()),
@@ -890,6 +895,11 @@ export const createAgent = superAdminMutation({
   },
   handler: async (ctx, args) => {
     const { userId } = ctx;
+
+    assertPurposeAndOwner({ purpose: args.description, ownerId: args.ownerId });
+    if (args.ownerId && !(await ctx.db.get(args.ownerId))) {
+      throw new Error("Choose the person accountable for this.");
+    }
 
     const now = Date.now();
 
@@ -933,6 +943,7 @@ export const createAgent = superAdminMutation({
         isActive: args.isActive ?? false,
         ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
       }, now),
+      ...(args.ownerId ? { ownerId: args.ownerId } : {}),
       ...(resolvedAvatarUrl ? { avatar: resolvedAvatarUrl } : {}),
       ...(args.allowInternetAccess !== undefined
         ? { allowInternetAccess: args.allowInternetAccess }
@@ -1050,6 +1061,10 @@ export const updateAgent = superAdminMutation({
     id: v.id("agents"), 
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    // How the assistants that predate the register get their accountable
+    // person. Sending it is optional; clearing one that is already set is not,
+    // because a record can be completed and should not be un-completed.
+    ownerId: v.optional(v.id("users")),
     avatar: v.optional(v.string()),
     modelId: v.optional(v.string()),
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
@@ -1085,6 +1100,9 @@ export const updateAgent = superAdminMutation({
     const { id, storageId, ...updates } = args;
     const existingAgent = await ctx.db.get(id);
     if (!existingAgent) throw new Error("Agent not found");
+    if (updates.ownerId !== undefined && !(await ctx.db.get(updates.ownerId))) {
+      throw new Error("Choose the person accountable for this.");
+    }
     const useCase: AgentModelUseCase = existingAgent.workflowId ? "workflow" : "agent";
     const modelSelectionMode: AgentModelSelectionMode | undefined = updates.modelSelectionMode;
     // Clamp the run budget on the way in, so the stored record says what will

@@ -25,6 +25,7 @@ import {
   formatModelDisplayName,
   formatTokenCost,
 } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
+import { describePurposeAndOwnerProblems } from "@/convex/agentAccountabilityService";
 
 /**
  * Creating an agent, on its own screen.
@@ -105,6 +106,7 @@ function parseLimitInput(value: string) {
 type NewAgentForm = {
   name: string;
   description: string;
+  ownerId: string;
   avatar: string;
   modelId: string;
   modelSelectionMode: ModelSelectionMode;
@@ -125,6 +127,7 @@ type NewAgentForm = {
 const emptyForm: NewAgentForm = {
   name: "",
   description: "",
+  ownerId: "",
   avatar: "",
   modelId: "",
   modelSelectionMode: "inherit",
@@ -150,6 +153,7 @@ export default function NewAgentPage() {
   const ts = useTranslations("admin.agents.details.settings");
 
   const createAgent = useMutation(api.agents.createAgent);
+  const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const approvalExpiry = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
 
@@ -178,7 +182,21 @@ export default function NewAgentPage() {
     return ` · ${input} in · ${output} out`;
   };
 
-  const canCreate = Boolean(formData.name.trim());
+  /**
+   * What still has to be said before this can be created.
+   *
+   * The purpose and owner rules come from the same function the server uses, so
+   * the form and the backend cannot disagree about what is required or word it
+   * two different ways.
+   */
+  const missingPieces = [
+    ...(formData.name.trim() ? [] : [t("builder.whatIsMissing")]),
+    ...describePurposeAndOwnerProblems({
+      purpose: formData.description,
+      ownerId: formData.ownerId || undefined,
+    }),
+  ];
+  const canCreate = missingPieces.length === 0;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -191,6 +209,7 @@ export default function NewAgentPage() {
       const newAgentId = await createAgent({
         name: formData.name.trim(),
         description: formData.description,
+        ownerId: formData.ownerId ? (formData.ownerId as Id<"users">) : undefined,
         modelSelectionMode: formData.modelSelectionMode,
         ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
         reasoningEffort: formData.reasoningEffort,
@@ -277,6 +296,25 @@ export default function NewAgentPage() {
               className={adminTextAreaClassName}
               placeholder={t("placeholders.description")}
             />
+
+            {/*
+              Who answers for this assistant. Not the person who creates it —
+              creation is already in the audit trail, and the register asks a
+              different question: who is accountable now.
+            */}
+            <FieldLabel htmlFor="agent-owner">{t("owner.label")}</FieldLabel>
+            <select
+              id="agent-owner"
+              value={formData.ownerId}
+              onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+              className={adminFieldClassName}
+            >
+              <option value="">{t("owner.choose")}</option>
+              {accountablePeople.map((person) => (
+                <option key={person._id} value={person._id}>{person.name}</option>
+              ))}
+            </select>
+            <p className="text-[12px] text-secondary">{t("owner.hint")}</p>
           </SettingsCard>
 
           <SettingsCard title={ts("sections.engine.groups.behaviour")}>
@@ -449,7 +487,7 @@ export default function NewAgentPage() {
           {/* Said once, near the button, rather than by greying it out with no
               explanation — the wizard disabled Next and left you guessing. */}
           {!canCreate && !isSubmitting && (
-            <span className="text-[12px] text-muted">{t("builder.whatIsMissing")}</span>
+            <span className="text-[12px] text-muted">{missingPieces.join(" ")}</span>
           )}
         </div>
       </form>

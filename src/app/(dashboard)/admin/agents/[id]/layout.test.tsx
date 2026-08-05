@@ -49,7 +49,7 @@ vi.mock("next-intl", () => ({
       "tabs.runs": "Runs",
       "tabs.evals": "Evals",
       "tabs.context": "Context",
-      "tabs.governance": "Instructions",
+      "tabs.instructions": "Instructions",
       "tabs.interfaces": "Interfaces",
       "tabs.settings": "Settings",
       "tabs.skills": "Skills",

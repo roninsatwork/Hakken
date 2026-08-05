@@ -181,7 +181,7 @@ describe("SidebarNavigation AI guardrails", () => {
    * tile that stays at zero for the first thirty minutes.
    */
   it("shows a count on Agent Approvals when runs are waiting", () => {
-    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    vi.mocked(usePathname).mockReturnValue("/admin/governance");
     useQueryMock.mockImplementation((queryRef: unknown) => {
       if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
       if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 3, atLimit: false };
@@ -190,14 +190,14 @@ describe("SidebarNavigation AI guardrails", () => {
 
     render(<SidebarNavigation />);
 
-    const link = screen.getByRole("link", { name: /Agent Approvals/ });
-    expect(link).toHaveAttribute("href", "/admin/agents/approvals");
+    const link = screen.getByRole("link", { name: /Approvals/ });
+    expect(link).toHaveAttribute("href", "/admin/governance/approvals");
     expect(link).toHaveTextContent("3");
     expect(screen.getByLabelText("3 waiting")).toBeInTheDocument();
   });
 
   it("hides the count when nothing is waiting", () => {
-    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    vi.mocked(usePathname).mockReturnValue("/admin/governance");
     useQueryMock.mockImplementation((queryRef: unknown) => {
       if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
       if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 0, atLimit: false };
@@ -207,12 +207,12 @@ describe("SidebarNavigation AI guardrails", () => {
     render(<SidebarNavigation />);
 
     // A badge that is always there stops being read.
-    expect(screen.getByRole("link", { name: /Agent Approvals/ })).not.toHaveTextContent("0");
+    expect(screen.getByRole("link", { name: /Approvals/ })).not.toHaveTextContent("0");
     expect(screen.queryByLabelText(/waiting/)).not.toBeInTheDocument();
   });
 
   it("marks the count as approximate once the counting limit is reached", () => {
-    vi.mocked(usePathname).mockReturnValue("/admin/agents");
+    vi.mocked(usePathname).mockReturnValue("/admin/governance");
     useQueryMock.mockImplementation((queryRef: unknown) => {
       if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
       if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 99, atLimit: true };
@@ -238,7 +238,7 @@ describe("SidebarNavigation AI guardrails", () => {
     // page load for a company admin.
     const countCalls = useQueryMock.mock.calls.filter(([ref]) => ref === "agentRuns:getPendingApprovalCount");
     expect(countCalls.every(([, args]) => args === "skip")).toBe(true);
-    expect(screen.queryByRole("link", { name: /Agent Approvals/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Approvals/ })).not.toBeInTheDocument();
   });
 
   // template:remove:start movement

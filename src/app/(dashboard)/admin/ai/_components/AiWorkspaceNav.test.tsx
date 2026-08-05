@@ -18,7 +18,7 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
     expect(screen.getByRole("link", { name: "Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
-    expect(screen.getByRole("button", { name: "Governance" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Instructions" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Widget" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Models" })).toBeInTheDocument();
 
@@ -31,10 +31,10 @@ describe("AiWorkspaceNav", () => {
     expect(screen.queryByRole("link", { name: "Model Catalogue" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Defaults" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Governance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Instructions" }));
 
-    expect(screen.getByRole("menuitem", { name: "Rules" })).toHaveAttribute("href", "/admin/ai/governance/rules");
-    expect(screen.getByRole("menuitem", { name: "System Prompt" })).toHaveAttribute("href", "/admin/ai/governance/system-prompt");
+    expect(screen.getByRole("menuitem", { name: "Rules" })).toHaveAttribute("href", "/admin/ai/rules");
+    expect(screen.getByRole("menuitem", { name: "System Prompt" })).toHaveAttribute("href", "/admin/ai/system-prompt");
     expect(screen.getByRole("menuitem", { name: "Global Knowledge" })).toHaveAttribute("href", "/admin/ai/knowledge");
 
     fireEvent.click(screen.getByRole("button", { name: "Widget" }));
@@ -55,7 +55,7 @@ describe("AiWorkspaceNav", () => {
 
     expect(screen.queryByRole("link", { name: "Overview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Usage" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Governance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Instructions" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Knowledge" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Tools" })).not.toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe("AiWorkspaceNav", () => {
 
     render(<AiWorkspaceNav />);
 
-    const trigger = screen.getByRole("button", { name: "Governance" });
+    const trigger = screen.getByRole("button", { name: "Instructions" });
     expect(trigger).toHaveClass("border-brand");
 
     fireEvent.click(trigger);

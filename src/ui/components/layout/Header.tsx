@@ -39,10 +39,10 @@ function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
   if (pathname.startsWith("/admin/ai/usage/chat-logs") || pathname.startsWith("/admin/ai/chat-logs")) {
     return [t("ai"), t("chatLogs")];
   }
-  if (pathname.startsWith("/admin/ai/governance/rules") || pathname.startsWith("/admin/ai/rules")) {
+  if (pathname.startsWith("/admin/ai/rules") || pathname.startsWith("/admin/ai/rules")) {
     return [t("ai"), t("rules")];
   }
-  if (pathname.startsWith("/admin/ai/governance/system-prompt") || pathname.startsWith("/admin/ai/system-prompt")) {
+  if (pathname.startsWith("/admin/ai/system-prompt") || pathname.startsWith("/admin/ai/system-prompt")) {
     return [t("ai"), t("systemPrompt")];
   }
   if (pathname.startsWith("/admin/ai/knowledge") || pathname.startsWith("/admin/ai/global-knowledge")) {

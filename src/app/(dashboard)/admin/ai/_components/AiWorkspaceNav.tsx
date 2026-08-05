@@ -24,22 +24,32 @@ import {
 
 import { cn } from "@/src/ui/lib/utils";
 
-const governanceItems = [
+/**
+ * Rules, the system prompt, and global knowledge: what the AI is told, and
+ * therefore how it behaves.
+ *
+ * Called "Governance" until the governance layer needed the word for the AI
+ * register, risk classification and compliance evidence. Nothing here is
+ * governance in that sense — these are the instructions an AI administrator
+ * writes — and one word meaning two unrelated things across the same admin
+ * section is how people end up on the wrong screen.
+ */
+const instructionItems = [
   {
     label: "Rules",
-    href: "/admin/ai/governance/rules",
+    href: "/admin/ai/rules",
     icon: ShieldCheck,
     matches: (pathname: string) => (
-      pathname.startsWith("/admin/ai/governance/rules")
+      pathname.startsWith("/admin/ai/rules")
       || pathname.startsWith("/admin/ai/rules")
     ),
   },
   {
     label: "System Prompt",
-    href: "/admin/ai/governance/system-prompt",
+    href: "/admin/ai/system-prompt",
     icon: TerminalSquare,
     matches: (pathname: string) => (
-      pathname.startsWith("/admin/ai/governance/system-prompt")
+      pathname.startsWith("/admin/ai/system-prompt")
       || pathname.startsWith("/admin/ai/system-prompt")
     ),
   },
@@ -185,24 +195,24 @@ export function AiWorkspaceNav() {
   const pathname = usePathname() || "/admin/ai";
   const readonlySearchParams = useSearchParams();
   const searchParams = new URLSearchParams(readonlySearchParams?.toString());
-  const [isGovernanceOpen, setIsGovernanceOpen] = useState(false);
+  const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isModelsOpen, setIsModelsOpen] = useState(false);
-  const governanceRef = useRef<HTMLDivElement>(null);
+  const instructionsRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const modelsRef = useRef<HTMLDivElement>(null);
-  const activeGovernanceItem = governanceItems.find((item) => item.matches(pathname));
-  const isGovernanceActive = Boolean(activeGovernanceItem);
+  const activeInstructionsItem = instructionItems.find((item) => item.matches(pathname));
+  const isInstructionsActive = Boolean(activeInstructionsItem);
   const activeWidgetItem = widgetItems.find((item) => isWidgetItemActive(pathname, searchParams, item));
   const isWidgetActive = Boolean(activeWidgetItem);
   const isModelsActive = pathname.startsWith("/admin/ai/models");
 
   useEffect(() => {
-    if (!isGovernanceOpen && !isWidgetOpen && !isModelsOpen) return;
+    if (!isInstructionsOpen && !isWidgetOpen && !isModelsOpen) return;
 
     function handlePointerDown(event: PointerEvent) {
-      if (governanceRef.current && !governanceRef.current.contains(event.target as Node)) {
-        setIsGovernanceOpen(false);
+      if (instructionsRef.current && !instructionsRef.current.contains(event.target as Node)) {
+        setIsInstructionsOpen(false);
       }
       if (widgetRef.current && !widgetRef.current.contains(event.target as Node)) {
         setIsWidgetOpen(false);
@@ -214,7 +224,7 @@ export function AiWorkspaceNav() {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsGovernanceOpen(false);
+        setIsInstructionsOpen(false);
         setIsWidgetOpen(false);
         setIsModelsOpen(false);
       }
@@ -227,7 +237,7 @@ export function AiWorkspaceNav() {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isGovernanceOpen, isWidgetOpen, isModelsOpen]);
+  }, [isInstructionsOpen, isWidgetOpen, isModelsOpen]);
 
   return (
     <nav
@@ -241,34 +251,34 @@ export function AiWorkspaceNav() {
         return (
           <div key={tab.href} className={cn("shrink-0", tab.label === "Widget" && "flex items-center gap-1")}>
             {tab.label === "Widget" && (
-              <div ref={governanceRef} className="relative shrink-0">
+              <div ref={instructionsRef} className="relative shrink-0">
                 <button
                   type="button"
-                  aria-expanded={isGovernanceOpen}
+                  aria-expanded={isInstructionsOpen}
                   aria-haspopup="menu"
                   onClick={() => {
                     setIsWidgetOpen(false);
                     setIsModelsOpen(false);
-                    setIsGovernanceOpen((current) => !current);
+                    setIsInstructionsOpen((current) => !current);
                   }}
                   className={cn(
                     "flex h-11 shrink-0 items-center gap-2 rounded-t-[8px] border-b-2 px-4 text-[13px] font-medium transition-colors whitespace-nowrap",
-                    isGovernanceActive
+                    isInstructionsActive
                       ? "border-brand bg-brand/5 text-brand"
                       : "border-transparent text-secondary hover:border-foreground/30 hover:text-foreground"
                   )}
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Governance</span>
-                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isGovernanceOpen && "rotate-180")} />
+                  <span>Instructions</span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isInstructionsOpen && "rotate-180")} />
                 </button>
 
-                {isGovernanceOpen && (
+                {isInstructionsOpen && (
                   <div
                     role="menu"
                     className="absolute left-0 top-full z-40 mt-2 w-[240px] overflow-hidden rounded-[10px] border border-border-dim bg-card shadow-2xl"
                   >
-                    {governanceItems.map((item) => {
+                    {instructionItems.map((item) => {
                       const ItemIcon = item.icon;
                       const isItemActive = item.matches(pathname);
 
@@ -277,7 +287,7 @@ export function AiWorkspaceNav() {
                           key={item.href}
                           href={item.href}
                           role="menuitem"
-                          onClick={() => setIsGovernanceOpen(false)}
+                          onClick={() => setIsInstructionsOpen(false)}
                           className={cn(
                             "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[14px] font-medium transition-colors",
                             isItemActive
@@ -305,7 +315,7 @@ export function AiWorkspaceNav() {
                   aria-expanded={isWidgetOpen}
                   aria-haspopup="menu"
                   onClick={() => {
-                    setIsGovernanceOpen(false);
+                    setIsInstructionsOpen(false);
                     setIsModelsOpen(false);
                     setIsWidgetOpen((current) => !current);
                   }}
@@ -361,7 +371,7 @@ export function AiWorkspaceNav() {
                   aria-expanded={isModelsOpen}
                   aria-haspopup="menu"
                   onClick={() => {
-                    setIsGovernanceOpen(false);
+                    setIsInstructionsOpen(false);
                     setIsWidgetOpen(false);
                     setIsModelsOpen((current) => !current);
                   }}

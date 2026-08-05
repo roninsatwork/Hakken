@@ -312,7 +312,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/users')) return 'Manage Users';
   if (pathname.startsWith('/admin/ai/tools')) return 'Tools';
   if (pathname.startsWith('/admin/ai')) return 'Artificial Intelligence';
-  if (pathname.startsWith('/admin/agents/approvals')) return 'Agent Approvals';
+  if (pathname.startsWith('/admin/governance')) return 'Governance';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
   if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
@@ -353,6 +353,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
 
   return {
     workspace: true,
+    governance: pathname.startsWith('/admin/governance'),
     businessHub: false,
     clients: false,
     companies: pathname.startsWith('/admin/companies'),
@@ -523,6 +524,32 @@ export default function SidebarNavigation() {
                       onClick={() => setActiveItem('Admin Dashboard')}
                     />
 
+                    {/*
+                      Top level, and not a child of Artificial Intelligence.
+                      The person who opens this is a compliance officer or an
+                      executive rather than an AI administrator, and buried one
+                      level down under a heading about AI they would never find
+                      it. Approvals moved here from under Agents and the audit
+                      trail was promoted out of Settings — both live here now
+                      and nowhere else, because two places showing the same
+                      queue is worse than one place in the wrong section.
+                    */}
+                    <NavItem navKey="governance"
+                      icon={ShieldCheck}
+                      label={t('governance')}
+                      isActive={pathname.startsWith('/admin/governance')}
+                      onClick={() => setActiveItem('Governance')}
+                      hasChildren
+                      isOpen={openSections.governance}
+                      onToggle={() => toggleSection('governance')}
+                    >
+                      <SubNavItem label={t('governanceOverview')} href="/admin/governance" navKey="governanceOverview" isActive={pathname === '/admin/governance'} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('aiRegister')} href="/admin/governance/register" navKey="aiRegister" isActive={pathname.startsWith('/admin/governance/register')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('governanceApprovals')} href="/admin/governance/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/governance/approvals')} onClick={() => setActiveItem('Governance')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
+                      <SubNavItem label={t('auditTrail')} href="/admin/governance/audit-trail" navKey="auditTrail" isActive={pathname.startsWith('/admin/governance/audit-trail')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('policiesInForce')} href="/admin/governance/policies" navKey="policiesInForce" isActive={pathname.startsWith('/admin/governance/policies')} onClick={() => setActiveItem('Governance')} />
+                    </NavItem>
+
                     {canSeeAdminSections && (
                       <NavItem navKey="adminCompanies"
                         icon={Building2}
@@ -572,9 +599,8 @@ export default function SidebarNavigation() {
                         isOpen={openSections.agents}
                         onToggle={() => toggleSection('agents')}
                       >
-                        <SubNavItem label={t('agentApprovals')} href="/admin/agents/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Agent Approvals')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
-                        <SubNavItem label={t('manageAgents')} href="/admin/agents" navKey="agents" isActive={pathname.startsWith('/admin/agents') && !pathname.startsWith('/admin/agents/approvals')} onClick={() => setActiveItem('Manage Agents')} />
-                        
+                        <SubNavItem label={t('manageAgents')} href="/admin/agents" navKey="agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
+
                         <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" navKey="workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
                         <SubNavItem label={t('workflowRuns')} href="/admin/workflows/executions" navKey="workflowRuns" isActive={pathname.startsWith('/admin/workflows/executions')} onClick={() => setActiveItem('Workflow Runs')} badge={pendingWorkflowApprovals?.count} badgeAtLimit={pendingWorkflowApprovals?.atLimit} />
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" navKey="schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />

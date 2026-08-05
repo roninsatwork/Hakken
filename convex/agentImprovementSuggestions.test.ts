@@ -192,6 +192,7 @@ describe("Agent Improvement Suggestions", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Shared Skill Learning Agent",
       description: "Tests skill-scoped improvement suggestions.",
     });
@@ -313,6 +314,7 @@ describe("Agent Improvement Suggestions", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Runtime Skill Attribution Agent",
       description: "Tests skill attribution for normal failed runs.",
     });

@@ -111,7 +111,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       ],
     },
     {
-      label: t('tabs.governance'),
+      label: t('tabs.instructions'),
       href: `/admin/agents/${agentId}/system-prompt`,
       icon: Scale,
       dropdownItems: [

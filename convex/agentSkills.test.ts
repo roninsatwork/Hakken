@@ -790,6 +790,7 @@ describe("agent skills", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Skill Regression Agent",
       description: "Tests reusable skill behavior.",
     });

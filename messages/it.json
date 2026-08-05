@@ -254,6 +254,12 @@
         "auditLogs": "Audit Ledger"
     },
     "sidebar": {
+        "governance": "Governance",
+        "governanceOverview": "Panoramica",
+        "aiRegister": "Registro IA",
+        "governanceApprovals": "Approvazioni",
+        "auditTrail": "Registro attività",
+        "policiesInForce": "Politiche",
         "admin": "Protocollo di Sistema",
         "navigation": "Navigazione Principale",
         "dashboard": "Dashboard",
@@ -1007,6 +1013,11 @@
                 "deleteConfirm": "Sei sicuro di voler eliminare definitivamente {name}?",
                 "undone": "Questa azione non può essere annullata."
             },
+            "owner": {
+                "label": "Chi è responsabile di questo?",
+                "choose": "Scegli una persona",
+                "hint": "La persona che risponde di ciò che fa questo assistente. Mostrata nel registro IA."
+            },
             "placeholders": {
                 "name": "es. Ricercatore Lead",
                 "description": "es. Specializzato nell'estrazione dati dai profili LinkedIn"
@@ -1039,7 +1050,7 @@
                     "runs": "Esecuzioni",
                     "evals": "Eval",
                     "context": "Contesto",
-                    "governance": "Istruzioni",
+                    "instructions": "Istruzioni",
                     "interfaces": "Interfacce",
                     "settings": "Impostazioni",
                     "skills": "Skill",
@@ -1953,6 +1964,78 @@
                 "error": {
                     "title": "Log Non Trovato",
                     "message": "Impossibile individuare il log dell'evento richiesto. Potrebbe essere stato eliminato o non hai i permessi per visualizzarlo."
+                }
+            }
+        },
+        "governance": {
+            "overview": {
+                "title": "Governance",
+                "description": "Quale IA usa questa organizzazione, chi l'ha approvata e il registro di ciò che ha fatto.",
+                "register": {
+                    "title": "Registro IA",
+                    "description": "Ogni sistema di IA in uso qui, a cosa serve e chi ne è responsabile."
+                },
+                "approvals": {
+                    "title": "Approvazioni",
+                    "description": "Esecuzioni in pausa in attesa di una decisione. Ognuna è un agente che attende di scrivere, inviare o chiamare qualcosa fuori dalla piattaforma."
+                },
+                "auditTrail": {
+                    "title": "Registro attività",
+                    "description": "Tutto ciò che qualcuno ha modificato, e quando. È la prima cosa che un revisore chiede di vedere."
+                },
+                "policies": {
+                    "title": "Politiche in vigore",
+                    "description": "Le regole che governano ciò che l'IA può fare adesso. Sola lettura — modificale in Istruzioni IA."
+                }
+            },
+            "register": {
+                "title": "Registro IA",
+                "description": "Ogni sistema di IA in uso qui, a cosa serve e chi ne è responsabile. Questo elenco si costruisce da solo — nulla viene aggiunto a mano.",
+                "empty": "Nessun sistema di IA è ancora in uso. Un assistente, un widget o un flusso di lavoro compare qui appena viene creato.",
+                "facesPublic": "Parla con il pubblico",
+                "noOwner": "Nessuno assegnato",
+                "summary": {
+                    "total": "Sistemi di IA",
+                    "incomplete": "Da completare",
+                    "publicFacing": "Rivolti al pubblico",
+                    "unattended": "Senza supervisione"
+                },
+                "kind": {
+                    "ASSISTANT": "Assistente",
+                    "WIDGET": "Chat sul sito",
+                    "WORKFLOW": "Flusso di lavoro"
+                },
+                "oversight": {
+                    "human": "Approva una persona",
+                    "unattended": "Senza supervisione"
+                },
+                "table": {
+                    "system": "Sistema e scopo",
+                    "kind": "Tipo",
+                    "owner": "Responsabile",
+                    "oversight": "Supervisione",
+                    "lastActive": "Ultima attività"
+                }
+            },
+            "auditTrail": {
+                "title": "Registro attività",
+                "description": "Tutto ciò che qualcuno ha modificato su questa piattaforma, e quando."
+            },
+            "policies": {
+                "title": "Politiche in vigore",
+                "description": "Le regole che governano ciò che l'IA può fare adesso. Per modificarne una, aprila in Istruzioni IA.",
+                "empty": "Nessuna regola in vigore. Al momento nulla limita ciò che l'IA può fare.",
+                "table": {
+                    "name": "Regola",
+                    "applies": "Si applica a",
+                    "priority": "Priorità",
+                    "instruction": "Cosa dice",
+                    "unnamed": "Regola senza nome"
+                },
+                "scope": {
+                    "agent": "Un assistente",
+                    "workspace": "Uno spazio di lavoro",
+                    "everywhere": "Ovunque"
                 }
             }
         },

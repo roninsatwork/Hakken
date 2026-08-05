@@ -23,7 +23,7 @@ export function AuditLogsSection({ logs }: { logs: AuditLogRow[] | undefined }) 
   );
 }
 
-function AuditLogsTable({ logs }: { logs: AuditLogRow[] | undefined }) {
+export function AuditLogsTable({ logs }: { logs: AuditLogRow[] | undefined }) {
   const router = useRouter();
   const t = useTranslations("admin.auditLogs");
   const common = useTranslations("common");

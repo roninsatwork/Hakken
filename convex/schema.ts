@@ -1763,6 +1763,20 @@ export default defineSchema({
   agents: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
+    /**
+     * The person accountable for this assistant.
+     *
+     * Not who created it — creation is already in the audit trail, and the
+     * person who set something up two years ago is rarely the person answerable
+     * for it now. The AI register asks "who is accountable", and until this
+     * field existed the honest answer was that nobody was.
+     *
+     * Optional in the schema so every assistant that already exists still
+     * validates; the create path requires it, and the register shows anything
+     * without one as incomplete until someone says. See
+     * docs/plans/active/governance-and-trust-plan.md.
+     */
+    ownerId: v.optional(v.id("users")),
     // Per-agent runtime budget. Unset means the platform default; values are
     // clamped to the ceilings in agentRuntimeService so a misconfigured agent
     // cannot spend without limit. Previously every agent on the platform shared

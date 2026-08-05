@@ -78,7 +78,7 @@ export default function RulesDashboard() {
         </div>
 
         <Link
-          href="/admin/ai/governance/rules/new"
+          href="/admin/ai/rules/new"
           className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground text-background font-medium tracking-wide text-[13px] hover:opacity-90 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -100,8 +100,8 @@ export default function RulesDashboard() {
         totalCount={totalCount}
         pageSize={pageSize}
         onPageChange={setPage}
-        getRowHref={(rule) => `/admin/ai/governance/rules/${rule._id}`}
-        getEditHref={(rule) => `/admin/ai/governance/rules/${rule._id}`}
+        getRowHref={(rule) => `/admin/ai/rules/${rule._id}`}
+        getEditHref={(rule) => `/admin/ai/rules/${rule._id}`}
         onToggleActive={(rule) => toggleActive({ id: rule._id, isActive: !rule.isActive })}
         onDelete={(rule) => setDeleteId(rule._id)}
         labels={{

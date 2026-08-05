@@ -12,7 +12,7 @@ import {
 } from "./userManagementService";
 import { incrementGlobalInventoryTotals } from "./utils/inventoryRollupService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
-import { publicMutation, publicQuery, superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { adminQuery, publicMutation, publicQuery, superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   type DirectoryActivity,
   activityBound,
@@ -1219,5 +1219,30 @@ export const purgeOrphanedAuthIdentities = internalMutation({
 
     console.log("[Auth purge] Orphaned identity sweep finished.", removed);
     return removed;
+  },
+});
+
+/**
+ * People who can be made accountable for an AI system.
+ *
+ * A short list for a picker, not a directory: the register asks for a name
+ * against each assistant, and the person answerable for one is an
+ * administrator rather than any signed-in user. Returns names and emails only
+ * — nothing here is a profile.
+ */
+export const getAccountablePeople = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(500);
+
+    return users
+      .filter((user) => user.role === "ADMIN" || user.role === "SUPER_ADMIN")
+      .map((user) => ({
+        _id: user._id,
+        name: (user.name ?? user.email ?? "").trim(),
+        email: user.email ?? "",
+      }))
+      .filter((user) => user.name.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
   },
 });

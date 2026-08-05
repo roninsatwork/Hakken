@@ -1,7 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { getCurrentUser, requireSuperAdmin } from "./authz";
+import { GOVERNANCE_READ_ROLES, getCurrentUser, requireSuperAdmin } from "./authz";
 import { publicQuery, superAdminMutation } from "./tenantFunctions";
 import {
   buildAuditPurgeConfigPayload,
@@ -133,8 +133,12 @@ export const getRecentLogs = publicQuery({
   reason: "Returns an empty result rather than throwing when the caller lacks a session or the required role, so the UI renders an empty state instead of an error. Role filtering happens inside the handler.",
   args: {},
   handler: async (ctx) => {
+    // The audit trail is a governance surface, so the oversight roles read it.
+    // It was super-admin only, which meant the one screen an auditor exists to
+    // look at was the one screen they could not open.
     const current = await getCurrentUser(ctx);
-    if (current?.user.role !== "SUPER_ADMIN") return [];
+    const role = current?.user.role;
+    if (!role || !GOVERNANCE_READ_ROLES.includes(role as (typeof GOVERNANCE_READ_ROLES)[number])) return [];
 
     const logs = await ctx.db.query("auditLogs")
       .withIndex("by_timestamp")

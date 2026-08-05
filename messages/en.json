@@ -254,6 +254,12 @@
         "auditLogs": "Audit Ledger"
     },
     "sidebar": {
+        "governance": "Governance",
+        "governanceOverview": "Overview",
+        "aiRegister": "AI Register",
+        "governanceApprovals": "Approvals",
+        "auditTrail": "Audit Trail",
+        "policiesInForce": "Policies",
         "admin": "Administration",
         "navigation": "Main Navigation",
         "dashboard": "Dashboard",
@@ -1007,6 +1013,11 @@
                 "deleteConfirm": "Are you sure you want to permanently delete {name}?",
                 "undone": "This action cannot be undone."
             },
+            "owner": {
+                "label": "Who is accountable for this?",
+                "choose": "Choose a person",
+                "hint": "The person answerable for what this assistant does. Shown in the AI register."
+            },
             "placeholders": {
                 "name": "e.g. Lead Researcher",
                 "description": "e.g. Specialized in extracting data from LinkedIn profiles"
@@ -1039,7 +1050,7 @@
                     "runs": "Runs",
                     "evals": "Evals",
                     "context": "Context",
-                    "governance": "Instructions",
+                    "instructions": "Instructions",
                     "interfaces": "Interfaces",
                     "settings": "Settings",
                     "skills": "Skills",
@@ -1953,6 +1964,78 @@
                 "error": {
                     "title": "Log Not Found",
                     "message": "The requested event log could not be located. It may have been purged or you do not have permission to view it."
+                }
+            }
+        },
+        "governance": {
+            "overview": {
+                "title": "Governance",
+                "description": "What AI this organisation runs, who approved it, and the record of what it did.",
+                "register": {
+                    "title": "AI register",
+                    "description": "Every AI system running here, what it is for, and who is accountable for it."
+                },
+                "approvals": {
+                    "title": "Approvals",
+                    "description": "Runs paused until a person decides. Each one is an agent waiting to write, send, or call something outside the platform."
+                },
+                "auditTrail": {
+                    "title": "Audit trail",
+                    "description": "Everything anyone changed, and when. This is what an auditor asks to see first."
+                },
+                "policies": {
+                    "title": "Policies in force",
+                    "description": "The rules governing what the AI may do right now. Read only — change them in AI instructions."
+                }
+            },
+            "register": {
+                "title": "AI register",
+                "description": "Every AI system running here, what it is for, and who is accountable for it. This list builds itself — nothing is added by hand.",
+                "empty": "No AI systems are running yet. An assistant, widget or workflow appears here the moment it is created.",
+                "facesPublic": "Talks to the public",
+                "noOwner": "Nobody assigned",
+                "summary": {
+                    "total": "AI systems",
+                    "incomplete": "Needing attention",
+                    "publicFacing": "Facing the public",
+                    "unattended": "Running unattended"
+                },
+                "kind": {
+                    "ASSISTANT": "Assistant",
+                    "WIDGET": "Website chat",
+                    "WORKFLOW": "Workflow"
+                },
+                "oversight": {
+                    "human": "A person approves",
+                    "unattended": "Runs unattended"
+                },
+                "table": {
+                    "system": "System and purpose",
+                    "kind": "Kind",
+                    "owner": "Accountable",
+                    "oversight": "Oversight",
+                    "lastActive": "Last active"
+                }
+            },
+            "auditTrail": {
+                "title": "Audit trail",
+                "description": "Everything anyone changed on this platform, and when they changed it."
+            },
+            "policies": {
+                "title": "Policies in force",
+                "description": "The rules governing what the AI may do right now. To change one, open it in AI instructions.",
+                "empty": "No rules are in force. Nothing is currently constraining what the AI may do.",
+                "table": {
+                    "name": "Rule",
+                    "applies": "Applies to",
+                    "priority": "Priority",
+                    "instruction": "What it says",
+                    "unnamed": "Unnamed rule"
+                },
+                "scope": {
+                    "agent": "One assistant",
+                    "workspace": "One workspace",
+                    "everywhere": "Everywhere"
                 }
             }
         },

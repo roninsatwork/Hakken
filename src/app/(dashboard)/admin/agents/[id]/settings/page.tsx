@@ -33,6 +33,7 @@ type ModelSelectionMode = "inherit" | "override";
 type AgentSettingsFormData = {
   name: string;
   description: string;
+  ownerId: string;
   avatar: string;
   modelId: string;
   modelSelectionMode: ModelSelectionMode;
@@ -56,6 +57,7 @@ type AgentSettingsFormData = {
 const emptyFormData: AgentSettingsFormData = {
   name: "",
   description: "",
+  ownerId: "",
   avatar: "",
   modelId: "",
   modelSelectionMode: "inherit",
@@ -110,6 +112,7 @@ function parseLimitInput(value: string) {
 
 export default function AgentOverviewPage() {
   const t = useTranslations("admin.agents.details.settings");
+  const tAgents = useTranslations("admin.agents");
   const params = useParams();
   const agentId = params.id as Id<"agents">;
 
@@ -128,6 +131,7 @@ export default function AgentOverviewPage() {
   // So a blank box can name the window it will actually follow, rather than
   // leaving the reader to guess.
   const approvalExpiry = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
+  const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const updateAgent = useMutation(api.agents.updateAgent);
 
   const [formData, setFormData] = useState<AgentSettingsFormData>(emptyFormData);
@@ -181,6 +185,7 @@ export default function AgentOverviewPage() {
     setFormData({
       name: agent.name || "",
       description: agent.description || "",
+      ownerId: agent.ownerId || "",
       avatar: agent.avatar || "",
       modelId: agent.modelId || defaultModelId,
       // An agent with no stored mode inherits — that is what the runtime does
@@ -219,6 +224,7 @@ export default function AgentOverviewPage() {
         id: agentId,
         name: formData.name,
         description: formData.description,
+        ...(formData.ownerId ? { ownerId: formData.ownerId as Id<"users"> } : {}),
         avatar: formData.avatar,
         modelSelectionMode: formData.modelSelectionMode,
         ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
@@ -328,6 +334,25 @@ export default function AgentOverviewPage() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="min-h-[96px] w-full flex-1 resize-none rounded-[12px] border border-border-dim bg-black/20 px-4 py-3 text-[13px] leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand/50"
             />
+
+            {/*
+              How the assistants that predate the register get an accountable
+              person. Without this the register could report that nobody owns
+              them and offer no way to fix it.
+            */}
+            <FieldLabel htmlFor="agent-owner">{tAgents("owner.label")}</FieldLabel>
+            <select
+              id="agent-owner"
+              value={formData.ownerId}
+              onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
+            >
+              <option value="">{tAgents("owner.choose")}</option>
+              {accountablePeople.map((person) => (
+                <option key={person._id} value={person._id}>{person.name}</option>
+              ))}
+            </select>
+            <p className="text-[12px] text-secondary">{tAgents("owner.hint")}</p>
           </SettingsCard>
 
           <SettingsCard title={t("sections.engine.groups.behaviour")}>

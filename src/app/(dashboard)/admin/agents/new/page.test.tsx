@@ -83,6 +83,11 @@ describe("NewAgentPage", () => {
       if (functionName === "aiModels:getActiveModels") {
         return models as unknown as ReturnType<typeof useQuery>;
       }
+      if (functionName === "users:getAccountablePeople") {
+        return [
+          { _id: "user_1", name: "Danette Cole", email: "danette@example.com" },
+        ] as unknown as ReturnType<typeof useQuery>;
+      }
       if (functionName === "agentRuns:getApprovalExpiryConfig") {
         return { expiryHours: 24, maxHours: 720 } as unknown as ReturnType<typeof useQuery>;
       }
@@ -91,9 +96,19 @@ describe("NewAgentPage", () => {
     vi.mocked(useMutation).mockReturnValue(createAgentMock as unknown as ReturnType<typeof useMutation>);
   });
 
+  /**
+   * A name alone is no longer enough to create an assistant: the register asks
+   * what it is for and who answers for it, and the form asks the same.
+   */
   const nameIt = () => {
     fireEvent.change(screen.getByLabelText(`${SETTINGS}.identity.name`), {
       target: { value: "Comax - Internet Customer Research Agent" },
+    });
+    fireEvent.change(screen.getByLabelText(`${SETTINGS}.identity.description`), {
+      target: { value: "Fills in missing customer details from public web sources." },
+    });
+    fireEvent.change(screen.getByLabelText("admin.agents.owner.label"), {
+      target: { value: "user_1" },
     });
   };
 

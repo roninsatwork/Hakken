@@ -98,7 +98,7 @@ function buildAttention(health: SystemHealth): Attention[] {
 
   add("agentFailures", "Agent runs that failed", ops.agentFailures, "Open the runs", "/admin/agents");
   add("staleAgentRuns", "Runs that started and never finished", ops.staleAgentRuns, "Open the runs", "/admin/agents");
-  add("pendingApprovals", "Approvals waiting on a person", ops.pendingApprovals, "Open approvals", "/admin/agents/approvals");
+  add("pendingApprovals", "Approvals waiting on a person", ops.pendingApprovals, "Open approvals", "/admin/governance/approvals");
   add("failedToolCalls", "Tool calls that failed", ops.failedToolCalls, "Open tools", "/admin/ai/tools");
   add("providerFailures", "Repeated failures from a model provider", ops.providerFailures, "Open models", "/admin/ai/models/providers");
   add("highCostAgents", "Agents costing more than expected", ops.highCostAgents, "Open agents", "/admin/agents");

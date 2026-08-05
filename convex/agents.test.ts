@@ -23,6 +23,9 @@ describe("OWASP: Broken Access Control - Agents", () => {
     ).rejects.toThrow("Unauthorized");
 
     await expect(
+      // No purpose or owner on purpose: the role guard runs before the handler,
+      // so this must be refused for being the wrong role rather than for being
+      // an incomplete record.
       maliciousClient.mutation(api.agents.createAgent, { name: "Rogue Agent" })
     ).rejects.toThrow("Unauthorized");
 
@@ -119,7 +122,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     });
 
     const client = t.withIdentity({ subject: adminId });
-    const agentId = await client.mutation(api.agents.createAgent, { name: "Fallback Agent" });
+    const agentId = await client.mutation(api.agents.createAgent, { name: "Fallback Agent", description: "Fixture assistant used to exercise this behaviour.", ownerId: adminId });
 
     const agent = await t.run(async (ctx) => await ctx.db.get(agentId));
     expect(agent?.modelId).toBe(SYSTEM_FAILSAFE_MODEL_ID);
@@ -149,6 +152,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Readiness Agent",
       description: "Tests readiness state.",
     });
@@ -543,6 +547,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "No Default Model Agent",
       description: "Tests model default readiness.",
     });
@@ -611,6 +616,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     });
 
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Inheriting Agent",
       description: "Follows the platform default.",
     });
@@ -665,6 +671,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Missing Tool Agent",
       description: "Tests failed smoke eval state.",
     });
@@ -763,6 +770,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Model Graded Agent",
       description: "Tests queued model grading state.",
     });
@@ -879,6 +887,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Model Required Release Agent",
       description: "Requires model-graded release gate evidence.",
     });
@@ -1211,6 +1220,8 @@ describe("OWASP: Broken Access Control - Agents", () => {
     });
 
     const blankAgentId = await client.mutation(api.agents.createAgent, {
+      description: "Fixture assistant used to exercise this behaviour.",
+      ownerId: adminId,
       name: "Blank Agent",
       reasoningEffort: "LOW",
     });
@@ -1269,6 +1280,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Customer Research Agent",
       description: "Fills in the blanks from the open web.",
       reasoningEffort: "HIGH",
@@ -1300,6 +1312,8 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     // Live on arrival is allowed. Checks report; they do not decide.
     const liveAgentId = await client.mutation(api.agents.createAgent, {
+      description: "Fixture assistant used to exercise this behaviour.",
+      ownerId: adminId,
       name: "Live On Arrival",
       isActive: true,
     });
@@ -1336,7 +1350,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
     });
 
     const client = t.withIdentity({ subject: adminId });
-    const agentId = await client.mutation(api.agents.createAgent, { name: "Untested Agent" });
+    const agentId = await client.mutation(api.agents.createAgent, { name: "Untested Agent", description: "Fixture assistant used to exercise this behaviour.", ownerId: adminId });
 
     const beforeActivation = await client.query(api.agents.getAgentReadiness, { id: agentId });
     expect(beforeActivation.activationWarnings).toContain("smokeEval");
@@ -1417,6 +1431,7 @@ describe("OWASP: Broken Access Control - Agents", () => {
 
     const client = t.withIdentity({ subject: adminId });
     const agentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Support Agent",
       description: "Handles support workflows.",
     });
@@ -1533,10 +1548,12 @@ describe("OWASP: Broken Access Control - Agents", () => {
     const client = t.withIdentity({ subject: adminId });
 
     const supportAgentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Support Search Agent",
       description: "Handles support workflows.",
     });
     const salesAgentId = await client.mutation(api.agents.createAgent, {
+      ownerId: adminId,
       name: "Sales Agent",
       description: "Handles sales workflows.",
     });

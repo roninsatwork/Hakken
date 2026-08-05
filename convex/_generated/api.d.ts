@@ -10,6 +10,7 @@
 
 import type * as actionAuth from "../actionAuth.js";
 import type * as adminQueryService from "../adminQueryService.js";
+import type * as agentAccountabilityService from "../agentAccountabilityService.js";
 import type * as agentEvalFixtures from "../agentEvalFixtures.js";
 import type * as agentEvalGradingActions from "../agentEvalGradingActions.js";
 import type * as agentEvalGradingService from "../agentEvalGradingService.js";
@@ -100,6 +101,8 @@ import type * as emailBrandingService from "../emailBrandingService.js";
 import type * as emailLayoutService from "../emailLayoutService.js";
 import type * as googleAgentProvider from "../googleAgentProvider.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
+import type * as governanceRegister from "../governanceRegister.js";
+import type * as governanceRegisterService from "../governanceRegisterService.js";
 import type * as http from "../http.js";
 import type * as httpConnectorPolicy from "../httpConnectorPolicy.js";
 import type * as inventoryRollups from "../inventoryRollups.js";
@@ -203,6 +206,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   actionAuth: typeof actionAuth;
   adminQueryService: typeof adminQueryService;
+  agentAccountabilityService: typeof agentAccountabilityService;
   agentEvalFixtures: typeof agentEvalFixtures;
   agentEvalGradingActions: typeof agentEvalGradingActions;
   agentEvalGradingService: typeof agentEvalGradingService;
@@ -293,6 +297,8 @@ declare const fullApi: ApiFromModules<{
   emailLayoutService: typeof emailLayoutService;
   googleAgentProvider: typeof googleAgentProvider;
   googleProviderAdapter: typeof googleProviderAdapter;
+  governanceRegister: typeof governanceRegister;
+  governanceRegisterService: typeof governanceRegisterService;
   http: typeof http;
   httpConnectorPolicy: typeof httpConnectorPolicy;
   inventoryRollups: typeof inventoryRollups;
