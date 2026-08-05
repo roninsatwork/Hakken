@@ -40,8 +40,17 @@ export const getAiRegister = governanceQuery({
       ? undefined
       : getActiveCompanyId(ctx.user);
 
+    /**
+     * What belongs on a workspace's register.
+     *
+     * Their own records, plus the platform-wide ones. Most assistants carry no
+     * company at all — they are global and serve every workspace — so matching
+     * on company alone would hand a customer an empty register while their
+     * assistants were plainly running. A global assistant answering questions
+     * in this workspace is AI running in this workspace, whoever set it up.
+     */
     const withinScope = <T extends { companyId?: Id<"companies"> }>(row: T) =>
-      !scopeCompanyId || row.companyId === scopeCompanyId;
+      !scopeCompanyId || row.companyId === scopeCompanyId || row.companyId === undefined;
 
     const [agents, widgets, workflows] = await Promise.all([
       ctx.db.query("agents").take(SCAN_LIMIT),

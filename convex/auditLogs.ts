@@ -1,7 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { GOVERNANCE_READ_ROLES, getCurrentUser, requireSuperAdmin } from "./authz";
+import { GOVERNANCE_READ_ROLES, getActiveCompanyId, getCurrentUser, requireSuperAdmin } from "./authz";
 import { publicQuery, superAdminMutation } from "./tenantFunctions";
 import {
   buildAuditPurgeConfigPayload,
@@ -140,10 +140,27 @@ export const getRecentLogs = publicQuery({
     const role = current?.user.role;
     if (!role || !GOVERNANCE_READ_ROLES.includes(role as (typeof GOVERNANCE_READ_ROLES)[number])) return [];
 
-    const logs = await ctx.db.query("auditLogs")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(500);
+    /**
+     * Whose records these are.
+     *
+     * Widening this query beyond super admins made the scope question real:
+     * `GOVERNANCE_READ_ROLES` includes `ADMIN`, and a company administrator
+     * reading the unscoped trail would have seen every other tenant's
+     * activity. Platform-wide reach belongs to the two platform roles; anyone
+     * else sees their own workspace and nothing else.
+     */
+    const platformWide = role === "SUPER_ADMIN" || role === "READ_ONLY";
+    const companyId = getActiveCompanyId(current.user);
+
+    if (!platformWide && !companyId) return [];
+
+    const logs = platformWide
+      ? await ctx.db.query("auditLogs").withIndex("by_timestamp").order("desc").take(500)
+      : await ctx.db
+          .query("auditLogs")
+          .withIndex("by_company", (q) => q.eq("companyId", companyId))
+          .order("desc")
+          .take(500);
       
     return await Promise.all(logs.map(async (log) => {
       const actor = await ctx.db.get(log.actorId);

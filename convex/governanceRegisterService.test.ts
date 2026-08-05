@@ -156,3 +156,31 @@ describe("the register puts what needs a person first", () => {
     });
   });
 });
+
+/**
+ * Widgets and workflows belong to a workspace; assistants usually belong to
+ * nobody in particular, because they are global and serve everyone.
+ */
+describe("what a workspace sees on its own register", () => {
+  const inScope = (companyId: string | undefined, scope: string | undefined) =>
+    !scope || companyId === scope || companyId === undefined;
+
+  test("a workspace sees its own records", () => {
+    expect(inScope("company_a", "company_a")).toBe(true);
+  });
+
+  test("a workspace never sees another one's", () => {
+    expect(inScope("company_b", "company_a")).toBe(false);
+  });
+
+  test("a global assistant counts as running in every workspace", () => {
+    // Matching on company alone would hand a customer an empty register while
+    // their assistants were plainly running.
+    expect(inScope(undefined, "company_a")).toBe(true);
+  });
+
+  test("the platform view is scoped to nothing and sees all of it", () => {
+    expect(inScope("company_b", undefined)).toBe(true);
+    expect(inScope(undefined, undefined)).toBe(true);
+  });
+});

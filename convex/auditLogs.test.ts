@@ -65,3 +65,59 @@ describe("Audit log access controls", () => {
     expect(logs[0].actorName).toBe("Admin User");
   });
 });
+
+/**
+ * Widening the audit trail past super admins made scope a live question: the
+ * governance read roles include `ADMIN`, and an unscoped trail would have shown
+ * a company administrator every other tenant's activity.
+ */
+describe("audit trail tenancy", () => {
+  test("a company admin sees their own workspace and no one else's", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { adminId, companyA, companyB } = await t.run(async (ctx) => {
+      const companyA = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const companyB = await ctx.db.insert("companies", { name: "Other", createdAt: Date.now() });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@acme.test",
+        role: "ADMIN",
+        companyId: companyA,
+      });
+
+      await ctx.db.insert("auditLogs", {
+        actorId: adminId,
+        actionType: "UPDATE_COMPANY",
+        entityType: "companies",
+        companyId: companyA,
+        timestamp: Date.now(),
+      });
+      await ctx.db.insert("auditLogs", {
+        actorId: adminId,
+        actionType: "UPDATE_COMPANY",
+        entityType: "companies",
+        companyId: companyB,
+        timestamp: Date.now(),
+      });
+
+      return { adminId, companyA, companyB };
+    });
+
+    const logs = await t
+      .withIdentity({ subject: adminId })
+      .query(api.auditLogs.getRecentLogs, {});
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0].companyId).toBe(companyA);
+    expect(logs.some((log) => log.companyId === companyB)).toBe(false);
+  });
+
+  test("an ordinary user sees nothing at all", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "user@acme.test", role: "USER" })
+    );
+
+    expect(await t.withIdentity({ subject: userId }).query(api.auditLogs.getRecentLogs, {})).toEqual([]);
+  });
+});

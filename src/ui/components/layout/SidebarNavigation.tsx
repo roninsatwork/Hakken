@@ -313,6 +313,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/ai/tools')) return 'Tools';
   if (pathname.startsWith('/admin/ai')) return 'Artificial Intelligence';
   if (pathname.startsWith('/admin/governance')) return 'Governance';
+  if (pathname.startsWith('/app/governance')) return 'Workspace Governance';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
   if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/admin/workflows/schedules')) return 'Schedules';
@@ -354,6 +355,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
   return {
     workspace: true,
     governance: pathname.startsWith('/admin/governance'),
+    workspaceGovernance: pathname.startsWith('/app/governance'),
     businessHub: false,
     clients: false,
     companies: pathname.startsWith('/admin/companies'),
@@ -757,6 +759,30 @@ export default function SidebarNavigation() {
 
                     </NavItem>
                     {/* template:remove:end */}
+
+                    {/*
+                      The customer's own governance section, scoped to their
+                      workspace. Offered to the people who run a workspace and
+                      to anyone brought in to audit it — the compliance officer
+                      this whole layer exists for is one of the latter, and
+                      never a platform administrator.
+                    */}
+                    {(user?.role === "ADMIN" || user?.role === "AUDITOR") && (
+                      <NavItem navKey="workspaceGovernance"
+                        icon={ShieldCheck}
+                        label={t('governance')}
+                        isActive={pathname.startsWith('/app/governance')}
+                        onClick={() => setActiveItem('Workspace Governance')}
+                        hasChildren
+                        isOpen={openSections.workspaceGovernance}
+                        onToggle={() => toggleSection('workspaceGovernance')}
+                      >
+                        <SubNavItem label={t('governanceOverview')} href="/app/governance" navKey="workspaceGovernanceOverview" isActive={pathname === '/app/governance'} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('aiRegister')} href="/app/governance/register" navKey="workspaceAiRegister" isActive={pathname.startsWith('/app/governance/register')} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('auditTrail')} href="/app/governance/audit-trail" navKey="workspaceAuditTrail" isActive={pathname.startsWith('/app/governance/audit-trail')} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('policiesInForce')} href="/app/governance/policies" navKey="workspacePolicies" isActive={pathname.startsWith('/app/governance/policies')} onClick={() => setActiveItem('Workspace Governance')} />
+                      </NavItem>
+                    )}
 
                     {!isSuperAdmin && user?.role === "ADMIN" && (
                       <NavItem

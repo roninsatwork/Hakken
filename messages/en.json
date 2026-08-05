@@ -1971,6 +1971,7 @@
             "overview": {
                 "title": "Governance",
                 "description": "What AI this organisation runs, who approved it, and the record of what it did.",
+                "workspaceDescription": "What AI runs in your workspace, who is accountable for it, and the record of what it did.",
                 "register": {
                     "title": "AI register",
                     "description": "Every AI system running here, what it is for, and who is accountable for it."

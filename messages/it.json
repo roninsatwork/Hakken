@@ -1971,6 +1971,7 @@
             "overview": {
                 "title": "Governance",
                 "description": "Quale IA usa questa organizzazione, chi l'ha approvata e il registro di ciò che ha fatto.",
+                "workspaceDescription": "Quale IA è in uso nel tuo spazio di lavoro, chi ne è responsabile e il registro di ciò che ha fatto.",
                 "register": {
                     "title": "Registro IA",
                     "description": "Ogni sistema di IA in uso qui, a cosa serve e chi ne è responsabile."
