@@ -38,20 +38,7 @@ export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, top
                 >
                   <div className="flex items-center gap-4">
                     <span className="text-[14px] font-mono font-bold text-muted/40 w-5">#{index + 1}</span>
-                    {company.logo ? (
-                      <Image
-                        src={company.logo}
-                        alt={company.name}
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d]"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] flex items-center justify-center text-[10px] text-foreground font-bold">
-                        {company.name.substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
+                    <LeaderboardAvatar src={company.logo} name={company.name} radiusClass="rounded-[8px]" />
                     <span className="text-[13px] font-semibold tracking-wide text-foreground">{company.name}</span>
                   </div>
                   <LeaderboardStats cost={company.cost} messages={company.messages} />
@@ -84,14 +71,7 @@ export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, top
                 >
                   <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                     <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{index + 1}</span>
-                    <Image
-                      src={user.image}
-                      alt={user.name}
-                      width={32}
-                      height={32}
-                      unoptimized
-                      className="w-8 h-8 rounded-full object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0"
-                    />
+                    <LeaderboardAvatar src={user.image} name={user.name} radiusClass="rounded-full" />
                     <div className="flex flex-col min-w-0">
                       <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
                         {user.name}
@@ -130,14 +110,7 @@ export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, top
               >
                 <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                   <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{index + 1}</span>
-                  <Image
-                    src={agent.avatar}
-                    alt={agent.name}
-                    width={32}
-                    height={32}
-                    unoptimized
-                    className="w-8 h-8 rounded-[6px] object-cover bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0"
-                  />
+                  <LeaderboardAvatar src={agent.avatar} name={agent.name} radiusClass="rounded-[6px]" />
                   <div className="flex flex-col min-w-0">
                     <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">
                       {agent.name}
@@ -153,6 +126,26 @@ export function AICostLeaderboards({ adminOverview, topAgents, topCompanies, top
       </motion.section>
     </div>
   );
+}
+
+/**
+ * A row without a picture is the normal case, not a broken one: agents and
+ * users carry an empty avatar string until someone uploads one. Passing that
+ * empty string to `src` makes the browser re-request the whole page, so the
+ * initials stand in and no image element is rendered at all.
+ */
+function LeaderboardAvatar({ src, name, radiusClass }: { src?: string; name: string; radiusClass: string }) {
+  const frame = `w-8 h-8 ${radiusClass} bg-foreground/10 border border-[#0000000d] dark:border-[#ffffff0d] shrink-0`;
+
+  if (!src) {
+    return (
+      <div className={`${frame} flex items-center justify-center text-[10px] text-foreground font-bold`}>
+        {name.substring(0, 2).toUpperCase()}
+      </div>
+    );
+  }
+
+  return <Image src={src} alt={name} width={32} height={32} unoptimized className={`${frame} object-cover`} />;
 }
 
 function LeaderboardEmptyState({ label }: { label: string }) {
