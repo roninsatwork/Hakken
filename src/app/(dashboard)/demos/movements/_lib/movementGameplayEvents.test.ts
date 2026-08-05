@@ -115,15 +115,77 @@ describe("movementGameplayEvents", () => {
     const motionFrame = motionFrameFor(squatPose());
     motionFrame.readability = {
       ...motionFrame.readability,
-      readableMovementStrength: 0.12,
+      rawMovementStrength: 0.12,
     };
     const result = resolveMovementGameplayEvents({ motionFrame });
 
-    expect(result.readableMovementStrength).toBe(0.12);
+    expect(result.scoredMovementStrength).toBe(0.12);
     expect(result.nextStreak).toBe(0);
     expect(result.events.map((event) => event.eventType)).toEqual([
       "bigger-movement-prompt",
     ]);
+  });
+
+  it("scores the tracked source strength rather than the display lane", () => {
+    const motionFrame = motionFrameFor(squatPose());
+    motionFrame.readability = {
+      ...motionFrame.readability,
+      // A display lane exaggerated for on-screen readability must not buy points.
+      displayedMovementStrength: 0.9,
+      readableMovementStrength: 0.9,
+      rawMovementStrength: 0.2,
+    };
+    const result = resolveMovementGameplayEvents({ motionFrame });
+
+    expect(result.scoredMovementStrength).toBe(0.2);
+    expect(result.effortQuality).toBe(0);
+    expect(resolveMovementGameplayEventFrameSummary(result).scoreDeltaTotal).toBe(0);
+  });
+
+  it("grades effort so a fuller movement outscores one that only just qualifies", () => {
+    const barelyClear = motionFrameFor(squatPose());
+    barelyClear.readability = { ...barelyClear.readability, rawMovementStrength: 0.29 };
+    const full = motionFrameFor(squatPose());
+    full.readability = { ...full.readability, rawMovementStrength: 0.6 };
+
+    const barelyResult = resolveMovementGameplayEvents({ motionFrame: barelyClear });
+    const fullResult = resolveMovementGameplayEvents({ motionFrame: full });
+
+    expect(barelyResult.effortQuality).toBeLessThan(fullResult.effortQuality);
+    expect(fullResult.effortQuality).toBe(1);
+    expect(
+      resolveMovementGameplayEventFrameSummary(barelyResult).scoreDeltaTotal,
+    ).toBeLessThan(
+      resolveMovementGameplayEventFrameSummary(fullResult).scoreDeltaTotal,
+    );
+  });
+
+  it("grades the clear-movement award against agreement with the instructor", () => {
+    const motionFrame = motionFrameFor(squatPose());
+    motionFrame.readability = { ...motionFrame.readability, rawMovementStrength: 0.6 };
+
+    const matched = resolveMovementGameplayEvents({ instructorSync: 100, motionFrame });
+    const drifting = resolveMovementGameplayEvents({ instructorSync: 30, motionFrame });
+
+    expect(matched.matchQuality).toBe(1);
+    expect(drifting.matchQuality).toBeCloseTo(0.3);
+    expect(
+      drifting.events.find((event) => event.eventType === "clear-movement-match")?.scoreDelta,
+    ).toBeLessThan(
+      matched.events.find((event) => event.eventType === "clear-movement-match")!.scoreDelta,
+    );
+    expect(drifting.events.map((event) => event.eventType)).toContain("coach-match-prompt");
+    expect(resolveMovementGameplayEventFrameSummary(drifting).feedbackMessage).toBe("match-the-coach");
+  });
+
+  it("falls back to effort-only grading when there is no instructor reference", () => {
+    const motionFrame = motionFrameFor(squatPose());
+    motionFrame.readability = { ...motionFrame.readability, rawMovementStrength: 0.6 };
+    const result = resolveMovementGameplayEvents({ motionFrame });
+
+    expect(result.matchQuality).toBeNull();
+    expect(resolveMovementGameplayEventFrameSummary(result).scoreDeltaTotal).toBe(15);
+    expect(result.events.map((event) => event.eventType)).not.toContain("coach-match-prompt");
   });
 
   it("uses help events instead of score loss when tracking is not scoreable", () => {

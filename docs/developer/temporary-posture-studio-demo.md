@@ -55,6 +55,25 @@ The selectable lobby roster comes from `src/lib/constants/avatars.ts`. It curren
 
 The instructor avatar is driven by recorded frames through `useMovementInstructorPlayback`. The player avatar is driven by live landmarks through `useMovementPlayerTracking`. `useMovementTrackingCalibration` manages player calibration, and `useMovementMatchScoring` updates final score, HUD score, sync, feedback, and completion state.
 
+## Scoring
+
+Scoring runs on a 140ms tick and has two layers.
+
+Per tick, `resolveMovementGameplayEvents` grades the frame:
+
+- It reads `readability.rawMovementStrength` — the source lane, not the display lane. The display lane exists to make the avatar read well on screen and can diverge from the tracked body; `displayAmplification` records that divergence and must never buy points.
+- Effort is graded, not pass/fail. Below `0.28` nothing scores; from `0.28` to `0.60` credit ramps from `0.4` to `1.0`.
+- `instructorSync` (0-100 joint-angle agreement from `resolveMovementMatchHudFrame`) multiplies the clear-movement award, so following the routine beats moving for its own sake. Below 50% agreement the player is told to follow the coach's shape. Lanes with no instructor reference — replay simulation, solo practice — pass `null` and fall back to effort-only grading, which is what keeps game/replay parity intact.
+
+Across the session, `movementSessionScore.ts` accumulates those ticks into a result:
+
+- `overallPercent` is the headline 0-100, blending coach match, effort, active share, spine hold, and tracking coverage. Every component is an average or a share, so a longer routine cannot outrank a better-performed shorter one. Raw points are still carried as `points` for the HUD.
+- Reps are counted with hysteresis (enter at `0.28`, exit at `0.15`) so one movement is one rep.
+- Spine is averaged over scoreable ticks and the reported cue is the session's most frequent one. A single well-held frame is not the practice.
+- Coach match only accumulates while the player is moving: two people standing still agree perfectly and prove nothing.
+
+`MovementCompletionDialog` renders the headline, grade band, points, reps, coach match, spine hold, movement size, and tracking coverage. Nothing is persisted — the result lives for the length of the session.
+
 Query parameters change behavior:
 
 - `guidedPreview=1` skips calibration, resets playback/scoring, and starts playback automatically once frames are loaded.

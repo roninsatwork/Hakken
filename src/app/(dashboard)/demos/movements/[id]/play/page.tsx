@@ -924,6 +924,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const spineGoal = toMovementSpineGoal(movement?.spineGoal);
   const {
     finalScore,
+    finalSessionResult,
     finalSpineScore,
     finalSpineCue,
     feedbackMsg,
@@ -1662,6 +1663,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
       <MovementCompletionDialog
         isOpen={isComplete}
         finalScore={finalScore}
+        finalSessionResult={finalSessionResult}
         finalSpineScore={finalSpineScore}
         finalSpineCue={finalSpineCue}
         isPreviewMode={isCalibrationSkipped}

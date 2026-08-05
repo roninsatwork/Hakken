@@ -22,7 +22,15 @@ import {
 import {
   resolveMovementMatchScoringGameplaySummary,
 } from "../_lib/movementGameplayScoring";
+import {
+  accumulateMovementSessionScoreFrame,
+  createMovementSessionScoreState,
+  resolveMovementSessionScoreResult,
+  type MovementSessionScoreResult,
+} from "../_lib/movementSessionScore";
 import type { MovementMotionFrame } from "../_lib/movementMotionFrame";
+
+export type { MovementSessionScoreResult } from "../_lib/movementSessionScore";
 
 export {
   resolveMovementMatchScoringGameplaySummary,
@@ -47,11 +55,13 @@ type UseMovementMatchScoringInput = {
 };
 
 const SCORE_UPDATE_INTERVAL_MS = 140;
+const DEFAULT_SPINE_CUE = "Review the spine guide and try one calmer pass.";
 
 const GAMEPLAY_FEEDBACK_TEXT: Record<MovementGameplayMessage, string> = {
   "great-effort": "Great effort!",
   "nice-clear-move": "Nice clear move!",
   "try-a-little-bigger": "Try making the next one a little bigger.",
+  "match-the-coach": "Follow the coach's shape.",
   "move-where-i-can-see-you": "Move where I can see you.",
   "step-back": "Step back so I can see you.",
   "step-closer": "Step a little closer.",
@@ -160,11 +170,12 @@ export function useMovementMatchScoring({
   const [hudSpineCue, setHudSpineCue] = useState("Waiting for spine tracking.");
   const [hudSpineReadiness, setHudSpineReadiness] = useState<MovementSpineReadiness["status"]>("blocked");
   const [finalSpineScore, setFinalSpineScore] = useState(0);
-  const [finalSpineCue, setFinalSpineCue] = useState("Review the spine guide and try one calmer pass.");
+  const [finalSpineCue, setFinalSpineCue] = useState(DEFAULT_SPINE_CUE);
+  const [finalSessionResult, setFinalSessionResult] = useState<MovementSessionScoreResult | null>(null);
   const scoreRef = useRef(0);
   const comboRef = useRef(0);
   const syncRef = useRef(0);
-  const bestSpineRef = useRef({ cue: "Review the spine guide and try one calmer pass.", score: 0 });
+  const sessionScoreRef = useRef(createMovementSessionScoreState());
   const lastHudUpdateRef = useRef(0);
   const lastPlayerMotionFrameRef = useRef<MovementMotionFrame | null>(null);
   const lastScoreUpdateRef = useRef(0);
@@ -191,10 +202,14 @@ export function useMovementMatchScoring({
       if (playback.status === "empty") return;
       if (playback.status === "complete") {
         if (isPlaying) {
-          setFinalScore(scoreRef.current);
-          setFinalSpineScore(bestSpineRef.current.score);
-          setFinalSpineCue(bestSpineRef.current.cue);
-          setHudScore(scoreRef.current);
+          const sessionResult = resolveMovementSessionScoreResult(sessionScoreRef.current);
+          setFinalSessionResult(sessionResult);
+          setFinalScore(sessionResult.points);
+          // Averaged across the session: a single well-held frame used to be
+          // reported as the whole practice.
+          setFinalSpineScore(sessionResult.spinePercent);
+          setFinalSpineCue(sessionResult.spineCue ?? DEFAULT_SPINE_CUE);
+          setHudScore(sessionResult.points);
           setHudSync(Math.round(syncRef.current));
           setIsPlaying(false);
           setIsComplete(true);
@@ -214,12 +229,6 @@ export function useMovementMatchScoring({
 
       if (hudFrame) {
         syncRef.current = hudFrame.sync;
-        if (hudFrame.spineScore > bestSpineRef.current.score) {
-          bestSpineRef.current = {
-            cue: hudFrame.spineCue,
-            score: hudFrame.spineScore,
-          };
-        }
 
         const now = performance.now();
         const shouldUpdateScore = now - lastScoreUpdateRef.current >= SCORE_UPDATE_INTERVAL_MS;
@@ -235,6 +244,8 @@ export function useMovementMatchScoring({
             setFeedbackMsg(null);
           } else {
             const { gameplayEventFrame, gameplaySummary } = resolveMovementMatchScoringGameplaySummary({
+              // Scoring is graded against the coach, not against movement alone.
+              instructorSync: instructorMotionFrame ? hudFrame.sync : null,
               playerMotionFrame,
               previousPlayerMotionFrame: lastPlayerMotionFrameRef.current,
               streak: comboRef.current,
@@ -242,6 +253,13 @@ export function useMovementMatchScoring({
             lastPlayerMotionFrameRef.current = playerMotionFrame;
             comboRef.current = gameplayEventFrame.nextStreak;
             scoreRef.current += gameplaySummary.scoreDeltaTotal;
+            accumulateMovementSessionScoreFrame(sessionScoreRef.current, {
+              gameplayEventFrame,
+              instructorSync: instructorMotionFrame ? hudFrame.sync : null,
+              scoreDeltaTotal: gameplaySummary.scoreDeltaTotal,
+              spineCue: hudFrame.spineCue,
+              spineScore: hudFrame.spineScore,
+            });
 
             if (!gameplaySummary.feedbackMessage) {
               setFeedbackMsg(null);
@@ -335,15 +353,13 @@ export function useMovementMatchScoring({
     scoreRef.current = 0;
     comboRef.current = 0;
     syncRef.current = 0;
-    bestSpineRef.current = {
-      cue: "Review the spine guide and try one calmer pass.",
-      score: 0,
-    };
+    sessionScoreRef.current = createMovementSessionScoreState();
     lastPlayerMotionFrameRef.current = null;
     lastScoreUpdateRef.current = 0;
+    setFinalSessionResult(null);
     setFinalScore(0);
     setFinalSpineScore(0);
-    setFinalSpineCue("Review the spine guide and try one calmer pass.");
+    setFinalSpineCue(DEFAULT_SPINE_CUE);
     setHudScore(0);
     setHudSync(0);
     setHudSpine(0);
@@ -354,6 +370,7 @@ export function useMovementMatchScoring({
 
   return {
     finalScore,
+    finalSessionResult,
     finalSpineScore,
     finalSpineCue,
     feedbackMsg,

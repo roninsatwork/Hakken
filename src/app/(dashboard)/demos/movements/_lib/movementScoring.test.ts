@@ -5,7 +5,6 @@ import {
   calculateLandmarkMotion,
   calculateMovementSync,
   isZenExpressionActive,
-  updateMovementScore,
   type ScoreLandmark,
 } from "./movementScoring";
 
@@ -98,30 +97,6 @@ describe("movement scoring", () => {
       { categoryName: "mouthSmileLeft", score: 0.6 },
       { categoryName: "mouthSmileRight", score: 0.5 },
     ])).toBe(true);
-  });
-
-  test("updates combo score and feedback thresholds", () => {
-    const result = updateMovementScore({ sync: 100, combo: 14, score: 100, isZenActive: false });
-
-    expect(result.combo).toBe(15);
-    expect(result.score).toBe(120);
-    expect(result.feedbackText).toBe("PERFECT ALIGNMENT");
-  });
-
-  test("breaks combo below sync floor", () => {
-    const result = updateMovementScore({ sync: 40, combo: 20, score: 100, isZenActive: false });
-
-    expect(result.combo).toBe(0);
-    expect(result.score).toBe(100);
-    expect(result.shouldClearFeedback).toBe(true);
-  });
-
-  test("adds zen frame score and feedback", () => {
-    const result = updateMovementScore({ sync: 100, combo: 44, score: 0, isZenActive: true });
-
-    expect(result.combo).toBe(45);
-    expect(result.score).toBe(55);
-    expect(result.feedbackText).toBe("ZEN BONUS ACTIVE");
   });
 
   test("calculates hand aperture", () => {

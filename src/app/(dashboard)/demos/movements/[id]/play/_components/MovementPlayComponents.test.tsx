@@ -93,18 +93,40 @@ describe("movement play components", () => {
       <MovementCompletionDialog
         isOpen
         finalScore={420}
-        finalSpineScore={82}
-        finalSpineCue="Keep tall spine as the knees bend."
+        finalSessionResult={{
+          activePercent: 61,
+          coachMatchPercent: 74,
+          grade: "Strong",
+          movementQualityPercent: 68,
+          overallPercent: 78,
+          points: 420,
+          repCount: 12,
+          spineCue: "Keep tall spine as the knees bend.",
+          spinePercent: 82,
+          trackingPercent: 96,
+        }}
         onExitMatch={onExitMatch}
         onRematch={onRematch}
       />,
     );
 
     expect(screen.getByText("Practice Complete")).toBeInTheDocument();
-    expect(screen.getByText("420")).toBeInTheDocument();
-    expect(screen.getByText("Best Spine")).toBeInTheDocument();
+    // The headline is a normalised 0-100, not the raw points rate.
+    expect(screen.getByTestId("movement-result-overall")).toHaveTextContent("78%");
+    expect(screen.getByText("Strong")).toBeInTheDocument();
+    expect(screen.getByText("420 points")).toBeInTheDocument();
+    expect(screen.getByText("Moves completed")).toBeInTheDocument();
+    expect(screen.getByText("Full movements you finished")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("Stayed with your coach")).toBeInTheDocument();
+    expect(screen.getByText("How closely you matched them")).toBeInTheDocument();
+    expect(screen.getByText("74%")).toBeInTheDocument();
+    expect(screen.getByText("Posture")).toBeInTheDocument();
+    expect(screen.getByText("How tall you stayed throughout")).toBeInTheDocument();
+    expect(screen.getByText("How far you moved")).toBeInTheDocument();
     expect(screen.getByText("82%")).toBeInTheDocument();
     expect(screen.getByText("Keep tall spine as the knees bend.")).toBeInTheDocument();
+    expect(screen.getByText("You were in full view for 96% of the practice.")).toBeInTheDocument();
 
     rerender(
       <MovementCompletionDialog
@@ -119,7 +141,7 @@ describe("movement play components", () => {
     expect(screen.getByText("Guided Preview")).toBeInTheDocument();
     expect(screen.getByText("Studio Ready")).toBeInTheDocument();
     expect(screen.getByText("The coach and student flow is ready for a live posture check.")).toBeInTheDocument();
-    expect(screen.queryByText("Alignment Result")).not.toBeInTheDocument();
+    expect(screen.queryByText("Practice score")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Leave Studio" }));
     fireEvent.click(screen.getByRole("button", { name: "Practice Again" }));

@@ -38,17 +38,6 @@ const ANGLES_TO_TRACK: TrackedAngle[] = [
   { name: "R_Hip_Abd", p: [24, 23, 25], i: [23, 24, 26] },
 ];
 
-const FEEDBACK_BY_COMBO = new Map([
-  [15, "PERFECT ALIGNMENT"],
-  [35, "BEAUTIFUL FORM"],
-  [60, "EXQUISITE CONTROL"],
-  [90, "FLAWLESS SYNCHRONIZATION"],
-  [120, "INCREDIBLE FLOW"],
-  [160, "TOTAL BODY HARMONY"],
-  [200, "UNSTOPPABLE MOMENTUM"],
-  [250, "PRECISION AND POWER"],
-]);
-
 const MOTION_TRACKING_INDICES = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28] as const;
 
 function getAxis(value: number | undefined) {
@@ -185,42 +174,4 @@ export function calculateLandmarkMotion(
   });
 
   return validLandmarks > 0 ? totalMotion / validLandmarks : 0;
-}
-
-export function updateMovementScore(args: {
-  sync: number;
-  combo: number;
-  score: number;
-  isZenActive: boolean;
-}) {
-  if (args.sync > 85) {
-    const combo = args.combo + 1;
-    const multiplier = Math.floor(combo / 10) + 1;
-    const frameScore = 10 * multiplier + (args.isZenActive ? 5 : 0);
-    const thresholdFeedback = FEEDBACK_BY_COMBO.get(combo);
-    const zenFeedback = args.isZenActive && combo % 45 === 0 ? "ZEN BONUS ACTIVE" : undefined;
-
-    return {
-      combo,
-      score: args.score + frameScore,
-      feedbackText: zenFeedback ?? thresholdFeedback,
-      shouldClearFeedback: false,
-    };
-  }
-
-  if (args.sync < 65) {
-    return {
-      combo: 0,
-      score: args.score,
-      feedbackText: undefined,
-      shouldClearFeedback: true,
-    };
-  }
-
-  return {
-    combo: args.combo,
-    score: args.score,
-    feedbackText: undefined,
-    shouldClearFeedback: false,
-  };
 }

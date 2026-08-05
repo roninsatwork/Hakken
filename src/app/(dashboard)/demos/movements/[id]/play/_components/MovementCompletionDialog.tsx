@@ -1,10 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import type { MovementSessionScoreResult } from "../../../_lib/movementSessionScore";
 
 type MovementCompletionDialogProps = {
   isOpen: boolean;
   finalScore: number;
+  finalSessionResult?: MovementSessionScoreResult | null;
   finalSpineScore?: number;
   finalSpineCue?: string;
   isPreviewMode?: boolean;
@@ -12,15 +14,38 @@ type MovementCompletionDialogProps = {
   onRematch: () => void;
 };
 
+function ResultStat({
+  description,
+  label,
+  value,
+}: {
+  description: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left">
+      <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/[0.48]">
+        {label}
+      </span>
+      <span className="mt-1 block text-2xl font-black text-[#a8d5ba]">{value}</span>
+      <span className="mt-1 block text-xs leading-5 text-white/[0.45]">{description}</span>
+    </div>
+  );
+}
+
 export default function MovementCompletionDialog({
   isOpen,
   finalScore,
+  finalSessionResult = null,
   finalSpineScore = 0,
   finalSpineCue = "Review the spine guide and try one calmer pass.",
   isPreviewMode = false,
   onExitMatch,
   onRematch,
 }: MovementCompletionDialogProps) {
+  const spinePercent = finalSessionResult?.spinePercent ?? finalSpineScore;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -61,22 +86,70 @@ export default function MovementCompletionDialog({
               ) : (
                 <>
                   <span className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-white/[0.48]">
-                    Alignment Result
+                    Practice score
                   </span>
-                  <span className="text-5xl font-black tracking-tight text-[#f6ccbe]">{finalScore}</span>
-                  <div className="mt-8 grid w-full grid-cols-[96px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left">
-                    <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/[0.48]">
-                        Best Spine
+                  <span
+                    className="text-5xl font-black tracking-tight text-[#f6ccbe]"
+                    data-testid="movement-result-overall"
+                  >
+                    {finalSessionResult ? `${finalSessionResult.overallPercent}%` : finalScore}
+                  </span>
+                  {finalSessionResult ? (
+                    <>
+                      <span className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-white/70">
+                        {finalSessionResult.grade}
                       </span>
-                      <span className="mt-1 block text-2xl font-black text-[#a8d5ba]">
-                        {finalSpineScore}%
+                      <span className="mt-1 text-xs uppercase tracking-[0.16em] text-white/[0.4]">
+                        {finalSessionResult.points} points
                       </span>
+                      <div className="mt-8 grid w-full grid-cols-2 gap-3">
+                        <ResultStat
+                          description="Full movements you finished"
+                          label="Moves completed"
+                          value={String(finalSessionResult.repCount)}
+                        />
+                        <ResultStat
+                          description="How closely you matched them"
+                          label="Stayed with your coach"
+                          value={
+                            finalSessionResult.coachMatchPercent === null
+                              ? "—"
+                              : `${finalSessionResult.coachMatchPercent}%`
+                          }
+                        />
+                        <ResultStat
+                          description="How tall you stayed throughout"
+                          label="Posture"
+                          value={`${spinePercent}%`}
+                        />
+                        <ResultStat
+                          description="How much of each movement you reached"
+                          label="How far you moved"
+                          value={`${finalSessionResult.movementQualityPercent}%`}
+                        />
+                      </div>
+                      <p className="mt-4 w-full text-left text-sm leading-6 text-white/60">
+                        {finalSessionResult.spineCue ?? finalSpineCue}
+                      </p>
+                      <p className="mt-2 w-full text-left text-xs leading-5 text-white/[0.4]">
+                        You were in full view for {finalSessionResult.trackingPercent}% of the practice.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="mt-8 grid w-full grid-cols-[96px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left">
+                      <div>
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-white/[0.48]">
+                          Posture
+                        </span>
+                        <span className="mt-1 block text-2xl font-black text-[#a8d5ba]">
+                          {spinePercent}%
+                        </span>
+                      </div>
+                      <p className="self-center text-sm leading-6 text-white/60">
+                        {finalSpineCue}
+                      </p>
                     </div>
-                    <p className="self-center text-sm leading-6 text-white/60">
-                      {finalSpineCue}
-                    </p>
-                  </div>
+                  )}
                 </>
               )}
             </div>
