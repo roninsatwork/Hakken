@@ -55,9 +55,36 @@ const customerFilterArgs = {
    * prospects are one click away rather than mixed in by default.
    */
   record: v.optional(
-    v.union(v.literal("CUSTOMERS"), v.literal("PROSPECTS"), v.literal("ALL"))
+    v.union(
+      v.literal("CUSTOMERS"),
+      v.literal("PROSPECTS"),
+      v.literal("SUSPECTS"),
+      v.literal("ALL")
+    )
   ),
 };
+
+type ListRecord = "CUSTOMERS" | "PROSPECTS" | "SUSPECTS" | "ALL";
+
+/**
+ * Prospects and suspects are the same table read two ways.
+ *
+ * A prospect is a site inside a group the workspace already supplies — the
+ * sales story is "we already serve your sister sites". A suspect came out of
+ * market discovery: a group nobody here has ever sold to, so it is colder and
+ * has to be worked differently. Anthony, 2026-08-05: *"can we call them
+ * suspects or something."* Mixing the two under one word made a warm list look
+ * bigger than it was, which is the one number a salesperson cannot afford to
+ * have inflated.
+ *
+ * A row with no origin predates market discovery, so it is existing-chain.
+ */
+function matchesOrigin(prospect: Doc<"salesDataProspects">, record: ListRecord) {
+  const isSuspect = prospect.origin === "MARKET_DISCOVERY";
+  if (record === "SUSPECTS") return isSuspect;
+  if (record === "PROSPECTS") return !isSuspect;
+  return true;
+}
 
 /**
  * Where a page of the combined list is reading from.
@@ -69,8 +96,9 @@ const customerFilterArgs = {
  */
 type ListStage = { source: "ACCOUNTS" | "PROSPECTS"; cursor: string | null };
 
-function decodeListStage(cursor: string | null, record: "CUSTOMERS" | "PROSPECTS" | "ALL"): ListStage {
-  const first: ListStage["source"] = record === "PROSPECTS" ? "PROSPECTS" : "ACCOUNTS";
+function decodeListStage(cursor: string | null, record: ListRecord): ListStage {
+  const first: ListStage["source"] =
+    record === "PROSPECTS" || record === "SUSPECTS" ? "PROSPECTS" : "ACCOUNTS";
   if (!cursor) return { source: first, cursor: null };
 
   try {
@@ -345,6 +373,7 @@ export const listCustomers = tenantQuery({
               // A prospect that started buying is a customer now, and appears in
               // the accounts half. Showing it here as well would double it.
               if (prospect.status !== "NEW") return false;
+              if (!matchesOrigin(prospect, record)) return false;
               const typed = details.get(prospect.prospectKey);
               return (
                 matchesFilter(args.customerType, prospect.customerType) &&
@@ -827,7 +856,7 @@ export const countCustomers = tenantQuery({
   handler: async (ctx) => {
     const companyId = await requireSalesDataCompany(ctx);
     const currentImport = await getCurrentImport(ctx, companyId);
-    if (!currentImport) return { total: 0, withDetails: 0, prospects: 0 };
+    if (!currentImport) return { total: 0, withDetails: 0, prospects: 0, suspects: 0 };
 
     const accounts = await ctx.db
       .query("salesDataAccounts")
@@ -840,12 +869,22 @@ export const countCustomers = tenantQuery({
     const withDetails = accounts.filter((a) => details.has(a.accountNameKey)).length;
 
     // Counted here so the gap is visible above the list without anybody
-    // changing the filter to find out it exists.
-    const prospects = await ctx.db
+    // changing the filter to find out it exists. Counted apart, because warm
+    // and cold are not one number: a prospect is inside a group already being
+    // supplied, a suspect is a group nobody here has sold to yet.
+    const openProspects = await ctx.db
       .query("salesDataProspects")
       .withIndex("by_company_status", (q) => q.eq("companyId", companyId).eq("status", "NEW"))
       .collect();
+    const suspects = openProspects.filter(
+      (prospect) => prospect.origin === "MARKET_DISCOVERY"
+    ).length;
 
-    return { total: accounts.length, withDetails, prospects: prospects.length };
+    return {
+      total: accounts.length,
+      withDetails,
+      prospects: openProspects.length - suspects,
+      suspects,
+    };
   },
 });

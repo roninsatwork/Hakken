@@ -45,7 +45,9 @@ function CustomerList() {
   const [search, setSearch] = useState("");
   const [customerType, setCustomerType] = useState<string | null>(null);
   const [groupName, setGroupName] = useState<string | null>(null);
-  const [record, setRecord] = useState<"CUSTOMERS" | "PROSPECTS" | "ALL">("CUSTOMERS");
+  const [record, setRecord] = useState<"CUSTOMERS" | "PROSPECTS" | "SUSPECTS" | "ALL">(
+    "CUSTOMERS"
+  );
 
   const pagination = useCursorPagination(
     JSON.stringify([search, customerType, groupName, record])
@@ -79,6 +81,7 @@ function CustomerList() {
               ? [
                   t("subtitle", { total: counts.total, withDetails: counts.withDetails }),
                   counts.prospects > 0 ? t("subtitleProspects", { count: counts.prospects }) : "",
+                  counts.suspects > 0 ? t("subtitleSuspects", { count: counts.suspects }) : "",
                 ]
                   .filter(Boolean)
                   .join(" ")
@@ -112,25 +115,33 @@ function CustomerList() {
             noMatchesLabel={t("filterNoMatches")}
           />
           <div className="flex items-center rounded-[12px] border border-border-dim overflow-hidden">
-            {(["CUSTOMERS", "PROSPECTS", "ALL"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setRecord(option)}
-                className={`px-3 py-2 text-[13px] transition-colors ${
-                  record === option
-                    ? "bg-brand/10 text-brand"
-                    : "text-secondary hover:text-foreground"
-                }`}
-              >
-                {t(`filterRecord${option}`)}
-                {option === "PROSPECTS" && counts && counts.prospects > 0 && (
-                  <span className="ml-1.5 text-[11px] text-muted tabular-nums">
-                    {counts.prospects}
-                  </span>
-                )}
-              </button>
-            ))}
+            {(["CUSTOMERS", "PROSPECTS", "SUSPECTS", "ALL"] as const).map((option) => {
+              // Each segment carries its own count, so the split between warm
+              // and cold is readable without clicking either.
+              const badge =
+                option === "PROSPECTS"
+                  ? counts?.prospects
+                  : option === "SUSPECTS"
+                    ? counts?.suspects
+                    : undefined;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setRecord(option)}
+                  className={`px-3 py-2 text-[13px] transition-colors ${
+                    record === option
+                      ? "bg-brand/10 text-brand"
+                      : "text-secondary hover:text-foreground"
+                  }`}
+                >
+                  {t(`filterRecord${option}`)}
+                  {badge !== undefined && badge > 0 && (
+                    <span className="ml-1.5 text-[11px] text-muted tabular-nums">{badge}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           {hasFilters && (
             <button
@@ -284,7 +295,9 @@ function CustomerList() {
               showing: (count) =>
                 record === "PROSPECTS"
                   ? t("rowsShownProspects", { count })
-                  : t("rowsShown", { count }),
+                  : record === "SUSPECTS"
+                    ? t("rowsShownSuspects", { count })
+                    : t("rowsShown", { count }),
             }}
           />
         </div>
@@ -445,8 +458,17 @@ function ResearchRow() {
     setMarketFinishedNotice(marketJob.endedReason ?? t("marketWorking"));
   }
 
-  const onPress = async (mode: "DETAILS" | "PROSPECTS") => {
+  // One bar, so one press clears whatever the other job left behind. Two
+  // strips meant a finished job's closing line sat above a live one with
+  // nothing but a colour to tell them apart. Anthony, 2026-08-05: *"it should
+  // use the same progress bar as all other buttons."*
+  const clearMessages = () => {
     setMessage(null);
+    setMarketMessage(null);
+  };
+
+  const onPress = async (mode: "DETAILS" | "PROSPECTS") => {
+    clearMessages();
     try {
       const result = await startResearch({ mode });
       if (result.nothingToDo) setMessage(t("researchNothingToDo"));
@@ -456,7 +478,7 @@ function ResearchRow() {
   };
 
   const onStartMarketDiscovery = async () => {
-    setMarketMessage(null);
+    clearMessages();
     try {
       await startMarketDiscovery({});
     } catch (caught) {
@@ -465,7 +487,7 @@ function ResearchRow() {
   };
 
   const onStopMarketDiscovery = async () => {
-    setMarketMessage(null);
+    clearMessages();
     try {
       await stopMarketDiscovery({});
     } catch (caught) {
@@ -475,6 +497,19 @@ function ResearchRow() {
 
   const finished = (job?.done ?? 0) + (job?.failed ?? 0);
   const percent = !job || job.total === 0 ? 0 : Math.round((finished / job.total) * 100);
+
+  /**
+   * Which job the one bar is currently telling the story of.
+   *
+   * A running job always wins, because that is what the reader is watching. A
+   * failed press wins next, so the reason a button did nothing is never buried
+   * under an older job's ending. Otherwise the most recently started job
+   * holds the bar, which is the one whose closing line is still news.
+   */
+  const showingMarket = marketIsRunning
+    || (!isRunning
+      && (marketMessage !== null
+        || (message === null && (marketJob?.startedAt ?? 0) > (job?.startedAt ?? 0))));
 
   return (
     <>
@@ -534,40 +569,16 @@ function ResearchRow() {
         {t("marketSetupButton")}
       </button>
 
+      {/* One strip for all three buttons. The bar keeps the colour of the
+          button that filled it, so it is still obvious which job is talking,
+          and a job that finished says so in its own closing words until the
+          next press — finishing silently read as never finishing. Anthony,
+          2026-08-03: "did the agent complete? I never got a message." */}
       <div className="flex-1 min-w-[220px] flex flex-col gap-1.5 px-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          {/* A job that finished says so, in the job's own closing words, until
-              the next press — finishing silently read as never finishing.
-              Anthony, 2026-08-03: "did the agent complete? I never got a
-              message." */}
-          <span className={`text-[12.5px] ${isRunning ? "text-foreground" : "text-muted"}`}>
-            {isRunning
-              ? job?.workingOn
-                ? t("researchWorkingOn", { name: job.workingOn.label })
-                : t("researchWorking")
-              : message
-                ?? (job?.endedReason
-                  ? t("researchFinished", { reason: job.endedReason })
-                  : t("researchIdle"))}
-          </span>
-          {isRunning && (
-            <span className="text-[12px] text-secondary tabular-nums">
-              {t("researchProgress", { done: finished, total: job?.total ?? 0 })}
-            </span>
-          )}
-        </div>
-        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-          <div
-            className="h-full bg-brand transition-all"
-            style={{ width: `${isRunning ? percent : 0}%` }}
-          />
-        </div>
-      </div>
-      {(marketIsRunning || marketJob || marketMessage) && (
-        <div className="basis-full flex flex-col gap-1.5 px-2 pb-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className={`text-[12.5px] ${marketIsRunning ? "text-foreground" : "text-muted"}`}>
-              {marketIsRunning
+          <span className={`text-[12.5px] ${anyRunning ? "text-foreground" : "text-muted"}`}>
+            {showingMarket
+              ? marketIsRunning
                 ? t("marketWorkingOn", {
                     phase: marketJob?.phaseLabel ?? t("marketWorking"),
                     name: marketJob?.currentLabel ?? marketJob?.customerType ?? "",
@@ -575,41 +586,58 @@ function ResearchRow() {
                 : marketMessage
                   ?? (marketJob?.endedReason
                     ? t("marketFinished", { reason: marketJob.endedReason })
-                    : t("marketIdle"))}
-            </span>
-            {marketJob && (
-              <span className="text-[12px] text-secondary tabular-nums">
-                {t("marketProgress", {
-                  accepted: marketJob.groupsAccepted,
-                  target: marketJob.targetGroupCount,
-                  locations: marketJob.locationsFiled,
-                  duplicates: marketJob.groupsDuplicate + marketJob.locationsDuplicate,
-                  review: marketJob.groupsNeedsCheck + marketJob.locationsNeedsCheck,
-                  spend: marketJob.spentGBP.toFixed(2),
-                  max: marketJob.maxCostGBP.toFixed(2),
-                })}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
-              <div
-                className="h-full bg-amber-400 transition-all"
-                style={{ width: `${marketIsRunning ? marketJob?.percent ?? 0 : 0}%` }}
-              />
-            </div>
-            {marketIsRunning && (
-              <button
-                type="button"
-                onClick={() => void onStopMarketDiscovery()}
-                className="px-2.5 py-1 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:border-border transition-colors"
-              >
-                {t("marketStop")}
-              </button>
-            )}
-          </div>
+                    : t("marketIdle"))
+              : isRunning
+                ? job?.workingOn
+                  ? t("researchWorkingOn", { name: job.workingOn.label })
+                  : t("researchWorking")
+                : message
+                  ?? (job?.endedReason
+                    ? t("researchFinished", { reason: job.endedReason })
+                    : t("researchIdle"))}
+          </span>
+          {showingMarket
+            ? marketJob && (
+                <span className="text-[12px] text-secondary tabular-nums">
+                  {t("marketProgress", {
+                    accepted: marketJob.groupsAccepted,
+                    target: marketJob.targetGroupCount,
+                    locations: marketJob.locationsFiled,
+                    duplicates: marketJob.groupsDuplicate + marketJob.locationsDuplicate,
+                    review: marketJob.groupsNeedsCheck + marketJob.locationsNeedsCheck,
+                    spend: marketJob.spentGBP.toFixed(2),
+                    max: marketJob.maxCostGBP.toFixed(2),
+                  })}
+                </span>
+              )
+            : isRunning && (
+                <span className="text-[12px] text-secondary tabular-nums">
+                  {t("researchProgress", { done: finished, total: job?.total ?? 0 })}
+                </span>
+              )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 flex-1 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className={`h-full transition-all ${showingMarket ? "bg-amber-400" : "bg-brand"}`}
+              style={{
+                width: `${showingMarket
+                  ? marketIsRunning ? marketJob?.percent ?? 0 : 0
+                  : isRunning ? percent : 0}%`,
+              }}
+            />
+          </div>
+          {marketIsRunning && (
+            <button
+              type="button"
+              onClick={() => void onStopMarketDiscovery()}
+              className="px-2.5 py-1 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:border-border transition-colors"
+            >
+              {t("marketStop")}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
     </>
   );

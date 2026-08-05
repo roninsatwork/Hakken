@@ -285,6 +285,7 @@ describe("customer list", () => {
       total: 3,
       withDetails: 0,
       prospects: 0,
+      suspects: 0,
     });
 
     await addDetails(t, companyId, userId, "Barrowfield Hotel Ltd", { phone: "01323 410222" });
@@ -293,7 +294,91 @@ describe("customer list", () => {
       total: 3,
       withDetails: 1,
       prospects: 0,
+      suspects: 0,
     });
+  });
+
+  test("prospects and suspects are counted and listed apart", async () => {
+    const { t, client, companyId } = await seed();
+
+    await t.run(async (ctx) => {
+      const base = {
+        companyId,
+        status: "NEW" as const,
+        foundAt: Date.now(),
+      };
+      // A sibling site inside a chain already supplied: warm.
+      await ctx.db.insert("salesDataProspects", {
+        ...base,
+        prospectKey: key("Daish's Sandbanks Hotel"),
+        siteName: "Daish's Sandbanks Hotel",
+        groupName: "Daish's Hotels",
+        groupNameKey: key("Daish's Hotels"),
+        customerType: "HOTELS",
+        customerTypeKey: key("HOTELS"),
+      });
+      // A site under a group nobody here has sold to: cold.
+      await ctx.db.insert("salesDataProspects", {
+        ...base,
+        prospectKey: key("Barchester Test Home"),
+        siteName: "Barchester Test Home",
+        groupName: "Barchester Healthcare",
+        groupNameKey: key("Barchester Healthcare"),
+        customerType: "CARE HOMES",
+        customerTypeKey: key("CARE HOMES"),
+        origin: "MARKET_DISCOVERY",
+      });
+    });
+
+    expect(await client.query(api.salesDataCustomers.countCustomers, {})).toEqual({
+      total: 3,
+      withDetails: 0,
+      prospects: 1,
+      suspects: 1,
+    });
+
+    const prospects = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      record: "PROSPECTS",
+    });
+    expect(prospects.page.map((row) => row.accountName)).toEqual(["Daish's Sandbanks Hotel"]);
+
+    const suspects = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      record: "SUSPECTS",
+    });
+    expect(suspects.page.map((row) => row.accountName)).toEqual(["Barchester Test Home"]);
+    expect(suspects.page[0]?.origin).toBe("MARKET_DISCOVERY");
+  });
+
+  test("a prospect filed before market discovery existed still reads as a prospect", async () => {
+    const { t, client, companyId } = await seed();
+
+    // No origin field at all, which is every row written before the market
+    // discovery lane shipped.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("salesDataProspects", {
+        companyId,
+        prospectKey: key("Old Rowntree Hotel"),
+        siteName: "Old Rowntree Hotel",
+        groupName: "Daish's Hotels",
+        groupNameKey: key("Daish's Hotels"),
+        customerType: "HOTELS",
+        customerTypeKey: key("HOTELS"),
+        status: "NEW",
+        foundAt: Date.now(),
+      });
+    });
+
+    const counts = await client.query(api.salesDataCustomers.countCustomers, {});
+    expect(counts.prospects).toBe(1);
+    expect(counts.suspects).toBe(0);
+
+    const suspects = await client.query(api.salesDataCustomers.listCustomers, {
+      paginationOpts: page,
+      record: "SUSPECTS",
+    });
+    expect(suspects.page).toEqual([]);
   });
 
   test("the missing-details filter narrows to who the sweep would research", async () => {
