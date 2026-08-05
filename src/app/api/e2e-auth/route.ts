@@ -7,7 +7,7 @@ import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
  * account sees would be to create one against real data and sign in as it,
  * which is enough friction that the check gets skipped.
  */
-const E2E_ROLES = new Set(["super-admin", "company-admin", "user", "read-only"]);
+const E2E_ROLES = new Set(["super-admin", "company-admin", "user", "read-only", "auditor"]);
 
 export function GET(request: NextRequest) {
   if (process.env.E2E_AUTH_ENABLED !== "1") {

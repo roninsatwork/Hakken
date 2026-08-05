@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Eye } from "lucide-react";
@@ -20,12 +20,18 @@ import { canWrite } from "@/src/lib/userRoles";
  * the two together mean a read-only account sees the same screens and can act
  * on none of them.
  *
- * `AUDITOR` is deliberately absent until the Governance section exists. An
- * auditor sees the governance surfaces only, which is narrower than this
- * section, so letting them in here now would grant more than the role is meant
- * to carry. See docs/plans/active/governance-and-trust-plan.md.
+ * `AUDITOR` reaches the Governance section and nothing else. It waited for that
+ * section to exist, because admitting it to the whole admin area would have
+ * granted far more than the role is meant to carry — an auditor's reach is the
+ * register, the approvals, the audit trail, the policies in force and the
+ * evidence pack, and that is the entire list.
+ *
+ * See docs/plans/active/governance-and-trust-plan.md.
  */
 const ADMIN_SECTION_ROLES = ["SUPER_ADMIN", "READ_ONLY"];
+
+/** The only part of the admin section an auditor may open. */
+const GOVERNANCE_PATH = "/admin/governance";
 
 export default function AdminLayout({
   children,
@@ -33,16 +39,22 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const user = useQuery(api.users.getMe);
   const t = useTranslations('admin.access');
 
-  const isAllowed = Boolean(user?.role && ADMIN_SECTION_ROLES.includes(user.role));
+  const isAuditor = user?.role === "AUDITOR";
+  const inGovernance = pathname.startsWith(GOVERNANCE_PATH);
+  const isAllowed = Boolean(user?.role)
+    && (ADMIN_SECTION_ROLES.includes(user?.role ?? "") || (isAuditor && inGovernance));
 
   useEffect(() => {
-    if (user !== undefined && !isAllowed) {
-      router.push("/app");
-    }
-  }, [user, isAllowed, router]);
+    if (user === undefined || isAllowed) return;
+
+    // An auditor who lands anywhere else in the admin section goes to the part
+    // they are here for, rather than being bounced out of the platform.
+    router.push(isAuditor ? GOVERNANCE_PATH : "/app");
+  }, [user, isAllowed, isAuditor, router]);
 
   // Prevent UI flashing during auth checks and redirects.
   if (user === undefined || !isAllowed) return null;
@@ -61,9 +73,16 @@ export default function AdminLayout({
            */
           <div className="flex items-start gap-3 px-6 py-3 border-b border-border-dim bg-foreground/[0.03] text-[13px] text-secondary">
             <Eye className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+            {/*
+              Two roles reach this banner and they see different amounts, so it
+              says which. Telling an auditor they "can see everything here" when
+              Governance is all they can open is simply untrue.
+            */}
             <p>
-              <span className="text-foreground font-medium">{t('readOnlyTitle')}</span>{" "}
-              {t('readOnlyDescription')}
+              <span className="text-foreground font-medium">
+                {isAuditor ? t('auditorTitle') : t('readOnlyTitle')}
+              </span>{" "}
+              {isAuditor ? t('auditorDescription') : t('readOnlyDescription')}
             </p>
           </div>
         ) : null}

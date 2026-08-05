@@ -2040,7 +2040,9 @@
             }
         },
         "access": {
-            "readOnlyTitle": "Hai accesso in sola lettura.",
+            "auditorTitle": "Hai accesso come revisore.",
+                "auditorDescription": "Puoi vedere le schermate di governance — il registro IA, le approvazioni, il registro attività e le politiche in vigore. Nient’altro sulla piattaforma è aperto al tuo account e nulla qui può essere modificato.",
+                "readOnlyTitle": "Hai accesso in sola lettura.",
             "readOnlyDescription": "Puoi vedere tutto qui e nulla in queste schermate può essere modificato dal tuo account."
         },
         "users": {

@@ -19,7 +19,7 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
  * in — it has never known about roles — so this list exists purely so the
  * fixture harness can show what a read-only account sees.
  */
-const E2E_ADMIN_ROLES = new Set(["super-admin", "read-only"]);
+const E2E_ADMIN_ROLES = new Set(["super-admin", "read-only", "auditor"]);
 
 function requestedProtectedRoute(request: Parameters<typeof isProtectedRoute>[0]) {
   return sanitizeAuthRedirect(`${request.nextUrl.pathname}${request.nextUrl.search}`);

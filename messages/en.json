@@ -2040,7 +2040,9 @@
             }
         },
         "access": {
-            "readOnlyTitle": "You have read-only access.",
+            "auditorTitle": "You have auditor access.",
+                "auditorDescription": "You can see the governance screens — the AI register, approvals, the audit trail and the policies in force. Nothing else on the platform is open to your account, and nothing here can be changed from it.",
+                "readOnlyTitle": "You have read-only access.",
             "readOnlyDescription": "You can see everything here, and nothing on these screens can be changed from your account."
         },
         "users": {

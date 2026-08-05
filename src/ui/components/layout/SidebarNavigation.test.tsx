@@ -88,6 +88,12 @@ const labels: Record<string, string> = {
   companies: "Companies",
   connectors: "Connectors",
   dashboard: "Dashboard",
+  governance: "Governance",
+  governanceOverview: "Overview",
+  aiRegister: "AI Register",
+  governanceApprovals: "Approvals",
+  auditTrail: "Audit Trail",
+  policiesInForce: "Policies",
   globalKnowledge: "Global Knowledge",
   invitations: "Invitations",
   maintenance: "Maintenance",
@@ -257,3 +263,34 @@ describe("SidebarNavigation AI guardrails", () => {
   });
   // template:remove:end
 });
+
+/**
+ * An auditor exists to read the governance surfaces and nothing else. Offering
+ * links that bounce them straight back would be worse than offering none.
+ */
+describe("SidebarNavigation auditor reach", () => {
+  const renderAsAuditor = (pathname: string) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+    useQueryMock.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "users:getMe") return { role: "AUDITOR" };
+      return undefined;
+    });
+    render(<SidebarNavigation />);
+  };
+
+  it("offers Governance and none of the other admin sections", () => {
+    renderAsAuditor("/admin/governance");
+
+    expect(screen.getByRole("link", { name: /AI Register/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Manage Companies/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /System Settings/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Manage Agents/ })).not.toBeInTheDocument();
+  });
+
+  it("does not offer the admin dashboard, which it cannot open", () => {
+    renderAsAuditor("/admin/governance");
+
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
+  });
+});
+

@@ -414,6 +414,12 @@ export default function SidebarNavigation() {
    * Deliberately not used for impersonation, which is a write.
    */
   const canSeeAdminSections = isSuperAdmin || user?.role === "READ_ONLY";
+  /**
+   * An auditor reaches Governance and nothing else, so the menu shows Governance
+   * and nothing else. Offering links that bounce them back here would be worse
+   * than offering none.
+   */
+  const isAuditor = user?.role === "AUDITOR";
   const router = useRouter();
   const impersonateCompany = useMutation(api.users.impersonateCompany);
   const impersonatedCompany = useQuery(
@@ -516,13 +522,15 @@ export default function SidebarNavigation() {
               <nav>
                 {isAdmin ? (
                   <>
-                    <NavItem
-                      icon={LayoutDashboard}
-                      label={t('dashboard')}
-                      href="/admin" navKey="adminDashboard"
-                      isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')}
-                      onClick={() => setActiveItem('Admin Dashboard')}
-                    />
+                    {!isAuditor && (
+                      <NavItem
+                        icon={LayoutDashboard}
+                        label={t('dashboard')}
+                        href="/admin" navKey="adminDashboard"
+                        isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')}
+                        onClick={() => setActiveItem('Admin Dashboard')}
+                      />
+                    )}
 
                     {/*
                       Top level, and not a child of Artificial Intelligence.
