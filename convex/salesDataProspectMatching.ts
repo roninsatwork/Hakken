@@ -43,6 +43,46 @@ export function normalizePostcode(value: string | undefined): string | null {
 }
 
 /**
+ * The shape of every UK postcode and nothing else.
+ *
+ * One or two letters, a digit, an optional digit or letter, then a digit and
+ * two letters. A US ZIP, an Eircode and a French code all fail it, which is the
+ * point: Comax delivers from England, so a site it cannot reach is not a
+ * prospect however good the company is. Cheap to check and impossible to fake
+ * from a foreign address, which makes it a better country test than asking a
+ * model to be careful.
+ */
+const UK_POSTCODE = /^[A-Z]{1,2}[0-9][0-9A-Z]?[0-9][A-Z]{2}$/;
+
+export function isUkPostcode(value: string | undefined): boolean {
+  const normalized = normalizePostcode(value);
+  return normalized !== null && UK_POSTCODE.test(normalized);
+}
+
+/**
+ * Postcode areas in the south of England.
+ *
+ * A preference, never a gate — Anthony, 2026-08-05: *"ideally in the south of
+ * england but thats not a deal breaker."* A site outside these is still filed;
+ * this only lets the run be told what to look for first, and lets somebody
+ * reading the list see which half of the country it landed in.
+ */
+const SOUTHERN_POSTCODE_AREAS = new Set([
+  "AL", "BA", "BH", "BN", "BR", "BS", "CB", "CM", "CO", "CR", "CT", "DA", "DT",
+  "E", "EC", "EN", "EX", "GL", "GU", "HA", "HP", "IG", "IP", "KT", "LU", "ME",
+  "MK", "N", "NR", "NW", "OX", "PL", "PO", "RG", "RH", "RM", "SE", "SG", "SL",
+  "SM", "SN", "SO", "SP", "SS", "SW", "TA", "TN", "TQ", "TR", "TW", "UB", "W",
+  "WC", "WD", "SG",
+]);
+
+export function isSouthernPostcode(value: string | undefined): boolean {
+  const normalized = normalizePostcode(value);
+  if (!normalized || !UK_POSTCODE.test(normalized)) return false;
+  const area = normalized.match(/^[A-Z]{1,2}/)?.[0];
+  return area !== undefined && SOUTHERN_POSTCODE_AREAS.has(area);
+}
+
+/**
  * The identifying words of a business name, in a stable order.
  *
  * The group prefix goes, the noise words go, and what is left is sorted so

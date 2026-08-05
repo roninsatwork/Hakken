@@ -163,7 +163,8 @@
         "salesDataResearchJobs",
         "salesDataResearchJobItems",
         "salesOpportunityReports",
-        "salesOpportunityReportGapProducts"
+        "salesOpportunityReportGapProducts",
+        "salesOpportunityReportTypeBaskets"
       ],
       "packageDependencies": [],
       "packageScripts": [],

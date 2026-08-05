@@ -304,6 +304,107 @@ export function buildGapProducts(
   }));
 }
 
+export type TypeBasket = {
+  customerTypeKey: string;
+  customerType: string;
+  totalSpendGBP: number;
+  customerCount: number;
+  categories: Array<{
+    categoryKey: string;
+    category: string;
+    spendGBP: number;
+    products: Array<{ description: string; spendGBP: number }>;
+  }>;
+};
+
+/** Products kept per category. Enough to sell from, short of a whole catalogue. */
+const BASKET_PRODUCTS_PER_CATEGORY = 12;
+
+/**
+ * What a customer of each type buys, and in what proportion.
+ *
+ * The mirror of `buildGapProducts` for a site nobody supplies yet. A gap can
+ * point at the sister accounts inside the same chain; a prospect in a chain
+ * with no customers has no siblings, so the pool is every customer of its
+ * type — the same pool its estimate was priced against, which is what makes
+ * the two figures agree.
+ *
+ * Shares, not totals, are the useful output: a site's own estimate multiplied
+ * by "chemicals are 28% of what these customers spend" is a line a rep can say
+ * out loud and a reader can check with a calculator. Storing the mix rather
+ * than pre-multiplying it keeps that arithmetic visible.
+ *
+ * Zero-revenue rows stay out, exactly as they do for gaps: the workbook writes
+ * "bought nothing" as a zero line, and a £0 product on an order sheet is
+ * noise a salesperson has to read past.
+ */
+export function buildTypeBaskets(
+  productRows: Array<{
+    customerTypeKey: string;
+    customerType: string;
+    accountNameKey: string;
+    categoryKey: string;
+    category: string;
+    productDescription: string;
+    spendGBP: number;
+  }>
+): TypeBasket[] {
+  type CategoryPool = { category: string; spendGBP: number; products: Map<string, number> };
+  type TypePool = {
+    customerType: string;
+    accounts: Set<string>;
+    categories: Map<string, CategoryPool>;
+  };
+
+  const types = new Map<string, TypePool>();
+
+  for (const row of productRows) {
+    if (row.spendGBP <= 0) continue;
+    const description = row.productDescription.trim();
+    if (!description) continue;
+
+    const type = types.get(row.customerTypeKey) ?? {
+      customerType: row.customerType,
+      accounts: new Set<string>(),
+      categories: new Map<string, CategoryPool>(),
+    };
+    type.accounts.add(row.accountNameKey);
+
+    const category = type.categories.get(row.categoryKey) ?? {
+      category: row.category,
+      spendGBP: 0,
+      products: new Map<string, number>(),
+    };
+    category.spendGBP += row.spendGBP;
+    category.products.set(description, (category.products.get(description) ?? 0) + row.spendGBP);
+
+    type.categories.set(row.categoryKey, category);
+    types.set(row.customerTypeKey, type);
+  }
+
+  return [...types.entries()].map(([customerTypeKey, type]) => {
+    const categories = [...type.categories.entries()]
+      .map(([categoryKey, category]) => ({
+        categoryKey,
+        category: category.category,
+        spendGBP: round2(category.spendGBP),
+        products: [...category.products.entries()]
+          .map(([description, spendGBP]) => ({ description, spendGBP: round2(spendGBP) }))
+          .sort((a, b) => b.spendGBP - a.spendGBP)
+          .slice(0, BASKET_PRODUCTS_PER_CATEGORY),
+      }))
+      .sort((a, b) => b.spendGBP - a.spendGBP);
+
+    return {
+      customerTypeKey,
+      customerType: type.customerType,
+      totalSpendGBP: round2(categories.reduce((sum, category) => sum + category.spendGBP, 0)),
+      customerCount: type.accounts.size,
+      categories,
+    };
+  });
+}
+
 /**
  * Every gap inside every chain: categories a member's siblings buy that it
  * does not.

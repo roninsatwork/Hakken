@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import html2canvas from "html2canvas";
@@ -101,6 +102,17 @@ export default function OpportunityReportPage() {
   const report = useQuery(api.salesOpportunityReports.getLatestOpportunityReport, {});
   const pdfRef = useRef<HTMLDivElement>(null);
 
+  // The open tab lives in the address bar rather than in state, so a section
+  // can be sent to somebody — "look at the suspects" is a link, not an
+  // instruction to click twice.
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeSection = parseSectionKey(searchParams?.get("section"));
+  const openSection = (key: SectionKey) => {
+    router.replace(`${pathname}?section=${key.toLowerCase()}`, { scroll: false });
+  };
+
   // The export must carry everything the screen can show, so the capture
   // briefly forces every collapsed tail and the summary open, then lets go.
   const [exporting, setExporting] = useState(false);
@@ -137,6 +149,7 @@ export default function OpportunityReportPage() {
   const isRunning = report?.status === "RUNNING";
   const hasSections = Boolean(report?.headline) && report?.phase === "DONE";
   const productsFor = report ? productsMapOf(report) : new Map<string, GapProductLine[]>();
+  const basketFor = report ? basketMapOf(report) : new Map<string, TypeBasket>();
 
   return (
     <>
@@ -171,16 +184,30 @@ export default function OpportunityReportPage() {
         {hasSections && report?.headline && (
           <div ref={pdfRef} className="flex flex-col gap-6 bg-background pb-4">
             <ImportLine report={report} />
-            <TotalCard report={report} headline={report.headline} />
-            {chainsOf(report).map((chain) => (
-              <ChainCard
-                key={chain.name}
-                chain={chain}
-                productsFor={productsFor}
-                exporting={exporting}
+            <TotalCard headline={report.headline} exporting={exporting} />
+            {/* The export carries the whole report, so every tab is rendered
+                while capturing — the client's PDF is one document, not
+                whichever third of it happened to be open. */}
+            {!exporting && (
+              <SectionTabs
+                sections={sectionsOf(report)}
+                active={activeSection}
+                onOpen={openSection}
               />
-            ))}
-            <CategoryChart report={report} />
+            )}
+            {sectionsOf(report)
+              .filter((section) => exporting || section.key === activeSection)
+              .map((section) => (
+                <SectionBlock
+                  key={section.key}
+                  section={section}
+                  report={report}
+                  productsFor={productsFor}
+                  basketFor={basketFor}
+                  exporting={exporting}
+                  showHeading={exporting}
+                />
+              ))}
             {report.summary && <AgentSummary summary={report.summary} exporting={exporting} />}
             {report.exceptions.length > 0 && <Exceptions exceptions={report.exceptions} />}
           </div>
@@ -341,10 +368,82 @@ type Chain = {
 };
 
 /**
+ * The report's three kinds of money, in the order a salesperson works them.
+ *
+ * They used to be one list grouped by chain, which put a group nobody has ever
+ * sold to in the same shape as a customer of ten years and ranked them against
+ * each other — Barchester's two hundred homes outranking Colten Care, with a
+ * small badge as the only clue. Anthony, 2026-08-05: three sections.
+ *
+ * The order is deliberate: closest money first. An upsell is to somebody
+ * already buying, a prospect is a sister site of somebody already buying, and
+ * a suspect is a company with no relationship at all.
+ */
+type SectionKey = "UPSELL" | "PROSPECTS" | "SUSPECTS";
+
+type ReportSection = {
+  key: SectionKey;
+  chains: Chain[];
+  totalGBP: number;
+};
+
+const SECTION_KEYS: SectionKey[] = ["UPSELL", "PROSPECTS", "SUSPECTS"];
+
+/**
+ * The tab's colour, matched to its dot in the total card.
+ *
+ * The same three colours carry the split from the headline into the tab bar
+ * and down onto the section's own badges, so the reader learns them once.
+ */
+const SECTION_ACCENT: Record<
+  SectionKey,
+  { text: string; bar: string; dot: string; border: string }
+> = {
+  UPSELL: {
+    text: "text-[#10b981]",
+    bar: "bg-[#10b981]",
+    dot: "bg-[#10b981]",
+    border: "border-[#10b981]/25",
+  },
+  PROSPECTS: { text: "text-brand", bar: "bg-brand", dot: "bg-brand", border: "border-brand/25" },
+  SUSPECTS: {
+    text: "text-amber-300",
+    bar: "bg-amber-400",
+    dot: "bg-amber-400",
+    border: "border-amber-400/25",
+  },
+};
+
+/** `?section=suspects` in, `SUSPECTS` out — anything else is the first tab. */
+function parseSectionKey(value: string | null | undefined): SectionKey {
+  const upper = value?.toUpperCase();
+  return SECTION_KEYS.find((key) => key === upper) ?? "UPSELL";
+}
+
+function sectionsOf(report: Report): ReportSection[] {
+  const isSuspect = (prospect: Prospect) => prospect.origin === "MARKET_DISCOVERY";
+
+  const build = (key: ReportSection["key"], prospects: Prospect[], gaps: Gap[]) => {
+    const chains = chainsOf(prospects, gaps);
+    return {
+      key,
+      chains,
+      totalGBP: chains.reduce((sum, chain) => sum + chain.totalGBP, 0),
+    };
+  };
+
+  return [
+    build("UPSELL", [], report.gaps),
+    build("PROSPECTS", report.prospects.filter((prospect) => !isSuspect(prospect)), []),
+    build("SUSPECTS", report.prospects.filter(isSuspect), []),
+  ];
+}
+
+/**
  * The stored rows regrouped under their chain, biggest chain first —
  * grouping and ordering only; every pound was priced upstream.
  */
-function chainsOf(report: Report): Chain[] {
+function chainsOf(prospects: Prospect[], gaps: Gap[]): Chain[] {
   const byName = new Map<string, { prospects: Prospect[]; gaps: Gap[] }>();
   const chainFor = (name: string) => {
     let chain = byName.get(name);
@@ -354,8 +453,8 @@ function chainsOf(report: Report): Chain[] {
     }
     return chain;
   };
-  for (const prospect of report.prospects) chainFor(prospect.groupName).prospects.push(prospect);
-  for (const gap of report.gaps) chainFor(gap.groupName).gaps.push(gap);
+  for (const prospect of prospects) chainFor(prospect.groupName).prospects.push(prospect);
+  for (const gap of gaps) chainFor(gap.groupName).gaps.push(gap);
 
   return [...byName.entries()]
     .map(([name, { prospects, gaps }]) => {
@@ -379,48 +478,55 @@ function chainsOf(report: Report): Chain[] {
 }
 
 /**
- * The top of the report: the one number management came for, how it was
- * worked out in plain words, and the ranked list saying which chains it
- * sits in — the TLDR the two flat tables never gave anyone.
+ * The one number management came for, and nothing else.
+ *
+ * This was a full-height card: the total, the three-way split, the pricing
+ * method and a ranked leaderboard of every chain — about a screen and a half
+ * before the reader reached any actual opportunity. Anthony, 2026-08-05: *"i
+ * dont think we need this large hero section."*
+ *
+ * What went and why: the split is now the tab bar directly below, stated in
+ * the same three colours, so printing it twice was repetition. The leaderboard
+ * ranked chains across warm and cold together, which is the thing the three
+ * sections exist to stop, and each section already lists its own chains
+ * biggest-first. The pricing method stays — it is how the reader knows the
+ * figures are honest — but folded away, because it is read once and never
+ * again.
  */
 function TotalCard({
-  report,
   headline,
+  exporting,
 }: {
-  report: Report;
   headline: NonNullable<Report["headline"]>;
+  exporting: boolean;
 }) {
   const t = useTranslations("salesData.opportunityReport");
-  const chains = chainsOf(report);
-  const largest = chains[0]?.totalGBP ?? 0;
+  const [openMethod, setOpenMethod] = useState(false);
+  const showMethod = openMethod || exporting;
 
   return (
-    <div className="bg-sidebar/40 border border-border-dim rounded-[20px] backdrop-blur-xl p-5 flex flex-col gap-5">
-      <div>
-        <div className="flex items-baseline justify-between gap-3 flex-wrap">
-          <span className="text-[12px] text-secondary">{t("totalTitle")}</span>
+    <div className="bg-sidebar/40 border border-border-dim rounded-[20px] backdrop-blur-xl px-5 py-4 flex flex-col gap-3">
+      <div className="flex items-baseline justify-between gap-x-5 gap-y-1 flex-wrap">
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <span className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+            {formatPounds(headline.totalOpportunityGBP)}
+          </span>
+          <span className="text-[12.5px] text-secondary">{t("totalTitle")}</span>
           <span className="text-[12px] text-muted">{t("totalSub")}</span>
         </div>
-        <div className="text-4xl lg:text-5xl font-semibold tracking-tight text-foreground tabular-nums mt-2">
-          {formatPounds(headline.totalOpportunityGBP)}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-muted mt-2">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-brand shrink-0" />
-            {t("totalSplitProspects", {
-              value: formatPounds(headline.prospectOpportunityGBP),
-            })}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#10b981] shrink-0" />
-            {t("totalSplitGaps", { value: formatPounds(headline.gapOpportunityGBP) })}
-          </span>
-        </div>
+        {!exporting && (
+          <button
+            type="button"
+            onClick={() => setOpenMethod((open) => !open)}
+            className="text-[12px] text-secondary hover:text-foreground transition-colors"
+          >
+            {t("methodTitle")}
+          </button>
+        )}
       </div>
 
-      <div className="border-t border-border-dim/60 pt-4">
-        <h2 className="text-[13px] font-medium text-secondary mb-2">{t("methodTitle")}</h2>
-        <ul className="flex flex-col gap-1 text-[12.5px] text-muted">
+      {showMethod && (
+        <ul className="flex flex-col gap-1 text-[12.5px] text-muted border-t border-border-dim/60 pt-3">
           {headline.prospectsSized > 0 && (
             <li>{t("methodSized", { count: headline.prospectsSized })}</li>
           )}
@@ -431,48 +537,144 @@ function TotalCard({
             <li>{t("methodUnpriced", { count: headline.prospectsUnpriced })}</li>
           )}
         </ul>
-      </div>
-
-      <div className="border-t border-border-dim/60 pt-4">
-        <h2 className="text-[13px] font-medium text-secondary mb-3">{t("leaderboardTitle")}</h2>
-        <div className="flex flex-col gap-2.5">
-          {chains.map((chain) => (
-            <div
-              key={chain.name}
-              className="grid grid-cols-[minmax(140px,220px)_minmax(0,1fr)_110px] items-center gap-3"
-            >
-              <div className="min-w-0">
-                <div className="text-[13px] text-foreground truncate">{chain.name}</div>
-                <div className="text-[11px] text-muted flex items-center gap-x-2.5 flex-wrap">
-                  {chain.prospects.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
-                      {t("leaderboardSites", { count: chain.prospects.length })}
-                    </span>
-                  )}
-                  {chain.gaps.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
-                      {t("leaderboardGaps", { count: chain.gaps.length })}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
-                <div
-                  className="h-full bg-brand rounded-full"
-                  style={{ width: `${largest > 0 ? Math.max((chain.totalGBP / largest) * 100, 1) : 0}%` }}
-                />
-              </div>
-              <span className="text-right text-[13px] text-foreground tabular-nums">
-                {formatPounds(chain.totalGBP)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
+}
+
+function SectionTabs({
+  sections,
+  active,
+  onOpen,
+}: {
+  sections: ReportSection[];
+  active: SectionKey;
+  onOpen: (key: SectionKey) => void;
+}) {
+  const t = useTranslations("salesData.opportunityReport");
+
+  return (
+    <div
+      role="tablist"
+      className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl"
+    >
+      {sections.map((section) => {
+        const isActive = section.key === active;
+        const accent = SECTION_ACCENT[section.key];
+        // An empty tab is shown, not hidden. A missing Suspects tab reads as a
+        // feature nobody built; an empty one reads as a job nobody has run,
+        // which is the true and actionable version.
+        const isEmpty = section.chains.length === 0;
+
+        return (
+          <button
+            key={section.key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onOpen(section.key)}
+            className={`text-left rounded-[12px] px-3.5 py-3 border transition-colors ${
+              isActive
+                ? "border-border bg-foreground/[0.04]"
+                : "border-transparent hover:bg-foreground/[0.02]"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${accent.dot} ${isEmpty ? "opacity-40" : ""}`} />
+              <span
+                className={`text-[13px] font-medium ${
+                  isActive ? "text-foreground" : isEmpty ? "text-muted" : "text-secondary"
+                }`}
+              >
+                {t(`section${section.key}Tab`)}
+              </span>
+            </span>
+            <span
+              className={`block mt-1 text-[17px] font-semibold tabular-nums ${
+                isEmpty ? "text-muted" : isActive ? accent.text : "text-foreground"
+              }`}
+            >
+              {formatPounds(section.totalGBP)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectionBlock({
+  section,
+  report,
+  productsFor,
+  basketFor,
+  exporting,
+  showHeading,
+}: {
+  section: ReportSection;
+  report: Report;
+  productsFor: Map<string, GapProductLine[]>;
+  basketFor: Map<string, TypeBasket>;
+  exporting: boolean;
+  /** The tab bar names the open section, so the heading is for the export. */
+  showHeading: boolean;
+}) {
+  const t = useTranslations("salesData.opportunityReport");
+  const accent = SECTION_ACCENT[section.key];
+
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div className="flex items-start gap-2.5">
+          <span className={`w-1 h-9 rounded-full shrink-0 mt-0.5 ${accent.bar}`} />
+          <div>
+            <h2 className="text-[15px] font-semibold text-foreground">
+              {t(`section${section.key}Title`)}
+            </h2>
+            <p className="text-[12.5px] text-secondary mt-0.5">
+              {t(`section${section.key}Note`)}
+            </p>
+          </div>
+        </div>
+        {showHeading && (
+          <span className="text-[18px] font-semibold text-foreground tabular-nums">
+            {formatPounds(section.totalGBP)}
+          </span>
+        )}
+      </div>
+
+      {section.chains.length === 0 ? (
+        <p className="text-[13px] text-muted">{t(`section${section.key}Empty`)}</p>
+      ) : (
+        section.chains.map((chain) => (
+          <ChainCard
+            key={chain.name}
+            chain={chain}
+            productsFor={productsFor}
+            basketFor={basketFor}
+            accent={accent}
+            exporting={exporting}
+          />
+        ))
+      )}
+
+      {/* The category chart is upsell money broken down by product, so it
+          belongs to the upsell section. It used to sit below all three, where
+          it read as a summary of the whole report and was not one. */}
+      {section.key === "UPSELL" && section.chains.length > 0 && (
+        <CategoryChart report={report} />
+      )}
+    </section>
+  );
+}
+
+type TypeBasket = Report["typeBaskets"][number];
+
+/** What a customer of each type buys, keyed by the type a prospect carries. */
+function basketMapOf(report: Report): Map<string, TypeBasket> {
+  // Keyed by the display name, because that is what a priced prospect row
+  // carries — both sides come from the same account rows, so they match.
+  return new Map(report.typeBaskets.map((basket) => [basket.customerType, basket]));
 }
 
 /** Each gap's order sheet, keyed the way the gap rows are keyed. */
@@ -509,10 +711,14 @@ function humaniseProduct(description: string): string {
 function ChainCard({
   chain,
   productsFor,
+  basketFor,
+  accent,
   exporting,
 }: {
   chain: Chain;
   productsFor: Map<string, GapProductLine[]>;
+  basketFor: Map<string, TypeBasket>;
+  accent: { text: string; border: string };
   exporting: boolean;
 }) {
   const t = useTranslations("salesData.opportunityReport");
@@ -547,7 +753,14 @@ function ChainCard({
         <p className="text-[13px] text-secondary mt-1">{summary}</p>
       </div>
 
-      {chain.prospects.length > 0 && <ChainProspects chain={chain} />}
+      {chain.prospects.length > 0 && (
+        <ChainProspects
+          chain={chain}
+          basketFor={basketFor}
+          accent={accent}
+          exporting={exporting}
+        />
+      )}
       {chain.gaps.length > 0 && (
         <ChainGaps chain={chain} productsFor={productsFor} exporting={exporting} />
       )}
@@ -556,7 +769,17 @@ function ChainCard({
 }
 
 /** Every prospect, every price: management reads this list, so none hide. */
-function ChainProspects({ chain }: { chain: Chain }) {
+function ChainProspects({
+  chain,
+  basketFor,
+  accent,
+  exporting,
+}: {
+  chain: Chain;
+  basketFor: Map<string, TypeBasket>;
+  accent: { text: string; border: string };
+  exporting: boolean;
+}) {
   const t = useTranslations("salesData.opportunityReport");
 
   const unsized = chain.prospects.filter(
@@ -564,6 +787,9 @@ function ChainProspects({ chain }: { chain: Chain }) {
       prospect.confidence === "GROUP_AVERAGE" || prospect.confidence === "TYPE_AVERAGE"
   );
   const allUnsized = unsized.length === chain.prospects.length;
+  // Every site in a chain shares one customer type, so one basket serves the
+  // whole table rather than repeating itself on each row.
+  const basket = basketFor.get(chain.prospects[0]?.customerType ?? "");
   const comparedNames = [
     ...new Set(
       chain.prospects.flatMap((prospect) =>
@@ -646,6 +872,14 @@ function ChainProspects({ chain }: { chain: Chain }) {
           {t("comparedAgainst", { names: comparedNames.join(", ") })}
         </p>
       )}
+      {basket && (
+        <ProspectBasket
+          basket={basket}
+          totalGBP={chain.prospectTotalGBP}
+          accent={accent}
+          exporting={exporting}
+        />
+      )}
     </div>
   );
 }
@@ -658,6 +892,136 @@ function ChainProspects({ chain }: { chain: Chain }) {
  * arithmetic follows underneath, and the dot keeps firm (sized, brand) and
  * rough (average, grey) tellable apart at a glance.
  */
+/**
+ * What a site like this buys, and what that is worth here.
+ *
+ * A gap carries the sister accounts' real order sheet. A prospect had a single
+ * pound figure and nothing else — four sites in a chain reading as four
+ * identical guesses. This is the equivalent evidence for a site nobody
+ * supplies: the category mix of the very customers the estimate was priced
+ * against, applied to this chain's own estimate.
+ *
+ * Built as the upsell section's accordion rather than a table of its own, so
+ * the two read as one report — Anthony, 2026-08-05: *"its the same ui style
+ * across all tabs."* The share is stated on every line, so the arithmetic
+ * stays checkable: the mix is the pool's, the total is this chain's, and
+ * multiplying one by the other is the only step between them.
+ */
+function ProspectBasket({
+  basket,
+  totalGBP,
+  accent,
+  exporting,
+}: {
+  basket: TypeBasket;
+  totalGBP: number;
+  accent: { text: string; border: string };
+  exporting: boolean;
+}) {
+  const t = useTranslations("salesData.opportunityReport");
+
+  if (basket.totalSpendGBP <= 0 || basket.categories.length === 0) return null;
+
+  return (
+    <div className="border-t border-border-dim/60 pt-4 mt-4">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
+        <h3 className="text-[14px] font-medium text-foreground flex items-center gap-2">
+          <ShoppingCart className={`w-4 h-4 ${accent.text}`} />
+          {t("basketTitle")}
+        </h3>
+        <span className="text-[14px] font-medium text-foreground tabular-nums">
+          {formatPounds(totalGBP)}
+        </span>
+      </div>
+      <p className="text-[12.5px] text-muted mb-4">
+        {t("basketNote", { count: basket.customerCount, type: basket.customerType })}
+      </p>
+
+      <div className="flex flex-col gap-3">
+        {basket.categories.map((category) => (
+          <BasketRow
+            key={category.categoryKey}
+            category={category}
+            share={category.spendGBP / basket.totalSpendGBP}
+            totalGBP={totalGBP}
+            accent={accent}
+            exporting={exporting}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** One category of the basket, opened the way a gap opens. */
+function BasketRow({
+  category,
+  share,
+  totalGBP,
+  accent,
+  exporting,
+}: {
+  category: TypeBasket["categories"][number];
+  share: number;
+  totalGBP: number;
+  accent: { text: string; border: string };
+  exporting: boolean;
+}) {
+  const t = useTranslations("salesData.opportunityReport");
+  const [open, setOpen] = useState(false);
+  const products = category.products;
+  const expanded = (open || exporting) && products.length > 0;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        disabled={products.length === 0}
+        className="w-full text-left rounded-[8px] -mx-1.5 px-1.5 py-0.5 hover:bg-white/[0.03] transition-colors disabled:cursor-default"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <span className="flex items-center gap-1.5 text-[13px] text-foreground">
+            {products.length > 0 && (
+              <ChevronRight
+                className={`w-3.5 h-3.5 ${accent.text} shrink-0 transition-transform ${
+                  expanded ? "rotate-90" : ""
+                }`}
+              />
+            )}
+            {category.category}
+          </span>
+          <span className="text-[13px] text-secondary tabular-nums">
+            {formatPounds(totalGBP * share)}
+          </span>
+        </div>
+        <div className={`text-[11.5px] text-muted ${products.length > 0 ? "pl-5" : ""}`}>
+          {[
+            t("basketShare", { share: Math.round(share * 100) }),
+            products.length > 0 ? t("productCount", { count: products.length }) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      </button>
+      {expanded && (
+        <div className={`mt-1.5 ml-1.5 border-l-2 ${accent.border} pl-4 flex flex-col gap-1 pb-1`}>
+          {products.map((product) => (
+            <div key={product.description} className="flex items-baseline justify-between gap-3">
+              <span className="text-[12.5px] text-secondary">
+                {humaniseProduct(product.description)}
+              </span>
+              <span className="text-[12px] text-muted tabular-nums shrink-0">
+                {formatPounds(product.spendGBP)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PricingCell({ prospect }: { prospect: Prospect }) {
   const t = useTranslations("salesData.opportunityReport");
   const sized = prospect.confidence === "GROUP_SIZED" || prospect.confidence === "TYPE_SIZED";

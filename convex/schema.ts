@@ -2883,6 +2883,17 @@ export default defineSchema({
     ),
     agentId: v.id("agents"),
     runId: v.optional(v.id("agentRuns")),
+    /**
+     * How many runs this job has spent.
+     *
+     * A run is labour, the job is the work. A model that ends its turn with
+     * queue left is not the job finishing — the first live run found five
+     * parent groups, never asked for a single location task, and the job
+     * closed itself as COMPLETE with nothing filed. The job now starts
+     * another run instead, and this counts them so it cannot do that for
+     * ever. Absent means one, which is every job written before this.
+     */
+    runsStarted: v.optional(v.number()),
     startedBy: v.id("users"),
     groupsAccepted: v.number(),
     groupsRejected: v.number(),
@@ -2934,6 +2945,17 @@ export default defineSchema({
       v.literal("DONE")
     ),
     locationsAttemptedAt: v.optional(v.number()),
+    /**
+     * How many times this group has been handed out for location finding.
+     *
+     * A group only leaves the queue when the agent says it is done, and a
+     * model that cannot find any locations often says nothing at all instead.
+     * Pearson — a publisher with no sites to file — was handed to five
+     * consecutive runs, each of which read the same page and gave up, while
+     * four other groups behind it were never reached. Counting the handouts is
+     * what lets the queue retire a group the agent will not.
+     */
+    locationsAttempts: v.optional(v.number()),
     locationsEndedReason: v.optional(v.string()),
     runId: v.optional(v.id("agentRuns")),
     agentId: v.optional(v.id("agents")),
@@ -3242,6 +3264,44 @@ export default defineSchema({
       v.object({
         description: v.string(),
         spendGBP: v.number(),
+      })
+    ),
+  }).index("by_company_report", ["companyId", "reportId"]),
+
+  /**
+   * What a customer of each type actually buys, and in what proportion.
+   *
+   * An existing customer's gap arrives with an order sheet — the products its
+   * sister accounts really purchase. A prospect got a single estimated pound
+   * figure and nothing else, so four sites in one chain read as four identical
+   * guesses with no size and no basket. Anthony, 2026-08-05: *"this feels lazy
+   * when we do this in the other tabs."*
+   *
+   * This is that order sheet for a site nobody supplies yet: the category mix
+   * of the customers the estimate was priced against, with the products inside
+   * each category. Applying the mix to a site's own estimate is arithmetic the
+   * reader can redo by hand, which is the rule the whole report is held to.
+   */
+  salesOpportunityReportTypeBaskets: defineTable({
+    companyId: v.id("companies"),
+    reportId: v.id("salesOpportunityReports"),
+    customerTypeKey: v.string(),
+    customerType: v.string(),
+    /** Six-month spend of every customer of this type, the share denominator. */
+    totalSpendGBP: v.number(),
+    /** How many customers the mix is averaged over, so the reader can weigh it. */
+    customerCount: v.number(),
+    categories: v.array(
+      v.object({
+        categoryKey: v.string(),
+        category: v.string(),
+        spendGBP: v.number(),
+        products: v.array(
+          v.object({
+            description: v.string(),
+            spendGBP: v.number(),
+          })
+        ),
       })
     ),
   }).index("by_company_report", ["companyId", "reportId"]),

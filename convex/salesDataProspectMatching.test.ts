@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  isSouthernPostcode,
+  isUkPostcode,
   matchDiscoveredSite,
   nameFingerprint,
   normalizePostcode,
@@ -136,5 +138,46 @@ describe("reading a postcode", () => {
 
   test.each([undefined, "", "BH23", "   "])("%s is not a postcode", (input) => {
     expect(normalizePostcode(input)).toBeNull();
+  });
+});
+
+describe("where Comax can deliver", () => {
+  test("UK postcodes pass in every shape the Royal Mail uses", () => {
+    for (const postcode of [
+      "BH23 2FR",   // two letters, two digits
+      "M1 1AE",     // one letter, one digit
+      "B33 8TH",    // one letter, two digits
+      "CR2 6XH",
+      "DN55 1PT",
+      "EC1A 1BB",   // digit-then-letter outward
+      "W1A 0AX",
+      "so16 4nb",   // however it was typed
+    ]) {
+      expect(isUkPostcode(postcode), postcode).toBe(true);
+    }
+  });
+
+  test("foreign postcodes are refused, which is the whole point", () => {
+    for (const postcode of [
+      "10001",        // New York
+      "90210-1234",   // Beverly Hills
+      "D02 XY45",     // Dublin — close enough to a UK code to matter
+      "75008",        // Paris
+      "2000",         // Sydney
+      "K1A 0B1",      // Ottawa: letter-digit-letter, not a UK shape
+      "",
+      undefined,
+    ]) {
+      expect(isUkPostcode(postcode), String(postcode)).toBe(false);
+    }
+  });
+
+  test("the southern preference reads the postcode area", () => {
+    expect(isSouthernPostcode("BH23 2FR")).toBe(true);   // Christchurch
+    expect(isSouthernPostcode("SW1A 1AA")).toBe(true);   // London
+    expect(isSouthernPostcode("TR1 1AA")).toBe(true);    // Truro
+    expect(isSouthernPostcode("EH22 2AH")).toBe(false);  // Dalkeith
+    expect(isSouthernPostcode("M1 1AE")).toBe(false);    // Manchester
+    expect(isSouthernPostcode("10001")).toBe(false);     // not even in the country
   });
 });

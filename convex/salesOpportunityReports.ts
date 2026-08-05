@@ -8,6 +8,7 @@ import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { extraFieldForType } from "./salesDataCustomerFields";
 import {
   buildGapProducts,
+  buildTypeBaskets,
   collectReportFigures,
   estimateProspect,
   findGroupGaps,
@@ -38,6 +39,8 @@ const SAVE_HANDLER_MAPPING = "opportunityReport.saveSummary";
 
 /** One doc per gap; far above any real report, well under the read cap. */
 const GAP_PRODUCT_DOC_LIMIT = 2000;
+/** One doc per customer type, and a workbook has a handful of those. */
+const TYPE_BASKET_DOC_LIMIT = 50;
 
 /** Plenty for a workspace of tens of accounts; a guard, not a target. */
 const ACCOUNT_SCAN_LIMIT = 500;
@@ -84,6 +87,14 @@ export const getLatestOpportunityReport = tenantQuery({
       )
       .take(GAP_PRODUCT_DOC_LIMIT);
 
+    // What a customer of each type buys, for the sites nobody supplies yet.
+    const typeBaskets = await ctx.db
+      .query("salesOpportunityReportTypeBaskets")
+      .withIndex("by_company_report", (q) =>
+        q.eq("companyId", companyId).eq("reportId", report._id)
+      )
+      .take(TYPE_BASKET_DOC_LIMIT);
+
     return {
       status: report.status,
       phase: report.phase,
@@ -97,6 +108,13 @@ export const getLatestOpportunityReport = tenantQuery({
         accountNameKey: entry.accountNameKey,
         categoryKey: entry.categoryKey,
         products: entry.products,
+      })),
+      typeBaskets: typeBaskets.map((entry) => ({
+        customerTypeKey: entry.customerTypeKey,
+        customerType: entry.customerType,
+        totalSpendGBP: entry.totalSpendGBP,
+        customerCount: entry.customerCount,
+        categories: entry.categories,
       })),
       summary: report.summary ?? null,
       exceptions: report.exceptions ?? [],
@@ -514,7 +532,11 @@ export const runGapsPassInternal = internalMutation({
     // accounts actually purchase in the category the account is missing.
     const productRows: Array<{
       groupNameKey: string;
+      customerTypeKey: string;
+      customerType: string;
+      accountNameKey: string;
       categoryKey: string;
+      category: string;
       productDescription: string;
       spendGBP: number;
     }> = [];
@@ -539,7 +561,11 @@ export const runGapsPassInternal = internalMutation({
         byCategory.set(row.productCategoryKey, entry);
         productRows.push({
           groupNameKey: account.groupNameKey,
+          customerTypeKey: account.customerTypeKey,
+          customerType: account.customerType,
+          accountNameKey: account.accountNameKey,
           categoryKey: row.productCategoryKey,
+          category: row.productCategory,
           productDescription: row.productDescription,
           spendGBP: row.totalRevenue,
         });
@@ -576,6 +602,20 @@ export const runGapsPassInternal = internalMutation({
         groupNameKey: groupKeyOf.get(gap.accountNameKey) ?? "",
       }))
     );
+    // The same sweep answers "what would a site like this buy?" for the
+    // prospects and suspects, which have no sister accounts to point at.
+    for (const basket of buildTypeBaskets(productRows)) {
+      await ctx.db.insert("salesOpportunityReportTypeBaskets", {
+        companyId: args.companyId,
+        reportId: report._id,
+        customerTypeKey: basket.customerTypeKey,
+        customerType: basket.customerType,
+        totalSpendGBP: basket.totalSpendGBP,
+        customerCount: basket.customerCount,
+        categories: basket.categories,
+      });
+    }
+
     for (const entry of gapProducts) {
       await ctx.db.insert("salesOpportunityReportGapProducts", {
         companyId: args.companyId,

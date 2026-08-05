@@ -6,7 +6,12 @@ import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import { distinctValues, getCurrentImport, requireSalesDataCompany } from "./salesData";
 import { normalizeKey } from "./salesDataImportService";
-import { matchDiscoveredSite, type KnownSite } from "./salesDataProspectMatching";
+import {
+  isSouthernPostcode,
+  isUkPostcode,
+  matchDiscoveredSite,
+  type KnownSite,
+} from "./salesDataProspectMatching";
 import {
   canonicalSourceUrl,
   isUsableSourceUrl,
@@ -27,6 +32,23 @@ const RUN_TOOL_CALL_LIMIT = 300;
 const LOOKUP_LIMIT = 500;
 const AGENT_BINDING_LOOKUP_LIMIT = 200;
 const GROUPS_PER_CUSTOMER_TYPE = 2;
+/**
+ * How many runs one job may spend before it stops trying.
+ *
+ * A model that walks away mid-queue is worth restarting, but not for ever: a
+ * job that cannot make progress in this many attempts has something wrong with
+ * it that another run will not fix, and the spend ceiling should not be the
+ * only thing standing between that and the bill.
+ */
+const MAX_JOB_RUNS = 6;
+/**
+ * How many times one parent group may be handed out for location finding.
+ *
+ * Three, because the second attempt is worth having — a page that failed to
+ * load, a run that stopped mid-list — and the third is the last honest one. A
+ * group that has produced nothing by then is a group with nothing to produce.
+ */
+const MAX_LOCATION_ATTEMPTS = 3;
 const DEFAULT_MAX_COST_GBP = 25;
 
 type MarketDiscoveryJob = Doc<"salesDataMarketDiscoveryJobs">;
@@ -48,6 +70,10 @@ type MarketDiscoveryTask =
       customerType: string;
       customerTypeKey: string;
       instruction: string;
+      /** Which go at this group this is, so the run can see it is repeating. */
+      attempt: number;
+      /** The last one it will get, whatever it reports back. */
+      finalAttempt: boolean;
     };
 
 async function assertSalesDataCompany(
@@ -290,14 +316,20 @@ function builtInToolForMapping(mapping: string) {
 
 const MARKET_DISCOVERY_PROMPT = `You find new parent companies for Comax, then file their locations as market-discovery prospects.
 
+WHERE COMAX SELLS
+- The United Kingdom only. Comax delivers from England, so a site abroad is not a prospect however good the company is.
+- A location can only be filed with a full UK postcode taken from the page you opened. A site whose address is not in the UK will be refused.
+- A parent company with sites in several countries is still useful — use it, and file only its UK sites.
+- Prefer the south of England: London and the south east, the south west, the south coast, East Anglia and the home counties. This is a preference, not a rule. File a good northern or Scottish site rather than nothing, but when a group has more sites than you can work through, do the southern ones first.
+
 HOW THIS RUN WORKS
 1. Call "Comax — Market discovery next task" first. It tells you one customer type, the target number of parent groups and whether you should find groups or locations.
 2. Work on that one customer type only. Do not switch types in the same run.
 3. For parent groups, search outside the imported customer list. Do not use groups Comax already sells to, and do not use groups already filed as prospects.
 4. Open the source page before recording anything. Search snippets are not proof.
-5. Record parent groups as you find them. High-confidence groups need a page proving the parent exists and belongs to the selected customer type.
-6. When the job tells you to find locations, use the accepted parent group it gives you. Prefer official/provider-owned location lists.
-7. File locations as you find them. Every location needs a source page that lists it.
+5. Record parent groups as you find them. High-confidence groups need a page proving the parent exists and belongs to the selected customer type, and operates in the UK.
+6. When the job tells you to find locations, use the accepted parent group it gives you. Prefer official/provider-owned location lists, and prefer a page that gives full addresses — you need the postcode.
+7. File locations as you find them. Every location needs a source page that lists it and a UK postcode.
 8. Keep asking for the next task until the job says there is nothing left, then stop and say what was found.
 
 BEING HONEST
@@ -305,7 +337,8 @@ BEING HONEST
 - A parent company needs source proof that it exists and belongs to the selected customer type.
 - A location needs source proof from a page opened in this run.
 - If a group or location is uncertain, park it for review instead of filing it as a clean prospect.
-- A duplicate is a useful outcome. Report it and move on.`;
+- A duplicate is a useful outcome. Report it and move on.
+- A group with no UK sites of its own is a normal answer. Say you could not finish it and ask for the next task — do not file a foreign site to have something to show.`;
 
 async function ensureAgentBindings(
   ctx: MutationCtx,
@@ -460,6 +493,96 @@ async function nextAcceptedGroupForLocations(ctx: MutationCtx, jobId: Id<"salesD
     .first();
 }
 
+/**
+ * What this job still owes, in the job's own terms.
+ *
+ * Asked of the job's rows, never of the run: a run that ended is not evidence
+ * the work is done, and treating it as evidence is exactly how a job with five
+ * unsearched parent groups reported "Found 5 parent groups" and closed.
+ */
+async function outstandingWork(ctx: MutationCtx, job: MarketDiscoveryJob) {
+  const groups = await ctx.db
+    .query("salesDataMarketDiscoveryGroups")
+    .withIndex("by_job_status", (q) => q.eq("jobId", job._id).eq("status", "ACCEPTED"))
+    .take(LOOKUP_LIMIT);
+
+  const groupsAwaitingLocations = groups.filter(
+    (group) => group.locationsStatus !== "DONE"
+  );
+
+  const types = job.customerTypes ?? [];
+  const typesShort = types.filter(
+    (type) =>
+      acceptedCountForType(groups, type.customerTypeKey) < type.targetGroupCount
+  );
+
+  return {
+    groupsAwaitingLocations,
+    typesShort,
+    total: groupsAwaitingLocations.length + typesShort.length,
+  };
+}
+
+/**
+ * Hand the job to a fresh run.
+ *
+ * The job survives its runs, so continuing is a new run against the same job
+ * rather than anything clever: the next `job.next` call hands out whatever the
+ * queue says is next, which is where the previous run walked away.
+ */
+async function startDiscoveryRun(
+  ctx: MutationCtx,
+  args: {
+    job: MarketDiscoveryJob;
+    companyId: Id<"companies">;
+    agentId: Id<"agents">;
+    userId: Id<"users">;
+    objective: string;
+    title: string;
+  }
+) {
+  const now = Date.now();
+  const agentVersionId = await ensureAgentVersionSnapshot(ctx, {
+    agentId: args.agentId,
+    companyId: args.companyId,
+  });
+  const runId = await ctx.db.insert("agentRuns", {
+    agentId: args.agentId,
+    agentVersionId,
+    triggerType: "MANUAL",
+    objective: args.objective,
+    title: args.title,
+    status: "QUEUED",
+    companyId: args.companyId,
+    userId: args.userId,
+    startedAt: now,
+    updatedAt: now,
+  });
+
+  await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
+    agentId: args.agentId,
+    objective: args.objective,
+    triggerType: "MANUAL",
+    runId,
+    companyId: args.companyId,
+    userId: args.userId,
+  });
+  await ctx.scheduler.runAfter(JOB_TICK_MS, internal.salesDataMarketDiscovery.watchJobInternal, {
+    jobId: args.job._id,
+  });
+
+  return runId;
+}
+
+function buildDiscoveryObjective() {
+  return [
+    "Run market discovery for every customer type in this workspace.",
+    `Find ${GROUPS_PER_CUSTOMER_TYPE} new parent companies per customer type that Comax does not already sell to.`,
+    "Then find locations for each accepted parent company and file them as market-discovery prospects.",
+    "Use the market discovery job tool for every next task and stop when it says there is nothing left.",
+  ].join(" ");
+}
+
 async function finishJob(
   ctx: MutationCtx,
   args: {
@@ -505,8 +628,9 @@ async function selectNextTask(ctx: MutationCtx, job: MarketDiscoveryJob): Promis
     return {
       kind: "FIND_GROUPS",
       instruction:
-        `Find parent companies in ${nextType.customerType} that are not already in this workspace. `
-        + "Record each candidate as soon as you have opened a proof page.",
+        `Find UK parent companies in ${nextType.customerType} that are not already in this workspace. `
+        + "They must operate sites in the United Kingdom, and sites in the south of England are worth "
+        + "more than sites elsewhere. Record each candidate as soon as you have opened a proof page.",
       customerType: nextType.customerType,
       customerTypeKey: nextType.customerTypeKey,
       accepted,
@@ -514,10 +638,26 @@ async function selectNextTask(ctx: MutationCtx, job: MarketDiscoveryJob): Promis
     };
   }
 
-  const group = await nextAcceptedGroupForLocations(ctx, refreshed._id);
+  // A group is handed out until it is done or until it has had its attempts.
+  // Without the second half the queue jams: a group with no locations to find
+  // is never reported done, so it is handed straight back on the next ask and
+  // every group behind it waits for ever.
+  let group = await nextAcceptedGroupForLocations(ctx, refreshed._id);
+  while (group && (group.locationsAttempts ?? 0) >= MAX_LOCATION_ATTEMPTS) {
+    await ctx.db.patch(group._id, {
+      locationsStatus: "DONE",
+      locationsEndedReason:
+        `No locations were filed after ${MAX_LOCATION_ATTEMPTS} attempts, so the job moved on.`,
+      updatedAt: Date.now(),
+    });
+    group = await nextAcceptedGroupForLocations(ctx, refreshed._id);
+  }
+
   if (group) {
+    const attempts = (group.locationsAttempts ?? 0) + 1;
     await ctx.db.patch(group._id, {
       locationsStatus: "IN_PROGRESS",
+      locationsAttempts: attempts,
       locationsAttemptedAt: Date.now(),
     });
     await ctx.db.patch(refreshed._id, {
@@ -532,8 +672,13 @@ async function selectNextTask(ctx: MutationCtx, job: MarketDiscoveryJob): Promis
       customerType: group.customerType,
       customerTypeKey: group.customerTypeKey,
       instruction:
-        `Find the locations run by ${group.groupName}. Record each location with a source page, `
-        + "and ask for the next task when the group's locations have been attempted.",
+        `Find the UK locations run by ${group.groupName}. Record each one with a source page and its `
+        + "full UK postcode — a site outside the UK will be refused, and southern sites are worth "
+        + "doing first. When you have filed what you can find, or this group has no UK sites to file, "
+        + "ask for the next task and say which — a group with nothing to file is a normal answer, "
+        + "not a failure.",
+      attempt: attempts,
+      finalAttempt: attempts >= MAX_LOCATION_ATTEMPTS,
     };
   }
 
@@ -612,38 +757,18 @@ export const startMarketDiscoveryJob = tenantMutation({
       updatedAt: now,
     });
 
-    const agentVersionId = await ensureAgentVersionSnapshot(ctx, { agentId: agent._id, companyId });
-    const objective = [
-      "Run market discovery for every customer type in this workspace.",
-      `Find ${GROUPS_PER_CUSTOMER_TYPE} new parent companies per customer type that Comax does not already sell to.`,
-      "Then find locations for each accepted parent company and file them as market-discovery prospects.",
-      "Use the market discovery job tool for every next task and stop when it says there is nothing left.",
-    ].join(" ");
-    const runId = await ctx.db.insert("agentRuns", {
-      agentId: agent._id,
-      agentVersionId,
-      triggerType: "MANUAL",
-      objective,
-      title: "Market discovery · all customer types",
-      status: "QUEUED",
-      companyId,
-      userId: ctx.userId,
-      startedAt: now,
-      updatedAt: now,
-    });
-    await ctx.db.patch(jobId, { runId, phase: "FIND_GROUPS", updatedAt: now });
+    const job = await ctx.db.get(jobId);
+    if (!job) throw new ConvexError("The market discovery job could not be created.");
 
-    await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
-      agentId: agent._id,
-      objective,
-      triggerType: "MANUAL",
-      runId,
+    const runId = await startDiscoveryRun(ctx, {
+      job,
       companyId,
+      agentId: agent._id,
       userId: ctx.userId,
+      objective: buildDiscoveryObjective(),
+      title: "Market discovery · all customer types",
     });
-    await ctx.scheduler.runAfter(JOB_TICK_MS, internal.salesDataMarketDiscovery.watchJobInternal, {
-      jobId,
-    });
+    await ctx.db.patch(jobId, { runId, phase: "FIND_GROUPS", runsStarted: 1, updatedAt: now });
 
     return { started: true, jobId };
   },
@@ -713,7 +838,14 @@ export const nextTaskInternal = internalMutation({
       return { done: true as const, task: null, message: "Another run owns this market discovery job. Stop here." };
     }
 
-    if (args.previousOutcome === "DONE" && job.phase === "FIND_LOCATIONS") {
+    // Either answer retires the group. "I could not find any" is a real
+    // outcome for a parent company that operates no sites of its own — a
+    // publisher, a supplier — and treating it as unfinished is what left
+    // Pearson in hand across five runs while four other groups waited.
+    if (
+      (args.previousOutcome === "DONE" || args.previousOutcome === "COULD_NOT")
+      && job.phase === "FIND_LOCATIONS"
+    ) {
       const current = await ctx.db
         .query("salesDataMarketDiscoveryGroups")
         .withIndex("by_job_locations_status", (q) =>
@@ -723,7 +855,11 @@ export const nextTaskInternal = internalMutation({
       if (current) {
         await ctx.db.patch(current._id, {
           locationsStatus: "DONE",
-          locationsEndedReason: args.note?.slice(0, 500),
+          locationsEndedReason:
+            args.note?.slice(0, 500)
+            ?? (args.previousOutcome === "COULD_NOT"
+              ? "The run could not find any locations to file for this group."
+              : undefined),
           updatedAt: Date.now(),
         });
       }
@@ -935,6 +1071,22 @@ export const recordLocationInternal = internalMutation({
     const proof = await requireRunOpenedSource(ctx, { runId: args.runId, sourceUrl: args.sourceUrl });
     if (!proof.ok) return { recorded: false as const, reason: proof.reason };
 
+    // The country gate, and it is a gate rather than a preference. Comax
+    // delivers from England, so a site abroad is not a prospect however good
+    // the parent company is — and a UK postcode is the one thing a foreign
+    // address cannot produce. Asked of the postcode rather than the model,
+    // because a model asked to be careful is a model that is careful most of
+    // the time. Anthony, 2026-08-05: *"outside the UK is [a deal breaker]."*
+    if (!isUkPostcode(args.postcode)) {
+      return {
+        recorded: false as const,
+        reason: args.postcode?.trim()
+          ? `${args.postcode.trim()} is not a UK postcode, so this site is outside the area Comax supplies. `
+            + "Only file UK locations, and give the full postcode from the page you opened."
+          : "A location needs its full UK postcode from the page you opened. Only UK sites can be filed.",
+      };
+    }
+
     const group = await ctx.db
       .query("salesDataMarketDiscoveryGroups")
       .withIndex("by_company_group", (q) => q.eq("companyId", args.companyId).eq("groupNameKey", normalizeKey(args.groupName)))
@@ -1001,10 +1153,78 @@ export const recordLocationInternal = internalMutation({
       prospectId,
       prospectKey: normalizeKey(siteName),
       conflict: match.outcome === "CONFLICT",
+      // The southern nudge is delivered here rather than as a rule, because it
+      // is a preference: the site is already filed either way, and the run is
+      // simply told which kind it just added so the next one it picks can be a
+      // better one.
+      southOfEngland: isSouthernPostcode(args.postcode),
       message:
         match.outcome === "CONFLICT"
           ? `Filed as a market-discovery prospect, with a clash to check: ${match.note}`
-          : `Filed as a market-discovery prospect in ${group.groupName}.`,
+          : isSouthernPostcode(args.postcode)
+            ? `Filed as a market-discovery prospect in ${group.groupName}, in the south of England.`
+            : `Filed as a market-discovery prospect in ${group.groupName}. It is outside the south of England — prefer southern sites while this group has them.`,
+    };
+  },
+});
+
+/**
+ * Put market discovery back to never having run.
+ *
+ * Deleting the suspects alone is not enough to get them found again: a parent
+ * group is remembered across jobs and refused as a duplicate the second time
+ * it is offered, so clearing the sites while keeping the group rows means the
+ * next run can never rediscover Barchester or MHA — it must find different
+ * companies. Everything market discovery wrote goes together, or the reset is
+ * not a reset.
+ *
+ * What it does not touch: the imported customers, and the warm prospects
+ * found inside chains Comax already supplies. Those cost money to find and
+ * have nothing to do with this lane — origin is the whole filter, and a
+ * prospect row without one predates market discovery entirely.
+ */
+export const resetMarketDiscoveryInternal = internalMutation({
+  args: { companyId: v.id("companies") },
+  returns: v.object({
+    suspectsDeleted: v.number(),
+    groupsDeleted: v.number(),
+    jobsDeleted: v.number(),
+    keptWarmProspects: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const prospects = await ctx.db
+      .query("salesDataProspects")
+      .withIndex("by_company_group", (q) => q.eq("companyId", args.companyId))
+      .take(LOOKUP_LIMIT);
+
+    let suspectsDeleted = 0;
+    for (const prospect of prospects) {
+      if (prospect.origin !== "MARKET_DISCOVERY") continue;
+      await ctx.db.delete(prospect._id);
+      suspectsDeleted += 1;
+    }
+
+    const groups = await ctx.db
+      .query("salesDataMarketDiscoveryGroups")
+      .withIndex("by_company_group", (q) => q.eq("companyId", args.companyId))
+      .take(LOOKUP_LIMIT);
+    for (const group of groups) {
+      await ctx.db.delete(group._id);
+    }
+
+    const jobs = await ctx.db
+      .query("salesDataMarketDiscoveryJobs")
+      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
+      .take(LOOKUP_LIMIT);
+    for (const job of jobs) {
+      await ctx.db.delete(job._id);
+    }
+
+    return {
+      suspectsDeleted,
+      groupsDeleted: groups.length,
+      jobsDeleted: jobs.length,
+      keptWarmProspects: prospects.length - suspectsDeleted,
     };
   },
 });
@@ -1056,17 +1276,78 @@ export const watchJobInternal = internalMutation({
     }
     const refreshed = await updateJobCounts(ctx, job._id);
     if (!refreshed) return;
-    const status =
-      refreshed.groupsNeedsCheck > 0 || refreshed.locationsNeedsCheck > 0
-        ? "COMPLETE_WITH_EXCEPTIONS"
-        : "COMPLETE";
+
+    // The run ending is not the job ending. The first live run proved the
+    // difference: it found five parent groups, never asked for a location
+    // task, ended SUCCESS, and this watchdog closed the job as COMPLETE with
+    // nothing filed and five groups untouched. The job asks its own rows what
+    // is left, and if anything is, it hands the work to a new run.
+    const outstanding = await outstandingWork(ctx, refreshed);
+    const runsStarted = refreshed.runsStarted ?? 1;
+    const withinBudget = refreshed.spentGBP < refreshed.maxCostGBP;
+    const withinRunCap = runsStarted < MAX_JOB_RUNS;
+
+    if (outstanding.total > 0 && withinBudget && withinRunCap) {
+      // A group the dead run had in hand goes back on the queue, or the next
+      // run would be handed the same half-finished item for ever.
+      for (const group of outstanding.groupsAwaitingLocations) {
+        if (group.locationsStatus === "IN_PROGRESS") {
+          await ctx.db.patch(group._id, { locationsStatus: "PENDING", updatedAt: now });
+        }
+      }
+
+      const nextRunId = await startDiscoveryRun(ctx, {
+        job: refreshed,
+        companyId: refreshed.companyId,
+        agentId: refreshed.agentId,
+        userId: refreshed.startedBy,
+        objective: buildDiscoveryObjective(),
+        title: `Market discovery · all customer types · run ${runsStarted + 1}`,
+      });
+      await ctx.db.patch(refreshed._id, {
+        runId: nextRunId,
+        runsStarted: runsStarted + 1,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    // Nothing left, or nothing left that may be spent on. Either way the
+    // ending says what was not done rather than reading as a clean finish.
+    const unfinished: string[] = [];
+    if (outstanding.groupsAwaitingLocations.length > 0) {
+      unfinished.push(
+        `${outstanding.groupsAwaitingLocations.length} accepted group${outstanding.groupsAwaitingLocations.length === 1 ? "" : "s"} had no locations searched (${outstanding.groupsAwaitingLocations
+          .map((group) => group.groupName)
+          .join(", ")})`
+      );
+    }
+    if (outstanding.typesShort.length > 0) {
+      unfinished.push(
+        `${outstanding.typesShort.length} customer type${outstanding.typesShort.length === 1 ? "" : "s"} came up short of the group target`
+      );
+    }
+    if (!withinBudget) unfinished.push("the job reached its spend ceiling");
+    else if (!withinRunCap && outstanding.total > 0) {
+      unfinished.push(`the job used all ${MAX_JOB_RUNS} of its runs`);
+    }
+
+    const hasExceptions =
+      unfinished.length > 0
+      || refreshed.groupsNeedsCheck > 0
+      || refreshed.locationsNeedsCheck > 0;
+    const found = `Found ${refreshed.groupsAccepted} parent groups and filed ${refreshed.locationsFiled} locations`;
+    const toCheck = refreshed.groupsNeedsCheck + refreshed.locationsNeedsCheck;
+
     await finishJob(ctx, {
       job: refreshed,
-      status,
-      reason:
-        status === "COMPLETE"
-          ? `Found ${refreshed.groupsAccepted} parent groups and filed ${refreshed.locationsFiled} locations.`
-          : `Found ${refreshed.groupsAccepted} parent groups and filed ${refreshed.locationsFiled} locations, with ${refreshed.groupsNeedsCheck + refreshed.locationsNeedsCheck} items to check.`,
+      status: hasExceptions ? "COMPLETE_WITH_EXCEPTIONS" : "COMPLETE",
+      reason: hasExceptions
+        ? `${found}. Not finished: ${[
+            ...unfinished,
+            ...(toCheck > 0 ? [`${toCheck} item${toCheck === 1 ? "" : "s"} to check`] : []),
+          ].join("; ")}.`
+        : `${found}.`,
     });
   },
 });

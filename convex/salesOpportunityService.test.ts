@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   buildGapProducts,
+  buildTypeBaskets,
   collectReportFigures,
   estimateProspect,
   findGroupGaps,
@@ -401,5 +402,84 @@ describe("buildGapProducts", () => {
       [gap("Colten Uniform", "Chemicals", "Colten")]
     );
     expect(sheet.products).toEqual([{ description: "Degreaser", spendGBP: 50 }]);
+  });
+});
+
+describe("what a site like this buys", () => {
+  const row = (over: Partial<Parameters<typeof buildTypeBaskets>[0][number]> = {}) => ({
+    customerTypeKey: "CARE HOMES",
+    customerType: "CARE HOMES",
+    accountNameKey: "FAIRMILE GRANGE",
+    categoryKey: "CHEMICALS",
+    category: "Chemicals",
+    productDescription: "BLEACH 5L",
+    spendGBP: 100,
+    ...over,
+  });
+
+  test("the mix is pooled across every customer of the type, biggest category first", () => {
+    const [basket] = buildTypeBaskets([
+      row({ spendGBP: 300 }),
+      row({ accountNameKey: "AVON REACH", spendGBP: 100 }),
+      row({ categoryKey: "BAGS", category: "Bags", productDescription: "REFUSE SACK", spendGBP: 200 }),
+    ]);
+
+    expect(basket.customerTypeKey).toBe("CARE HOMES");
+    // Two accounts contributed, which is what the reader weighs the mix by.
+    expect(basket.customerCount).toBe(2);
+    expect(basket.totalSpendGBP).toBe(600);
+    expect(basket.categories.map((category) => [category.category, category.spendGBP])).toEqual([
+      ["Chemicals", 400],
+      ["Bags", 200],
+    ]);
+  });
+
+  test("a category carries the products actually bought, biggest spend first", () => {
+    const [basket] = buildTypeBaskets([
+      row({ productDescription: "BLEACH 5L", spendGBP: 50 }),
+      row({ productDescription: "DEGREASER 5L", spendGBP: 250 }),
+      row({ productDescription: "BLEACH 5L", spendGBP: 50 }),
+    ]);
+
+    expect(basket.categories[0].products).toEqual([
+      { description: "DEGREASER 5L", spendGBP: 250 },
+      { description: "BLEACH 5L", spendGBP: 100 },
+    ]);
+  });
+
+  test("a zero-revenue line is the workbook writing 'bought nothing', so it stays off the sheet", () => {
+    const baskets = buildTypeBaskets([
+      row({ productDescription: "NEVER BOUGHT", spendGBP: 0 }),
+      row({ productDescription: "   ", spendGBP: 90 }),
+      row({ productDescription: "BLEACH 5L", spendGBP: 10 }),
+    ]);
+
+    expect(baskets[0].categories[0].products).toEqual([
+      { description: "BLEACH 5L", spendGBP: 10 },
+    ]);
+  });
+
+  test("types are kept apart, because a hotel does not buy what a care home buys", () => {
+    const baskets = buildTypeBaskets([
+      row({ spendGBP: 100 }),
+      row({
+        customerTypeKey: "HOTELS",
+        customerType: "HOTELS",
+        accountNameKey: "THE CASTLE INN",
+        categoryKey: "LINEN",
+        category: "Linen",
+        productDescription: "TOWEL",
+        spendGBP: 40,
+      }),
+    ]);
+
+    expect(baskets).toHaveLength(2);
+    const hotels = baskets.find((basket) => basket.customerTypeKey === "HOTELS");
+    expect(hotels?.totalSpendGBP).toBe(40);
+    expect(hotels?.categories[0].category).toBe("Linen");
+  });
+
+  test("nothing bought means no basket rather than an empty one", () => {
+    expect(buildTypeBaskets([])).toEqual([]);
   });
 });

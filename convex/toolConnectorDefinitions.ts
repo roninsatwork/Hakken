@@ -635,23 +635,26 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Comax — Record a market-discovery location",
         description:
-          "Records one location under an accepted market-discovery parent group. The location "
-          + "source page must have been opened in this run. Existing customers and existing "
-          + "prospects are skipped and counted as duplicates.",
+          "Records one UK location under an accepted market-discovery parent group. The location "
+          + "source page must have been opened in this run, and the site must have a full UK "
+          + "postcode — Comax delivers from England, so sites abroad are refused. Existing "
+          + "customers and existing prospects are skipped and counted as duplicates.",
         handlerMapping: "marketDiscovery.locations.record",
         requiredRole: "ADMIN",
         sideEffectLevel: "WRITE",
         confirmationRequired: false,
         inputSchema: JSON.stringify({
           type: "object",
-          required: ["groupName", "siteName", "sourceUrl", "reasoning"],
+          required: ["groupName", "siteName", "postcode", "sourceUrl", "reasoning"],
           properties: {
             groupName: { type: "string", description: "The accepted parent group name." },
             siteName: { type: "string", description: "The location name as published." },
             town: { type: "string", description: "The town it is in." },
             postcode: {
               type: "string",
-              description: "The postcode, when published. It is the best duplicate signal.",
+              description:
+                "The site's full UK postcode, from the page you opened. Required: a site "
+                + "without one, or with a postcode from another country, will be refused.",
             },
             sourceUrl: {
               type: "string",

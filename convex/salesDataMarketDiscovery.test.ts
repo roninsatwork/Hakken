@@ -175,6 +175,348 @@ describe("market discovery jobs", () => {
     ]);
   });
 
+
+  test("a site outside the UK is refused however good the parent company is", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    const groupUrl = "https://example.com/barchester";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: groupUrl });
+    await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      customerType: "CARE HOMES",
+      sourceUrl: groupUrl,
+      reasoning: "The page says Barchester operates care homes.",
+      confidence: "HIGH",
+      agentId,
+      runId: job.runId,
+    });
+    await t.mutation(internal.salesDataMarketDiscovery.nextTaskInternal, {
+      companyId,
+      runId: job.runId,
+    });
+
+    const siteUrl = "https://example.com/barchester/locations";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: siteUrl });
+
+    // A real site, a real source page, an address Comax cannot deliver to.
+    const abroad = await t.mutation(internal.salesDataMarketDiscovery.recordLocationInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      siteName: "Barchester Boston Home",
+      town: "Boston",
+      postcode: "02108",
+      sourceUrl: siteUrl,
+      reasoning: "Listed on the group's locations page.",
+      agentId,
+      runId: job.runId,
+    });
+    expect(abroad.recorded).toBe(false);
+    expect(abroad.reason).toContain("not a UK postcode");
+
+    // No postcode at all is refused too — otherwise leaving it out is the way
+    // round the rule.
+    const noPostcode = await t.mutation(internal.salesDataMarketDiscovery.recordLocationInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      siteName: "Barchester Somewhere Home",
+      town: "Somewhere",
+      sourceUrl: siteUrl,
+      reasoning: "Listed on the group's locations page.",
+      agentId,
+      runId: job.runId,
+    });
+    expect(noPostcode.recorded).toBe(false);
+    expect(noPostcode.reason).toContain("full UK postcode");
+
+    // Nothing was filed by either attempt.
+    const filed = await t.run(async (ctx) =>
+      await ctx.db.query("salesDataProspects").collect()
+    );
+    expect(filed).toEqual([]);
+  });
+
+  test("a UK site is filed, and the run is told whether it is a southern one", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    const groupUrl = "https://example.com/barchester";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: groupUrl });
+    await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      customerType: "CARE HOMES",
+      sourceUrl: groupUrl,
+      reasoning: "The page says Barchester operates care homes.",
+      confidence: "HIGH",
+      agentId,
+      runId: job.runId,
+    });
+    await t.mutation(internal.salesDataMarketDiscovery.nextTaskInternal, {
+      companyId,
+      runId: job.runId,
+    });
+
+    const siteUrl = "https://example.com/barchester/locations";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: siteUrl });
+
+    const southern = await t.mutation(internal.salesDataMarketDiscovery.recordLocationInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      siteName: "Barchester Christchurch Home",
+      town: "Christchurch",
+      postcode: "BH23 2FR",
+      sourceUrl: siteUrl,
+      reasoning: "Listed on the group's locations page.",
+      agentId,
+      runId: job.runId,
+    });
+    expect(southern.recorded).toBe(true);
+    expect(southern.southOfEngland).toBe(true);
+
+    // Northern sites are still filed — the preference is not a gate.
+    const northern = await t.mutation(internal.salesDataMarketDiscovery.recordLocationInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      siteName: "Barchester Dalkeith Home",
+      town: "Dalkeith",
+      postcode: "EH22 2AH",
+      sourceUrl: siteUrl,
+      reasoning: "Listed on the group's locations page.",
+      agentId,
+      runId: job.runId,
+    });
+    expect(northern.recorded).toBe(true);
+    expect(northern.southOfEngland).toBe(false);
+    expect(northern.message).toContain("outside the south of England");
+  });
+
+  test("a group with no locations to find is retired when the run says so", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    // Two accepted groups. The first is a publisher with no sites of its own —
+    // Pearson, on the real run — and the second is behind it in the queue.
+    for (const [groupName, url] of [
+      ["Pearson", "https://example.com/pearson"],
+      ["Eton College", "https://example.com/eton"],
+    ]) {
+      await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url });
+      await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+        companyId,
+        groupName,
+        customerType: "CARE HOMES",
+        sourceUrl: url,
+        reasoning: `The page says ${groupName} is a group of this type.`,
+        confidence: "HIGH",
+        agentId,
+        runId: job.runId,
+      });
+    }
+
+    // Every parent group target is met, so the queue is location work only.
+    const first = await t.mutation(internal.salesDataMarketDiscovery.nextTaskInternal, {
+      companyId,
+      runId: job.runId,
+    });
+    expect(first.task?.kind).toBe("FIND_LOCATIONS");
+    const firstGroup = first.task?.kind === "FIND_LOCATIONS" ? first.task.groupName : null;
+
+    // The run reports honestly that there is nothing to file.
+    const second = await t.mutation(internal.salesDataMarketDiscovery.nextTaskInternal, {
+      companyId,
+      runId: job.runId,
+      previousOutcome: "COULD_NOT",
+      note: "It sells products, not sites.",
+    });
+
+    expect(second.task?.kind).toBe("FIND_LOCATIONS");
+    const secondGroup = second.task?.kind === "FIND_LOCATIONS" ? second.task.groupName : null;
+    // The queue moved on rather than handing the same group back.
+    expect(secondGroup).not.toBe(firstGroup);
+
+    const retired = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("salesDataMarketDiscoveryGroups")
+        .withIndex("by_job_status", (q) => q.eq("jobId", job._id).eq("status", "ACCEPTED"))
+        .collect();
+      return rows.find((row) => row.groupName === firstGroup);
+    });
+    expect(retired?.locationsStatus).toBe("DONE");
+    expect(retired?.locationsEndedReason).toContain("sells products");
+  });
+
+  test("a group the run never reports on is retired after three attempts", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    for (const [groupName, url] of [
+      ["Pearson", "https://example.com/pearson"],
+      ["Eton College", "https://example.com/eton"],
+    ]) {
+      await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url });
+      await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+        companyId,
+        groupName,
+        customerType: "CARE HOMES",
+        sourceUrl: url,
+        reasoning: `The page says ${groupName} is a group of this type.`,
+        confidence: "HIGH",
+        agentId,
+        runId: job.runId,
+      });
+    }
+
+    // Asked for repeatedly with no outcome ever reported, which is what a
+    // model that cannot finish and will not admit it looks like.
+    const seen: string[] = [];
+    for (let ask = 0; ask < 4; ask += 1) {
+      const next = await t.mutation(internal.salesDataMarketDiscovery.nextTaskInternal, {
+        companyId,
+        runId: job.runId,
+      });
+      if (next.task?.kind === "FIND_LOCATIONS") seen.push(next.task.groupName);
+      // Put it back the way a dead run leaves it, so the same group is next.
+      await t.run(async (ctx) => {
+        const held = await ctx.db
+          .query("salesDataMarketDiscoveryGroups")
+          .withIndex("by_job_locations_status", (q) =>
+            q.eq("jobId", job._id).eq("locationsStatus", "IN_PROGRESS")
+          )
+          .first();
+        if (held) await ctx.db.patch(held._id, { locationsStatus: "PENDING" });
+      });
+    }
+
+    // Three goes at the first group, then the queue moves on by itself.
+    expect(seen.filter((name) => name === seen[0]).length).toBe(3);
+    expect(seen[3]).not.toBe(seen[0]);
+  });
+
+  test("a run that walks away mid-queue hands the job to a new run", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    // One accepted parent group whose locations were never searched — the
+    // exact state the first live run left behind.
+    const sourceUrl = "https://example.com/barchester";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: sourceUrl });
+    await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      customerType: "CARE HOMES",
+      sourceUrl,
+      reasoning: "The page says Barchester operates care homes.",
+      confidence: "HIGH",
+      agentId,
+      runId: job.runId,
+    });
+
+    // The run ends of its own accord, reporting success.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(job.runId!, { status: "SUCCESS", completedAt: Date.now() });
+    });
+
+    await t.mutation(internal.salesDataMarketDiscovery.watchJobInternal, { jobId: job._id });
+
+    const after = await latestJob(t);
+    expect(after?.status).toBe("RUNNING");
+    expect(after?.runsStarted).toBe(2);
+    expect(after?.runId).not.toBe(job.runId);
+
+    // And the queue is intact, so the new run is handed the location task the
+    // old one never asked for.
+    const group = await t.run(async (ctx) =>
+      await ctx.db
+        .query("salesDataMarketDiscoveryGroups")
+        .withIndex("by_job_status", (q) => q.eq("jobId", job._id).eq("status", "ACCEPTED"))
+        .first()
+    );
+    expect(group?.locationsStatus).toBe("PENDING");
+  });
+
+  test("a group left in progress by a dead run goes back on the queue", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    const sourceUrl = "https://example.com/barchester";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: sourceUrl });
+    await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      customerType: "CARE HOMES",
+      sourceUrl,
+      reasoning: "The page says Barchester operates care homes.",
+      confidence: "HIGH",
+      agentId,
+      runId: job.runId,
+    });
+    // Taken off the queue by a run that then died holding it.
+    await t.run(async (ctx) => {
+      const group = await ctx.db
+        .query("salesDataMarketDiscoveryGroups")
+        .withIndex("by_job_status", (q) => q.eq("jobId", job._id).eq("status", "ACCEPTED"))
+        .first();
+      await ctx.db.patch(group!._id, { locationsStatus: "IN_PROGRESS" });
+      await ctx.db.patch(job.runId!, { status: "SUCCESS", completedAt: Date.now() });
+    });
+
+    await t.mutation(internal.salesDataMarketDiscovery.watchJobInternal, { jobId: job._id });
+
+    const group = await t.run(async (ctx) =>
+      await ctx.db
+        .query("salesDataMarketDiscoveryGroups")
+        .withIndex("by_job_status", (q) => q.eq("jobId", job._id).eq("status", "ACCEPTED"))
+        .first()
+    );
+    expect(group?.locationsStatus).toBe("PENDING");
+  });
+
+  test("a job that runs out of runs says what it left undone rather than reading as a clean finish", async () => {
+    const { t, client, companyId, userId, agentId } = await seed();
+    await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
+    const job = await latestJob(t);
+    if (!job?.runId) throw new Error("Missing job run.");
+
+    const sourceUrl = "https://example.com/barchester";
+    await markPageRead(t, { companyId, userId, agentId, runId: job.runId, url: sourceUrl });
+    await t.mutation(internal.salesDataMarketDiscovery.recordGroupInternal, {
+      companyId,
+      groupName: "Barchester Healthcare",
+      customerType: "CARE HOMES",
+      sourceUrl,
+      reasoning: "The page says Barchester operates care homes.",
+      confidence: "HIGH",
+      agentId,
+      runId: job.runId,
+    });
+    await t.run(async (ctx) => {
+      // Already spent every run it is allowed.
+      await ctx.db.patch(job._id, { runsStarted: 6 });
+      await ctx.db.patch(job.runId!, { status: "SUCCESS", completedAt: Date.now() });
+    });
+
+    await t.mutation(internal.salesDataMarketDiscovery.watchJobInternal, { jobId: job._id });
+
+    const after = await latestJob(t);
+    expect(after?.status).toBe("COMPLETE_WITH_EXCEPTIONS");
+    expect(after?.endedReason).toContain("Not finished");
+    expect(after?.endedReason).toContain("Barchester Healthcare");
+  });
+
   test("parent groups require a source opened in the same run and refuse workspace duplicates", async () => {
     const { t, client, companyId, userId, agentId } = await seed();
     await client.mutation(api.salesDataMarketDiscovery.startMarketDiscoveryJob, {});
