@@ -285,6 +285,88 @@ export const getConnectorMarketplace = adminQuery({
   },
 });
 
+/**
+ * Install one built-in connector and bring its tool rows into line.
+ *
+ * The admin screen is not the only caller: a maintenance script has to be able
+ * to put a deployment into a known state without a person clicking through the
+ * connector list. Both go through here so an install performed by a script is
+ * the same install, rather than a second implementation that drifts.
+ *
+ * The permission check stays with the callers — this function assumes it has
+ * already happened.
+ */
+export async function installBuiltInConnector(
+  ctx: MutationCtx,
+  args: {
+    key: string;
+    installedBy: Id<"users">;
+    companyId?: Id<"companies">;
+    tenantAvailability?: ToolConnectorTenantAvailability;
+    configuredSecretRefs?: string[];
+    enabledToolMappings?: string[];
+    isActive?: boolean;
+  }
+) {
+  const definition = getBuiltInToolConnector(args.key);
+  if (!definition) throw new Error("Connector definition not found.");
+
+  const configuredSecretRefs = normalizeSecretRefKeys(args.configuredSecretRefs);
+  assertSafeSecretRefs(configuredSecretRefs);
+  const enabledToolMappings = getEnabledToolMappings(definition, args.enabledToolMappings);
+  const tenantAvailability = resolveConnectorTenantAvailability({
+    definitionAvailability: definition.tenantAvailability,
+    companyId: args.companyId,
+    tenantAvailability: args.tenantAvailability,
+  });
+  const now = Date.now();
+  const existing = await findConnectorInstall(ctx, { key: definition.key, companyId: args.companyId });
+  const connectorPatch = {
+    key: definition.key,
+    name: definition.name,
+    description: definition.description,
+    category: definition.category,
+    authMode: definition.authMode,
+    requiredScopes: definition.requiredScopes,
+    requiredSecretRefs: definition.requiredSecretRefs,
+    configuredSecretRefs,
+    enabledToolMappings,
+    tenantAvailability,
+    companyId: args.companyId,
+    installStatus: "INSTALLED" as ToolConnectorInstallStatus,
+    testStatus: "UNTESTED" as const,
+    authConnectionStatus: definition.authMode === "OAUTH" ? "NOT_CONNECTED" as const : undefined,
+    isActive: args.isActive ?? true,
+    updatedAt: now,
+  };
+
+  const connectorId = existing
+    ? (await ctx.db.patch(existing._id, connectorPatch), existing._id)
+    : await ctx.db.insert("toolConnectors", {
+        ...connectorPatch,
+        createdAt: now,
+        createdBy: args.installedBy,
+      });
+  const connector = await ctx.db.get(connectorId);
+  if (!connector) throw new Error("Connector install failed.");
+
+  await syncConnectorSecretRefs(ctx, {
+    connectorId,
+    requiredSecretRefs: definition.requiredSecretRefs,
+    configuredSecretRefs,
+    updatedBy: args.installedBy,
+    now,
+  });
+  await syncConnectorTools(ctx, {
+    connector,
+    enabledToolMappings,
+    createdBy: args.installedBy,
+    now,
+  });
+
+  return { connectorId, alreadyInstalled: existing !== null };
+}
+
 export const installConnector = superAdminMutation({
   args: {
     key: v.string(),
@@ -295,61 +377,14 @@ export const installConnector = superAdminMutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = ctx;
-    const definition = getBuiltInToolConnector(args.key);
-    if (!definition) throw new Error("Connector definition not found.");
-
-    const configuredSecretRefs = normalizeSecretRefKeys(args.configuredSecretRefs);
-    assertSafeSecretRefs(configuredSecretRefs);
-    const enabledToolMappings = getEnabledToolMappings(definition, args.enabledToolMappings);
-    const tenantAvailability = resolveConnectorTenantAvailability({
-      definitionAvailability: definition.tenantAvailability,
+    const { connectorId } = await installBuiltInConnector(ctx, {
+      key: args.key,
+      installedBy: ctx.userId,
       companyId: args.companyId,
       tenantAvailability: args.tenantAvailability,
-    });
-    const now = Date.now();
-    const existing = await findConnectorInstall(ctx, { key: definition.key, companyId: args.companyId });
-    const connectorPatch = {
-      key: definition.key,
-      name: definition.name,
-      description: definition.description,
-      category: definition.category,
-      authMode: definition.authMode,
-      requiredScopes: definition.requiredScopes,
-      requiredSecretRefs: definition.requiredSecretRefs,
-      configuredSecretRefs,
-      enabledToolMappings,
-      tenantAvailability,
-      companyId: args.companyId,
-      installStatus: "INSTALLED" as ToolConnectorInstallStatus,
-      testStatus: "UNTESTED" as const,
-      authConnectionStatus: definition.authMode === "OAUTH" ? "NOT_CONNECTED" as const : undefined,
-      isActive: args.isActive ?? true,
-      updatedAt: now,
-    };
-
-    const connectorId = existing
-      ? (await ctx.db.patch(existing._id, connectorPatch), existing._id)
-      : await ctx.db.insert("toolConnectors", {
-          ...connectorPatch,
-          createdAt: now,
-      createdBy: userId,
-    });
-    const connector = await ctx.db.get(connectorId);
-    if (!connector) throw new Error("Connector install failed.");
-
-    await syncConnectorSecretRefs(ctx, {
-      connectorId,
-      requiredSecretRefs: definition.requiredSecretRefs,
-      configuredSecretRefs,
-      updatedBy: userId,
-      now,
-    });
-    await syncConnectorTools(ctx, {
-      connector,
-      enabledToolMappings,
-      createdBy: userId,
-      now,
+      configuredSecretRefs: args.configuredSecretRefs,
+      enabledToolMappings: args.enabledToolMappings,
+      isActive: args.isActive,
     });
 
     return connectorId;

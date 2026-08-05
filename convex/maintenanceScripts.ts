@@ -5,6 +5,9 @@ import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getRegisteredMigrationNames } from "./dataMigrations";
 import { rebuildGlobalInventoryRollupData } from "./inventoryRollups";
+// template:remove:start salesData
+import { provisionComaxAgents } from "./salesDataComaxProvisioning";
+// template:remove:end
 import {
   getMaintenanceScriptDefinition,
   maintenanceScriptDefinitions,
@@ -34,6 +37,11 @@ async function executeMaintenanceScript(
     return await startPendingDataMigrations(ctx);
   }
 
+  // template:remove:start salesData
+  if (scriptId === "comax-agents-provision") {
+    return await provisionComaxAgents(ctx, actorId);
+  }
+  // template:remove:end
 
   throw new Error("Unknown maintenance script");
 }

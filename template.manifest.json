@@ -141,6 +141,8 @@
         "convex/salesDataResearchJobService.test.ts",
         "convex/salesDataMarketDiscovery.ts",
         "convex/salesDataMarketDiscovery.test.ts",
+        "convex/salesDataComaxProvisioning.ts",
+        "convex/salesDataComaxProvisioning.test.ts",
         "convex/salesOpportunityService.ts",
         "convex/salesOpportunityService.test.ts",
         "convex/salesOpportunityReports.ts",
