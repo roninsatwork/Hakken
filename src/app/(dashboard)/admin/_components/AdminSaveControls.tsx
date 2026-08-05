@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Save } from "lucide-react";
+import { useCanWriteHere } from "./AdminAccessLevel";
 
 type AdminSaveActionProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   isSaving: boolean;
@@ -21,6 +22,12 @@ export function AdminSaveAction({
   type = "button",
   ...buttonProps
 }: AdminSaveActionProps) {
+  const canWriteHere = useCanWriteHere();
+
+  // Nothing to save when nothing can be changed. The fields on the settings
+  // screens above this button read fine on their own.
+  if (!canWriteHere) return null;
+
   return (
     <div className="flex items-center gap-3">
       {showSuccess && successLabel ? (

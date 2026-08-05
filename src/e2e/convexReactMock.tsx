@@ -3,7 +3,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { getFunctionName } from "convex/server";
 
-type E2ERole = "super-admin" | "company-admin" | "user";
+type E2ERole = "super-admin" | "company-admin" | "user" | "read-only";
 type FunctionReference = Parameters<typeof getFunctionName>[0];
 
 const now = 1_717_200_000_000;
@@ -676,7 +676,7 @@ function getCookie(name: string) {
 
 function getRole(): E2ERole | null {
   const role = getCookie("sonae_e2e_auth");
-  if (role === "super-admin" || role === "company-admin" || role === "user") return role;
+  if (role === "super-admin" || role === "company-admin" || role === "user" || role === "read-only") return role;
   return null;
 }
 
@@ -691,6 +691,19 @@ function getCurrentUser() {
       email: "super.e2e@example.com",
       name: "E2E Super Admin",
       role: "SUPER_ADMIN",
+      createdAt: now,
+    };
+  }
+
+  // Reaches the admin section like a super admin, and every write control on
+  // it is removed by AdminAccessLevelProvider.
+  if (role === "read-only") {
+    return {
+      _id: superAdminId,
+      _creationTime: now,
+      email: "readonly.e2e@example.com",
+      name: "E2E Read Only",
+      role: "READ_ONLY",
       createdAt: now,
     };
   }

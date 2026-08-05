@@ -11,6 +11,16 @@ const isLandingPage = createRouteMatcher(["/"]);
 const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/app(.*)", "/demos(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
+/**
+ * Which fixture roles reach the admin section, in end-to-end mode only.
+ *
+ * Mirrors `ADMIN_SECTION_ROLES` in the admin layout, which is the real gate.
+ * Outside end-to-end mode this middleware checks only that someone is signed
+ * in — it has never known about roles — so this list exists purely so the
+ * fixture harness can show what a read-only account sees.
+ */
+const E2E_ADMIN_ROLES = new Set(["super-admin", "read-only"]);
+
 function requestedProtectedRoute(request: Parameters<typeof isProtectedRoute>[0]) {
   return sanitizeAuthRedirect(`${request.nextUrl.pathname}${request.nextUrl.search}`);
 }
@@ -90,10 +100,10 @@ export default convexAuthNextjsMiddleware(async (request) => {
       if (isSignInPage(request)) {
         return nextjsMiddlewareRedirect(
           request,
-          requestedLoginRedirect(request) ?? (e2eRole === "super-admin" ? "/admin" : "/app"),
+          requestedLoginRedirect(request) ?? (E2E_ADMIN_ROLES.has(e2eRole) ? "/admin" : "/app"),
         );
       }
-      if (isAdminRoute(request) && e2eRole !== "super-admin") {
+      if (isAdminRoute(request) && !E2E_ADMIN_ROLES.has(e2eRole)) {
         return nextjsMiddlewareRedirect(request, "/app");
       }
       return;

@@ -16,6 +16,7 @@ import {
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 /** One screenful of candidates; "load more" fetches the next. */
 const PICKER_PAGE_SIZE = 20;
@@ -221,14 +222,14 @@ export default function AgentSkillsPage() {
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(row.binding.assignedAt)}</td>
               <td className="px-4 py-3 text-right">
-                <button
+                <AdminWriteButton
                   type="button"
                   aria-label={`Remove ${row.skill.name}`}
                   onClick={() => setRemoveTarget(row)}
                   className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </AdminWriteButton>
               </td>
             </tr>
           ))}
@@ -315,14 +316,14 @@ export default function AgentSkillsPage() {
             <button type="button" onClick={() => setRemoveTarget(null)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] hover:text-foreground">
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={confirmRemove}
               disabled={!!removeTarget && action.isBusy(removeTarget.binding._id)}
               className="h-9 px-4 rounded-[8px] bg-red-500 text-white text-[12px] font-medium disabled:opacity-50"
             >
               Remove skill
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

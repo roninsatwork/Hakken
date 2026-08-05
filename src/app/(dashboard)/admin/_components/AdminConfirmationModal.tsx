@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import { useCanWriteHere } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type AdminConfirmationWarningProps = {
   title?: ReactNode;
@@ -36,6 +37,8 @@ export function AdminConfirmationModal({
   error,
   warning,
 }: AdminConfirmationModalProps) {
+  const canWriteHere = useCanWriteHere();
+
   const handleClose = () => {
     if (!isSubmitting) onClose();
   };
@@ -66,14 +69,16 @@ export function AdminConfirmationModal({
         >
           {cancelLabel}
         </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={isSubmitting}
-          className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
-        >
-          {confirmLabel}
-        </button>
+        {canWriteHere ? (
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-[10px] bg-red-500/90 text-white hover:bg-red-500 transition-all text-sm font-medium shadow-lg shadow-red-500/20 disabled:opacity-50"
+          >
+            {confirmLabel}
+          </button>
+        ) : null}
       </div>
     </SonaeModal>
   );

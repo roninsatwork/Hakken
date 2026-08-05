@@ -23,6 +23,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type SuperAdminFormData = {
   name: string;
@@ -360,13 +361,13 @@ export default function ManageSuperAdminsPage() {
             >
               Cancel
             </button>
-            <button 
+            <AdminWriteButton 
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? "Saving..." : (editingUser ? "Update User" : "Send Invite")}
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>

@@ -10,6 +10,7 @@ import { ArrowLeft, ChevronDown, Loader2, Save } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   buildDefaultJobsByModelId,
   formatModelTag,
@@ -184,14 +185,14 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
         </div>
-        <button
+        <AdminWriteButton
           onClick={handleSave}
           disabled={isSaving}
           className="h-10 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save
-        </button>
+        </AdminWriteButton>
       </div>
       <AdminSaveError>{saveError}</AdminSaveError>
 
@@ -213,13 +214,13 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
           .
         </p>
         {!handlesEveryJob && (
-          <button
+          <AdminWriteButton
             type="button"
             onClick={() => setIsDefaultConfirmOpen(true)}
             className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground"
           >
             Make this the default model
-          </button>
+          </AdminWriteButton>
         )}
       </div>
 

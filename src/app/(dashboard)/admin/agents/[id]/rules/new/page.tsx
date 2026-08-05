@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
   const t = useTranslations("admin.agents.details.rules.form");
@@ -162,14 +163,14 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
-          <button
+          <AdminWriteButton
             type="submit"
             disabled={!name.trim() || !trigger.trim() || !instruction.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
             <span>{t("create.submit")}</span>
-          </button>
+          </AdminWriteButton>
         </div>
       </form>
     </div>

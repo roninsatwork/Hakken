@@ -1,10 +1,23 @@
 import type { Doc, Id } from "./_generated/dataModel";
 
-export type ManagedUserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+export type ManagedUserRole = "USER" | "ADMIN" | "SUPER_ADMIN" | "READ_ONLY" | "AUDITOR";
 type UserPolicySubject = Pick<Doc<"users">, "role" | "companyId" | "impersonatingCompanyId">;
 type UserPolicyTarget = Pick<Doc<"users">, "role" | "companyId">;
 
+/**
+ * Roles that may manage other people. The oversight roles are excluded by name
+ * rather than by accident.
+ *
+ * This check previously read "is an ADMIN, or is impersonating a company", and
+ * the oversight roles would have failed it only because nothing sets the
+ * impersonation field for them. That is a true fact about the platform today
+ * and a fragile one to rest a permission on — anything that started setting
+ * that field would silently hand a read-only account the ability to create
+ * administrators. The users mutations are declared with `tenantMutation`, which
+ * admits any signed-in caller, so this function is the whole guard.
+ */
 function isScopedAdmin(caller: UserPolicySubject) {
+  if (caller.role === "READ_ONLY" || caller.role === "AUDITOR") return false;
   return caller.role === "ADMIN" || Boolean(caller.impersonatingCompanyId);
 }
 

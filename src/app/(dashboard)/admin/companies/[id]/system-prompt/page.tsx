@@ -13,6 +13,7 @@ import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 
 export default function CompanySystemPromptPage() {
@@ -84,17 +85,17 @@ export default function CompanySystemPromptPage() {
         {/* Dynamic Action Area */}
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <button 
+            <AdminWriteButton 
               onClick={handleRevert}
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
               <span>Revert</span>
-            </button>
+            </AdminWriteButton>
           )}
 
-          <button 
+          <AdminWriteButton 
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
             className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${
@@ -109,7 +110,7 @@ export default function CompanySystemPromptPage() {
               <Save className="w-3.5 h-3.5" />
             )}
             <span>Save Prompt</span>
-          </button>
+          </AdminWriteButton>
         </div>
       </header>
 

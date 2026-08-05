@@ -147,6 +147,21 @@ describe("ai tool execution service", () => {
       allowed: false,
       reason: "Tool execution requires administrator privileges.",
     });
+    /**
+     * The oversight roles must be refused here, and this is the test that says
+     * so. The check used to name `USER` as the only role it turned away, so the
+     * moment a fourth role existed it would have fallen through to the
+     * administrator path and been allowed to run tools — including destructive
+     * ones — despite existing precisely so its holder could change nothing.
+     */
+    expect(canExecuteTool({ requiredRole: "ADMIN", userRole: "READ_ONLY", userCompanyId: "a", targetCompanyId: "a" })).toEqual({
+      allowed: false,
+      reason: "Tool execution requires administrator privileges.",
+    });
+    expect(canExecuteTool({ requiredRole: "ADMIN", userRole: "AUDITOR", userCompanyId: "a", targetCompanyId: "a" })).toEqual({
+      allowed: false,
+      reason: "Tool execution requires administrator privileges.",
+    });
     expect(canExecuteTool({ requiredRole: "SUPER_ADMIN", userRole: "ADMIN", userCompanyId: "a" })).toEqual({
       allowed: false,
       reason: "Tool execution requires super-admin privileges.",

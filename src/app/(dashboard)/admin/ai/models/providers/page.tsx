@@ -17,6 +17,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { cn } from "@/src/ui/lib/utils";
 import { getErrorMessage } from "@/src/lib/errors";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   describeProviderStatus,
   describeProviderStatusTone,
@@ -235,7 +236,7 @@ export default function AIModelProvidersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <button
+                      <AdminWriteButton
                         type="button"
                         onClick={() => syncProviderKey && syncProvider(syncProviderKey)}
                         disabled={!syncProviderKey || syncingProvider !== null}
@@ -243,7 +244,7 @@ export default function AIModelProvidersPage() {
                       >
                         {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         Sync
-                      </button>
+                      </AdminWriteButton>
                       <button
                         type="button"
                         onClick={() => testProvider(provider.providerKey)}
@@ -256,7 +257,7 @@ export default function AIModelProvidersPage() {
                       {/* The switch is the control, not a badge beside a button
                           saying the same thing. Same treatment the catalogue's
                           Active column got. */}
-                      <button
+                      <AdminWriteButton
                         type="button"
                         role="switch"
                         aria-checked={provider.isEnabled}
@@ -277,7 +278,7 @@ export default function AIModelProvidersPage() {
                             )}
                           />
                         </span>
-                      </button>
+                      </AdminWriteButton>
                     </div>
                   </td>
                 </tr>
@@ -345,7 +346,7 @@ export default function AIModelProvidersPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={confirmDisable}
               disabled={isDisabling}
@@ -353,7 +354,7 @@ export default function AIModelProvidersPage() {
             >
               {isDisabling && <Loader2 className="h-4 w-4 animate-spin" />}
               Switch it off
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

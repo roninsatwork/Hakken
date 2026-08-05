@@ -1,4 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -15,6 +16,22 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type AuthCtx = QueryCtx | MutationCtx;
 type UserRole = NonNullable<Doc<"users">["role"]>;
+
+/**
+ * The role union, for function arguments.
+ *
+ * Four mutations across `users.ts` and `invites.ts` each spelled this out
+ * inline, so adding the oversight roles meant editing the same list four times
+ * and hoping none was missed. Declared once, a role added here reaches every
+ * caller at the same moment.
+ */
+export const userRoleValidator = v.union(
+  v.literal("USER"),
+  v.literal("ADMIN"),
+  v.literal("SUPER_ADMIN"),
+  v.literal("READ_ONLY"),
+  v.literal("AUDITOR")
+);
 
 export type CurrentUser = {
   userId: Id<"users">;
@@ -57,12 +74,101 @@ export async function requireRole(
   return current as RoleCheckedUser;
 }
 
+/**
+ * Roles that may change things at admin level.
+ *
+ * The oversight roles are deliberately absent. `requireAdmin` guards writes, so
+ * anything added here gains the ability to alter the platform.
+ */
+export const ADMIN_WRITE_ROLES = ["ADMIN", "SUPER_ADMIN"] as const;
+
+/**
+ * Roles that may read admin surfaces.
+ *
+ * `READ_ONLY` sees what an admin sees and can change nothing — the split
+ * between this list and `ADMIN_WRITE_ROLES` is the whole mechanism, so a
+ * read-only account cannot be created that quietly holds write access.
+ *
+ * `AUDITOR` is not here on purpose. An auditor sees the governance surfaces
+ * only, which is a narrower set than "everything an admin can read", so it is
+ * granted by `GOVERNANCE_READ_ROLES` rather than by admin membership.
+ */
+export const ADMIN_READ_ROLES = ["ADMIN", "SUPER_ADMIN", "READ_ONLY"] as const;
+
+/**
+ * Roles that may read the governance surfaces — register, approvals, audit
+ * trail, policies in force, evidence pack.
+ *
+ * This is the only list containing `AUDITOR`. Reading here is all it can do:
+ * there is no governance write guard, because no governance surface is
+ * editable from within the governance section by design.
+ */
+export const GOVERNANCE_READ_ROLES = ["ADMIN", "SUPER_ADMIN", "READ_ONLY", "AUDITOR"] as const;
+
+/**
+ * Roles that may read platform-wide surfaces.
+ *
+ * The admin section *is* the super-admin console — around sixty of its queries
+ * are declared super-admin only — so "read-only sees what an admin sees" is
+ * only true if read-only reaches them. Without this, half the admin screens
+ * would refuse a read-only account and the role would be advertised as seeing
+ * everything while showing blanks.
+ *
+ * `superAdminMutation` is untouched and still admits `SUPER_ADMIN` alone. The
+ * rule across this whole file is the same one: reads widen to include the
+ * oversight roles, writes never do.
+ *
+ * `AUDITOR` is absent — an auditor's reach is the governance surfaces, which is
+ * narrower than the platform console.
+ */
+export const SUPER_ADMIN_READ_ROLES = ["SUPER_ADMIN", "READ_ONLY"] as const;
+
+/** Cannot write anywhere, whatever else they can see. */
+export const OVERSIGHT_ROLES = ["READ_ONLY", "AUDITOR"] as const;
+
+export function isOversightRole(role: Doc<"users">["role"]): boolean {
+  return role === "READ_ONLY" || role === "AUDITOR";
+}
+
+/**
+ * A caller who may change things at admin level.
+ *
+ * Named for what it protects rather than for who passes it: every existing
+ * caller of this guards a write, and the oversight roles must never satisfy it.
+ */
 export async function requireAdmin(
   ctx: AuthCtx,
   message = "Unauthorized",
   unauthenticatedMessage = "Unauthenticated"
 ): Promise<RoleCheckedUser> {
-  return await requireRole(ctx, ["ADMIN", "SUPER_ADMIN"], message, unauthenticatedMessage);
+  return await requireRole(ctx, ADMIN_WRITE_ROLES, message, unauthenticatedMessage);
+}
+
+/** A caller who may read admin surfaces, including read-only accounts. */
+export async function requireAdminReader(
+  ctx: AuthCtx,
+  message = "Unauthorized",
+  unauthenticatedMessage = "Unauthenticated"
+): Promise<RoleCheckedUser> {
+  return await requireRole(ctx, ADMIN_READ_ROLES, message, unauthenticatedMessage);
+}
+
+/** A caller who may read platform-wide surfaces, including read-only accounts. */
+export async function requireSuperAdminReader(
+  ctx: AuthCtx,
+  message = "Unauthorized",
+  unauthenticatedMessage = "Unauthenticated"
+): Promise<RoleCheckedUser> {
+  return await requireRole(ctx, SUPER_ADMIN_READ_ROLES, message, unauthenticatedMessage);
+}
+
+/** A caller who may read the governance surfaces. */
+export async function requireGovernanceReader(
+  ctx: AuthCtx,
+  message = "Unauthorized",
+  unauthenticatedMessage = "Unauthenticated"
+): Promise<RoleCheckedUser> {
+  return await requireRole(ctx, GOVERNANCE_READ_ROLES, message, unauthenticatedMessage);
 }
 
 export async function requireSuperAdmin(
@@ -81,6 +187,14 @@ export function canAccessCompany(user: Doc<"users">, companyId: Id<"companies">)
   return user.role === "SUPER_ADMIN" || getActiveCompanyId(user) === companyId;
 }
 
+/**
+ * Scoped company access for anyone reading or writing admin surfaces.
+ *
+ * The oversight roles are company-scoped exactly as `ADMIN` is: a read-only or
+ * auditor account attached to one company cannot read another's records. What
+ * they may do once inside is decided by the guard the function declared, not
+ * here — this answers "whose data", not "may they change it".
+ */
 export function assertAdminCanAccessCompany(
   user: Doc<"users">,
   companyId: Id<"companies"> | undefined,
@@ -88,7 +202,8 @@ export function assertAdminCanAccessCompany(
 ) {
   if (user.role === "SUPER_ADMIN") return;
 
-  if (user.role === "ADMIN" && companyId && getActiveCompanyId(user) === companyId) {
+  const scopedRole = user.role === "ADMIN" || isOversightRole(user.role);
+  if (scopedRole && companyId && getActiveCompanyId(user) === companyId) {
     return;
   }
 

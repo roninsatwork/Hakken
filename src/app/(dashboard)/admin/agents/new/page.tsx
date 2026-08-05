@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   FieldLabel,
   SegmentedChoice,
@@ -432,13 +433,13 @@ export default function NewAgentPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <AdminWriteButton
             type="submit"
             disabled={isSubmitting || !canCreate}
             className="rounded-[8px] bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {isSubmitting ? t("buttons.creating") : t("buttons.createDraft")}
-          </button>
+          </AdminWriteButton>
           <Link
             href="/admin/agents"
             className="rounded-[8px] border border-border-dim px-4 py-2 text-[13px] text-secondary transition-colors hover:text-foreground"

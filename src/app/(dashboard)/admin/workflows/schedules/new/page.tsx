@@ -17,6 +17,7 @@ import {
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
 import ScheduleBuilder from "../_components/ScheduleBuilder";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   createDefaultScheduleDraft,
   serializeScheduleDraft,
@@ -319,14 +320,14 @@ export default function NewSchedulePage() {
             >
               {t('actions.cancel')}
             </button>
-            <button
+            <AdminWriteButton
               type="submit"
               disabled={isSubmitting || (payloadType === "workflow" ? !formData.workflowId : !formData.agentId) || !formData.name}
               className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
             >
               {isSubmitting ? t('actions.deploying') : t('actions.deploy')}
               {!isSubmitting && <Timer className="w-4 h-4" />}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
 

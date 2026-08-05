@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useCanWriteHere } from "./AdminAccessLevel";
 
 export const adminModalInputClassName =
   "px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm";
@@ -49,6 +50,8 @@ export function AdminModalFormActions({
   isSubmitting,
   onCancel,
 }: AdminModalFormActionsProps) {
+  const canWriteHere = useCanWriteHere();
+
   return (
     <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
       <button
@@ -59,13 +62,15 @@ export function AdminModalFormActions({
       >
         {cancelLabel}
       </button>
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
-      >
-        {submitLabel}
-      </button>
+      {canWriteHere ? (
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
+        >
+          {submitLabel}
+        </button>
+      ) : null}
     </div>
   );
 }

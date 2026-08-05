@@ -13,6 +13,7 @@ import { api } from "@/convex/_generated/api";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 
 export default function SystemPromptPage() {
@@ -79,17 +80,17 @@ export default function SystemPromptPage() {
         {/* Dynamic Action Area */}
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <button
+            <AdminWriteButton
               onClick={handleRevert}
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
               <span>{t("revert")}</span>
-            </button>
+            </AdminWriteButton>
           )}
 
-          <button
+          <AdminWriteButton
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
             className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${hasUnsavedChanges
@@ -103,7 +104,7 @@ export default function SystemPromptPage() {
               <Save className="w-3.5 h-3.5" />
             )}
             <span>{t("commit")}</span>
-          </button>
+          </AdminWriteButton>
         </div>
       </header>
 

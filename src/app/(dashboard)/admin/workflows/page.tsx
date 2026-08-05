@@ -202,7 +202,7 @@ export default function WorkflowsPage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <AdminRowActions>
-                            <AdminRowIconButton label={t('table.visualBuilder')} onClick={() => router.push(`/admin/workflows/${workflow._id}`)}>
+                            <AdminRowIconButton navigates label={t('table.visualBuilder')} onClick={() => router.push(`/admin/workflows/${workflow._id}`)}>
                               <Settings className="w-4 h-4" />
                             </AdminRowIconButton>
                             <AdminRowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingWorkflow(workflow)}>

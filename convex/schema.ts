@@ -281,7 +281,26 @@ export default defineSchema({
     // Sonae Custom Fields
     companyId: v.optional(v.id("companies")),
     impersonatingCompanyId: v.optional(v.id("companies")),
-    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
+    /**
+     * What this person may do.
+     *
+     * `READ_ONLY` and `AUDITOR` are oversight roles, added for the governance
+     * layer. Neither can write anywhere: `READ_ONLY` sees what an admin sees,
+     * `AUDITOR` sees only the governance surfaces. They exist because the
+     * alternative was making a compliance officer a full administrator so they
+     * could read the register — giving the person whose job is oversight the
+     * power to change what they are overseeing. See
+     * docs/plans/active/governance-and-trust-plan.md.
+     */
+    role: v.optional(
+      v.union(
+        v.literal("USER"),
+        v.literal("ADMIN"),
+        v.literal("SUPER_ADMIN"),
+        v.literal("READ_ONLY"),
+        v.literal("AUDITOR")
+      )
+    ),
     planOverrideId: v.optional(v.id("plans")),
     messagesUsedThisPeriod: v.optional(v.number()),
     createdAt: v.optional(v.number()),
@@ -339,7 +358,13 @@ export default defineSchema({
   invitations: defineTable({
     email: v.string(),
     companyId: v.optional(v.id("companies")),
-    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    role: v.union(
+      v.literal("USER"),
+      v.literal("ADMIN"),
+      v.literal("SUPER_ADMIN"),
+      v.literal("READ_ONLY"),
+      v.literal("AUDITOR")
+    ),
     status: v.union(v.literal("PENDING"), v.literal("ACCEPTED"), v.literal("REVOKED")),
     token: v.string(),
     invitedBy: v.optional(v.id("users")),

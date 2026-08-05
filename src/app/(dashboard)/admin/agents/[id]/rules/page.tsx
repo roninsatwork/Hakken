@@ -13,6 +13,7 @@ import { AdminSearchBar } from "@/src/app/(dashboard)/admin/_components/AdminTab
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 export default function AgentRulesPage() {
   const t = useTranslations("admin.agents.details.rules");
@@ -136,14 +137,14 @@ export default function AgentRulesPage() {
             >
               {t("deleteModal.abort")}
             </button>
-            <button
+            <AdminWriteButton
               onClick={handleDeleteRule}
               disabled={isDeleting}
               className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-medium tracking-wide bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50"
             >
               {isDeleting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               <span>{t("deleteModal.confirm")}</span>
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

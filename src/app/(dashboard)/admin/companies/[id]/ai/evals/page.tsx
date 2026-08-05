@@ -26,6 +26,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 type CompanyEvalRun = Doc<"companyEvalRuns">;
@@ -172,7 +173,7 @@ export default function CompanyAiEvalsPage() {
           )}
           <div className="flex flex-wrap gap-2">
             {hasChecks && (
-              <button
+              <AdminWriteButton
                 type="button"
                 onClick={() => setConfirmBatch(true)}
                 disabled={batchAction.isBusy() || runnableCount === 0}
@@ -180,7 +181,7 @@ export default function CompanyAiEvalsPage() {
               >
                 {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 Run checks
-              </button>
+              </AdminWriteButton>
             )}
             {/* On an empty screen the invitation lives in the table, with the
                 sentence explaining why anyone would want one. A second identical
@@ -245,7 +246,7 @@ export default function CompanyAiEvalsPage() {
                     A check catches your AI saying something wrong before a customer sees it.
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
-                    <button
+                    <AdminWriteButton
                       type="button"
                       onClick={handleAddStarters}
                       disabled={starterAction.isBusy()}
@@ -253,7 +254,7 @@ export default function CompanyAiEvalsPage() {
                     >
                       {starterAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                       Add 3 starter checks
-                    </button>
+                    </AdminWriteButton>
                     <Link
                       href={`${aiHref}/evals/new?returnTo=${encodeURIComponent(`${aiHref}/evals`)}`}
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold normal-case tracking-normal text-foreground transition-colors hover:bg-foreground/5"
@@ -300,7 +301,7 @@ export default function CompanyAiEvalsPage() {
                       {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                       Run
                     </button>
-                    <button
+                    <AdminWriteButton
                       type="button"
                       aria-label={`Delete ${evalCase.name}`}
                       title="Delete"
@@ -308,7 +309,7 @@ export default function CompanyAiEvalsPage() {
                       className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </AdminWriteButton>
                   </div>
                 </td>
               </tr>
@@ -354,10 +355,10 @@ export default function CompanyAiEvalsPage() {
             <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleteAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleDeleteCase} disabled={deleteAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+            <AdminWriteButton type="button" onClick={handleDeleteCase} disabled={deleteAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
               {deleteAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Delete check
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

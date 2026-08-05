@@ -19,6 +19,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { cn } from "@/src/ui/lib/utils";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type ApiKeyScope = "agent:run" | "workflow:run" | "run:read";
 
@@ -256,7 +257,7 @@ export default function ApiKeysPage() {
           <p className="text-[13px] text-rose-300">{validationError || createAction.error}</p>
         ) : null}
 
-        <button
+        <AdminWriteButton
           type="button"
           onClick={handleCreate}
           disabled={createAction.isBusy()}
@@ -264,7 +265,7 @@ export default function ApiKeysPage() {
         >
           {createAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Create key
-        </button>
+        </AdminWriteButton>
 
         {oneTimeKey ? (
           <div className="flex flex-col gap-3 rounded-[12px] border border-amber-500/20 bg-amber-500/10 p-4">
@@ -349,14 +350,14 @@ export default function ApiKeysPage() {
                   </td>
                   <td className="px-4 py-3 align-top text-right">
                     {apiKey.status === "ACTIVE" ? (
-                      <button
+                      <AdminWriteButton
                         type="button"
                         onClick={() => setRevokeTarget({ id: apiKey._id, name: apiKey.name })}
                         aria-label={`Turn off ${apiKey.name}`}
                         className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </AdminWriteButton>
                     ) : null}
                   </td>
                 </tr>
@@ -408,7 +409,7 @@ export default function ApiKeysPage() {
             >
               Keep it
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={handleRevoke}
               disabled={revokeAction.isBusy()}
@@ -416,7 +417,7 @@ export default function ApiKeysPage() {
             >
               {revokeAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Turn it off
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

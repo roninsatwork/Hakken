@@ -24,6 +24,7 @@ import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type CompanySkill = Doc<"companySkills">;
 type GlobalSkill = Doc<"agentSkills">;
@@ -214,14 +215,14 @@ export default function CompanyAiSkillsPage() {
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
               <td className="px-4 py-3 text-right">
-                <button
+                <AdminWriteButton
                   type="button"
                   aria-label={`Remove ${skill.name}`}
                   onClick={() => setArchiveTarget(skill)}
                   className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </AdminWriteButton>
               </td>
             </tr>
           ))}
@@ -293,7 +294,7 @@ export default function CompanyAiSkillsPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={handleImportGlobalSkill}
               disabled={selectedGlobalSkillIds.length === 0 || action.isBusy()}
@@ -303,7 +304,7 @@ export default function CompanyAiSkillsPage() {
               {selectedGlobalSkillIds.length > 1
                 ? `Add ${selectedGlobalSkillIds.length} skills`
                 : "Add skill"}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -319,10 +320,10 @@ export default function CompanyAiSkillsPage() {
             <button type="button" onClick={() => setArchiveTarget(null)} disabled={action.isBusy()} className="h-10 rounded-[8px] border border-border-dim px-4 text-[13px] text-secondary hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleArchiveSkill} disabled={action.isBusy()} className="flex h-10 items-center gap-2 rounded-[8px] bg-red-500 px-4 text-[13px] font-semibold text-white hover:bg-red-600 disabled:opacity-50">
+            <AdminWriteButton type="button" onClick={handleArchiveSkill} disabled={action.isBusy()} className="flex h-10 items-center gap-2 rounded-[8px] bg-red-500 px-4 text-[13px] font-semibold text-white hover:bg-red-600 disabled:opacity-50">
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove skill
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

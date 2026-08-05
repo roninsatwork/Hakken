@@ -25,8 +25,9 @@ import { useTranslations } from "next-intl";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { ASSIGNABLE_ROLES, ROLE_DESCRIPTION_KEYS, ROLE_LABEL_KEYS, type UserRole } from "@/src/lib/userRoles";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
-type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type CompanyUser = Doc<"users">;
 type PendingInvite = Doc<"invitations">;
 
@@ -429,9 +430,15 @@ export default function CompanyUsersPage() {
               onChange={e => setFormData({...formData, role: e.target.value as UserRole})}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
-              <option value="USER">User (Read-only)</option>
-              <option value="ADMIN">Company Administrator</option>
+              {ASSIGNABLE_ROLES
+                .filter(role => role !== "SUPER_ADMIN")
+                .map(role => (
+                  <option key={role} value={role}>{t(`roles.${ROLE_LABEL_KEYS[role]}`)}</option>
+                ))}
             </select>
+            <p className="text-[13px] text-secondary">
+              {t(`roles.${ROLE_DESCRIPTION_KEYS[formData.role]}`)}
+            </p>
           </div>
 
           {!editingUser && (
@@ -456,13 +463,13 @@ export default function CompanyUsersPage() {
             >
               Cancel
             </button>
-            <button 
+            <AdminWriteButton 
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? "Saving..." : (editingUser ? "Update User" : "Send Invite")}
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>
@@ -540,13 +547,13 @@ export default function CompanyUsersPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="submit"
               disabled={isSubmitting || !selectedAdminId}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? "Assigning..." : t("assignToWorkspace")}
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>

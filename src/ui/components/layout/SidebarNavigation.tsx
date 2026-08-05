@@ -265,7 +265,12 @@ function SalesDataNavItem({
 
   // Undefined while loading. Drawing the section before the answer arrives
   // would flash a link at workspaces that never get one.
-  if (!workspace?.enabledModules.includes(SALES_DATA_MODULE_KEY)) return null;
+  //
+  // `enabledModules` is optional-chained too: a workspace record that arrives
+  // without the field threw here and took the whole navigation section down
+  // into its error boundary. Reaching this with no module list means "no
+  // modules", not "crash".
+  if (!workspace?.enabledModules?.includes(SALES_DATA_MODULE_KEY)) return null;
 
   // The section lives under the workspace's own name, so Comax reads
   // /app/comax/... and the next client reads their own — from the company
@@ -396,6 +401,18 @@ export default function SidebarNavigation() {
 
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  /**
+   * Whether the admin menu shows its sections.
+   *
+   * Every section below was gated on being a super admin, because until the
+   * oversight roles existed nobody else could open the admin area at all. A
+   * read-only account now can, and a menu offering it only "Dashboard" would
+   * make the rest of the section unreachable — visible in principle, and
+   * impossible to get to.
+   *
+   * Deliberately not used for impersonation, which is a write.
+   */
+  const canSeeAdminSections = isSuperAdmin || user?.role === "READ_ONLY";
   const router = useRouter();
   const impersonateCompany = useMutation(api.users.impersonateCompany);
   const impersonatedCompany = useQuery(
@@ -408,13 +425,13 @@ export default function SidebarNavigation() {
   // super admin, because the query is super-admin only and the page is too.
   const pendingApprovals = useQuery(
     api.agentRuns.getPendingApprovalCount,
-    isAdmin && isSuperAdmin ? {} : "skip"
+    isAdmin && canSeeAdminSections ? {} : "skip"
   );
   // Same reasoning as the agent queue: a workflow halted on a Human Approval node
   // waits indefinitely, and until this badge nothing on the platform said so.
   const pendingWorkflowApprovals = useQuery(
     api.scheduler.getPendingWorkflowApprovalCount,
-    isAdmin && isSuperAdmin ? {} : "skip"
+    isAdmin && canSeeAdminSections ? {} : "skip"
   );
 
   const handleExitImpersonation = async () => {
@@ -506,7 +523,7 @@ export default function SidebarNavigation() {
                       onClick={() => setActiveItem('Admin Dashboard')}
                     />
 
-                    {isSuperAdmin && (
+                    {canSeeAdminSections && (
                       <NavItem navKey="adminCompanies"
                         icon={Building2}
                         label={t('companies')}
@@ -537,7 +554,7 @@ export default function SidebarNavigation() {
                       <SubNavItem label={t('tools')} href="/admin/ai/tools" navKey="tools" isActive={pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Tools')} />
                     </NavItem>
 
-                    {isSuperAdmin && (
+                    {canSeeAdminSections && (
                       <NavItem navKey="agents"
                         icon={Workflow}
                         label={t('agents')}
@@ -564,7 +581,7 @@ export default function SidebarNavigation() {
                       </NavItem>
                     )}
 
-                    {isSuperAdmin && (
+                    {canSeeAdminSections && (
                       <>
                         <NavItem navKey="systemSettings"
                           icon={Settings}

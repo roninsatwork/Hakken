@@ -310,7 +310,11 @@ describe("OWASP: Broken Access Control - Users", () => {
     expect(auditLogs[1]).toMatchObject({
       actorId: superAdminId,
       entityId: userId,
-      metadata: JSON.stringify({ updatedRole: "USER" }),
+      // The role it changed *from* is recorded alongside the new one. A record
+      // saying someone was made an administrator does not say whether that was
+      // a promotion or the quiet removal of an oversight restriction, and the
+      // second is what an auditor is looking for.
+      metadata: JSON.stringify({ updatedRole: "USER", previousRole: "ADMIN" }),
     });
     expect(auditLogs[2]).toMatchObject({
       actorId: superAdminId,

@@ -9,13 +9,15 @@ import {
 const companyA = "company-a" as Id<"companies">;
 const companyB = "company-b" as Id<"companies">;
 
-const caller = (role: "USER" | "ADMIN" | "SUPER_ADMIN", companyId?: Id<"companies">, impersonatingCompanyId?: Id<"companies">) => ({
+type Role = "USER" | "ADMIN" | "SUPER_ADMIN" | "READ_ONLY" | "AUDITOR";
+
+const caller = (role: Role, companyId?: Id<"companies">, impersonatingCompanyId?: Id<"companies">) => ({
   role,
   companyId,
   impersonatingCompanyId,
 });
 
-const target = (role: "USER" | "ADMIN" | "SUPER_ADMIN", companyId?: Id<"companies">) => ({
+const target = (role: Role, companyId?: Id<"companies">) => ({
   role,
   companyId,
 });
@@ -161,5 +163,83 @@ describe("user management service policy", () => {
         newCompanyId: companyB,
       })
     ).toThrow("Unauthorized");
+  });
+});
+
+/**
+ * The users mutations are declared with `tenantMutation`, which admits any
+ * signed-in caller whatever their role, so this policy is the only thing
+ * standing between a read-only account and the ability to create
+ * administrators. These tests are that guarantee.
+ */
+describe("oversight roles cannot manage people", () => {
+  const oversight: Role[] = ["READ_ONLY", "AUDITOR"];
+
+  test("cannot create anyone, even an ordinary user in their own company", () => {
+    for (const role of oversight) {
+      expect(() =>
+        assertCanCreateManagedUser({
+          caller: caller(role, companyA),
+          activeCompanyId: companyA,
+          newRole: "USER",
+          newCompanyId: companyA,
+        })
+      ).toThrow("Unauthorized");
+    }
+  });
+
+  test("cannot change anyone, including their own kind of account", () => {
+    for (const role of oversight) {
+      expect(() =>
+        assertCanUpdateManagedUser({
+          caller: caller(role, companyA),
+          activeCompanyId: companyA,
+          targetUser: target("USER", companyA),
+          nextRole: "ADMIN",
+        })
+      ).toThrow("Unauthorized");
+    }
+  });
+
+  test("cannot delete anyone", () => {
+    for (const role of oversight) {
+      expect(() =>
+        assertCanDeleteManagedUser({
+          caller: caller(role, companyA),
+          activeCompanyId: companyA,
+          targetUser: target("USER", companyA),
+        })
+      ).toThrow("Unauthorized");
+    }
+  });
+
+  test("an impersonation field set on an oversight account grants nothing", () => {
+    // The scoped-admin check reads "is an ADMIN, or is impersonating". Without
+    // naming the oversight roles, this case would have passed on the second
+    // clause and handed a read-only account full user management.
+    for (const role of oversight) {
+      expect(() =>
+        assertCanCreateManagedUser({
+          caller: caller(role, companyA, companyA),
+          activeCompanyId: companyA,
+          newRole: "ADMIN",
+          newCompanyId: companyA,
+        })
+      ).toThrow("Unauthorized");
+    }
+  });
+
+  test("an administrator can still do all three, so nothing tightened either", () => {
+    const admin = caller("ADMIN", companyA);
+
+    expect(() =>
+      assertCanCreateManagedUser({ caller: admin, activeCompanyId: companyA, newRole: "USER", newCompanyId: companyA })
+    ).not.toThrow();
+    expect(() =>
+      assertCanUpdateManagedUser({ caller: admin, activeCompanyId: companyA, targetUser: target("USER", companyA), nextRole: "READ_ONLY" })
+    ).not.toThrow();
+    expect(() =>
+      assertCanDeleteManagedUser({ caller: admin, activeCompanyId: companyA, targetUser: target("USER", companyA) })
+    ).not.toThrow();
   });
 });

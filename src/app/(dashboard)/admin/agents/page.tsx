@@ -222,7 +222,7 @@ export default function AgentsPage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <AdminRowActions>
-                            <AdminRowIconButton label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
+                            <AdminRowIconButton navigates label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
                               <Settings className="w-4 h-4" />
                             </AdminRowIconButton>
                             <AdminRowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>

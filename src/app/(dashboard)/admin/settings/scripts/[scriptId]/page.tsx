@@ -17,6 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 // Mirrors the list page's RiskBadge. This was previously hardcoded to the
 // emerald "low risk" styling, so a MEDIUM or HIGH risk script was presented as
@@ -137,7 +138,7 @@ export default function MaintenanceScriptDetailPage() {
           </div>
         </div>
 
-        <button
+        <AdminWriteButton
           type="button"
           onClick={() => setIsConfirmOpen(true)}
           disabled={isRunning}
@@ -145,7 +146,7 @@ export default function MaintenanceScriptDetailPage() {
         >
           {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           Run script
-        </button>
+        </AdminWriteButton>
       </header>
 
       {feedback ? (

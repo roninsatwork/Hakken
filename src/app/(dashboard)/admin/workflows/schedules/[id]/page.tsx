@@ -17,6 +17,7 @@ import {
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
 import ScheduleBuilder from "../_components/ScheduleBuilder";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   createDefaultScheduleDraft,
   hydrateScheduleDraft,
@@ -173,7 +174,7 @@ export default function EditSchedulePage() {
         </div>
 
         {/* State Toggle in Header */}
-        <button
+        <AdminWriteButton
           type="button"
           onClick={() => updateDraft({ isActive: !form.isActive })}
           className={`flex items-center gap-3 group transition-colors ${form.isActive ? "text-[#10b981]" : "text-muted hover:text-foreground"}`}
@@ -183,7 +184,7 @@ export default function EditSchedulePage() {
             <span className="text-[10px] text-muted/70 font-medium tracking-wide">{form.isActive ? t('status.armedDesc') : t('status.pausedDesc')}</span>
           </div>
           {form.isActive ? <ToggleRight className="w-9 h-9" /> : <ToggleLeft className="w-9 h-9" />}
-        </button>
+        </AdminWriteButton>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6 flex-1 relative w-full pt-2">
@@ -247,13 +248,13 @@ export default function EditSchedulePage() {
                     </span>
                     <span className="text-[12px] text-brand/70 font-medium tracking-wide">{t('fields.workflow.selectedDesc')}</span>
                   </div>
-                  <button
+                  <AdminWriteButton
                     type="button"
                     onClick={() => updateFormData({ workflowId: "" })}
                     className="px-4 py-2 rounded-[8px] bg-brand/20 text-brand text-[11px] font-bold tracking-widest uppercase hover:bg-brand hover:text-white transition-all"
                   >
                     {t('fields.workflow.change')}
-                  </button>
+                  </AdminWriteButton>
                 </div>
               ) : (
                 // Search & Select State
@@ -302,13 +303,13 @@ export default function EditSchedulePage() {
                     </span>
                     <span className="text-[12px] text-[#d97736]/70 font-medium tracking-wide">{t('fields.agent.selectedDesc')}</span>
                   </div>
-                  <button
+                  <AdminWriteButton
                     type="button"
                     onClick={() => updateFormData({ agentId: "" })}
                     className="px-4 py-2 rounded-[8px] bg-[#d97736]/20 text-[#d97736] text-[11px] font-bold tracking-widest uppercase hover:bg-[#d97736] hover:text-white transition-all"
                   >
                     {t('fields.agent.change')}
-                  </button>
+                  </AdminWriteButton>
                 </div>
               ) : (
                 // Search & Select Agent State
@@ -369,14 +370,14 @@ export default function EditSchedulePage() {
             >
               {t('actions.cancel')}
             </button>
-            <button
+            <AdminWriteButton
               type="submit"
               disabled={isSubmitting || (form.payloadType === "workflow" ? !form.formData.workflowId : !form.formData.agentId) || !form.formData.name}
               className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
             >
               {isSubmitting ? t('actions.saving') : t('actions.save')}
               {!isSubmitting && <CheckCircle2 className="w-4 h-4" />}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
 

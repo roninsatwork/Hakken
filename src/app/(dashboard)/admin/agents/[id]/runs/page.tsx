@@ -27,6 +27,7 @@ import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 import { describeStepKind, describeStepStatus } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useToast } from "@/src/context/ToastContext";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type AgentRun = Doc<"agentRuns">;
 type AgentRunFeedback = Doc<"agentRunFeedback">;
@@ -785,7 +786,7 @@ export default function AgentRunsPage() {
                   </button>
                 )}
                 {runDetail.evalFixtureContext.canCreateFromRun && (
-                  <button
+                  <AdminWriteButton
                     type="button"
                     onClick={() => handleCreateEvalFixture(runDetail.run._id)}
                     disabled={action.isBusy(runDetail.run._id)}
@@ -793,7 +794,7 @@ export default function AgentRunsPage() {
                   >
                     {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
                     {runDetail.evalFixtureContext.activeCount > 0 ? "Update eval" : "Create eval"}
-                  </button>
+                  </AdminWriteButton>
                 )}
               </div>
             </div>
@@ -1190,7 +1191,7 @@ export default function AgentRunsPage() {
               >
                 Cancel
               </button>
-              <button
+              <AdminWriteButton
                 type="button"
                 onClick={handleFeedbackSubmit}
                 disabled={action.isBusy()}
@@ -1198,7 +1199,7 @@ export default function AgentRunsPage() {
               >
                 {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
                 Save feedback
-              </button>
+              </AdminWriteButton>
             </div>
           </div>
         )}

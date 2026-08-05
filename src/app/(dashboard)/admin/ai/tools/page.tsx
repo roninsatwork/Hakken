@@ -17,6 +17,7 @@ import {
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "System admins",
@@ -154,7 +155,7 @@ export default function ToolsPage() {
                           Set up
                         </Link>
                       ) : (
-                        <button
+                        <AdminWriteButton
                           type="button"
                           onClick={() => handleAddConnector(connector.key)}
                           disabled={isBusy}
@@ -162,7 +163,7 @@ export default function ToolsPage() {
                         >
                           {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                           Add
-                        </button>
+                        </AdminWriteButton>
                       )}
                     </td>
                   </tr>
@@ -246,7 +247,7 @@ export default function ToolsPage() {
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
-                        <button
+                        <AdminWriteButton
                           type="button"
                           onClick={() => handleDeleteTool(tool._id)}
                           disabled={isDeleting}
@@ -254,17 +255,17 @@ export default function ToolsPage() {
                           className="rounded-[8px] bg-rose-500 p-1.5 text-white transition-colors hover:bg-rose-600 disabled:opacity-50"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        </AdminWriteButton>
                       </span>
                     ) : (
-                      <button
+                      <AdminWriteButton
                         type="button"
                         onClick={() => setDeleteId(tool._id)}
                         aria-label={`Remove ${tool.name}`}
                         className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </AdminWriteButton>
                     )}
                   </td>
                 </tr>

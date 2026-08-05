@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Mail, ShieldCheck, User as UserIcon, Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   AdminFeedbackPill,
   AdminSaveAction,
@@ -264,14 +265,14 @@ export default function InviteUsersPage() {
 
         {/* STEP 3: DISPATCH GATEWAY */}
         <div className="flex flex-col items-center justify-center pt-4">
-          <button
+          <AdminWriteButton
             type="submit"
             disabled={isSending || !inviteEmail}
             className="w-full md:w-auto min-w-[300px] flex items-center justify-center gap-3 bg-foreground text-background font-medium px-8 py-4 rounded-[14px] text-[15px] hover:bg-foreground/90 transition-all shadow-2xl shadow-foreground/10 disabled:opacity-50"
           >
             {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             {isSending ? t('actions.sending') : t('actions.sendInvitation')}
-          </button>
+          </AdminWriteButton>
 
           {/* Functional Feedback Stream */}
           <div className="h-[40px] mt-4 flex items-center justify-center w-full max-w-md">

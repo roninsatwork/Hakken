@@ -1956,6 +1956,10 @@
                 }
             }
         },
+        "access": {
+            "readOnlyTitle": "Hai accesso in sola lettura.",
+            "readOnlyDescription": "Puoi vedere tutto qui e nulla in queste schermate può essere modificato dal tuo account."
+        },
         "users": {
             "profilePage": {
                 "title": "Profilo Utente",
@@ -2044,7 +2048,14 @@
             "roles": {
                 "superAdmin": "Super Admin",
                 "admin": "Amministratore",
-                "user": "Utente Protocollo"
+                "user": "Utente Protocollo",
+                "readOnly": "Sola lettura",
+                "auditor": "Revisore",
+                "superAdminDescription": "Controllo completo dell'intera piattaforma, inclusi tutti gli spazi di lavoro.",
+                "adminDescription": "Controllo completo di questo spazio di lavoro e di tutto ciò che contiene.",
+                "userDescription": "Usa lo spazio di lavoro ogni giorno e non vede alcuna schermata di amministrazione.",
+                "readOnlyDescription": "Vede tutto ciò che vede un amministratore e non può modificare nulla.",
+                "auditorDescription": "Vede solo le schermate di governance — il registro IA, le approvazioni, il registro attività, le politiche e il pacchetto di prove. Non può modificare nulla."
             },
             "buttons": {
                 "cancel": "Annulla",
@@ -2405,6 +2416,18 @@
         }
     },
     "companyUsers": {
+        "roles": {
+            "superAdmin": "Super Admin",
+            "admin": "Amministratore",
+            "user": "Utente Protocollo",
+            "readOnly": "Sola lettura",
+            "auditor": "Revisore",
+            "superAdminDescription": "Controllo completo dell'intera piattaforma, inclusi tutti gli spazi di lavoro.",
+            "adminDescription": "Controllo completo di questo spazio di lavoro e di tutto ciò che contiene.",
+            "userDescription": "Usa lo spazio di lavoro ogni giorno e non vede alcuna schermata di amministrazione.",
+            "readOnlyDescription": "Vede tutto ciò che vede un amministratore e non può modificare nulla.",
+            "auditorDescription": "Vede solo le schermate di governance — il registro IA, le approvazioni, il registro attività, le politiche e il pacchetto di prove. Non può modificare nulla."
+        },
         "assignSystemAdmin": "ASSEGNA AMMINISTRATORE DI SISTEMA",
         "attachExistingAdmin": "Collega un amministratore di sistema esistente a livello di piattaforma a questo spazio di lavoro tenant.",
         "selectAdministrator": "SELEZIONA AMMINISTRATORE",

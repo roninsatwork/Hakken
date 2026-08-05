@@ -10,6 +10,7 @@ import { SquareTerminal, RefreshCcw, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 
 export default function AgentSystemPromptPage() {
@@ -85,17 +86,17 @@ export default function AgentSystemPromptPage() {
         {/* Dynamic Action Area */}
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <button
+            <AdminWriteButton
               onClick={handleRevert}
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
               <span>{t("revertButton")}</span>
-            </button>
+            </AdminWriteButton>
           )}
 
-          <button
+          <AdminWriteButton
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
             className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${hasUnsavedChanges
@@ -109,7 +110,7 @@ export default function AgentSystemPromptPage() {
               <Save className="w-3.5 h-3.5" />
             )}
             <span>{t("saveButton")}</span>
-          </button>
+          </AdminWriteButton>
         </div>
       </header>
 

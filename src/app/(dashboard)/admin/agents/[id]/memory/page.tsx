@@ -48,6 +48,7 @@ import {
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type AgentMemory = Doc<"agentMemories">;
 type SourceRunSummary = {
@@ -637,7 +638,7 @@ export default function AgentMemoryPage() {
                 />
                 {candidate.status === "PROPOSED" && (
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <AdminWriteButton
                       type="button"
                       onClick={() => handleApproveCandidate(candidate.candidateId)}
                       disabled={action.isBusy(`memory:${candidate.candidateId}`)}
@@ -647,7 +648,7 @@ export default function AgentMemoryPage() {
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <Check className="h-3.5 w-3.5" />}
                       Approve
-                    </button>
+                    </AdminWriteButton>
                     <button
                       type="button"
                       onClick={() => {
@@ -689,7 +690,7 @@ export default function AgentMemoryPage() {
                 />
                 {suggestion.status === "PROPOSED" && (
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <AdminWriteButton
                       type="button"
                       onClick={() => handleSuggestionDecision(suggestion.suggestionId, "APPROVED")}
                       disabled={action.isBusy(`suggestion:${suggestion.suggestionId}`)}
@@ -699,8 +700,8 @@ export default function AgentMemoryPage() {
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <SlidersHorizontal className="h-3.5 w-3.5" />}
                       Apply
-                    </button>
-                    <button
+                    </AdminWriteButton>
+                    <AdminWriteButton
                       type="button"
                       onClick={() => handleSuggestionDecision(suggestion.suggestionId, "REJECTED")}
                       disabled={action.isBusy(`suggestion:${suggestion.suggestionId}`)}
@@ -708,7 +709,7 @@ export default function AgentMemoryPage() {
                     >
                       <X className="h-3.5 w-3.5" />
                       Turn down
-                    </button>
+                    </AdminWriteButton>
                   </div>
                 )}
               </div>
@@ -737,7 +738,7 @@ export default function AgentMemoryPage() {
                 {reflection.status === "GENERATED" && (
                   <div className="flex flex-wrap gap-2">
                     {reflection.sourceRun && reflection.proposedEvalFixture && (
-                      <button
+                      <AdminWriteButton
                         type="button"
                         onClick={() => handleCreateEvalFromReflection(reflection.reflectionId, reflection.sourceRun!.runId)}
                         disabled={action.isBusy(`reflection:${reflection.reflectionId}`)}
@@ -747,7 +748,7 @@ export default function AgentMemoryPage() {
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           : <ClipboardCheck className="h-3.5 w-3.5" />}
                         Create eval
-                      </button>
+                      </AdminWriteButton>
                     )}
                     <button
                       type="button"
@@ -816,7 +817,7 @@ export default function AgentMemoryPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={handleDelete}
               disabled={action.isBusy()}
@@ -824,7 +825,7 @@ export default function AgentMemoryPage() {
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -854,7 +855,7 @@ export default function AgentMemoryPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={handleRejectCandidate}
               disabled={action.isBusy()}
@@ -862,7 +863,7 @@ export default function AgentMemoryPage() {
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
               Turn down
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

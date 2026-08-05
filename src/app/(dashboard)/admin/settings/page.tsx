@@ -33,6 +33,8 @@ import { WhiteLabelModulePresetsSection, type WhiteLabelModulePreset } from "./_
 import { WhiteLabelNavigationProfilesSection, type WhiteLabelNavigationProfile } from "./_components/WhiteLabelNavigationProfilesSection";
 import { WhiteLabelPackagingChecklistSection, type WhiteLabelPackagingChecklist } from "./_components/WhiteLabelPackagingChecklistSection";
 import { WhiteLabelReadinessSection, type WhiteLabelReadiness } from "./_components/WhiteLabelReadinessSection";
+import { useCanWriteHere } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   type AuditConfig,
   type PiiConfig,
@@ -41,6 +43,7 @@ import {
 } from "./_components/types";
 
 export default function SystemSettingsPage() {
+  const canWriteHere = useCanWriteHere();
   const t = useTranslations('admin.settings');
 
   const currentSettings = useQuery(api.settings.get);
@@ -221,14 +224,16 @@ export default function SystemSettingsPage() {
             {t('subtitle')}
           </p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 disabled:opacity-50"
-        >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveSuccess ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-          {isSaving ? t('saving') : saveSuccess ? t('success') : t('save')}
-        </button>
+        {canWriteHere ? (
+          <AdminWriteButton
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveSuccess ? <CheckCircle2 className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+            {isSaving ? t('saving') : saveSuccess ? t('success') : t('save')}
+          </AdminWriteButton>
+        ) : null}
       </header>
 
       <div className="flex items-center gap-1 border-b border-border-dim/50 overflow-x-auto custom-scrollbar pb-px -mt-4">

@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
 import { useToast } from "@/src/context/ToastContext";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
@@ -263,14 +264,14 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
             >
               Keep running
             </button>
-            <button
+            <AdminWriteButton
               onClick={() => void handleConfirmStop()}
               disabled={isStoppingAgent}
               className="px-5 py-2.5 rounded-[10px] bg-rose-600 text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isStoppingAgent ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
               Stop Agent
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

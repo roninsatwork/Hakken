@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   formatUtcPreview,
   getPrimaryScheduleTime,
@@ -171,13 +172,13 @@ export default function SchedulesPage() {
               className="bg-transparent border-none outline-none w-full text-[13px] placeholder:text-muted"
             />
           </div>
-          <button
+          <AdminWriteButton
             onClick={handleOpenAdd}
             className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>{t('newSchedule')}</span>
-          </button>
+          </AdminWriteButton>
         </div>
       </div>
 

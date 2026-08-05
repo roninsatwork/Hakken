@@ -31,6 +31,7 @@ import {
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type AgentEvalFixture = Doc<"agentEvalFixtures">;
 
@@ -268,14 +269,14 @@ export default function AgentEvalsPage() {
               {runAction.isBusy("run:setup") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
               Check setup
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={openCreate}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
               <Plus className="h-4 w-4" />
               New check
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </header>
@@ -379,7 +380,7 @@ export default function AgentEvalsPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button
+                    <AdminWriteButton
                       type="button"
                       aria-label={`Remove ${fixture.objective}`}
                       title="Remove"
@@ -387,7 +388,7 @@ export default function AgentEvalsPage() {
                       className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </AdminWriteButton>
                   </div>
                 </td>
               </tr>
@@ -477,10 +478,10 @@ export default function AgentEvalsPage() {
             <button type="button" onClick={() => setIsFormOpen(false)} disabled={formAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleSave} disabled={formAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
+            <AdminWriteButton type="button" onClick={handleSave} disabled={formAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
               {formAction.isBusy() && <Loader2 className="h-4 w-4 animate-spin" />}
               {editingId ? "Save check" : "Create check"}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -494,10 +495,10 @@ export default function AgentEvalsPage() {
             <button type="button" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <button type="button" onClick={handleArchive} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+            <AdminWriteButton type="button" onClick={handleArchive} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
               {archiveAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

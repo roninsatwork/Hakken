@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
 
-const E2E_ROLES = new Set(["super-admin", "company-admin", "user"]);
+/**
+ * `read-only` is here so the oversight role added for the governance layer can
+ * actually be looked at. Without it the only way to see what a read-only
+ * account sees would be to create one against real data and sign in as it,
+ * which is enough friction that the check gets skipped.
+ */
+const E2E_ROLES = new Set(["super-admin", "company-admin", "user", "read-only"]);
 
 export function GET(request: NextRequest) {
   if (process.env.E2E_AUTH_ENABLED !== "1") {

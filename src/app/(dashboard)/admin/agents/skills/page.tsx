@@ -18,6 +18,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
@@ -444,10 +445,10 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             <button type="button" onClick={() => setEditTarget(null)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
               Cancel
             </button>
-            <button type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+            <AdminWriteButton type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
               {action.isBusy(EDIT_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
               Save
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>
@@ -466,7 +467,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={confirmDelete}
               disabled={action.isBusy(DELETE_KEY)}
@@ -474,7 +475,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             >
               {action.isBusy(DELETE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               Delete skill
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -518,10 +519,10 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
               Cancel
             </button>
-            <button type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+            <AdminWriteButton type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
               {action.isBusy(ADD_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
               Add skill
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>

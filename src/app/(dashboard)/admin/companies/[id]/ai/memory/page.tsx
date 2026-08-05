@@ -44,6 +44,7 @@ import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type CompanyMemory = Doc<"companyMemories">;
 type CompanyMemoryCandidate = Doc<"companyMemoryCandidates">;
@@ -375,7 +376,7 @@ export default function CompanyAiMemoryPage() {
                 <p className="mt-2 text-[11px] leading-relaxed text-muted">{candidate.reason}</p>
               )}
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
+                <AdminWriteButton
                   type="button"
                   onClick={() => handleApprove(candidate)}
                   disabled={action.isBusy(candidate._id)}
@@ -385,7 +386,7 @@ export default function CompanyAiMemoryPage() {
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     : <Check className="h-3.5 w-3.5" />}
                   Approve
-                </button>
+                </AdminWriteButton>
                 <button
                   type="button"
                   onClick={() => {
@@ -463,7 +464,7 @@ export default function CompanyAiMemoryPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={handleArchive}
               disabled={action.isBusy()}
@@ -471,7 +472,7 @@ export default function CompanyAiMemoryPage() {
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -504,7 +505,7 @@ export default function CompanyAiMemoryPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={handleReject}
               disabled={action.isBusy()}
@@ -512,7 +513,7 @@ export default function CompanyAiMemoryPage() {
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
               Turn down
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

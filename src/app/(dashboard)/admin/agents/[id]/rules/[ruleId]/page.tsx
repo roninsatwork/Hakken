@@ -10,6 +10,7 @@ import Link from "next/link";
 import { use } from "react";
 import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 
@@ -177,14 +178,14 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-1">
             {(["LOW", "NORMAL", "HIGH", "CRITICAL"] as const).map(p => (
-              <button
+              <AdminWriteButton
                 key={p}
                 type="button"
 	                onClick={() => updateDraft({ priority: p })}
 	                className={`flex flex-col items-start gap-1 p-3 rounded-[10px] border transition-all text-left ${p === form.priority ? selectedClasses[p] : `border-border-dim bg-transparent text-secondary ${priorityClasses[p]}`}`}
               >
                 <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{t(`priority.levels.${p}`)}</span>
-              </button>
+              </AdminWriteButton>
             ))}
           </div>
         </section>
@@ -211,14 +212,14 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-4 border-t border-border-dim mt-2">
-          <button
+          <AdminWriteButton
             type="submit"
 	            disabled={!form.name.trim() || !form.trigger.trim() || !form.instruction.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{t("edit.submit")}</span>
-          </button>
+          </AdminWriteButton>
         </div>
       </form>
     </div>

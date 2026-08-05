@@ -18,6 +18,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { cn } from "@/src/ui/lib/utils";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   describeModelUseCase,
   formatModelDisplayName,
@@ -281,14 +282,14 @@ export default function AIModelDefaultsPage() {
                 </option>
               ))}
             </select>
-            <button
+            <AdminWriteButton
               type="button"
               disabled={!everyJobModel}
               onClick={() => setIsEveryJobConfirmOpen(true)}
               className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
             >
               Apply
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       )}
@@ -328,7 +329,7 @@ export default function AIModelDefaultsPage() {
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               type="button"
               onClick={applyToEveryJob}
               disabled={isApplyingEveryJob}
@@ -336,7 +337,7 @@ export default function AIModelDefaultsPage() {
             >
               {isApplyingEveryJob && <Loader2 className="w-4 h-4 animate-spin" />}
               Apply to every job
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

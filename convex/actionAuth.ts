@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
+import { ADMIN_WRITE_ROLES } from "./authz";
 
 type UserRole = NonNullable<Doc<"users">["role"]>;
 
@@ -42,7 +43,7 @@ export async function requireActionAdmin(
   unauthorizedMessage = "Unauthorized",
   unauthenticatedMessage = "Unauthenticated request"
 ) {
-  return await requireActionRole(ctx, ["ADMIN", "SUPER_ADMIN"], unauthorizedMessage, unauthenticatedMessage);
+  return await requireActionRole(ctx, ADMIN_WRITE_ROLES, unauthorizedMessage, unauthenticatedMessage);
 }
 
 export async function requireActionSuperAdmin(

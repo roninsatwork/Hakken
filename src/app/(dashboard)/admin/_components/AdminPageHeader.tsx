@@ -1,6 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useCanWriteHere } from "./AdminAccessLevel";
 
 type AdminPageHeaderProps = {
   icon: ReactNode;
@@ -46,6 +47,13 @@ export function AdminPagePrimaryAction({
   type = "button",
   ...buttonProps
 }: AdminPagePrimaryActionProps) {
+  const canWriteHere = useCanWriteHere();
+
+  // Removed rather than disabled. A greyed-out button invites the reader to
+  // work out why it will not press; nothing at all reads as "this screen is for
+  // looking at", which is exactly what a read-only account is for.
+  if (!canWriteHere) return null;
+
   return (
     <button
       type={type}

@@ -25,6 +25,7 @@ import {
 } from "@/src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 function getWidgetSectionSlug(tab: WidgetConfigTab) {
   return tab.toLowerCase().replaceAll(" ", "-");
@@ -221,14 +222,14 @@ export default function CompanyWidgetPage() {
           </p>
         </div>
         {widget && (
-          <button
+          <AdminWriteButton
             onClick={handleCreateOrUpdate}
             disabled={isSaving}
             className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-brand text-white font-medium tracking-wide text-[13px] hover:bg-brand/90 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] transition-all shrink-0"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Publish Configuration</span>
-          </button>
+          </AdminWriteButton>
         )}
       </header>
 

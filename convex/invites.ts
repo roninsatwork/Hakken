@@ -1,13 +1,7 @@
 import { mutation, query, action, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import {
-  canAccessCompany,
-  getActiveCompanyId,
-  getCurrentUser,
-  requireAdmin,
-  requireSuperAdmin,
-} from "./authz";
+import { canAccessCompany, getActiveCompanyId, getCurrentUser, requireAdmin, requireSuperAdmin, userRoleValidator } from "./authz";
 import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
@@ -178,7 +172,7 @@ export const createInviteRecord = internalMutation({
   args: {
     email: v.string(),
     companyId: v.optional(v.id("companies")),
-    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    role: userRoleValidator,
     token: v.string(),
     callerId: v.optional(v.id("users")),
   },
@@ -294,7 +288,7 @@ export const dispatchInviteEmail = adminAction({
   args: {
     email: v.string(),
     companyId: v.optional(v.id("companies")),
-    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    role: userRoleValidator,
     template: v.object({
       subject: v.string(),
       headline: v.string(),

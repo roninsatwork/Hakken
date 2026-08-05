@@ -1956,6 +1956,10 @@
                 }
             }
         },
+        "access": {
+            "readOnlyTitle": "You have read-only access.",
+            "readOnlyDescription": "You can see everything here, and nothing on these screens can be changed from your account."
+        },
         "users": {
             "profilePage": {
                 "title": "User Profile",
@@ -2044,7 +2048,14 @@
             "roles": {
                 "superAdmin": "Super Admin",
                 "admin": "Administrator",
-                "user": "Protocol User"
+                "user": "Protocol User",
+                "readOnly": "Read only",
+                "auditor": "Auditor",
+                "superAdminDescription": "Full control of the whole platform, including every workspace.",
+                "adminDescription": "Full control of this workspace and everything in it.",
+                "userDescription": "Uses the workspace day to day, and sees no admin screens.",
+                "readOnlyDescription": "Sees everything an administrator sees, and can change nothing.",
+                "auditorDescription": "Sees the governance screens only — the AI register, approvals, the audit trail, policies and the evidence pack. Can change nothing."
             },
             "buttons": {
                 "cancel": "Abort",
@@ -2405,6 +2416,18 @@
         }
     },
     "companyUsers": {
+        "roles": {
+            "superAdmin": "Super Admin",
+            "admin": "Administrator",
+            "user": "Protocol User",
+            "readOnly": "Read only",
+            "auditor": "Auditor",
+            "superAdminDescription": "Full control of the whole platform, including every workspace.",
+            "adminDescription": "Full control of this workspace and everything in it.",
+            "userDescription": "Uses the workspace day to day, and sees no admin screens.",
+            "readOnlyDescription": "Sees everything an administrator sees, and can change nothing.",
+            "auditorDescription": "Sees the governance screens only — the AI register, approvals, the audit trail, policies and the evidence pack. Can change nothing."
+        },
         "assignSystemAdmin": "ASSIGN SYSTEM ADMIN",
         "attachExistingAdmin": "Attach an existing platform-level System Admin to this tenant workspace.",
         "selectAdministrator": "SELECT ADMINISTRATOR",

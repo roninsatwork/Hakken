@@ -14,11 +14,19 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { CurrentUser, RoleCheckedUser } from "./authz";
 import {
+  ADMIN_READ_ROLES,
+  ADMIN_WRITE_ROLES,
+  GOVERNANCE_READ_ROLES,
+  SUPER_ADMIN_READ_ROLES,
   getActiveCompanyId,
   requireAdmin,
+  requireAdminReader,
   requireCurrentUser,
+  requireGovernanceReader,
   requireSuperAdmin,
+  requireSuperAdminReader,
 } from "./authz";
 import { requireActionRole, requireActionUser } from "./actionAuth";
 
@@ -63,18 +71,40 @@ export type TenantIdentity = {
 export type TenantQueryCtx = QueryCtx & TenantIdentity;
 export type TenantMutationCtx = MutationCtx & TenantIdentity;
 
-type Guard = "authenticated" | "admin" | "superAdmin";
+/**
+ * `admin` guards writes; `adminRead` guards reads and additionally admits
+ * read-only accounts; `governance` admits auditors as well, and only the
+ * governance surfaces use it. Splitting read from write is what makes an
+ * oversight role possible at all — while one guard served both, "can see the
+ * register" and "can change the platform" were the same permission.
+ */
+type Guard = "authenticated" | "admin" | "adminRead" | "governance" | "superAdmin" | "superAdminRead";
+
+/**
+ * One resolver per guard, as a record rather than a chain of ternaries.
+ *
+ * `Record<Guard, ...>` makes this exhaustive: adding a guard to the union
+ * without adding it here fails to compile. The chain this replaces ended in a
+ * catch-all `requireCurrentUser`, so a guard nobody had wired up did not fail —
+ * it silently admitted any signed-in caller. That is precisely what happened
+ * when `superAdminRead` was first added, and the access-control tests caught a
+ * platform console briefly open to every logged-in user. A permission model
+ * whose default branch is "let them in" is one edit away from that every time.
+ */
+const GUARD_RESOLVERS: Record<Guard, (ctx: QueryCtx | MutationCtx) => Promise<RoleCheckedUser | CurrentUser>> = {
+  authenticated: requireCurrentUser,
+  admin: requireAdmin,
+  adminRead: requireAdminReader,
+  governance: requireGovernanceReader,
+  superAdmin: requireSuperAdmin,
+  superAdminRead: requireSuperAdminReader,
+};
 
 async function resolveTenantIdentity(
   ctx: QueryCtx | MutationCtx,
   guard: Guard,
 ): Promise<TenantIdentity> {
-  const current =
-    guard === "superAdmin"
-      ? await requireSuperAdmin(ctx)
-      : guard === "admin"
-        ? await requireAdmin(ctx)
-        : await requireCurrentUser(ctx);
+  const current = await GUARD_RESOLVERS[guard](ctx);
 
   return {
     user: current.user,
@@ -121,12 +151,37 @@ const guardedCtx = (guard: Guard) =>
 export const tenantQuery = customQuery(query, guardedCtx("authenticated"));
 export const tenantMutation = customMutation(mutation, guardedCtx("authenticated"));
 
-/** ADMIN or SUPER_ADMIN. */
-export const adminQuery = customQuery(query, guardedCtx("admin"));
+/**
+ * Admin surfaces.
+ *
+ * `adminQuery` reads, so it also admits `READ_ONLY`. `adminMutation` writes, so
+ * it does not — and neither oversight role satisfies it anywhere on the
+ * platform. Nothing loosened when the oversight roles were added: no existing
+ * account holds one, so every pre-existing caller behaves exactly as before.
+ */
+export const adminQuery = customQuery(query, guardedCtx("adminRead"));
 export const adminMutation = customMutation(mutation, guardedCtx("admin"));
 
-/** SUPER_ADMIN only. */
-export const superAdminQuery = customQuery(query, guardedCtx("superAdmin"));
+/**
+ * Governance surfaces: the register, approvals, the audit trail, policies in
+ * force, and the evidence pack.
+ *
+ * Read-only by construction. There is no `governanceMutation`, and there should
+ * never be one — an auditor who can change what they are auditing is the
+ * problem this role exists to solve. Governance screens that need an edit send
+ * the reader to the screen that owns the thing, guarded by `adminMutation`.
+ */
+export const governanceQuery = customQuery(query, guardedCtx("governance"));
+
+/**
+ * Platform-wide surfaces.
+ *
+ * `superAdminQuery` reads, so it also admits `READ_ONLY` — the admin section is
+ * the super-admin console, and a read-only account that could not reach these
+ * would find half of it blank. `superAdminMutation` writes and still admits
+ * `SUPER_ADMIN` alone.
+ */
+export const superAdminQuery = customQuery(query, guardedCtx("superAdminRead"));
 export const superAdminMutation = customMutation(mutation, guardedCtx("superAdmin"));
 
 /**
@@ -143,9 +198,15 @@ const guardedActionCtx = (guard: Guard) =>
     const current =
       guard === "superAdmin"
         ? await requireActionRole(ctx, ["SUPER_ADMIN"])
+        : guard === "superAdminRead"
+          ? await requireActionRole(ctx, SUPER_ADMIN_READ_ROLES)
         : guard === "admin"
-          ? await requireActionRole(ctx, ["ADMIN", "SUPER_ADMIN"])
-          : await requireActionUser(ctx);
+          ? await requireActionRole(ctx, ADMIN_WRITE_ROLES)
+          : guard === "adminRead"
+            ? await requireActionRole(ctx, ADMIN_READ_ROLES)
+            : guard === "governance"
+              ? await requireActionRole(ctx, GOVERNANCE_READ_ROLES)
+              : await requireActionUser(ctx);
 
     return { user: current.user, userId: current.userId };
   });
@@ -153,6 +214,16 @@ const guardedActionCtx = (guard: Guard) =>
 export const tenantAction = customAction(action, guardedActionCtx("authenticated"));
 export const adminAction = customAction(action, guardedActionCtx("admin"));
 export const superAdminAction = customAction(action, guardedActionCtx("superAdmin"));
+
+/**
+ * Producing the evidence pack is an action rather than a query, and an auditor
+ * has to be able to run it — an export they cannot take is not evidence.
+ *
+ * It reads and returns; it must not write. The guard cannot enforce that on its
+ * own, so any function declared with this builder is expected to be free of
+ * side effects beyond the audit record of the export itself.
+ */
+export const governanceAction = customAction(action, guardedActionCtx("governance"));
 
 /**
  * Deliberately unauthenticated surface.

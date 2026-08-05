@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
+import { useCanWriteHere } from "./AdminAccessLevel";
 
 type AdminSearchBarProps = {
   value: string;
@@ -122,9 +123,29 @@ type AdminRowIconButtonProps = {
   label: string;
   onClick: () => void;
   tone?: "default" | "danger";
+  /**
+   * This action only takes the reader somewhere — it opens a detail page or a
+   * viewer and changes nothing.
+   *
+   * Row actions are hidden from accounts that cannot write, and most of them
+   * edit or delete. A few navigate, and hiding those would leave a read-only
+   * reader looking at a list they cannot open, which defeats the point of the
+   * role. Opt in per action rather than by guessing from the label.
+   */
+  navigates?: boolean;
 };
 
-export function AdminRowIconButton({ children, label, onClick, tone = "default" }: AdminRowIconButtonProps) {
+export function AdminRowIconButton({
+  children,
+  label,
+  onClick,
+  tone = "default",
+  navigates = false,
+}: AdminRowIconButtonProps) {
+  const canWriteHere = useCanWriteHere();
+
+  if (!canWriteHere && !navigates) return null;
+
   const toneClass =
     tone === "danger"
       ? "hover:bg-red-500/10 text-secondary hover:text-red-500"

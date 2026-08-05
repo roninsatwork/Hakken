@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin, userRoleValidator } from "./authz";
 import {
   assertCanCreateManagedUser,
   assertCanDeleteManagedUser,
@@ -352,7 +352,7 @@ export const addUser = tenantMutation({
   args: {
     name: v.string(),
     email: v.string(),
-    role: v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
+    role: userRoleValidator,
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
@@ -400,7 +400,7 @@ export const updateUser = tenantMutation({
     id: v.id("users"),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
-    role: v.optional(v.union(v.literal("USER"), v.literal("ADMIN"), v.literal("SUPER_ADMIN"))),
+    role: v.optional(userRoleValidator),
     image: v.optional(v.string()),
     companyId: v.optional(v.id("companies")),
   },
@@ -422,9 +422,11 @@ export const updateUser = tenantMutation({
     });
 
     const { id, role, companyId, ...updates } = args;
+    const previousRole = targetUser.role;
+
     await ctx.db.patch(id, {
       ...updates,
-      ...(role !== undefined && { role: role as "USER" | "ADMIN" | "SUPER_ADMIN" }),
+      ...(role !== undefined && { role }),
       ...(companyId !== undefined && { companyId })
     });
 
@@ -434,7 +436,17 @@ export const updateUser = tenantMutation({
       entityType: "users",
       entityId: id,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ updatedRole: role, updatedCompanyId: companyId })
+      /**
+       * `previousRole` matters as much as the new one. A record saying someone
+       * was made an administrator does not say whether that was a promotion
+       * from ordinary use or the quiet removal of an oversight restriction, and
+       * the second is the one an auditor is looking for.
+       */
+      metadata: JSON.stringify({
+        updatedRole: role,
+        previousRole: role !== undefined && role !== previousRole ? previousRole : undefined,
+        updatedCompanyId: companyId,
+      })
     });
 
     return id;

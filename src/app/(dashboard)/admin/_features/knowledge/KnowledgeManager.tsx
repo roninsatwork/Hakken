@@ -34,6 +34,7 @@ import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type KnowledgeScope =
   | { type: "global" }
@@ -438,14 +439,14 @@ export function KnowledgeManager({
                 placeholder="Search stored chunks"
                 className="h-9 flex-1 bg-background border border-border-dim rounded-[8px] px-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors"
               />
-              <button
+              <AdminWriteButton
                 type="submit"
                 disabled={!retrievalQuery.trim()}
                 className="h-9 px-4 rounded-[8px] bg-foreground text-background font-medium text-[13px] flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50"
               >
                 <Search className="w-3.5 h-3.5" />
                 Test
-              </button>
+              </AdminWriteButton>
             </form>
           </div>
 
@@ -558,7 +559,7 @@ export function KnowledgeManager({
                     "px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-300 text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-40",
                     "Inspect",
                   )}
-                  <button
+                  <AdminWriteButton
                     type="button"
                     onClick={() => handleRetryDocument(item.documentId)}
                     disabled={repairingDocumentIds[item.documentId]}
@@ -566,7 +567,7 @@ export function KnowledgeManager({
                   >
                     {repairingDocumentIds[item.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                     Repair
-                  </button>
+                  </AdminWriteButton>
                 </div>
               ))}
             </div>
@@ -604,14 +605,14 @@ export function KnowledgeManager({
                 className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors resize-y"
               />
               <div className="flex justify-end">
-                <button
+                <AdminWriteButton
                   onClick={handleSaveText}
                   disabled={isSavingText || !textTitle.trim() || !textContent.trim()}
                   className="h-10 px-6 rounded-[8px] bg-secondary text-background font-medium text-[13px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSavingText ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Add text
-                </button>
+                </AdminWriteButton>
               </div>
             </div>
           </div>
@@ -732,13 +733,13 @@ export function KnowledgeManager({
                         >
                           <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
                         </button>
-                        <button
+                        <AdminWriteButton
                           onClick={() => setRootToDelete(root)}
                           title="Delete Complete Domain"
                           className="p-1.5 rounded-lg text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </AdminWriteButton>
                         <button onClick={() => toggleGroup(root)} className="ml-2 flex items-center gap-1 bg-brand/10 text-brand px-3 py-1 rounded-md text-[13px] font-medium hover:bg-brand/20 transition-colors">
                           {totalDocs} pages {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
@@ -786,22 +787,22 @@ export function KnowledgeManager({
                                 "text-secondary hover:text-brand transition-colors opacity-50 group-hover:opacity-100",
                               )}
                               {document.status === "failed" && (
-                                <button
+                                <AdminWriteButton
                                   onClick={() => handleRetryDocument(document._id)}
                                   disabled={repairingDocumentIds[document._id]}
                                   className="text-secondary hover:text-amber-300 transition-colors opacity-50 group-hover:opacity-100 disabled:opacity-50"
                                   title="Retry ingestion"
                                 >
                                   {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-                                </button>
+                                </AdminWriteButton>
                               )}
-                              <button
+                              <AdminWriteButton
                                 onClick={() => setDocumentToDelete(document)}
                                 className="text-secondary hover:text-red-500 transition-colors opacity-50 group-hover:opacity-100"
                                 title="Delete Document"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </AdminWriteButton>
                             </div>
                           </div>
                         ))}
@@ -878,23 +879,23 @@ export function KnowledgeManager({
                       )}
 
                       {document.status === "failed" && (
-                        <button
+                        <AdminWriteButton
                           onClick={() => handleRetryDocument(document._id)}
                           disabled={repairingDocumentIds[document._id]}
                           className="p-2 rounded-lg border border-transparent text-secondary hover:text-amber-300 hover:bg-amber-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                           title="Retry ingestion"
                         >
                           {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-                        </button>
+                        </AdminWriteButton>
                       )}
 
-                      <button
+                      <AdminWriteButton
                         onClick={() => setDocumentToDelete(document)}
                         className="p-2 rounded-lg border border-transparent text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
                         title="Delete Document"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </AdminWriteButton>
                     </div>
                   </div>
                 ))}
@@ -1000,14 +1001,14 @@ export function KnowledgeManager({
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               onClick={handleConfirmDocumentDelete}
               disabled={isDeletingDocument}
               className="px-4 py-2 rounded-md bg-red-500 text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-red-600 disabled:opacity-50"
             >
               {isDeletingDocument && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Delete Document
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -1062,7 +1063,7 @@ export function KnowledgeManager({
                 )}
                 {documentInspection.document.status === "failed" && (
                   <div className="pt-2">
-                    <button
+                    <AdminWriteButton
                       type="button"
                       onClick={() => handleRetryDocument(documentInspection.document.documentId)}
                       disabled={repairingDocumentIds[documentInspection.document.documentId]}
@@ -1070,7 +1071,7 @@ export function KnowledgeManager({
                     >
                       {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                       Retry ingestion
-                    </button>
+                    </AdminWriteButton>
                   </div>
                 )}
               </div>
@@ -1090,7 +1091,7 @@ export function KnowledgeManager({
                     <div>Stored: {documentInspection.embeddingDrift.storedModelId || "unknown"} ({documentInspection.embeddingDrift.storedDimensions || "?"} dims)</div>
                     <div>Active: {documentInspection.embeddingDrift.activeModelId} ({documentInspection.embeddingDrift.activeDimensions || "?"} dims)</div>
                   </div>
-                  <button
+                  <AdminWriteButton
                     type="button"
                     onClick={() => handleRetryDocument(documentInspection.document.documentId)}
                     disabled={repairingDocumentIds[documentInspection.document.documentId]}
@@ -1098,7 +1099,7 @@ export function KnowledgeManager({
                   >
                     {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                     Re-embed with active model
-                  </button>
+                  </AdminWriteButton>
                 </div>
               )}
 
@@ -1168,14 +1169,14 @@ export function KnowledgeManager({
             >
               Cancel
             </button>
-            <button
+            <AdminWriteButton
               onClick={handleConfirmBulkDelete}
               disabled={isDeletingBulk}
               className="px-4 py-2 rounded-md bg-red-500 text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-red-600"
             >
               {isDeletingBulk && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Delete Everything
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

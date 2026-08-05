@@ -25,8 +25,9 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
+import { ASSIGNABLE_ROLES, ROLE_DESCRIPTION_KEYS, ROLE_LABEL_KEYS, type UserRole } from "@/src/lib/userRoles";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
-type UserRole = "USER" | "ADMIN" | "SUPER_ADMIN";
 type UserRow = Doc<"users"> & { companyName?: string | null };
 
 type UserFormData = {
@@ -360,10 +361,15 @@ export default function ManageUsersPage() {
               onChange={e => setFormData({ ...formData, role: e.target.value as UserRole })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
             >
-              <option value="USER">{t('roles.user')}</option>
-              <option value="ADMIN">{t('roles.admin')}</option>
-              {isSuperAdmin && <option value="SUPER_ADMIN">{t('roles.superAdmin')}</option>}
+              {ASSIGNABLE_ROLES
+                .filter(role => role !== "SUPER_ADMIN" || isSuperAdmin)
+                .map(role => (
+                  <option key={role} value={role}>{t(`roles.${ROLE_LABEL_KEYS[role]}`)}</option>
+                ))}
             </select>
+            <p className="text-[13px] text-secondary">
+              {t(`roles.${ROLE_DESCRIPTION_KEYS[formData.role]}`)}
+            </p>
           </div>
 
           {isSuperAdmin && (
@@ -403,13 +409,13 @@ export default function ManageUsersPage() {
             >
               {t('buttons.cancel')}
             </button>
-            <button
+            <AdminWriteButton
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? tCommon('saving') : editingUser ? t('buttons.updateUser') : t('buttons.sendInvite')}
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>

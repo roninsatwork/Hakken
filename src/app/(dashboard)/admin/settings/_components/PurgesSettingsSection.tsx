@@ -7,6 +7,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   AlertTriangle,
   Clock,
@@ -408,7 +409,7 @@ export function PurgesSettingsSection() {
             >
               {t('purges.modals.config.cancel')}
             </button>
-            <button
+            <AdminWriteButton
               onClick={async () => {
                 if (configModalPipeline) {
                   const retentionDays = Math.max(30, configModalData.retentionDays || 30);
@@ -427,7 +428,7 @@ export function PurgesSettingsSection() {
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-[13px]"
             >
               {t('purges.modals.config.save')}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -462,7 +463,7 @@ export function PurgesSettingsSection() {
             >
               {t('purges.modals.confirm.cancel')}
             </button>
-            <button
+            <AdminWriteButton
               onClick={async () => {
                 if (confirmModalPipeline) {
                   setIsManualRunning(true);
@@ -481,7 +482,7 @@ export function PurgesSettingsSection() {
             >
               {isManualRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               {t('purges.modals.confirm.confirm')}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -514,7 +515,7 @@ export function PurgesSettingsSection() {
             >
               {t('purges.modals.cancelConfirm.cancel')}
             </button>
-            <button
+            <AdminWriteButton
               onClick={async () => {
                 if (cancelModalHistoryId) {
                   setIsCancelRunning(true);
@@ -533,7 +534,7 @@ export function PurgesSettingsSection() {
             >
               {isCancelRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-white" />}
               {t('purges.modals.cancelConfirm.confirm')}
-            </button>
+            </AdminWriteButton>
           </div>
         </div>
       </SonaeModal>

@@ -17,6 +17,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import {
   AdminLoadMoreFooter,
   AdminSearchBar,
@@ -148,13 +149,13 @@ export default function SubscriptionPlansPage() {
           <p className="text-[13px] text-secondary mt-1">{t('subtitle')}</p>
         </div>
 
-        <button
+        <AdminWriteButton
           onClick={handleOpenAdd}
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
           <span>{t('newPlan')}</span>
-        </button>
+        </AdminWriteButton>
       </div>
 
       {/* Explanation Notice */}
@@ -346,13 +347,13 @@ export default function SubscriptionPlansPage() {
             >
               {tCommon('cancel')}
             </button>
-            <button
+            <AdminWriteButton
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? tCommon('saving') : (editingPlan ? t('savePlan') : t('newPlan'))}
-            </button>
+            </AdminWriteButton>
           </div>
         </form>
       </SonaeModal>

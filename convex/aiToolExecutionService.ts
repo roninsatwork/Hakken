@@ -26,7 +26,24 @@ import {
 type JsonSchema = Record<string, unknown>;
 
 export type ToolAccessRole = "ADMIN" | "SUPER_ADMIN";
-export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN";
+
+/**
+ * Whatever role the caller happens to hold, including ones that may not execute
+ * anything. Deciding that is `canExecuteTool`'s job, not this type's.
+ */
+export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN" | "READ_ONLY" | "AUDITOR";
+
+/**
+ * The only roles that may run a tool.
+ *
+ * An allowlist rather than a list of exclusions. The check here used to refuse
+ * `USER` by name and admit everything else, which was correct while three roles
+ * existed and became a privilege escalation the moment a fourth was added — the
+ * oversight roles would have fallen through to the administrator path. Written
+ * this way, a role added in future is refused until someone deliberately adds
+ * it.
+ */
+const TOOL_EXECUTOR_ROLES: readonly ToolExecutorRole[] = ["ADMIN", "SUPER_ADMIN"];
 export type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 export type ToolHandlerExecutionInput = {
   ctx: Pick<ActionCtx, "runMutation" | "runQuery" | "runAction">;
@@ -320,7 +337,7 @@ export function canExecuteTool(args: {
     return { allowed: false, reason: "Tool execution requires an authenticated user." };
   }
 
-  if (args.userRole === "USER") {
+  if (!TOOL_EXECUTOR_ROLES.includes(args.userRole)) {
     return { allowed: false, reason: "Tool execution requires administrator privileges." };
   }
 
