@@ -12,7 +12,7 @@ export function DemosIntro() {
             Built on Sonae
           </span>
           <h2 className="ps-display ps-demos-intro-h2 mt-3" data-reveal>
-            Three demos, pre-built in record time.
+            Four demos, pre-built in record time.
           </h2>
         </div>
         <p className="ps-demos-intro-lede" data-reveal>

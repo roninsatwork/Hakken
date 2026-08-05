@@ -1289,6 +1289,7 @@ div:has(> .public-site) {
 .ps-panel-props { background: #e7f2ea; }
 .ps-panel-reports { background: #faf0da; }
 .ps-panel-studio { background: #fbe9e0; }
+.ps-panel-sales { background: #e8eef3; }
 
 .ps-pill {
   color: #fff;
@@ -1567,6 +1568,106 @@ div:has(> .public-site) {
   background: rgba(245, 196, 178, 0.28);
   border-radius: 10px;
   padding: 11px 13px;
+}
+
+/* ---------- opportunity report screen ---------- */
+.ps-opp-status {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #35617d;
+  background: rgba(60, 96, 121, 0.12);
+  border-radius: 999px;
+  padding: 6px 13px;
+  white-space: nowrap;
+}
+.ps-opp-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ps-opp-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.ps-opp-tab {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ps-ink-60);
+  border: 1px solid var(--ps-line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.ps-opp-tab[data-on="true"] {
+  background: #3c6079;
+  border-color: #3c6079;
+  color: #fff;
+}
+/*
+ * Three columns on desktop: who it is, what kind of money it is, and how the
+ * figure was reached. The "how" is the whole point of the screen, so it keeps a
+ * full column rather than sitting under the name as a caption.
+ */
+.ps-opp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ps-line);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .ps-opp-row {
+    grid-template-columns: minmax(0, 1fr) 108px minmax(0, 1.3fr) 92px;
+    align-items: center;
+  }
+}
+.ps-opp-group {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ps-ink-40);
+}
+.ps-opp-kind {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 5px 9px;
+  text-align: center;
+  white-space: nowrap;
+  justify-self: start;
+}
+.ps-opp-kind[data-kind="New business"] { background: #e4edf3; color: #35617d; }
+.ps-opp-kind[data-kind="Upsell"] { background: #e7f2ea; color: #3e7a55; }
+.ps-opp-kind[data-kind="Suspect"] { background: #faf0d4; color: #8f6a12; }
+.ps-opp-how {
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ps-ink-60);
+  border-left: 2px solid var(--ps-line);
+  padding-left: 12px;
+}
+@media (min-width: 900px) {
+  .ps-opp-how { grid-column: 3; }
+}
+.ps-opp-value {
+  font-family: var(--ps-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ps-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  grid-row: 1;
+  grid-column: 2;
+}
+@media (min-width: 900px) {
+  .ps-opp-value { grid-column: 4; }
 }
 
 /* ---------- story ---------- */

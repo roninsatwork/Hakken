@@ -21,6 +21,7 @@ import { ContactLink } from "../ContactLink";
 const PROPERTIES_BUILD_TIME: string | null = "Built and live inside 1 month";
 const REPORTS_BUILD_TIME: string | null = "Built in 1 week";
 const STUDIO_BUILD_TIME: string | null = "Built in 1 month";
+const SALES_BUILD_TIME: string | null = "Built in 1 week";
 
 /* Representative listings for the library screen — shape and density are real. */
 const LISTINGS = [
@@ -64,6 +65,56 @@ const RISKS = [
     deal: "Norwood · £128k",
     note: "Signed off internally and waiting on a date.",
     action: "Confirm the start date and close it.",
+  },
+];
+
+/*
+ * The opportunity report screen. Names and figures are invented, and the sector
+ * is never named, because the client this was built for is under NDA. What is
+ * real is the shape: three streams of work priced into one table, and a line on
+ * every row saying how that figure was reached.
+ */
+const OPPORTUNITY_TABS = [
+  "Upsell existing customers",
+  "Prospects in their groups",
+  "Suspects — new groups",
+];
+
+const OPPORTUNITY_ROWS = [
+  {
+    site: "Marden Court",
+    group: "Marden Group",
+    kind: "New business",
+    value: "£34,600",
+    how: "Priced by size against three sister sites already supplied.",
+  },
+  {
+    site: "Beckmere Grange",
+    group: "Northbrook Group",
+    kind: "Upsell",
+    value: "£19,400",
+    how: "Six categories its sister sites buy and this account does not.",
+  },
+  {
+    site: "Stone Cross House",
+    group: "Halden Group",
+    kind: "Suspect",
+    value: "£41,200",
+    how: "A group nobody here has sold to, found and priced on the type average.",
+  },
+  {
+    site: "Ashfield Lodge",
+    group: "Ashfield Group",
+    kind: "New business",
+    value: "£28,900",
+    how: "No size on file, so the average of the group's existing accounts.",
+  },
+  {
+    site: "Kellerton Park",
+    group: "Marden Group",
+    kind: "Upsell",
+    value: "£12,750",
+    how: "Two categories missing against the group's own buying mix.",
   },
 ];
 
@@ -525,6 +576,101 @@ export function ProductPanels() {
               <div className="ps-lib-foot">
                 <span>553 points tracked live · ~14 scans a second</span>
                 <span>0 frames of video stored</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* template:remove:end */}
+
+      {/* template:remove:start salesData */}
+      <section className="ps-panel ps-panel-sales ps-demo-full">
+        <div className="ps-demo-full-inner">
+          <div className="ps-demo-head">
+            <div className="ps-demo-metarow">
+              <span className="ps-pill bg-[#3C6079]">
+                Agentic Research and Upsells
+              </span>
+              {SALES_BUILD_TIME && (
+                <span className="ps-demo-time">{SALES_BUILD_TIME}</span>
+              )}
+            </div>
+            <h2 className="ps-display ps-demo-h2 mt-5">
+              Finding the revenue already sitting inside your own sales data.
+            </h2>
+            <p className="ps-demo-lede mt-4">
+              For businesses that have great systems and know what is happening
+              day to day but lack the modern research and vision that agentic AI
+              can bring. This customer exported their customer and sales data
+              into spreadsheets, and as a rapid proof of concept we imported the
+              history, turned it into a real CRM, then put three research agents
+              on top: one finds products existing customers are not buying that
+              their sister sites are, one finds new sites inside the groups they
+              already supply, and one goes out looking for groups they have
+              never sold to.
+            </p>
+            <div className="mt-6">
+              <ContactLink className="ps-cta-quiet">Talk to us</ContactLink>
+            </div>
+          </div>
+
+          <div className="ps-demo-stage">
+            <div className="ps-demo-screen">
+              <div className="ps-lib-bar">
+                <span className="ps-rep-title">
+                  Opportunity report
+                  <em>Priced from sales-history.xlsx · 412 accounts · 6 months</em>
+                </span>
+                <span className="ps-opp-status">Report ready</span>
+              </div>
+
+              <div className="ps-opp-body">
+                <div className="ps-rep-metrics">
+                  {[
+                    { k: "Total opportunity", v: "£1.24m", d: "over the next six months" },
+                    { k: "New sites to win", v: "£780k", d: "61 sites across 18 groups" },
+                    { k: "Upsell at existing accounts", v: "£462k", d: "204 product gaps" },
+                  ].map((metric) => (
+                    <div key={metric.k} className="ps-rep-metric">
+                      <span className="ps-rep-metric-k">{metric.k}</span>
+                      <span className="ps-rep-metric-v">{metric.v}</span>
+                      <span className="ps-rep-metric-d">{metric.d}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div>
+                  <span className="ps-rep-section">
+                    Three agents, one table
+                  </span>
+                  <div className="ps-opp-tabs">
+                    {OPPORTUNITY_TABS.map((tab, i) => (
+                      <span key={tab} className="ps-opp-tab" data-on={i === 0}>
+                        {tab}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="ps-opp-rows">
+                    {OPPORTUNITY_ROWS.map((row) => (
+                      <div key={row.site} className="ps-opp-row">
+                        <div>
+                          <div className="ps-rep-deal">{row.site}</div>
+                          <div className="ps-opp-group">{row.group}</div>
+                        </div>
+                        <span className="ps-opp-kind" data-kind={row.kind}>
+                          {row.kind}
+                        </span>
+                        <div className="ps-opp-how">{row.how}</div>
+                        <div className="ps-opp-value">{row.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="ps-lib-foot">
+                <span>412 accounts read · 61 groups searched</span>
+                <span>One press · 4 minutes</span>
               </div>
             </div>
           </div>
