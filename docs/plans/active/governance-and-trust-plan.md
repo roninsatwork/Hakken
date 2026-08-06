@@ -3,6 +3,38 @@
 Written 2026-08-05, after reading the platform against the EU AI Act and against
 what an enterprise security review actually asks for.
 
+## Status: delivered 2026-08-06
+
+All eight phases are built and on `dev`. The estimates below are left as they
+were written rather than corrected after the fact — a plan whose figures are
+edited to match what happened teaches nobody anything next time.
+
+This stays in `active/` rather than moving to `completed/`, on purpose. Two
+things here outlive the build and are the reason to keep it in front of people:
+
+- **The framework test** at the top — what Sonae carries versus what belongs to
+  the products built on it. It is the rule for deciding anything proposed next,
+  not a note about work that is finished.
+- **The decisions in the closing section** — no single sign-on, no two-factor,
+  no AI literacy, and why each. Filed under "completed" they become
+  archaeology, and the way a recorded decision gets quietly reversed is that
+  nobody can find it.
+
+What was built, and what it turned out to be worth, is in the commits. What was
+deliberately *not* built is here.
+
+Two things stated plainly, because a plan that only records successes is worth
+less than one that does not:
+
+- **Continuous conformance is a first version.** It answers whether an
+  assistant's behaviour matches its classification, which is the drift that
+  makes the rest of these screens untrue. It does not judge whether output was
+  good, on-topic or faithful to instructions — that needs a model to decide, and
+  a model's opinion is not evidence.
+- **The one-time-code throttle sits on the request path, not inside the send.**
+  It stops the sign-in form being used to post mail at someone. It is not a
+  defence against a caller driving the auth endpoint directly.
+
 ## What this is
 
 This is the plan for the layer that lets Sonae be sold to organisations who take

@@ -118,8 +118,10 @@ completed work.
   three tasks to completion under a single press, replacing the fan-out of one
   agent run per customer and per chain. Read it before touching the sweeps in
   `convex/salesDataResearch.ts`.
-- [Governance And Trust Plan](./active/governance-and-trust-plan.md) — the
-  phased plan for the AI register, risk classification, evidence export,
+- [Governance And Trust Plan](./active/governance-and-trust-plan.md) — delivered
+  2026-08-06, and kept in `active/` because its framework test and its recorded
+  decisions govern what comes next. The phased plan for the AI register, risk
+  classification, evidence export,
   governance navigation, and the access-control and personal-data-rights work a
   serious enterprise buyer checks for. Owns the Governance section, the auditor
   and read-only roles, one-time-code sign-in, and anything claiming compliance
