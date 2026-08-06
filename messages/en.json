@@ -2085,6 +2085,49 @@
                 "confirmWarningTitle": "What this keeps",
                 "confirmWarning": "Shared records they created — rules, workflows, documents — are kept, with their name taken off. The audit trail and the approvals they gave are kept whole, because they are the evidence that oversight happened."
             },
+            "dashboard": {
+                "settled": "Nothing needs your attention.",
+                "attention": "{count} things need your attention.",
+                "systems": "{count} AI systems in scope.",
+                "checks": {
+                    "unrated": {
+                        "label": "Risk ratings",
+                        "attention": "{count} not yet rated. Nothing else here means much until they are.",
+                        "settled": "Everything is rated."
+                    },
+                    "incomplete": {
+                        "label": "Purpose and owner",
+                        "attention": "{count} without a purpose or anybody accountable.",
+                        "settled": "Everything has both."
+                    },
+                    "staleApprovals": {
+                        "label": "Approvals nobody has answered",
+                        "attention": "{count} waiting more than a week. That is a queue, not oversight.",
+                        "settled": "Nothing has been left waiting."
+                    },
+                    "waitingApprovals": {
+                        "label": "Waiting for a person",
+                        "attention": "{count} paused until somebody decides.",
+                        "settled": "Nothing is waiting."
+                    },
+                    "unattendedHighRisk": {
+                        "label": "High risk, running unattended",
+                        "attention": "{count} rated high risk with nobody approving. These predate the rule.",
+                        "settled": "None."
+                    },
+                    "publicFacing": {
+                        "label": "Talking to the public",
+                        "attention": "{count} reachable by people who have not signed in.",
+                        "settled": "None."
+                    },
+                    "retention": {
+                        "label": "How long records are kept",
+                        "attention": "Some records are deleted sooner than the six months they are expected to be kept for:",
+                        "settled": "Records are kept long enough.",
+                        "notSetUp": "Nothing is deleted automatically. That breaks no rule."
+                    }
+                }
+            },
             "auditTrail": {
                 "title": "Audit trail",
                 "description": "Everything anyone changed on this platform, and when they changed it."

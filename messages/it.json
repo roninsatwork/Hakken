@@ -2085,6 +2085,49 @@
                 "confirmWarningTitle": "Cosa viene mantenuto",
                 "confirmWarning": "I record condivisi che ha creato — regole, flussi di lavoro, documenti — vengono mantenuti, senza il suo nome. Il registro attività e le approvazioni che ha dato restano interi, perché sono la prova che la supervisione è avvenuta."
             },
+            "dashboard": {
+                "settled": "Nulla richiede la tua attenzione.",
+                "attention": "{count} elementi richiedono la tua attenzione.",
+                "systems": "{count} sistemi di IA inclusi.",
+                "checks": {
+                    "unrated": {
+                        "label": "Valutazioni del rischio",
+                        "attention": "{count} non ancora valutati. Nient'altro qui conta molto finché non lo sono.",
+                        "settled": "Tutto è valutato."
+                    },
+                    "incomplete": {
+                        "label": "Scopo e responsabile",
+                        "attention": "{count} senza uno scopo o senza nessun responsabile.",
+                        "settled": "Tutto ha entrambi."
+                    },
+                    "staleApprovals": {
+                        "label": "Approvazioni senza risposta",
+                        "attention": "{count} in attesa da più di una settimana. Questa è una coda, non supervisione.",
+                        "settled": "Nulla è stato lasciato in attesa."
+                    },
+                    "waitingApprovals": {
+                        "label": "In attesa di una persona",
+                        "attention": "{count} in pausa finché qualcuno non decide.",
+                        "settled": "Nulla è in attesa."
+                    },
+                    "unattendedHighRisk": {
+                        "label": "Rischio alto, senza supervisione",
+                        "attention": "{count} valutati ad alto rischio senza nessuno che approvi. Precedono la regola.",
+                        "settled": "Nessuno."
+                    },
+                    "publicFacing": {
+                        "label": "Parlano con il pubblico",
+                        "attention": "{count} raggiungibili da persone non autenticate.",
+                        "settled": "Nessuno."
+                    },
+                    "retention": {
+                        "label": "Per quanto si conservano i record",
+                        "attention": "Alcuni record vengono cancellati prima dei sei mesi previsti:",
+                        "settled": "I record si conservano abbastanza a lungo.",
+                        "notSetUp": "Nulla viene cancellato automaticamente. Non viola alcuna regola."
+                    }
+                }
+            },
             "auditTrail": {
                 "title": "Registro attività",
                 "description": "Tutto ciò che qualcuno ha modificato su questa piattaforma, e quando."

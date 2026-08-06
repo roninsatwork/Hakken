@@ -104,6 +104,8 @@ import type * as evidencePack from "../evidencePack.js";
 import type * as evidencePackService from "../evidencePackService.js";
 import type * as googleAgentProvider from "../googleAgentProvider.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
+import type * as governanceDashboard from "../governanceDashboard.js";
+import type * as governanceDashboardService from "../governanceDashboardService.js";
 import type * as governanceRegister from "../governanceRegister.js";
 import type * as governanceRegisterService from "../governanceRegisterService.js";
 import type * as http from "../http.js";
@@ -307,6 +309,8 @@ declare const fullApi: ApiFromModules<{
   evidencePackService: typeof evidencePackService;
   googleAgentProvider: typeof googleAgentProvider;
   googleProviderAdapter: typeof googleProviderAdapter;
+  governanceDashboard: typeof governanceDashboard;
+  governanceDashboardService: typeof governanceDashboardService;
   governanceRegister: typeof governanceRegister;
   governanceRegisterService: typeof governanceRegisterService;
   http: typeof http;
