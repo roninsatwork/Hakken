@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
+import { buildSignatureHeaders } from "./webhookSignatureService";
 
 const WEBHOOK_DELIVERY_RESPONSE_READ_LIMIT = 2000;
 const WEBHOOK_DELIVERY_RETRY_BASE_MS = 60_000;
@@ -68,6 +69,14 @@ export const dispatchInternal = internalAction({
     deliveryId: v.id("webhookDeliveries"),
     payloadJson: v.string(),
     headers: v.optional(webhookDeliveryHeaderValidator),
+    /**
+     * Signs the delivery when present.
+     *
+     * Absent means unsigned, quietly: a destination configured before signing
+     * existed keeps working exactly as it did. Turning every existing
+     * integration off in the name of security would be its own outage.
+     */
+    signingSecret: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<DispatchResult> => {
     const delivery = await ctx.runQuery(internal.webhookDeliveries.getInternal, { deliveryId: args.deliveryId });
@@ -81,9 +90,17 @@ export const dispatchInternal = internalAction({
 
     const attemptNumber = delivery.attemptCount + 1;
     try {
+      // The receiver had no way to tell a delivery from Sonae apart from
+      // anyone else posting the same shape at the same URL.
+      const signatureHeaders = await buildSignatureHeaders({
+        secret: args.signingSecret,
+        body: args.payloadJson,
+        nowMs: Date.now(),
+      });
+
       const response = await fetch(delivery.destinationUrl, {
         method: "POST",
-        headers: buildHeaders(args.headers),
+        headers: { ...buildHeaders(args.headers), ...signatureHeaders },
         body: args.payloadJson,
       });
       const responseBodyPreview = await readResponsePreview(response);

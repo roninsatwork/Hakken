@@ -27,6 +27,7 @@ import {
   type PurgePipelineConfig,
   type PurgePipelineKey,
 } from "./types";
+import { EXPECTED_RETENTION_DAYS } from "@/convex/governanceDashboardService";
 
 export function PurgesSettingsSection() {
   const t = useTranslations('admin.settings');
@@ -332,6 +333,19 @@ export function PurgesSettingsSection() {
                 />
               </div>
             )}
+
+            {/*
+              Said where the choice is made, not only on a dashboard afterwards.
+              A number chosen here quietly destroys records someone is expected
+              to still have, and the person choosing it is the one who can
+              change their mind.
+            */}
+            {configModalData.enabled && (configModalData.retentionDays ?? 0) > 0
+              && (configModalData.retentionDays ?? 0) < EXPECTED_RETENTION_DAYS ? (
+              <p className="rounded-[10px] bg-[#fef3c7]/60 dark:bg-[#78350f]/30 px-4 py-3 text-[13px] leading-relaxed text-[#78350f] dark:text-[#fef3c7]">
+                {t('purges.modals.config.tooShort', { days: EXPECTED_RETENTION_DAYS })}
+              </p>
+            ) : null}
 
             <div className="flex flex-col gap-2 relative">
               <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.interval')}</span>

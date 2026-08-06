@@ -1936,6 +1936,7 @@
                         "days": "{days} Days",
                         "custom": "Custom Days",
                         "customLabel": "Custom Retention (Days)",
+                        "tooShort": "Records of this kind are expected to be kept for {days} days. Deleting them sooner may leave you unable to answer an auditor about that period.",
                         "customPlaceholder": "e.g. 90",
                         "interval": "Execution Interval",
                         "hour": "Execution Hour (UTC)",
@@ -2099,6 +2100,11 @@
                         "label": "Purpose and owner",
                         "attention": "{count} without a purpose or anybody accountable.",
                         "settled": "Everything has both."
+                    },
+                    "conformance": {
+                        "label": "Behaviour matches its rating",
+                        "attention": "{count} doing more than their rating claims. The register is saying something untrue about them.",
+                        "settled": "Every rating matches what the assistant actually does."
                     },
                     "staleApprovals": {
                         "label": "Approvals nobody has answered",

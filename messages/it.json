@@ -1936,6 +1936,7 @@
                         "days": "{days} Giorni",
                         "custom": "Giorni Personalizzati",
                         "customLabel": "Ritenzione Personalizzata (Giorni)",
+                        "tooShort": "I record di questo tipo dovrebbero essere conservati per {days} giorni. Cancellarli prima potrebbe impedirti di rispondere a un revisore su quel periodo.",
                         "customPlaceholder": "es. 90",
                         "interval": "Intervallo di Esecuzione",
                         "hour": "Ora di Esecuzione (UTC)",
@@ -2099,6 +2100,11 @@
                         "label": "Scopo e responsabile",
                         "attention": "{count} senza uno scopo o senza nessun responsabile.",
                         "settled": "Tutto ha entrambi."
+                    },
+                    "conformance": {
+                        "label": "Il comportamento corrisponde alla valutazione",
+                        "attention": "{count} fanno più di quanto la loro valutazione dichiari. Il registro dice qualcosa di non vero su di loro.",
+                        "settled": "Ogni valutazione corrisponde a ciò che l'assistente fa davvero."
                     },
                     "staleApprovals": {
                         "label": "Approvazioni senza risposta",

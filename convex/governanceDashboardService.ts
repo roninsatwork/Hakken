@@ -93,6 +93,7 @@ export function orderChecks(checks: GovernanceCheck[]): GovernanceCheck[] {
   const priority = [
     "unrated",
     "incomplete",
+    "conformance",
     "staleApprovals",
     "waitingApprovals",
     "unattendedHighRisk",
