@@ -3,11 +3,19 @@ import type { AuthProviderConfig } from "@convex-dev/auth/server";
 
 import Google from "@auth/core/providers/google";
 import Resend from "@auth/core/providers/resend";
+import { Email } from "@convex-dev/auth/providers/Email";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { internal } from "./_generated/api";
 import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
+import {
+  CODE_TTL_MS,
+  expiryFrom,
+  generateCode,
+  minutesUntil,
+  normaliseEmail,
+} from "./oneTimeCodeService";
 import { sendResendEmail } from "./resendEmailService";
 import { DEFAULT_SETTINGS } from "./settingsService";
 
@@ -74,6 +82,84 @@ const providers: AuthProviderConfig[] = [
           subject: `Sign in to ${platformName}`,
           html: email.html,
           text: email.text,
+        },
+      });
+    },
+  }),
+  /**
+   * Signing in with a typed code, beside the magic link rather than instead of
+   * it.
+   *
+   * A link has to be opened in the browser that asked for it, and the common
+   * failure is a request made on a desktop and an email opened on a phone. A
+   * code is typed wherever the person already is, and survives the corporate
+   * mail scanners that follow links and burn them before anyone clicks.
+   *
+   * The framework holds the code and its expiry; what is added here is the
+   * shared email shell, the throttle, and a record on the auth trail. Nothing
+   * about the existing options changes.
+   */
+  Email({
+    id: "one-time-code",
+    maxAge: CODE_TTL_MS / 1000,
+    from: buildEmailFromAddress({
+      envFromAddress: resolveEnvFromAddress(process.env),
+      fallbackName: DEFAULT_SETTINGS.platformName,
+    }),
+    // Cryptographic randomness, not `Math.random`: this is a credential.
+    generateVerificationToken: async () =>
+      generateCode((count) => crypto.getRandomValues(new Uint8Array(count))),
+    /**
+     * No `ctx` here — this provider's send hook is Auth.js's, which takes only
+     * the parameters and has no database access. The throttle therefore lives
+     * in `oneTimeCodes.requestCode`, which the sign-in screen calls first and
+     * which refuses before `signIn` is ever reached.
+     *
+     * Worth stating plainly rather than implying otherwise: that gate is on the
+     * request path, not inside the send. It stops the sign-in form being used
+     * to post mail at someone, which is what it is for; it is not a defence
+     * against a caller driving the auth endpoint directly.
+     */
+    sendVerificationRequest: async ({ identifier, provider, token }) => {
+      const platformName = DEFAULT_SETTINGS.platformName;
+      const now = Date.now();
+      const email = normaliseEmail(identifier);
+      const minutes = minutesUntil(expiryFrom(now), now);
+
+      const rendered = renderEmail(
+        {
+          kind: "Sign in",
+          verdict: `Your sign-in code for ${platformName}.`,
+          paragraphs: [
+            "Type this code on the sign-in screen. You do not need to open it on the same device you asked from.",
+          ],
+          // The shell's own stat block, rather than a new field for one email.
+          // It renders large and on its own, which is exactly what a code needs.
+          stats: [{ label: "Your code", value: token }],
+          quiet: [`This code works once, and expires in about ${minutes} minutes.`],
+          footer: {
+            lines: [
+              "If you did not ask to sign in, ignore this email. Nobody can use this code but you.",
+            ],
+          },
+        },
+        { platformName }
+      );
+
+      if (!process.env.RESEND_API_KEY) {
+        console.warn("RESEND_API_KEY not found. Simulating sign-in code email.", { to: email });
+        return;
+      }
+
+      await sendResendEmail({
+        apiKey: process.env.RESEND_API_KEY,
+        operation: "authOneTimeCode",
+        payload: {
+          from: provider.from as string,
+          to: email,
+          subject: `Your ${platformName} sign-in code`,
+          html: rendered.html,
+          text: rendered.text,
         },
       });
     },

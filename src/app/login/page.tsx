@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ChevronRight, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Mail, ChevronRight, Loader2, Sparkles, CheckCircle2, KeyRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { useSearchParams } from "next/navigation";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
+import { describeVerdict, normaliseCode } from "@/convex/oneTimeCodeService";
 
 export default function LoginPage() {
   const t = useTranslations('login');
@@ -21,6 +22,17 @@ export default function LoginPage() {
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const requestOneTimeCode = useMutation(api.oneTimeCodes.requestCode);
+  const recordCodeVerified = useMutation(api.oneTimeCodes.recordVerified);
+  /**
+   * Which way in the person chose. Neither is the default, and choosing one
+   * never takes the other away — a link is right when the email is open on the
+   * same machine, and a code is right when it is not.
+   */
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
+  const [codeError, setCodeError] = useState("");
 
   const handleGoogleSignIn = async () => {
     setIsSubmittingGoogle(true);
@@ -47,6 +59,52 @@ export default function LoginPage() {
     }
   };
 
+  const handleCodeRequest = async () => {
+    if (!email || isSubmittingCode) return;
+    setIsSubmittingCode(true);
+    setCodeError("");
+
+    try {
+      // Refused quietly when the address has asked too often. Saying so would
+      // confirm which addresses exist, and the person receiving unwanted codes
+      // is better served by the mail stopping than by a message.
+      const allowed = await requestOneTimeCode({ email });
+      if (allowed) {
+        await signIn("one-time-code", { email, redirectTo });
+      }
+    } catch {
+      // Silent, exactly as the link path is, to thwart user enumeration.
+      console.debug("Auth action processed.");
+    } finally {
+      setIsSubmittingCode(false);
+      setCodeSent(true);
+    }
+  };
+
+  const handleCodeSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const entered = normaliseCode(code);
+    if (!entered || isSubmittingCode) return;
+
+    setIsSubmittingCode(true);
+    setCodeError("");
+
+    try {
+      await signIn("one-time-code", { email, code: entered, redirectTo });
+      try {
+        await recordCodeVerified({ email });
+      } catch {
+        console.debug("Auth diagnostics skipped.");
+      }
+    } catch {
+      // The framework refuses a wrong or spent code without saying which, so
+      // the screen says the one thing that is always true and always useful.
+      setCodeError(describeVerdict({ ok: false, reason: "wrong" }));
+    } finally {
+      setIsSubmittingCode(false);
+    }
+  };
+
   return (
     <div className="public-site ps-login">
       <div className="ps-login-inner">
@@ -68,7 +126,57 @@ export default function LoginPage() {
             <h1 className="ps-display ps-login-h1">{t('title')}</h1>
 
             <AnimatePresence mode="wait">
-              {!emailSent ? (
+              {codeSent ? (
+                <motion.form
+                  key="code"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="mt-7 flex w-full flex-col gap-3"
+                  onSubmit={handleCodeSubmit}
+                >
+                  <p className="ps-login-note">{t('codeSent')}</p>
+
+                  <div className="relative w-full">
+                    <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[var(--ps-ink-40)]" />
+                    <input
+                      // `inputMode` so a phone offers digits, and no autofill
+                      // guessing: this is typed from another device by design.
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      required
+                      placeholder={t('codePlaceholder')}
+                      value={code}
+                      onChange={(event) => setCode(event.target.value)}
+                      className="ps-login-input"
+                    />
+                  </div>
+
+                  {codeError ? <p className="ps-login-note">{codeError}</p> : null}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingCode || !code}
+                    className="ps-login-primary group"
+                  >
+                    {isSubmittingCode ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <span>{t('signInWithCode')}</span>
+                        <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setCodeSent(false); setCode(""); setCodeError(""); }}
+                    className="ps-login-try"
+                  >
+                    {t('tryDifferentEmail')}
+                  </button>
+                </motion.form>
+              ) : !emailSent ? (
                 <motion.form
                   key="form"
                   initial={{ opacity: 0, x: -16 }}
@@ -100,6 +208,22 @@ export default function LoginPage() {
                       <>
                         <span>{t('sendMagicLink')}</span>
                         <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCodeRequest}
+                    disabled={isSubmittingCode || !email}
+                    className="ps-login-secondary"
+                  >
+                    {isSubmittingCode ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <KeyRound className="h-4 w-4" />
+                        <span>{t('sendCode')}</span>
                       </>
                     )}
                   </button>

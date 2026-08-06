@@ -19,7 +19,10 @@ export type AuthEventType =
   | "EMAIL_DISPATCH_SIMULATED"
   | "EMAIL_DISPATCH_STARTED"
   | "EMAIL_DISPATCH_FAILED"
-  | "MAGIC_LINK_VERIFIED";
+  | "MAGIC_LINK_VERIFIED"
+  | "ONE_TIME_CODE_REQUESTED"
+  | "ONE_TIME_CODE_THROTTLED"
+  | "ONE_TIME_CODE_VERIFIED";
 
 export type AuthEventInput = {
   email: string;

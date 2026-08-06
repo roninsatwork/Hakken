@@ -120,6 +120,8 @@ import type * as localTestAuth from "../localTestAuth.js";
 import type * as maintenanceScriptRegistry from "../maintenanceScriptRegistry.js";
 import type * as maintenanceScripts from "../maintenanceScripts.js";
 import type * as movements from "../movements.js";
+import type * as oneTimeCodeService from "../oneTimeCodeService.js";
+import type * as oneTimeCodes from "../oneTimeCodes.js";
 import type * as openaiAgentProvider from "../openaiAgentProvider.js";
 import type * as openaiProviderService from "../openaiProviderService.js";
 import type * as openrouterAgentProvider from "../openrouterAgentProvider.js";
@@ -319,6 +321,8 @@ declare const fullApi: ApiFromModules<{
   maintenanceScriptRegistry: typeof maintenanceScriptRegistry;
   maintenanceScripts: typeof maintenanceScripts;
   movements: typeof movements;
+  oneTimeCodeService: typeof oneTimeCodeService;
+  oneTimeCodes: typeof oneTimeCodes;
   openaiAgentProvider: typeof openaiAgentProvider;
   openaiProviderService: typeof openaiProviderService;
   openrouterAgentProvider: typeof openrouterAgentProvider;

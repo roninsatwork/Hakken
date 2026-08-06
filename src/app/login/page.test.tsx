@@ -28,6 +28,10 @@ vi.mock("@/convex/_generated/api", () => ({
     authEvents: {
       recordMagicLinkRequestAttempt: "recordMagicLinkRequestAttempt",
     },
+    oneTimeCodes: {
+      requestCode: "requestCode",
+      recordVerified: "recordVerified",
+    },
   },
 }));
 
@@ -151,3 +155,94 @@ describe("LoginPage", () => {
     expect(signInMock).toHaveBeenCalledWith("google", { redirectTo: "/app" });
   });
 });
+
+/**
+ * The code option, beside the link rather than instead of it. Sign-in is the
+ * one screen where a half-built feature locks people out, so both ways in are
+ * covered here.
+ */
+describe("LoginPage one-time code", () => {
+  beforeEach(() => {
+    signInMock.mockReset();
+    recordMagicLinkRequestAttemptMock.mockReset();
+    searchParamsGetMock.mockReset();
+    searchParamsGetMock.mockReturnValue(null);
+  });
+
+  const typeEmail = () => {
+    fireEvent.change(screen.getByPlaceholderText("Enter your email address"), {
+      target: { value: "anthony@ronins.co.uk" },
+    });
+  };
+
+  const askForCode = async () => {
+    typeEmail();
+    fireEvent.click(screen.getByText("Email me a code instead"));
+    await waitFor(() => screen.getByPlaceholderText("Six-digit code"));
+  };
+
+  it("offers a code without taking either other way in away", () => {
+    renderLoginPage();
+
+    expect(screen.getByText("Send Magic Link")).toBeInTheDocument();
+    expect(screen.getByText("Email me a code instead")).toBeInTheDocument();
+    expect(screen.getByText("Continue with Google")).toBeInTheDocument();
+  });
+
+  it("asks for a code, then asks the person to type it", async () => {
+    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce(true);
+    signInMock.mockResolvedValueOnce(undefined);
+    renderLoginPage();
+
+    await askForCode();
+
+    expect(signInMock).toHaveBeenCalledWith("one-time-code", {
+      email: "anthony@ronins.co.uk",
+      redirectTo: "/app",
+    });
+  });
+
+  it("sends nothing when the address has asked too often, and says nothing either", async () => {
+    // Telling the person would confirm which addresses exist, so the screen
+    // behaves identically and only the mail stops.
+    recordMagicLinkRequestAttemptMock.mockResolvedValueOnce(false);
+    renderLoginPage();
+
+    await askForCode();
+
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
+  it("signs in with the typed code, ignoring spaces someone typed", async () => {
+    recordMagicLinkRequestAttemptMock.mockResolvedValue(true);
+    signInMock.mockResolvedValue(undefined);
+    renderLoginPage();
+    await askForCode();
+    signInMock.mockClear();
+
+    fireEvent.change(screen.getByPlaceholderText("Six-digit code"), { target: { value: "123 456" } });
+    fireEvent.click(screen.getByText("Sign in"));
+
+    await waitFor(() =>
+      expect(signInMock).toHaveBeenCalledWith("one-time-code", {
+        email: "anthony@ronins.co.uk",
+        code: "123456",
+        redirectTo: "/app",
+      })
+    );
+  });
+
+  it("says what to do when a code is refused", async () => {
+    recordMagicLinkRequestAttemptMock.mockResolvedValue(true);
+    signInMock.mockResolvedValueOnce(undefined);
+    renderLoginPage();
+    await askForCode();
+
+    signInMock.mockRejectedValueOnce(new Error("refused"));
+    fireEvent.change(screen.getByPlaceholderText("Six-digit code"), { target: { value: "000000" } });
+    fireEvent.click(screen.getByText("Sign in"));
+
+    await waitFor(() => expect(screen.getByText(/not right/)).toBeInTheDocument());
+  });
+});
+

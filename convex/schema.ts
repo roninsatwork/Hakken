@@ -521,7 +521,13 @@ export default defineSchema({
       v.literal("EMAIL_DISPATCH_SIMULATED"),
       v.literal("EMAIL_DISPATCH_STARTED"),
       v.literal("EMAIL_DISPATCH_FAILED"),
-      v.literal("MAGIC_LINK_VERIFIED")
+      v.literal("MAGIC_LINK_VERIFIED"),
+      // Signing in with a typed code rather than a link. Recorded on the same
+      // trail as the link, so the diagnostics screen shows one story about a
+      // sign-in rather than two depending on which option was used.
+      v.literal("ONE_TIME_CODE_REQUESTED"),
+      v.literal("ONE_TIME_CODE_THROTTLED"),
+      v.literal("ONE_TIME_CODE_VERIFIED")
     ),
     timestamp: v.number(),
     companyId: v.optional(v.id("companies")),
