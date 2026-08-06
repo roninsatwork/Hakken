@@ -36,6 +36,8 @@ export default function AiRegisterPage() {
   const tiles = [
     { key: "total", value: summary?.total },
     { key: "incomplete", value: summary?.incomplete, needsAttention: true },
+    { key: "unrated", value: summary?.unrated, needsAttention: true },
+    { key: "highRisk", value: summary?.highRisk },
     { key: "publicFacing", value: summary?.publicFacing },
     { key: "unattended", value: summary?.unattended },
   ];
@@ -71,6 +73,7 @@ export default function AiRegisterPage() {
             <AdminTableHeaderRow>
               <AdminTableHeaderCell>{t("table.system")}</AdminTableHeaderCell>
               <AdminTableHeaderCell>{t("table.kind")}</AdminTableHeaderCell>
+              <AdminTableHeaderCell>{t("table.risk")}</AdminTableHeaderCell>
               <AdminTableHeaderCell>{t("table.owner")}</AdminTableHeaderCell>
               <AdminTableHeaderCell>{t("table.oversight")}</AdminTableHeaderCell>
               <AdminTableHeaderCell>{t("table.lastActive")}</AdminTableHeaderCell>
@@ -78,10 +81,10 @@ export default function AiRegisterPage() {
           </thead>
           <tbody>
             {entries === undefined ? (
-              <AdminTableLoadingRow colSpan={5} />
+              <AdminTableLoadingRow colSpan={6} />
             ) : entries.length === 0 ? (
               <AdminTableEmptyRow
-                colSpan={5}
+                colSpan={6}
                 icon={<ClipboardList className="w-5 h-5" />}
                 label={t("empty")}
               />
@@ -115,6 +118,24 @@ export default function AiRegisterPage() {
                     {entry.facesPublic ? (
                       <span className="mt-0.5 block text-[11px] text-muted">{t("facesPublic")}</span>
                     ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    {/*
+                      A text label always, with the amber reserved for the
+                      rating that actually restrains something. Colour on its
+                      own would be carrying meaning nobody can rely on.
+                    */}
+                    <span
+                      className={`inline-block rounded-[6px] px-2 py-1 text-[11px] ${
+                        entry.risk === "HIGH"
+                          ? "bg-[#fef3c7] text-[#78350f] dark:bg-[#78350f] dark:text-[#fef3c7]"
+                          : entry.risk === "UNRATED"
+                            ? "text-[#b45309] dark:text-[#fbbf24]"
+                            : "bg-sidebar/60 text-secondary"
+                      }`}
+                    >
+                      {t(`risk.${entry.risk}`)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-[13px] text-secondary">
                     {entry.ownerName || <span className="text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>}

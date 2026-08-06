@@ -1013,6 +1013,15 @@
                 "deleteConfirm": "Are you sure you want to permanently delete {name}?",
                 "undone": "This action cannot be undone."
             },
+            "risk": {
+                "label": "How much could this do if it went wrong?",
+                "unrated": "Not yet rated",
+                "low": "Low — reads and answers, changes nothing",
+                "medium": "Medium — changes things inside the platform",
+                "high": "High — writes, sends or spends outside the platform",
+                "hint": "Shown in the AI register. Rating something high means a person must approve what it does.",
+                "highHint": "A person will have to approve everything this does. That cannot be switched off while it is rated high."
+            },
             "owner": {
                 "label": "Who is accountable for this?",
                 "choose": "Choose a person",
@@ -1999,7 +2008,15 @@
                     "total": "AI systems",
                     "incomplete": "Needing attention",
                     "publicFacing": "Facing the public",
-                    "unattended": "Running unattended"
+                    "unattended": "Running unattended",
+                    "highRisk": "Rated high risk",
+                    "unrated": "Not yet rated"
+                },
+                "risk": {
+                    "LOW": "Low",
+                    "MEDIUM": "Medium",
+                    "HIGH": "High risk",
+                    "UNRATED": "Not rated"
                 },
                 "kind": {
                     "ASSISTANT": "Assistant",
@@ -2013,6 +2030,7 @@
                 "table": {
                     "system": "System and purpose",
                     "kind": "Kind",
+                    "risk": "Risk",
                     "owner": "Accountable",
                     "oversight": "Oversight",
                     "lastActive": "Last active"

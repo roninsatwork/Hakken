@@ -64,10 +64,10 @@ export function toAssistantEntry(
     name: agent.name,
     purpose,
     ownerName,
-    // Assistants carry no rating yet; that arrives with the classification
-    // work. `UNRATED` is honest, where defaulting to LOW would be a claim
-    // nobody made.
-    risk: "UNRATED",
+    // `UNRATED` where nobody has classified it. Honest, where defaulting to LOW
+    // would be a claim nobody made — and it is the figure the dashboard needs
+    // in order to say how much of the estate has actually been looked at.
+    risk: agent.riskLevel ?? "UNRATED",
     // Absent or false means gated: an agent only runs unattended when someone
     // deliberately switched that on.
     humanApproves: agent.autonomousToolExecution !== true,
@@ -121,10 +121,18 @@ export function toWorkflowEntry(
   };
 }
 
-/** Newest first, but anything incomplete comes first — it needs a person. */
+/**
+ * Anything incomplete first, because it needs a person; then riskiest; then
+ * most recently active.
+ *
+ * Risk sits below completeness on purpose. An unrated high-risk assistant is
+ * indistinguishable from an unrated harmless one until somebody says, so the
+ * missing record is the more urgent thing.
+ */
 export function sortRegister(entries: AiSystemEntry[]): AiSystemEntry[] {
   return [...entries].sort((a, b) => {
     if (a.missing.length !== b.missing.length) return b.missing.length - a.missing.length;
+    if (riskRank(a.risk) !== riskRank(b.risk)) return riskRank(a.risk) - riskRank(b.risk);
     return (b.lastActiveAt ?? 0) - (a.lastActiveAt ?? 0);
   });
 }
@@ -135,5 +143,19 @@ export function summariseRegister(entries: AiSystemEntry[]) {
     incomplete: entries.filter((entry) => entry.missing.length > 0).length,
     publicFacing: entries.filter((entry) => entry.facesPublic).length,
     unattended: entries.filter((entry) => !entry.humanApproves).length,
+    highRisk: entries.filter((entry) => entry.risk === "HIGH").length,
+    unrated: entries.filter((entry) => entry.risk === "UNRATED").length,
   };
+}
+
+/** Riskiest first within a rating, so the entries that matter surface. */
+const RISK_ORDER: Record<AiSystemRisk, number> = {
+  HIGH: 0,
+  MEDIUM: 1,
+  LOW: 2,
+  UNRATED: 3,
+};
+
+export function riskRank(risk: AiSystemRisk): number {
+  return RISK_ORDER[risk];
 }

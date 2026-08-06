@@ -34,6 +34,7 @@ type AgentSettingsFormData = {
   name: string;
   description: string;
   ownerId: string;
+  riskLevel: string;
   avatar: string;
   modelId: string;
   modelSelectionMode: ModelSelectionMode;
@@ -58,6 +59,7 @@ const emptyFormData: AgentSettingsFormData = {
   name: "",
   description: "",
   ownerId: "",
+  riskLevel: "",
   avatar: "",
   modelId: "",
   modelSelectionMode: "inherit",
@@ -186,6 +188,7 @@ export default function AgentOverviewPage() {
       name: agent.name || "",
       description: agent.description || "",
       ownerId: agent.ownerId || "",
+      riskLevel: agent.riskLevel || "",
       avatar: agent.avatar || "",
       modelId: agent.modelId || defaultModelId,
       // An agent with no stored mode inherits — that is what the runtime does
@@ -225,6 +228,7 @@ export default function AgentOverviewPage() {
         name: formData.name,
         description: formData.description,
         ...(formData.ownerId ? { ownerId: formData.ownerId as Id<"users"> } : {}),
+        ...(formData.riskLevel ? { riskLevel: formData.riskLevel as "LOW" | "MEDIUM" | "HIGH" } : {}),
         avatar: formData.avatar,
         modelSelectionMode: formData.modelSelectionMode,
         ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
@@ -353,6 +357,26 @@ export default function AgentOverviewPage() {
               ))}
             </select>
             <p className="text-[12px] text-secondary">{tAgents("owner.hint")}</p>
+            {/*
+              The rating is not a label. Choosing High makes human approval a
+              consequence rather than a preference, and the platform refuses to
+              switch it off afterwards.
+            */}
+            <FieldLabel htmlFor="agent-risk">{tAgents("risk.label")}</FieldLabel>
+            <select
+              id="agent-risk"
+              value={formData.riskLevel}
+              onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value })}
+              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
+            >
+              <option value="">{tAgents("risk.unrated")}</option>
+              <option value="LOW">{tAgents("risk.low")}</option>
+              <option value="MEDIUM">{tAgents("risk.medium")}</option>
+              <option value="HIGH">{tAgents("risk.high")}</option>
+            </select>
+            <p className="text-[12px] text-secondary">
+              {formData.riskLevel === "HIGH" ? tAgents("risk.highHint") : tAgents("risk.hint")}
+            </p>
           </SettingsCard>
 
           <SettingsCard title={t("sections.engine.groups.behaviour")}>

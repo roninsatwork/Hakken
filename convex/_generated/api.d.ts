@@ -23,6 +23,7 @@ import type * as agentMemoryCandidates from "../agentMemoryCandidates.js";
 import type * as agentObservabilityService from "../agentObservabilityService.js";
 import type * as agentProviderRegistry from "../agentProviderRegistry.js";
 import type * as agentProviderTypes from "../agentProviderTypes.js";
+import type * as agentRiskService from "../agentRiskService.js";
 import type * as agentRunCheckpoints from "../agentRunCheckpoints.js";
 import type * as agentRunContinuationService from "../agentRunContinuationService.js";
 import type * as agentRunFeedback from "../agentRunFeedback.js";
@@ -219,6 +220,7 @@ declare const fullApi: ApiFromModules<{
   agentObservabilityService: typeof agentObservabilityService;
   agentProviderRegistry: typeof agentProviderRegistry;
   agentProviderTypes: typeof agentProviderTypes;
+  agentRiskService: typeof agentRiskService;
   agentRunCheckpoints: typeof agentRunCheckpoints;
   agentRunContinuationService: typeof agentRunContinuationService;
   agentRunFeedback: typeof agentRunFeedback;

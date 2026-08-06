@@ -144,6 +144,10 @@ describe("the register puts what needs a person first", () => {
       incomplete: 1,
       publicFacing: 1,
       unattended: 1,
+      // Nothing in this fixture is rated, which is the state the whole estate
+      // starts in and the figure the dashboard needs in order to say so.
+      highRisk: 0,
+      unrated: 4,
     });
   });
 
@@ -153,6 +157,8 @@ describe("the register puts what needs a person first", () => {
       incomplete: 0,
       publicFacing: 0,
       unattended: 0,
+      highRisk: 0,
+      unrated: 0,
     });
   });
 });
@@ -184,3 +190,36 @@ describe("what a workspace sees on its own register", () => {
     expect(inScope(undefined, undefined)).toBe(true);
   });
 });
+
+describe("risk shows up in the register itself", () => {
+  test("an assistant carries whatever rating it was given", () => {
+    expect(toAssistantEntry(agent({ riskLevel: "HIGH" }), "Priya Shah", 10).risk).toBe("HIGH");
+  });
+
+  test("an unclassified assistant reads as unrated rather than guessing low", () => {
+    expect(toAssistantEntry(agent(), "Priya Shah", 10).risk).toBe("UNRATED");
+  });
+
+  test("the summary counts high-risk and unrated separately", () => {
+    const base = toAssistantEntry(agent({ riskLevel: "HIGH" }), "Someone", 1);
+    const summary = summariseRegister([base, { ...base, id: "b", risk: "UNRATED" }]);
+
+    expect(summary.highRisk).toBe(1);
+    expect(summary.unrated).toBe(1);
+  });
+
+  test("riskiest first, once completeness has been settled", () => {
+    const complete = (id: string, risk: "HIGH" | "LOW" | "UNRATED") => ({
+      ...toAssistantEntry(agent({ riskLevel: risk === "UNRATED" ? undefined : risk }), "Someone", 1),
+      id,
+      purpose: "Does a thing.",
+      missing: [],
+    });
+
+    expect(
+      sortRegister([complete("unrated", "UNRATED"), complete("low", "LOW"), complete("high", "HIGH")])
+        .map((e) => e.id)
+    ).toEqual(["high", "low", "unrated"]);
+  });
+});
+

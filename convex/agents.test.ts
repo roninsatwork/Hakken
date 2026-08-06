@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import type { Id } from "./_generated/dataModel";
 import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import { AGENT_OBJECTIVE_LIMIT_CEILINGS } from "./agentRuntimeService";
 
@@ -1799,5 +1800,106 @@ describe("OWASP: Broken Access Control - Agents", () => {
     // Untouched fields survive a save that did not mention them.
     expect(cleared?.maxToolCalls).toBe(6);
     expect(cleared?.autonomousToolExecution).toBe(true);
+  });
+});
+
+/**
+ * Phase 2 of the governance plan: a rating restrains the platform rather than
+ * describing it. These cover the rule surviving the round trip through the
+ * mutations, which is where a pure-function test cannot reach.
+ */
+describe("risk ratings bind", () => {
+  const setUp = async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "super@test.com", role: "SUPER_ADMIN" })
+    );
+    return { t, adminId, client: t.withIdentity({ subject: adminId }) };
+  };
+
+  const payload = (adminId: Id<"users">, extra: Record<string, unknown> = {}) => ({
+    name: "Invoice checker",
+    description: "Checks invoices against purchase orders.",
+    ownerId: adminId,
+    ...extra,
+  });
+
+  test("a high-risk assistant cannot be created to run unattended", async () => {
+    const { client, adminId } = await setUp();
+
+    await expect(
+      client.mutation(
+        api.agents.createAgent,
+        payload(adminId, { riskLevel: "HIGH", autonomousToolExecution: true })
+      )
+    ).rejects.toThrow("high risk");
+  });
+
+  test("a lower-rated assistant still can, so nothing tightened beyond the rule", async () => {
+    const { client, adminId } = await setUp();
+
+    const agentId = await client.mutation(
+      api.agents.createAgent,
+      payload(adminId, { riskLevel: "LOW", autonomousToolExecution: true })
+    );
+
+    expect(agentId).toBeDefined();
+  });
+
+  test("switching an existing high-risk assistant to unattended is refused", async () => {
+    const { client, adminId } = await setUp();
+    const agentId = await client.mutation(api.agents.createAgent, payload(adminId, { riskLevel: "HIGH" }));
+
+    await expect(
+      client.mutation(api.agents.updateAgent, { id: agentId, autonomousToolExecution: true })
+    ).rejects.toThrow("high risk");
+  });
+
+  test("raising an unattended assistant to high risk closes its gate instead of failing", async () => {
+    const { t, client, adminId } = await setUp();
+    const agentId = await client.mutation(
+      api.agents.createAgent,
+      payload(adminId, { riskLevel: "LOW", autonomousToolExecution: true })
+    );
+
+    await client.mutation(api.agents.updateAgent, { id: agentId, riskLevel: "HIGH" });
+
+    const agent = await t.run(async (ctx) => ctx.db.get(agentId));
+    expect(agent?.riskLevel).toBe("HIGH");
+    // The change is honoured and the gate simply closes.
+    expect(agent?.autonomousToolExecution).toBe(false);
+  });
+
+  test("a rating change is audited on its own, naming both ends and the closed gate", async () => {
+    const { t, client, adminId } = await setUp();
+    const agentId = await client.mutation(
+      api.agents.createAgent,
+      payload(adminId, { riskLevel: "LOW", autonomousToolExecution: true })
+    );
+
+    await client.mutation(api.agents.updateAgent, { id: agentId, riskLevel: "HIGH" });
+
+    const logs = await t.run(async (ctx) =>
+      ctx.db.query("auditLogs").filter((q) => q.eq(q.field("actionType"), "UPDATE_AGENT_RISK")).collect()
+    );
+
+    expect(logs).toHaveLength(1);
+    const metadata = JSON.parse(logs[0].metadata ?? "{}");
+    expect(metadata.from).toBe("LOW");
+    expect(metadata.to).toBe("HIGH");
+    expect(metadata.humanApprovalReinstated).toBe(true);
+  });
+
+  test("an update that does not touch the rating writes no rating record", async () => {
+    const { t, client, adminId } = await setUp();
+    const agentId = await client.mutation(api.agents.createAgent, payload(adminId, { riskLevel: "MEDIUM" }));
+
+    await client.mutation(api.agents.updateAgent, { id: agentId, name: "Renamed" });
+
+    const logs = await t.run(async (ctx) =>
+      ctx.db.query("auditLogs").filter((q) => q.eq(q.field("actionType"), "UPDATE_AGENT_RISK")).collect()
+    );
+
+    expect(logs).toHaveLength(0);
   });
 });

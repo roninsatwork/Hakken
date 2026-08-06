@@ -107,6 +107,7 @@ type NewAgentForm = {
   name: string;
   description: string;
   ownerId: string;
+  riskLevel: string;
   avatar: string;
   modelId: string;
   modelSelectionMode: ModelSelectionMode;
@@ -128,6 +129,7 @@ const emptyForm: NewAgentForm = {
   name: "",
   description: "",
   ownerId: "",
+  riskLevel: "",
   avatar: "",
   modelId: "",
   modelSelectionMode: "inherit",
@@ -210,6 +212,7 @@ export default function NewAgentPage() {
         name: formData.name.trim(),
         description: formData.description,
         ownerId: formData.ownerId ? (formData.ownerId as Id<"users">) : undefined,
+        ...(formData.riskLevel ? { riskLevel: formData.riskLevel as "LOW" | "MEDIUM" | "HIGH" } : {}),
         modelSelectionMode: formData.modelSelectionMode,
         ...(formData.modelSelectionMode === "override" ? { modelId: formData.modelId } : {}),
         reasoningEffort: formData.reasoningEffort,
@@ -315,6 +318,26 @@ export default function NewAgentPage() {
               ))}
             </select>
             <p className="text-[12px] text-secondary">{t("owner.hint")}</p>
+            {/*
+              The rating is not a label. Choosing High makes human approval a
+              consequence rather than a preference, and the platform refuses to
+              switch it off afterwards.
+            */}
+            <FieldLabel htmlFor="agent-risk">{t("risk.label")}</FieldLabel>
+            <select
+              id="agent-risk"
+              value={formData.riskLevel}
+              onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value })}
+              className={adminFieldClassName}
+            >
+              <option value="">{t("risk.unrated")}</option>
+              <option value="LOW">{t("risk.low")}</option>
+              <option value="MEDIUM">{t("risk.medium")}</option>
+              <option value="HIGH">{t("risk.high")}</option>
+            </select>
+            <p className="text-[12px] text-secondary">
+              {formData.riskLevel === "HIGH" ? t("risk.highHint") : t("risk.hint")}
+            </p>
           </SettingsCard>
 
           <SettingsCard title={ts("sections.engine.groups.behaviour")}>

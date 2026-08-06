@@ -139,7 +139,10 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     },
     { label: t('tabs.settings'), href: `/admin/agents/${agentId}/settings`, icon: Settings },
   ];
-  const activeRun = runningRuns?.page[0] ?? pendingApprovalRuns?.page[0] ?? queuedRuns?.page[0] ?? null;
+  // `page` is optional-chained too. The guard stopped one level short, so a
+  // result that arrived without a page — rather than not arriving at all — took
+  // the whole agent detail screen down to its error boundary.
+  const activeRun = runningRuns?.page?.[0] ?? pendingApprovalRuns?.page?.[0] ?? queuedRuns?.page?.[0] ?? null;
   const isRunStateLoading = runningRuns === undefined || pendingApprovalRuns === undefined || queuedRuns === undefined;
   const hasActiveRun = activeRun !== undefined && activeRun !== null;
   const isPrimaryActionBusy = isManualRunning || isStoppingAgent || isRunStateLoading;

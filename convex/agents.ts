@@ -1,4 +1,11 @@
 import { assertPurposeAndOwner } from "./agentAccountabilityService";
+import {
+  autonomyAfterRiskChange,
+  describeRiskChange,
+  refusalForAutonomy,
+  resolveRisk,
+  type AgentRiskLevel,
+} from "./agentRiskService";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery } from "./_generated/server";
@@ -877,6 +884,7 @@ export const createAgent = superAdminMutation({
     // purpose and a person answerable for it.
     description: v.optional(v.string()),
     ownerId: v.optional(v.id("users")),
+    riskLevel: v.optional(v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
     avatar: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
     modelId: v.optional(v.string()),
@@ -897,6 +905,16 @@ export const createAgent = superAdminMutation({
     const { userId } = ctx;
 
     assertPurposeAndOwner({ purpose: args.description, ownerId: args.ownerId });
+
+    // The rating decides, not the switch. A high-risk assistant created with
+    // approval turned off is refused here rather than created and quietly
+    // corrected, because the person doing it asked for something the platform
+    // will not allow and should be told so.
+    const autonomyRefusal = refusalForAutonomy({
+      risk: args.riskLevel,
+      autonomous: args.autonomousToolExecution,
+    });
+    if (autonomyRefusal) throw new Error(autonomyRefusal);
     if (args.ownerId && !(await ctx.db.get(args.ownerId))) {
       throw new Error("Choose the person accountable for this.");
     }
@@ -944,6 +962,7 @@ export const createAgent = superAdminMutation({
         ...(args.reasoningEffort ? { reasoningEffort: args.reasoningEffort } : {}),
       }, now),
       ...(args.ownerId ? { ownerId: args.ownerId } : {}),
+      ...(args.riskLevel ? { riskLevel: args.riskLevel } : {}),
       ...(resolvedAvatarUrl ? { avatar: resolvedAvatarUrl } : {}),
       ...(args.allowInternetAccess !== undefined
         ? { allowInternetAccess: args.allowInternetAccess }
@@ -1065,6 +1084,7 @@ export const updateAgent = superAdminMutation({
     // person. Sending it is optional; clearing one that is already set is not,
     // because a record can be completed and should not be un-completed.
     ownerId: v.optional(v.id("users")),
+    riskLevel: v.optional(v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
     avatar: v.optional(v.string()),
     modelId: v.optional(v.string()),
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),
@@ -1174,6 +1194,31 @@ export const updateAgent = superAdminMutation({
       resolvedAvatarUrl = (await ctx.storage.getUrl(storageId)) ?? updates.avatar;
     }
 
+    /**
+     * The rating decides what the switch is allowed to say.
+     *
+     * Two different situations, handled differently on purpose. Asking to run
+     * unattended *while* high risk is refused, because the person asked for
+     * something the platform will not allow and should be told. Raising an
+     * already-unattended assistant to high risk is honoured, and the gate
+     * simply closes — that change is the most useful thing a compliance officer
+     * can do, and refusing it would punish exactly the right instinct.
+     */
+    const nextRisk = resolveRisk(updates.riskLevel as AgentRiskLevel | undefined, existingAgent.riskLevel);
+    const riskChanged = updates.riskLevel !== undefined && updates.riskLevel !== existingAgent.riskLevel;
+
+    if (updates.autonomousToolExecution === true) {
+      const refusal = refusalForAutonomy({ risk: nextRisk, autonomous: true });
+      if (refusal) throw new Error(refusal);
+    }
+
+    const autonomyNow = updates.autonomousToolExecution ?? existingAgent.autonomousToolExecution;
+    const correctedAutonomy = autonomyAfterRiskChange({ risk: nextRisk, autonomous: autonomyNow });
+    const gateClosed = correctedAutonomy !== autonomyNow;
+    if (gateClosed) {
+      updates.autonomousToolExecution = correctedAutonomy;
+    }
+
     const now = Date.now();
     await ctx.db.patch(id, buildAgentUpdatePatch({
       updates,
@@ -1192,6 +1237,26 @@ export const updateAgent = superAdminMutation({
         systemPrompt: updates.systemPrompt,
       })
     });
+
+    // Its own record, separate from the field list above. "riskLevel was among
+    // the fields updated" does not tell an auditor what it moved from, what it
+    // moved to, or that a gate closed as a result — and those are the three
+    // things they are looking for.
+    if (riskChanged) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "UPDATE_AGENT_RISK",
+        actorId: userId,
+        entityType: "agents",
+        entityId: id,
+        timestamp: now,
+        metadata: JSON.stringify({
+          from: existingAgent.riskLevel ?? null,
+          to: nextRisk ?? null,
+          humanApprovalReinstated: gateClosed,
+          summary: describeRiskChange({ from: existingAgent.riskLevel, to: nextRisk, gateClosed }),
+        }),
+      });
+    }
 
     return id;
   },

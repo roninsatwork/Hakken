@@ -1777,6 +1777,23 @@ export default defineSchema({
      * docs/plans/active/governance-and-trust-plan.md.
      */
     ownerId: v.optional(v.id("users")),
+    /**
+     * How much damage this assistant could do, and therefore what the platform
+     * will let it do.
+     *
+     * Not a label. A `HIGH` rating makes human approval a consequence of the
+     * classification rather than a setting an administrator can quietly switch
+     * off — which is the difference between governance that is written down and
+     * governance that holds.
+     *
+     * Optional because everything that predates the register is genuinely
+     * unrated, and saying so is honest where defaulting to `LOW` would be a
+     * claim nobody made. See
+     * docs/plans/active/governance-and-trust-plan.md.
+     */
+    riskLevel: v.optional(
+      v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))
+    ),
     // Per-agent runtime budget. Unset means the platform default; values are
     // clamped to the ceilings in agentRuntimeService so a misconfigured agent
     // cannot spend without limit. Previously every agent on the platform shared

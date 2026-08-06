@@ -1013,6 +1013,15 @@
                 "deleteConfirm": "Sei sicuro di voler eliminare definitivamente {name}?",
                 "undone": "Questa azione non può essere annullata."
             },
+            "risk": {
+                "label": "Quanto danno potrebbe fare se andasse storto?",
+                "unrated": "Non ancora valutato",
+                "low": "Basso — legge e risponde, non modifica nulla",
+                "medium": "Medio — modifica cose dentro la piattaforma",
+                "high": "Alto — scrive, invia o spende fuori dalla piattaforma",
+                "hint": "Mostrato nel registro IA. Valutare alto significa che una persona deve approvare ciò che fa.",
+                "highHint": "Una persona dovrà approvare tutto ciò che fa. Non può essere disattivato finché la valutazione è alta."
+            },
             "owner": {
                 "label": "Chi è responsabile di questo?",
                 "choose": "Scegli una persona",
@@ -1999,7 +2008,15 @@
                     "total": "Sistemi di IA",
                     "incomplete": "Da completare",
                     "publicFacing": "Rivolti al pubblico",
-                    "unattended": "Senza supervisione"
+                    "unattended": "Senza supervisione",
+                    "highRisk": "Rischio alto",
+                    "unrated": "Non ancora valutati"
+                },
+                "risk": {
+                    "LOW": "Basso",
+                    "MEDIUM": "Medio",
+                    "HIGH": "Rischio alto",
+                    "UNRATED": "Non valutato"
                 },
                 "kind": {
                     "ASSISTANT": "Assistente",
@@ -2013,6 +2030,7 @@
                 "table": {
                     "system": "Sistema e scopo",
                     "kind": "Tipo",
+                    "risk": "Rischio",
                     "owner": "Responsabile",
                     "oversight": "Supervisione",
                     "lastActive": "Ultima attività"
