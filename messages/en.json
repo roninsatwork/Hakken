@@ -2068,6 +2068,23 @@
                     "noOwner": "nobody assigned"
                 }
             },
+            "personalData": {
+                "title": "What we hold about a person",
+                "description": "Answer a request to see everything held about someone, or to delete it. Both are recorded, and deleting is not reversible.",
+                "emailPlaceholder": "Their email address",
+                "read": "Show what we hold",
+                "erase": "Delete everything",
+                "readFailed": "That could not be produced. Check the email address and try again.",
+                "eraseFailed": "Nothing was deleted. Check the email address and try again.",
+                "done": "Done. Keep this — it is the answer to give whoever asked.",
+                "keepRecord": "Save this record",
+                "cancel": "Cancel",
+                "confirmTitle": "Delete everything about this person",
+                "confirmBody": "This deletes everything held about {email}, and cannot be undone.",
+                "confirmErase": "Delete everything",
+                "confirmWarningTitle": "What this keeps",
+                "confirmWarning": "Shared records they created — rules, workflows, documents — are kept, with their name taken off. The audit trail and the approvals they gave are kept whole, because they are the evidence that oversight happened."
+            },
             "auditTrail": {
                 "title": "Audit trail",
                 "description": "Everything anyone changed on this platform, and when they changed it."

@@ -383,7 +383,8 @@ async function executionMatchesScope(ctx: QueryCtx, execution: Doc<"workflowExec
       .first();
     if (run?.companyId === scope.companyId) return true;
   }
-  const starter = await ctx.db.get(execution.startedBy);
+  // A run whose starter has since been erased belongs to no one's scope.
+  const starter = execution.startedBy ? await ctx.db.get(execution.startedBy) : null;
   return getUserCompanyScope(starter) === scope.companyId;
 }
 
@@ -410,7 +411,8 @@ async function scheduleMatchesScope(ctx: QueryCtx, schedule: Doc<"schedules">, s
       .first();
     if (run?.companyId === scope.companyId) return true;
   }
-  const creator = await ctx.db.get(schedule.createdBy);
+  // A schedule whose creator has since been erased belongs to no scope.
+  const creator = schedule.createdBy ? await ctx.db.get(schedule.createdBy) : null;
   return getUserCompanyScope(creator) === scope.companyId;
 }
 

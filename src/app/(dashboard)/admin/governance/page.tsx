@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import { EvidencePackPanel } from "@/src/app/(dashboard)/admin/_components/EvidencePackPanel";
+import { PersonalDataPanel } from "@/src/app/(dashboard)/admin/_components/PersonalDataPanel";
 
 /**
  * The way in to everything in this section.
@@ -37,6 +38,8 @@ export default function GovernanceOverviewPage() {
       />
 
       <EvidencePackPanel />
+
+      <PersonalDataPanel />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {sections.map(({ key, href, icon: Icon }) => (

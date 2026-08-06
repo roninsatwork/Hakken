@@ -163,7 +163,9 @@ export const getRecentLogs = publicQuery({
           .take(500);
       
     return await Promise.all(logs.map(async (log) => {
-      const actor = await ctx.db.get(log.actorId);
+      // Some entries have no human behind them — a blocked widget embed is an
+      // anonymous request. `withAuditLogActorName` already renders that.
+      const actor = log.actorId ? await ctx.db.get(log.actorId) : null;
       return withAuditLogActorName(log, actor);
     }));
   }

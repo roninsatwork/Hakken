@@ -126,7 +126,7 @@ async function logPublicApiRequest(ctx: Pick<MutationCtx, "db">, args: {
 
 async function enrichApiKey(ctx: Pick<QueryCtx, "db">, apiKey: Doc<"apiKeys">) {
   const company = await ctx.db.get(apiKey.companyId);
-  const creator = await ctx.db.get(apiKey.createdBy);
+  const creator = apiKey.createdBy ? await ctx.db.get(apiKey.createdBy) : null;
   const revokedBy = apiKey.revokedBy ? await ctx.db.get(apiKey.revokedBy) : null;
 
   return {

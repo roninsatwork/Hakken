@@ -721,7 +721,7 @@ export const inspectDocument = tenantQuery({
       .filter((log) => log.entityType === "knowledgeDocuments" && log.entityId === document._id)
       .slice(0, KNOWLEDGE_HISTORY_LIMIT)
       .map(async (log) => {
-        const actor = await ctx.db.get(log.actorId);
+        const actor = log.actorId ? await ctx.db.get(log.actorId) : null;
         return {
           actionType: log.actionType,
           timestamp: log.timestamp,

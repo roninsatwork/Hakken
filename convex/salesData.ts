@@ -139,9 +139,10 @@ export const listImports = tenantQuery({
       .order("desc")
       .take(limit);
 
+    // An import whose author was erased keeps the import and loses the name.
     const importedByNames = new Map<Id<"users">, string>();
     for (const record of imports) {
-      if (importedByNames.has(record.importedBy)) continue;
+      if (!record.importedBy || importedByNames.has(record.importedBy)) continue;
       const user = await ctx.db.get(record.importedBy);
       importedByNames.set(record.importedBy, user?.name ?? user?.email ?? "");
     }
@@ -159,7 +160,7 @@ export const listImports = tenantQuery({
       supersededAt: record.supersededAt ?? null,
       startedAt: record.startedAt,
       completedAt: record.completedAt ?? null,
-      importedByName: importedByNames.get(record.importedBy) ?? "",
+      importedByName: (record.importedBy ? importedByNames.get(record.importedBy) : "") ?? "",
     }));
   },
 });

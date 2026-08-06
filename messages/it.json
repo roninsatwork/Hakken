@@ -2068,6 +2068,23 @@
                     "noOwner": "nessuno assegnato"
                 }
             },
+            "personalData": {
+                "title": "Cosa conserviamo su una persona",
+                "description": "Rispondi a una richiesta di vedere tutto ciò che è conservato su qualcuno, o di cancellarlo. Entrambe le azioni vengono registrate e la cancellazione è irreversibile.",
+                "emailPlaceholder": "Il suo indirizzo email",
+                "read": "Mostra cosa conserviamo",
+                "erase": "Cancella tutto",
+                "readFailed": "Non è stato possibile produrlo. Controlla l'indirizzo email e riprova.",
+                "eraseFailed": "Non è stato cancellato nulla. Controlla l'indirizzo email e riprova.",
+                "done": "Fatto. Conserva questo — è la risposta da dare a chi l'ha chiesto.",
+                "keepRecord": "Salva questo documento",
+                "cancel": "Annulla",
+                "confirmTitle": "Cancella tutto su questa persona",
+                "confirmBody": "Questo cancella tutto ciò che è conservato su {email} e non può essere annullato.",
+                "confirmErase": "Cancella tutto",
+                "confirmWarningTitle": "Cosa viene mantenuto",
+                "confirmWarning": "I record condivisi che ha creato — regole, flussi di lavoro, documenti — vengono mantenuti, senza il suo nome. Il registro attività e le approvazioni che ha dato restano interi, perché sono la prova che la supervisione è avvenuta."
+            },
             "auditTrail": {
                 "title": "Registro attività",
                 "description": "Tutto ciò che qualcuno ha modificato su questa piattaforma, e quando."

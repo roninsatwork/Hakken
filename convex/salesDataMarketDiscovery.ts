@@ -536,7 +536,8 @@ async function startDiscoveryRun(
     job: MarketDiscoveryJob;
     companyId: Id<"companies">;
     agentId: Id<"agents">;
-    userId: Id<"users">;
+    /** Absent when the person who started the job has since been erased. */
+    userId: Id<"users"> | undefined;
     objective: string;
     title: string;
   }

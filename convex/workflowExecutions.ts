@@ -8,7 +8,9 @@ export const createExecution = internalMutation({
     workflowId: v.id("workflows"),
     companyId: v.optional(v.id("companies")),
     triggerType: v.string(),
-    startedBy: v.id("users"),
+    // Optional since erasure can take the name off a workflow: the execution
+    // still happened, and recording it as nobody is truer than refusing it.
+    startedBy: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("workflowExecutions", {

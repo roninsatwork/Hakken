@@ -536,7 +536,7 @@ export const getCustomer = tenantQuery({
 
     let updatedByName: string | null = null;
     if (details) {
-      const user = await ctx.db.get(details.updatedBy);
+      const user = details.updatedBy ? await ctx.db.get(details.updatedBy) : null;
       updatedByName = user?.name ?? user?.email ?? null;
     }
 

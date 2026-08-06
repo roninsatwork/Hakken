@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import { EvidencePackPanel } from "@/src/app/(dashboard)/admin/_components/EvidencePackPanel";
+import { PersonalDataPanel } from "@/src/app/(dashboard)/admin/_components/PersonalDataPanel";
 
 /**
  * The customer's own governance section.
@@ -40,6 +41,8 @@ export default function WorkspaceGovernancePage() {
       />
 
       <EvidencePackPanel />
+
+      <PersonalDataPanel />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {sections.map(({ key, href, icon: Icon }) => (

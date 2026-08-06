@@ -823,7 +823,10 @@ export const executeDatabaseOperation = internalMutation({
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow) throw new ConvexError("Workflow not found.");
 
-    const user = await ctx.db.get(workflow.createdBy);
+    // A workflow whose creator was erased gets the tightest treatment rather
+    // than the loosest: no user means no super-admin reach and no tenant, so
+    // the checks below refuse it.
+    const user = workflow.createdBy ? await ctx.db.get(workflow.createdBy) : null;
     const table = args.tableName as WorkflowDbTable;
 
     if (!user || user.role !== "SUPER_ADMIN") {
@@ -938,7 +941,7 @@ export const scheduleDispatcher = internalMutation({
              if (schedule.agentId) {
                 const agent = await ctx.db.get(schedule.agentId);
                 if (!agent || agent.isActive === false) continue;
-                const creator = await ctx.db.get(schedule.createdBy);
+                const creator = schedule.createdBy ? await ctx.db.get(schedule.createdBy) : null;
                 const agentRunId = await ctx.db.insert("agentRuns", {
                   agentId: schedule.agentId,
                   scheduleId: schedule._id,

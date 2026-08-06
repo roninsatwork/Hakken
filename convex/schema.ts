@@ -394,7 +394,15 @@ export default defineSchema({
   }).index("by_key", ["key"]),
 
   auditLogs: defineTable({
-    actorId: v.id("users"), // The admin who did it
+    /**
+     * The admin who did it, when a person did.
+     *
+     * Optional because some entries have no human behind them: a blocked
+     * widget embed is an anonymous request from the internet, and naming the
+     * widget's creator as the actor was a fiction that read as an accusation.
+     * Erasure never clears this field — the trail is retained whole.
+     */
+    actorId: v.optional(v.id("users")),
     actionType: v.string(), // e.g. "UPDATE_COMPANY"
     entityId: v.optional(v.string()), // Target ID
     entityType: v.string(), // "companies", "users"
@@ -419,7 +427,7 @@ export default defineSchema({
     )),
     status: v.union(v.literal("ACTIVE"), v.literal("REVOKED")),
     rateLimitPerMinute: v.number(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
     expiresAt: v.optional(v.number()),
     lastUsedAt: v.optional(v.number()),
@@ -952,7 +960,7 @@ export default defineSchema({
     runId: v.id("agentRuns"),
     agentId: v.id("agents"),
     companyId: v.optional(v.id("companies")),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     category: v.union(
       v.literal("MISSING_CONTEXT"),
       v.literal("BAD_TOOL_PLAN"),
@@ -1070,7 +1078,7 @@ export default defineSchema({
     sourceReflectionId: v.optional(v.id("agentRunReflections")),
     sourceFeedbackId: v.optional(v.id("agentRunFeedback")),
     sourceMemoryCandidateId: v.optional(v.id("agentMemoryCandidates")),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     type: v.union(
       v.literal("HAPPY_PATH"),
       v.literal("APPROVAL_PAUSE"),
@@ -1117,7 +1125,7 @@ export default defineSchema({
     sourceEvalFixtureId: v.optional(v.id("agentEvalFixtures")),
     sourceSkillId: v.optional(v.id("agentSkills")),
     sourceSkillVersionId: v.optional(v.id("agentSkillVersions")),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     type: v.union(
       v.literal("PROMPT_CHANGE"),
       v.literal("RULE_CHANGE"),
@@ -1207,7 +1215,7 @@ export default defineSchema({
     sourceHash: v.optional(v.string()),
     /** The uploaded file verbatim: the source of truth the screens render. */
     sourceMarkdown: v.optional(v.string()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1245,7 +1253,7 @@ export default defineSchema({
     skillVersionId: v.id("agentSkillVersions"),
     companyId: v.optional(v.id("companies")),
     isEnabled: v.boolean(),
-    assignedBy: v.id("users"),
+    assignedBy: v.optional(v.id("users")),
     assignedAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1355,7 +1363,7 @@ export default defineSchema({
     ),
     sourceIdsJson: v.optional(v.string()),
     rejectedFingerprint: v.optional(v.string()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     approvedBy: v.optional(v.id("users")),
     archivedBy: v.optional(v.id("users")),
     createdAt: v.number(),
@@ -1477,7 +1485,7 @@ export default defineSchema({
     approvalPolicyJson: v.optional(v.string()),
     recommendedKnowledgeJson: v.optional(v.string()),
     versionLabel: v.optional(v.string()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
     archivedBy: v.optional(v.id("users")),
@@ -1506,7 +1514,7 @@ export default defineSchema({
     ),
     surfaceId: v.optional(v.string()),
     isEnabled: v.boolean(),
-    assignedBy: v.id("users"),
+    assignedBy: v.optional(v.id("users")),
     assignedAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1584,7 +1592,7 @@ export default defineSchema({
      * sample is another two provider calls and real money.
      */
     sampleCount: v.optional(v.number()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
     archivedBy: v.optional(v.id("users")),
@@ -1616,7 +1624,7 @@ export default defineSchema({
     judgeNotes: v.optional(v.string()),
     startedAt: v.number(),
     completedAt: v.number(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
   })
     .index("by_company_completed", ["companyId", "completedAt"])
     .index("by_case_completed", ["evalCaseId", "completedAt"])
@@ -1631,7 +1639,7 @@ export default defineSchema({
     instruction: v.string(),
     priority: v.union(v.literal("LOW"), v.literal("NORMAL"), v.literal("HIGH"), v.literal("CRITICAL")),
     isActive: v.boolean(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   })
     .index("by_active", ["isActive", "createdAt"])
@@ -1663,7 +1671,7 @@ export default defineSchema({
     lastIngestionStartedAt: v.optional(v.number()),
     lastIngestedAt: v.optional(v.number()),
     lastIngestionError: v.optional(v.string()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
     .index("by_company_format", ["companyId", "format", "createdAt"])
@@ -1881,7 +1889,7 @@ export default defineSchema({
     isReleaseGate: v.optional(v.boolean()),
     requiresModelGrading: v.optional(v.boolean()),
     status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1931,7 +1939,7 @@ export default defineSchema({
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
   })
     .index("by_key", ["key"])
     .index("by_key_company", ["key", "companyId"])
@@ -1949,7 +1957,7 @@ export default defineSchema({
     diagnosticDetailsJson: v.optional(v.string()),
     missingSecretRefs: v.optional(v.array(v.string())),
     testedAt: v.number(),
-    testedBy: v.id("users"),
+    testedBy: v.optional(v.id("users")),
   })
     .index("by_connector_tested", ["connectorId", "testedAt"])
     .index("by_company_tested", ["companyId", "testedAt"]),
@@ -1962,7 +1970,7 @@ export default defineSchema({
     required: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
-    updatedBy: v.id("users"),
+    updatedBy: v.optional(v.id("users")),
   })
     .index("by_connector", ["connectorId"])
     .index("by_connector_key", ["connectorId", "key"]),
@@ -1987,7 +1995,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     connectedAt: v.optional(v.number()),
-    initiatedBy: v.id("users"),
+    initiatedBy: v.optional(v.id("users")),
   })
     .index("by_connector_updated", ["connectorId", "updatedAt"])
     .index("by_state", ["state"])
@@ -2015,7 +2023,7 @@ export default defineSchema({
     version: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
     createdAt: v.number(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
   })
     .index("by_name", ["name"])
     .index("by_connector", ["connectorId"])
@@ -2042,7 +2050,7 @@ export default defineSchema({
     edges: v.optional(v.string()), // JSON stringified array of React Flow edges
     createdAt: v.number(),
     updatedAt: v.number(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     companyId: v.optional(v.id("companies")),
     webhookSecret: v.optional(v.string()),
   })
@@ -2059,7 +2067,7 @@ export default defineSchema({
     triggerType: v.string(),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
-    startedBy: v.id("users"),
+    startedBy: v.optional(v.id("users")),
     state: v.optional(v.string()), // JSON representation of final execution state for debugging
   }).index("by_workflow", ["workflowId", "startedAt"])
     .index("by_company_started", ["companyId", "startedAt"])
@@ -2073,7 +2081,7 @@ export default defineSchema({
     lastRunTs: v.optional(v.number()),
     nextRunAt: v.optional(v.number()),
     createdAt: v.number(),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
   })
     .index("by_workflow", ["workflowId"])
     .index("by_agent", ["agentId"])
@@ -2285,7 +2293,7 @@ export default defineSchema({
     enableGreeting: v.optional(v.boolean()),
     isActive: v.boolean(),
     isGlobal: v.optional(v.boolean()),
-    createdBy: v.id("users"),
+    createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_company", ["companyId"])
     .index("by_company_created", ["companyId", "createdAt"])
@@ -2340,7 +2348,7 @@ export default defineSchema({
     runId: v.string(), // The Apify run ID
     actorId: v.string(),
     status: v.union(v.literal("PENDING"), v.literal("COMPLETED"), v.literal("FAILED")),
-    startedBy: v.id("users"),
+    startedBy: v.optional(v.id("users")),
     companyId: v.optional(v.id("companies")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
@@ -2543,7 +2551,7 @@ export default defineSchema({
      * need telling apart.
      */
     supersededAt: v.optional(v.number()),
-    importedBy: v.id("users"),
+    importedBy: v.optional(v.id("users")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
   }).index("by_company_started", ["companyId", "startedAt"]),
@@ -2773,7 +2781,7 @@ export default defineSchema({
     pupils: v.optional(v.number()),
     notes: v.optional(v.string()),
     updatedAt: v.number(),
-    updatedBy: v.id("users"),
+    updatedBy: v.optional(v.id("users")),
   }).index("by_company_account", ["companyId", "accountNameKey"]),
 
   /**
@@ -2956,7 +2964,7 @@ export default defineSchema({
      * ever. Absent means one, which is every job written before this.
      */
     runsStarted: v.optional(v.number()),
-    startedBy: v.id("users"),
+    startedBy: v.optional(v.id("users")),
     groupsAccepted: v.number(),
     groupsRejected: v.number(),
     groupsDuplicate: v.number(),
@@ -3113,7 +3121,7 @@ export default defineSchema({
     /** Spend split by skill, so the report can say what each worker cost. */
     findingSpentGBP: v.optional(v.number()),
     fillingSpentGBP: v.optional(v.number()),
-    startedBy: v.id("users"),
+    startedBy: v.optional(v.id("users")),
     startedAt: v.number(),
     updatedAt: v.number(),
     finishedAt: v.optional(v.number()),
@@ -3209,7 +3217,7 @@ export default defineSchema({
     agentId: v.optional(v.id("agents")),
     /** The run doing the work, so the report can be traced to its run. */
     runId: v.optional(v.id("agentRuns")),
-    requestedBy: v.id("users"),
+    requestedBy: v.optional(v.id("users")),
     startedAt: v.number(),
     updatedAt: v.number(),
     completedAt: v.optional(v.number()),
