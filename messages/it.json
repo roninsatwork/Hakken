@@ -1427,6 +1427,9 @@
                 "logoLightSub": "PNG vettoriale o ad alta risoluzione per superfici predefinite.",
                 "logoDark": "Logo di Sistema (Dark)",
                 "logoDarkSub": "Variante ottimizzata per ambienti scuri e notturni.",
+                "removeLogo": "Rimuovi",
+                "removeLogoLight": "Rimuovi il logo chiaro",
+                "removeLogoDark": "Rimuovi il logo scuro",
                 "emailSender": "Mittente Email",
                 "emailSenderSub": "Mittente brandizzato predefinito usato da inviti, email workflow e alert di piattaforma quando non e impostato un override di deployment.",
                 "emailSenderName": "Nome Mittente",
@@ -2135,8 +2138,62 @@
                 }
             },
             "auditTrail": {
-                "title": "Registro attività",
-                "description": "Tutto ciò che qualcuno ha modificato su questa piattaforma, e quando."
+"title": "Registro attività",
+                    "description": "Tutto ciò che qualcuno ha fatto su questa piattaforma, e quando.",
+                    "searchPlaceholder": "Cerca per azione, persona o cosa è successo",
+                    "showing": "Da {from} a {to}",
+                    "empty": "Non è ancora stato registrato nulla",
+                    "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa",
+                    "noTarget": "Niente in particolare",
+                    "targetNotNamed": "Non ha più un nome",
+                    "noWorkspace": "Tutta la piattaforma",
+                    "filters": {
+                        "periodLabel": "Fino a quando indietro",
+                        "period": "Ultimi {count} giorni",
+                        "allTime": "Sempre",
+                        "actionLabel": "Azione",
+                        "allActions": "Qualsiasi azione",
+                        "personLabel": "Persona",
+                        "allPeople": "Chiunque",
+                        "workspaceLabel": "Spazio di lavoro",
+                        "allWorkspaces": "Qualsiasi spazio di lavoro",
+                        "clear": "Azzera"
+                    },
+                    "export": {
+                        "action": "Esporta",
+                        "working": "Esportazione…",
+                        "truncated": "L'esportazione si è fermata a {count} record, il massimo che un file può contenere. Restringi le date o i filtri ed esporta di nuovo per essere certo di avere tutto."
+                    },
+                    "columns": {
+                        "action": "Azione",
+                        "who": "Chi",
+                        "change": "Cosa è successo",
+                        "target": "Su cosa",
+                        "workspace": "Spazio di lavoro",
+                        "when": "Quando"
+                    },
+                    "pagination": {
+                        "previous": "Precedente",
+                        "next": "Successiva",
+                        "page": "Pagina {page}"
+                    },
+                    "entry": {
+                        "back": "Torna al registro attività",
+                        "notFound": "Questa voce non è disponibile. Potrebbe essere stata rimossa da una regola di conservazione.",
+                        "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa.",
+                        "noTarget": "Niente in particolare",
+                        "changesTitle": "Cosa è successo",
+                        "noChangesDetail": "Questa voce registra che qualcosa è accaduto, e nulla di più.",
+                        "valuesNotRecorded": "Registrata prima che si conservassero i valori precedenti e successivi, quindi i valori non sono noti.",
+                        "nothing": "niente",
+                        "rawTitle": "Il record così com'è stato scritto",
+                        "facts": {
+                            "who": "Chi l'ha fatto",
+                            "when": "Quando",
+                            "what": "Tipo di record",
+                            "target": "Quale record"
+                        }
+                    }
             },
             "policies": {
                 "title": "Politiche in vigore",

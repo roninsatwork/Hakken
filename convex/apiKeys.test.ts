@@ -140,11 +140,20 @@ describe("Public API key governance", () => {
       error: "API key has been revoked.",
     });
 
+    /*
+     * The key coming alive and the two refusals now sit on the trail alongside
+     * the administrator's own actions. A key being accepted is routine traffic
+     * and stays in the API's own log; a key being refused, or used for the very
+     * first time, is what somebody governing this platform wants to see.
+     */
     const auditLogs = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
     expect(auditLogs.map((log) => log.actionType)).toEqual([
       "CREATE_API_KEY",
+      "API_KEY_FIRST_USED",
+      "API_REQUEST_REFUSED",
       "CREATE_API_KEY",
       "REVOKE_API_KEY",
+      "API_REQUEST_REFUSED",
     ]);
     expect(auditLogs.every((log) => log.companyId === companyAId)).toBe(true);
 
@@ -204,5 +213,122 @@ describe("Public API key governance", () => {
     const requestLogs = await t.run(async (ctx) => ctx.db.query("publicApiRequests").collect());
     expect(requestLogs.map((log) => log.status)).toEqual(["AUTHORIZED", "AUTHORIZED", "RATE_LIMITED"]);
     expect(requestLogs.every((log) => log.companyId === companyId)).toBe(true);
+  });
+});
+
+/**
+ * A key being accepted is routine traffic. A key being refused, and a key being
+ * used for the very first time, are the two moments somebody governing this
+ * platform would want to know about — and neither reached the audit trail.
+ *
+ * See docs/plans/active/audit-trail-plan.md.
+ */
+describe("what the audit trail learns about API keys", () => {
+  const makeKey = async (t: ReturnType<typeof convexTest>) => {
+    const { companyId, superAdminId } = await t.run(async (ctx) => ({
+      companyId: await ctx.db.insert("companies", { name: "Comax", createdAt: Date.now() }),
+      superAdminId: await ctx.db.insert("users", {
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      }),
+    }));
+
+    const created = await t.withIdentity({ subject: superAdminId }).mutation(api.apiKeys.create, {
+      companyId,
+      name: "Agent run trigger",
+      scopes: ["agent:run"],
+    });
+
+    return { companyId, created };
+  };
+
+  const trailFor = async (t: ReturnType<typeof convexTest>, actionType: string) =>
+    (await t.run(async (ctx) => await ctx.db.query("auditLogs").collect()))
+      .filter((log) => log.actionType === actionType);
+
+  test("records a key coming alive, once and only once", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, created } = await makeKey(t);
+
+    const call = {
+      apiKey: created.apiKey,
+      requiredScope: "agent:run" as const,
+      method: "POST",
+      path: "/api/public/v1/agent-runs",
+    };
+
+    await t.mutation(internal.apiKeys.authenticatePublicRequest, { ...call, now: 1_000 });
+    await t.mutation(internal.apiKeys.authenticatePublicRequest, { ...call, now: 2_000 });
+
+    // Every accepted call after the first is routine traffic, and belongs in the
+    // API's own log rather than here.
+    const firstUse = await trailFor(t, "API_KEY_FIRST_USED");
+    expect(firstUse).toHaveLength(1);
+    expect(firstUse[0].companyId).toBe(companyId);
+    expect(JSON.parse(firstUse[0].metadata ?? "{}")).toMatchObject({
+      name: "Agent run trigger",
+      path: "/api/public/v1/agent-runs",
+    });
+  });
+
+  test("records a refusal, and names no actor for it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { created } = await makeKey(t);
+
+    await t.mutation(internal.apiKeys.authenticatePublicRequest, {
+      apiKey: created.apiKey,
+      requiredScope: "workflow:run",
+      method: "POST",
+      path: "/api/public/v1/workflow-runs",
+      now: 1_000,
+    });
+
+    const refusals = await trailFor(t, "API_REQUEST_REFUSED");
+    expect(refusals).toHaveLength(1);
+    // A refused request has not proved who it is, which is why it was refused.
+    expect(refusals[0].actorId).toBeUndefined();
+    expect(JSON.parse(refusals[0].metadata ?? "{}")).toMatchObject({
+      refusedBecause: "API key is missing required scope: workflow:run.",
+      requiredScope: "workflow:run",
+    });
+  });
+
+  test("a caller hammering a bad key cannot bury the rest of the trail", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { created } = await makeKey(t);
+
+    for (let index = 0; index < 12; index++) {
+      await t.mutation(internal.apiKeys.authenticatePublicRequest, {
+        apiKey: created.apiKey,
+        requiredScope: "workflow:run",
+        method: "POST",
+        path: "/api/public/v1/workflow-runs",
+        now: 1_000 + index,
+      });
+    }
+
+    // Throttled on the trail. The API's own log still holds every one of them,
+    // which is what that log is for.
+    expect(await trailFor(t, "API_REQUEST_REFUSED")).toHaveLength(5);
+
+    const apiLog = (await t.run(async (ctx) => await ctx.db.query("publicApiRequests").collect()))
+      .filter((request) => request.status === "FORBIDDEN");
+    expect(apiLog).toHaveLength(12);
+  });
+
+  test("a request with no usable key at all is still recorded", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.mutation(internal.apiKeys.authenticatePublicRequest, {
+      requiredScope: "agent:run",
+      method: "POST",
+      path: "/api/public/v1/agent-runs",
+      now: 1_000,
+    });
+
+    const refusals = await trailFor(t, "API_REQUEST_REFUSED");
+    expect(refusals).toHaveLength(1);
+    expect(JSON.parse(refusals[0].metadata ?? "{}")).toMatchObject({ keyPrefix: "none given" });
   });
 });

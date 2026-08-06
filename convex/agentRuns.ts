@@ -1,8 +1,14 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import {
+  buildAgentActionAuditMetadata,
+  buildAgentRunAuditMetadata,
+  isAuditableAgentAction,
+} from "./auditLogService";
 import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
@@ -126,6 +132,61 @@ type TerminalRunStatus = "SUCCESS" | "FAILED" | "CANCELLED";
 
 function isTerminalRunStatus(status: string): status is TerminalRunStatus {
   return status === "SUCCESS" || status === "FAILED" || status === "CANCELLED";
+}
+
+/**
+ * What an agent did on its own account, on the trail.
+ *
+ * A person changing an agent's purpose was recorded and the agent then acting
+ * was not, which on a platform sold as AI governance is the conspicuous hole in
+ * it.
+ *
+ * Reads never reach here. An agent answering a question by looking something up
+ * is the bulk of what agents do, and putting all of it on the trail would bury
+ * the entries that matter within a week. What is recorded is what an agent
+ * changed, deleted, or sent outside.
+ *
+ * No actor. An agent is not a person, and naming whoever started the run as the
+ * one who did this would put a human name against an action they did not take —
+ * which is the precise thing an accountability record must not do. The run and
+ * the agent are both on the entry, so the person who set it going is one hop
+ * away.
+ *
+ * See docs/plans/active/audit-trail-plan.md.
+ */
+async function recordAgentAction(
+  ctx: MutationCtx,
+  args: {
+    agentId: Id<"agents">;
+    companyId?: Id<"companies">;
+    runId: Id<"agentRuns">;
+    tool: string;
+    sideEffectLevel: string;
+    status: string;
+    error?: string;
+    wasApproved?: boolean;
+    timestamp: number;
+  },
+) {
+  if (!isAuditableAgentAction(args.sideEffectLevel)) return;
+
+  const agent = await ctx.db.get(args.agentId);
+
+  await ctx.db.insert("auditLogs", {
+    actionType: "AGENT_ACTION",
+    entityType: "agents",
+    entityId: args.agentId,
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    timestamp: args.timestamp,
+    metadata: buildAgentActionAuditMetadata({
+      agentName: agent?.name,
+      tool: args.tool,
+      sideEffectLevel: args.sideEffectLevel,
+      status: args.status,
+      wasApproved: args.wasApproved,
+      error: args.error,
+    }),
+  });
 }
 
 function isReplayableRunStatus(status: string) {
@@ -2021,6 +2082,30 @@ export const updateRunStatusInternal = internalMutation({
       ...(args.finalOutput !== undefined ? { finalOutput: args.finalOutput } : {}),
     });
     if (isTerminalRunStatus(args.status)) {
+      /*
+       * One entry per run, where it ends.
+       *
+       * Not one per step. Step-level detail already lives in the agent
+       * observability screens and belongs there; repeating it on the trail
+       * would make the trail unreadable inside a week, which is the failure
+       * mode this whole plan is trying to avoid.
+       */
+      const agent = await ctx.db.get(existingRun.agentId);
+      await ctx.db.insert("auditLogs", {
+        actionType: "AGENT_RUN_FINISHED",
+        entityType: "agentRuns",
+        entityId: args.runId,
+        ...(existingRun.companyId ? { companyId: existingRun.companyId } : {}),
+        timestamp: now,
+        metadata: buildAgentRunAuditMetadata({
+          agentName: agent?.name,
+          objective: existingRun.objective,
+          status: args.status,
+          durationMs: now - existingRun.startedAt,
+          error: args.error,
+        }),
+      });
+
       await updateMemoryUsageOutcomeForRun(ctx, args.runId, args.status);
       // Offer what this run taught, without waiting for someone to press a
       // button on the run list — which is why the queue was always empty.
@@ -2110,11 +2195,32 @@ export const insertToolCallInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    return await ctx.db.insert("agentToolCalls", {
+    const settled = args.status !== "PENDING" && args.status !== "APPROVAL_REQUIRED";
+
+    const toolCallId = await ctx.db.insert("agentToolCalls", {
       ...args,
       startedAt: now,
-      ...(args.status !== "PENDING" && args.status !== "APPROVAL_REQUIRED" ? { completedAt: now } : {}),
+      ...(settled ? { completedAt: now } : {}),
     });
+
+    // A call still waiting on a person is not something the agent has done yet.
+    // It reaches the trail when it settles — through the approval decision if a
+    // person refuses it, or through `recordApprovedToolResultInternal` if it
+    // runs.
+    if (settled) {
+      await recordAgentAction(ctx, {
+        agentId: args.agentId,
+        companyId: args.companyId,
+        runId: args.runId,
+        tool: args.normalizedToolName,
+        sideEffectLevel: args.sideEffectLevel,
+        status: args.status,
+        error: args.error,
+        timestamp: now,
+      });
+    }
+
+    return toolCallId;
   },
 });
 
@@ -2236,6 +2342,24 @@ export const recordApprovedToolResultInternal = internalMutation({
         completedAt: now,
         ...(args.error !== undefined ? { error: args.error } : {}),
       });
+
+      // The other settlement point. This call was held back for a person, who
+      // said yes — so the trail carries the decision and, here, what the agent
+      // then actually did with it.
+      const approvedCall = await ctx.db.get(approval.toolCallId);
+      if (approvedCall) {
+        await recordAgentAction(ctx, {
+          agentId: approval.agentId,
+          companyId: approval.companyId,
+          runId: approval.runId,
+          tool: approvedCall.normalizedToolName,
+          sideEffectLevel: approvedCall.sideEffectLevel,
+          status: args.status,
+          error: args.error,
+          wasApproved: true,
+          timestamp: now,
+        });
+      }
     }
 
     const stillPending = await ctx.db

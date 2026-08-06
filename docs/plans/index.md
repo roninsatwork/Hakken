@@ -127,6 +127,14 @@ completed work.
   and read-only roles, one-time-code sign-in, and anything claiming compliance
   evidence. Records the decision not to build single sign-on. Read it before
   adding a governance surface, a new role, or a sign-in method.
+- [Audit Trail Plan](./active/audit-trail-plan.md) — the plan to make the audit
+  trail say what happened rather than only what fields changed, written after
+  most rows on the finished screen read "nothing recorded" over records that
+  held plenty. Owns `convex/auditLogService.ts`, `convex/auditLogs.ts`, both
+  audit trail screens, and the rule the rest of the platform follows when
+  writing an entry. Records the decision that retention deletion must log
+  itself, and the decision not to build tamper-proofing or page-view logging
+  yet. Read it before adding an audit entry anywhere.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -159,6 +167,10 @@ If work touches the AI register, risk classification, compliance evidence, the
 Governance section, roles, sign-in methods, or personal data rights, use the
 Governance And Trust Plan. It owns approvals and audit-trail *placement*; the
 Agent Autonomy And Approvals Plan still owns approvals *behaviour*.
+If work touches what the audit trail records, how an entry is worded, or the
+audit trail screens themselves, use the Audit Trail Plan. It takes the audit
+trail's *content* from the Governance And Trust Plan, which keeps its placement
+in the Governance section.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the
 Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.

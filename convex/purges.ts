@@ -13,6 +13,7 @@ import {
   normalizePurgePipelineConfigForUpdate,
   PURGE_PIPELINE_KEYS,
 } from "./purgeScheduleService";
+import { AUDIT_PURGE_ACTION, isAuditPurgeRecord } from "./auditLogService";
 
 const superAdminPurgeMessage = "Unauthorized: Super Administrator privileges required.";
 
@@ -188,6 +189,9 @@ export const executePurgeRecursive = internalMutation({
     cutoffTimestamp: v.number(),
     historyId: v.id("purgeHistory"),
     deletedCount: v.number(),
+    // Used by the audit trail pipeline alone, which pages by cursor because
+    // some of its rows are never deletable.
+    cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { pipelineKey, cutoffTimestamp, historyId, deletedCount } = args;
@@ -204,6 +208,7 @@ export const executePurgeRecursive = internalMutation({
     try {
       let currentDeleted = 0;
       let hasMore = false;
+      let nextCursor: string | undefined;
 
       if (pipelineKey === "agentLogs") {
         const batch = await ctx.db
@@ -228,16 +233,29 @@ export const executePurgeRecursive = internalMutation({
         currentDeleted = batch.length;
         hasMore = batch.length === 500;
       } else if (pipelineKey === "auditLogs") {
+        /*
+         * Paged by cursor, unlike its neighbours, because this is the one
+         * pipeline whose rows are not all deletable. Repeatedly taking the
+         * oldest rows works only while everything found can go; the moment some
+         * are exempt, the same exempt rows come back every batch and the run
+         * never ends.
+         */
         const batch = await ctx.db
           .query("auditLogs")
           .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoffTimestamp))
-          .take(500);
+          .paginate({ numItems: 500, cursor: args.cursor ?? null });
 
-        for (const record of batch) {
+        for (const record of batch.page) {
+          // The records of previous clear-outs outlive every clear-out. A
+          // summary a later run could remove would leave the same hole one run
+          // further on, which is the hole this record exists to close.
+          if (isAuditPurgeRecord(record.actionType)) continue;
           await ctx.db.delete(record._id);
+          currentDeleted++;
         }
-        currentDeleted = batch.length;
-        hasMore = batch.length === 500;
+
+        nextCursor = batch.continueCursor;
+        hasMore = !batch.isDone;
       } else if (pipelineKey === "workflowLogs") {
         // Deleting executions and cascaded steps, cap at 200 executions
         const batch = await ctx.db
@@ -347,6 +365,7 @@ export const executePurgeRecursive = internalMutation({
           cutoffTimestamp,
           historyId,
           deletedCount: newTotal,
+          ...(nextCursor !== undefined ? { cursor: nextCursor } : {}),
         });
       } else {
         // Complete the run successfully
@@ -355,6 +374,30 @@ export const executePurgeRecursive = internalMutation({
           recordsPurged: newTotal,
           completedAt: Date.now(),
         });
+
+        /*
+         * The clear-out lands on the trail as well as in its own history.
+         *
+         * `purgeHistory` records that a pipeline ran; it is a separate screen
+         * with its own retention, and somebody reading the audit trail to find
+         * out why a month of records is missing would never reach it. That is
+         * particularly true of this pipeline, which deletes the trail itself.
+         */
+        if (newTotal > 0) {
+          await ctx.db.insert("auditLogs", {
+            ...(history.actorId ? { actorId: history.actorId } : {}),
+            actionType: pipelineKey === "auditLogs" ? AUDIT_PURGE_ACTION : "RECORDS_PURGED",
+            entityType: "purgeHistory",
+            entityId: historyId,
+            timestamp: Date.now(),
+            metadata: JSON.stringify({
+              pipelineKey,
+              recordsRemoved: newTotal,
+              startedBy: history.triggerType === "MANUAL" ? "a person" : "the schedule",
+              removedBeforeAt: cutoffTimestamp,
+            }),
+          });
+        }
       }
     } catch (err) {
       console.error(`Error in executePurgeRecursive for ${pipelineKey}:`, err);

@@ -79,9 +79,25 @@ describe("settings service helpers", () => {
   });
 
   test("serializes settings audit metadata", () => {
+    // No previous record — the first save has nothing to have moved from.
     expect(buildSettingsAuditMetadata({ platformName: "New Name", brandColorHex: "#ffffff" })).toBe(
       JSON.stringify({ modifiedFields: ["platformName", "brandColorHex"] })
     );
+  });
+
+  test("records what a setting was changed from, not only that it was", () => {
+    const metadata = buildSettingsAuditMetadata(
+      { platformName: "Sonae", brandColorHex: "#ffffff" },
+      { platformName: "Sonae", brandColorHex: "#E26D28" }
+    );
+
+    // The screen posts the whole form on every save, so a field saved as the
+    // value it already held has to be dropped. Without that, every entry would
+    // list forty untouched colours and the one real change would be lost in it.
+    expect(JSON.parse(metadata)).toEqual({
+      modifiedFields: ["platformName", "brandColorHex"],
+      changes: [{ field: "brandColorHex", from: "#E26D28", to: "#ffffff" }],
+    });
   });
 
   test("builds branded email sender fallbacks without exposing invalid addresses", () => {

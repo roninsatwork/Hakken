@@ -457,8 +457,19 @@ describe("OWASP: Broken Access Control - Users", () => {
       location: "London",
     });
 
+    /*
+     * Two entries: the administrator's session, and the ordinary user's.
+     *
+     * Sign-ins were recorded for the two admin roles and nobody else, so "who
+     * was in the system that afternoon" could only ever be half answered. The
+     * duplicate above still writes nothing — the throttle on the login record
+     * governs both, so this follows real sessions rather than page loads.
+     */
     const auditLogs = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
-    expect(auditLogs.map((log) => log.actionType)).toEqual(["SYSTEM_AUTHENTICATION"]);
+    expect(auditLogs.map((log) => log.actionType)).toEqual([
+      "SYSTEM_AUTHENTICATION",
+      "SYSTEM_AUTHENTICATION",
+    ]);
     expect(companyId).toBeDefined();
   });
 
@@ -520,11 +531,15 @@ describe("OWASP: Broken Access Control - Users", () => {
 
     expect(caller?.impersonatingCompanyId).toBeUndefined();
     expect(target?.companyId).toBeUndefined();
+    // Stopping has its own name. Both halves used to be recorded as
+    // "IMPERSONATE_COMPANY", told apart only by a metadata value reading
+    // "None (Reverted)" — so the trail showed a super admin appearing to enter
+    // a workspace at the moment they left it.
     expect(auditLogs.map((log) => log.actionType)).toEqual([
       "IMPERSONATE_COMPANY",
       "ASSIGN_SUPER_ADMIN",
       "DETACH_SUPER_ADMIN",
-      "IMPERSONATE_COMPANY",
+      "END_IMPERSONATION",
     ]);
   });
 });

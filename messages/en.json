@@ -1427,6 +1427,9 @@
                 "logoLightSub": "Vector or high-res PNG for default surfaces.",
                 "logoDark": "System Logo (Dark)",
                 "logoDarkSub": "Variants optimized for dark and night environments.",
+                "removeLogo": "Remove",
+                "removeLogoLight": "Remove the light logo",
+                "removeLogoDark": "Remove the dark logo",
                 "emailSender": "Email Sender",
                 "emailSenderSub": "Default branded sender used by invites, workflow emails, and platform alerts when no deployment override is set.",
                 "emailSenderName": "Sender Name",
@@ -2136,7 +2139,61 @@
             },
             "auditTrail": {
                 "title": "Audit trail",
-                "description": "Everything anyone changed on this platform, and when they changed it."
+                "description": "Everything anyone did on this platform, and when they did it.",
+                "searchPlaceholder": "Search by action, person or what happened",
+                "showing": "Showing {from}-{to}",
+                "empty": "Nothing has been recorded yet",
+                "noChangeRecorded": "Nothing was recorded beyond the action itself",
+                "noTarget": "Nothing in particular",
+                "targetNotNamed": "No longer named",
+                "noWorkspace": "Whole platform",
+                "filters": {
+                    "periodLabel": "How far back",
+                    "period": "Last {count} days",
+                    "allTime": "All time",
+                    "actionLabel": "Action",
+                    "allActions": "Any action",
+                    "personLabel": "Person",
+                    "allPeople": "Anyone",
+                    "workspaceLabel": "Workspace",
+                    "allWorkspaces": "Any workspace",
+                    "clear": "Clear"
+                },
+                "export": {
+                    "action": "Export",
+                    "working": "Exporting…",
+                    "truncated": "This export stopped at {count} records, which is as many as one file holds. Narrow the dates or the filters and export again to be sure you have everything."
+                },
+                "columns": {
+                    "action": "Action",
+                    "who": "Who",
+                    "change": "What happened",
+                    "target": "What it was done to",
+                    "workspace": "Workspace",
+                    "when": "When"
+                },
+                "pagination": {
+                    "previous": "Previous",
+                    "next": "Next",
+                    "page": "Page {page}"
+                },
+                "entry": {
+                    "back": "Back to the audit trail",
+                    "notFound": "That entry is not available. It may have been removed by a retention rule.",
+                    "noChangeRecorded": "Nothing was recorded beyond the action itself.",
+                    "noTarget": "Nothing in particular",
+                    "changesTitle": "What happened",
+                    "noChangesDetail": "This entry records that something happened, and nothing further about it.",
+                    "valuesNotRecorded": "Recorded before before-and-after values were kept, so the values are not known.",
+                    "nothing": "nothing",
+                    "rawTitle": "The record as written",
+                    "facts": {
+                        "who": "Who did it",
+                        "when": "When",
+                        "what": "Kind of record",
+                        "target": "Which record"
+                    }
+                }
             },
             "policies": {
                 "title": "Policies in force",

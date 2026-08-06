@@ -535,7 +535,11 @@ export default defineSchema({
       // sign-in rather than two depending on which option was used.
       v.literal("ONE_TIME_CODE_REQUESTED"),
       v.literal("ONE_TIME_CODE_THROTTLED"),
-      v.literal("ONE_TIME_CODE_VERIFIED")
+      v.literal("ONE_TIME_CODE_VERIFIED"),
+      // A code that did not work. Only successful sign-ins were ever recorded,
+      // so a run of attempts against an account — the first thing anybody looks
+      // for — left nothing behind at all.
+      v.literal("ONE_TIME_CODE_FAILED")
     ),
     timestamp: v.number(),
     companyId: v.optional(v.id("companies")),

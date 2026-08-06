@@ -118,7 +118,9 @@ export const update = superAdminMutation({
       entityType: "systemSettings",
       entityId: settings?._id || "global_settings",
       timestamp: Date.now(),
-      metadata: buildSettingsAuditMetadata(patchObj)
+      // Read before the patch is applied above, so the record holds what the
+      // setting actually moved from.
+      metadata: buildSettingsAuditMetadata(patchObj, settings)
     });
 
     return true;

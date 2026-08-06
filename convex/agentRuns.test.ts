@@ -1968,3 +1968,137 @@ describe("Agent Runs", () => {
     expect(cancelledState.cancelLogs).toHaveLength(1);
   });
 });
+
+/**
+ * A person changing an agent's purpose was recorded; the agent then going off
+ * and acting was not. On a platform sold as AI governance, the trail covering
+ * only the humans is the conspicuous hole in it.
+ *
+ * See docs/plans/active/audit-trail-plan.md.
+ */
+describe("what an agent did on its own account", () => {
+  const setup = async (t: ReturnType<typeof convexTest>) => {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Comax", createdAt: Date.now() });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Housekeeping Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const runId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        triggerType: "CHAT",
+        status: "RUNNING",
+        objective: "Tidy the register.",
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+        maxSteps: 3,
+      });
+
+      return { companyId, agentId, runId };
+    });
+  };
+
+  const auditLogs = async (t: ReturnType<typeof convexTest>) =>
+    await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
+
+  test("records a change the agent made, and never a lookup", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId, runId } = await setup(t);
+
+    const call = {
+      runId,
+      agentId,
+      companyId,
+      handlerMapping: "knowledge.search",
+      argumentsJson: "{}",
+      status: "SUCCESS" as const,
+      requiredRole: "ADMIN" as const,
+      confirmationRequired: false,
+    };
+
+    // An agent answering a question by looking something up is the bulk of what
+    // agents do. All of it on the trail is a trail nobody can read.
+    await t.mutation(internal.agentRuns.insertToolCallInternal, {
+      ...call,
+      normalizedToolName: "knowledge_search",
+      sideEffectLevel: "READ",
+    });
+
+    expect(await auditLogs(t)).toEqual([]);
+
+    await t.mutation(internal.agentRuns.insertToolCallInternal, {
+      ...call,
+      normalizedToolName: "company_overview_write",
+      sideEffectLevel: "WRITE",
+    });
+
+    const logs = await auditLogs(t);
+    expect(logs).toHaveLength(1);
+    expect(logs[0].actionType).toBe("AGENT_ACTION");
+    expect(logs[0].companyId).toBe(companyId);
+    expect(logs[0].entityId).toBe(agentId);
+    // An agent is not a person. Naming whoever started the run as the one who
+    // did this puts a human name against an action they did not take.
+    expect(logs[0].actorId).toBeUndefined();
+    expect(JSON.parse(logs[0].metadata ?? "{}")).toEqual({
+      agent: "Housekeeping Agent",
+      did: "changed something",
+      using: "company_overview_write",
+      outcome: "SUCCESS",
+    });
+  });
+
+  test("a call still waiting on a person is not yet something the agent has done", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId, runId } = await setup(t);
+
+    await t.mutation(internal.agentRuns.insertToolCallInternal, {
+      runId,
+      agentId,
+      companyId,
+      normalizedToolName: "delete_everything",
+      handlerMapping: "danger.delete",
+      argumentsJson: "{}",
+      status: "APPROVAL_REQUIRED",
+      requiredRole: "SUPER_ADMIN",
+      sideEffectLevel: "DESTRUCTIVE",
+      confirmationRequired: true,
+    });
+
+    expect(await auditLogs(t)).toEqual([]);
+  });
+
+  test("a finished run leaves one entry, whatever happened inside it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { runId } = await setup(t);
+
+    await t.mutation(internal.agentRuns.updateRunStatusInternal, {
+      runId,
+      status: "FAILED",
+      error: "The provider timed out.",
+    });
+
+    const logs = (await auditLogs(t)).filter((log) => log.actionType === "AGENT_RUN_FINISHED");
+    expect(logs).toHaveLength(1);
+    expect(JSON.parse(logs[0].metadata ?? "{}")).toMatchObject({
+      agent: "Housekeeping Agent",
+      outcome: "FAILED",
+      asked: "Tidy the register.",
+      error: "The provider timed out.",
+    });
+  });
+
+  test("a run that is merely progressing writes nothing", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { runId } = await setup(t);
+
+    await t.mutation(internal.agentRuns.updateRunStatusInternal, { runId, status: "RUNNING" });
+
+    expect(await auditLogs(t)).toEqual([]);
+  });
+});

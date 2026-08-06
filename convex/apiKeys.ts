@@ -264,6 +264,38 @@ export const revoke = adminMutation({
   },
 });
 
+/**
+ * How many refusals one key puts on the audit trail in a window.
+ *
+ * Small on purpose. The point of the entry is that somebody notices a key being
+ * refused, and the tenth identical refusal in a minute adds nothing the first
+ * one did not already say.
+ */
+const API_REFUSAL_AUDIT_LIMIT = 5;
+const API_REFUSAL_AUDIT_WINDOW_MS = 15 * 60 * 1000;
+
+async function isWithinApiRefusalAuditLimit(
+  ctx: MutationCtx,
+  apiKeyId: Id<"apiKeys"> | undefined,
+  now: number,
+) {
+  // A request that never matched a key has nothing to count against. The API's
+  // own log still records every one of them.
+  if (!apiKeyId) return true;
+
+  const recent = await ctx.db
+    .query("auditLogs")
+    .withIndex("by_timestamp", (q) => q.gt("timestamp", now - API_REFUSAL_AUDIT_WINDOW_MS))
+    .order("desc")
+    .take(200);
+
+  const refusals = recent.filter(
+    (log) => log.actionType === "API_REQUEST_REFUSED" && log.entityId === apiKeyId,
+  );
+
+  return refusals.length < API_REFUSAL_AUDIT_LIMIT;
+}
+
 export const authenticatePublicRequest = internalMutation({
   args: {
     apiKey: v.optional(v.string()),
@@ -290,6 +322,41 @@ export const authenticatePublicRequest = internalMutation({
         error,
         requestedAt: now,
       });
+
+      /*
+       * A refused request reaches the audit trail as well as the API's own log.
+       *
+       * `publicApiRequests` records every call and is its own screen with its
+       * own retention. Somebody reading the audit trail to find out how a key
+       * was being used would never reach it — and a key being refused is the
+       * security event, where a key being accepted is routine traffic.
+       *
+       * Throttled per key prefix. This runs on an unauthenticated path, so a
+       * caller hammering the API with a bad key could otherwise write unbounded
+       * rows into the trail and bury everything else in it. The API's own log
+       * keeps every one regardless.
+       *
+       * See docs/plans/active/audit-trail-plan.md.
+       */
+      if (await isWithinApiRefusalAuditLimit(ctx, apiKey?._id, now)) {
+        await ctx.db.insert("auditLogs", {
+          // No actor. A refused request has not proved who it is, which is the
+          // whole reason it was refused.
+          actionType: "API_REQUEST_REFUSED",
+          entityType: "apiKeys",
+          ...(apiKey ? { entityId: apiKey._id } : {}),
+          ...(apiKey?.companyId ? { companyId: apiKey.companyId } : {}),
+          timestamp: now,
+          metadata: JSON.stringify({
+            keyPrefix: keyPrefix ?? "none given",
+            method: args.method,
+            path: args.path,
+            requiredScope: args.requiredScope,
+            refusedBecause: error,
+          }),
+        });
+      }
+
       return { ok: false as const, statusCode, error };
     };
 
@@ -333,6 +400,30 @@ export const authenticatePublicRequest = internalMutation({
     );
     if (recentAuthorizedRequests.length >= apiKey.rateLimitPerMinute) {
       return await deny("RATE_LIMITED", 429, "API key rate limit exceeded.", apiKey);
+    }
+
+    /*
+     * The moment a key comes alive, once.
+     *
+     * Every accepted call is routine traffic and belongs in the API's own log,
+     * not here — mirroring it onto the trail would bury everything else within
+     * a day. A key being used for the very first time is the governance event:
+     * it is the point at which something issued months ago starts acting.
+     */
+    if (apiKey.lastUsedAt === undefined) {
+      await ctx.db.insert("auditLogs", {
+        actionType: "API_KEY_FIRST_USED",
+        entityType: "apiKeys",
+        entityId: apiKey._id,
+        ...(apiKey.companyId ? { companyId: apiKey.companyId } : {}),
+        timestamp: now,
+        metadata: JSON.stringify({
+          keyPrefix: apiKey.keyPrefix,
+          name: apiKey.name,
+          method: args.method,
+          path: args.path,
+        }),
+      });
     }
 
     await ctx.db.patch(apiKey._id, { lastUsedAt: now });

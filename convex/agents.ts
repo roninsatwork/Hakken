@@ -1231,10 +1231,15 @@ export const updateAgent = superAdminMutation({
       actorId: userId,
       entityType: "agents",
       entityId: id,
+      ...(existingAgent.companyId ? { companyId: existingAgent.companyId } : {}),
       timestamp: now,
       metadata: buildUpdateAgentAuditMetadata({
         updatedFields: Object.keys(updates),
         systemPrompt: updates.systemPrompt,
+        // The record as it stood, and what was asked of it. Without both, the
+        // entry can only name the field and leave the reader guessing.
+        before: existingAgent as unknown as Record<string, unknown>,
+        after: updates as unknown as Record<string, unknown>,
       })
     });
 
@@ -1248,6 +1253,7 @@ export const updateAgent = superAdminMutation({
         actorId: userId,
         entityType: "agents",
         entityId: id,
+        ...(existingAgent.companyId ? { companyId: existingAgent.companyId } : {}),
         timestamp: now,
         metadata: JSON.stringify({
           from: existingAgent.riskLevel ?? null,

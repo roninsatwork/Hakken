@@ -707,16 +707,23 @@ export const recordLogin = publicMutation({
      */
     await ctx.db.patch(current.userId, { lastLoginAt: now });
 
-    if (current.user.role === "SUPER_ADMIN" || current.user.role === "ADMIN") {
-       await ctx.db.insert("auditLogs", {
-          actionType: "SYSTEM_AUTHENTICATION",
-          actorId: current.userId,
-          entityType: "users",
-          entityId: "USER_SESSION",
-          timestamp: Date.now(),
-          metadata: JSON.stringify({ ip: args.ip, location: args.location })
-       });
-    }
+    /*
+     * Everyone, not only the administrators.
+     *
+     * The trail recorded sign-ins for the two admin roles and nobody else, so
+     * "who was in the system that afternoon" could only ever be half answered.
+     * The insert above is already deduplicated inside a window, so this follows
+     * real sessions rather than every page load.
+     */
+    await ctx.db.insert("auditLogs", {
+       actionType: "SYSTEM_AUTHENTICATION",
+       actorId: current.userId,
+       entityType: "users",
+       entityId: "USER_SESSION",
+       ...(current.user.companyId ? { companyId: current.user.companyId } : {}),
+       timestamp: Date.now(),
+       metadata: JSON.stringify({ ip: args.ip, location: args.location })
+    });
 
     return loginId;
   }
@@ -749,13 +756,29 @@ export const impersonateCompany = superAdminMutation({
 
     await ctx.db.patch(userId, { impersonatingCompanyId: args.companyId === undefined ? undefined : args.companyId });
 
+    const company = args.companyId ? await ctx.db.get(args.companyId) : null;
+
     await ctx.db.insert("auditLogs", {
-      actionType: "IMPERSONATE_COMPANY",
+      /*
+       * Stopping has its own name.
+       *
+       * Both halves were recorded as "IMPERSONATE_COMPANY", and stopping was
+       * told apart only by a metadata value reading "None (Reverted)" — so a
+       * reader scanning the trail saw a super admin appearing to enter a
+       * workspace at the exact moment they left it.
+       */
+      actionType: args.companyId ? "IMPERSONATE_COMPANY" : "END_IMPERSONATION",
       actorId: userId,
       entityType: "users",
       entityId: userId,
       timestamp: Date.now(),
-      metadata: JSON.stringify({ targetCompanyId: args.companyId || "None (Reverted)" })
+      // The workspace by name. Its identifier said nothing to anybody reading
+      // this later, which is the whole complaint about the old trail.
+      metadata: JSON.stringify(
+        args.companyId
+          ? { workspace: company?.name ?? args.companyId, targetCompanyId: args.companyId }
+          : {}
+      )
     });
 
     return true;

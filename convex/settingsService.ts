@@ -1,4 +1,5 @@
 import type { Doc } from "./_generated/dataModel";
+import { summariseAuditValue } from "./auditLogService";
 
 export const DEFAULT_SETTINGS = {
   platformName: "Sonae",
@@ -75,8 +76,43 @@ export function mergeSettingsWithDefaults(args: {
   };
 }
 
-export function buildSettingsAuditMetadata(patch: Record<string, unknown>) {
-  return JSON.stringify({ modifiedFields: Object.keys(patch) });
+/**
+ * What a settings save changed, and what it changed from.
+ *
+ * This recorded the names of the fields that were saved and nothing else, so
+ * the trail could say the brand colour was changed and no screen could ever say
+ * what it was changed to. Agent changes were fixed on 2026-08-06; this was the
+ * last place still writing field names alone.
+ *
+ * `previous` is optional because the very first save has nothing before it, and
+ * because entries written before this existed still have to render.
+ *
+ * See docs/plans/active/audit-trail-plan.md.
+ */
+export function buildSettingsAuditMetadata(
+  patch: Record<string, unknown>,
+  previous?: Record<string, unknown> | null,
+) {
+  const modifiedFields = Object.keys(patch);
+
+  const changes = previous
+    ? modifiedFields
+        .map((field) => ({
+          field,
+          from: summariseAuditValue(previous[field]),
+          to: summariseAuditValue(patch[field]),
+        }))
+        // A field saved as the value it already held is not a change, and an
+        // entry claiming otherwise wastes a reader's attention. Every save on
+        // this screen posts the whole form, so without this nearly every entry
+        // would list forty untouched colours.
+        .filter((change) => change.from !== change.to)
+    : [];
+
+  return JSON.stringify({
+    modifiedFields,
+    ...(changes.length > 0 ? { changes } : {}),
+  });
 }
 
 export type WhiteLabelReadinessStatus = "ready" | "pending" | "manual";

@@ -22,7 +22,8 @@ export type AuthEventType =
   | "MAGIC_LINK_VERIFIED"
   | "ONE_TIME_CODE_REQUESTED"
   | "ONE_TIME_CODE_THROTTLED"
-  | "ONE_TIME_CODE_VERIFIED";
+  | "ONE_TIME_CODE_VERIFIED"
+  | "ONE_TIME_CODE_FAILED";
 
 export type AuthEventInput = {
   email: string;

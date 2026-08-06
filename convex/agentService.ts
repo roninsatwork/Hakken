@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { summariseAuditValue } from "./auditLogService";
 
 export function isGlobalAgent(agent: Doc<"agents">) {
   return agent.isGlobal !== false;
@@ -142,16 +143,50 @@ export function buildCreateAgentFromTemplateAuditMetadata(args: {
   });
 }
 
-export function buildUpdateAgentAuditMetadata(args: { updatedFields: string[]; systemPrompt?: string } | string[]) {
+export function buildUpdateAgentAuditMetadata(
+  args:
+    | {
+        updatedFields: string[];
+        systemPrompt?: string;
+        /**
+         * What each field moved from and to.
+         *
+         * The trail used to record the names of the fields that changed and
+         * nothing else, so an entry could say "description was updated" and no
+         * screen could ever say what it was updated to. Risk ratings were the
+         * one exception, which is why only they read properly.
+         */
+        before?: Record<string, unknown>;
+        after?: Record<string, unknown>;
+      }
+    | string[],
+) {
   const updatedFields = Array.isArray(args) ? args : args.updatedFields;
   const systemPrompt = Array.isArray(args) ? undefined : args.systemPrompt;
+  const before = Array.isArray(args) ? undefined : args.before;
+  const after = Array.isArray(args) ? undefined : args.after;
+
   const safetyWarnings =
     typeof systemPrompt === "string"
       ? getAssistantSafetyWarnings(systemPrompt).map((warning) => warning.category)
       : [];
 
+  const changes =
+    before && after
+      ? updatedFields
+          .map((field) => ({
+            field,
+            from: summariseAuditValue(before[field]),
+            to: summariseAuditValue(after[field]),
+          }))
+          // A field patched to the value it already held is not a change, and
+          // an entry claiming otherwise wastes a reader's attention.
+          .filter((change) => change.from !== change.to)
+      : [];
+
   return JSON.stringify({
     updatedFields,
+    ...(changes.length > 0 ? { changes } : {}),
     ...(safetyWarnings.length > 0 ? { safetyWarnings } : {}),
   });
 }
