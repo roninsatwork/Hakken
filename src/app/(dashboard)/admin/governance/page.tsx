@@ -5,6 +5,7 @@ import { ClipboardList, History, ScrollText, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { EvidencePackPanel } from "@/src/app/(dashboard)/admin/_components/EvidencePackPanel";
 
 /**
  * The way in to everything in this section.
@@ -34,6 +35,8 @@ export default function GovernanceOverviewPage() {
         title={t("title")}
         description={t("description")}
       />
+
+      <EvidencePackPanel />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {sections.map(({ key, href, icon: Icon }) => (

@@ -100,6 +100,8 @@ import type * as crons from "../crons.js";
 import type * as dataMigrations from "../dataMigrations.js";
 import type * as emailBrandingService from "../emailBrandingService.js";
 import type * as emailLayoutService from "../emailLayoutService.js";
+import type * as evidencePack from "../evidencePack.js";
+import type * as evidencePackService from "../evidencePackService.js";
 import type * as googleAgentProvider from "../googleAgentProvider.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
 import type * as governanceRegister from "../governanceRegister.js";
@@ -297,6 +299,8 @@ declare const fullApi: ApiFromModules<{
   dataMigrations: typeof dataMigrations;
   emailBrandingService: typeof emailBrandingService;
   emailLayoutService: typeof emailLayoutService;
+  evidencePack: typeof evidencePack;
+  evidencePackService: typeof evidencePackService;
   googleAgentProvider: typeof googleAgentProvider;
   googleProviderAdapter: typeof googleProviderAdapter;
   governanceRegister: typeof governanceRegister;

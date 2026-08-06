@@ -2036,6 +2036,34 @@
                     "lastActive": "Ultima attività"
                 }
             },
+            "evidence": {
+                "title": "Pacchetto di prove",
+                "description": "Un registro datato di ogni sistema di IA, di tutto ciò che ha fatto, di ogni decisione presa da una persona e di ogni politica in vigore. Scritto per essere letto, e tuo da conservare.",
+                "periodLabel": "Periodo",
+                "produce": "Scarica il pacchetto di prove",
+                "producing": "Raccolta in corso…",
+                "failed": "Non è stato possibile produrre il pacchetto di prove. Riprova e, se continua, contatta il tuo amministratore.",
+                "periods": {
+                    "7": "Ultimi 7 giorni",
+                    "30": "Ultimi 30 giorni",
+                    "90": "Ultimi 90 giorni",
+                    "365": "Ultimo anno"
+                },
+                "document": {
+                    "title": "Pacchetto di prove sulla governance dell'IA",
+                    "period": "Periodo",
+                    "scopePlatform": "Comprende ogni spazio di lavoro di questa piattaforma.",
+                    "scopeWorkspace": "Comprende solo questo spazio di lavoro.",
+                    "systems": "Ogni sistema di IA",
+                    "runs": "Cosa ha fatto l'IA",
+                    "decisions": "Decisioni prese da una persona",
+                    "policies": "Politiche in vigore",
+                    "models": "Modelli usati",
+                    "none": "Nulla da segnalare per questo periodo.",
+                    "notRated": "non ancora valutato",
+                    "noOwner": "nessuno assegnato"
+                }
+            },
             "auditTrail": {
                 "title": "Registro attività",
                 "description": "Tutto ciò che qualcuno ha modificato su questa piattaforma, e quando."
