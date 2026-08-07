@@ -237,3 +237,238 @@ describe("clearing the workspace", () => {
     ).rejects.toThrow(/not enabled/i);
   });
 });
+
+/**
+ * The other clear — everything, workbook included.
+ *
+ * Its reason to exist is a client uploading different workbooks of the same
+ * shape to play with: findings and reports derived from the last file poison
+ * the next run, so each upload has to start from a workspace that remembers
+ * nothing. The part worth proving is total coverage — a table missed here is
+ * exactly the stale memory the button promises is gone.
+ */
+async function seedEverything() {
+  const { t, client } = await seed();
+
+  await t.run(async (ctx) => {
+    const company = (await ctx.db.query("companies").first())!;
+    const companyId = company._id;
+    const importRecord = (await ctx.db.query("salesDataImports").first())!;
+    const importId = importRecord._id;
+
+    const agentId = await ctx.db.insert("agents", {
+      name: "Researcher",
+      modelId: "gpt-test",
+      thinkingMode: false,
+      isActive: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    const jobId = await ctx.db.insert("salesDataResearchJobs", {
+      companyId,
+      importId,
+      status: "COMPLETE" as const,
+      phase: "DONE" as const,
+      agentId,
+      runsStarted: 2,
+      maxCostGBP: 5,
+      spentGBP: 1,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await ctx.db.insert("salesDataResearchJobItems", {
+      jobId,
+      companyId,
+      kind: "CUSTOMER" as const,
+      key: "COLTEN CARE",
+      label: "Colten Care",
+      status: "DONE" as const,
+      attempts: 1,
+      updatedAt: Date.now(),
+    });
+    await ctx.db.insert("salesDataResearchJobItems", {
+      jobId,
+      companyId,
+      kind: "CHAIN" as const,
+      key: "COLTEN GROUP",
+      label: "Colten Group",
+      status: "DONE" as const,
+      attempts: 1,
+      updatedAt: Date.now(),
+    });
+
+    const discoveryJobId = await ctx.db.insert("salesDataMarketDiscoveryJobs", {
+      companyId,
+      customerTypeKey: "CARE HOMES",
+      customerType: "CARE HOMES",
+      targetGroupCount: 5,
+      status: "COMPLETE" as const,
+      phase: "SETUP" as const,
+      agentId,
+      groupsAccepted: 1,
+      groupsRejected: 0,
+      groupsDuplicate: 0,
+      groupsNeedsCheck: 0,
+      locationsFiled: 1,
+      locationsDuplicate: 0,
+      locationsNeedsCheck: 0,
+      maxCostGBP: 5,
+      spentGBP: 1,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await ctx.db.insert("salesDataMarketDiscoveryGroups", {
+      companyId,
+      jobId: discoveryJobId,
+      groupName: "Amberwood Group",
+      groupNameKey: "AMBERWOOD GROUP",
+      customerType: "CARE HOMES",
+      customerTypeKey: "CARE HOMES",
+      sourceUrl: "https://example.com",
+      reasoning: "Looks like a chain of care homes.",
+      status: "ACCEPTED" as const,
+      locationsStatus: "PENDING" as const,
+      foundAt: Date.now(),
+    });
+
+    const reportId = await ctx.db.insert("salesOpportunityReports", {
+      companyId,
+      importId,
+      status: "COMPLETE" as const,
+      phase: "MATCHING" as const,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    await ctx.db.insert("salesOpportunityReportGapProducts", {
+      companyId,
+      reportId,
+      accountNameKey: "COLTEN CARE",
+      categoryKey: "WASHROOM",
+      products: [],
+    });
+    await ctx.db.insert("salesOpportunityReportTypeBaskets", {
+      companyId,
+      reportId,
+      customerTypeKey: "CARE HOMES",
+      customerType: "CARE HOMES",
+      totalSpendGBP: 1200,
+      customerCount: 1,
+      categories: [],
+    });
+  });
+
+  return { t, client };
+}
+
+describe("clearing everything, workbook included", () => {
+  test("leaves no sales-data table with a row in it", async () => {
+    const { t, client } = await seedEverything();
+
+    await client.action(api.salesDataReset.clearAllSalesData, {});
+
+    const left = await t.run(async (ctx) => ({
+      imports: (await ctx.db.query("salesDataImports").collect()).length,
+      rows: (await ctx.db.query("salesDataRows").collect()).length,
+      accounts: (await ctx.db.query("salesDataAccounts").collect()).length,
+      categories: (await ctx.db.query("salesDataCategoryLinks").collect()).length,
+      interest: (await ctx.db.query("salesDataAreasOfInterest").collect()).length,
+      frequencies: (await ctx.db.query("salesDataFrequencies").collect()).length,
+      customers: (await ctx.db.query("salesDataCustomers").collect()).length,
+      research: (await ctx.db.query("salesDataCustomerResearch").collect()).length,
+      prospects: (await ctx.db.query("salesDataProspects").collect()).length,
+      researchJobs: (await ctx.db.query("salesDataResearchJobs").collect()).length,
+      researchItems: (await ctx.db.query("salesDataResearchJobItems").collect()).length,
+      discoveryJobs: (await ctx.db.query("salesDataMarketDiscoveryJobs").collect()).length,
+      discoveryGroups: (await ctx.db.query("salesDataMarketDiscoveryGroups").collect()).length,
+      reports: (await ctx.db.query("salesOpportunityReports").collect()).length,
+      gapProducts: (await ctx.db.query("salesOpportunityReportGapProducts").collect()).length,
+      baskets: (await ctx.db.query("salesOpportunityReportTypeBaskets").collect()).length,
+    }));
+
+    expect(left).toEqual({
+      imports: 0,
+      rows: 0,
+      accounts: 0,
+      categories: 0,
+      interest: 0,
+      frequencies: 0,
+      customers: 0,
+      research: 0,
+      prospects: 0,
+      researchJobs: 0,
+      researchItems: 0,
+      discoveryJobs: 0,
+      discoveryGroups: 0,
+      reports: 0,
+      gapProducts: 0,
+      baskets: 0,
+    });
+  });
+
+  /**
+   * Clearing under a running agent would have its next write land on rows
+   * that no longer exist. The jobs carry their own stop buttons; the clear
+   * refuses rather than reaching for them.
+   */
+  test("refuses while an agent is still working", async () => {
+    const { t, client } = await seedEverything();
+
+    await t.run(async (ctx) => {
+      const company = (await ctx.db.query("companies").first())!;
+      const importRecord = (await ctx.db.query("salesDataImports").first())!;
+      const agent = (await ctx.db.query("agents").first())!;
+      await ctx.db.insert("salesDataResearchJobs", {
+        companyId: company._id,
+        importId: importRecord._id,
+        status: "RUNNING" as const,
+        phase: "CUSTOMERS" as const,
+        agentId: agent._id,
+        runsStarted: 1,
+        maxCostGBP: 5,
+        spentGBP: 0,
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    });
+
+    await expect(client.action(api.salesDataReset.clearAllSalesData, {})).rejects.toThrow(
+      /still working/i
+    );
+
+    const kept = await t.run(async (ctx) => ({
+      imports: (await ctx.db.query("salesDataImports").collect()).length,
+      rows: (await ctx.db.query("salesDataRows").collect()).length,
+    }));
+    expect(kept).toEqual({ imports: 1, rows: 1 });
+  });
+
+  test("leaves another workspace's workbook where it is", async () => {
+    const { t, client } = await seedEverything();
+
+    await t.run(async (ctx) => {
+      const other = await ctx.db.insert("companies", {
+        name: "Someone Else",
+        enabledModules: ["salesData"],
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("salesDataImports", {
+        companyId: other,
+        fileName: "theirs.xlsx",
+        status: "COMPLETED" as const,
+        sheetMapping: { sales: 0, categories: 1, areasOfInterest: 2, frequency: 3 },
+        periodLabels: ["2026-01"],
+        salesRowCount: 0,
+        startedAt: Date.now(),
+        completedAt: Date.now(),
+      });
+    });
+
+    await client.action(api.salesDataReset.clearAllSalesData, {});
+
+    const survivors = await t.run(async (ctx) =>
+      (await ctx.db.query("salesDataImports").collect()).map((row) => row.fileName)
+    );
+    expect(survivors).toEqual(["theirs.xlsx"]);
+  });
+});

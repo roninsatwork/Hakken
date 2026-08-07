@@ -123,6 +123,7 @@ import type * as knowledgeReembedActions from "../knowledgeReembedActions.js";
 import type * as knowledgeService from "../knowledgeService.js";
 import type * as localDemoSeed from "../localDemoSeed.js";
 import type * as localTestAuth from "../localTestAuth.js";
+import type * as magicLinkUrlService from "../magicLinkUrlService.js";
 import type * as maintenanceScriptRegistry from "../maintenanceScriptRegistry.js";
 import type * as maintenanceScripts from "../maintenanceScripts.js";
 import type * as movements from "../movements.js";
@@ -333,6 +334,7 @@ declare const fullApi: ApiFromModules<{
   knowledgeService: typeof knowledgeService;
   localDemoSeed: typeof localDemoSeed;
   localTestAuth: typeof localTestAuth;
+  magicLinkUrlService: typeof magicLinkUrlService;
   maintenanceScriptRegistry: typeof maintenanceScriptRegistry;
   maintenanceScripts: typeof maintenanceScripts;
   movements: typeof movements;

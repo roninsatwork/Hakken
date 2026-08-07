@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Table2 } from "lucide-react";
@@ -219,6 +219,7 @@ function SalesDataTables() {
                 : t("tablesSubtitleEmpty")}
             </p>
           </div>
+          {overview?.currentImport ? <ClearAllButton /> : null}
         </div>
 
         {/* Secondary tabs — one per source worksheet */}
@@ -546,4 +547,80 @@ function formatMoney(value: number | undefined) {
     currency: "GBP",
     minimumFractionDigits: 2,
   });
+}
+
+/**
+ * The full clear — workbook included — for starting the whole process again.
+ *
+ * The customers screen's clear deliberately spares the spreadsheet, because
+ * re-finding and re-mapping the file is the expensive half of an import. This
+ * button is the other scope for the other situation: a client playing with
+ * different workbooks of the same shape, where findings and reports derived
+ * from the last file would poison the next run. It lives on the imports screen
+ * because that is the data it clears, and the confirm states the full blast
+ * radius rather than assuming the scopes are remembered apart.
+ *
+ * Same inline confirm as the customers screen, not a modal — one press to
+ * arm, one to fire, anything else stands down.
+ */
+function ClearAllButton() {
+  const t = useTranslations("salesData");
+  const clearAll = useAction(api.salesDataReset.clearAllSalesData);
+  const [state, setState] = useState<"idle" | "confirming" | "clearing" | "cleared" | "error">(
+    "idle"
+  );
+  const [message, setMessage] = useState<string | null>(null);
+
+  const onConfirm = async () => {
+    setState("clearing");
+    setMessage(null);
+    try {
+      await clearAll({});
+      setState("cleared");
+      setMessage(t("clearAllDone"));
+    } catch (caught) {
+      setState("error");
+      setMessage(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
+
+  if (state === "confirming") {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void onConfirm()}
+          className="px-3 py-2 rounded-[12px] border border-[#ef4444]/40 bg-[#ef4444]/10 text-[13px] text-[#ef4444] hover:bg-[#ef4444]/20 transition-colors"
+        >
+          {t("clearAllConfirm")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setState("idle")}
+          className="px-3 py-2 text-[13px] text-secondary hover:text-foreground transition-colors"
+        >
+          {t("clearAllCancel")}
+        </button>
+        <span className="text-[12px] text-muted max-w-[320px]">{t("clearAllWarning")}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setState("confirming")}
+        disabled={state === "clearing"}
+        className="px-3 py-2 rounded-[12px] border border-border-dim text-[13px] text-secondary hover:text-foreground hover:border-border transition-colors disabled:opacity-60"
+      >
+        {state === "clearing" ? t("clearAllRunning") : t("clearAllStart")}
+      </button>
+      {message && (
+        <span className={`text-[12px] ${state === "error" ? "text-red-400" : "text-secondary"}`}>
+          {message}
+        </span>
+      )}
+    </div>
+  );
 }
