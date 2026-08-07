@@ -2041,7 +2041,40 @@
                     "risk": "Risk",
                     "owner": "Accountable",
                     "oversight": "Oversight",
-                    "lastActive": "Last active"
+                    "lastActive": "Last active",
+                    "activity": "Activity",
+                    "runs": "{count} runs"
+                },
+                "searchPlaceholder": "Search by name, purpose, person or model",
+                "noMatches": "No AI systems match these filters",
+                "noPurpose": "No purpose recorded",
+                "filters": {
+                    "kindLabel": "Kind",
+                    "allKinds": "Any kind",
+                    "clear": "Clear"
+                },
+                "pagination": {
+                    "previous": "Previous",
+                    "next": "Next",
+                    "empty": "No AI systems are running yet",
+                    "noMatches": "No AI systems match these filters",
+                    "page": "Page {page} of {total}",
+                    "showing": "Showing {start}-{end} of {total}"
+                },
+                "panel": {
+                    "notEditable": "Everything else about this system is set where the system itself is managed.",
+                    "purposeLabel": "What it is for",
+                    "purposePlaceholder": "Say what this system does, in a sentence.",
+                    "ownerLabel": "Accountable person",
+                    "ownerKeep": "Keep {name}",
+                    "ownerNone": "Nobody assigned",
+                    "ownerEmpty": "There is nobody here who can be made accountable yet.",
+                    "riskLabel": "Risk rating",
+                    "riskUnset": "Not rated",
+                    "recorded": "Every change here is recorded on the audit trail.",
+                    "save": "Save",
+                    "saveFailed": "That could not be saved. Try again.",
+                    "runs": "{count} runs"
                 }
             },
             "evidence": {
@@ -2135,6 +2168,62 @@
                         "settled": "Records are kept long enough.",
                         "notSetUp": "Nothing is deleted automatically. That breaks no rule."
                     }
+                },
+                "checksTitle": "What we check for",
+                "activity": {
+                    "title": "What has actually been happening",
+                    "rangeLabel": "How far back",
+                    "range": "Last {count} days",
+                    "truncated": "This covers as much as one read can hold, so the figures below are a floor rather than a total. Narrow the range for an exact picture.",
+                    "tiles": {
+                        "runs": {
+                            "label": "Runs",
+                            "hint": "{count} a day on average"
+                        },
+                        "actions": {
+                            "label": "Actions taken",
+                            "hint": "{percent}% of them were lookups",
+                            "none": "Nothing was touched in this period"
+                        },
+                        "oversight": {
+                            "label": "Waited for a person",
+                            "hint": "{minutes} minutes to a decision, typically",
+                            "none": "Nothing waited for a person"
+                        },
+                        "unfinished": {
+                            "label": "Never finished",
+                            "hint": "{count} of them were refused"
+                        }
+                    },
+                    "chart": {
+                        "title": "Runs per day",
+                        "empty": "Nothing has run in this period.",
+                        "finished": "Finished",
+                        "waited": "Waited for a person",
+                        "unfinished": "Never finished"
+                    },
+                    "touched": {
+                        "title": "What it was allowed to touch",
+                        "read": "Read something",
+                        "write": "Changed something",
+                        "external": "Sent something outside",
+                        "destructive": "Deleted something",
+                        "empty": "Nothing was touched in this period."
+                    },
+                    "risk": {
+                        "title": "Risk ratings across {count} systems",
+                        "high": "High",
+                        "medium": "Medium",
+                        "low": "Low",
+                        "unrated": "Not yet rated",
+                        "warning": "Nothing else here means much until these are rated.",
+                        "empty": "Nothing is registered yet."
+                    },
+                    "busiest": {
+                        "title": "Busiest systems",
+                        "runs": "{count} runs",
+                        "empty": "Nothing has run in this period."
+                    }
                 }
             },
             "auditTrail": {
@@ -2209,14 +2298,38 @@
                 "scope": {
                     "agent": "One assistant",
                     "workspace": "One workspace",
-                    "everywhere": "Everywhere"
+                    "everywhere": "Everywhere",
+                    "AGENT": "One assistant",
+                    "WORKSPACE": "One workspace",
+                    "EVERYWHERE": "Everywhere"
+                },
+                "searchPlaceholder": "Search by rule or what it says",
+                "noMatches": "No rules match these filters",
+                "filters": {
+                    "priorityLabel": "Priority",
+                    "allPriorities": "Any priority",
+                    "scopeLabel": "Applies to",
+                    "allScopes": "Anywhere",
+                    "clear": "Clear"
+                },
+                "pagination": {
+                    "previous": "Previous",
+                    "next": "Next",
+                    "page": "Page {page} of {total}",
+                    "showing": "Showing {start}-{end} of {total}"
+                },
+                "priority": {
+                    "CRITICAL": "Critical",
+                    "HIGH": "High",
+                    "NORMAL": "Normal",
+                    "LOW": "Low"
                 }
             }
         },
         "access": {
             "auditorTitle": "You have auditor access.",
-                "auditorDescription": "You can see the governance screens — the AI register, approvals, the audit trail and the policies in force. Nothing else on the platform is open to your account, and nothing here can be changed from it.",
-                "readOnlyTitle": "You have read-only access.",
+            "auditorDescription": "You can see the governance screens — the AI register, approvals, the audit trail and the policies in force. Nothing else on the platform is open to your account, and nothing here can be changed from it.",
+            "readOnlyTitle": "You have read-only access.",
             "readOnlyDescription": "You can see everything here, and nothing on these screens can be changed from your account."
         },
         "users": {

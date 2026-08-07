@@ -1,8 +1,11 @@
 import { describe, expect, test } from "vitest";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  NO_REGISTER_FILTERS,
   describeMissing,
+  filterRegister,
   sortRegister,
+  sortRegisterBy,
   summariseRegister,
   toAssistantEntry,
   toWidgetEntry,
@@ -223,3 +226,157 @@ describe("risk shows up in the register itself", () => {
   });
 });
 
+
+describe("finding something in a register that builds itself", () => {
+  const make = (overrides: Partial<AiSystemEntry>): AiSystemEntry => ({
+    id: "x",
+    kind: "ASSISTANT",
+    name: "Invoice checker",
+    purpose: "Reads supplier invoices",
+    ownerName: "Dana Okafor",
+    risk: "LOW",
+    humanApproves: true,
+    facesPublic: false,
+    missing: [],
+    ...overrides,
+  });
+
+  const entries = [
+    make({ id: "a", name: "Comax - Prospect Search Agent", purpose: "Finds prospects", risk: "UNRATED" }),
+    make({ id: "b", name: "Rightmove Agent", ownerName: "", missing: ["Nobody is accountable for this."] }),
+    make({ id: "c", name: "Main website bot", kind: "WIDGET", risk: "HIGH", model: "fast-mini-preview" }),
+  ];
+
+  test("no filters leaves the register alone", () => {
+    expect(filterRegister(entries, NO_REGISTER_FILTERS)).toHaveLength(3);
+  });
+
+  test("searches the name", () => {
+    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "rightmove" });
+
+    expect(found.map((entry) => entry.id)).toEqual(["b"]);
+  });
+
+  test("searches what a system is for, not only what it is called", () => {
+    // Somebody looking for the prospecting assistant may not remember its name.
+    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "prospects" });
+
+    expect(found.map((entry) => entry.id)).toEqual(["a"]);
+  });
+
+  test("searches the person accountable and the model on the row", () => {
+    expect(filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "dana" })).toHaveLength(2);
+    expect(filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "fast-mini" })).toHaveLength(1);
+  });
+
+  test("ignores case and stray spacing, because people type how they type", () => {
+    expect(filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "  RIGHTMOVE " })).toHaveLength(1);
+  });
+
+  test("filters by rating", () => {
+    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, risk: "HIGH" });
+
+    expect(found.map((entry) => entry.id)).toEqual(["c"]);
+  });
+
+  test("filters by what kind of thing it is", () => {
+    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, kind: "WIDGET" });
+
+    expect(found.map((entry) => entry.id)).toEqual(["c"]);
+  });
+
+  test("shows only what needs a person", () => {
+    const found = filterRegister(entries, { ...NO_REGISTER_FILTERS, attentionOnly: true });
+
+    expect(found.map((entry) => entry.id)).toEqual(["b"]);
+  });
+
+  test("filters stack rather than replacing each other", () => {
+    const found = filterRegister(entries, {
+      ...NO_REGISTER_FILTERS,
+      search: "agent",
+      risk: "UNRATED",
+    });
+
+    expect(found.map((entry) => entry.id)).toEqual(["a"]);
+  });
+
+  test("nothing matching is empty rather than everything", () => {
+    // The failure that turns a filter into a liar is falling back to the full
+    // list when it matches nothing.
+    expect(filterRegister(entries, { ...NO_REGISTER_FILTERS, search: "zzz" })).toEqual([]);
+  });
+});
+
+describe("reordering the register without losing what it is for", () => {
+  const make = (overrides: Partial<AiSystemEntry>): AiSystemEntry => ({
+    id: "x",
+    kind: "ASSISTANT",
+    name: "Something",
+    purpose: "Does a thing",
+    ownerName: "Someone",
+    risk: "LOW",
+    humanApproves: true,
+    facesPublic: false,
+    missing: [],
+    ...overrides,
+  });
+
+  const entries = [
+    make({ id: "quiet", name: "Zeta sandbox", activity: 0, lastActiveAt: 10, risk: "UNRATED" }),
+    make({ id: "busy", name: "Alpha research", activity: 200, lastActiveAt: 50, risk: "UNRATED" }),
+    make({ id: "rated", name: "Mid discovery", activity: 11, lastActiveAt: 99, risk: "HIGH" }),
+  ];
+
+  test("the default still puts what needs a person first", () => {
+    // The register exists to surface incomplete records. A screen that opens
+    // sorted by name buries that under the alphabet.
+    const incomplete = make({ id: "gap", activity: 0, missing: ["No purpose recorded."] });
+
+    expect(sortRegisterBy([...entries, incomplete], "ATTENTION")[0].id).toBe("gap");
+  });
+
+  test("busiest first says which unrated system is actually urgent", () => {
+    expect(sortRegisterBy(entries, "ACTIVITY").map((entry) => entry.id)).toEqual([
+      "busy",
+      "rated",
+      "quiet",
+    ]);
+  });
+
+  test("something with no activity figure sorts below something with none recorded as zero", () => {
+    // A widget is not run the way an assistant is, and pretending it ran nought
+    // times would rank it alongside an assistant that genuinely sat idle.
+    const widget = make({ id: "widget", kind: "WIDGET", activity: undefined });
+
+    expect(sortRegisterBy([widget, make({ id: "idle", activity: 0 })], "ACTIVITY").map((e) => e.id)).toEqual(
+      ["idle", "widget"],
+    );
+  });
+
+  test("most recently active first", () => {
+    expect(sortRegisterBy(entries, "LAST_ACTIVE").map((entry) => entry.id)).toEqual([
+      "rated",
+      "busy",
+      "quiet",
+    ]);
+  });
+
+  test("by name, for finding one you already know", () => {
+    expect(sortRegisterBy(entries, "NAME").map((entry) => entry.id)).toEqual([
+      "busy",
+      "rated",
+      "quiet",
+    ]);
+  });
+
+  test("riskiest first", () => {
+    expect(sortRegisterBy(entries, "RISK")[0].id).toBe("rated");
+  });
+
+  test("sorting never loses an entry", () => {
+    for (const sort of ["ATTENTION", "ACTIVITY", "LAST_ACTIVE", "NAME", "RISK"] as const) {
+      expect(sortRegisterBy(entries, sort)).toHaveLength(3);
+    }
+  });
+});

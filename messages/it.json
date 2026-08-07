@@ -2041,7 +2041,40 @@
                     "risk": "Rischio",
                     "owner": "Responsabile",
                     "oversight": "Supervisione",
-                    "lastActive": "Ultima attività"
+                    "lastActive": "Ultima attività",
+                    "activity": "Attività",
+                    "runs": "{count} esecuzioni"
+                },
+                "searchPlaceholder": "Cerca per nome, scopo, persona o modello",
+                "noMatches": "Nessun sistema di IA corrisponde a questi filtri",
+                "noPurpose": "Nessuno scopo registrato",
+                "filters": {
+                    "kindLabel": "Tipo",
+                    "allKinds": "Qualsiasi tipo",
+                    "clear": "Azzera"
+                },
+                "pagination": {
+                    "previous": "Precedente",
+                    "next": "Successiva",
+                    "empty": "Non è ancora in funzione alcun sistema di IA",
+                    "noMatches": "Nessun sistema di IA corrisponde a questi filtri",
+                    "page": "Pagina {page} di {total}",
+                    "showing": "Da {start} a {end} di {total}"
+                },
+                "panel": {
+                    "notEditable": "Tutto il resto di questo sistema si imposta dove il sistema stesso viene gestito.",
+                    "purposeLabel": "A che cosa serve",
+                    "purposePlaceholder": "Descrivi in una frase che cosa fa questo sistema.",
+                    "ownerLabel": "Persona responsabile",
+                    "ownerKeep": "Mantieni {name}",
+                    "ownerNone": "Nessuno assegnato",
+                    "ownerEmpty": "Non c'è ancora nessuno a cui attribuire la responsabilità.",
+                    "riskLabel": "Livello di rischio",
+                    "riskUnset": "Non valutato",
+                    "recorded": "Ogni modifica qui viene registrata nel registro attività.",
+                    "save": "Salva",
+                    "saveFailed": "Non è stato possibile salvare. Riprova.",
+                    "runs": "{count} esecuzioni"
                 }
             },
             "evidence": {
@@ -2135,65 +2168,121 @@
                         "settled": "I record si conservano abbastanza a lungo.",
                         "notSetUp": "Nulla viene cancellato automaticamente. Non viola alcuna regola."
                     }
+                },
+                "checksTitle": "Che cosa controlliamo",
+                "activity": {
+                    "title": "Che cosa è successo davvero",
+                    "rangeLabel": "Fino a quando indietro",
+                    "range": "Ultimi {count} giorni",
+                    "truncated": "Questo copre quanto una singola lettura può contenere, quindi i numeri qui sotto sono un minimo, non un totale. Restringi il periodo per un quadro esatto.",
+                    "tiles": {
+                        "runs": {
+                            "label": "Esecuzioni",
+                            "hint": "{count} al giorno in media"
+                        },
+                        "actions": {
+                            "label": "Azioni compiute",
+                            "hint": "il {percent}% erano semplici letture",
+                            "none": "Nulla è stato toccato in questo periodo"
+                        },
+                        "oversight": {
+                            "label": "In attesa di una persona",
+                            "hint": "{minutes} minuti per una decisione, di norma",
+                            "none": "Nulla ha atteso una persona"
+                        },
+                        "unfinished": {
+                            "label": "Mai concluse",
+                            "hint": "{count} sono state rifiutate"
+                        }
+                    },
+                    "chart": {
+                        "title": "Esecuzioni al giorno",
+                        "empty": "Nulla è stato eseguito in questo periodo.",
+                        "finished": "Concluse",
+                        "waited": "In attesa di una persona",
+                        "unfinished": "Mai concluse"
+                    },
+                    "touched": {
+                        "title": "Che cosa poteva toccare",
+                        "read": "Ha letto qualcosa",
+                        "write": "Ha modificato qualcosa",
+                        "external": "Ha inviato qualcosa all'esterno",
+                        "destructive": "Ha eliminato qualcosa",
+                        "empty": "Nulla è stato toccato in questo periodo."
+                    },
+                    "risk": {
+                        "title": "Livelli di rischio su {count} sistemi",
+                        "high": "Alto",
+                        "medium": "Medio",
+                        "low": "Basso",
+                        "unrated": "Non ancora valutato",
+                        "warning": "Nulla di tutto questo significa molto finché non sono valutati.",
+                        "empty": "Non è ancora registrato nulla."
+                    },
+                    "busiest": {
+                        "title": "Sistemi più attivi",
+                        "runs": "{count} esecuzioni",
+                        "empty": "Nulla è stato eseguito in questo periodo."
+                    }
                 }
             },
             "auditTrail": {
-"title": "Registro attività",
-                    "description": "Tutto ciò che qualcuno ha fatto su questa piattaforma, e quando.",
-                    "searchPlaceholder": "Cerca per azione, persona o cosa è successo",
-                    "showing": "Da {from} a {to}",
-                    "empty": "Non è ancora stato registrato nulla",
-                    "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa",
+                "title": "Registro attività",
+                "description": "Tutto ciò che qualcuno ha fatto su questa piattaforma, e quando.",
+                "searchPlaceholder": "Cerca per azione, persona o cosa è successo",
+                "showing": "Da {from} a {to}",
+                "empty": "Non è ancora stato registrato nulla",
+                "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa",
+                "noTarget": "Niente in particolare",
+                "targetNotNamed": "Non ha più un nome",
+                "noWorkspace": "Tutta la piattaforma",
+                "filters": {
+                    "periodLabel": "Fino a quando indietro",
+                    "period": "Ultimi {count} giorni",
+                    "allTime": "Sempre",
+                    "actionLabel": "Azione",
+                    "allActions": "Qualsiasi azione",
+                    "personLabel": "Persona",
+                    "allPeople": "Chiunque",
+                    "workspaceLabel": "Spazio di lavoro",
+                    "allWorkspaces": "Qualsiasi spazio di lavoro",
+                    "clear": "Azzera"
+                },
+                "export": {
+                    "action": "Esporta",
+                    "working": "Esportazione…",
+                    "truncated": "L'esportazione si è fermata a {count} record, il massimo che un file può contenere. Restringi le date o i filtri ed esporta di nuovo per essere certo di avere tutto."
+                },
+                "columns": {
+                    "action": "Azione",
+                    "who": "Chi",
+                    "change": "Cosa è successo",
+                    "target": "Su cosa",
+                    "workspace": "Spazio di lavoro",
+                    "when": "Quando"
+                },
+                "pagination": {
+                    "previous": "Precedente",
+                    "next": "Successiva",
+                    "page": "Pagina {page}"
+                },
+                "entry": {
+                    "back": "Torna al registro attività",
+                    "notFound": "Questa voce non è disponibile. Potrebbe essere stata rimossa da una regola di conservazione.",
+                    "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa.",
                     "noTarget": "Niente in particolare",
-                    "targetNotNamed": "Non ha più un nome",
-                    "noWorkspace": "Tutta la piattaforma",
-                    "filters": {
-                        "periodLabel": "Fino a quando indietro",
-                        "period": "Ultimi {count} giorni",
-                        "allTime": "Sempre",
-                        "actionLabel": "Azione",
-                        "allActions": "Qualsiasi azione",
-                        "personLabel": "Persona",
-                        "allPeople": "Chiunque",
-                        "workspaceLabel": "Spazio di lavoro",
-                        "allWorkspaces": "Qualsiasi spazio di lavoro",
-                        "clear": "Azzera"
-                    },
-                    "export": {
-                        "action": "Esporta",
-                        "working": "Esportazione…",
-                        "truncated": "L'esportazione si è fermata a {count} record, il massimo che un file può contenere. Restringi le date o i filtri ed esporta di nuovo per essere certo di avere tutto."
-                    },
-                    "columns": {
-                        "action": "Azione",
-                        "who": "Chi",
-                        "change": "Cosa è successo",
-                        "target": "Su cosa",
-                        "workspace": "Spazio di lavoro",
-                        "when": "Quando"
-                    },
-                    "pagination": {
-                        "previous": "Precedente",
-                        "next": "Successiva",
-                        "page": "Pagina {page}"
-                    },
-                    "entry": {
-                        "back": "Torna al registro attività",
-                        "notFound": "Questa voce non è disponibile. Potrebbe essere stata rimossa da una regola di conservazione.",
-                        "noChangeRecorded": "Non è stato registrato nulla oltre all'azione stessa.",
-                        "noTarget": "Niente in particolare",
-                        "changesTitle": "Cosa è successo",
-                        "noChangesDetail": "Questa voce registra che qualcosa è accaduto, e nulla di più.",
-                        "valuesNotRecorded": "Registrata prima che si conservassero i valori precedenti e successivi, quindi i valori non sono noti.",
-                        "nothing": "niente",
-                        "rawTitle": "Il record così com'è stato scritto",
-                        "facts": {
-                            "who": "Chi l'ha fatto",
-                            "when": "Quando",
-                            "what": "Tipo di record",
-                            "target": "Quale record"
-                        }
+                    "changesTitle": "Cosa è successo",
+                    "noChangesDetail": "Questa voce registra che qualcosa è accaduto, e nulla di più.",
+                    "valuesNotRecorded": "Registrata prima che si conservassero i valori precedenti e successivi, quindi i valori non sono noti.",
+                    "nothing": "niente",
+                    "rawTitle": "Il record così com'è stato scritto",
+                    "facts": {
+                        "who": "Chi l'ha fatto",
+                        "when": "Quando",
+                        "what": "Tipo di record",
+                        "target": "Quale record"
                     }
+                }
             },
             "policies": {
                 "title": "Politiche in vigore",
@@ -2209,14 +2298,38 @@
                 "scope": {
                     "agent": "Un assistente",
                     "workspace": "Uno spazio di lavoro",
-                    "everywhere": "Ovunque"
+                    "everywhere": "Ovunque",
+                    "AGENT": "Un assistente",
+                    "WORKSPACE": "Uno spazio di lavoro",
+                    "EVERYWHERE": "Ovunque"
+                },
+                "searchPlaceholder": "Cerca per regola o per ciò che dice",
+                "noMatches": "Nessuna regola corrisponde a questi filtri",
+                "filters": {
+                    "priorityLabel": "Priorità",
+                    "allPriorities": "Qualsiasi priorità",
+                    "scopeLabel": "Si applica a",
+                    "allScopes": "Ovunque",
+                    "clear": "Azzera"
+                },
+                "pagination": {
+                    "previous": "Precedente",
+                    "next": "Successiva",
+                    "page": "Pagina {page} di {total}",
+                    "showing": "Da {start} a {end} di {total}"
+                },
+                "priority": {
+                    "CRITICAL": "Critica",
+                    "HIGH": "Alta",
+                    "NORMAL": "Normale",
+                    "LOW": "Bassa"
                 }
             }
         },
         "access": {
             "auditorTitle": "Hai accesso come revisore.",
-                "auditorDescription": "Puoi vedere le schermate di governance — il registro IA, le approvazioni, il registro attività e le politiche in vigore. Nient’altro sulla piattaforma è aperto al tuo account e nulla qui può essere modificato.",
-                "readOnlyTitle": "Hai accesso in sola lettura.",
+            "auditorDescription": "Puoi vedere le schermate di governance — il registro IA, le approvazioni, il registro attività e le politiche in vigore. Nient’altro sulla piattaforma è aperto al tuo account e nulla qui può essere modificato.",
+            "readOnlyTitle": "Hai accesso in sola lettura.",
             "readOnlyDescription": "Puoi vedere tutto qui e nulla in queste schermate può essere modificato dal tuo account."
         },
         "users": {
