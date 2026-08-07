@@ -12,13 +12,15 @@
  * So the mailed link points at a page that holds the code and does nothing with
  * it. The parameter is renamed on the way out, because a page carrying `code`
  * would be redeemed by the provider on mount wherever it lived — the rename is
- * what makes the interstitial inert rather than merely quiet. Only the button
- * on that page sends anyone to the URL that actually spends it.
+ * what makes the interstitial inert rather than merely quiet. Redemption
+ * happens only inside a click handler on that page: after an anchor-based
+ * first version was spent by a gateway that renders pages and follows the
+ * links it finds in them, no URL that redeems on load exists anywhere — not in
+ * the email, not in the page's DOM.
  *
- * This does not defeat a scanner that renders the page and clicks its buttons.
- * It defeats the ones that follow links, which is what Safe Links, Mimecast and
- * Proofpoint do. The typed one-time code remains the answer for the rest, and
- * neither option takes the other away.
+ * A sandbox that synthetically clicks buttons could still spend the code. The
+ * typed one-time code remains the answer for those, and neither option takes
+ * the other away.
  */
 
 /** The query parameter the interstitial carries. Deliberately not `code`. */
@@ -70,18 +72,4 @@ export function buildConsentUrl(actionUrl: string, siteUrl: string | undefined):
   }
 
   return consent.toString();
-}
-
-/**
- * The URL the consent button sends people to — the one that actually redeems.
- *
- * Built on the client from the parameters the interstitial was given, so the
- * `code` name only ever appears in a URL a person navigated to on purpose.
- */
-export function buildRedemptionUrl(code: string, redirectTo?: string | null): string {
-  const params = new URLSearchParams({ code });
-  if (redirectTo) {
-    params.set("redirectTo", redirectTo);
-  }
-  return `/?${params.toString()}`;
 }

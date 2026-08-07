@@ -1,41 +1,79 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { KeyRound, Loader2, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  CONSENT_CODE_PARAM,
-  buildRedemptionUrl,
-} from "@/convex/magicLinkUrlService";
+import { CONSENT_CODE_PARAM } from "@/convex/magicLinkUrlService";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
 
 /**
  * The page a sign-in link lands on, which deliberately does nothing on arrival.
  *
- * A mail gateway that follows links reaches exactly this, and leaves with
- * nothing: the code sits in a parameter the auth client does not recognise, so
- * no redemption happens on mount. Pressing the button is what moves the code
- * onto the name the client reads, and only a person does that.
+ * The first version of this page held the code behind a plain anchor, on the
+ * theory that mail scanners follow links but do not click. Production proved
+ * the theory half right: the gateway at the affected domain renders pages and
+ * follows the anchors it finds in them, and it spent the code 93 seconds after
+ * send — before the email had even been released to the inbox.
  *
- * It renders as a plain anchor rather than a click handler on purpose. If
- * JavaScript never runs the link still works, and there is no effect here that
- * a rendering scanner could trip by loading the page.
+ * So there is now no URL anywhere that redeems on load. Not in the email, not
+ * in this page's DOM. Redemption happens only inside a click handler on a
+ * button with no href: a crawler that renders this page and harvests
+ * navigation targets finds a dead end. The page therefore requires JavaScript,
+ * which is the trade being made — the no-JS anchor was precisely the leak, and
+ * the app this signs into cannot run without JavaScript either.
+ *
+ * A sandbox that synthetically clicks buttons would still spend the code.
+ * Those exist and are rarer; if one turns up, the answer is not another round
+ * of this arms race but the typed one-time code, which is immune by
+ * construction because nothing in the email can spend it.
  */
 function VerifyContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { signIn } = useAuthActions();
   const code = searchParams.get(CONSENT_CODE_PARAM);
   const redirectTo = sanitizeAuthRedirect(searchParams.get("redirectTo"));
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [state, setState] = useState<"idle" | "signingIn" | "failed">("idle");
 
-  if (!code) {
+  const handleSignIn = async () => {
+    if (!code || state === "signingIn") return;
+    setState("signingIn");
+    try {
+      /*
+       * No provider, just the code — exactly how the library's own
+       * URL-code flow calls it (`signIn(undefined, { code })` in its React
+       * client). The public typing requires a provider name; the runtime
+       * resolves the code without one, and passing a name here would tie
+       * this page to one provider when the code already knows its own.
+       */
+      const signInWithCode = signIn as (
+        provider?: string,
+        params?: { code: string }
+      ) => ReturnType<typeof signIn>;
+      const result = await signInWithCode(undefined, { code });
+      if (result.signingIn) {
+        router.replace(redirectTo);
+        return;
+      }
+      setState("failed");
+    } catch {
+      setState("failed");
+    }
+  };
+
+  if (!code || state === "failed") {
     return (
       <div className="flex flex-col gap-4 text-center">
-        <h1 className="text-xl font-semibold">This link is incomplete</h1>
+        <h1 className="text-xl font-semibold">
+          {state === "failed" ? "That link has already been used" : "This link is incomplete"}
+        </h1>
         <p className="text-sm text-secondary">
-          It may have been shortened or rewritten in transit. Ask for a new one, or sign in with a
-          typed code instead.
+          {state === "failed"
+            ? "A sign-in link works once. Ask for a new one, or sign in with a typed code instead."
+            : "It may have been shortened or rewritten in transit. Ask for a new one, or sign in with a typed code instead."}
         </p>
         <Link
           href="/login"
@@ -60,12 +98,13 @@ function VerifyContent() {
           links before you do, and a sign-in link only works once.
         </p>
       </div>
-      <a
-        href={buildRedemptionUrl(code, redirectTo)}
-        onClick={() => setIsNavigating(true)}
-        className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-brand px-4 py-3 text-sm font-semibold"
+      <button
+        type="button"
+        onClick={handleSignIn}
+        disabled={state === "signingIn"}
+        className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-brand px-4 py-3 text-sm font-semibold disabled:opacity-70"
       >
-        {isNavigating ? (
+        {state === "signingIn" ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
             Signing you in
@@ -76,7 +115,7 @@ function VerifyContent() {
             <ChevronRight className="h-4 w-4" />
           </>
         )}
-      </a>
+      </button>
     </div>
   );
 }

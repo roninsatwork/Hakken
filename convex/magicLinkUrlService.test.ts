@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  CONSENT_CODE_PARAM,
-  buildConsentUrl,
-  buildRedemptionUrl,
-} from "./magicLinkUrlService";
+import { CONSENT_CODE_PARAM, buildConsentUrl } from "./magicLinkUrlService";
 
 const SITE = "https://sonae.example.com";
 
@@ -51,22 +47,5 @@ describe("buildConsentUrl", () => {
 
   test("returns the original URL when it cannot be parsed", () => {
     expect(buildConsentUrl("not a url", SITE)).toBe("not a url");
-  });
-});
-
-describe("buildRedemptionUrl", () => {
-  test("restores the name the client redeems", () => {
-    expect(buildRedemptionUrl("abc123")).toBe("/?code=abc123");
-  });
-
-  test("keeps the redirect alongside the code", () => {
-    const url = new URL(buildRedemptionUrl("abc123", "/app/reports"), SITE);
-    expect(url.searchParams.get("code")).toBe("abc123");
-    expect(url.searchParams.get("redirectTo")).toBe("/app/reports");
-  });
-
-  test("omits an absent redirect rather than sending an empty one", () => {
-    expect(buildRedemptionUrl("abc123", null)).toBe("/?code=abc123");
-    expect(buildRedemptionUrl("abc123", "")).toBe("/?code=abc123");
   });
 });
