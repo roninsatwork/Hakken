@@ -31,7 +31,6 @@
     "src/app/(dashboard)/admin/users/[id]/page.tsx",
     "src/app/(dashboard)/admin/users/invite/page.tsx",
     "src/app/(dashboard)/admin/workflows/[id]/page.tsx",
-    "src/app/(dashboard)/app/[workspace]/_components/TableControls.tsx",
     "src/app/(dashboard)/app/[workspace]/spreadsheet-import/page.tsx",
     "src/app/(dashboard)/app/agentic-testing/page.tsx",
     "src/app/(dashboard)/app/arcade/ronins-run/page.tsx",

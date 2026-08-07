@@ -22,6 +22,7 @@
  *   CONTENT      in-page elements that overlap each other
  *   RAISED       something that must beat its own page's content
  *   PAGE_CHROME  toolbars, filter bars, sticky table headings
+ *   PAGE_MENU    a menu opened out of page chrome, which must clear all of it
  *   HEADER       the app header and anything opening out of it
  *   SIDEBAR      the main navigation, which covers the page when it is a drawer
  *   OVERLAY      modals and their backdrops
@@ -30,11 +31,23 @@
  * `PAGE_CHROME` is deliberately below `HEADER`. A filter bar has to cover the
  * table under it and must never cover the account menu. `SIDEBAR` stays above
  * `HEADER` because on a narrow screen it is a drawer over the whole page.
+ *
+ * `PAGE_MENU` exists because a page can hold more than one bar. The Comax
+ * customers screen stacks three — filters, then the clear-and-import row, then
+ * the research row — and all three were correctly `PAGE_CHROME`. Correct, and
+ * still a tie: the filter dropdown opened underneath the two rows below it,
+ * because each bar is blurred and so traps its own children, and equal siblings
+ * are settled by document order. A menu is not chrome; it is the thing chrome
+ * opens, and it has to clear every sibling bar whatever order they are in. It
+ * belongs to the page, so it stays under `HEADER` — the account menu still
+ * wins. Anything using this must escape its bar's stacking context to reach it,
+ * which in practice means a portal.
  */
 export const LAYER = {
   CONTENT: "z-0",
   RAISED: "z-10",
   PAGE_CHROME: "z-20",
+  PAGE_MENU: "z-30",
   HEADER: "z-40",
   SIDEBAR: "z-50",
   OVERLAY: "z-[60]",
@@ -48,6 +61,7 @@ export const LAYER_ORDER: LayerName[] = [
   "CONTENT",
   "RAISED",
   "PAGE_CHROME",
+  "PAGE_MENU",
   "HEADER",
   "SIDEBAR",
   "OVERLAY",

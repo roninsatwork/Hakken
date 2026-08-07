@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search, X } from "lucide-react";
+
+import { LAYER } from "@/src/ui/lib/layers";
 
 /**
  * The search box and filter dropdowns above the data tables.
@@ -85,6 +88,9 @@ export function TableSearchInput({
  */
 const FILTER_BOX_THRESHOLD = 10;
 
+/** Room the panel needs below the trigger before it flips above it instead. */
+const MENU_MAX_HEIGHT = 340;
+
 export function TableFilterSelect({
   label,
   options,
@@ -104,7 +110,9 @@ export function TableFilterSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [needle, setNeedle] = useState("");
+  const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Reopening should offer the whole list again, not the last search into it.
   const close = () => {
@@ -112,14 +120,42 @@ export function TableFilterSelect({
     setNeedle("");
   };
 
+  // The panel is fixed to the viewport, so it needs the trigger's place in it.
+  // Right-hand offset rather than left, because the panel is anchored to the
+  // trigger's right edge and is wider than the trigger.
+  const measure = useCallback(() => {
+    const trigger = containerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const below = window.innerHeight - rect.bottom;
+    // Falling off the bottom of the window is the one case worth handling:
+    // these bars sit near the top, but the research row's copy can push them
+    // down on a short screen.
+    const flip = below < MENU_MAX_HEIGHT && rect.top > below;
+    setAnchor({
+      top: flip ? rect.top - MENU_MAX_HEIGHT - 4 : rect.bottom + 4,
+      right: window.innerWidth - rect.right,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    measure();
+  }, [isOpen, measure]);
+
   useEffect(() => {
     if (!isOpen) return;
 
+    // The panel no longer lives inside the trigger, so "outside" is now both
+    // of them. Without the menu in this test, mousedown inside the list closes
+    // it and unmounts the option before its click can land — the dropdown
+    // would look like it ignored every choice.
     function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
-        setNeedle("");
-      }
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setIsOpen(false);
+      setNeedle("");
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -127,14 +163,23 @@ export function TableFilterSelect({
         setNeedle("");
       }
     }
+    // Fixed panels do not travel with the page, so an unfollowed scroll leaves
+    // the list hanging beside a trigger that has moved on.
+    function handleReflow() {
+      measure();
+    }
 
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleReflow, true);
+    window.addEventListener("resize", handleReflow);
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleReflow, true);
+      window.removeEventListener("resize", handleReflow);
     };
-  }, [isOpen]);
+  }, [isOpen, measure]);
 
   const visible = needle
     ? options.filter((option) => option.toLowerCase().includes(needle.toLowerCase()))
@@ -165,45 +210,58 @@ export function TableFilterSelect({
         <ChevronDown className="w-4 h-4 shrink-0" />
       </button>
 
-      {isOpen && (
+      {isOpen &&
+        anchor &&
+        // Rendered into the body rather than beside the trigger. The bar around
+        // it is blurred, which makes it a stacking context, so a panel left
+        // inside could never rise above the sibling bars further down the page
+        // however large its z-index — it opened underneath the rows below it.
+        // Out here it competes with them directly, at a layer chosen for it.
+        //
         // Anchored to the trigger's right edge, not its left. These sit at the
         // right-hand end of the control bar, and a panel wider than its button
         // opening rightwards runs off the screen — which it did, clipping the
         // longer group names. Opening leftwards there is always room for.
-        <div className="absolute right-0 z-50 mt-1 min-w-[240px] max-w-[340px] bg-sidebar border border-border-dim rounded-[12px] shadow-lg backdrop-blur-xl overflow-hidden">
-          {options.length > FILTER_BOX_THRESHOLD && (
-            <div className="p-2 border-b border-border-dim">
-              <input
-                type="text"
-                autoFocus
-                value={needle}
-                onChange={(event) => setNeedle(event.target.value)}
-                placeholder={filterPlaceholder}
-                aria-label={filterPlaceholder}
-                className="w-full px-2 py-1.5 bg-background border border-border-dim rounded-[8px] text-[13px] outline-none focus:border-brand/50"
-              />
-            </div>
-          )}
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ top: anchor.top, right: anchor.right }}
+            className={`fixed ${LAYER.PAGE_MENU} min-w-[240px] max-w-[340px] bg-sidebar border border-border-dim rounded-[12px] shadow-lg backdrop-blur-xl overflow-hidden`}
+          >
+            {options.length > FILTER_BOX_THRESHOLD && (
+              <div className="p-2 border-b border-border-dim">
+                <input
+                  type="text"
+                  autoFocus
+                  value={needle}
+                  onChange={(event) => setNeedle(event.target.value)}
+                  placeholder={filterPlaceholder}
+                  aria-label={filterPlaceholder}
+                  className="w-full px-2 py-1.5 bg-background border border-border-dim rounded-[8px] text-[13px] outline-none focus:border-brand/50"
+                />
+              </div>
+            )}
 
-          <ul role="listbox" className="max-h-[280px] overflow-y-auto py-1">
-            <li>
-              <Option selected={value === null} onSelect={() => select(null)}>
-                {allLabel}
-              </Option>
-            </li>
-            {visible.map((option) => (
-              <li key={option}>
-                <Option selected={option === value} onSelect={() => select(option)}>
-                  {option}
+            <ul role="listbox" className="max-h-[280px] overflow-y-auto py-1">
+              <li>
+                <Option selected={value === null} onSelect={() => select(null)}>
+                  {allLabel}
                 </Option>
               </li>
-            ))}
-            {visible.length === 0 && (
-              <li className="px-3 py-2 text-[13px] text-muted">{noMatchesLabel}</li>
-            )}
-          </ul>
-        </div>
-      )}
+              {visible.map((option) => (
+                <li key={option}>
+                  <Option selected={option === value} onSelect={() => select(option)}>
+                    {option}
+                  </Option>
+                </li>
+              ))}
+              {visible.length === 0 && (
+                <li className="px-3 py-2 text-[13px] text-muted">{noMatchesLabel}</li>
+              )}
+            </ul>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
