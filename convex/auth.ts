@@ -2,8 +2,6 @@ import { convexAuth } from "@convex-dev/auth/server";
 import type { AuthProviderConfig } from "@convex-dev/auth/server";
 
 import Google from "@auth/core/providers/google";
-import LinkedIn from "@auth/core/providers/linkedin";
-import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
 import Resend from "@auth/core/providers/resend";
 import { Email } from "@convex-dev/auth/providers/Email";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
@@ -12,7 +10,6 @@ import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
 import { buildConsentUrl } from "./magicLinkUrlService";
-import { gatedOAuthProviders } from "./oauthProviderDirectory";
 import {
   CODE_TTL_MS,
   expiryFrom,
@@ -178,34 +175,6 @@ const providers: AuthProviderConfig[] = [
     },
   }),
 ];
-
-/*
- * The optional OAuth providers, constructed only when their credentials exist.
- * `oauthProviderDirectory` decides which those are — the same description the
- * login screen reads to decide which buttons to draw, so a button never
- * appears whose sign-in would fail. Turning one on is two environment
- * variables in the Convex dashboard, no code change; which is how a bespoke
- * deployment says "our customers live in Microsoft 365" without owning a fork.
- */
-const gatedOAuthFactories: Record<string, () => AuthProviderConfig> = {
-  "microsoft-entra-id": () =>
-    MicrosoftEntraID({
-      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
-      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-    }),
-  linkedin: () =>
-    LinkedIn({
-      clientId: process.env.AUTH_LINKEDIN_ID,
-      clientSecret: process.env.AUTH_LINKEDIN_SECRET,
-    }),
-};
-
-for (const descriptor of gatedOAuthProviders(process.env)) {
-  const factory = gatedOAuthFactories[descriptor.id];
-  if (factory) {
-    providers.push(factory());
-  }
-}
 
 if (
   process.env.LOCAL_TEST_AUTH_ENABLED === "1" &&

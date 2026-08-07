@@ -1,8 +1,8 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ChevronRight, Loader2, Sparkles, CheckCircle2, KeyRound } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,23 +11,6 @@ import { api } from "@/convex/_generated/api";
 import { useSearchParams } from "next/navigation";
 import { sanitizeAuthRedirect } from "@/src/lib/authRedirect";
 import { describeVerdict, normaliseCode } from "@/convex/oneTimeCodeService";
-
-/**
- * One flat-colour glyph per optional provider, matching the Google button's
- * fill-current treatment rather than each brand's palette.
- */
-const OAUTH_ICONS: Record<string, ReactNode> = {
-  "microsoft-entra-id": (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
-      <path d="M3 3h8.5v8.5H3zM12.5 3H21v8.5h-8.5zM3 12.5h8.5V21H3zM12.5 12.5H21V21h-8.5z" />
-    </svg>
-  ),
-  linkedin: (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden>
-      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z" />
-    </svg>
-  ),
-};
 
 export default function LoginPage() {
   const t = useTranslations('login');
@@ -39,14 +22,6 @@ export default function LoginPage() {
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  /**
-   * The optional OAuth buttons, asked of the server because only it knows
-   * which credentials exist. Google is not in this loop — it predates the
-   * directory and its button is drawn unconditionally below.
-   */
-  const oauthProviders = useQuery(api.oauthProviders.getEnabledOAuthProviders);
-  const extraOAuthProviders = (oauthProviders ?? []).filter((p) => p.id !== "google");
-  const [submittingProviderId, setSubmittingProviderId] = useState<string | null>(null);
   const requestOneTimeCode = useMutation(api.oneTimeCodes.requestCode);
   const recordCodeVerified = useMutation(api.oneTimeCodes.recordVerified);
   const recordCodeFailed = useMutation(api.oneTimeCodes.recordFailed);
@@ -59,11 +34,6 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [isSubmittingCode, setIsSubmittingCode] = useState(false);
   const [codeError, setCodeError] = useState("");
-
-  const handleOAuthSignIn = async (providerId: string) => {
-    setSubmittingProviderId(providerId);
-    await signIn(providerId, { redirectTo });
-  };
 
   const handleGoogleSignIn = async () => {
     setIsSubmittingGoogle(true);
@@ -291,25 +261,6 @@ export default function LoginPage() {
                       </>
                     )}
                   </button>
-
-                  {extraOAuthProviders.map((provider) => (
-                    <button
-                      key={provider.id}
-                      type="button"
-                      onClick={() => handleOAuthSignIn(provider.id)}
-                      disabled={submittingProviderId === provider.id}
-                      className="ps-login-secondary mt-2"
-                    >
-                      {submittingProviderId === provider.id ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <>
-                          {OAUTH_ICONS[provider.id]}
-                          <span>{t('continueWith', { provider: provider.label })}</span>
-                        </>
-                      )}
-                    </button>
-                  ))}
                 </motion.form>
               ) : (
                 <motion.div
