@@ -258,7 +258,7 @@ async function seedEverything() {
 
     const agentId = await ctx.db.insert("agents", {
       name: "Researcher",
-      modelId: "gpt-test",
+      modelId: "model-test",
       thinkingMode: false,
       isActive: true,
       createdAt: Date.now(),
