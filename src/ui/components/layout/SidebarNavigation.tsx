@@ -247,6 +247,7 @@ class OptionalNavSection extends Component<
  * platform, holds a customer's name as a string.
  */
 function SalesDataNavItem({
+  isSignedIn,
   pathname,
   activeItem,
   isOpen,
@@ -254,6 +255,7 @@ function SalesDataNavItem({
   onSelect,
   t,
 }: {
+  isSignedIn: boolean;
   pathname: string;
   activeItem: string;
   isOpen: boolean;
@@ -261,7 +263,23 @@ function SalesDataNavItem({
   onSelect: () => void;
   t: (key: string) => string;
 }) {
-  const workspace = useQuery(api.companies.getMyWorkspaceModules);
+  /*
+   * Skipped until there is a signed-in user, like every other guarded query in
+   * this sidebar. `getMyWorkspaceModules` is a `tenantQuery`, so calling it
+   * without an identity throws `Unauthenticated` on the server — and the
+   * dashboard layout mounts this sidebar for the whole route group, including
+   * the moment after sign-out when the token has cleared but the tree has not
+   * unmounted yet.
+   *
+   * The boundary above caught the throw, so the only visible trace was a
+   * failed query on every sign-out in the Convex logs. A section that hides
+   * itself for a tick is the right outcome; asking the server a question it
+   * cannot answer is not.
+   */
+  const workspace = useQuery(
+    api.companies.getMyWorkspaceModules,
+    isSignedIn ? {} : "skip"
+  );
 
   // Undefined while loading. Drawing the section before the answer arrives
   // would flash a link at workspaces that never get one.
@@ -740,6 +758,7 @@ export default function SidebarNavigation() {
                     {/* template:remove:start salesData */}
                     <OptionalNavSection>
                       <SalesDataNavItem
+                        isSignedIn={!!user}
                         pathname={pathname}
                         activeItem={activeItem}
                         isOpen={openSections.salesData}

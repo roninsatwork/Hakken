@@ -20,7 +20,10 @@ vi.mock("@/convex/_generated/api", () => ({
   api: {
     agentRuns: { getPendingApprovalCount: "agentRuns:getPendingApprovalCount" },
     scheduler: { getPendingWorkflowApprovalCount: "scheduler:getPendingWorkflowApprovalCount" },
-    companies: { getCompanyById: "companies:getCompanyById" },
+    companies: {
+      getCompanyById: "companies:getCompanyById",
+      getMyWorkspaceModules: "companies:getMyWorkspaceModules",
+    },
     users: { getMe: "users:getMe", impersonateCompany: "users:impersonateCompany" },
   },
 }));
@@ -291,6 +294,57 @@ describe("SidebarNavigation auditor reach", () => {
     renderAsAuditor("/admin/governance");
 
     expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The sidebar mounts for the whole dashboard route group, including the moment
+ * after sign-out when the token has cleared but the tree has not unmounted. Its
+ * guarded queries have to be skipped until there is a caller to answer for, or
+ * the server is asked a question it can only refuse.
+ *
+ * The workspace-modules query was the one that did not, and because the section
+ * renders inside an error boundary the throw left no visible trace — only a
+ * failed query in the Convex logs on every sign-out.
+ */
+describe("SidebarNavigation guarded queries", () => {
+  const workspaceModulesCall = () =>
+    useQueryMock.mock.calls.find((call) => call[0] === "companies:getMyWorkspaceModules");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useMutationMock.mockReturnValue(vi.fn());
+    vi.mocked(usePathname).mockReturnValue("/app");
+  });
+
+  it("skips the workspace modules query when nobody is signed in", () => {
+    useQueryMock.mockImplementation((queryRef: unknown) => (
+      queryRef === "users:getMe" ? null : undefined
+    ));
+
+    render(<SidebarNavigation />);
+
+    expect(workspaceModulesCall()).toEqual(["companies:getMyWorkspaceModules", "skip"]);
+  });
+
+  // Undefined, not null: `getMe` has not answered yet. Still no identity to
+  // query with.
+  it("skips it while the current user is still loading", () => {
+    useQueryMock.mockReturnValue(undefined);
+
+    render(<SidebarNavigation />);
+
+    expect(workspaceModulesCall()).toEqual(["companies:getMyWorkspaceModules", "skip"]);
+  });
+
+  it("asks once there is a signed-in user", () => {
+    useQueryMock.mockImplementation((queryRef: unknown) => (
+      queryRef === "users:getMe" ? { role: "USER" } : undefined
+    ));
+
+    render(<SidebarNavigation />);
+
+    expect(workspaceModulesCall()).toEqual(["companies:getMyWorkspaceModules", {}]);
   });
 });
 
