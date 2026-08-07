@@ -77,8 +77,30 @@ export async function createOrUpdateSonaeAuthUser(
   const { email, name, image } = getAuthIdentity(args);
   const provider = args.provider?.id;
   const isEmailProvider = args.provider?.type === "email";
-  const isVerifiedEmail = args.profile?.emailVerified === true;
+  /*
+   * Google never sets `profile.emailVerified`, so reading only that flag meant
+   * `acceptPendingInvite` never ran for a Google sign-in and the invitation
+   * stayed PENDING for good — the directory showed a pending row sitting next
+   * to the very account it had just provisioned, and nothing would ever clear
+   * it.
+   *
+   * Two things in the framework combine to cause it. Auth.js's default profile
+   * mapper keeps only id/name/email/image, dropping Google's `email_verified`;
+   * and `verifyCodeAndSignIn` skips its second `createOrUpdateUser` call for
+   * oauth/oidc providers, which is the call that carries `emailVerified: true`
+   * on the email path. So this callback sees an OAuth sign-in exactly once,
+   * always unverified.
+   *
+   * Reaching here on an OAuth provider means the provider already
+   * authenticated the address against its own account — the same guarantee the
+   * flag stands for on the email path.
+   */
+  const isOAuthProvider = args.provider?.type === "oauth" || args.provider?.type === "oidc";
+  const isVerifiedEmail = args.profile?.emailVerified === true || isOAuthProvider;
   const isMagicLinkRequest = isEmailProvider && !isVerifiedEmail;
+  // The same acceptance, reached two ways. Recording a Google sign-in as
+  // MAGIC_LINK_VERIFIED would put a link that was never sent on the auth trail.
+  const verifiedEventType = isOAuthProvider ? "OAUTH_VERIFIED" : "MAGIC_LINK_VERIFIED";
 
   if (!email) {
     throw new Error("Invalid login: No email provided.");
@@ -104,7 +126,7 @@ export async function createOrUpdateSonaeAuthUser(
       const acceptedInvite = await acceptPendingInvite(ctx, email, now);
       await logAuthEvent(ctx, {
         email,
-        eventType: "MAGIC_LINK_VERIFIED",
+        eventType: verifiedEventType,
         timestamp: now,
         companyId: existingUser.companyId ?? acceptedInvite?.companyId,
         userId: existingUser._id,
@@ -191,7 +213,7 @@ export async function createOrUpdateSonaeAuthUser(
     const acceptedInvite = await acceptPendingInvite(ctx, email, now);
     await logAuthEvent(ctx, {
       email,
-      eventType: "MAGIC_LINK_VERIFIED",
+      eventType: verifiedEventType,
       timestamp: now,
       companyId: invite.companyId,
       userId: newUserId,

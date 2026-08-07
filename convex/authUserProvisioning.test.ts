@@ -123,6 +123,108 @@ describe("Sonae auth user provisioning", () => {
     );
   });
 
+  test("accepts a pending invite for a Google sign-in, which never sets emailVerified", async () => {
+    const t = setup();
+
+    const ids = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Google Corp", createdAt: NOW });
+      const userId = await ctx.db.insert("users", {
+        email: "oauth@example.com",
+        role: "USER",
+        companyId,
+        createdAt: NOW,
+      });
+      await ctx.db.insert("invitations", {
+        email: "oauth@example.com",
+        role: "USER",
+        companyId,
+        status: "PENDING",
+        token: "invite-token",
+        invitedAt: NOW,
+      });
+
+      // Exactly what Auth.js hands over for Google: no `emailVerified`, because
+      // the default profile mapper drops it.
+      const returnedUserId = await createOrUpdateSonaeAuthUser(
+        ctx,
+        {
+          provider: { id: "google", type: "oidc" },
+          profile: { email: "oauth@example.com", name: "Alessandro Merola" },
+        },
+        NOW + 1000
+      );
+
+      return { userId, returnedUserId };
+    });
+
+    const invite = await t.run(async (ctx) =>
+      ctx.db
+        .query("invitations")
+        .withIndex("by_email", (q) => q.eq("email", "oauth@example.com"))
+        .first()
+    );
+
+    expect(ids.returnedUserId).toBe(ids.userId);
+    expect(invite).toMatchObject({
+      status: "ACCEPTED",
+      acceptedAt: NOW + 1000,
+    });
+
+    const events = await getAuthEventTypes(t, "oauth@example.com");
+    expect(events).toEqual(expect.arrayContaining(["USER_FOUND", "OAUTH_VERIFIED"]));
+    // No link was sent, so none is claimed on the trail.
+    expect(events).not.toContain("MAGIC_LINK_VERIFIED");
+    expect(events).not.toContain("MAGIC_LINK_STARTED");
+  });
+
+  test("provisions and accepts in one pass when Google is the first sign-in", async () => {
+    const t = setup();
+
+    const { companyId, userId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "First Login Corp", createdAt: NOW });
+      await ctx.db.insert("invitations", {
+        email: "firstlogin@example.com",
+        role: "ADMIN",
+        companyId,
+        status: "PENDING",
+        token: "invite-token",
+        invitedAt: NOW,
+      });
+
+      const userId = await createOrUpdateSonaeAuthUser(
+        ctx,
+        {
+          provider: { id: "google", type: "oidc" },
+          profile: { email: "firstlogin@example.com", name: "First Login", picture: "https://img/1" },
+        },
+        NOW + 1000
+      );
+      return { companyId, userId };
+    });
+
+    const snapshot = await t.run(async (ctx) => ({
+      user: await ctx.db.get(userId),
+      invite: await ctx.db
+        .query("invitations")
+        .withIndex("by_email", (q) => q.eq("email", "firstlogin@example.com"))
+        .first(),
+    }));
+
+    expect(snapshot.user).toMatchObject({
+      email: "firstlogin@example.com",
+      name: "First Login",
+      role: "ADMIN",
+      companyId,
+    });
+    expect(snapshot.invite).toMatchObject({
+      status: "ACCEPTED",
+      acceptedAt: NOW + 1000,
+    });
+    expect(await getAuthEventTypes(t, "firstlogin@example.com")).toEqual(
+      expect.arrayContaining(["INVITE_FOUND", "OAUTH_VERIFIED"])
+    );
+  });
+
   test("recovers an accepted invite that is missing its user row", async () => {
     const t = setup();
 

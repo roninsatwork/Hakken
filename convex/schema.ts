@@ -530,6 +530,11 @@ export default defineSchema({
       v.literal("EMAIL_DISPATCH_STARTED"),
       v.literal("EMAIL_DISPATCH_FAILED"),
       v.literal("MAGIC_LINK_VERIFIED"),
+      // Signing in through Google rather than through this platform's own
+      // email. It accepts the invitation the same way a verified magic link
+      // does, and is recorded separately so the trail does not claim a link
+      // was sent when none was.
+      v.literal("OAUTH_VERIFIED"),
       // Signing in with a typed code rather than a link. Recorded on the same
       // trail as the link, so the diagnostics screen shows one story about a
       // sign-in rather than two depending on which option was used.

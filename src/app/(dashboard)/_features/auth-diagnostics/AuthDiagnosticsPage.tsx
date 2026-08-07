@@ -43,6 +43,7 @@ const authEventTypes = [
   "EMAIL_DISPATCH_STARTED",
   "EMAIL_DISPATCH_FAILED",
   "MAGIC_LINK_VERIFIED",
+  "OAUTH_VERIFIED",
 ];
 
 function formatCode(value: string | null | undefined) {
