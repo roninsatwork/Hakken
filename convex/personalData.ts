@@ -7,6 +7,7 @@ import { governanceAction, superAdminAction } from "./tenantFunctions";
 import {
   PERSONAL_DATA_RULES,
   describeErasure,
+  indexFor,
   rulesFor,
   type ErasureResult,
   type ErasureTally,
@@ -26,10 +27,61 @@ import {
  * See docs/plans/active/governance-and-trust-plan.md.
  */
 
-/** Bounded per transaction, so a person with a long history does not blow the limit. */
-const BATCH = 200;
-/** Enough passes to finish a large history; a stubborn table stops rather than looping forever. */
-const MAX_PASSES = 50;
+/**
+ * How much one execution may read.
+ *
+ * An indexed search only ever loads the person's own rows, so it can afford a
+ * generous page. A fallback scan loads every row it steps over — including
+ * tables whose rows carry whole tool results — so its page is small enough that
+ * even fat rows stay well inside the sixteen-megabyte ceiling.
+ */
+const INDEXED_PAGE = 500;
+const SCAN_PAGE = 200;
+
+/**
+ * How far a single table may be searched.
+ *
+ * A ceiling rather than no ceiling because an action that walks a table of
+ * millions one page at a time is not answering the request either. Reaching it
+ * is reported rather than passed off as a complete answer.
+ */
+const MAX_PAGES = 200;
+
+/**
+ * The table being searched comes from the manifest, so its name is data rather
+ * than something the compiler knows. These describe the shape actually used —
+ * an index range on one field, then a page — so the cast is confined here
+ * instead of being sprinkled through every call.
+ */
+type PaginableQuery = {
+  paginate: (options: { cursor: string | null; numItems: number }) => Promise<{
+    page: Array<Record<string, unknown> & { _id: Id<TableNames> }>;
+    continueCursor: string;
+    isDone: boolean;
+  }>;
+};
+
+type IndexableQuery = PaginableQuery & {
+  withIndex: (
+    name: string,
+    range: (q: { eq: (field: string, value: unknown) => unknown }) => unknown,
+  ) => PaginableQuery;
+};
+
+/** The person's rows in one table, by index where there is one and by scan where there is not. */
+function searchFor(
+  query: unknown,
+  table: string,
+  field: string,
+  userId: Id<"users">,
+): { source: PaginableQuery; indexed: boolean } {
+  const index = indexFor(table, field);
+  const base = query as IndexableQuery;
+
+  return index
+    ? { source: base.withIndex(index, (q) => q.eq(field, userId)), indexed: true }
+    : { source: base, indexed: false };
+}
 
 export const findByEmail = internalQuery({
   args: { email: v.string() },
@@ -49,36 +101,50 @@ export const findByEmail = internalQuery({
 });
 
 /**
- * Everything held about one person, gathered table by table.
+ * One page of one table, searched for one person.
+ *
+ * A page rather than a table because the whole manifest used to be walked
+ * inside a single execution: fifty unindexed scans, every row of every table
+ * loaded, and the sixteen-megabyte read ceiling hit long before the answer was
+ * ready. The caller stitches the pages together, so no one execution reads more
+ * than it can.
  *
  * Read-only, so an auditor can answer a subject access request without being
  * able to act on it.
  */
-export const collect = internalQuery({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args): Promise<{ sections: PersonalDataSection[] }> => {
-    const sections: PersonalDataSection[] = [];
+export const collectPage = internalQuery({
+  args: {
+    table: v.string(),
+    field: v.string(),
+    userId: v.id("users"),
+    cursor: v.union(v.string(), v.null()),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ rows: unknown[]; cursor: string | null; isDone: boolean }> => {
+    const { source, indexed } = searchFor(
+      ctx.db.query(args.table as TableNames),
+      args.table,
+      args.field,
+      args.userId,
+    );
 
-    for (const rule of PERSONAL_DATA_RULES) {
-      if (rule.table === "users") continue;
+    const page = await source.paginate({
+      cursor: args.cursor,
+      numItems: indexed ? INDEXED_PAGE : SCAN_PAGE,
+    });
 
-      const rows: unknown[] = [];
-      for (const field of rule.fields) {
-        const found = await ctx.db
-          .query(rule.table as TableNames)
-          .filter((q) => q.eq(q.field(field as never), args.userId))
-          .take(BATCH);
-        rows.push(...found);
-      }
+    // Matched in code rather than with `.filter()` on purpose. A database-side
+    // filter still walks the whole table looking for matches, which is the
+    // thing that was blowing the limit; paginating first bounds what is read,
+    // and the match then costs nothing.
+    const rows = indexed ? page.page : page.page.filter((row) => row[args.field] === args.userId);
 
-      if (rows.length > 0) {
-        sections.push({ table: rule.table, treatment: rule.treatment, reason: rule.reason, rows });
-      }
-    }
-
-    return { sections };
+    return { rows, cursor: page.continueCursor, isDone: page.isDone };
   },
 });
+
 
 export const produceSubjectAccess = governanceAction({
   args: { email: v.string() },
@@ -92,7 +158,43 @@ export const produceSubjectAccess = governanceAction({
     }
 
     const person = { ...found, userId: found.userId as Id<"users"> };
-    const collected = await ctx.runQuery(internal.personalData.collect, { userId: person.userId });
+
+    const sections: PersonalDataSection[] = [];
+
+    for (const rule of PERSONAL_DATA_RULES) {
+      if (rule.table === "users") continue;
+
+      const rows: unknown[] = [];
+      let truncated = false;
+
+      for (const field of rule.fields) {
+        let cursor: string | null = null;
+
+        for (let page = 0; page < MAX_PAGES; page += 1) {
+          const result: { rows: unknown[]; cursor: string | null; isDone: boolean } = await ctx.runQuery(
+            internal.personalData.collectPage,
+            { table: rule.table, field, userId: person.userId, cursor },
+          );
+
+          rows.push(...result.rows);
+          if (result.isDone) break;
+
+          cursor = result.cursor;
+          // The last page allowed was not the last page there was.
+          if (page === MAX_PAGES - 1) truncated = true;
+        }
+      }
+
+      if (rows.length > 0) {
+        sections.push({
+          table: rule.table,
+          treatment: rule.treatment,
+          reason: rule.reason,
+          rows,
+          ...(truncated ? { truncated: true } : {}),
+        });
+      }
+    }
 
     await ctx.runMutation(internal.personalData.recordAction, {
       actorId: ctx.userId,
@@ -101,57 +203,54 @@ export const produceSubjectAccess = governanceAction({
       summary: [`Produced everything held about ${person.email}.`],
     });
 
-    return { person, sections: collected.sections };
+    return { person, sections };
   },
 });
 
-/** One table's worth of erasure, small enough to fit in a transaction. */
+/**
+ * One page of one table, erased or unlinked.
+ *
+ * Paged for the same reason the search is: an unindexed `.filter()` walks the
+ * whole table inside one transaction, and on the busier tables that never
+ * finished. Acting on a page at a time keeps each transaction small and lets a
+ * long history complete across several of them.
+ */
 export const eraseFromTable = internalMutation({
-  args: { table: v.string(), fields: v.array(v.string()), userId: v.id("users") },
-  handler: async (ctx, args): Promise<{ removed: number; more: boolean }> => {
-    let removed = 0;
-    let more = false;
-
-    for (const field of args.fields) {
-      const rows = await ctx.db
-        .query(args.table as TableNames)
-        .filter((q) => q.eq(q.field(field as never), args.userId))
-        .take(BATCH);
-
-      for (const row of rows) await ctx.db.delete(row._id);
-      removed += rows.length;
-      if (rows.length === BATCH) more = true;
-    }
-
-    return { removed, more };
+  args: {
+    table: v.string(),
+    field: v.string(),
+    userId: v.id("users"),
+    cursor: v.union(v.string(), v.null()),
+    /** Clear the field rather than delete the row. */
+    dissociate: v.boolean(),
   },
-});
+  handler: async (ctx, args): Promise<{ removed: number; cursor: string | null; isDone: boolean }> => {
+    const { source, indexed } = searchFor(
+      ctx.db.query(args.table as TableNames),
+      args.table,
+      args.field,
+      args.userId,
+    );
 
-/** The name comes off; the record stays. */
-export const dissociateInTable = internalMutation({
-  args: { table: v.string(), fields: v.array(v.string()), userId: v.id("users") },
-  handler: async (ctx, args): Promise<{ removed: number; more: boolean }> => {
-    let changed = 0;
-    let more = false;
+    const page = await source.paginate({
+      cursor: args.cursor,
+      numItems: indexed ? INDEXED_PAGE : SCAN_PAGE,
+    });
 
-    for (const field of args.fields) {
-      const rows = await ctx.db
-        .query(args.table as TableNames)
-        .filter((q) => q.eq(q.field(field as never), args.userId))
-        .take(BATCH);
+    const rows = indexed ? page.page : page.page.filter((row) => row[args.field] === args.userId);
 
-      for (const row of rows) {
+    for (const row of rows) {
+      if (args.dissociate) {
         // Cleared rather than pointed at a tombstone user. A field that is
         // absent reads as "nobody recorded"; a field pointing at a placeholder
         // account invents a person who never did anything.
-        await ctx.db.patch(row._id, { [field]: undefined } as never);
+        await ctx.db.patch(row._id, { [args.field]: undefined } as never);
+      } else {
+        await ctx.db.delete(row._id);
       }
-
-      changed += rows.length;
-      if (rows.length === BATCH) more = true;
     }
 
-    return { removed: changed, more };
+    return { removed: rows.length, cursor: page.continueCursor, isDone: page.isDone };
   },
 });
 
@@ -202,20 +301,25 @@ export const erase = superAdminAction({
     for (const rule of PERSONAL_DATA_RULES) {
       if (rule.treatment === "RETAIN" || rule.table === "users") continue;
 
-      const mutation =
-        rule.treatment === "ERASE"
-          ? internal.personalData.eraseFromTable
-          : internal.personalData.dissociateInTable;
-
       let rows = 0;
-      for (let pass = 0; pass < MAX_PASSES; pass += 1) {
-        const result = await ctx.runMutation(mutation, {
-          table: rule.table,
-          fields: rule.fields,
-          userId: person.userId,
-        });
-        rows += result.removed;
-        if (!result.more) break;
+
+      for (const field of rule.fields) {
+        let cursor: string | null = null;
+
+        for (let page = 0; page < MAX_PAGES; page += 1) {
+          const result: { removed: number; cursor: string | null; isDone: boolean } =
+            await ctx.runMutation(internal.personalData.eraseFromTable, {
+              table: rule.table,
+              field,
+              userId: person.userId,
+              cursor,
+              dissociate: rule.treatment === "DISSOCIATE",
+            });
+
+          rows += result.removed;
+          if (result.isDone) break;
+          cursor = result.cursor;
+        }
       }
 
       tallies.push({ table: rule.table, treatment: rule.treatment, rows });

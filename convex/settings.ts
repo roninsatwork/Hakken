@@ -127,6 +127,49 @@ export const update = superAdminMutation({
   },
 });
 
+/**
+ * Take a logo back off the platform.
+ *
+ * A wrong logo could be replaced but never removed: the save path drops fields
+ * that arrive undefined, so no value the form could send meant "there is no
+ * logo now". This clears the field outright, and drops the uploaded file with
+ * it when the setting still points at one of ours.
+ */
+export const clearLogo = superAdminMutation({
+  args: {
+    mode: v.union(v.literal("light"), v.literal("dark")),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = ctx;
+
+    const settings = await ctx.db.query("systemSettings").first();
+    if (!settings) return false;
+
+    const field = args.mode === "light" ? "logoUrlLight" : "logoUrlDark";
+    const current = settings[field];
+    if (!current) return false;
+
+    await ctx.db.patch(settings._id, { [field]: undefined });
+
+    // Only an uploaded logo has a file behind it. One pointing at an external
+    // URL is not ours to delete.
+    if (isStorageLogoReference(current)) {
+      await ctx.storage.delete(current as Id<"_storage">).catch(() => {});
+    }
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "UPDATE_SYSTEM_PREFERENCES",
+      actorId: userId,
+      entityType: "systemSettings",
+      entityId: settings._id,
+      timestamp: Date.now(),
+      metadata: buildSettingsAuditMetadata({ [field]: undefined }, settings),
+    });
+
+    return true;
+  },
+});
+
 export const getEmailBranding = internalQuery({
   args: {},
   handler: async (ctx) => {

@@ -191,7 +191,51 @@ export type PersonalDataSection = {
   treatment: string;
   reason: string;
   rows: unknown[];
+  /**
+   * Set when the search stopped before the end of the table.
+   *
+   * A short answer given as though it were complete is the worst thing this
+   * feature could produce, because it is handed to somebody exercising a legal
+   * right. The ceiling exists so a vast table cannot hang the request; saying
+   * when it was reached is what keeps the answer honest.
+   */
+  truncated?: boolean;
 };
+
+/**
+ * Indexes that already exist and happen to lead with the field pointing at the
+ * person.
+ *
+ * Gathering what is held about somebody used to run one unindexed scan per
+ * table across the whole manifest inside a single execution, which read every
+ * row of roughly fifty tables and died against Convex's sixteen-megabyte
+ * ceiling — the screen showed a bare "Server Error" to an administrator
+ * answering a legal request.
+ *
+ * Where an index leads with the right field, the search reads only that
+ * person's rows. Everywhere else it pages through in bounded steps, which is
+ * slower but reads a fixed amount at a time and therefore finishes.
+ *
+ * No index was added for the rest on purpose. They would have to be maintained
+ * on every write to some of the busiest tables on the platform, for ever, to
+ * speed up something run a handful of times a year — a cost paid constantly for
+ * a benefit taken rarely.
+ */
+export const PERSONAL_DATA_INDEXES: Readonly<Record<string, string>> = {
+  "agentRunFeedback.userId": "by_user_agent_updated",
+  "aiActionRequests.actorId": "by_actor_action_requested",
+  "analyticsDailySnapshots.userId": "by_user_date",
+  "arcadeScores.userId": "by_user",
+  "auditLogs.actorId": "by_actor",
+  "logins.userId": "by_user",
+  "messages.userId": "by_user_role_created",
+  "threads.userId": "by_user",
+};
+
+/** The index to search a table's personal field by, when there is one. */
+export function indexFor(table: string, field: string): string | undefined {
+  return PERSONAL_DATA_INDEXES[`${table}.${field}`];
+}
 
 export type PersonSummary = {
   /** Typed as the caller sees it; the module that owns ids narrows it. */

@@ -109,6 +109,62 @@ describe("OWASP: Broken Access Control - Settings", () => {
     expect(auditLogs[1].entityId).toBe(settingsRows[0]._id);
   });
 
+  test("a wrong logo can be taken off, and only by a super admin", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { superAdminId, adminId, storageId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const adminId = await ctx.db.insert("users", {
+        email: "admin@test.com",
+        role: "ADMIN",
+        createdAt: Date.now(),
+      });
+      const storageId = await ctx.storage.store(new Blob(["light-logo"], { type: "image/png" }));
+      await ctx.db.insert("systemSettings", {
+        platformName: "Acme Ops",
+        logoUrlLight: storageId,
+        logoUrlDark: "https://cdn.example/dark.png",
+      });
+      return { superAdminId, adminId, storageId };
+    });
+
+    await expect(
+      t.withIdentity({ subject: adminId }).mutation(api.settings.clearLogo, { mode: "light" })
+    ).rejects.toThrow("Unauthorized");
+
+    const superAdminClient = t.withIdentity({ subject: superAdminId });
+    await expect(superAdminClient.mutation(api.settings.clearLogo, { mode: "light" })).resolves.toBe(true);
+
+    const afterLight = await t.query(api.settings.get, {});
+    expect(afterLight.logoUrlLight).toBeUndefined();
+    expect(afterLight.logoUrlDark).toBe("https://cdn.example/dark.png");
+
+    // The uploaded file goes with the setting that pointed at it.
+    expect(await t.run(async (ctx) => ctx.storage.getUrl(storageId))).toBeNull();
+
+    await expect(superAdminClient.mutation(api.settings.clearLogo, { mode: "dark" })).resolves.toBe(true);
+    expect((await t.query(api.settings.get, {})).logoUrlDark).toBeUndefined();
+
+    // Nothing left to remove is not a change worth recording.
+    await expect(superAdminClient.mutation(api.settings.clearLogo, { mode: "dark" })).resolves.toBe(false);
+
+    const auditLogs = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
+    expect(auditLogs).toHaveLength(2);
+    expect(auditLogs[0]).toMatchObject({
+      actionType: "UPDATE_SYSTEM_PREFERENCES",
+      actorId: superAdminId,
+      entityType: "systemSettings",
+    });
+    expect(JSON.parse(auditLogs[0].metadata as string)).toMatchObject({
+      modifiedFields: ["logoUrlLight"],
+      changes: [{ field: "logoUrlLight", from: storageId, to: null }],
+    });
+  });
+
   test("white-label readiness is super-admin scoped and includes widget evidence", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

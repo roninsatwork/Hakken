@@ -34,6 +34,19 @@ export type AiSystemEntry = {
   facesPublic: boolean;
   model?: string;
   lastActiveAt?: number;
+  /**
+   * How many times this has run recently.
+   *
+   * The register lists what exists; this says what is busy, and the two are
+   * routinely different. "Not rated" against something that ran two hundred
+   * times last month and "not rated" against a sandbox nobody has touched since
+   * April are the same words describing very different situations, and the
+   * screen had no way to tell them apart.
+   *
+   * Undefined where the idea does not apply — a widget or a workflow is not run
+   * the way an assistant is.
+   */
+  activity?: number;
   /** Why this entry is incomplete, in plain sentences. Empty when it is not. */
   missing: string[];
 };
@@ -146,6 +159,81 @@ export function summariseRegister(entries: AiSystemEntry[]) {
     highRisk: entries.filter((entry) => entry.risk === "HIGH").length,
     unrated: entries.filter((entry) => entry.risk === "UNRATED").length,
   };
+}
+
+export type RegisterSort = "ATTENTION" | "ACTIVITY" | "LAST_ACTIVE" | "NAME" | "RISK";
+
+/**
+ * Reordering the register without losing what it is for.
+ *
+ * `ATTENTION` is the default and stays the default: the register exists to
+ * surface what nobody has described or taken responsibility for, and a screen
+ * that opens sorted by name buries that under the alphabet. The other orders
+ * are there because a reader with a specific question — what is busiest, what
+ * has gone quiet — should not have to read every row to answer it.
+ *
+ * Ties always fall back to the attention order, so switching sorts never
+ * produces an arrangement with no reasoning behind it.
+ */
+export function sortRegisterBy(entries: AiSystemEntry[], sort: RegisterSort): AiSystemEntry[] {
+  const byAttention = sortRegister(entries);
+  if (sort === "ATTENTION") return byAttention;
+
+  const compare: Record<Exclude<RegisterSort, "ATTENTION">, (a: AiSystemEntry, b: AiSystemEntry) => number> = {
+    ACTIVITY: (a, b) => (b.activity ?? -1) - (a.activity ?? -1),
+    LAST_ACTIVE: (a, b) => (b.lastActiveAt ?? 0) - (a.lastActiveAt ?? 0),
+    NAME: (a, b) => a.name.localeCompare(b.name),
+    RISK: (a, b) => riskRank(a.risk) - riskRank(b.risk),
+  };
+
+  return [...byAttention].sort((a, b) => compare[sort](a, b));
+}
+
+export type RegisterFilters = {
+  /** Free text, matched against everything a reader can see on the row. */
+  search: string;
+  risk: AiSystemRisk | "ALL";
+  kind: AiSystemKind | "ALL";
+  /** Only the entries nobody has described or taken responsibility for. */
+  attentionOnly: boolean;
+};
+
+export const NO_REGISTER_FILTERS: RegisterFilters = {
+  search: "",
+  risk: "ALL",
+  kind: "ALL",
+  attentionOnly: false,
+};
+
+/**
+ * Narrowing the register down to the rows somebody is looking for.
+ *
+ * The list builds itself and therefore grows on its own, which is the point of
+ * it — but it arrived as one unbroken table with no way to search, filter or
+ * page through. Anthony, 2026-08-06: *"the UX is not great."* A register nobody
+ * can find anything in is a list rather than a register.
+ *
+ * Matched against what the row actually shows: its name, what it is for, who is
+ * accountable and which model it runs on. Searching a field the reader cannot
+ * see returns rows that look like mistakes.
+ *
+ * Kept here beside the sorting and the summary so every rule about what the
+ * register means lives in one place, and can be tested without a screen.
+ */
+export function filterRegister(entries: AiSystemEntry[], filters: RegisterFilters): AiSystemEntry[] {
+  const needle = filters.search.trim().toLowerCase();
+
+  return entries.filter((entry) => {
+    if (filters.attentionOnly && entry.missing.length === 0) return false;
+    if (filters.risk !== "ALL" && entry.risk !== filters.risk) return false;
+    if (filters.kind !== "ALL" && entry.kind !== filters.kind) return false;
+    if (!needle) return true;
+
+    return [entry.name, entry.purpose, entry.ownerName, entry.model ?? ""]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle);
+  });
 }
 
 /** Riskiest first within a rating, so the entries that matter surface. */

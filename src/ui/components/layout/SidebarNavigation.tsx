@@ -534,32 +534,6 @@ export default function SidebarNavigation() {
                       />
                     )}
 
-                    {/*
-                      Top level, and not a child of Artificial Intelligence.
-                      The person who opens this is a compliance officer or an
-                      executive rather than an AI administrator, and buried one
-                      level down under a heading about AI they would never find
-                      it. Approvals moved here from under Agents and the audit
-                      trail was promoted out of Settings — both live here now
-                      and nowhere else, because two places showing the same
-                      queue is worse than one place in the wrong section.
-                    */}
-                    <NavItem navKey="governance"
-                      icon={ShieldCheck}
-                      label={t('governance')}
-                      isActive={pathname.startsWith('/admin/governance')}
-                      onClick={() => setActiveItem('Governance')}
-                      hasChildren
-                      isOpen={openSections.governance}
-                      onToggle={() => toggleSection('governance')}
-                    >
-                      <SubNavItem label={t('governanceOverview')} href="/admin/governance" navKey="governanceOverview" isActive={pathname === '/admin/governance'} onClick={() => setActiveItem('Governance')} />
-                      <SubNavItem label={t('aiRegister')} href="/admin/governance/register" navKey="aiRegister" isActive={pathname.startsWith('/admin/governance/register')} onClick={() => setActiveItem('Governance')} />
-                      <SubNavItem label={t('governanceApprovals')} href="/admin/governance/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/governance/approvals')} onClick={() => setActiveItem('Governance')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
-                      <SubNavItem label={t('auditTrail')} href="/admin/governance/audit-trail" navKey="auditTrail" isActive={pathname.startsWith('/admin/governance/audit-trail')} onClick={() => setActiveItem('Governance')} />
-                      <SubNavItem label={t('policiesInForce')} href="/admin/governance/policies" navKey="policiesInForce" isActive={pathname.startsWith('/admin/governance/policies')} onClick={() => setActiveItem('Governance')} />
-                    </NavItem>
-
                     {canSeeAdminSections && (
                       <NavItem navKey="adminCompanies"
                         icon={Building2}
@@ -616,6 +590,39 @@ export default function SidebarNavigation() {
                         <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" navKey="schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
                       </NavItem>
                     )}
+
+                    {/*
+                      After Agents and before Settings, at the top level.
+
+                      Top level rather than a child of Artificial Intelligence:
+                      the person who opens this is a compliance officer or an
+                      executive rather than an AI administrator, and buried one
+                      level down under a heading about AI they would never find
+                      it. Sat above Companies for a while and read as the first
+                      thing the product was about, which it is not — it belongs
+                      beside the things it governs, after the assistants and
+                      workflows and before the platform's own settings.
+
+                      Approvals moved here from under Agents and the audit trail
+                      was promoted out of Settings — both live here now and
+                      nowhere else, because two places showing the same queue is
+                      worse than one place in the wrong section.
+                    */}
+                    <NavItem navKey="governance"
+                      icon={ShieldCheck}
+                      label={t('governance')}
+                      isActive={pathname.startsWith('/admin/governance')}
+                      onClick={() => setActiveItem('Governance')}
+                      hasChildren
+                      isOpen={openSections.governance}
+                      onToggle={() => toggleSection('governance')}
+                    >
+                      <SubNavItem label={t('governanceOverview')} href="/admin/governance" navKey="governanceOverview" isActive={pathname === '/admin/governance'} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('aiRegister')} href="/admin/governance/register" navKey="aiRegister" isActive={pathname.startsWith('/admin/governance/register')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('governanceApprovals')} href="/admin/governance/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/governance/approvals')} onClick={() => setActiveItem('Governance')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
+                      <SubNavItem label={t('auditTrail')} href="/admin/governance/audit-trail" navKey="auditTrail" isActive={pathname.startsWith('/admin/governance/audit-trail')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('policiesInForce')} href="/admin/governance/policies" navKey="policiesInForce" isActive={pathname.startsWith('/admin/governance/policies')} onClick={() => setActiveItem('Governance')} />
+                    </NavItem>
 
                     {canSeeAdminSections && (
                       <>

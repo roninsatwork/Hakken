@@ -6,6 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
+import { AdminSelect } from "./AdminSelect";
 import { getErrorMessage } from "@/src/lib/errors";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
 import { buildEvidencePackDocument } from "@/src/lib/evidencePackDocument";
@@ -92,18 +93,18 @@ export function EvidencePackPanel() {
         <label className="text-[13px] text-secondary" htmlFor="evidence-period">
           {t("periodLabel")}
         </label>
-        <select
+        <AdminSelect
           id="evidence-period"
           value={days}
-          onChange={(event) => setDays(Number(event.target.value))}
-          className="h-[38px] rounded-[10px] border border-border-dim bg-background px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+          onChange={(next) => setDays(Number(next))}
+          className="w-[180px]"
         >
           {PERIODS.map((period) => (
             <option key={period} value={period}>
               {t(`periods.${period}`)}
             </option>
           ))}
-        </select>
+        </AdminSelect>
 
         {/*
           An ordinary button rather than AdminWriteButton: an auditor cannot

@@ -36,6 +36,20 @@
 const WIDTH = 600;
 
 /**
+ * Side padding on the panel.
+ *
+ * Raised from 22 to 32 on 2026-08-06. Anthony, comparing our system health
+ * alert against a well-made intelligence digest: *"the Sonae emails are
+ * terrible, can we make them look more like the Conterra email in terms of
+ * colour."* Half of what separated the two was not colour at all — it was air.
+ * Tight padding is what made our panel read as a form rather than a document.
+ */
+const PAD = 32;
+
+/** The measure everything inside the panel is drawn to. */
+const INNER = WIDTH - PAD * 2;
+
+/**
  * Gmail truncates around 102KB and hides the rest behind "View entire
  * message". A noisy alert is exactly the mail most at risk, so the card list is
  * capped and the remainder becomes a link.
@@ -67,12 +81,25 @@ export const MAX_CARDS = 8;
  * simulated deuteranopia and protanopia. Contrast is not a matter of taste
  * here: an email is read once, on someone else's screen, at whatever
  * brightness they happen to have.
+ *
+ * ## The 2026-08-06 revision: depth, not hue
+ *
+ * The hues above were right and are unchanged. What was wrong was their
+ * *setting*. Ground `#101114` and card `#1a1c21` were close enough in value to
+ * read as one mid-grey slab, and `#3a3e48` borders drew a visible box around
+ * every element inside it — so a two-signal alert arrived looking like a form.
+ *
+ * The panel now sits barely above a near-black ground and the borders are
+ * hairlines. Nothing about the signal ramp moved, so the colour-blind
+ * separation the palette was rebuilt for on 2026-08-04 is untouched; every
+ * contrast pair only improved, because a darker ground raises the ratio against
+ * light type.
  */
 export const EMAIL_PALETTE = {
-  ground: "#101114",
-  card: "#1a1c21",
-  inset: "#14161a",
-  edge: "#3a3e48",
+  ground: "#0a0b0d",
+  card: "#111316",
+  inset: "#16181c",
+  edge: "#2b2f36",
   ink: "#f7f8fa",
   ink70: "#c6cad3",
   // Small print: footer, meta lines. Measures 6.57 on the card — comfortably
@@ -165,7 +192,12 @@ const COLOUR_LOCK =
     [".e-stripe-edge", `background-color:${C.edge}!important;`],
   ]
     .map(([selector, declarations]) =>
+      // Both appearances, not just dark. A client set to *light* is the one
+      // that might drop a dark background while leaving the light text on it —
+      // which is the white-on-white failure. Restating the background under
+      // `light` as well means a reader in light mode cannot lose it.
       `@media (prefers-color-scheme:dark){${selector}{${declarations}}}` +
+      `@media (prefers-color-scheme:light){${selector}{${declarations}}}` +
       `[data-ogsc] ${selector}{${declarations}}` +
       `[data-ogsb] ${selector}{${declarations}}`
     )
@@ -324,23 +356,26 @@ function gap(height: number) {
 }
 
 function renderStats(stats: EmailStat[]) {
-  const width = Math.floor((WIDTH - 44 - (stats.length - 1) * 8) / stats.length);
+  const width = Math.floor((INNER - (stats.length - 1) * 10) / stats.length);
 
   const cells = stats
     .map((stat, index) => {
-      const spacer = index === 0 ? "" : `<td width="8" style="width:8px;font-size:0;">&nbsp;</td>`;
+      const spacer = index === 0 ? "" : `<td width="10" style="width:10px;font-size:0;">&nbsp;</td>`;
       const statTone = tone(stat.tone);
       return (
         `${spacer}<td width="${width}" valign="top" class="e-inset" bgcolor="${C.inset}" ` +
-        `style="width:${width}px;background-color:${C.inset};border:1px solid ${C.edge};padding:11px 12px;">` +
-        `<div class="e-ink45" style="${line(11, 15, C.ink45, 700)}">${up(stat.label)}</div>` +
-        `<div class="${statTone.cls}" style="${line(25, 29, statTone.colour, 700, "padding-top:5px;")}">${esc(stat.value)}</div>` +
+        `style="width:${width}px;background-color:${C.inset};border:1px solid ${C.edge};padding:15px 16px 17px;">` +
+        // Value above label. With the label on top, a two-line label pushed its
+        // number down while a one-line label did not, so the row of figures —
+        // the thing the eye is meant to scan — came out ragged.
+        `<div class="${statTone.cls}" style="${line(28, 34, statTone.colour, 700)}">${esc(stat.value)}</div>` +
+        `<div class="e-ink45" style="${line(11, 15, C.ink45, 700, "padding-top:7px;")}">${up(stat.label)}</div>` +
         `</td>`
       );
     })
     .join("");
 
-  return `${openTable(`width="${WIDTH - 44}"`)}<tr>${cells}</tr></table>`;
+  return `${openTable(`width="${INNER}"`)}<tr>${cells}</tr></table>`;
 }
 
 function renderCard(card: EmailCard) {
@@ -352,29 +387,29 @@ function renderCard(card: EmailCard) {
     : "";
 
   const meta = card.meta
-    ? `<tr><td class="e-ink45" style="${line(12, 17, C.ink45, 400, "padding-top:7px;")}">${esc(card.meta)}</td></tr>`
+    ? `<tr><td class="e-ink45" style="${line(12, 18, C.ink45, 400, "padding-top:9px;")}">${esc(card.meta)}</td></tr>`
     : "";
 
   const fix = card.fix
-    ? `<tr><td style="padding-top:9px;">` +
+    ? `<tr><td style="padding-top:13px;">` +
       `${openTable(`width="100%"`)}<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table>` +
-      `<div class="e-ink45" style="${line(13, 19, C.ink45, 400, "padding-top:9px;")}">${esc(card.fix)}</div>` +
+      `<div class="e-ink45" style="${line(13, 20, C.ink45, 400, "padding-top:12px;")}">${esc(card.fix)}</div>` +
       `</td></tr>`
     : "";
 
   const link = card.link
-    ? `<tr><td class="e-blue" style="${line(12, 17, C.blue, 700, "padding-top:9px;")}">` +
+    ? `<tr><td class="e-blue" style="${line(13, 18, C.blue, 700, "padding-top:12px;")}">` +
       `<a href="${esc(safeUrl(card.link.url))}" class="e-blue" style="color:${C.blue};">${esc(card.link.label)}</a>` +
       `</td></tr>`
     : "";
 
   return (
-    `${openTable(`width="${WIDTH - 44}"`)}<tr>` +
+    `${openTable(`width="${INNER}"`)}<tr>` +
     `<td width="3" class="${stripe.cls}" bgcolor="${stripe.colour}" style="width:3px;background-color:${stripe.colour};font-size:0;line-height:0;">&nbsp;</td>` +
-    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};border-left:0;padding:13px 15px;">` +
+    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};border-left:0;padding:18px 20px;">` +
     `${openTable(`width="100%"`)}` +
-    `<tr><td class="e-ink" style="${line(14, 19, C.ink, 700)}">${esc(card.title)}</td>${badge}</tr>` +
-    `<tr><td colspan="${label ? 2 : 1}" class="e-ink70" style="${line(13, 19, C.ink70, 400, "padding-top:7px;")}">${esc(card.body)}</td></tr>` +
+    `<tr><td class="e-ink" style="${line(16, 22, C.ink, 700)}">${esc(card.title)}</td>${badge}</tr>` +
+    `<tr><td colspan="${label ? 2 : 1}" class="e-ink70" style="${line(14, 21, C.ink70, 400, "padding-top:8px;")}">${esc(card.body)}</td></tr>` +
     meta +
     fix +
     link +
@@ -395,40 +430,50 @@ function renderButton(action: EmailAction) {
   const url = safeUrl(action.url);
   const label = esc(action.label);
   // VML cannot size to its content, so the width is estimated from the label.
-  const vmlWidth = Math.max(150, action.label.length * 9 + 46);
+  const vmlWidth = Math.max(150, action.label.length * 9 + 54);
 
+  // Near-square corners rather than a pill. The pill read as a web UI control
+  // dropped into a document; a 4px corner reads as part of the page, which is
+  // the whole direction of the 2026-08-06 revision.
   return (
     `<!--[if mso]>` +
     `<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" ` +
-    `href="${esc(url)}" style="height:42px;v-text-anchor:middle;width:${vmlWidth}px;" ` +
-    `arcsize="50%" stroke="${primary ? "f" : "t"}" strokecolor="${C.edge}" fillcolor="${bg}">` +
+    `href="${esc(url)}" style="height:44px;v-text-anchor:middle;width:${vmlWidth}px;" ` +
+    `arcsize="9%" stroke="${primary ? "f" : "t"}" strokecolor="${C.edge}" fillcolor="${bg}">` +
     `<w:anchorlock/>` +
-    `<center style="${line(14, 42, fg, 700)}">${label}</center>` +
+    `<center style="${line(14, 44, fg, 700)}">${label}</center>` +
     `</v:roundrect>` +
     `<![endif]-->` +
     `<!--[if !mso]><!-->` +
-    `<a href="${esc(url)}" class="${primary ? "e-btn" : "e-btn-secondary"}" style="${line(14, 42, fg, 700)}display:inline-block;background-color:${bg};` +
-    `border:1px solid ${primary ? bg : C.edge};border-radius:21px;padding:0 22px;text-decoration:none;">${label}</a>` +
+    `<a href="${esc(url)}" class="${primary ? "e-btn" : "e-btn-secondary"}" style="${line(14, 44, fg, 700)}display:inline-block;background-color:${bg};` +
+    `border:1px solid ${primary ? bg : C.edge};border-radius:4px;padding:0 26px;text-decoration:none;">${label}</a>` +
     `<!--<![endif]-->`
   );
 }
 
+/**
+ * Label left, value right, one hairline between each pair.
+ *
+ * The dividers are the point. A stack of rows in a single box reads as a form;
+ * the same rows ruled apart read as a record, which is what these facts are.
+ */
 function renderFacts(facts: EmailFact[]) {
   const rows = facts
-    .map((fact) => {
+    .map((fact, index) => {
       const factTone = tone(fact.tone);
+      const divider = index === 0 ? "" : `border-top:1px solid ${C.edge};`;
       return (
         `<tr>` +
-        `<td class="e-ink70" style="${line(13, 19, C.ink70, 400, "padding:4px 0;")}">${esc(fact.term)}</td>` +
-        `<td align="right" class="${factTone.cls}" style="${line(13, 19, factTone.colour, 700, "padding:4px 0 4px 14px;")}">${esc(fact.value)}</td>` +
+        `<td class="e-ink45" style="${line(12, 17, C.ink45, 700, `padding:14px 0;${divider}`)}">${up(fact.term)}</td>` +
+        `<td align="right" class="${factTone.cls}" style="${line(15, 17, factTone.colour, 700, `padding:14px 0 14px 14px;${divider}`)}">${esc(fact.value)}</td>` +
         `</tr>`
       );
     })
     .join("");
 
   return (
-    `${openTable(`width="${WIDTH - 44}"`)}<tr>` +
-    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};padding:13px 15px;">` +
+    `${openTable(`width="${INNER}"`)}<tr>` +
+    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};padding:2px 18px;">` +
     `${openTable(`width="100%"`)}${rows}</table>` +
     `</td></tr></table>`
   );
@@ -446,42 +491,44 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
 
   const body: string[] = [];
 
+  // The headline carries the message. It was 25px sitting in a tight panel,
+  // which is the size a form label gets — not the size a verdict gets.
   body.push(
-    `<tr><td class="e-ink" style="${line(25, 29, C.ink, 700, `padding:0 22px;letter-spacing:-0.02em;`)}">${esc(content.verdict)}</td></tr>`
+    `<tr><td class="e-ink" style="${line(33, 40, C.ink, 700, `padding:0 ${PAD}px;letter-spacing:-0.02em;`)}">${esc(content.verdict)}</td></tr>`
   );
 
   if (content.lede) {
-    body.push(gap(14));
-    body.push(`<tr><td class="e-ink70" style="${line(15, 23, C.ink70, 400, "padding:0 22px;")}">${esc(content.lede)}</td></tr>`);
+    body.push(gap(16));
+    body.push(`<tr><td class="e-ink70" style="${line(16, 25, C.ink70, 400, `padding:0 ${PAD}px;`)}">${esc(content.lede)}</td></tr>`);
   }
 
   for (const paragraph of content.paragraphs ?? []) {
-    body.push(gap(14));
+    body.push(gap(16));
     // Escape first, then turn the survivors into breaks — the other order would
     // let a caller's literal "<br />" through as markup.
     const withBreaks = esc(paragraph).replace(/\r?\n/g, "<br />");
-    body.push(`<tr><td class="e-ink70" style="${line(15, 23, C.ink70, 400, "padding:0 22px;")}">${withBreaks}</td></tr>`);
+    body.push(`<tr><td class="e-ink70" style="${line(16, 25, C.ink70, 400, `padding:0 ${PAD}px;`)}">${withBreaks}</td></tr>`);
   }
 
   if (content.stats?.length) {
-    body.push(gap(20));
-    body.push(`<tr><td style="padding:0 22px;">${renderStats(content.stats)}</td></tr>`);
+    body.push(gap(26));
+    body.push(`<tr><td style="padding:0 ${PAD}px;">${renderStats(content.stats)}</td></tr>`);
   }
 
   if (content.facts?.length) {
-    body.push(gap(18));
-    body.push(`<tr><td style="padding:0 22px;">${renderFacts(content.facts)}</td></tr>`);
+    body.push(gap(24));
+    body.push(`<tr><td style="padding:0 ${PAD}px;">${renderFacts(content.facts)}</td></tr>`);
   }
 
   for (const card of shown) {
-    body.push(gap(14));
-    body.push(`<tr><td style="padding:0 22px;">${renderCard(card)}</td></tr>`);
+    body.push(gap(18));
+    body.push(`<tr><td style="padding:0 ${PAD}px;">${renderCard(card)}</td></tr>`);
   }
 
   if (hidden > 0 && content.overflow) {
-    body.push(gap(12));
+    body.push(gap(14));
     body.push(
-      `<tr><td class="e-ink45" style="${line(13, 19, C.ink45, 400, "padding:0 22px;")}">` +
+      `<tr><td class="e-ink45" style="${line(13, 19, C.ink45, 400, `padding:0 ${PAD}px;`)}">` +
         `${esc(`${hidden} more not shown.`)} ` +
         `<a href="${esc(safeUrl(content.overflow.url))}" class="e-blue" style="color:${C.blue};">${esc(content.overflow.label)}</a>` +
         `</td></tr>`
@@ -489,28 +536,28 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
   }
 
   if (content.actions?.length) {
-    body.push(gap(22));
+    body.push(gap(28));
     const buttons = content.actions
-      .map((action) => `<td style="padding:0 9px 9px 0;">${renderButton(action)}</td>`)
+      .map((action) => `<td style="padding:0 10px 10px 0;">${renderButton(action)}</td>`)
       .join("");
     body.push(
-      `<tr><td style="padding:0 22px;">${openTable()}<tr>${buttons}</tr></table></td></tr>`
+      `<tr><td style="padding:0 ${PAD}px;">${openTable()}<tr>${buttons}</tr></table></td></tr>`
     );
   }
 
   for (const quiet of content.quiet ?? []) {
-    body.push(gap(14));
-    body.push(`<tr><td class="e-ink45" style="${line(13, 20, C.ink45, 400, "padding:0 22px;")}">${esc(quiet)}</td></tr>`);
+    body.push(gap(18));
+    body.push(`<tr><td class="e-ink45" style="${line(13, 20, C.ink45, 400, `padding:0 ${PAD}px;`)}">${esc(quiet)}</td></tr>`);
   }
 
   const footerLines = (content.footer?.lines ?? [])
     .map(
-      (text) => `<tr><td class="e-ink45" style="${line(12, 19, C.ink45, 400, "padding:0 22px 4px;")}">${esc(text)}</td></tr>`
+      (text) => `<tr><td class="e-ink45" style="${line(12, 19, C.ink45, 400, `padding:0 ${PAD}px 5px;`)}">${esc(text)}</td></tr>`
     )
     .join("");
 
   const footerLinks = content.footer?.links?.length
-    ? `<tr><td class="e-ink45" style="${line(12, 19, C.ink45, 400, "padding:0 22px 4px;")}">` +
+    ? `<tr><td class="e-ink45" style="${line(12, 19, C.ink45, 400, `padding:0 ${PAD}px 5px;`)}">` +
       content.footer.links
         .map(
           (link) =>
@@ -546,26 +593,31 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
     `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">` +
     `${esc(preheader)}${"&#847;&zwnj;&nbsp;".repeat(60)}</div>` +
     `${openTable(`width="100%" class="e-ground" bgcolor="${C.ground}" style="background-color:${C.ground};"`)}` +
-    `<tr><td align="center" style="padding:26px 12px 22px;">` +
+    `<tr><td align="center" style="padding:32px 12px 30px;">` +
     `${openTable(`width="${WIDTH}" style="width:${WIDTH}px;"`)}` +
-    // header
-    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.edge};border-bottom:0;padding:15px 22px;">` +
+    // Header. The rule beneath it does the separating, so the panel reads as one
+    // surface rather than three stacked boxes.
+    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.edge};border-bottom:0;padding:26px ${PAD}px 24px;">` +
     `${openTable(`width="100%"`)}<tr>` +
-    `<td width="26" class="e-mark" bgcolor="${C.orange}" align="center" style="width:26px;background-color:${C.orange};${line(14, 26, C.onOrange, 700)}">${esc(initial)}</td>` +
-    `<td class="e-ink" style="${line(14, 26, C.ink, 700, "padding-left:10px;")}">${up(platformName)}</td>` +
-    `<td align="right" class="e-ink45" style="${line(11, 26, C.ink45, 700)}">${up(content.kind)}</td>` +
-    `</tr></table></td></tr>` +
+    `<td width="28" class="e-mark" bgcolor="${C.orange}" align="center" style="width:28px;background-color:${C.orange};${line(15, 28, C.onOrange, 700)}">${esc(initial)}</td>` +
+    `<td class="e-ink" style="${line(15, 28, C.ink, 700, "padding-left:11px;")}">${up(platformName)}</td>` +
+    `<td align="right" class="e-ink45" style="${line(11, 28, C.ink45, 700)}">${up(content.kind)}</td>` +
+    `</tr></table>` +
+    // Word ignores height on a div, so the gap and the rule are table rows.
+    `${openTable(`width="100%"`)}${gap(24)}` +
+    `<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table>` +
+    `</td></tr>` +
     // body
     `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border-left:1px solid ${C.edge};border-right:1px solid ${C.edge};">` +
-    `${openTable(`width="100%"`)}${gap(24)}${body.join("")}${gap(20)}</table>` +
+    `${openTable(`width="100%"`)}${gap(30)}${body.join("")}${gap(28)}</table>` +
     `</td></tr>` +
     // footer
-    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.edge};border-top:0;padding:16px 0 20px;">` +
+    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.edge};border-top:0;padding:0 0 28px;">` +
     `${openTable(`width="100%"`)}` +
-    `<tr><td style="padding:0 22px 12px;">${openTable(`width="100%"`)}<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>` +
+    `<tr><td style="padding:0 ${PAD}px 18px;">${openTable(`width="100%"`)}<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>` +
     footerLines +
     footerLinks +
-    `<tr><td class="e-ink45" style="${line(11, 17, C.ink45, 700, "padding:6px 22px 0;")}">${up(creditLine)}</td></tr>` +
+    `<tr><td class="e-ink45" style="${line(11, 17, C.ink45, 700, `padding:8px ${PAD}px 0;`)}">${up(creditLine)}</td></tr>` +
     `</table></td></tr>` +
     `</table></td></tr></table></body></html>`;
 

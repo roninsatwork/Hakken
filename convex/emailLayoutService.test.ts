@@ -155,6 +155,44 @@ describe("renderEmail — legacy Outlook contract", () => {
     expect(used.size).toBeGreaterThan(0);
   });
 
+  /*
+   * Anthony, 2026-08-06: "if the background goes white the text needs to go
+   * dark." The failure he is describing is a client that drops our dark
+   * background but keeps the light text sitting on it — white on white.
+   *
+   * We cannot detect that after the fact, so the answer is that the background
+   * must be impossible to lose. It is stated four times over: inline, as a
+   * `bgcolor` attribute, and restated under both appearances in the lock. A
+   * reader in light mode is the one at risk, so `light` is asserted here as
+   * explicitly as `dark`.
+   */
+  test("restates every surface under light as well as dark", () => {
+    const css = (html.match(/<style[\s\S]*?<\/style>/i) ?? [""])[0];
+
+    const light = css.match(/@media \(prefers-color-scheme:light\)\{[^}]*\{[^}]*\}\}/g) ?? [];
+    const dark = css.match(/@media \(prefers-color-scheme:dark\)\{[^}]*\{[^}]*\}\}/g) ?? [];
+
+    expect(light.length).toBe(dark.length);
+    expect(light.length).toBeGreaterThan(0);
+    // The grounds are what white-on-white depends on, so name them rather than
+    // trusting the counts to have covered them.
+    for (const surface of ["e-ground", "e-card", "e-inset"]) {
+      expect(css).toContain(`@media (prefers-color-scheme:light){.${surface}{background-color:`);
+    }
+  });
+
+  test("no painted surface exists without a lock class to defend it", () => {
+    // A new surface added without a class would be the one element a
+    // forced-appearance client could strip, and nothing would put it back.
+    const document = html.replace(/<style[\s\S]*?<\/style>/i, "");
+    const painted = document.match(/<(?:td|body|table)[^>]*background-color:#[0-9a-f]{6}[^>]*>/gi) ?? [];
+
+    expect(painted.length).toBeGreaterThan(0);
+    for (const element of painted) {
+      expect(element).toMatch(/class="e-[a-z0-9- ]*"/i);
+    }
+  });
+
   test("every colour the lock restates is also inline on the element it targets", () => {
     const css = (html.match(/<style[\s\S]*?<\/style>/i) ?? [""])[0];
     const body = html.replace(/<style[\s\S]*?<\/style>/i, "");

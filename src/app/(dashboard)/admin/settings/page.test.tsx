@@ -446,8 +446,9 @@ describe("SystemSettingsPage", () => {
       expect(updateAuditConfig).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Audit/i }));
-    expect(screen.getByText("Audit rows 1")).toBeInTheDocument();
+    // The audit trail moved under Governance and no longer has a tab here.
+    // Two places showing the same records is how they start disagreeing.
+    expect(screen.queryByRole("button", { name: /^Audit$/i })).not.toBeInTheDocument();
   });
 
   it("shows white-label readiness checks in system options", () => {

@@ -7,8 +7,6 @@ import { History, Loader2, Search } from "lucide-react";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import type { AuditLogRow } from "./types";
 
-const mockAuditTimestampBase = 1735689600000;
-
 export function AuditLogsSection({ logs }: { logs: AuditLogRow[] | undefined }) {
   const t = useTranslations("admin.settings");
 
@@ -35,40 +33,16 @@ export function AuditLogsTable({ logs }: { logs: AuditLogRow[] | undefined }) {
     return <div className="p-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-brand" /></div>;
   }
 
-  const activeLogs: AuditLogRow[] = logs.length > 0 ? logs : [
-    {
-      _id: "mock-log-1a2b3c",
-      actionType: "UPDATE_COMPANY",
-      actorName: "Anthony (SuperAdmin)",
-      entityId: "comp_291039",
-      timestamp: mockAuditTimestampBase - 1000 * 60 * 5,
-      metadata: "{\"field\":\"security_policy\",\"status\":\"enforced\"}",
-    },
-    {
-      _id: "mock-log-4d5e6f",
-      actionType: "TOGGLE_PII",
-      actorName: "System Subroutine",
-      entityId: "system_global",
-      timestamp: mockAuditTimestampBase - 1000 * 60 * 120,
-      metadata: "{\"rule\":\"maskCreditCards\",\"newState\":true}",
-    },
-    {
-      _id: "mock-log-7g8h9i",
-      actionType: "DELETE_USER",
-      actorName: "Anthony (SuperAdmin)",
-      entityId: "usr_malicious_99",
-      timestamp: mockAuditTimestampBase - 1000 * 60 * 60 * 24,
-      metadata: "{\"reason\":\"TOS Violation\",\"email\":\"spam@fake.com\"}",
-    },
-    {
-      _id: "mock-log-xjx9a1",
-      actionType: "CREATE_INVITE",
-      actorName: "Regional Admin",
-      entityId: "inv_91823",
-      timestamp: mockAuditTimestampBase - 1000 * 60 * 60 * 48,
-      metadata: "{\"role\":\"USER\",\"companyId\":\"comp_812\"}",
-    },
-  ];
+  /**
+   * What is actually there, and nothing else.
+   *
+   * An empty trail used to be filled with four invented entries — among them a
+   * user deletion for a "TOS Violation" against an account that never existed,
+   * attributed to a named administrator. Placeholder rows are a demo trick that
+   * has no business on a compliance surface: the one screen whose entire value
+   * is that it only contains things that happened.
+   */
+  const activeLogs: AuditLogRow[] = logs;
 
   const filteredLogs = activeLogs.filter((log) =>
     log.actionType.toLowerCase().includes(searchTerm.toLowerCase()) ||

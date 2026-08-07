@@ -7,8 +7,10 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 
+import { GovernanceActivity } from "./governance/GovernanceActivity";
+
 /**
- * What needs a person, right now.
+ * What needs a person, right now — and what the AI has actually been doing.
  *
  * Built last on purpose. A dashboard drawn over an empty register is a
  * screenshot rather than a product, so this waited until the register filled
@@ -17,6 +19,13 @@ import { api } from "@/convex/_generated/api";
  * Every figure links to the records behind it. A number with nowhere to go is
  * decoration, and decoration on a compliance screen is worse than a blank one —
  * it suggests a check nobody is actually doing.
+ *
+ * The checks alone were not enough to read. Every one of them counts a problem,
+ * so a healthy estate rendered as a page of noughts and the screen looked like
+ * it had failed to load — Anthony, 2026-08-06: *"its factual and boring."* The
+ * activity above them is the same record read the other way round: not what is
+ * wrong, but what happened. The checks stay where they are, below it, because
+ * they are still the part that asks for something.
  *
  * See docs/plans/active/governance-and-trust-plan.md.
  */
@@ -55,6 +64,10 @@ export function GovernanceDashboard() {
           {t("systems", { count: dashboard.systems })}
         </p>
       </div>
+
+      <GovernanceActivity riskMix={dashboard.riskMix} systems={dashboard.systems} />
+
+      <p className="mt-2 text-[13px] font-medium text-foreground">{t("checksTitle")}</p>
 
       <div className="grid gap-2 sm:grid-cols-2">
         {dashboard.checks.map((check) => {

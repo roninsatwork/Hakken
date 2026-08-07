@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { ChangeEvent } from "react";
-import { Building2, ImageIcon, Loader2 } from "lucide-react";
+import { Building2, ImageIcon, Loader2, X } from "lucide-react";
 import { SettingBlock } from "./SettingBlock";
 import type { SystemSettingsFormData } from "./types";
 
@@ -10,6 +10,7 @@ type IdentitySettingsSectionProps = {
   uploadingLight: boolean;
   uploadingDark: boolean;
   onFileUpload: (event: ChangeEvent<HTMLInputElement>, mode: "light" | "dark") => void;
+  onRemoveLogo: (mode: "light" | "dark") => void;
   t: (key: string) => string;
 };
 
@@ -19,6 +20,7 @@ export function IdentitySettingsSection({
   uploadingLight,
   uploadingDark,
   onFileUpload,
+  onRemoveLogo,
   t,
 }: IdentitySettingsSectionProps) {
   return (
@@ -52,7 +54,21 @@ export function IdentitySettingsSection({
               <ImageIcon className="w-8 h-8 text-black/20" />
             )}
             <input type="file" onChange={(event) => onFileUpload(event, "light")} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
-            {uploadingLight && <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-20"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>}
+            {/* Sits above the file input, which covers the whole tile: without a
+                higher layer the click to remove would open the file picker. */}
+            {formData.logoUrlLight ? (
+              <button
+                type="button"
+                onClick={() => onRemoveLogo("light")}
+                aria-label={t("identity.removeLogoLight")}
+                title={t("identity.removeLogoLight")}
+                className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-[8px] bg-black/70 px-2.5 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-black"
+              >
+                <X className="w-3.5 h-3.5" />
+                {t("identity.removeLogo")}
+              </button>
+            ) : null}
+            {uploadingLight && <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-30"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>}
           </div>
         </SettingBlock>
 
@@ -71,7 +87,19 @@ export function IdentitySettingsSection({
               <ImageIcon className="w-8 h-8 text-white/20" />
             )}
             <input type="file" onChange={(event) => onFileUpload(event, "dark")} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
-            {uploadingDark && <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-20"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>}
+            {formData.logoUrlDark ? (
+              <button
+                type="button"
+                onClick={() => onRemoveLogo("dark")}
+                aria-label={t("identity.removeLogoDark")}
+                title={t("identity.removeLogoDark")}
+                className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-[8px] bg-white/85 px-2.5 py-1.5 text-[11px] font-medium text-black transition-colors hover:bg-white"
+              >
+                <X className="w-3.5 h-3.5" />
+                {t("identity.removeLogo")}
+              </button>
+            ) : null}
+            {uploadingDark && <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-30"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>}
           </div>
         </SettingBlock>
       </div>

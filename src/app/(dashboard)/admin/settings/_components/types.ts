@@ -1,6 +1,6 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-export type SettingsTab = "identity" | "appearance" | "security" | "audit" | "options" | "purges";
+export type SettingsTab = "identity" | "appearance" | "security" | "options" | "purges";
 
 export type PiiConfig = {
   enabled?: boolean;

@@ -102,11 +102,19 @@ green anywhere**, and status runs on the blue/yellow axis, which every form of
 red/green colour blindness preserves. Critical is also markedly darker than
 warning, so that distinction survives even in greyscale.
 
+Revised again 2026-08-06 for **depth**. The hues were right; their setting was
+not. Ground and card sat close enough in value to read as one mid-grey slab,
+and `#3a3e48` borders drew a visible box around everything inside it. The panel
+now sits barely above a near-black ground and the borders are hairlines. No
+signal colour moved, so the colour-blind separation above is untouched, and
+every contrast pair improved — a darker ground raises the ratio against light
+type.
+
 | Token | Hex | Use |
 | --- | --- | --- |
-| Card | `#1a1c21` | Card ground |
-| Ground | `#101114` | Outer page |
-| Inset | `#14161a` | Tiles, signal cards |
+| Card | `#111316` | Card ground |
+| Ground | `#0a0b0d` | Outer page |
+| Inset | `#16181c` | Tiles, signal cards |
 | Ink | `#f7f8fa` | Type |
 | Blue | `#8fc6ff` | Passed / healthy, and every link |
 | Gold | `#fae19e` | Needs attention |
@@ -454,6 +462,46 @@ preview route gives us the source to hand to a render service at that point.
   Phase 0.
 
 ## Decisions Log
+
+- **2026-08-06 — the panel got darker and the design got air.** Anthony,
+  comparing our system health alert against a Conterra intelligence digest:
+  *"the Sonae emails are terrible, can we make them look more like the Conterra
+  email in terms of colour."* Diagnosis: only half the gap was colour. Ground
+  `#101114` against card `#1a1c21` read as one mid-grey slab, `#3a3e48` borders
+  boxed every element inside it, side padding was 22px and the verdict was 25px
+  — form proportions, not document proportions. Fixed by dropping the ground to
+  near-black, thinning the borders to hairlines, raising padding to 32 and the
+  verdict to 33px, ruling the fact rows apart instead of stacking them in one
+  box, squaring the button from a 21px pill to 4px, and putting stat values
+  above their labels so a two-line label can no longer knock the row of figures
+  out of line. **No hue changed**, so 2026-08-04's colour-blind work stands
+  untouched and every contrast pair improved.
+
+- **2026-08-06 — the lock now covers light mode too, so the background cannot
+  be lost.** Anthony: *"it can't be identical in light and dark mode as we have
+  white text here"*, and then the sharper version: *"if the background goes
+  white the text needs to go dark."*
+
+  The email is not transparent — it paints its own background on `<body>`, on
+  the wrapper table and on every panel cell, as both a CSS value and a `bgcolor`
+  attribute — so a reader simply *being* in light mode does not turn it white.
+  But the failure he described is real in one narrow case: a client that drops
+  the background while keeping the light text on it. There is no way to detect
+  that after the fact and darken the text in response, so the answer is to make
+  the background impossible to lose.
+
+  `COLOUR_LOCK` previously restated every surface under `prefers-color-scheme:
+  dark` only, which left the light-mode reader — the one actually at risk —
+  unprotected. It now restates the same values under `light` as well. Every
+  surface is therefore declared four times: inline, as `bgcolor`, under dark,
+  under light. Two tests hold it: one that the light and dark blocks stay in
+  step and name the three grounds explicitly, and one that **no painted surface
+  can exist without a lock class**, so a future element cannot be added
+  undefended.
+
+  The design still does not *switch* to a light variant. Gmail ignores
+  `prefers-color-scheme` entirely, so a switching design would work in Apple
+  Mail and nowhere else — which is the 2026-07-31 decision, unchanged.
 
 - **2026-08-04 — forest palette replaced with neutral charcoal; signals moved
   to the blue/yellow axis.** Anthony is red/green colour blind and could not

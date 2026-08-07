@@ -14,14 +14,12 @@ import {
   ShieldCheck,
   ToggleLeft,
   ToggleRight,
-  History,
   Database,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { AppearanceSettingsSection } from "./_components/AppearanceSettingsSection";
-import { AuditLogsSection } from "./_components/AuditLogsTable";
 import { IdentitySettingsSection } from "./_components/IdentitySettingsSection";
 import { PurgesSettingsSection } from "./_components/PurgesSettingsSection";
 import { ApprovalExpirySection } from "./_components/ApprovalExpirySection";
@@ -54,6 +52,7 @@ export default function SystemSettingsPage() {
   const whiteLabelHandoffSummary = useQuery(api.settings.getWhiteLabelHandoffSummary);
   const whiteLabelPackagingChecklist = useQuery(api.settings.getWhiteLabelPackagingChecklist);
   const updateSettings = useMutation(api.settings.update);
+  const clearLogo = useMutation(api.settings.clearLogo);
   const generateUploadUrl = useMutation(api.settings.generateUploadUrl);
 
   const currentPiiConfig = useQuery(api.system.getPiiConfig);
@@ -61,7 +60,6 @@ export default function SystemSettingsPage() {
 
   const currentAuditConfig = useQuery(api.auditLogs.getConfig);
   const updateAuditConfig = useMutation(api.auditLogs.updateConfig);
-  const recentLogs = useQuery(api.auditLogs.getRecentLogs);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -153,8 +151,6 @@ export default function SystemSettingsPage() {
       if (activeTab === "security") {
         await updatePiiConfig({ configStr: JSON.stringify(piiData) });
         await updateAuditConfig(auditData);
-      } else if (activeTab === "audit") {
-        // Read-only feed, no state to save
       } else {
         const payload = { ...formData };
         delete payload._id;
@@ -204,6 +200,26 @@ export default function SystemSettingsPage() {
     }
   };
 
+  // Removing a logo saves on the spot, the same way uploading one does, so the
+  // tile never shows a logo the platform has already stopped using.
+  const handleRemoveLogo = async (mode: "light" | "dark") => {
+    if (mode === "light") setUploadingLight(true);
+    if (mode === "dark") setUploadingDark(true);
+
+    try {
+      await clearLogo({ mode });
+      setFormData((s) => ({
+        ...s,
+        ...(mode === "light" ? { logoUrlLight: undefined } : { logoUrlDark: undefined }),
+      }));
+    } catch (err) {
+      console.error("Logo removal failed", err);
+    } finally {
+      if (mode === "light") setUploadingLight(false);
+      if (mode === "dark") setUploadingDark(false);
+    }
+  };
+
   if (!currentSettings) {
     return (
       <div className="w-full h-[50vh] flex items-center justify-center">
@@ -241,7 +257,6 @@ export default function SystemSettingsPage() {
           { id: 'identity', label: t('tabs.identity'), icon: Building2 },
           { id: 'appearance', label: t('tabs.appearance'), icon: Palette },
           { id: 'security', label: t('tabs.security'), icon: ShieldCheck },
-          { id: 'audit', label: t('tabs.audit'), icon: History },
           { id: 'purges', label: t('tabs.purges'), icon: Database },
           { id: 'options', label: t('tabs.options'), icon: SettingsIcon }
         ] satisfies { id: SettingsTab; label: string; icon: typeof SettingsIcon }[]).map(tab => {
@@ -272,6 +287,7 @@ export default function SystemSettingsPage() {
             uploadingLight={uploadingLight}
             uploadingDark={uploadingDark}
             onFileUpload={handleFileUpload}
+            onRemoveLogo={handleRemoveLogo}
             t={t}
           />
         )}
@@ -440,10 +456,6 @@ export default function SystemSettingsPage() {
         )}
 
 
-
-        {activeTab === "audit" && (
-          <AuditLogsSection logs={recentLogs} />
-        )}
 
         {/* Global Options Engine */}
         {activeTab === "options" && (

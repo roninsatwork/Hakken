@@ -11,6 +11,7 @@ import {
   type GovernanceCheck,
 } from "./governanceDashboardService";
 import { checkConformance, type ConformanceFinding, type SideEffectLevel } from "./conformanceService";
+import { countRiskMix, type RiskMix } from "./governanceActivityService";
 import {
   sortRegister,
   summariseRegister,
@@ -39,6 +40,14 @@ export type GovernanceDashboard = {
   attention: number;
   state: "NEEDS_ATTENTION" | "SETTLED" | "NOT_SET_UP";
   systems: number;
+  /**
+   * The estate by rating.
+   *
+   * The unrated count was already a check, but only as a figure in a box. Drawn
+   * as a bar it is one solid block of grey, which says the thing the number
+   * could not: nothing here has been classified at all.
+   */
+  riskMix: RiskMix;
   checks: GovernanceCheck[];
   /** Named pipelines set below the six months such records are expected to be kept. */
   retentionTooShort: string[];
@@ -145,6 +154,7 @@ export const getGovernanceDashboard = governanceQuery({
       scope: platformWide ? "PLATFORM" : "WORKSPACE",
       ...summariseDashboard(checks),
       systems: register.length,
+      riskMix: countRiskMix(register.map((entry) => entry.risk)),
       checks,
       conformance,
       retentionTooShort: retention.tooShort,

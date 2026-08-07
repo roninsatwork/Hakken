@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import {
+  PERSONAL_DATA_INDEXES,
   PERSONAL_DATA_RULES,
   describeErasure,
+  indexFor,
   ruleFor,
   rulesFor,
   type ErasureTally,
@@ -29,6 +31,48 @@ function tablesReferencingUsers(): Map<string, string[]> {
 
   return found;
 }
+
+/** Every index in the schema, as "table.leadingField" to the index's name. */
+function indexesLeadingWith(): Map<string, string> {
+  const source = fs.readFileSync(path.join(process.cwd(), "convex", "schema.ts"), "utf8");
+  const found = new Map<string, string>();
+
+  for (const [, table, body] of source.matchAll(/^ {2}(\w+): defineTable\(([\s\S]*?)(?=^ {2}\w+: defineTable\(|\Z)/gm)) {
+    for (const [, name, columns] of body.matchAll(/\.index\("(\w+)",\s*\[([^\]]+)\]/g)) {
+      const leading = columns.match(/"(\w+)"/)?.[1];
+      if (leading) found.set(`${table}.${leading}`, name);
+    }
+  }
+
+  return found;
+}
+
+describe("the search knows which indexes it can actually use", () => {
+  const schemaIndexes = indexesLeadingWith();
+
+  test("the schema is actually being read", () => {
+    expect(schemaIndexes.size).toBeGreaterThan(50);
+  });
+
+  test("every index it claims exists, and leads with the field it searches by", () => {
+    // A renamed index would otherwise make the search quietly fall back to
+    // reading the whole table — the thing that was crashing the screen — and
+    // nothing would say so until it failed in front of somebody answering a
+    // legal request.
+    const wrong = Object.entries(PERSONAL_DATA_INDEXES).filter(
+      ([pair, name]) => schemaIndexes.get(pair) !== name,
+    );
+
+    expect(wrong, `These no longer match the schema: ${wrong.map(([pair]) => pair).join(", ")}`).toEqual(
+      [],
+    );
+  });
+
+  test("a table with no usable index says so rather than guessing a name", () => {
+    expect(indexFor("agentToolCalls", "userId")).toBeUndefined();
+    expect(indexFor("messages", "userId")).toBe("by_user_role_created");
+  });
+});
 
 describe("every place a person's data can be is classified", () => {
   const schemaTables = tablesReferencingUsers();

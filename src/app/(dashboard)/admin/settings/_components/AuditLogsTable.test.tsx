@@ -63,13 +63,19 @@ describe("AuditLogsSection", () => {
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();
   });
 
-  it("falls back to mock rows when no audit logs exist", () => {
+  it("shows nothing when nothing has been recorded", () => {
+    /*
+      This used to invent four entries to fill the space — among them a user
+      deletion for a "TOS Violation" against an account that never existed,
+      attributed to a named administrator. On the one screen whose entire value
+      is that it contains only things that happened, placeholder rows are not a
+      cosmetic problem.
+    */
     render(<AuditLogsSection logs={[]} />);
 
-    expect(screen.getByText("Audit feed")).toBeInTheDocument();
-    expect(screen.getByText("UPDATE_COMPANY")).toBeInTheDocument();
-    expect(screen.getByText("TOGGLE_PII")).toBeInTheDocument();
-    expect(screen.getByText(/Showing 1 to 4 of 4 entries/)).toBeInTheDocument();
+    expect(screen.queryByText("UPDATE_COMPANY")).not.toBeInTheDocument();
+    expect(screen.queryByText("TOGGLE_PII")).not.toBeInTheDocument();
+    expect(screen.queryByText(/usr_malicious_99/)).not.toBeInTheDocument();
   });
 
   it("filters rows by action or actor and navigates to log detail pages", () => {

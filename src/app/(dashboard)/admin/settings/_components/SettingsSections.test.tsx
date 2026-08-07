@@ -84,6 +84,9 @@ const t = (key: string) => {
     "identity.logoLightSub": "Shown on light surfaces",
     "identity.logoDark": "Dark logo",
     "identity.logoDarkSub": "Shown on dark surfaces",
+    "identity.removeLogo": "Remove",
+    "identity.removeLogoLight": "Remove the light logo",
+    "identity.removeLogoDark": "Remove the dark logo",
     "whiteLabel.summary.score": "Score",
     "whiteLabel.summary.ready": "Ready",
     "whiteLabel.summary.pending": "Pending",
@@ -178,6 +181,7 @@ describe("settings sections", () => {
         uploadingLight
         uploadingDark={false}
         onFileUpload={onFileUpload}
+        onRemoveLogo={vi.fn()}
         t={t}
       />
     );
@@ -193,6 +197,43 @@ describe("settings sections", () => {
     expect(setFormData).toHaveBeenCalledWith({ ...formData, platformName: "New Sonae" });
     expect(onFileUpload).toHaveBeenCalledWith(expect.any(Object), "light");
     expect(onFileUpload).toHaveBeenCalledWith(expect.any(Object), "dark");
+  });
+
+  it("offers to remove each logo only once there is one to remove", () => {
+    const onRemoveLogo = vi.fn();
+
+    const { rerender } = render(
+      <IdentitySettingsSection
+        formData={{}}
+        setFormData={vi.fn()}
+        uploadingLight={false}
+        uploadingDark={false}
+        onFileUpload={vi.fn()}
+        onRemoveLogo={onRemoveLogo}
+        t={t}
+      />
+    );
+
+    expect(screen.queryByLabelText("Remove the light logo")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Remove the dark logo")).not.toBeInTheDocument();
+
+    rerender(
+      <IdentitySettingsSection
+        formData={{ logoUrlLight: "/light.png", logoUrlDark: "/dark.png" }}
+        setFormData={vi.fn()}
+        uploadingLight={false}
+        uploadingDark={false}
+        onFileUpload={vi.fn()}
+        onRemoveLogo={onRemoveLogo}
+        t={t}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText("Remove the light logo"));
+    fireEvent.click(screen.getByLabelText("Remove the dark logo"));
+
+    expect(onRemoveLogo).toHaveBeenNthCalledWith(1, "light");
+    expect(onRemoveLogo).toHaveBeenNthCalledWith(2, "dark");
   });
 
   it("edits appearance typography and palette fields", () => {
