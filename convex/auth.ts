@@ -9,6 +9,7 @@ import { internal } from "./_generated/api";
 import { createOrUpdateSonaeAuthUser } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
+import { buildConsentUrl } from "./magicLinkUrlService";
 import {
   CODE_TTL_MS,
   expiryFrom,
@@ -46,7 +47,16 @@ const providers: AuthProviderConfig[] = [
      */
     sendVerificationRequest: async ({ identifier, provider, url, expires }) => {
       const platformName = DEFAULT_SETTINGS.platformName;
-      const minutes = Math.max(1, Math.round((expires.getTime() - Date.now()) / 60000));
+      const hours = Math.max(1, Math.round((expires.getTime() - Date.now()) / 3600000));
+
+      /*
+       * Never the framework's own URL. That one carries `code`, which the React
+       * client redeems the instant any page holding it mounts — so a mail
+       * gateway that follows links signs itself in and spends the single-use
+       * code before the recipient has the email. Ours were being redeemed 24 to
+       * 29 seconds after send. See `magicLinkUrlService`.
+       */
+      const consentUrl = buildConsentUrl(url, process.env.SITE_URL);
 
       const email = renderEmail(
         {
@@ -55,8 +65,8 @@ const providers: AuthProviderConfig[] = [
           paragraphs: [
             "Use the button below and you will be signed in — there is no password to enter.",
           ],
-          actions: [{ label: `Sign in to ${platformName}`, url }],
-          quiet: [`This link works once, and expires in about ${minutes} minutes.`],
+          actions: [{ label: `Sign in to ${platformName}`, url: consentUrl }],
+          quiet: [`This link works once, and expires in about ${hours} hours.`],
           footer: {
             lines: [
               "If you did not ask to sign in, ignore this email. Nothing happens until the link is used.",
