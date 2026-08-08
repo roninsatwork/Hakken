@@ -57,7 +57,7 @@ const INNER = WIDTH - PAD * 2;
 export const MAX_CARDS = 8;
 
 /**
- * Neutral charcoal with a blue/gold/red signal ramp.
+ * Conterra-style charcoal with a blue/gold/red signal ramp.
  *
  * This replaced the forest-green palette on 2026-08-04. Anthony, on the system
  * health alert: *"the colours are terrible, they are not accessible, I cannot
@@ -82,7 +82,14 @@ export const MAX_CARDS = 8;
  * here: an email is read once, on someone else's screen, at whatever
  * brightness they happen to have.
  *
- * ## The 2026-08-06 revision: depth, not hue
+ * ## The 2026-08-08 revision: the Conterra readability pass
+ *
+ * Anthony compared the Sonae alert against a Conterra alert and then clarified
+ * that every outbound email should be easy to read in that colour scheme. The
+ * shell now takes the Conterra cues that matter in email clients: near-black
+ * page, black card, readable white body copy, quiet grey metadata, a soft grey
+ * summary strip, and yellow/orange operational accents. The signal colours
+ * still avoid the red/green axis, and colour is still never the only carrier.
  *
  * The hues above were right and are unchanged. What was wrong was their
  * *setting*. Ground `#101114` and card `#1a1c21` were close enough in value to
@@ -96,28 +103,33 @@ export const MAX_CARDS = 8;
  * light type.
  */
 export const EMAIL_PALETTE = {
-  ground: "#0a0b0d",
-  card: "#111316",
-  inset: "#16181c",
-  edge: "#2b2f36",
-  ink: "#f7f8fa",
-  ink70: "#c6cad3",
+  ground: "#050505",
+  card: "#111111",
+  inset: "#191919",
+  edge: "#303030",
+  banner: "#5f625d",
+  onBanner: "#f2f2ed",
+  ink: "#ffffff",
+  ink70: "#d8d8d8",
   // Small print: footer, meta lines. Measures 6.57 on the card — comfortably
   // past AA while staying visibly quieter than body copy.
-  ink45: "#9ba1ad",
+  ink45: "#a8a8a8",
+  // Non-signal operational label colour, matching the Conterra monitor's
+  // muted sage. Signal status never relies on this hue.
+  sage: "#aebd9a",
   // Healthy, and every link. 9.49 on the card.
-  blue: "#8fc6ff",
+  blue: "#82bdff",
   // Needs attention. 13.25 on the card — deliberately the brightest signal.
-  gold: "#fae19e",
+  gold: "#f3d66e",
   // Failed. 5.31 on the card: past AA, but far darker than gold on purpose —
   // the brightness gap is what keeps warning and critical apart when hue
   // cannot.
-  red: "#ee6352",
-  orange: "#ff5a1f",
+  red: "#e45545",
+  orange: "#ff7a1f",
   // Label colour for the orange fill. White on #ff5a1f measures 3.12 and
   // fails AA on the one element the whole email exists to get clicked.
   // Dark ink on the same fill measures 5.76 and leaves the brand hex alone.
-  onOrange: "#1b1611",
+  onOrange: "#241300",
 } as const;
 
 const C = EMAIL_PALETTE;
@@ -178,15 +190,16 @@ const COLOUR_LOCK =
     [".e-ground", `background-color:${C.ground}!important;`],
     [".e-card", `background-color:${C.card}!important;`],
     [".e-inset", `background-color:${C.inset}!important;`],
-    [".e-mark", `background-color:${C.orange}!important;color:${C.onOrange}!important;`],
-    [".e-btn", `background-color:${C.orange}!important;border-color:${C.orange}!important;color:${C.onOrange}!important;`],
+    [".e-banner", `background-color:${C.banner}!important;color:${C.onBanner}!important;`],
     [".e-btn-secondary", `background-color:${C.card}!important;color:${C.ink}!important;`],
     [".e-ink", `color:${C.ink}!important;`],
     [".e-ink70", `color:${C.ink70}!important;`],
     [".e-ink45", `color:${C.ink45}!important;`],
+    [".e-sage", `color:${C.sage}!important;`],
     [".e-blue", `color:${C.blue}!important;`],
     [".e-gold", `color:${C.gold}!important;`],
     [".e-red", `color:${C.red}!important;`],
+    [".e-btn", `background-color:${C.orange}!important;border-color:${C.orange}!important;color:${C.onOrange}!important;`],
     [".e-stripe-red", `background-color:${C.red}!important;`],
     [".e-stripe-gold", `background-color:${C.gold}!important;`],
     [".e-stripe-edge", `background-color:${C.edge}!important;`],
@@ -356,26 +369,41 @@ function gap(height: number) {
 }
 
 function renderStats(stats: EmailStat[]) {
-  const width = Math.floor((INNER - (stats.length - 1) * 10) / stats.length);
+  if (stats.length === 1) {
+    const stat = stats[0];
+    const statTone = tone(stat.tone);
+    return (
+      `${openTable(`width="${INNER}"`)}<tr>` +
+      `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};padding:20px 24px;">` +
+      `<div class="${statTone.cls}" style="${line(32, 38, statTone.colour, 700)}">${esc(stat.value)}</div>` +
+      `<div class="e-ink45" style="${line(12, 17, C.ink45, 700, "padding-top:8px;")}">${up(stat.label)}</div>` +
+      `</td></tr></table>`
+    );
+  }
 
-  const cells = stats
+  /*
+   * Stat tiles made the alert read as a dashboard screenshot. Count rows are
+   * denser and easier to scan in a mail client, matching the Conterra monitor.
+   */
+  const rows = stats
     .map((stat, index) => {
-      const spacer = index === 0 ? "" : `<td width="10" style="width:10px;font-size:0;">&nbsp;</td>`;
       const statTone = tone(stat.tone);
+      const divider = index === 0 ? "" : `border-top:1px solid ${C.edge};`;
       return (
-        `${spacer}<td width="${width}" valign="top" class="e-inset" bgcolor="${C.inset}" ` +
-        `style="width:${width}px;background-color:${C.inset};border:1px solid ${C.edge};padding:15px 16px 17px;">` +
-        // Value above label. With the label on top, a two-line label pushed its
-        // number down while a one-line label did not, so the row of figures —
-        // the thing the eye is meant to scan — came out ragged.
-        `<div class="${statTone.cls}" style="${line(28, 34, statTone.colour, 700)}">${esc(stat.value)}</div>` +
-        `<div class="e-ink45" style="${line(11, 15, C.ink45, 700, "padding-top:7px;")}">${up(stat.label)}</div>` +
-        `</td>`
+        `<tr>` +
+        `<td class="e-ink45" style="${line(13, 18, C.ink45, 700, `padding:15px 0;${divider}`)}">${up(stat.label)}</td>` +
+        `<td align="right" class="${statTone.cls}" style="${line(16, 18, statTone.colour, 700, `padding:15px 0 15px 14px;${divider}`)}">${esc(stat.value)}</td>` +
+        `</tr>`
       );
     })
     .join("");
 
-  return `${openTable(`width="${INNER}"`)}<tr>${cells}</tr></table>`;
+  return (
+    `${openTable(`width="${INNER}"`)}<tr>` +
+    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};padding:0 20px;">` +
+    `${openTable(`width="100%"`)}${rows}</table>` +
+    `</td></tr></table>`
+  );
 }
 
 function renderCard(card: EmailCard) {
@@ -383,17 +411,17 @@ function renderCard(card: EmailCard) {
   const badgeTone = severityText(card.severity);
   const label = badgeText(card);
   const badge = label
-    ? `<td align="right" valign="top" class="${badgeTone.cls}" style="${line(11, 15, badgeTone.colour, 700, "padding-left:12px;")}">${up(label)}</td>`
+    ? `<td align="right" valign="top" class="${badgeTone.cls}" style="${line(12, 16, badgeTone.colour, 700, "padding-left:12px;")}">${up(label)}</td>`
     : "";
 
   const meta = card.meta
-    ? `<tr><td class="e-ink45" style="${line(12, 18, C.ink45, 400, "padding-top:9px;")}">${esc(card.meta)}</td></tr>`
+    ? `<tr><td class="e-ink45" style="${line(13, 19, C.ink45, 400, "padding-top:9px;")}">${esc(card.meta)}</td></tr>`
     : "";
 
   const fix = card.fix
     ? `<tr><td style="padding-top:13px;">` +
       `${openTable(`width="100%"`)}<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table>` +
-      `<div class="e-ink45" style="${line(13, 20, C.ink45, 400, "padding-top:12px;")}">${esc(card.fix)}</div>` +
+      `<div class="e-ink70" style="${line(13, 21, C.ink70, 400, "padding-top:12px;")}">${esc(card.fix)}</div>` +
       `</td></tr>`
     : "";
 
@@ -406,10 +434,10 @@ function renderCard(card: EmailCard) {
   return (
     `${openTable(`width="${INNER}"`)}<tr>` +
     `<td width="3" class="${stripe.cls}" bgcolor="${stripe.colour}" style="width:3px;background-color:${stripe.colour};font-size:0;line-height:0;">&nbsp;</td>` +
-    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};border-left:0;padding:18px 20px;">` +
+    `<td class="e-inset" bgcolor="${C.inset}" style="background-color:${C.inset};border:1px solid ${C.edge};border-left:0;padding:20px 24px;">` +
     `${openTable(`width="100%"`)}` +
-    `<tr><td class="e-ink" style="${line(16, 22, C.ink, 700)}">${esc(card.title)}</td>${badge}</tr>` +
-    `<tr><td colspan="${label ? 2 : 1}" class="e-ink70" style="${line(14, 21, C.ink70, 400, "padding-top:8px;")}">${esc(card.body)}</td></tr>` +
+    `<tr><td class="e-ink" style="${line(17, 23, C.ink, 700)}">${esc(card.title)}</td>${badge}</tr>` +
+    `<tr><td colspan="${label ? 2 : 1}" class="e-ink70" style="${line(15, 23, C.ink70, 400, "padding-top:9px;")}">${esc(card.body)}</td></tr>` +
     meta +
     fix +
     link +
@@ -494,7 +522,7 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
   // The headline carries the message. It was 25px sitting in a tight panel,
   // which is the size a form label gets — not the size a verdict gets.
   body.push(
-    `<tr><td class="e-ink" style="${line(33, 40, C.ink, 700, `padding:0 ${PAD}px;letter-spacing:-0.02em;`)}">${esc(content.verdict)}</td></tr>`
+    `<tr><td class="e-ink" style="${line(33, 40, C.ink, 700, `padding:0 ${PAD}px;letter-spacing:0;`)}">${esc(content.verdict)}</td></tr>`
   );
 
   if (content.lede) {
@@ -593,26 +621,30 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
     `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">` +
     `${esc(preheader)}${"&#847;&zwnj;&nbsp;".repeat(60)}</div>` +
     `${openTable(`width="100%" class="e-ground" bgcolor="${C.ground}" style="background-color:${C.ground};"`)}` +
-    `<tr><td align="center" style="padding:32px 12px 30px;">` +
+    `<tr><td align="center" style="padding:30px 12px 34px;">` +
     `${openTable(`width="${WIDTH}" style="width:${WIDTH}px;"`)}` +
+    `<tr><td class="e-banner" bgcolor="${C.banner}" style="background-color:${C.banner};padding:15px ${PAD}px;">` +
+    `<div class="e-banner" style="${line(14, 20, C.onBanner, 700)}">${esc(preheader)}</div>` +
+    `</td></tr>` +
     // Header. The rule beneath it does the separating, so the panel reads as one
     // surface rather than three stacked boxes.
-    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.edge};border-bottom:0;padding:26px ${PAD}px 24px;">` +
+    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};padding:34px ${PAD}px 28px;">` +
     `${openTable(`width="100%"`)}<tr>` +
-    `<td width="28" class="e-mark" bgcolor="${C.orange}" align="center" style="width:28px;background-color:${C.orange};${line(15, 28, C.onOrange, 700)}">${esc(initial)}</td>` +
-    `<td class="e-ink" style="${line(15, 28, C.ink, 700, "padding-left:11px;")}">${up(platformName)}</td>` +
-    `<td align="right" class="e-ink45" style="${line(11, 28, C.ink45, 700)}">${up(content.kind)}</td>` +
+    `<td width="34" class="e-banner" bgcolor="${C.banner}" align="center" style="width:34px;background-color:${C.banner};${line(16, 34, C.onBanner, 700)}">${esc(initial)}</td>` +
+    `<td style="padding-left:14px;">` +
+    `<div class="e-ink" style="${line(17, 22, C.ink, 700)}">${esc(platformName)}</div>` +
+    `<div class="e-ink45" style="${line(13, 18, C.ink45, 400, "padding-top:2px;")}">${esc(content.kind)}</div>` +
+    `</td>` +
     `</tr></table>` +
-    // Word ignores height on a div, so the gap and the rule are table rows.
-    `${openTable(`width="100%"`)}${gap(24)}` +
-    `<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table>` +
+    `${openTable(`width="100%"`)}${gap(34)}` +
+    `<tr><td class="e-sage" style="${line(13, 18, C.sage, 700)}">${up(content.kind)}</td></tr></table>` +
     `</td></tr>` +
     // body
-    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border-left:1px solid ${C.edge};border-right:1px solid ${C.edge};">` +
-    `${openTable(`width="100%"`)}${gap(30)}${body.join("")}${gap(28)}</table>` +
+    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};">` +
+    `${openTable(`width="100%"`)}${gap(0)}${body.join("")}${gap(28)}</table>` +
     `</td></tr>` +
     // footer
-    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};border:1px solid ${C.edge};border-top:0;padding:0 0 28px;">` +
+    `<tr><td class="e-card" bgcolor="${C.card}" style="background-color:${C.card};padding:0 0 30px;">` +
     `${openTable(`width="100%"`)}` +
     `<tr><td style="padding:0 ${PAD}px 18px;">${openTable(`width="100%"`)}<tr><td style="border-top:1px solid ${C.edge};font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>` +
     footerLines +

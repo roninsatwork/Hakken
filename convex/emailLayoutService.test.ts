@@ -497,6 +497,8 @@ describe("renderEmail — contrast", () => {
     ["small print on the card", P.ink45, P.card],
     ["small print on an inset block", P.ink45, P.inset],
     ["body copy on an inset block", P.ink70, P.inset],
+    ["the summary strip text", P.onBanner, P.banner],
+    ["the operational kicker", P.sage, P.card],
     ["links and the healthy tone", P.blue, P.card],
     ["the healthy tone on an inset tile", P.blue, P.inset],
     ["the warning tone", P.gold, P.card],
@@ -504,7 +506,6 @@ describe("renderEmail — contrast", () => {
     ["the critical tone", P.red, P.card],
     ["the critical tone on an inset tile", P.red, P.inset],
     ["the primary button label", P.onOrange, P.orange],
-    ["the wordmark initial", P.onOrange, P.orange],
   ];
 
   test.each(pairs)("%s meets WCAG AA", (_name, foreground, background) => {
