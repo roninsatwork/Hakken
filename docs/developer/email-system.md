@@ -5,7 +5,8 @@ Every email the platform sends renders through one shell:
 
 Governed by [Email Design System Plan](../plans/active/email-design-system-plan.md).
 Sender identity and branding resolution are covered separately in
-[Email Branding](./email-branding.md).
+[Email Branding](./email-branding.md). Magic-link URL construction is covered by
+`convex/magicLinkUrlService.ts` and [Route Protection And Authentication](./route-protection-and-authentication.md).
 
 ## The one rule
 
@@ -48,6 +49,7 @@ Anything optional that is absent renders nothing — a minimal message is just
 | Invites | `convex/invites.ts` calls `renderEmail` directly | Template record supplies headline and body |
 | Agent notifications | `buildAgentNotificationEmail` in `convex/aiToolNotificationService.ts` | Sent from `convex/aiToolExecutionService.ts` |
 | Workflow email nodes | `convex/workflowRuntime.ts` calls `renderEmail` directly | Body is author-written and template-substituted |
+| Magic-link and one-time-code auth | Convex Auth email provider plus `convex/oneTimeCodes.ts` | Sign-in links route through `/verify`; typed codes are scanner-safe |
 
 All four pass `{ html, text }` to `sendResendEmail`. A send without a text part
 scores worse with spam filters and is unreadable on a watch or through a screen
@@ -139,6 +141,10 @@ the cap of 8, and uses an oversized provider payload. Check it after any change
 to the shell — the failures worth catching are invisible in tidy sample data.
 
 The route is unreachable in production unless `EMAIL_PREVIEW_ENABLED=1`.
+`GET /api/email-preview` returns 404 in production unless explicitly enabled.
+`?raw=<key>` returns HTML source as `text/plain`; `?raw=<key>&format=text`
+returns the plain-text part. Keep the route dev-only unless there is a specific
+deployment decision to expose it.
 
 ## Adding a new email
 

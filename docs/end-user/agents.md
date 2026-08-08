@@ -21,7 +21,7 @@ Agent administration is under the admin area:
 - `/admin/agents/[id]/interfaces` chooses which tools the agent may use, and whether it answers in plain English or in a fixed set of fields.
 - `/admin/agents/[id]/logs` and `/admin/agents/[id]/logs/[logId]` inspect agent logs.
 - `/admin/ai/skills` and `/admin/agents/skills` manage the reusable skill catalog. Skill detail and edit controls currently live inside the Skill Center surface rather than a separate implemented skill-detail route.
-- `/admin/agents/approvals` shows paused agent tool calls waiting for an approval decision.
+- `/admin/governance/approvals` shows paused agent tool calls waiting for an approval decision.
 - `/app/agentic-testing` provides a sandbox for sending prompts to a selected agent or using automatic routing.
 
 If a user cannot open these routes, they probably do not have the required role or company context.

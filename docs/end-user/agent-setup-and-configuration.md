@@ -27,7 +27,7 @@ Use these admin routes:
 - `/admin/agents/[id]/memory`: review active memories, memory quality, candidates, reflections, and suggestions.
 - `/admin/agents/[id]/logs`: inspect agent trace history.
 - `/admin/agents/[id]/logs/[logId]`: inspect one trace.
-- `/admin/agents/approvals`: review pending tool-call approvals across agents.
+- `/admin/governance/approvals`: review pending tool-call approvals across agents.
 - `/admin/ai/skills` and `/admin/agents/skills`: manage the reusable skill catalog. Skill detail and edit controls currently live inside the Skill Center surface rather than a separate implemented skill-detail route.
 
 ## Create An Agent

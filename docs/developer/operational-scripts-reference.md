@@ -30,6 +30,10 @@ because a script passes locally.
 | `npm run test:run` | Runs the Vitest suite once after `verify:env`. |
 | `npm run test:coverage` | Runs coverage after `verify:env`. |
 | `npm run coverage:check` | Checks coverage thresholds. |
+| `npm run check:pagination` | Runs the pagination drift guard. |
+| `npm run check:encoding` | Runs the source/document encoding guard. |
+| `npm run check:layering` | Runs the app layering/import-boundary guard. |
+| `npm run check:guards` | Runs the project guard checks as a grouped command. |
 | `npm run check` | Runs environment verification, lint, typecheck, and Vitest. |
 | `npm run gate` | Runs lint, typecheck, unit tests, E2E, coverage, and coverage threshold check. |
 | `npm run setup:validate` | Validates local or production setup requirements. |

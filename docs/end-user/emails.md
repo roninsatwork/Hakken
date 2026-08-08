@@ -53,6 +53,10 @@ Sonae will not proceed without an answer.
 There is no password to set — sign in with the address the invitation arrived
 at and Sonae recognises you.
 
+Magic-link sign-in emails may open a confirmation page first. Pressing the
+button on that page proves a person, not a mail scanner, is spending the
+one-use link. Some environments may instead use a typed one-time code.
+
 **If you were not expecting it:** ignore it. Nothing happens until you sign in.
 
 ## Notification from an agent

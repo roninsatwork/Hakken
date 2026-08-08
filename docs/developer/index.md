@@ -19,6 +19,8 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 
 - [Assistant Chat](./assistant-chat.md)
 - [Public Website](./public-website.md)
+- [Governance And Trust](./governance-and-trust.md)
+- [Sales Data Workspace](./sales-data-workspace.md)
 - [Administration](./administration.md)
 - [Company And User Management](./company-user-management.md)
 - [Company AI Readiness And Checks](./company-ai-readiness-and-checks.md)

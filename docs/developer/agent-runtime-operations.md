@@ -11,7 +11,7 @@ Operational routes:
 - `src/app/(dashboard)/admin/agents/[id]/runs/page.tsx` reads analytics, paginated runs, run detail, feedback, reflections, memory candidates, eval fixtures, smoke history, versions, and improvement suggestions. It also triggers replay, cancellation, feedback writes, reflection creation, memory candidate generation/review, eval creation, eval suite execution, and improvement suggestion review.
 - `src/app/(dashboard)/admin/agents/[id]/evals/page.tsx` manages checks, smoke evals, suite presets, and skill coverage.
 - `src/app/(dashboard)/admin/agents/[id]/memory/page.tsx` reviews active memories, quality signals, memory candidates, reflections, and improvement suggestions.
-- `src/app/(dashboard)/admin/agents/approvals/page.tsx` reviews pending approvals across agents.
+- `src/app/(dashboard)/admin/governance/approvals/page.tsx` reviews pending approvals across agents.
 - `src/app/(dashboard)/admin/health/page.tsx` consumes cross-agent observability data.
 
 Shared operational UI should keep using admin pagination, in-app modals, inline save/error feedback, and redacted previews rather than native browser dialogs.

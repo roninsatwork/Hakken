@@ -17,7 +17,7 @@ The admin routes are under `src/app/(dashboard)/admin/agents/`:
 - `src/app/(dashboard)/admin/agents/[id]/memory/page.tsx` reviews memories, memory quality, memory candidates, reflections, and improvement suggestions.
 - `src/app/(dashboard)/admin/agents/[id]/logs/page.tsx` and `src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx` show agent logs.
 - `src/app/(dashboard)/admin/agents/skills/page.tsx` and `src/app/(dashboard)/admin/ai/skills/page.tsx` manage the reusable skill catalog. Skill detail and edit controls currently live inside the Skill Center surface rather than a separate skill-detail route.
-- `src/app/(dashboard)/admin/agents/approvals/page.tsx` exposes pending `agentRunApprovals`.
+- `src/app/(dashboard)/admin/governance/approvals/page.tsx` exposes pending `agentRunApprovals` from the Governance section.
 
 The prompt sandbox lives at `src/app/(dashboard)/app/agentic-testing/page.tsx`. It selects an agent or auto-routes through `api.orchestrator.routeAgentIntent`, creates a chat thread, and sends a message with `dynamicAgentId` when an agent is selected or routed.
 

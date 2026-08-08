@@ -179,19 +179,20 @@ stale, and "it builds itself as you work" is the entire proposition — a build
 that requires anyone to add entries by hand has failed this plan even if every
 screen works.
 
-## Naming conflict to resolve first
+## Naming conflict resolved
 
-The word "governance" is already used twice in the platform and neither use is
+The word "governance" was already used twice in the platform and neither use was
 this one:
 
-- `/admin/ai/governance/rules` and `/admin/ai/governance/system-prompt` — AI
-  configuration, not governance in the regulatory sense.
+- The former AI-governance aliases under the AI admin section described AI
+  configuration, not governance in the regulatory sense. Those aliases are no
+  longer current routes; AI configuration now lives under `/admin/ai/rules` and
+  `/admin/ai/system-prompt`.
 - Each agent has an internal tab keyed `governance` that displays as
   "Instructions".
 
-A third meaning will confuse everyone. Phase 1 must rename these rather than
-build alongside them. The AI paths become AI configuration paths; the agent tab
-keeps its visible label and loses the internal name.
+A third meaning would confuse everyone. The AI paths became AI configuration
+paths; the agent tab keeps its visible label and loses the internal name.
 
 ## Two surfaces, one set of data
 

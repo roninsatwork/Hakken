@@ -2,7 +2,7 @@
 
 Route protection and authentication in Sonae are implemented through Convex Auth providers, client-side layout guards, deterministic test-auth helpers, Next.js route aliases/security headers, and backend Convex authorization checks. There is currently no root `middleware.ts`; route access is enforced by app layouts and by every sensitive query, mutation, and action.
 
-Read this before changing `next.config.ts`, `convex/auth.ts`, `convex/authUserProvisioning.ts`, `convex/authEvents.ts`, `convex/authz.ts`, `convex/actionAuth.ts`, `convex/localTestAuth.ts`, `src/app/login/page.tsx`, dashboard layouts, admin layouts, or E2E auth helpers. For support diagnostics events, see [Auth Diagnostics](./auth-diagnostics.md). For user and invite lifecycle rules, see [Company And User Management](./company-user-management.md).
+Read this before changing `next.config.ts`, `convex/auth.ts`, `convex/authUserProvisioning.ts`, `convex/authEvents.ts`, `convex/authz.ts`, `convex/actionAuth.ts`, `convex/localTestAuth.ts`, `convex/oneTimeCodes.ts`, `convex/magicLinkUrlService.ts`, `src/app/login/page.tsx`, `src/app/verify/page.tsx`, dashboard layouts, admin layouts, or E2E auth helpers. For support diagnostics events, see [Auth Diagnostics](./auth-diagnostics.md). For user and invite lifecycle rules, see [Company And User Management](./company-user-management.md).
 
 ## Authentication Providers
 
@@ -22,11 +22,32 @@ The auth callback `createOrUpdateUser` is `createOrUpdateSonaeAuthUser` from `co
 
 - Google sign-in with `signIn("google", { redirectTo: "/app" })`
 - email magic-link sign-in with `signIn("resend", { email, redirectTo: "/app" })`
+- typed one-time-code sign-in through public `oneTimeCodes` mutations
 - preflight auth diagnostics through `api.authEvents.recordMagicLinkRequestAttempt`
 
 The email flow deliberately uses neutral success copy. It shows the same "check your inbox" state whether the backend accepts or rejects the email. This avoids user enumeration from the public login form.
 
 If diagnostics logging fails, the login page catches that failure and still proceeds with the auth action. Auth diagnostics are useful evidence, not a dependency for sending the magic link.
+
+## Verify Page And One-Time Codes
+
+`src/app/verify/page.tsx` is the page a magic-link email lands on. It reads the
+consent code parameter named by `CONSENT_CODE_PARAM` in
+`convex/magicLinkUrlService.ts`, but it does not redeem the code during page
+load. Redemption happens only inside the user's button click handler. This
+protects one-use sign-in links from mail gateways that render links before the
+user sees the message.
+
+`convex/magicLinkUrlService.ts` builds the consent URL for `/verify`. Keep the
+parameter name and route aligned with the email provider callback and the verify
+page.
+
+`convex/oneTimeCodes.ts` supports typed code sign-in with public mutations for
+request, failed-attempt recording, and verified-attempt recording. The rules live
+in `convex/oneTimeCodeService.ts`: six digits, ten-minute expiry, five attempts,
+and a five-request rolling window per email. The code path is deliberately
+immune to link scanners because there is no link in the email that can spend the
+code.
 
 ## Invite-Only Provisioning
 
@@ -156,7 +177,8 @@ Current implemented redirects include:
 - `/app` redirects super admins to `/admin` once per session.
 - `/admin` routes redirect non-super-admin users to `/app` through the admin layout.
 - `/admin/companies/[id]/directory` redirects to `/admin/companies/[id]/directory/users`.
-- `/admin/companies/[id]/ai` redirects to `/admin/companies/[id]/ai/knowledge`.
+- `/admin/companies/[id]/ai` opens the company AI readiness overview.
+- `/verify` requires a user click before redeeming a magic-link consent code.
 
 `next.config.ts` also keeps legacy company-admin URLs working with temporary redirects:
 
@@ -177,7 +199,7 @@ These redirects shape navigation. They do not replace backend authorization chec
 
 `next.config.ts` applies `next-secure-headers` to `/`, `/login`, `/admin/:path*`, `/app/:path*`, `/sandbox/:path*`, `/w/:path*`, and `/embed.js`.
 
-The default header set is report-only CSP with same-origin frame ancestors. It is used by the public landing/login, admin, app, and sandbox routes. The widget iframe route `/w/:path*` and the embed script `/embed.js` use an embed header set with frame guard disabled and `frameAncestors: ["*"]` so customer sites can host the widget. Treat this as intentional widget behavior, not a general relaxation for dashboard routes.
+The default header set is report-only CSP with same-origin frame ancestors. It is used by the public landing/login, admin, app, and sandbox routes. The widget iframe route `/w/:path*` and the embed script `/embed.js` use an embed header set with `frameGuard: false` so customer sites can host the widget. Per-widget frame authorization is request-specific and belongs to `src/proxy.ts`, which applies an enforcing `frame-ancestors` policy from the widget's allowed domains. Treat this as intentional widget behavior, not a general relaxation for dashboard routes.
 
 Both header sets currently allow self plus HTTPS scripts, inline/eval scripts, inline styles, data/blob/HTTPS images, HTTPS and websocket connections, and HTTPS frames. Because the CSP is report-only, do not describe it as an enforced runtime block until `reportOnly` is removed. If widget embedding, sandbox behavior, or dashboard CSP posture changes, update this guide, [Embedded Widgets](./embedded-widgets.md), and the customer handoff docs together.
 
@@ -202,6 +224,8 @@ Focused tests include:
 - `convex/authUserProvisioning.test.ts` for invite-only provisioning, invite acceptance, stale accepted invite recovery, expiration, revoked invites, public diagnostics, and initial super-admin creation.
 - `convex/authEvents.test.ts` for super-admin reads, company-admin scoping, and standard-user rejection.
 - `convex/authz.test.ts` for active-company and tenant helper behavior.
+- `convex/oneTimeCodes.test.ts` and `convex/oneTimeCodeService.test.ts` for typed-code request, expiry, attempt, and verification behavior.
+- `convex/magicLinkUrlService.test.ts` for the `/verify` consent URL.
 - `convex/localTestAuth.test.ts` for deterministic seeding, secret validation, and fail-closed behavior.
 - `e2e/auth-journey.spec.ts`, `e2e/auth.setup.ts`, and `e2e/helpers/auth.ts` for deterministic browser auth route journeys.
 

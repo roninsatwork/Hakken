@@ -10,7 +10,7 @@ For the broader settings map, see [Platform Operations Settings](./platform-oper
 - `/admin/settings/scripts`: allowlisted maintenance script list.
 - `/admin/settings/scripts/[scriptId]`: one script's guidance, run action, and history.
 - `/admin/health`: recent agent run triage when system health points to run failures.
-- `/admin/agents/approvals`: pending approval queue when system health reports stranded approvals.
+- `/admin/governance/approvals`: pending approval queue when system health reports stranded approvals.
 - `/admin/workflows/schedules`: schedule configuration when system health reports schedule drift or execution failures.
 
 System health accepts admins. Super admins see platform-wide evidence; company admins see company-scoped reports where supported. Maintenance script listing, detail, and execution require super-admin access because scripts are platform repair controls.

@@ -14,7 +14,7 @@ Sonae uses three roles: `USER`, `ADMIN`, and `SUPER_ADMIN`. A standard user can 
 
 ## Admin Navigation
 
-When a super admin opens `/admin`, the sidebar shows platform administration groups. The dashboard item opens the global admin overview. Companies opens company management and company detail screens. AI contains costs, chat logs, rules, system prompt, global knowledge, widget, and model configuration. Agents contains approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks, run observatory, system health, scripts, and auth diagnostics. Settings contains system settings, plans, API keys, webhook deliveries, and analytics. System admins contains super-admin management and super-admin invitations.
+When a super admin opens `/admin`, the sidebar shows platform administration groups. The dashboard item opens the global admin overview. Companies opens company management and company detail screens. Directory opens the read-only platform user directory. Governance opens the AI register, policies, audit trail, evidence, personal-data tools, and approval evidence. AI contains costs, chat logs, rules, system prompt, global knowledge, widget, and model configuration. Agents contains approvals, skills, agent management, connectors, workflows, and schedules. Maintenance contains release checks, run observatory, system health, scripts, and auth diagnostics. Settings contains system settings, plans, API keys, webhook deliveries, and analytics. System admins contains super-admin management and super-admin invitations.
 
 The normal application sidebar remains different. In `/app`, users see dashboard, assistant, reports, properties, the temporary posture demo, and for company admins an organization section. Diagnostic arcade routes only appear when diagnostic routing is enabled. This distinction matters because customers should not expect every admin function to be available from the regular user dashboard.
 
@@ -42,6 +42,8 @@ Impersonation is intentionally constrained. While a super admin is impersonating
 
 The global user management screen is available under `/admin/users`. It lists users and pending invitations together, supports search, shows user identity, role, workspace, joined date, and row actions, and uses pagination. Hover actions let admins open detail, edit a user, or delete a user. Pending invitation rows show that the invite is awaiting acceptance and include a revoke action.
 
+The platform user directory at `/admin/directory` is read-only. It is for observability, not account management. It supports search, company filtering, role filtering, activity filtering, and sorting by last login or login count when not using search. Use `/admin/users` when a user actually needs to be added, edited, invited, or deleted.
+
 The add/edit modal collects full name, email, role, optional workspace, and avatar URL. Super admins can choose the workspace and can create super admins from global context. Tenant-scoped admins and impersonated super admins are limited to their active company and cannot create, edit, or delete super-admin privileges. Errors appear inside the modal or confirmation dialog.
 
 Invitations can be sent from invite routes. Invitation email content comes from the active invite email template or a default template. The user invite, company invite, and super-admin invite screens share one global invite template; saving that template is a super-admin action, so tenant admins should treat the visible copy as platform-managed unless a super admin has approved a change. In production, Sonae sends through the configured email provider. In a local or unconfigured environment where the email API key is missing, the system can simulate success and still create the pending invite record. The current invitation link sends the recipient to the login page, and access depends on signing in with the invited email address.
@@ -61,6 +63,12 @@ The AI section centralizes governance of Sonae’s AI behavior. The costs screen
 Admins should understand that these controls are layered. The global system prompt gives platform-wide behavior. Company prompts tailor behavior for a specific tenant. Rules add targeted instructions. Knowledge gives reference material. Model settings control available engines and defaults. Safety and tenancy controls still sit above all of these; a rule or document cannot authorize cross-tenant access or hidden prompt disclosure.
 
 Changes to model and prompt configuration can affect users immediately. Test with a normal assistant conversation after changing models, global prompts, company prompts, or active rules. If a tenant reports surprising assistant behavior, check company prompt, active rules, global knowledge, company knowledge, selected model, and usage limits before assuming the chat UI itself is broken.
+
+## Governance
+
+The Governance section at `/admin/governance` is the evidence layer for AI systems. It includes the AI register, active policies, audit trail, evidence packs, personal-data tools, and the approvals queue. Use it to understand what AI systems exist, what rules govern them, what happened, and what evidence can be shared.
+
+The customer workspace also has `/app/governance`, which shows the customer's own scoped governance standing. See [Governance And Trust](./governance-and-trust.md) for the customer-facing workflow.
 
 ## Agents, Workflows, Releases, and Connectors
 

@@ -10,6 +10,8 @@ End-user docs are customer-friendly explanations of the Sonae platform, its feat
 ## Product Guides
 
 - [Login, Access, And Authentication](./login-access-and-authentication.md)
+- [Governance And Trust](./governance-and-trust.md)
+- [Sales Data Workspace](./sales-data-workspace.md)
 - [Assistant Chat](./assistant-chat.md)
 - [Administration](./administration.md)
 - [AI Administration](./ai-administration.md)
@@ -40,6 +42,6 @@ End-user docs are customer-friendly explanations of the Sonae platform, its feat
 
 ## Coverage Status
 
-The 2026-07-30 documentation coverage audit found no high-priority missing end-user guide for the currently implemented authenticated customer-facing surfaces exposed through the dashboard navigation. The public pre-login website remains active product work rather than complete end-user documentation; see [Public Website Plan](../plans/active/public-website-plan.md) and [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).
+The documentation coverage audit should be refreshed whenever routes, Convex modules, navigation, admin surfaces, workspace verticals, workflows, widgets, public pages, or operator-facing experiences change. Current shipped customer-facing feature families have end-user guides; planned public website routes remain active product work until they ship.
 
 Continue auditing this index when navigation, routes, admin surfaces, workflows, widgets, public pages, or operator-facing experiences change.

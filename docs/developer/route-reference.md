@@ -1,6 +1,6 @@
 # Route Reference
 
-Last reviewed: 2026-07-30 17:39 BST +0100
+Last reviewed: 2026-08-08 12:10 BST +0100
 Status: current route inventory
 Audience: engineers and agents changing Sonae routing, navigation, page ownership, or documentation coverage.
 
@@ -21,10 +21,12 @@ in the same documentation pass.
 | --- | --- | --- | --- |
 | `/` | `src/app/(public)/page.tsx` | Public pre-login home page. | [Public Website](../end-user/public-website.md), [Public Website Developer Guide](./public-website.md) |
 | `/login` | `src/app/login/page.tsx` | Sign-in screen. | [Login, Access, And Authentication](../end-user/login-access-and-authentication.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
+| `/verify` | `src/app/verify/page.tsx` | Magic-link consent confirmation page. | [Login, Access, And Authentication](../end-user/login-access-and-authentication.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
 | `/local-test-auth` | `src/app/local-test-auth/page.tsx` | Local deterministic auth helper. | [Local Test Auth Runbook](../operator/local-test-auth-runbook.md) |
 | `/w/[widgetId]` | `src/app/w/[widgetId]/page.tsx` | Public embedded widget runtime. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
 | `/sandbox/[widgetId]` | `src/app/sandbox/[widgetId]/page.tsx` | Widget sandbox host page. | [Widget Handoff And Troubleshooting](../end-user/widget-handoff-and-troubleshooting.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
 | `/api/health` | `src/app/api/health/route.ts` | HTTP health route. | [System Health And Platform Alerts](./system-health-and-platform-alerts.md) |
+| `/api/email-preview` | `src/app/api/email-preview/route.ts` | Dev-only email template preview and raw source route. | [Email System](./email-system.md) |
 | `/api/e2e-auth` | `src/app/api/e2e-auth/route.ts` | Deterministic E2E auth route. | Test-only route; see auth docs before changing. |
 | `/api/e2e-fixture/face-proof` | `src/app/api/e2e-fixture/face-proof/route.ts` | Test fixture route for movement proof. | Movement docs and E2E tests. |
 | `/api/e2e-fixture/hand-proof` | `src/app/api/e2e-fixture/hand-proof/route.ts` | Test fixture route for movement proof. | Movement docs and E2E tests. |
@@ -47,6 +49,17 @@ in the same documentation pass.
 | `/app/properties/logs` | Property extraction run log. | [Property Research And Board Reports](../end-user/property-research-and-reports.md), [Property Research And Board Reports Developer Guide](./property-research-and-reports.md) |
 | `/app/reports/information` | Reports explanation page. | [Sales And Board Reports](../end-user/sales-and-board-reports.md), [Sales And Board Reports Developer Guide](./sales-and-board-reports.md) |
 | `/app/reports` | Sales or board report workflow. | [Sales And Board Reports](../end-user/sales-and-board-reports.md), [Sales And Board Reports Developer Guide](./sales-and-board-reports.md) |
+| `/app/governance` | Workspace governance overview. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/app/governance/register` | Workspace AI register. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/app/governance/policies` | Workspace active-policy view. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/app/governance/audit-trail` | Workspace audit trail. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/app/[workspace]/spreadsheet-import` | Workspace workbook upload and worksheet mapping. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
+| `/app/[workspace]/import-data` | Workspace imported sales-data table browser. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
+| `/app/[workspace]/customers` | Workspace customer/prospect list. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
+| `/app/[workspace]/customers/[account]` | Workspace customer/prospect profile. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
+| `/app/[workspace]/opportunity-report` | Workspace opportunity report. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales And Board Reports](../end-user/sales-and-board-reports.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
+| `/app/sales-data` | Legacy Sales Data redirect. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
+| `/app/sales-data/import` | Legacy Sales Data import redirect. | [Sales Data Workspace](../end-user/sales-data-workspace.md), [Sales Data Workspace Developer Guide](./sales-data-workspace.md) |
 | `/app/arcade/ronins-run` | Ronin's Run arcade experience. | [Auxiliary App Experiences](../end-user/auxiliary-app-experiences.md), [Auxiliary App Experiences Developer Guide](./auxiliary-app-experiences.md) |
 | `/app/agentic-testing` | Agentic testing sandbox. | [Auxiliary App Experiences](../end-user/auxiliary-app-experiences.md), [Auxiliary App Experiences Developer Guide](./auxiliary-app-experiences.md) |
 
@@ -55,6 +68,7 @@ in the same documentation pass.
 | Route | Purpose | Owning docs |
 | --- | --- | --- |
 | `/admin` | Super-admin dashboard. | [Administration User Guide](../end-user/administration.md), [Administration Developer Guide](./administration.md) |
+| `/admin/directory` | Read-only platform user directory. | [Administration User Guide](../end-user/administration.md), [Administration Developer Guide](./administration.md) |
 | `/admin/companies` | Company list and management. | [Administration User Guide](../end-user/administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]` | Company detail redirect/root. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/overview` | Company overview. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
@@ -103,13 +117,10 @@ in the same documentation pass.
 | `/admin/ai` | Global AI landing. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/ai/costs`, `/admin/ai/usage/costs` | Global AI cost analytics. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
 | `/admin/ai/chat-logs`, `/admin/ai/usage/chat-logs` | Global chat-log review. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/ai/system-prompt`, `/admin/ai/governance/system-prompt` | Global system prompt. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/rules` and governance rule routes | Global AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
+| `/admin/ai/system-prompt` | Global system prompt. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
+| `/admin/ai/rules` | Global AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/rules/new` | New global AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/rules/[id]` | Global AI rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/governance/rules` | Governance alias for global AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/governance/rules/new` | Governance alias for new global AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/governance/rules/[id]` | Governance alias for global AI rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/global-knowledge`, `/admin/ai/knowledge` | Global knowledge. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md) |
 | `/admin/ai/widget` | Global widget configuration. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
 | `/admin/ai/models` and children | Model catalogue, providers, defaults, detail. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
@@ -123,12 +134,23 @@ in the same documentation pass.
 | `/admin/ai/tools/connectors/[id]` | Tool connector detail. | [AI Tools And Connectors](../end-user/ai-tools-and-connectors.md), [AI Tools And Connectors Developer Guide](./ai-tools-and-connectors.md) |
 | `/admin/ai/skills` | Skill Center alias/surface. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
 
+## Governance Routes
+
+| Route | Purpose | Owning docs |
+| --- | --- | --- |
+| `/admin/governance` | Platform governance overview. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/admin/governance/register` | Platform AI register. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/admin/governance/policies` | Platform active-policy view. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/admin/governance/audit-trail` | Platform audit trail with filters and export. | [Governance And Trust](../end-user/governance-and-trust.md), [Governance And Trust Developer Guide](./governance-and-trust.md) |
+| `/admin/governance/audit-trail/[id]` | Governance audit event detail. | [Governance And Trust](../end-user/governance-and-trust.md), [Audit Log Service](./audit-log-service.md) |
+| `/admin/governance/approvals` | Governance-facing agent approvals queue. | [Governance And Trust](../end-user/governance-and-trust.md), [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
+
 ## Agent Routes
 
 | Route | Purpose | Owning docs |
 | --- | --- | --- |
 | `/admin/agents` | Agent list and creation. | [Agents](../end-user/agents.md), [Agents Developer Guide](./agents.md) |
-| `/admin/agents/approvals` | Pending agent approval queue. | [Agent Operations And Review](../end-user/agent-operations-and-review.md), [Agent Runtime Operations](./agent-runtime-operations.md) |
+| `/admin/agents/new` | New agent creation screen. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
 | `/admin/agents/skills` | Skill Center. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
 | `/admin/agents/[id]` | Agent detail overview. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agents Developer Guide](./agents.md) |
 | `/admin/agents/[id]/settings` | Agent settings. | [Agent Setup And Configuration](../end-user/agent-setup-and-configuration.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |

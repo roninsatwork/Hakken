@@ -1,6 +1,6 @@
 # Login, Access, And Authentication
 
-Sonae uses invite-based access. Users sign in from `/login` with Google or an email magic link, and the platform checks whether the email belongs to an existing user or a valid invitation.
+Sonae uses invite-based access. Users sign in from `/login` with Google, an email magic link, or a typed one-time code, and the platform checks whether the email belongs to an existing user or a valid invitation.
 
 This guide is for support, customer-success, admins, and operators who need to explain how people get into Sonae and how to troubleshoot access issues.
 
@@ -10,10 +10,13 @@ The login page supports:
 
 - Google sign-in
 - email magic links
+- typed one-time codes
 
-Both methods send users into the main app at `/app` after authentication. Super admins may then be redirected to `/admin`.
+Successful sign-in sends users into the main app at `/app`. Super admins may then be redirected to `/admin`.
 
-When someone requests an email magic link, Sonae shows neutral success text even if the email is not currently allowed. This is intentional. It prevents the public login screen from revealing whether an email address belongs to a user or invite.
+When someone requests an email magic link or code, Sonae shows neutral success text even if the email is not currently allowed. This is intentional. It prevents the public login screen from revealing whether an email address belongs to a user or invite.
+
+Magic links land on `/verify` before signing in. That page does not redeem the link on load; the user must press the sign-in button. This protects one-use links from company mail scanners that open links before the person does. Typed one-time codes are useful when a mail system is especially aggressive about opening links.
 
 ## Invite-Based Access
 
@@ -83,6 +86,7 @@ When a user cannot sign in:
 4. Confirm the user has the intended role and company assignment.
 5. Check Auth Diagnostics for missing, expired, revoked, or accepted invite events.
 6. For email magic links, confirm the email provider is configured for the environment.
+7. If link scanning spends links before users click them, ask the user to sign in with the typed one-time code instead.
 
 When a user can sign in but cannot access admin:
 
@@ -99,6 +103,6 @@ When a super admin lands in the wrong context:
 
 ## Security Notes
 
-Do not send screenshots of magic-link emails, session cookies, or login links into shared support channels. Do not use super-admin accounts for normal tenant work when a scoped admin workflow is enough.
+Do not send screenshots of magic-link emails, one-time codes, session cookies, or login links into shared support channels. Do not use super-admin accounts for normal tenant work when a scoped admin workflow is enough.
 
 The public login screen is intentionally vague. Use Auth Diagnostics and invitation records for support evidence rather than expecting the login screen to explain the exact reason access was denied.

@@ -1,6 +1,6 @@
 # Function And Feature Coverage Matrix
 
-Last reviewed: 2026-07-30 17:39 BST +0100
+Last reviewed: 2026-08-08 12:10 BST +0100
 Status: active coverage matrix
 Audience: agents and engineers documenting every Sonae feature, route, backend function family, schema area, and operational command.
 
@@ -41,7 +41,7 @@ for package-script ownership.
 | Feature or function area | Implemented surfaces checked | Backend or data anchors | Current docs | Status | Remaining documentation work |
 | --- | --- | --- | --- | --- | --- |
 | Public website home | `/`, `src/app/(public)`, public nav/footer, public motion components | public route group, environment-driven contact/company links | `docs/end-user/public-website.md`, `docs/developer/public-website.md`, `docs/plans/active/public-website-plan.md` | Current page documented plus active plan | Refresh when `/platform`, `/showcase`, `/trust`, and `/contact` ship. Current drift: `/platform` and `/contact` are linked/fallback targets while those routes are still pending. |
-| Login and local auth | `/login`, `/local-test-auth`, login layout | `convex/auth.ts`, `convex/localTestAuth.ts`, `convex/authEvents.ts`, `convex/authz-migration-allowlist.json`, `users`, `logins`, `authEvents` | `docs/end-user/login-access-and-authentication.md`, `docs/developer/route-protection-and-authentication.md`, `docs/developer/tenancy-enforcement.md`, `docs/operator/local-test-auth-runbook.md` | Complete pair | Keep local-test-only routes, tenant-builder enforcement, and operator steps current when auth flows change. |
+| Login, verification, typed codes, and local auth | `/login`, `/verify`, `/local-test-auth`, login layout | `convex/auth.ts`, `convex/localTestAuth.ts`, `convex/authEvents.ts`, `convex/oneTimeCodes.ts`, `convex/oneTimeCodeService.ts`, `convex/magicLinkUrlService.ts`, `convex/authz-migration-allowlist.json`, `users`, `logins`, `authEvents` | `docs/end-user/login-access-and-authentication.md`, `docs/developer/route-protection-and-authentication.md`, `docs/developer/tenancy-enforcement.md`, `docs/operator/local-test-auth-runbook.md` | Complete pair | Keep local-test-only routes, `/verify`, one-time-code limits, tenant-builder enforcement, and operator steps current when auth flows change. |
 | Dashboard shell and navigation | `/app`, `/admin`, dashboard layout, sidebar navigation, white-label navigation visibility | `convex/settings.ts`, `systemSettings`, navigation profile helpers | `docs/end-user/platform-overview.md`, `docs/developer/frontend.md`, `docs/developer/system-settings-and-branding.md` | Covered broadly | Add deeper docs if navigation profiles, module hiding, or dashboard routing changes. |
 | Assistant chat | `/app/assistant`, `/app/assistant/[threadId]` | `convex/chat.ts`, `convex/ai.ts`, `convex/aiPromptAssembly.ts`, `threads`, `messages`, `knowledgeDocuments`, `knowledgeChunks` | `docs/end-user/assistant-chat.md`, `docs/developer/assistant-chat.md` | Complete pair | Keep transcription, attachment, quota, model, and safety behavior current. |
 | Profile and user self-service | `/app/profile` | `convex/users.ts`, `users`, storage uploads | `docs/end-user/organization-and-company-workspaces.md`, `docs/developer/company-user-management.md` | Covered broadly | Add dedicated profile doc if profile settings grow beyond account basics. |
@@ -49,6 +49,8 @@ for package-script ownership.
 | Administration overview | `/admin`, admin layout | `convex/adminQueryService.ts`, admin auth helpers | `docs/end-user/administration.md`, `docs/developer/administration.md` | Complete pair | Umbrella only; specialized admin routes are tracked separately below. |
 | Company management | `/admin/companies`, `/admin/companies/[id]`, overview, users, invites, directory, chat logs, company detail tabs | `convex/companies.ts`, `convex/users.ts`, `convex/invites.ts`, `companies`, `users`, `invitations`, `emailTemplates` | `docs/end-user/administration.md`, `docs/end-user/company-workspace-administration.md`, `docs/developer/company-user-management.md` | Complete pair | Check directory and invite routes when company workspace UX changes. |
 | Super-admin and user management | `/admin/users`, `/admin/users/invite`, `/admin/super-admins`, `/admin/super-admins/invite` | `convex/users.ts`, `convex/invites.ts`, `users`, `invitations`, `auditLogs` | `docs/end-user/administration.md`, `docs/developer/company-user-management.md`, `docs/developer/tenancy-enforcement.md` | Complete pair | Keep privilege escalation and super-admin assignment rules explicit. |
+| Read-only user directory | `/admin/directory` | `convex/users.ts`, `convex/userActivityService.ts`, `users`, `logins` | `docs/end-user/administration.md`, `docs/developer/administration.md`, `docs/plans/active/user-directory-plan.md` | Covered broadly | Keep this read-only; account mutations belong in `/admin/users`. |
+| Governance and trust | `/admin/governance`, register, policies, audit trail, approvals; `/app/governance`, register, policies, audit trail | `convex/governanceDashboard.ts`, `convex/governanceRegister.ts`, `convex/governanceActivity.ts`, `convex/evidencePack.ts`, `convex/personalData.ts`, `convex/conformanceService.ts`, `auditLogs`, `agentRuns`, `aiRules`, `agents`, `widgets`, `workflows` | `docs/end-user/governance-and-trust.md`, `docs/developer/governance-and-trust.md`, `docs/plans/active/governance-and-trust-plan.md` | Complete pair plus active plan | Refresh when evidence-pack contents, personal-data rules, audit export, or register inputs change. |
 | Global AI administration | `/admin/ai`, costs, chat logs, rules, system prompt, global knowledge, widget, models, providers, defaults, tools | `convex/aiModels.ts`, `convex/aiModelsActions.ts`, `convex/aiRules.ts`, `convex/system.ts`, `convex/knowledge.ts`, `convex/widgets.ts`, `convex/aiTools.ts`, `convex/analytics.ts` | `docs/end-user/ai-administration.md`, `docs/developer/ai-administration.md` | Complete pair | Split dedicated docs only when a sub-area becomes too large for the AI admin guide. |
 | AI models, providers, defaults, and costs | `/admin/ai/models`, model detail, catalogue, providers, defaults, usage/cost routes, company model defaults | `aiProviders`, `aiModels`, `aiModelDefaults`, `aiModelRollups`, `analyticsDailySnapshots`, `convex/aiModels.ts`, provider services | `docs/end-user/ai-models-providers-and-costs.md`, `docs/developer/ai-models-providers-and-costs.md`, `docs/plans/active/openrouter-and-model-scale-plan.md`, `docs/plans/active/company-and-agent-model-defaults-plan.md` | Complete pair plus active plans | Refresh after OpenRouter/model-scale work and company/agent defaults work land. |
 | AI rules and prompts | global, company, and agent rule routes; global/company/agent prompt routes | `convex/aiRules.ts`, `convex/system.ts`, `convex/agents.ts`, `systemConfig`, `aiRules`, `agents` | `docs/end-user/ai-rules-and-prompts.md`, `docs/developer/ai-rules-and-prompts.md` | Complete pair | Keep scope hierarchy and safety precedence current. |
@@ -64,6 +66,7 @@ for package-script ownership.
 | Public API and webhooks | `/api/health`, public agent/workflow/run-status API, Apify webhook, webhook delivery monitor | `convex/publicApi.ts`, `convex/http.ts`, `convex/webhooks.ts`, `convex/webhookDeliveries.ts`, `publicApiRequests`, `webhookDeliveries`, `apifyRuns` | `docs/end-user/public-api-and-webhooks.md`, `docs/developer/public-api-and-webhooks.md` | Complete pair | Add endpoint-level examples when public API expands. |
 | Property research and Rightmove/Apify flow | `/app/properties/information`, search, scraped data, detail, logs | `convex/properties.ts`, `convex/propertyAgents.ts`, `convex/apify.ts`, `convex/webhooks.ts`, `properties`, `apifyRuns` | `docs/end-user/property-research-and-reports.md`, `docs/developer/property-research-and-reports.md`, `docs/plans/active/rightmove-agent-execution-plan.md` | Complete pair plus active plan | The Search page now queues the Rightmove Agent. Refresh again when Apify run records link visibly back to agent run detail or the active plan is retired. |
 | Sales and board reports | `/app/reports/information`, `/app/reports` | `convex/salesReports.ts`, `convex/salesReportActions.ts`, `salesReports`, knowledge docs | `docs/end-user/sales-and-board-reports.md`, `docs/developer/sales-and-board-reports.md` | Complete pair | Refresh when report history, manual regeneration, source selection, or document export changes. |
+| Sales Data workspace | `/app/[workspace]/spreadsheet-import`, `/app/[workspace]/import-data`, `/app/[workspace]/customers`, `/app/[workspace]/customers/[account]`, `/app/[workspace]/opportunity-report`, legacy `/app/sales-data` redirects | `convex/salesData.ts`, `convex/salesDataImportActions.ts`, `convex/salesDataCustomers.ts`, `convex/salesDataResearch.ts`, `convex/salesDataMarketDiscovery.ts`, `convex/salesOpportunityReports.ts`, sales data tables | `docs/end-user/sales-data-workspace.md`, `docs/developer/sales-data-workspace.md`, sales-data active plans | Complete pair plus active plans | Refresh when workspace routing, import mapping, research jobs, market discovery, or opportunity-report workflow changes. |
 | Auxiliary app experiences | `/app/arcade/ronins-run`, `/app/agentic-testing` | `convex/arcade.ts`, `convex/orchestrator.ts`, `arcadeScores`, `threads`, `messages` | `docs/end-user/auxiliary-app-experiences.md`, `docs/developer/auxiliary-app-experiences.md` | Complete pair | Keep diagnostic-routing visibility and agent auto-routing behavior current. |
 | Temporary Posture Studio and movement demo | `/demos/movements`, replay lab, play, capture, benchmark, proof routes | `convex/movements.ts`, movement debug scripts, `movements`, `movementDebugSessions` | `docs/end-user/temporary-posture-studio-demo.md`, `docs/developer/temporary-posture-studio-demo.md`, movement docs and active movement plan | Frozen | Do not expand except under explicit user approval and movement guardrails. |
 | Local demo seed and packaging operations | package scripts, local demo seed, setup validation, template build | `convex/localDemoSeed.ts`, `convex/localTestAuth.ts`, `scripts/local-demo-seed.mjs`, `scripts/validate-setup.mjs`, `scripts/build-template.mjs` | `docs/operator/local-demo-seed-runbook.md`, `docs/operator/local-test-auth-runbook.md`, `docs/operator/vertical-app-packaging-checklist.md`, `docs/operator/white-label-packaging-operator-guide.md` | Complete operator coverage | Add runbooks only for real recurring operations. |
@@ -78,10 +81,12 @@ feature family above.
 
 - `/` - public home page, currently covered by the Public Website Plan.
 - `/login` - login page and login layout.
+- `/verify` - click-to-redeem magic-link confirmation page.
 - `/local-test-auth` - local deterministic auth helper.
 - `/w/[widgetId]` - public embedded widget runtime.
 - `/sandbox/[widgetId]` - widget sandbox host page.
 - `/api/health` - public health check.
+- `/api/email-preview` - dev-only email template preview.
 - `/api/e2e-auth`, `/api/e2e-fixture/face-proof`, `/api/e2e-fixture/hand-proof` - deterministic test-only routes.
 
 ### Authenticated App Routes
@@ -100,12 +105,30 @@ feature family above.
 - `/app/properties/logs`
 - `/app/reports/information`
 - `/app/reports`
+- `/app/governance`
+- `/app/governance/register`
+- `/app/governance/policies`
+- `/app/governance/audit-trail`
+- `/app/[workspace]/spreadsheet-import`
+- `/app/[workspace]/import-data`
+- `/app/[workspace]/customers`
+- `/app/[workspace]/customers/[account]`
+- `/app/[workspace]/opportunity-report`
+- `/app/sales-data`
+- `/app/sales-data/import`
 - `/app/arcade/ronins-run`
 - `/app/agentic-testing`
 
 ### Admin Routes
 
 - `/admin`
+- `/admin/directory`
+- `/admin/governance`
+- `/admin/governance/register`
+- `/admin/governance/policies`
+- `/admin/governance/audit-trail`
+- `/admin/governance/audit-trail/[id]`
+- `/admin/governance/approvals`
 - `/admin/companies`
 - `/admin/companies/[id]`
 - `/admin/companies/[id]/overview`
@@ -147,13 +170,9 @@ feature family above.
 - `/admin/ai/chat-logs`
 - `/admin/ai/usage/chat-logs`
 - `/admin/ai/system-prompt`
-- `/admin/ai/governance/system-prompt`
 - `/admin/ai/rules`
 - `/admin/ai/rules/new`
 - `/admin/ai/rules/[id]`
-- `/admin/ai/governance/rules`
-- `/admin/ai/governance/rules/new`
-- `/admin/ai/governance/rules/[id]`
 - `/admin/ai/global-knowledge`
 - `/admin/ai/knowledge`
 - `/admin/ai/widget`
@@ -168,7 +187,7 @@ feature family above.
 - `/admin/ai/tools/connectors/[id]`
 - `/admin/ai/skills`
 - `/admin/agents`
-- `/admin/agents/approvals`
+- `/admin/agents/new`
 - `/admin/agents/skills`
 - `/admin/agents/[id]`
 - `/admin/agents/[id]/settings`
@@ -259,12 +278,15 @@ every private TypeScript helper one-by-one.
 | `arcade.ts` | leaderboard listing, score count, score submission |
 | `auditLogs.ts` | audit logging, audit config, purge dispatch/execution, recent log reads |
 | `authEvents.ts` | `recordMagicLinkRequestAttempt` |
+| `oneTimeCodes.ts` | typed one-time-code request, failed attempt recording, verified attempt recording |
 | `chat.ts` | thread/message reads, upload URL generation, thread CRUD, send message, assistant message/streaming saves, safety refusal |
 | `chatAdmin.ts` | global/company chat thread pagination |
 | `companies.ts` | company list/search/options/get, create/update/delete, prompt/profile updates, plan assignment, internal purge |
 | `companyEvals.ts` and actions | company eval thread creation/outcome, batch/case lookup, graded run recording, `runCompanyCheck` |
 | `companyMemories.ts` and suggestions | runtime memory reads/usage, sweep input, sweep recording, sweep actions |
 | `companySkills.ts` | runtime company skill reads |
+| `governanceDashboard.ts`, `governanceRegister.ts`, `governanceActivity.ts` | governance overview, AI register, activity evidence |
+| `evidencePack.ts`, `personalData.ts` | evidence-pack production/export recording, subject-access and erasure actions |
 | `dataMigrations.ts` | migration run, batch processing, status reads |
 | `inventoryRollups.ts` | global inventory rollup rebuild |
 | `invites.ts` | active template read, template save, invite record creation |
@@ -279,6 +301,9 @@ every private TypeScript helper one-by-one.
 | `publicApi.ts` | public ping, run status, public agent trigger, public workflow trigger |
 | `purges.ts` | purge config, history, manual purge, recursive execution, dispatch, cancel |
 | `salesReports.ts` and actions | sales report context reads and generated report save/generation |
+| `salesData.ts` and actions | workspace workbook upload/import, imported table reads, row insertion, import purge/completion |
+| `salesDataCustomers.ts`, `salesDataResearch.ts`, `salesDataResearchJobs.ts`, `salesDataMarketDiscovery.ts` | customer/prospect records, typed details, research findings, research jobs, market discovery |
+| `salesOpportunityReports.ts` | opportunity report read/start/watch, matching pass, gap pass, summary save |
 | `scheduler.ts` | schedules CRUD/toggle/manual run, agent execution completion, workflow executions, pending workflow approvals |
 | `settings.ts` | public settings read, settings update, email branding, white-label readiness/presets/navigation/domain/handoff/packaging, upload URL |
 | `swarmActions.ts` and `swarmRuntime.ts` | swarm execution, logs, demo agents, company context |
@@ -307,6 +332,7 @@ every private TypeScript helper one-by-one.
 | Company AI skills, evals, and memory | `companySkills`, `companySkillBindings`, `companyEvalCases`, `companyEvalRuns`, `companyMemories`, `companyMemoryCandidates`, `companyMemoryUsage`, `companyMemorySweeps`, `companyAiDriftEvents` |
 | Workflows and schedules | `workflows`, `workflowExecutions`, `workflowExecutionSteps`, `schedules` |
 | Property and reports | `properties`, `apifyRuns`, `salesReports` |
+| Sales Data workspace | `salesDataImports`, `salesDataRows`, `salesDataCategoryLinks`, `salesDataAreasOfInterest`, `salesDataFrequencies`, `salesDataAccounts`, `salesDataCustomers`, `salesDataCustomerResearch`, `salesDataProspects`, `salesDataMarketDiscoveryJobs`, `salesDataMarketDiscoveryGroups`, `salesDataResearchJobs`, `salesDataResearchJobItems`, `salesOpportunityReports`, `salesOpportunityReportGapProducts`, `salesOpportunityReportTypeBaskets` |
 | Operations, audit, and retention | `auditLogs`, `authEvents`, `purgeHistory`, `swarmLogs` |
 | Auxiliary and demos | `arcadeScores`, `movements`, `movementDebugSessions`, `mockStorageMetadata` |
 
@@ -316,7 +342,8 @@ Package scripts are grouped into these documented operational families:
 
 - local development and verification: `dev`, `convex:dev`, `verify:env`,
   `lint`, `lint:all`, `typecheck`, `test`, `test:run`, `test:coverage`,
-  `coverage:check`, `check`, `build`, `gate`, `setup:validate`
+  `coverage:check`, `check:pagination`, `check:encoding`, `check:layering`,
+  `check:guards`, `check`, `build`, `gate`, `setup:validate`
 - npm lifecycle guards: `predev`, `preconvex:dev`, `prebuild`, `pretest`,
   `pretest:run`, `pretest:coverage`, `pretest:e2e`,
   `pretest:e2e:real-auth`, `preeval:movement-avatar`
@@ -335,8 +362,9 @@ gate, add or refresh an operator runbook and link it from `docs/operator/index.m
    routes ship. Do not document planned routes as live behavior.
 2. Company AI readiness and checks: after the active rebuild and AI Checks work
    lands, refresh the dedicated end-user and developer guides.
-3. Sales and board reports: refresh the dedicated guides when report history,
-   manual regeneration, source selection, or formal document export ships.
+3. Sales Data workspace: refresh the dedicated guides when import semantics,
+   research/prospecting jobs, market discovery, clear/reset behavior, or
+   opportunity-report workflow changes.
 4. Agent observability and autonomy: refresh the agent operation guides when
    the active observability/autonomy/run-properly plans settle.
 5. Rightmove Agent execution: the Search page now queues the Rightmove Agent;

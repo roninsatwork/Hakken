@@ -1,6 +1,6 @@
 # Agent autonomy and the approvals queue — make the brake optional, and make it visible
 
-**Started 2026-07-26.** The approvals queue at `/admin/agents/approvals` has never
+**Started 2026-07-26.** The approvals queue now lives at `/admin/governance/approvals`. At the start of this plan, the queue at the former `/admin/agents/approvals` route had never
 held a single row. Not "none today" — the only non-test code path that can insert
 into `agentRunApprovals` is `insertApprovalInternal` (`convex/agentRuns.ts:1707`),
 reachable solely from the live runtime, and no seed, script or demo has ever
@@ -281,7 +281,7 @@ indistinguishable from a hang.
 
 ### The screen itself is the last card grid in the admin area
 
-`src/app/(dashboard)/admin/agents/approvals/page.tsx` is 177 lines and uses one
+The approvals page was 177 lines at the former admin agents route and used one
 shared primitive, `AdminLoadMoreFooter` (`:163`) — rendered outside any container,
 so its `border-t`/`bg-sidebar/40` styling floats detached instead of sitting
 inside `AdminTableShell`'s rounded frame.
@@ -1075,7 +1075,7 @@ and the query resolves. The search box was cleared afterwards.
 
 **Original plan text follows.**
 
-`src/app/(dashboard)/admin/agents/approvals/page.tsx`, rebuilt on the shared
+the approvals page, now at `src/app/(dashboard)/admin/governance/approvals/page.tsx`, rebuilt on the shared
 primitives.
 
 1. `AdminPageHeader` (with `divider`) replaces the hand-rolled `<header>`. The

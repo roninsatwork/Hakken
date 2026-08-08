@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-08-04 10:59 UTC
+Last reviewed: 2026-08-08 12:10 BST +0100
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -114,6 +114,11 @@ as the durable documentation work queue.
   covers `convex/salesOpportunityReports.ts`, deterministic pricing ownership,
   schema role, watchdog completion, and the localisation contract for named
   sister-account evidence.
+- Run a fresh August coverage pass after the governance, sales-data, typed-code
+  auth, user-directory, and email-preview work. This added dedicated Governance
+  and Sales Data workspace doc pairs, refreshed `/verify`, one-time-code, email
+  preview, read-only user-directory, and moved-approval-route docs, and updated
+  the route, Convex, schema, and script coverage maps.
 
 ### Remaining Follow-Up
 
@@ -126,11 +131,11 @@ as the durable documentation work queue.
 2. Company AI follow-up: the current overview, checks, memory, and skills routes
    are now documented, but the active Company AI readiness rebuild and AI Checks
    plans still own follow-up semantics. Refresh the pair when those plans settle.
-3. Sales and board reports follow-up: the current information page, latest
-   report dashboard, generation action, schema, export behavior, tenancy, and
-   workspace Opportunity Report are now documented. Refresh the pair when report
-   history, manual regeneration, source selection, formal document export, or a
-   materially different opportunity-report workflow ships.
+3. Sales Data follow-up: the current workbook import, imported table browser,
+   customer/prospect list, customer profile, research/prospecting context,
+   market-discovery backend, reset actions, and workspace Opportunity Report are
+   now documented. Refresh the pair when import semantics, research job flow,
+   market discovery, reset behavior, or opportunity-report workflow changes.
 4. Thin-doc review: some audience guides are concise by design, but future
    runs should review the shorter end-user and developer documents when their
    implementation areas change. A short guide is not automatically wrong, but
