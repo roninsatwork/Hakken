@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
+import { widgetMessageDisplayText } from "@/src/lib/widgetSystemMessages";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 
@@ -382,9 +383,16 @@ export default function WidgetIframePage() {
                            const isUser = message.role === "user";
                            
                            // Strip the hidden System Gateway prefix for UI rendering so they don't see it
-                           const displayContent = isUser && message.content.startsWith("[System Gateway")
+                           const rawContent = isUser && message.content.startsWith("[System Gateway")
                                 ? message.content.replace(/\[System Gateway:.*?\]\n\n/, "")
                                 : message.content;
+
+                           // Platform-authored messages (systemKey) render in the
+                           // visitor's own browser language; stored English is the fallback.
+                           const displayContent = widgetMessageDisplayText(
+                                { content: rawContent, systemKey: message.systemKey },
+                                typeof navigator !== "undefined" ? navigator.language : undefined
+                           );
 
                            return (
                               <motion.div

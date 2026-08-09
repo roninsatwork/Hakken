@@ -157,6 +157,23 @@ export function isChatQuotaExceeded(quota: ChatQuota) {
   return quota.messageLimit !== -1 && quota.messagesUsed >= quota.messageLimit;
 }
 
+/**
+ * What a refused sender is told, which depends on who is asking.
+ *
+ * A signed-in user belongs to the company, so they are told the truth — the
+ * plan is exhausted — and who can fix it. An anonymous widget visitor is a
+ * stranger on the company's website: the company's billing state is not theirs
+ * to see, and "ask your administrator" reads as nonsense when the reader has
+ * no administrator. They get an apology with no reason, which is all a
+ * stranger is owed.
+ */
+export function quotaRefusalMessage(thread: Doc<"threads">) {
+  if (isAnonymousWidgetThread(thread)) {
+    return "I'm sorry, but I can't take new messages right now. Please try again later.";
+  }
+  return "I apologise, but your company has exhausted its AI allocation for this period. Please ask your administrator to review your plan.";
+}
+
 export async function incrementChatQuota(ctx: Pick<MutationCtx, "db">, quota: ChatQuota) {
   if (!quota.usageTarget) return;
   await ctx.db.patch(quota.usageTarget.id, { messagesUsedThisPeriod: quota.messagesUsed + 1 });

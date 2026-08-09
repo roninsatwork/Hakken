@@ -72,6 +72,182 @@ describe("Message Quotas Enforcements", () => {
     expect(companyRecords?.messagesUsedThisPeriod).toBe(10);
   });
 
+  /**
+   * Anonymous widget traffic spends from the company's plan — the decision in
+   * docs/plans/active/widget-plan-quota-plan.md. One pot: a visitor's message
+   * counts exactly like an employee's, and when the pot is empty the visitor
+   * is refused before any model call is scheduled.
+   */
+  describe("widget visitors spend from the company plan", () => {
+    /** A company on a limited plan, with a live widget a visitor can talk to. */
+    async function setUpWidgetCompany(
+      t: ReturnType<typeof convexTest>,
+      options: { messageLimit: number; messagesUsedThisPeriod: number }
+    ) {
+      return await t.run(async (ctx) => {
+        const planId = await ctx.db.insert("plans", {
+          name: "Standard",
+          messageLimit: options.messageLimit,
+          priceGBP: 10,
+          isActive: true,
+          createdAt: Date.now(),
+        });
+        const companyId = await ctx.db.insert("companies", {
+          name: "Widget Corp",
+          planId,
+          messagesUsedThisPeriod: options.messagesUsedThisPeriod,
+          createdAt: Date.now(),
+        });
+        const creatorId = await ctx.db.insert("users", {
+          email: "owner@widgetcorp.test",
+          role: "ADMIN",
+          companyId,
+        });
+        const widgetId = await ctx.db.insert("widgets", {
+          companyId,
+          name: "Website Bot",
+          allowedDomains: ["example.com"],
+          isActive: true,
+          createdBy: creatorId,
+          createdAt: Date.now(),
+        });
+        return { companyId, widgetId };
+      });
+    }
+
+    test("a visitor's message increments the company's usage", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { companyId, widgetId } = await setUpWidgetCompany(t, {
+        messageLimit: 10,
+        messagesUsedThisPeriod: 3,
+      });
+
+      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+        widgetId,
+        sourceUrl: "https://example.com/",
+      });
+
+      await t.mutation(api.chat.sendMessage, {
+        threadId,
+        content: "What are your opening hours?",
+        widgetAccessToken: accessToken,
+      });
+
+      const company = await t.run(async (ctx) => ctx.db.get(companyId));
+      expect(company?.messagesUsedThisPeriod).toBe(4);
+    });
+
+    test("an exhausted plan refuses the visitor without revealing why", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { companyId, widgetId } = await setUpWidgetCompany(t, {
+        messageLimit: 10,
+        messagesUsedThisPeriod: 10,
+      });
+
+      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+        widgetId,
+        sourceUrl: "https://example.com/",
+      });
+
+      await t.mutation(api.chat.sendMessage, {
+        threadId,
+        content: "Hello, is anyone there?",
+        widgetAccessToken: accessToken,
+      });
+
+      const messages = await t.query(api.chat.getMessages, {
+        threadId,
+        widgetAccessToken: accessToken,
+      });
+
+      // Exactly the refused exchange — nothing was scheduled, so no assistant
+      // reply beyond the refusal will ever arrive.
+      expect(messages?.length).toBe(2);
+      expect(messages?.[1].role).toBe("assistant");
+      // The key the widget client uses to render this in the visitor's language.
+      expect(messages?.[1].systemKey).toBe("quotaRefusal");
+
+      // The company's billing state is not the visitor's business. The words
+      // the informative in-company refusal uses must all be absent here.
+      const refusal = messages?.[1].content ?? "";
+      for (const forbidden of ["plan", "allocation", "administrator", "company", "exhausted"]) {
+        expect(refusal.toLowerCase()).not.toContain(forbidden);
+      }
+
+      // A refused message costs the company nothing.
+      const company = await t.run(async (ctx) => ctx.db.get(companyId));
+      expect(company?.messagesUsedThisPeriod).toBe(10);
+    });
+
+    test("a refused message is still PII-redacted before it is stored", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { widgetId } = await setUpWidgetCompany(t, {
+        messageLimit: 10,
+        messagesUsedThisPeriod: 10,
+      });
+
+      // The PII firewall is opt-in for chat; switch it on the way an admin
+      // does, so this proves the refusal path honours it when it is armed.
+      await t.run(async (ctx) => {
+        await ctx.db.insert("systemConfig", {
+          key: "PII_REDACTION_CONFIG",
+          value: JSON.stringify({ enabled: true }),
+          updatedAt: Date.now(),
+        });
+      });
+
+      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+        widgetId,
+        sourceUrl: "https://example.com/",
+      });
+
+      await t.mutation(api.chat.sendMessage, {
+        threadId,
+        content: "My email is visitor@example.com, please contact me.",
+        widgetAccessToken: accessToken,
+      });
+
+      const messages = await t.query(api.chat.getMessages, {
+        threadId,
+        widgetAccessToken: accessToken,
+      });
+
+      // Refusal must not be the one path that stores a raw email address.
+      expect(messages?.[0].content).toContain("[EMAIL_REDACTED]");
+      expect(messages?.[0].content).not.toContain("visitor@example.com");
+    });
+
+    test("an unlimited plan is never refused by quota", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { widgetId } = await setUpWidgetCompany(t, {
+        messageLimit: -1,
+        // Far past any finite limit, to prove -1 means unlimited rather than zero.
+        messagesUsedThisPeriod: 5000,
+      });
+
+      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+        widgetId,
+        sourceUrl: "https://example.com/",
+      });
+
+      await t.mutation(api.chat.sendMessage, {
+        threadId,
+        content: "Still there?",
+        widgetAccessToken: accessToken,
+      });
+
+      const messages = await t.query(api.chat.getMessages, {
+        threadId,
+        widgetAccessToken: accessToken,
+      });
+
+      // One stored message — the visitor's own. No refusal was injected; the
+      // real reply arrives later from the scheduled model call.
+      expect(messages?.length).toBe(1);
+      expect(messages?.[0].role).toBe("user");
+    });
+  });
+
   test("assistant messages inherit analytics dimensions from their thread", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const now = Date.now();

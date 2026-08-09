@@ -1767,6 +1767,11 @@ export default defineSchema({
     widgetId: v.optional(v.id("widgets")),
     analyticsDimensionsVersion: v.optional(v.number()),
     attachments: v.optional(v.array(v.id("_storage"))),
+    // Names a platform-authored message (e.g. "quotaRefusal") so a client can
+    // render it in the reader's own language. `content` still carries the
+    // English text as the fallback for clients that do not know the key —
+    // exports, older UIs, and the admin transcript views stay readable.
+    systemKey: v.optional(v.string()),
     // Set while a reply is still being written token by token. Clients show a
     // caret; readers see the answer build instead of watching a spinner.
     isStreaming: v.optional(v.boolean()),

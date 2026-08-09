@@ -13,6 +13,7 @@ import {
   incrementChatQuota,
   isChatQuotaExceeded,
   loadPiiConfig,
+  quotaRefusalMessage,
   resolveChatQuota,
   resolveTargetAgentId,
   validateChatAttachments,
@@ -163,6 +164,13 @@ export const sendMessage = publicMutation({
 
     const now = Date.now();
 
+    // -- PII FIREWALL EXTRACTION --
+    // Redaction runs before the quota gate on purpose: the refused message is
+    // stored too, and refusal must not be the one path that writes an
+    // unredacted email address into the transcript.
+    const piiConfig = await loadPiiConfig(ctx);
+    const safeContent = redactPII(args.content, piiConfig);
+
     // 3. Evaluate Limit
     if (isChatQuotaExceeded(quota)) {
        const messageDimensions = getThreadMessageDimensions(thread);
@@ -170,14 +178,17 @@ export const sendMessage = publicMutation({
        await ctx.db.insert("messages", {
           threadId: args.threadId,
           role: "user",
-          content: args.content,
+          content: safeContent,
           createdAt: now,
           ...messageDimensions,
        });
        await ctx.db.insert("messages", {
           threadId: args.threadId,
           role: "assistant",
-          content: "I apologise, but your company has exhausted its AI allocation for this period. Please ask your administrator to review your plan.",
+          content: quotaRefusalMessage(thread),
+          // Lets the widget render this in the visitor's language; the stored
+          // English is the fallback for every other reader of the transcript.
+          systemKey: "quotaRefusal",
           createdAt: now + 1,
           ...messageDimensions,
        });
@@ -187,12 +198,6 @@ export const sendMessage = publicMutation({
 
     // 4. Increment appropriate tracker since limit passed
     await incrementChatQuota(ctx, quota);
-
-    // -- PII FIREWALL EXTRACTION --
-    const piiConfig = await loadPiiConfig(ctx);
-    
-    // Execute Auto-redaction logic masking sensitive data synchronously
-    const safeContent = redactPII(args.content, piiConfig);
 
     // 1. Insert User Message
     await ctx.db.insert("messages", {
