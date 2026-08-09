@@ -27,7 +27,7 @@ export default function GlobalKnowledgeBasePage() {
           <AiWorkspaceNav />
         </>
       )}
-      emptyDocumentDescription="Upload PDF or DOCX files so the AI can securely learn about structural system operations."
+      emptyDocumentDescription="Upload PDF, Word or Markdown files — or drop a whole OKF folder — so the AI can securely learn about structural system operations."
       deleteDocumentDescription={(title) => (
         <>
           Are you sure you want to remove <strong>{title}</strong> from Sonae&apos;s memory?

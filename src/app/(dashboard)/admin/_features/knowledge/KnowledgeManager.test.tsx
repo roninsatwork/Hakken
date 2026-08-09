@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -221,5 +221,117 @@ describe("KnowledgeManager", () => {
     );
     expect(screen.queryByText("https://example.com/case-study-category/ecommerce")).not.toBeInTheDocument();
     expect(screen.queryByText("https://example.com/ai-consultancy")).not.toBeInTheDocument();
+  });
+});
+
+describe("KnowledgeManager bulk upload", () => {
+  function mockUploadMutations() {
+    const saveDocument = vi.fn().mockResolvedValue("doc_new");
+    const startQueue = vi.fn().mockResolvedValue(undefined);
+    const generateUploadUrl = vi.fn().mockResolvedValue("https://upload.test/put");
+
+    vi.mocked(useMutation).mockImplementation((mutationFn) => {
+      const functionName = getFunctionName(mutationFn);
+      if (functionName === "knowledge:saveDocument") return saveDocument as never;
+      if (functionName === "knowledge:startKnowledgeFileQueue") return startQueue as never;
+      if (functionName === "knowledge:generateUploadUrl") return generateUploadUrl as never;
+      return vi.fn() as never;
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ json: async () => ({ storageId: "storage_1" }) }),
+    );
+
+    return { saveDocument, startQueue, generateUploadUrl };
+  }
+
+  function openUploadModal() {
+    render(
+      <KnowledgeManager
+        scope={{ type: "global" }}
+        header={<div />}
+        emptyDocumentDescription="Upload documents"
+        deleteDocumentDescription={() => <span />}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "File" }));
+    fireEvent.click(screen.getByRole("button", { name: /Upload Document/ }));
+  }
+
+  function dropOf(files: File[]) {
+    return {
+      // No entry API, so the collector falls back to the flat `files` list.
+      items: files.map(() => ({ webkitGetAsEntry: () => null })),
+      files,
+    } as unknown as DataTransfer;
+  }
+
+  it("offers a folder picker and says markdown is supported", () => {
+    mockUploadMutations();
+    openUploadModal();
+
+    expect(screen.getByRole("button", { name: "Choose Folder" })).toBeInTheDocument();
+    expect(screen.getByText(/\.MD/)).toBeInTheDocument();
+    expect(screen.getByText(/OKF bundle/)).toBeInTheDocument();
+  });
+
+  it("defers ingestion for a batch and starts the drain queue once", async () => {
+    const { saveDocument, startQueue } = mockUploadMutations();
+    openUploadModal();
+
+    const files = [
+      new File(["# One"], "one.md", { type: "text/markdown" }),
+      new File(["# Two"], "two.md", { type: "text/markdown" }),
+      new File(["# Three"], "three.md", { type: "text/markdown" }),
+    ];
+
+    await act(async () => {
+      fireEvent.drop(screen.getByText(/Drag & Drop Files or a Folder/).closest("div")!, {
+        dataTransfer: dropOf(files),
+      });
+    });
+
+    expect(saveDocument).toHaveBeenCalledTimes(3);
+    expect(saveDocument.mock.calls.every(([args]) => args.deferIngestion === true)).toBe(true);
+    expect(startQueue).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("3 files sent for processing")).toBeInTheDocument();
+  });
+
+  it("ingests a lone file immediately without touching the queue", async () => {
+    const { saveDocument, startQueue } = mockUploadMutations();
+    openUploadModal();
+
+    await act(async () => {
+      fireEvent.drop(screen.getByText(/Drag & Drop Files or a Folder/).closest("div")!, {
+        dataTransfer: dropOf([new File(["# One"], "one.md", { type: "text/markdown" })]),
+      });
+    });
+
+    expect(saveDocument).toHaveBeenCalledTimes(1);
+    expect(saveDocument.mock.calls[0][0].deferIngestion).toBeUndefined();
+    expect(startQueue).not.toHaveBeenCalled();
+  });
+
+  it("fails only the unsupported file and uploads the rest", async () => {
+    const { saveDocument } = mockUploadMutations();
+    openUploadModal();
+
+    const files = [
+      new File(["# Good"], "good.md", { type: "text/markdown" }),
+      new File(["alert(1)"], "payload.js", { type: "text/javascript" }),
+      new File(["# Also good"], "also-good.md", { type: "text/markdown" }),
+    ];
+
+    await act(async () => {
+      fireEvent.drop(screen.getByText(/Drag & Drop Files or a Folder/).closest("div")!, {
+        dataTransfer: dropOf(files),
+      });
+    });
+
+    expect(saveDocument).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("2 of 3 uploaded, 1 failed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry 1 failed" })).toBeInTheDocument();
+    expect(screen.getByText(/Please upload PDF, CSV, Excel, Word, Markdown, or Text files/)).toBeInTheDocument();
   });
 });

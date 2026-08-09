@@ -19,7 +19,7 @@ export default function CompanyKnowledgeBasePage() {
           </div>
         </div>
       )}
-      emptyDocumentDescription="Upload PDF or DOCX files so the AI can securely learn about this company."
+      emptyDocumentDescription="Upload PDF, Word or Markdown files — or drop a whole OKF folder — so the AI can securely learn about this company."
       getInspectDocumentHref={(documentId) => `/admin/companies/${companyId}/ai/knowledge/${documentId}`}
       deleteDocumentDescription={(title) => (
         <>

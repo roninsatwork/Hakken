@@ -32,8 +32,18 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDate } from "@/src/lib/dates";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
+import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
 import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
+import {
+  MAX_BULK_UPLOAD_FILES,
+  UPLOAD_CONCURRENCY,
+  buildUploadTitle,
+  collectDroppedFiles,
+  collectPickedFiles,
+  mapWithConcurrency,
+  partitionReservedBundleFiles,
+  type CollectedFile,
+} from "./knowledgeUploadUtils";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
 type KnowledgeScope =
@@ -50,6 +60,20 @@ type KnowledgeManagerProps = {
 };
 
 type KnowledgeTab = "Website" | "File" | "Text";
+
+type UploadQueueEntry = {
+  key: string;
+  title: string;
+  status: "waiting" | "uploading" | "queued" | "failed";
+  error?: string;
+};
+
+const UPLOAD_STATUS_LABELS: Record<UploadQueueEntry["status"], string> = {
+  waiting: "Waiting",
+  uploading: "Uploading",
+  queued: "Sent for processing",
+  failed: "Failed",
+};
 
 function buildScopeArgs(scope: KnowledgeScope) {
   if (scope.type === "agent") return { agentId: scope.agentId };
@@ -81,6 +105,7 @@ export function KnowledgeManager({
   const qualitySummary = useQuery(api.knowledge.getQualitySummary, scopeArgs);
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
+  const startKnowledgeFileQueue = useMutation(api.knowledge.startKnowledgeFileQueue);
   const deleteDocument = useMutation(api.knowledge.deleteDocument);
   const saveManualText = useMutation(api.knowledge.saveManualText);
   const queueWebsiteUrls = useMutation(api.knowledge.queueWebsiteUrls);
@@ -94,7 +119,12 @@ export function KnowledgeManager({
   const [isUploading, setIsUploading] = useState(false);
   const [fileError, setFileError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<UploadQueueEntry[]>([]);
+  const [skippedBundleFileCount, setSkippedBundleFileCount] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  /** Keeps the source file behind each queue row so a failed upload can be retried. */
+  const uploadSourcesRef = useRef<Map<string, CollectedFile>>(new Map());
 
   const [textTitle, setTextTitle] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -131,39 +161,141 @@ export function KnowledgeManager({
   const isLoadingMoreDocuments = status === "LoadingMore";
   const canLoadMoreDocuments = status === "CanLoadMore";
 
-  const processFile = async (file: File) => {
-    const validation = validateUploadFile(file, "knowledgeDocument");
-    if (!validation.allowed) {
-      setFileError(validation.reason || "Unsupported file type. Please upload a PDF, DOCX, TXT, or CSV file.");
+  const updateQueueEntry = (key: string, patch: Partial<UploadQueueEntry>) => {
+    setUploadQueue((entries) => entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)));
+  };
+
+  const uploadOneFile = async (collected: CollectedFile, key: string, deferIngestion: boolean) => {
+    updateQueueEntry(key, { status: "uploading" });
+
+    const contentType = resolveUploadContentType(collected.file);
+    const uploadUrl = await generateUploadUrl();
+    const result = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": contentType },
+      body: collected.file,
+    });
+    const { storageId } = await result.json() as { storageId: Id<"_storage"> };
+
+    await saveDocument({
+      ...scopeArgs,
+      storageId,
+      title: buildUploadTitle(collected),
+      format: contentType,
+      ...(deferIngestion ? { deferIngestion: true } : {}),
+    });
+  };
+
+  /**
+   * One path for one file and for five hundred. A batch of more than one parks
+   * each document as pending and starts the drain queue once at the end, rather
+   * than firing an ingestion action per file.
+   */
+  const processFiles = async (collected: CollectedFile[]) => {
+    if (collected.length === 0) return;
+
+    const { uploadable, skipped } = partitionReservedBundleFiles(collected);
+    setSkippedBundleFileCount(skipped);
+
+    if (uploadable.length === 0) {
+      setUploadQueue([]);
+      setFileError("Those are all bundle index and log files, which hold links rather than facts. Nothing to upload.");
+      return;
+    }
+
+    const overCap = uploadable.length > MAX_BULK_UPLOAD_FILES;
+    const capped = overCap ? uploadable.slice(0, MAX_BULK_UPLOAD_FILES) : uploadable;
+
+    setFileError(
+      overCap
+        ? `That is more than ${MAX_BULK_UPLOAD_FILES} files. The first ${MAX_BULK_UPLOAD_FILES} are being uploaded — add the rest in a second batch.`
+        : "",
+    );
+
+    const accepted: { collected: CollectedFile; key: string }[] = [];
+    const initialQueue: UploadQueueEntry[] = [];
+    uploadSourcesRef.current = new Map();
+
+    capped.forEach((item, index) => {
+      const key = `${index}-${item.path}`;
+      const title = buildUploadTitle(item);
+      const validation = validateUploadFile(item.file, "knowledgeDocument");
+      uploadSourcesRef.current.set(key, item);
+
+      if (validation.allowed) {
+        accepted.push({ collected: item, key });
+        initialQueue.push({ key, title, status: "waiting" });
+      } else {
+        initialQueue.push({ key, title, status: "failed", error: validation.reason });
+      }
+    });
+
+    setUploadQueue(initialQueue);
+
+    if (accepted.length === 0) {
+      setFileError(initialQueue[0]?.error || "Unsupported file type. Please upload a PDF, DOCX, MD, TXT, or CSV file.");
       return;
     }
 
     setIsUploading(true);
-    setFileError("");
+    const deferIngestion = accepted.length > 1;
 
-    try {
-      const uploadUrl = await generateUploadUrl();
-      const result = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      const { storageId } = await result.json() as { storageId: Id<"_storage"> };
+    const outcomes = await mapWithConcurrency(accepted, UPLOAD_CONCURRENCY, async ({ collected: item, key }) => {
+      try {
+        await uploadOneFile(item, key, deferIngestion);
+        updateQueueEntry(key, { status: "queued" });
+        return true;
+      } catch (err: unknown) {
+        console.error(err);
+        updateQueueEntry(key, { status: "failed", error: getErrorMessage(err, "Failed to upload file.") });
+        return false;
+      }
+    });
 
-      await saveDocument({
-        ...scopeArgs,
-        storageId,
-        title: file.name,
-        format: file.type,
-      });
+    const uploaded = outcomes.filter(Boolean).length;
+
+    if (deferIngestion && uploaded > 0) {
+      try {
+        await startKnowledgeFileQueue({});
+      } catch (err: unknown) {
+        console.error(err);
+        setFileError(getErrorMessage(err, "Files uploaded, but processing did not start. Use Retry on the list below."));
+      }
+    }
+
+    setIsUploading(false);
+
+    // A single clean upload needs no report; a batch does.
+    if (!deferIngestion && uploaded === 1) {
+      setUploadQueue([]);
       setIsModalOpen(false);
-    } catch (err: unknown) {
-      console.error(err);
-      setFileError(getErrorMessage(err, "Failed to upload file."));
-    } finally {
-      setIsUploading(false);
     }
   };
+
+
+  const handleRetryFailedUploads = async () => {
+    const retryable = uploadQueue
+      .filter((entry) => entry.status === "failed")
+      .map((entry) => uploadSourcesRef.current.get(entry.key))
+      .filter((source): source is CollectedFile => Boolean(source));
+
+    if (retryable.length === 0) return;
+    await processFiles(retryable);
+  };
+
+  const failedUploadCount = uploadQueue.filter((entry) => entry.status === "failed").length;
+  const sentUploadCount = uploadQueue.filter((entry) => entry.status === "queued").length;
+  const settledUploadCount = failedUploadCount + sentUploadCount;
+
+  const uploadProgressLabel = uploadQueue.length > 1
+    ? `Uploading ${Math.min(settledUploadCount + 1, uploadQueue.length)} of ${uploadQueue.length}...`
+    : "Securely Uploading Document...";
+
+  const uploadSummary = isUploading
+    ? `${sentUploadCount} of ${uploadQueue.length} uploaded`
+    : failedUploadCount > 0
+      ? `${sentUploadCount} of ${uploadQueue.length} uploaded, ${failedUploadCount} failed`
+      : `${uploadQueue.length} ${uploadQueue.length === 1 ? "file" : "files"} sent for processing`;
 
   const handleDrag = (event: DragEvent<HTMLElement>) => {
     event.preventDefault();
@@ -179,16 +311,16 @@ export function KnowledgeManager({
     event.preventDefault();
     event.stopPropagation();
     setDragActive(false);
-    if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-      await processFile(event.dataTransfer.files[0]);
-    }
+    const collected = await collectDroppedFiles(event.dataTransfer);
+    await processFiles(collected);
   };
 
   const handleChange = async (event: ChangeEvent<HTMLInputElement>) => {
     event.preventDefault();
-    if (event.target.files && event.target.files[0]) {
-      await processFile(event.target.files[0]);
-    }
+    const collected = collectPickedFiles(event.target.files);
+    // Clear the input so re-picking the same folder fires a fresh change event.
+    event.target.value = "";
+    await processFiles(collected);
   };
 
   const handleSaveText = async () => {
@@ -922,8 +1054,15 @@ export function KnowledgeManager({
 
       <SonaeModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Upload Knowledge Document"
+        onClose={() => {
+          setIsModalOpen(false);
+          if (!isUploading) {
+            setUploadQueue([]);
+            setFileError("");
+            setSkippedBundleFileCount(0);
+          }
+        }}
+        title="Upload Knowledge Documents"
         size="md"
       >
         <div className="flex flex-col gap-6 w-full pt-4">
@@ -944,31 +1083,108 @@ export function KnowledgeManager({
             <input
               ref={inputRef}
               type="file"
-              accept=".pdf,.docx,.txt,.csv,.xls,.xlsx"
+              multiple
+              accept=".pdf,.docx,.txt,.csv,.xls,.xlsx,.md,.markdown"
+              onChange={handleChange}
+              className="hidden"
+            />
+            {/*
+              `webkitdirectory` turns the picker into a folder picker. React has
+              no typed prop for it, hence the spread.
+            */}
+            <input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
               onChange={handleChange}
               className="hidden"
             />
             {isUploading ? (
               <div className="flex flex-col flex-1 items-center justify-center pointer-events-none">
                 <Loader2 className="w-12 h-12 text-brand animate-spin mb-4" />
-                <p className="text-[14px] font-bold text-foreground">Securely Uploading Document...</p>
+                <p className="text-[14px] font-bold text-foreground">
+                  {uploadProgressLabel}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col flex-1 items-center justify-center pointer-events-none">
                 <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${dragActive ? "text-brand scale-110" : "text-secondary"}`} />
-                <p className="text-[14px] font-bold text-foreground mb-1">Drag & Drop Documentation</p>
-                <p className="text-[13px] text-muted text-center max-w-[250px] leading-relaxed mb-6">
-                  Supports .PDF, .DOCX, .TXT, and .CSV format.
+                <p className="text-[14px] font-bold text-foreground mb-1">Drag &amp; Drop Files or a Folder</p>
+                <p className="text-[13px] text-muted text-center max-w-[280px] leading-relaxed mb-6">
+                  Supports .PDF, .DOCX, .MD, .TXT, and .CSV. Drop a whole folder to load an OKF bundle — up to {MAX_BULK_UPLOAD_FILES} files at a time.
                 </p>
-                <button
-                  onClick={(event) => { event.preventDefault(); inputRef.current?.click(); }}
-                  className="px-6 py-2.5 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all pointer-events-auto shadow-[0_0_20px_rgba(255,255,255,0.05)]"
-                >
-                  Browse Desktop Files
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={(event) => { event.preventDefault(); inputRef.current?.click(); }}
+                    className="px-6 py-2.5 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all pointer-events-auto shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                  >
+                    Browse Files
+                  </button>
+                  <button
+                    onClick={(event) => { event.preventDefault(); folderInputRef.current?.click(); }}
+                    className="px-6 py-2.5 rounded-full border border-white/15 text-foreground font-bold tracking-wide text-[13px] hover:bg-white/5 transition-all pointer-events-auto"
+                  >
+                    Choose Folder
+                  </button>
+                </div>
               </div>
             )}
           </div>
+
+          {uploadQueue.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] font-semibold text-foreground">
+                  {uploadSummary}
+                </p>
+                {!isUploading && failedUploadCount > 0 && (
+                  <button
+                    onClick={handleRetryFailedUploads}
+                    className="px-3 py-1.5 rounded-full border border-white/15 text-[12px] font-semibold hover:bg-white/5 transition-colors"
+                  >
+                    Retry {failedUploadCount} failed
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-[260px] overflow-y-auto rounded-[12px] border border-white/10 divide-y divide-white/5">
+                {uploadQueue.map((entry) => (
+                  <div key={entry.key} className="flex items-start gap-3 px-3 py-2">
+                    <div className="mt-0.5 flex-shrink-0">
+                      {entry.status === "failed" ? (
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                      ) : entry.status === "queued" ? (
+                        <CheckCircle2 className="w-4 h-4 text-brand" />
+                      ) : entry.status === "uploading" ? (
+                        <Loader2 className="w-4 h-4 text-brand animate-spin" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-muted" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] text-foreground truncate" title={entry.title}>{entry.title}</p>
+                      <p className={`text-[12px] ${entry.status === "failed" ? "text-red-500" : "text-secondary"}`}>
+                        {entry.status === "failed"
+                          ? `Failed — ${entry.error || "upload did not complete"}`
+                          : UPLOAD_STATUS_LABELS[entry.status]}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {skippedBundleFileCount > 0 && (
+                <p className="text-[12px] text-secondary">
+                  {skippedBundleFileCount} bundle {skippedBundleFileCount === 1 ? "index or log file was" : "index and log files were"} skipped — they hold links and history rather than facts.
+                </p>
+              )}
+
+              <p className="text-[12px] text-muted">
+                Uploaded files are processed in the background. Close this window whenever you like — progress shows in the document list.
+              </p>
+            </div>
+          )}
         </div>
       </SonaeModal>
 

@@ -10,7 +10,7 @@ import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
 import { requireActionAdmin } from "./actionAuth";
-import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
+import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "./utils/knowledgeActionsService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction } from "./tenantFunctions";
@@ -19,23 +19,30 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
-export const ingestDocument = internalAction({
-  args: {
-    documentId: v.id("knowledgeDocuments"),
-    storageId: v.optional(v.id("_storage")),
-  },
-  handler: async (ctx, args) => {
+/**
+ * Shared by the direct single-file path and the bulk file queue. Swallows its
+ * own failures into the document's status so a bad file never stops the queue
+ * behind it.
+ */
+async function ingestStoredDocument(
+  ctx: ActionCtx,
+  documentId: Id<"knowledgeDocuments">,
+  storageId: Id<"_storage"> | undefined,
+  options: { alreadyClaimed?: boolean } = {}
+) {
     try {
-      const doc = await ctx.runQuery(internal.knowledge.getDocInternal, { id: args.documentId });
+      const doc = await ctx.runQuery(internal.knowledge.getDocInternal, { id: documentId });
       if (!doc) throw new Error("Document missing from DB");
-      await ctx.runMutation(internal.knowledge.markDocIngestionStartedInternal, { documentId: args.documentId });
+      if (!options.alreadyClaimed) {
+        await ctx.runMutation(internal.knowledge.markDocIngestionStartedInternal, { documentId });
+      }
 
       let rawText = "";
 
       if (doc.textContent) {
           rawText = doc.textContent;
-      } else if (args.storageId) {
-          const fileUrl = await ctx.storage.getUrl(args.storageId);
+      } else if (storageId) {
+          const fileUrl = await ctx.storage.getUrl(storageId);
           if (!fileUrl) throw new Error("Storage URL missing");
 
           const response = await fetch(fileUrl);
@@ -55,15 +62,59 @@ export const ingestDocument = internalAction({
 
       if (!rawText.trim()) throw new Error("No text content could be extracted from the intelligence file.");
 
-      await embedAndStoreDoc(ctx, args.documentId, doc.companyId, doc.agentId, doc.threadId, rawText);
+      let ingestText = rawText;
+
+      if (isMarkdownFormat(doc.format)) {
+        const prepared = prepareKnowledgeMarkdown(rawText);
+        ingestText = prepared.text;
+
+        // An OKF concept names itself. Prefer that over the uploaded filename.
+        if (prepared.frontmatter.title && prepared.frontmatter.title !== doc.title) {
+          await ctx.runMutation(internal.knowledge.setDocumentTitleInternal, {
+            documentId,
+            title: prepared.frontmatter.title,
+          });
+        }
+      }
+
+      if (!ingestText.trim()) throw new Error("No text content could be extracted from the intelligence file.");
+
+      await embedAndStoreDoc(ctx, documentId, doc.companyId, doc.agentId, doc.threadId, ingestText);
 
     } catch (error) {
        console.error("Critical Failure in Knowledge Ingestion:", error);
        await ctx.runMutation(internal.knowledge.markDocFailedInternal, {
-         documentId: args.documentId,
+         documentId,
          error: getErrorMessage(error),
        });
     }
+}
+
+export const ingestDocument = internalAction({
+  args: {
+    documentId: v.id("knowledgeDocuments"),
+    storageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    await ingestStoredDocument(ctx, args.documentId, args.storageId);
+  },
+});
+
+/**
+ * Drains bulk-uploaded files one document per pass, rescheduling itself until
+ * the pending queue is empty. Several of these chains run at once — see
+ * KNOWLEDGE_FILE_QUEUE_WIDTH — and the claim is transactional so no two chains
+ * take the same document.
+ */
+export const processKnowledgeFileQueue = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const claimed = await ctx.runMutation(internal.knowledge.claimNextPendingFileInternal, {});
+    if (!claimed) return;
+
+    await ingestStoredDocument(ctx, claimed.documentId, claimed.fileId ?? undefined, { alreadyClaimed: true });
+
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.processKnowledgeFileQueue, {});
   },
 });
 

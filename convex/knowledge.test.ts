@@ -1333,3 +1333,126 @@ describe("OWASP: Broken Object Level Authorization - Knowledge Base", () => {
     expect(recentThreadDocument?._id).toBe(recentThreadDocumentId);
   });
 });
+
+describe("bulk file ingestion queue", () => {
+  async function seedSuperAdmin(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      return await ctx.db.insert("users", {
+        email: "super@test.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+    });
+  }
+
+  test("deferIngestion parks the document as pending instead of processing it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const adminId = await seedSuperAdmin(t);
+    const adminClient = t.withIdentity({ subject: adminId });
+
+    const storageId = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(new Blob(["# Revenue"], { type: "text/markdown" }));
+      await ctx.db.insert("mockStorageMetadata", {
+        storageId,
+        size: 10,
+        contentType: "text/markdown",
+      });
+      return storageId;
+    });
+
+    const documentId = await adminClient.mutation(api.knowledge.saveDocument, {
+      storageId,
+      title: "finance/revenue.md",
+      format: "text/markdown",
+      deferIngestion: true,
+    });
+
+    const document = await t.run(async (ctx) => ctx.db.get(documentId));
+    expect(document?.status).toBe("pending");
+    expect(document?.title).toBe("finance/revenue.md");
+  });
+
+  test("the website queue never claims an uploaded file", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("knowledgeDocuments", {
+        title: "concept.md",
+        status: "pending",
+        format: "text/markdown",
+        createdAt: Date.now(),
+      });
+    });
+
+    const claimedByWebsiteQueue = await t.run(async (ctx) =>
+      ctx.runQuery(internal.knowledge.getNextPendingUrlInternal, {}),
+    );
+
+    expect(claimedByWebsiteQueue).toBeNull();
+  });
+
+  test("the file queue never claims a website document", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("knowledgeDocuments", {
+        title: "https://example.com/pricing",
+        sourceUrl: "https://example.com/pricing",
+        status: "pending",
+        format: "url",
+        createdAt: Date.now(),
+      });
+    });
+
+    const claimed = await t.mutation(internal.knowledge.claimNextPendingFileInternal, {});
+    expect(claimed).toBeNull();
+  });
+
+  test("a claimed document is marked processing so a parallel chain cannot take it twice", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const documentId = await t.run(async (ctx) => {
+      return await ctx.db.insert("knowledgeDocuments", {
+        title: "concept.md",
+        status: "pending",
+        format: "text/markdown",
+        createdAt: Date.now(),
+      });
+    });
+
+    const first = await t.mutation(internal.knowledge.claimNextPendingFileInternal, {});
+    const second = await t.mutation(internal.knowledge.claimNextPendingFileInternal, {});
+
+    expect(first?.documentId).toBe(documentId);
+    expect(second).toBeNull();
+
+    const document = await t.run(async (ctx) => ctx.db.get(documentId));
+    expect(document?.status).toBe("processing");
+  });
+
+  test("the queue drains oldest first", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { olderId, newerId } = await t.run(async (ctx) => {
+      const olderId = await ctx.db.insert("knowledgeDocuments", {
+        title: "first.md",
+        status: "pending",
+        format: "text/markdown",
+        createdAt: 1,
+      });
+      const newerId = await ctx.db.insert("knowledgeDocuments", {
+        title: "second.md",
+        status: "pending",
+        format: "text/markdown",
+        createdAt: 2,
+      });
+      return { olderId, newerId };
+    });
+
+    const first = await t.mutation(internal.knowledge.claimNextPendingFileInternal, {});
+    const second = await t.mutation(internal.knowledge.claimNextPendingFileInternal, {});
+
+    expect(first?.documentId).toBe(olderId);
+    expect(second?.documentId).toBe(newerId);
+  });
+});

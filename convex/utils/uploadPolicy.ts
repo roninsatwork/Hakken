@@ -15,6 +15,19 @@ export const CHAT_DOCUMENT_CONTENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
+export const MARKDOWN_CONTENT_TYPES = ["text/markdown", "text/x-markdown"] as const;
+
+/**
+ * Knowledge ingestion accepts everything chat does, plus markdown. Markdown is
+ * deliberately not added to the chat list: OKF bundles and `.md` libraries are
+ * knowledge-base material, and widening chat attachments is a separate
+ * decision. See docs/plans/active/knowledge-markdown-and-bulk-upload-plan.md.
+ */
+export const KNOWLEDGE_DOCUMENT_CONTENT_TYPES = [
+  ...CHAT_DOCUMENT_CONTENT_TYPES,
+  ...MARKDOWN_CONTENT_TYPES,
+] as const;
+
 type StorageMetadata = {
   size: number;
   contentType?: string | null;
@@ -26,6 +39,7 @@ type AttachmentPolicy = {
 };
 
 type UploadPolicy = AttachmentPolicy & {
+  documentContentTypes?: readonly string[];
   documentMaxBytes?: number;
   imageMaxBytes?: number;
   invalidTypeMessage?: string;
@@ -84,6 +98,12 @@ export function isChatDocumentContentType(contentType?: string | null) {
   );
 }
 
+export function isKnowledgeDocumentContentType(contentType?: string | null) {
+  return KNOWLEDGE_DOCUMENT_CONTENT_TYPES.includes(
+    normalizeContentType(contentType) as (typeof KNOWLEDGE_DOCUMENT_CONTENT_TYPES)[number],
+  );
+}
+
 export function isChatImageContentType(contentType?: string | null) {
   return normalizeContentType(contentType).startsWith("image/");
 }
@@ -108,7 +128,9 @@ export function validateUploadMetadata(metadata: StorageMetadata, policy: Upload
     return "image";
   }
 
-  if (policy.allowDocuments && isChatDocumentContentType(metadata.contentType)) {
+  const documentContentTypes = policy.documentContentTypes ?? CHAT_DOCUMENT_CONTENT_TYPES;
+
+  if (policy.allowDocuments && documentContentTypes.includes(normalizeContentType(metadata.contentType))) {
     const maxBytes = policy.documentMaxBytes ?? CHAT_DOCUMENT_MAX_BYTES;
     if (metadata.size > maxBytes) {
       throw new Error(`File exceeds the maximum size limit of ${formatBytes(maxBytes)} for documents`);
@@ -120,9 +142,14 @@ export function validateUploadMetadata(metadata: StorageMetadata, policy: Upload
     throw new Error(policy.invalidTypeMessage);
   }
 
+  const allowsMarkdown = MARKDOWN_CONTENT_TYPES.every((type) => documentContentTypes.includes(type));
   const allowedKinds = [
     policy.allowImages ? "images" : null,
-    policy.allowDocuments ? "PDF, CSV, Excel, Word, or text documents" : null,
+    policy.allowDocuments
+      ? allowsMarkdown
+        ? "PDF, CSV, Excel, Word, Markdown, or text documents"
+        : "PDF, CSV, Excel, Word, or text documents"
+      : null,
   ].filter(Boolean);
 
   throw new Error(`Invalid file type: only ${allowedKinds.join(" and ")} are allowed`);
@@ -136,6 +163,7 @@ function formatBytes(bytes: number) {
 export function validateKnowledgeDocumentMetadata(metadata: StorageMetadata) {
   return validateUploadMetadata(metadata, {
     allowDocuments: true,
+    documentContentTypes: KNOWLEDGE_DOCUMENT_CONTENT_TYPES,
     documentMaxBytes: CHAT_DOCUMENT_MAX_BYTES,
   });
 }

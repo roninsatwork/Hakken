@@ -135,6 +135,16 @@ completed work.
   writing an entry. Records the decision that retention deletion must log
   itself, and the decision not to build tamper-proofing or page-view logging
   yet. Read it before adding an audit entry anywhere.
+- [Knowledge Markdown And Bulk Upload Plan](./active/knowledge-markdown-and-bulk-upload-plan.md) —
+  the plan to accept `.md` files and Google Cloud's Open Knowledge Format
+  bundles across global, company and agent knowledge, and to upload many files
+  or a whole folder in one gesture. Owns the two duplicated upload allow-lists
+  in `src/lib/constants/uploads.ts` and `convex/utils/uploadPolicy.ts`, the
+  upload half of `KnowledgeManager.tsx`, and the new pending-file ingestion
+  queue beside `processWebsiteQueue`. Records the latent
+  `getNextPendingUrlInternal` defect that bulk file ingestion activates, and
+  the decision to leave the whitespace-collapsing chunker alone for now. Read
+  it before widening any upload allow-list or scheduling `ingestDocument`.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of

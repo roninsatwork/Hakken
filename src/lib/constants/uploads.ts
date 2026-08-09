@@ -12,13 +12,17 @@ export const CHAT_DOCUMENT_CONTENT_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
+export const MARKDOWN_CONTENT_TYPES = ["text/markdown", "text/x-markdown"] as const;
+
+/**
+ * Mirrors KNOWLEDGE_DOCUMENT_CONTENT_TYPES in convex/utils/uploadPolicy.ts.
+ * Convex functions cannot import from src/, so the two lists are duplicated and
+ * held in step by a test. Markdown is knowledge-only on purpose — chat
+ * attachments keep the narrower list.
+ */
 export const KNOWLEDGE_DOCUMENT_CONTENT_TYPES = [
-  "application/pdf",
-  "text/csv",
-  "text/plain",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ...CHAT_DOCUMENT_CONTENT_TYPES,
+  ...MARKDOWN_CONTENT_TYPES,
 ] as const;
 
 export type UploadPolicyKey =
@@ -43,7 +47,7 @@ const uploadPolicies: Record<UploadPolicyKey, UploadPolicy> = {
   knowledgeDocument: {
     allowedTypes: KNOWLEDGE_DOCUMENT_CONTENT_TYPES,
     maxBytes: CHAT_DOCUMENT_MAX_BYTES,
-    rejectedTypeMessage: "Please upload PDF, CSV, Excel, Word, or Text files.",
+    rejectedTypeMessage: "Please upload PDF, CSV, Excel, Word, Markdown, or Text files.",
   },
   adminImage: {
     allowImages: true,
@@ -61,19 +65,45 @@ function normalizeFileType(file: File) {
   return file.type.split(";")[0]?.trim().toLowerCase() ?? "";
 }
 
+const CHAT_DOCUMENT_EXTENSIONS = [".csv", ".txt", ".docx", ".pdf", ".xls", ".xlsx"] as const;
+export const MARKDOWN_EXTENSIONS = [".md", ".markdown"] as const;
+const KNOWLEDGE_DOCUMENT_EXTENSIONS = [...CHAT_DOCUMENT_EXTENSIONS, ...MARKDOWN_EXTENSIONS] as const;
+
 function isAllowedByExtension(file: File, policyKey: UploadPolicyKey) {
   const name = file.name.toLowerCase();
-  if (policyKey === "chatDocument" || policyKey === "knowledgeDocument") {
-    return (
-      name.endsWith(".csv") ||
-      name.endsWith(".txt") ||
-      name.endsWith(".docx") ||
-      name.endsWith(".pdf") ||
-      name.endsWith(".xls") ||
-      name.endsWith(".xlsx")
-    );
+  if (policyKey === "chatDocument") {
+    return CHAT_DOCUMENT_EXTENSIONS.some((extension) => name.endsWith(extension));
+  }
+  if (policyKey === "knowledgeDocument") {
+    return KNOWLEDGE_DOCUMENT_EXTENSIONS.some((extension) => name.endsWith(extension));
   }
   return false;
+}
+
+/**
+ * Browsers do not reliably label `.md` files — `file.type` is often the empty
+ * string depending on OS registry. Uploading with an empty Content-Type makes
+ * Convex storage record nothing, and the server-side check then rejects a valid
+ * file with an unexplained "Invalid file type". Resolve from the extension so
+ * both the upload header and the stored `format` are honest.
+ */
+export function resolveUploadContentType(file: File) {
+  const declared = normalizeFileType(file);
+  if (declared) return declared;
+
+  const name = file.name.toLowerCase();
+  if (MARKDOWN_EXTENSIONS.some((extension) => name.endsWith(extension))) return "text/markdown";
+  if (name.endsWith(".txt")) return "text/plain";
+  if (name.endsWith(".csv")) return "text/csv";
+  if (name.endsWith(".pdf")) return "application/pdf";
+  if (name.endsWith(".docx")) {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  if (name.endsWith(".xlsx")) {
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  }
+  if (name.endsWith(".xls")) return "application/vnd.ms-excel";
+  return "";
 }
 
 export function getUploadPolicy(policyKey: UploadPolicyKey) {

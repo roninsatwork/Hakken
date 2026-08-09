@@ -25,7 +25,7 @@ export default function AgentKnowledgePage() {
           </div>
         </div>
       )}
-      emptyDocumentDescription="Upload documents, text, or website pages so this agent can retrieve approved tenant-scoped reference material."
+      emptyDocumentDescription="Upload documents, Markdown or an OKF folder, text, or website pages so this agent can retrieve approved tenant-scoped reference material."
       deleteDocumentDescription={(title) => (
         <>
           Are you sure you want to remove <strong>{title}</strong> from this agent&apos;s knowledge?

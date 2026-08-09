@@ -856,6 +856,12 @@ export const saveDocument = tenantMutation({
     agentId: v.optional(v.id("agents")),
     title: v.string(),
     format: v.string(),
+    /**
+     * Bulk uploads park at "pending" and let the file queue drain them a few at
+     * a time. Starting one ingestion action per file would fire hundreds of
+     * concurrent embedding loops and fail most of them on rate limits.
+     */
+    deferIngestion: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
@@ -866,7 +872,7 @@ export const saveDocument = tenantMutation({
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
       fileId: args.storageId,
-      status: "processing",
+      status: args.deferIngestion ? "pending" : "processing",
       format: args.format,
       createdBy: userId,
       createdAt: Date.now(),
@@ -876,10 +882,12 @@ export const saveDocument = tenantMutation({
     }));
 
     // Trigger off the heavy-duty background action for processing & embeddings
-    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
-      documentId,
-      storageId: args.storageId,
-    });
+    if (!args.deferIngestion) {
+      await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
+        documentId,
+        storageId: args.storageId,
+      });
+    }
 
     await ctx.db.insert("auditLogs", {
       actionType: "UPLOAD_DOCUMENT",
@@ -1092,6 +1100,23 @@ export const markDocIngestionStartedInternal = internalMutation({
   },
 });
 
+/**
+ * An OKF concept declares its own title in frontmatter. Applied during
+ * ingestion so a bundle lists as "Quarterly Revenue" rather than
+ * "finance/quarterly-revenue.md".
+ */
+export const setDocumentTitleInternal = internalMutation({
+  args: {
+    documentId: v.id("knowledgeDocuments"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const title = args.title.trim();
+    if (!title) return;
+    await ctx.db.patch(args.documentId, { title: title.slice(0, 300) });
+  },
+});
+
 export const markDocPendingInternal = internalMutation({
   args: {
     documentId: v.id("knowledgeDocuments"),
@@ -1148,6 +1173,12 @@ export const garbageCollectThreadVectors = internalMutation({
   }
 });
 
+/**
+ * The website queue must only ever claim website documents. Bulk file uploads
+ * also park at status "pending" while the file queue drains them, and without
+ * this filter the scraper would claim one and POST `sourceUrl: undefined` to
+ * Firecrawl. See docs/plans/active/knowledge-markdown-and-bulk-upload-plan.md.
+ */
 export const getNextPendingUrlInternal = internalQuery({
   args: {},
   handler: async (ctx) => {
@@ -1155,8 +1186,54 @@ export const getNextPendingUrlInternal = internalQuery({
       .query("knowledgeDocuments")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
       .order("asc")
+      .filter((q) => q.eq(q.field("format"), "url"))
       .first();
   }
+});
+
+/**
+ * The mirror of the above for uploaded files: everything pending that is not a
+ * website. Claim and mark are one transaction on purpose — several queue chains
+ * drain in parallel, so a read-then-patch pair would hand the same document to
+ * two of them. Drained by internal.knowledgeActions.processKnowledgeFileQueue.
+ */
+export const claimNextPendingFileInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const next = await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .order("asc")
+      .filter((q) => q.neq(q.field("format"), "url"))
+      .first();
+
+    if (!next) return null;
+
+    await ctx.db.patch(next._id, {
+      status: "processing",
+      lastIngestionStartedAt: Date.now(),
+      lastIngestionError: undefined,
+    });
+
+    return { documentId: next._id, fileId: next.fileId };
+  }
+});
+
+/**
+ * How many file-queue chains drain in parallel. Three is a deliberate middle:
+ * one chain makes a 500-file bundle crawl, and anything wider starts losing
+ * chunks to Vertex rate limits that embedVertexContentWithRetry then burns its
+ * five attempts on.
+ */
+export const KNOWLEDGE_FILE_QUEUE_WIDTH = 3;
+
+export const startKnowledgeFileQueue = adminMutation({
+  args: {},
+  handler: async (ctx) => {
+    for (let chain = 0; chain < KNOWLEDGE_FILE_QUEUE_WIDTH; chain += 1) {
+      await ctx.scheduler.runAfter(chain * 250, internal.knowledgeActions.processKnowledgeFileQueue, {});
+    }
+  },
 });
 
 export const saveManualText = tenantMutation({

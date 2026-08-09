@@ -39,6 +39,34 @@ describe("upload policy validators", () => {
     ).toThrow("Invalid file type");
   });
 
+  test("accepts markdown for knowledge and refuses it for chat", () => {
+    expect(validateKnowledgeDocumentMetadata({ size: 128, contentType: "text/markdown" })).toBe("document");
+    expect(validateKnowledgeDocumentMetadata({ size: 128, contentType: "text/x-markdown" })).toBe("document");
+    expect(validateKnowledgeDocumentMetadata({ size: 128, contentType: "text/markdown; charset=utf-8" })).toBe(
+      "document",
+    );
+
+    expect(() =>
+      validateChatAttachmentMetadata({ size: 128, contentType: "text/markdown" }),
+    ).toThrow("Invalid file type");
+  });
+
+  test("names markdown in the knowledge refusal but not the chat one", () => {
+    expect(() =>
+      validateKnowledgeDocumentMetadata({ size: 128, contentType: "application/javascript" }),
+    ).toThrow("PDF, CSV, Excel, Word, Markdown, or text documents");
+
+    expect(() =>
+      validateChatAttachmentMetadata({ size: 128, contentType: "application/javascript" }, { allowDocuments: true }),
+    ).toThrow("PDF, CSV, Excel, Word, or text documents");
+  });
+
+  test("still holds markdown to the document size limit", () => {
+    expect(() =>
+      validateKnowledgeDocumentMetadata({ size: CHAT_DOCUMENT_MAX_BYTES + 1, contentType: "text/markdown" }),
+    ).toThrow("50MB for documents");
+  });
+
   test("enforces admin and widget image policies", () => {
     expect(validateAdminImageMetadata({ size: ADMIN_IMAGE_MAX_BYTES, contentType: "image/webp" })).toBe("image");
     expect(() =>
