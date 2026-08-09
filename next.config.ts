@@ -1,4 +1,5 @@
 import { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { createSecureHeaders } from 'next-secure-headers';
 import path from 'node:path';
@@ -139,4 +140,31 @@ const nextConfig: NextConfig = {
 };
 
 const withNextIntl = createNextIntlPlugin();
-export default withNextIntl(nextConfig);
+
+/**
+ * Sentry's build step, which does two jobs beyond the runtime SDK.
+ *
+ * It installs the hooks that let server-side errors be attributed to a request,
+ * and — only when given a token — it uploads source maps so a stack trace names
+ * a line of our code instead of a column in a minified bundle.
+ *
+ * Upload is switched off unless `SENTRY_AUTH_TOKEN` is present. A build should
+ * not need a secret to succeed: CI, a local production build, and anyone who
+ * clones this repo all build without one, and a plugin that fails or warns
+ * loudly in that state trains people to ignore build output. With no token the
+ * traces still arrive, just minified.
+ */
+const sourceMapsConfigured = Boolean(
+  process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+);
+
+export default withSentryConfig(withNextIntl(nextConfig), {
+  ...(process.env.SENTRY_ORG ? { org: process.env.SENTRY_ORG } : {}),
+  ...(process.env.SENTRY_PROJECT ? { project: process.env.SENTRY_PROJECT } : {}),
+  sourcemaps: { disable: !sourceMapsConfigured },
+  // The plugin's own progress output, not ours. Errors still surface.
+  silent: true,
+  // Strips Sentry's internal debug logging from the production bundle.
+  // (`disableLogger` is the deprecated spelling and warns under Turbopack.)
+  webpack: { treeshake: { removeDebugLogging: true } },
+});
