@@ -145,6 +145,18 @@ completed work.
   `getNextPendingUrlInternal` defect that bulk file ingestion activates, and
   the decision to leave the whitespace-collapsing chunker alone for now. Read
   it before widening any upload allow-list or scheduling `ingestDocument`.
+- [Self-Improvement Plan](./active/self-improvement-plan.md) — the plan to
+  close the four learning loops that already collect signal and throw it away:
+  automatic reflection on failed runs, outcome-weighted memory ranking,
+  end-user feedback in chat, and retrieval priors from rated answers — while
+  keeping the human approval gate on every new belief. Owns the
+  `SELF_IMPROVEMENT_CONFIG` kill switches, the future `messageFeedback` and
+  `knowledgeChunkStats` tables, and the decision gate on autonomous memory
+  writing (Phase 5, default off, not to be built unbidden). Read it before
+  touching memory ranking in `convex/agentMemories.ts` or
+  `convex/companyMemories.ts`, `convex/agentRunReflections.ts`,
+  `convex/agentMemoryCandidates.ts`, `convex/companyMemorySuggestions.ts`, or
+  the fusion in `convex/knowledgeRetrievalService.ts`.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -181,6 +193,10 @@ If work touches what the audit trail records, how an entry is worded, or the
 audit trail screens themselves, use the Audit Trail Plan. It takes the audit
 trail's *content* from the Governance And Trust Plan, which keeps its placement
 in the Governance section.
+If work touches how the AI learns over time — memory ranking, run reflections,
+feedback collection, memory suggestion queues, or retrieval priors — use the
+Self-Improvement Plan, which takes its eval fixtures from the AI Checks Plan
+and its approvals philosophy from the Agent Autonomy And Approvals Plan.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the
 Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.
