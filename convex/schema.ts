@@ -2216,6 +2216,10 @@ export default defineSchema({
     output: v.optional(v.string()), // JSON stringified
     status: v.union(v.literal("PENDING"), v.literal("RUNNING"), v.literal("SUCCESS"), v.literal("FAILED"), v.literal("PENDING_APPROVAL")),
     error: v.optional(v.string()),
+    // 1-based try counter; absent means first attempt. Only transient failures
+    // of provably re-runnable node types requeue (see workflowRetryService.ts),
+    // and a FAILED step keeps the count so the review list shows what was tried.
+    attempt: v.optional(v.number()),
     // Copied from the parent execution on insert. Tenancy lived only on the
     // parent, so a query spanning executions could not filter by company without a
     // lookup per row — which is not something an index can do.

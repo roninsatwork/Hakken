@@ -122,7 +122,36 @@ export const claimNextPendingStep = internalMutation({
         status: "RUNNING",
         startedAt: Date.now()
     });
-    
-    return { stepId: pendingStep._id, input: pendingStep.input };
+
+    return { stepId: pendingStep._id, input: pendingStep.input, attempt: pendingStep.attempt ?? 1 };
   }
+});
+
+/**
+ * Put a transiently-failed step back in the queue for another try.
+ *
+ * Returning the step to PENDING re-arms `claimNextPendingStep` — the retry
+ * flows through the exact claim path a first attempt does, so fan-out
+ * collision safety applies unchanged. The error that caused the retry is kept
+ * on the step: a retry that eventually succeeds should still show what it
+ * survived. The parent execution is deliberately untouched — it is still
+ * running, just not yet successful.
+ */
+export const requeueStepForRetry = internalMutation({
+  args: {
+    stepId: v.id("workflowExecutionSteps"),
+    error: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const step = await ctx.db.get(args.stepId);
+    if (!step || step.status !== "RUNNING") return null;
+
+    const nextAttempt = (step.attempt ?? 1) + 1;
+    await ctx.db.patch(step._id, {
+      status: "PENDING",
+      attempt: nextAttempt,
+      error: args.error,
+    });
+    return { nextAttempt };
+  },
 });

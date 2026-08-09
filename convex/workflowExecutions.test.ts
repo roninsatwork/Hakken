@@ -145,8 +145,8 @@ describe("workflow execution internals", () => {
       nodeId: "worker",
     });
 
-    expect(firstClaim).toEqual({ stepId: olderStepId, input: "oldest" });
-    expect(secondClaim).toEqual({ stepId: newerStepId, input: "newest" });
+    expect(firstClaim).toEqual({ stepId: olderStepId, input: "oldest", attempt: 1 });
+    expect(secondClaim).toEqual({ stepId: newerStepId, input: "newest", attempt: 1 });
     expect(thirdClaim).toBeNull();
 
     const claimedSteps = await t.run(async (ctx) =>

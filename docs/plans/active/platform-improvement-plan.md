@@ -50,7 +50,22 @@ a company-less swarm reads global knowledge only.
 knowledge wrapper the other sites use. Pre-existing, unchanged, worth its own
 look.
 
-## Phase 2 — Workflow retries and a dead-letter queue (3–5 days)
+## Phase 2 — Workflow retries and a dead-letter queue — PARTIALLY DONE 2026-08-09
+
+**Built and tested:** `workflowRetryService.ts` (transient-error classifier,
+deny-by-default retryable-node policy — only `agentNode` qualifies today, with
+the reasoning recorded in the module; 3-attempt budget; 5s/25s backoff);
+`requeueStepForRetry` returns a RUNNING step to PENDING with the attempt
+counted and the surviving error kept, flowing retries through the normal claim
+path so fan-out collision safety applies unchanged; `executeNode`'s catch now
+consults the policy. Steps carry a 1-based `attempt`. 7 new tests, including
+the acceptance property that side-effecting node types never retry.
+
+**Still to do:** an end-to-end test driving the real `executeNode` through
+fail-twice-succeed-third; and a decision on the review surface — FAILED
+executions already appear in the admin executions list with the attempt count
+on their steps, which may be enough, or may deserve a filtered
+"needs attention" view.
 
 **What:** a workflow step that fails for a transient reason (network, provider
 hiccup, rate limit) retries with backoff — a small number of attempts — before

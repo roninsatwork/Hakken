@@ -209,6 +209,7 @@ import type * as webhooks from "../webhooks.js";
 import type * as widgets from "../widgets.js";
 import type * as workflowEngine from "../workflowEngine.js";
 import type * as workflowExecutions from "../workflowExecutions.js";
+import type * as workflowRetryService from "../workflowRetryService.js";
 import type * as workflowRuntime from "../workflowRuntime.js";
 import type * as workflowRuntimeService from "../workflowRuntimeService.js";
 import type * as workflowScheduleService from "../workflowScheduleService.js";
@@ -422,6 +423,7 @@ declare const fullApi: ApiFromModules<{
   widgets: typeof widgets;
   workflowEngine: typeof workflowEngine;
   workflowExecutions: typeof workflowExecutions;
+  workflowRetryService: typeof workflowRetryService;
   workflowRuntime: typeof workflowRuntime;
   workflowRuntimeService: typeof workflowRuntimeService;
   workflowScheduleService: typeof workflowScheduleService;

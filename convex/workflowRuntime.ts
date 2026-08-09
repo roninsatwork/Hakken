@@ -29,6 +29,7 @@ import {
   executeWaitNode,
   getRuntimeErrorMessage,
 } from "./workflowRuntimeService";
+import { decideStepFailure } from "./workflowRetryService";
 
 async function executeAgentRuntimeNode(ctx: ActionCtx, args: {
   agentId: Id<"agents">;
@@ -203,6 +204,9 @@ export const executeNode = internalAction({
   },
   handler: async (ctx, args) => {
     let lockedStepId: Id<"workflowExecutionSteps"> | undefined = undefined;
+    // Read by the catch block's retry decision; set once known.
+    let failedNodeType: string | undefined = undefined;
+    let claimedAttempt = 1;
     try {
       const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, { id: args.executionId });
       if (!execution || execution.status === "FAILED") {
@@ -216,6 +220,7 @@ export const executeNode = internalAction({
       const nodes = parseWorkflowNodes(workflow.nodes);
       const node = nodes.find((candidate) => candidate.id === args.nodeId);
       if (!node) throw new Error(`Node ${args.nodeId} not found in graph topology`);
+      failedNodeType = node.type;
 
       // Safely claim a PENDING execution step (prevents collision in iterator fan-outs)
       const claimedStep = await ctx.runMutation(internal.workflowExecutions.claimNextPendingStep, {
@@ -230,6 +235,7 @@ export const executeNode = internalAction({
 
       const stepInput = claimedStep.input || execution.state || "{}";
       lockedStepId = claimedStep.stepId;
+      claimedAttempt = claimedStep.attempt;
 
       let outputPayload = "{}";
       const { currentNodeData, globalStatePayload, resolvedInput } = createWorkflowRuntimeContext({
@@ -353,12 +359,41 @@ export const executeNode = internalAction({
 
     } catch (error: unknown) {
       console.error(`Workflow execution failed at node ${args.nodeId}:`, error);
-      
+
+      const errorMessage = getRuntimeErrorMessage(error);
+
+      // A transient failure of a provably re-runnable node gets another try
+      // (workflowRetryService.ts holds the policy). The retry goes back
+      // through the normal claim path after a delay; anything else — terminal
+      // error, unsafe node type, budget exhausted — fails as it always has.
+      const decision = decideStepFailure({
+        errorMessage,
+        nodeType: failedNodeType,
+        attemptJustFailed: claimedAttempt,
+      });
+
+      if (decision.action === "retry" && lockedStepId) {
+        const requeued = await ctx.runMutation(internal.workflowExecutions.requeueStepForRetry, {
+          stepId: lockedStepId,
+          error: errorMessage,
+        });
+        if (requeued) {
+          await ctx.scheduler.runAfter(decision.delayMs, internal.workflowRuntime.executeNode, {
+            workflowId: args.workflowId,
+            executionId: args.executionId,
+            nodeId: args.nodeId,
+          });
+          return;
+        }
+        // The step was not requeueable (already finalized elsewhere); fall
+        // through to the ordinary failure so nothing is silently swallowed.
+      }
+
       await ctx.runMutation(internal.workflowEngine.failNodeStep, {
         executionId: args.executionId,
         nodeId: args.nodeId,
         stepId: lockedStepId,
-        error: getRuntimeErrorMessage(error),
+        error: errorMessage,
       });
       // The fail mutation marks the global execution as FAILED, halting further steps
     }
