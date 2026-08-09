@@ -307,6 +307,7 @@ export const generateSonaeResponse = internalAction({
                           queryText: args.content,
                           scope: { kind: "company", companyId: thread.companyId },
                           limit: 50,
+                          priorCompanyId: thread.companyId,
                         })
                       : Promise.resolve([]),
                     searchKnowledgeScope(ctx, {
@@ -314,12 +315,16 @@ export const generateSonaeResponse = internalAction({
                         queryText: args.content,
                         scope: { kind: "global" },
                         limit: 50,
+                        // Tenant-scoped evidence applies to global documents
+                        // too: it is this company's experience of them.
+                        priorCompanyId: thread?.companyId,
                     }),
                     searchKnowledgeScope(ctx, {
                         queryVector,
                         queryText: args.content,
                         scope: { kind: "thread", threadId: args.threadId },
                         limit: 50,
+                        priorCompanyId: thread?.companyId,
                     }),
                 ]);
                 

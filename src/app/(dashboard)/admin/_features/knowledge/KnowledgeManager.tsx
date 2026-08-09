@@ -103,6 +103,16 @@ export function KnowledgeManager({
   );
   const websiteDocuments = useQuery(api.knowledge.getWebsiteDocuments, scopeArgs);
   const qualitySummary = useQuery(api.knowledge.getQualitySummary, scopeArgs);
+  // Which documents keep grounding well-rated answers (self-improvement
+  // plan, Phase 4). Company scope only: evidence is a tenant's experience of
+  // its own assistant, so global and agent screens have nothing to show.
+  const documentEvidence = useQuery(
+    api.knowledgeEvidence.getDocumentEvidenceForCompany,
+    scope.type === "company" ? { companyId: scope.companyId } : "skip",
+  );
+  const evidenceByDocument = new Map(
+    (documentEvidence ?? []).map((entry) => [entry.documentId as string, entry]),
+  );
   const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
   const saveDocument = useMutation(api.knowledge.saveDocument);
   const startKnowledgeFileQueue = useMutation(api.knowledge.startKnowledgeFileQueue);
@@ -984,6 +994,17 @@ export function KnowledgeManager({
                           <span>*</span>
                           <span className="uppercase">{document.format?.split("/").pop()?.replace("vnd.openxmlformats-officedocument.wordprocessingml.document", "docx")}</span>
                         </div>
+                        {(() => {
+                          const evidence = evidenceByDocument.get(document._id as string);
+                          if (!evidence) return null;
+                          return (
+                            <div className="flex items-center gap-2 text-[11px]">
+                              <span className="text-sky-400">{evidence.positiveEvidence} rated helpful</span>
+                              <span className="text-muted">·</span>
+                              <span className="text-amber-400">{evidence.negativeEvidence} rated not right</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 

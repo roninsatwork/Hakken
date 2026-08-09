@@ -1,7 +1,8 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { SELF_IMPROVEMENT_CONFIG_KEY } from "./selfImprovementConfig";
 
 const paginationOpts = { numItems: 10, cursor: null };
 
@@ -196,5 +197,198 @@ describe("Agent Run Reflections", () => {
       "DISMISS_AGENT_RUN_REFLECTION",
       "CREATE_AGENT_RUN_REFLECTION",
     ]);
+  });
+});
+
+describe("Automatic reflection (self-improvement, Phase 1)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * A failed run with an operator note that context was missing — the shape
+   * the taxonomy turns into a proposed memory. No admin presses anything
+   * after the run fails; that absence is the behaviour under test.
+   */
+  async function seedUnattendedFailure(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const userId = await ctx.db.insert("users", {
+        email: "admin@example.com",
+        role: "ADMIN",
+        companyId,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Unattended Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const runId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        userId,
+        triggerType: "SCHEDULE",
+        objective: "Compile the weekly account summary",
+        status: "FAILED",
+        startedAt: 100,
+        completedAt: 140,
+        updatedAt: 140,
+        error: "Could not find the account list",
+      });
+      await ctx.db.insert("agentRunFeedback", {
+        runId,
+        agentId,
+        companyId,
+        userId,
+        rating: "NEGATIVE",
+        labels: ["MISSED_CONTEXT"],
+        comment: "The agent never saw the account list document",
+        createdAt: 150,
+        updatedAt: 150,
+      });
+      return { companyId, userId, agentId, runId };
+    });
+  }
+
+  test("a failed run reflects itself, with no author, and the candidate pass follows", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { agentId, runId } = await seedUnattendedFailure(t);
+
+    await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const reflections = await t.run(async (ctx) =>
+      await ctx.db
+        .query("agentRunReflections")
+        .withIndex("by_run_created", (q) => q.eq("runId", runId))
+        .collect()
+    );
+    expect(reflections).toHaveLength(1);
+    expect(reflections[0].category).toBe("MISSING_CONTEXT");
+    expect(reflections[0].createdBy).toBeUndefined();
+    expect(reflections[0].proposedMemory).toBeTruthy();
+
+    const candidates = await t.run(async (ctx) =>
+      await ctx.db
+        .query("agentMemoryCandidates")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+        .collect()
+    );
+    expect(candidates.length).toBeGreaterThan(0);
+    // The reflection-sourced draft proves the chain ran in order: the
+    // candidate pass saw a reflection that did not exist when the run ended.
+    expect(candidates.some((candidate) => candidate.proposedBy === "SYSTEM_REFLECTION")).toBe(true);
+    // Nothing applied: proposals only, per the human-gate contract.
+    expect(candidates.every((candidate) => candidate.status === "PROPOSED")).toBe(true);
+    expect(candidates.every((candidate) => candidate.createdBy === undefined)).toBe(true);
+  });
+
+  test("a second automatic pass patches the reflection rather than duplicating it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { runId } = await seedUnattendedFailure(t);
+
+    await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
+    await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const reflections = await t.run(async (ctx) =>
+      await ctx.db
+        .query("agentRunReflections")
+        .withIndex("by_run_created", (q) => q.eq("runId", runId))
+        .collect()
+    );
+    expect(reflections).toHaveLength(1);
+  });
+
+  test("a successful run is not reflected", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { agentId, runId } = await seedUnattendedFailure(t);
+    const successRunId = await t.run(async (ctx) =>
+      await ctx.db.insert("agentRuns", {
+        agentId,
+        triggerType: "CHAT",
+        objective: "Fine run",
+        status: "SUCCESS",
+        startedAt: 200,
+        completedAt: 220,
+        updatedAt: 220,
+      })
+    );
+
+    await t.mutation(internal.agentRunReflections.createForRunInternal, { runId: successRunId });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const reflections = await t.run(async (ctx) => await ctx.db.query("agentRunReflections").collect());
+    expect(reflections).toHaveLength(0);
+    // Unused seed silence: the failed run from the seed was never passed in.
+    void runId;
+  });
+
+  test("switching autoReflection off skips the write-up but the candidate pass still runs", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { agentId, runId } = await seedUnattendedFailure(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("systemConfig", {
+        key: SELF_IMPROVEMENT_CONFIG_KEY,
+        value: JSON.stringify({ autoReflection: false }),
+        updatedAt: Date.now(),
+      });
+    });
+
+    await t.mutation(internal.agentRunReflections.createForRunInternal, { runId });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+    const reflections = await t.run(async (ctx) => await ctx.db.query("agentRunReflections").collect());
+    expect(reflections).toHaveLength(0);
+
+    // The MISSED_CONTEXT operator feedback still yields a draft on its own,
+    // proving the candidate pass was not lost with the reflection switch.
+    const candidates = await t.run(async (ctx) =>
+      await ctx.db
+        .query("agentMemoryCandidates")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+        .collect()
+    );
+    expect(candidates.length).toBeGreaterThan(0);
+  });
+
+  test("the automatic pass stops proposing while ten suggestions await review", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId, runId } = await seedUnattendedFailure(t);
+
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 10; index += 1) {
+        await ctx.db.insert("agentMemoryCandidates", {
+          agentId,
+          companyId,
+          sourceRunId: runId,
+          proposedBy: "SYSTEM_REFLECTION",
+          kind: "SUMMARY",
+          content: `Waiting suggestion number ${index}`,
+          normalizedContent: `waiting suggestion number ${index}`,
+          confidence: 0.6,
+          riskLevel: "LOW",
+          status: "PROPOSED",
+          createdAt: 1000 + index,
+          updatedAt: 1000 + index,
+        });
+      }
+    });
+
+    await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId });
+
+    const candidates = await t.run(async (ctx) =>
+      await ctx.db
+        .query("agentMemoryCandidates")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+        .collect()
+    );
+    expect(candidates).toHaveLength(10);
   });
 });

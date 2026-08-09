@@ -35,4 +35,36 @@ test.describe('End-User Chat Journey', () => {
     // We expect either a streaming indicator or an assistant message block to appear
     await expect(page.getByText(/E2E assistant response ready|Thinking/i).first()).toBeVisible({ timeout: 30000 });
   });
+
+  test('User can rate an answer and the choice survives a revisit', async ({ page }) => {
+    await gotoWithoutServerCrash(page, '/app/assistant');
+    await skipWhenRedirectedToLogin(page, 'Chat feedback requires an authenticated user storage state.');
+
+    const chatInput = page.locator('textarea');
+    await expect(chatInput).toBeVisible({ timeout: 10000 });
+    await chatInput.click();
+    await chatInput.pressSequentially(`Feedback check ${Date.now()}`);
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/app\/assistant\/[a-zA-Z0-9_-]+/, { timeout: 15000 });
+
+    // The controls appear only once the reply has finished streaming.
+    const helpful = page.getByRole('button', { name: 'Helpful' }).first();
+    await expect(helpful).toBeVisible({ timeout: 30000 });
+    await helpful.click();
+    await expect(helpful).toHaveAttribute('aria-pressed', 'true', { timeout: 10000 });
+
+    // A reload must show the same choice — the rating is stored, not local state.
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Helpful' }).first()).toHaveAttribute(
+      'aria-pressed',
+      'true',
+      { timeout: 15000 },
+    );
+
+    // Changing to "Not right" opens the one-tap label picker.
+    const notRight = page.getByRole('button', { name: 'Not right' }).first();
+    await notRight.click();
+    await expect(notRight).toHaveAttribute('aria-pressed', 'true', { timeout: 10000 });
+    await expect(page.getByText('What went wrong?')).toBeVisible({ timeout: 10000 });
+  });
 });

@@ -67,6 +67,16 @@ crons.interval(
   {}
 );
 
+// Fold new answer ratings into per-chunk knowledge evidence. Hourly and
+// watermarked: rating a message stays O(1), the aggregation happens here,
+// and a quiet hour costs one indexed read. No model call is involved.
+crons.interval(
+  "knowledge-evidence-sweep",
+  { hours: 1 },
+  internal.knowledgeEvidence.sweepEvidenceInternal,
+  {}
+);
+
 // Run hourly dispatcher to evaluate auto-purge schedule
 crons.hourly(
   "audit-log-purge-dispatcher",

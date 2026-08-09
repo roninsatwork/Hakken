@@ -46,6 +46,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   { table: "threads", fields: ["userId"], treatment: "ERASE", reason: "Their conversations." },
   { table: "messages", fields: ["userId"], treatment: "ERASE", reason: "What they said, and what was said back." },
   { table: "agentRunFeedback", fields: ["userId"], treatment: "ERASE", reason: "Their opinion of a run." },
+  { table: "messageFeedback", fields: ["userId"], treatment: "ERASE", reason: "Their opinion of an answer." },
   { table: "arcadeScores", fields: ["userId"], treatment: "ERASE", reason: "Their scores." },
   { table: "aiActionRequests", fields: ["actorId"], treatment: "ERASE", reason: "Their rate-limit counters." },
   { table: "analyticsDailySnapshots", fields: ["userId"], treatment: "ERASE", reason: "Their usage, counted per person." },
@@ -223,6 +224,7 @@ export type PersonalDataSection = {
  */
 export const PERSONAL_DATA_INDEXES: Readonly<Record<string, string>> = {
   "agentRunFeedback.userId": "by_user_agent_updated",
+  "messageFeedback.userId": "by_user_created",
   "aiActionRequests.actorId": "by_actor_action_requested",
   "analyticsDailySnapshots.userId": "by_user_date",
   "arcadeScores.userId": "by_user",

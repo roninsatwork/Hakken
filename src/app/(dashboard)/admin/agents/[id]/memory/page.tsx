@@ -95,6 +95,38 @@ function resolveApplyMode(memory: { applyMode?: MemoryApplyMode; kind?: string }
   return memory.kind === "INSTRUCTION" || memory.kind === "PREFERENCE" ? "ALWAYS" : "WHEN_RELEVANT";
 }
 
+/**
+ * How runs that used this memory have gone (self-improvement plan, Phase 2).
+ * The same counters the runtime ranking blends in, shown so a memory moving
+ * up or down the retrieval order is explainable from this screen. Text labels
+ * with a blue/amber accent — never a colour alone.
+ */
+function MemoryTrackRecord({ memory }: { memory: AgentMemory }) {
+  const successCount = memory.successCount ?? 0;
+  const troubleCount = (memory.failureCount ?? 0) + (memory.cancelledCount ?? 0);
+  const total = successCount + troubleCount;
+
+  if (total === 0) {
+    return <span className="text-[11px] text-muted">No history yet</span>;
+  }
+
+  const label = troubleCount > successCount ? "Review" : "Helping";
+  const labelClass = troubleCount > successCount
+    ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
+    : "text-sky-400 bg-sky-500/10 border-sky-500/20";
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${labelClass}`}>
+        {label}
+      </span>
+      <span className="text-[11px] text-secondary">
+        {successCount} helped · {troubleCount} in failed runs
+      </span>
+    </div>
+  );
+}
+
 function getRiskColor(risk: string) {
   if (risk === "HIGH") return "text-red-400 bg-red-500/10 border-red-500/20";
   if (risk === "MEDIUM") return "text-amber-400 bg-amber-500/10 border-amber-500/20";
@@ -542,16 +574,17 @@ export default function AgentMemoryPage() {
           <AdminTableHeaderRow>
             <AdminTableHeaderCell>What the agent knows</AdminTableHeaderCell>
             <AdminTableHeaderCell className="w-[150px]">Applies</AdminTableHeaderCell>
+            <AdminTableHeaderCell className="w-[150px]">Track record</AdminTableHeaderCell>
             <AdminTableHeaderCell className="w-[190px]">Added</AdminTableHeaderCell>
             <AdminTableHeaderCell className="w-[110px]" align="right"> </AdminTableHeaderCell>
           </AdminTableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <AdminTableLoadingRow colSpan={5} />
           ) : pageMemories.length === 0 ? (
             <AdminTableEmptyRow
-              colSpan={4}
+              colSpan={5}
               icon={<Brain className="h-8 w-8 text-muted/30" />}
               label={showRemoved ? "Nothing has been removed" : "No memories yet — add what the agent should know"}
             />
@@ -567,6 +600,9 @@ export default function AgentMemoryPage() {
               </td>
               <td className="px-4 py-3">
                 <MemoryApplyModeBadge applyMode={resolveApplyMode(memory)} />
+              </td>
+              <td className="px-4 py-3">
+                <MemoryTrackRecord memory={memory} />
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(memory.createdAt)}</td>
               <td className="px-4 py-3">

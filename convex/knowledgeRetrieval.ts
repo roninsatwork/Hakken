@@ -22,6 +22,7 @@ import type { GenericActionCtx } from "convex/server";
 import type { DataModel, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
+  applyChunkPriors,
   fuseRetrievalRankings,
   type FusedMatch,
   type KnowledgeRetrievalScope,
@@ -130,6 +131,13 @@ export async function searchKnowledgeScope(
     queryText: string;
     scope: KnowledgeRetrievalScope;
     limit: number;
+    /**
+     * When set, the tenant's answer-rating evidence nudges the fused ranking
+     * (self-improvement plan, Phase 4): a bounded per-chunk prior, tenant-
+     * scoped, off with the platform switch. Absent — no company to scope
+     * evidence to — retrieval is exactly the pure fusion.
+     */
+    priorCompanyId?: Id<"companies">;
   }
 ): Promise<FusedMatch<Id<"knowledgeChunks">>[]> {
   const [vectorRanked, keywordRanked] = await Promise.all([
@@ -143,5 +151,20 @@ export async function searchKnowledgeScope(
       .catch(() => [] as { _id: Id<"knowledgeChunks"> }[]),
   ]);
 
-  return fuseRetrievalRankings({ vectorRanked, keywordRanked });
+  const fused = fuseRetrievalRankings({ vectorRanked, keywordRanked });
+  if (!args.priorCompanyId || fused.length === 0) return fused;
+
+  // Best-effort like the keyword half: a broken prior lookup must not take
+  // retrieval down with it.
+  const priors = await ctx
+    .runQuery(internal.knowledgeEvidence.getChunkPriorsInternal, {
+      companyId: args.priorCompanyId,
+      chunkIds: fused.map((match) => match._id),
+    })
+    .catch(() => [] as Array<{ chunkId: Id<"knowledgeChunks">; prior: number }>);
+
+  return applyChunkPriors(
+    fused,
+    new Map(priors.map((entry) => [entry.chunkId, entry.prior]))
+  );
 }

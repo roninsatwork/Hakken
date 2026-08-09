@@ -23,6 +23,7 @@ import { AppearanceSettingsSection } from "./_components/AppearanceSettingsSecti
 import { IdentitySettingsSection } from "./_components/IdentitySettingsSection";
 import { PurgesSettingsSection } from "./_components/PurgesSettingsSection";
 import { ApprovalExpirySection } from "./_components/ApprovalExpirySection";
+import { SelfImprovementSection } from "./_components/SelfImprovementSection";
 import { SettingBlock } from "./_components/SettingBlock";
 import { isSettingsTab } from "./_components/settingsTabs";
 import { WhiteLabelCustomDomainChecklistSection, type WhiteLabelCustomDomainChecklist } from "./_components/WhiteLabelCustomDomainChecklistSection";
@@ -482,6 +483,11 @@ export default function SystemSettingsPage() {
                 </span>
               </button>
             </SettingBlock>
+
+            {/* Saves through its own mutation rather than the page's formData:
+                these switches are systemConfig, not systemSettings, and flipping
+                learning behaviour should not ride along with a branding save. */}
+            <SelfImprovementSection />
 
             <SettingBlock title={t('whiteLabel.title')} sub={t('whiteLabel.subtitle')}>
               <WhiteLabelReadinessSection

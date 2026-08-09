@@ -969,6 +969,12 @@ export default defineSchema({
       v.literal("SHOULD_BECOME_EVAL")
     )),
     comment: v.optional(v.string()),
+    /**
+     * Who left it: an operator on the admin run screens, or the person the
+     * agent was actually answering. Absent reads as ADMIN — every row written
+     * before end users had a voice was an operator's.
+     */
+    source: v.optional(v.union(v.literal("ADMIN"), v.literal("END_USER"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1312,6 +1318,16 @@ export default defineSchema({
     normalizedContent: v.string(),
     importance: v.number(),
     isActive: v.boolean(),
+    /**
+     * How runs that consulted this memory ended, one count per run, cached
+     * here from agentMemoryUsage so ranking never fans out a usage query per
+     * candidate. Ground truth stays in the usage table; the backfill
+     * migration rebuilds these. Self-improvement plan, Phase 2.
+     */
+    successCount: v.optional(v.number()),
+    failureCount: v.optional(v.number()),
+    cancelledCount: v.optional(v.number()),
+    lastOutcomeAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
     createdBy: v.optional(v.id("users")),
@@ -1393,6 +1409,14 @@ export default defineSchema({
     archivedAt: v.optional(v.number()),
     lastUsedAt: v.optional(v.number()),
     usageCount: v.number(),
+    /**
+     * End-user sentiment about answers this memory grounded, via the message
+     * evidence trail. The chat path has no run outcome, so ratings are its
+     * outcome signal. Self-improvement plan, Phases 2–3.
+     */
+    positiveFeedbackCount: v.optional(v.number()),
+    negativeFeedbackCount: v.optional(v.number()),
+    lastFeedbackAt: v.optional(v.number()),
   })
     .index("by_company_updated", ["companyId", "updatedAt"])
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
@@ -1806,6 +1830,67 @@ export default defineSchema({
     .index("by_user_role_created", ["userId", "role", "createdAt"])
     .index("by_agent_role_created", ["agentId", "role", "createdAt"])
     .index("by_provider_created", ["providerKey", "createdAt"]),
+
+  /**
+   * End-user ratings of assistant chat messages (self-improvement plan,
+   * Phase 3). Chat answers have no agent run, so operator run feedback could
+   * never hear from the people actually asking. One row per user per
+   * message, rating changeable. Feedback is data, not instruction: nothing
+   * here reaches a prompt — it feeds the suggestion sweep and the memory
+   * feedback counters, both of which only propose or reorder.
+   */
+  messageFeedback: defineTable({
+    messageId: v.id("messages"),
+    threadId: v.id("threads"),
+    companyId: v.optional(v.id("companies")),
+    userId: v.id("users"),
+    rating: v.union(v.literal("POSITIVE"), v.literal("NEGATIVE")),
+    labels: v.array(v.union(
+      v.literal("GREAT_ANSWER"),
+      v.literal("INCORRECT"),
+      v.literal("MISSED_CONTEXT"),
+      v.literal("UNHELPFUL")
+    )),
+    comment: v.optional(v.string()),
+    /**
+     * False once the writer's daily cap is passed: the row is accepted (the
+     * user is not punished for caring) but every learning consumer skips it,
+     * so one account cannot flood the signal.
+     */
+    countsTowardLearning: v.boolean(),
+    /**
+     * The rating the knowledge-evidence sweep last folded into
+     * `knowledgeChunkStats`. What makes the sweep idempotent and lets a
+     * changed mind move the count across instead of stacking both sides.
+     */
+    lastCountedRating: v.optional(v.union(v.literal("POSITIVE"), v.literal("NEGATIVE"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_message_user", ["messageId", "userId"])
+    .index("by_thread_created", ["threadId", "createdAt"])
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_company_updated", ["companyId", "updatedAt"])
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_updated", ["updatedAt"]),
+
+  /**
+   * Which knowledge chunks keep grounding well-rated answers (self-improvement
+   * plan, Phase 4). Maintained by the hourly evidence sweep from rated
+   * messages' evidence trails; read at retrieval time as a bounded prior on
+   * the fused ranking. Tenant-scoped: one company's ratings never touch
+   * another's retrieval, even of global documents.
+   */
+  knowledgeChunkStats: defineTable({
+    companyId: v.id("companies"),
+    chunkId: v.id("knowledgeChunks"),
+    positiveEvidence: v.number(),
+    negativeEvidence: v.number(),
+    lastEvidenceAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company_chunk", ["companyId", "chunkId"])
+    .index("by_company_updated", ["companyId", "updatedAt"]),
 
   // Agent Orchestration Engine
   agents: defineTable({

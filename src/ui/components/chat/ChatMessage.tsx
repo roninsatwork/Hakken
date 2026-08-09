@@ -10,6 +10,7 @@ import Image from "next/image";
 import { formatTime } from "@/src/lib/dates";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
+import { MessageFeedbackControls } from "./MessageFeedbackControls";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
@@ -66,6 +67,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             message.content
           )}
         </div>
+
+        {/* Rating controls only once the reply has finished writing itself,
+            and never on platform notices — a quota message is not an answer. */}
+        {isAssistant && !isStreaming && presentation !== "stalled" && !message.systemKey && (
+          <MessageFeedbackControls message={message} />
+        )}
 
         {/* Ambient Subtle Timestamp Data. Hidden mid-stream: a clock next to a
             half-written reply reads as though the answer is already finished. */}

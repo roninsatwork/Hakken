@@ -10,12 +10,17 @@ const useQueryMock = vi.fn();
 
 vi.mock("convex/react", () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args),
+  useMutation: () => vi.fn(),
 }));
 
 vi.mock("@/convex/_generated/api", () => ({
   api: {
     swarmRuntime: { getSwarmLogs: "getSwarmLogs" },
     users: { getMe: "getMe" },
+    messageFeedback: {
+      getMineForThread: "getMineForThread",
+      upsertForMessage: "upsertForMessage",
+    },
   },
 }));
 

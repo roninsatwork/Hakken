@@ -762,6 +762,7 @@ export const runAgentObjective = internalAction({
                     queryText: args.content,
                     scope: { kind: "agent", agentId: args.agentId },
                     limit: 100, // Matching the maximum RAG boundary limit
+                    priorCompanyId: owner.companyId,
                 });
                 
                 if (vectorMatches.length > 0) {

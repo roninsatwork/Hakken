@@ -10,6 +10,8 @@ import { resolveAgentApplyMode } from "./utils/memoryApplication";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const CANDIDATE_LIMIT = 200;
+/** The automatic pass stops proposing while this many suggestions await review. */
+const AUTO_PROPOSAL_QUEUE_LIMIT = 10;
 const REVIEW_INBOX_LIMIT = 50;
 
 const candidateDecisionValidator = v.union(
@@ -665,6 +667,15 @@ async function generateCandidatesForRun(ctx: MutationCtx, args: {
         .withIndex("by_agent_active_updated", (q) => q.eq("agentId", run.agentId).eq("isActive", true))
         .take(CANDIDATE_LIMIT),
     ]);
+
+    // Back-pressure for the automatic pass only: past ten waiting suggestions
+    // the queue is a backlog, not a review surface, and every run adding more
+    // buries the ones worth reading. The same rule the company sweep applies.
+    // An admin pressing the button still gets their pass — a person asking is
+    // the signal the queue is being read.
+    if (!userId && agentCandidates.length >= AUTO_PROPOSAL_QUEUE_LIMIT) {
+      return { createdIds: [], appliedIds: [] };
+    }
 
     const existingByContent = new Set([
       ...existingCandidates.map((candidate) => candidate.normalizedContent),

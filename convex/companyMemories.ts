@@ -12,7 +12,13 @@ import {
   resolveCompanyApplyMode,
   type MemoryApplyMode,
 } from "./utils/memoryApplication";
-import { buildMemorySearchQuery, rankScore } from "./utils/memoryRetrieval";
+import {
+  blendedMemoryRank,
+  buildMemorySearchQuery,
+  companyQualityForRanking,
+  rankScore,
+} from "./utils/memoryRetrieval";
+import { getSelfImprovementConfig } from "./selfImprovementConfig";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const MEMORY_TITLE_MAX_CHARS = 120;
@@ -297,15 +303,46 @@ export const getRuntimeMemoriesInternal = internalQuery({
         // instruction and would otherwise be sent to the model twice.
         .take(limit * 2);
 
-    const relevantMemories = searchMatches
-      .filter((memory) => resolveCompanyApplyMode(memory) === "WHEN_RELEVANT")
-      .slice(0, limit);
+    const kept = searchMatches.filter((memory) => resolveCompanyApplyMode(memory) === "WHEN_RELEVANT");
+
+    // ALWAYS memories are injected unconditionally by design and never
+    // reordered by track record — a quality score must not silently
+    // un-approve what a person approved. Only the searched list blends.
+    const always = alwaysMemories.map((memory, index) =>
+      toRuntimeMemory(memory, rankScore(index, alwaysMemories.length)));
+
+    const config = await getSelfImprovementConfig(ctx.db);
+    if (!config.outcomeWeightedRanking) {
+      return {
+        always,
+        relevant: kept
+          .slice(0, limit)
+          .map((memory, index, list) => toRuntimeMemory(memory, rankScore(index, list.length))),
+      };
+    }
+
+    const now = Date.now();
+    const scored = kept.map((memory, index) => ({
+      memory,
+      blended: blendedMemoryRank({
+        positionalScore: rankScore(index, kept.length),
+        quality: companyQualityForRanking({
+          confidence: memory.confidence,
+          positiveFeedbackCount: memory.positiveFeedbackCount,
+          negativeFeedbackCount: memory.negativeFeedbackCount,
+          lastFeedbackAt: memory.lastFeedbackAt,
+          lastUsedAt: memory.lastUsedAt,
+          updatedAt: memory.updatedAt,
+          now,
+        }),
+      }),
+      index,
+    }));
+    scored.sort((a, b) => b.blended - a.blended || a.index - b.index);
 
     return {
-      always: alwaysMemories.map((memory, index) =>
-        toRuntimeMemory(memory, rankScore(index, alwaysMemories.length))),
-      relevant: relevantMemories.map((memory, index) =>
-        toRuntimeMemory(memory, rankScore(index, relevantMemories.length))),
+      always,
+      relevant: scored.slice(0, limit).map((entry) => toRuntimeMemory(entry.memory, entry.blended)),
     };
   },
 });

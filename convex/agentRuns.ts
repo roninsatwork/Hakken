@@ -2136,9 +2136,21 @@ export const updateRunStatusInternal = internalMutation({
       // button on the run list — which is why the queue was always empty.
       // Scheduled rather than awaited: a suggestion is worth having, but never
       // at the cost of the run failing to record that it finished.
-      await ctx.scheduler.runAfter(0, internal.agentMemoryCandidates.generateForRunInternal, {
-        runId: args.runId,
-      });
+      //
+      // Failures go through reflection first, which schedules the candidate
+      // pass itself once the reflection row exists. Chained rather than two
+      // runAfter(0) siblings, because the candidate pass reads reflections and
+      // racing them would make it blind to the one thing a failed run has to
+      // teach (self-improvement plan, Phase 1).
+      if (args.status === "FAILED" || args.status === "CANCELLED") {
+        await ctx.scheduler.runAfter(0, internal.agentRunReflections.createForRunInternal, {
+          runId: args.runId,
+        });
+      } else {
+        await ctx.scheduler.runAfter(0, internal.agentMemoryCandidates.generateForRunInternal, {
+          runId: args.runId,
+        });
+      }
     }
   },
 });

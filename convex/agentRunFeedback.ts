@@ -1,7 +1,7 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
-import { adminMutation, adminQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, tenantMutation } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 
 const FEEDBACK_COMMENT_LIMIT = 2000;
@@ -100,6 +100,7 @@ export const upsertForRun = adminMutation({
       rating: args.rating,
       labels,
       comment,
+      source: "ADMIN",
       createdAt: now,
       updatedAt: now,
     });
@@ -118,6 +119,72 @@ export const upsertForRun = adminMutation({
     });
 
     return feedbackId;
+  },
+});
+
+/**
+ * The end-user's version of the same verdict (self-improvement plan,
+ * Phase 3). Restricted to runs whose conversation the caller actually owns,
+ * to the two ratings a thumbs control can express, and to the labels an end
+ * user could mean. It lands in the same table so the run screens show
+ * operator and user feedback side by side, told apart by `source`.
+ */
+export const upsertForRunAsEndUser = tenantMutation({
+  args: {
+    runId: v.id("agentRuns"),
+    rating: v.union(v.literal("POSITIVE"), v.literal("NEGATIVE")),
+    labels: v.array(v.union(
+      v.literal("GOOD_ANSWER"),
+      v.literal("INCORRECT"),
+      v.literal("MISSED_CONTEXT")
+    )),
+    comment: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, user } = ctx;
+    const run = await ctx.db.get(args.runId);
+    if (!run) throw new Error("Run not found");
+
+    // Ownership, not role: the run was answering this person's conversation.
+    const thread = run.threadId ? await ctx.db.get(run.threadId) : null;
+    const ownsRun = run.userId === userId || (thread !== null && thread.userId === userId);
+    if (!ownsRun) throw new Error("Unauthorized");
+    if (user.role !== "SUPER_ADMIN" && run.companyId && run.companyId !== ctx.companyId) {
+      throw new Error("Unauthorized");
+    }
+
+    const now = Date.now();
+    const labels = uniqueLabels(args.labels);
+    const comment = normalizeComment(args.comment);
+    const existing = await ctx.db
+      .query("agentRunFeedback")
+      .withIndex("by_run_created", (q) => q.eq("runId", args.runId))
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        rating: args.rating,
+        labels,
+        comment,
+        source: "END_USER",
+        updatedAt: now,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("agentRunFeedback", {
+      runId: args.runId,
+      agentId: run.agentId,
+      companyId: run.companyId,
+      userId,
+      rating: args.rating,
+      labels,
+      comment,
+      source: "END_USER",
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 

@@ -59,6 +59,50 @@ export function fuseRetrievalRankings<IdType extends string>(args: {
     .sort((a, b) => b._score - a._score);
 }
 
+/*
+ * Evidence priors (self-improvement plan, Phase 4).
+ *
+ * Every rated answer records which chunks grounded it; the evidence sweep
+ * folds those ratings into per-chunk counts, and retrieval adds a bounded
+ * prior to the fused score. The cap is four head-adjacent rank gaps — the
+ * distance from first to fifth place — so history moves a chunk a handful of
+ * places and can never overturn clear relevance (RRF scores compress toward
+ * the tail, so any cap sized off the *top* contribution would quietly
+ * dominate ordering further down; this one is sized off the top *gap*). A
+ * chunk with only negative evidence still appears when it is the only
+ * relevant source, because the prior reorders and nothing else.
+ */
+
+export const CHUNK_PRIOR_CAP = 4 * (1 / (RRF_K + 1) - 1 / (RRF_K + 2));
+/** Laplace-style damping so two ratings do not swing like two hundred. */
+export const CHUNK_PRIOR_SMOOTHING = 5;
+const CHUNK_PRIOR_DECAY_MS = 90 * 24 * 60 * 60 * 1000;
+
+export function chunkPrior(args: {
+  positiveEvidence: number;
+  negativeEvidence: number;
+  lastEvidenceAt: number;
+  now: number;
+}): number {
+  // Old evidence decays to nothing rather than steering forever.
+  if (args.now - args.lastEvidenceAt > CHUNK_PRIOR_DECAY_MS) return 0;
+  const total = args.positiveEvidence + args.negativeEvidence;
+  if (total === 0) return 0;
+  const ratio = (args.positiveEvidence - args.negativeEvidence) / (total + CHUNK_PRIOR_SMOOTHING);
+  return ratio * CHUNK_PRIOR_CAP;
+}
+
+/** Fold priors into a fused ranking. No priors, or all-zero priors: unchanged. */
+export function applyChunkPriors<IdType extends string>(
+  fused: FusedMatch<IdType>[],
+  priors: ReadonlyMap<IdType, number> | undefined
+): FusedMatch<IdType>[] {
+  if (!priors || priors.size === 0) return fused;
+  return fused
+    .map((match) => ({ _id: match._id, _score: match._score + (priors.get(match._id) ?? 0) }))
+    .sort((a, b) => b._score - a._score);
+}
+
 /**
  * The scopes a retrieval may search. Explicit and closed on purpose: the old
  * per-site copies included one that searched with *no* filter when a company

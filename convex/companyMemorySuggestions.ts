@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 
@@ -121,8 +122,20 @@ export function parseSuggestions(rawText: string): ProposedMemory[] {
  * The same reasoning as buildUntrustedKnowledgeContext: everything inside came
  * from a member of the public.
  */
-export function buildTranscript(messages: Array<{ role: string; content: string }>): string {
-  const lines = messages.map((message) => `${message.role === "user" ? "Customer" : "Assistant"}: ${message.content}`);
+export function buildTranscript(
+  messages: Array<{ role: string; content: string; feedbackLabels?: string[] }>
+): string {
+  const lines = messages.map((message) => {
+    const speaker = message.role === "user" ? "Customer" : "Assistant";
+    // A rating is the sweep's strongest lead: the customer has said, in one
+    // tap, that the answer here was wrong or missing something. The labels
+    // are the platform's own enum, never customer text, so annotating with
+    // them adds no injection surface.
+    const marker = message.feedbackLabels?.length
+      ? ` (the customer marked the reply to this: ${message.feedbackLabels.join(", ")})`
+      : "";
+    return `${speaker}${marker}: ${message.content}`;
+  });
   const joined = lines.join("\n");
   const clipped = joined.length > TRANSCRIPT_MAX_CHARS
     ? `${joined.slice(0, TRANSCRIPT_MAX_CHARS)}\n[transcript truncated]`
@@ -158,7 +171,47 @@ export const getSweepInputInternal = internalQuery({
       )
       .take(MAX_OPEN_SUGGESTIONS);
 
-    const messages = await ctx.db
+    /*
+     * Conversations the customer flagged come first (self-improvement plan,
+     * Phase 3): a negative rating since the last sweep is a direct pointer at
+     * an answer worth learning from, and the chronological window below can
+     * push exactly those messages out on a busy tenant. Only counted
+     * feedback is read — the daily cap already decided what one account may
+     * teach.
+     */
+    const negativeFeedback = (await ctx.db
+      .query("messageFeedback")
+      .withIndex("by_company_created", (q) =>
+        q.eq("companyId", args.companyId).gt("createdAt", args.since)
+      )
+      .order("desc")
+      .take(50))
+      .filter((row) => row.rating === "NEGATIVE" && row.countsTowardLearning);
+
+    const labelsByThread = new Map<string, Set<string>>();
+    for (const row of negativeFeedback) {
+      const labels = labelsByThread.get(row.threadId) ?? new Set<string>();
+      for (const label of row.labels) labels.add(label);
+      if (labels.size === 0) labels.add("UNHELPFUL");
+      labelsByThread.set(row.threadId, labels);
+    }
+
+    const flaggedMessages: Array<Doc<"messages"> & { feedbackLabels: string[] }> = [];
+    for (const [threadId, labels] of labelsByThread) {
+      const threadMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_thread", (q) => q.eq("threadId", threadId as Id<"threads">))
+        .order("desc")
+        .take(20);
+      for (const message of threadMessages) {
+        if (message.role !== "user") continue;
+        flaggedMessages.push({ ...message, feedbackLabels: Array.from(labels) });
+        if (flaggedMessages.length >= MESSAGES_PER_SWEEP) break;
+      }
+      if (flaggedMessages.length >= MESSAGES_PER_SWEEP) break;
+    }
+
+    const chronological = await ctx.db
       .query("messages")
       .withIndex("by_company_role_created", (q) =>
         q.eq("companyId", args.companyId).eq("role", "user").gt("createdAt", args.since)
@@ -166,14 +219,25 @@ export const getSweepInputInternal = internalQuery({
       .order("asc")
       .take(MESSAGES_PER_SWEEP);
 
+    const seen = new Set(flaggedMessages.map((message) => message._id));
+    const merged = [
+      ...flaggedMessages,
+      ...chronological.filter((message) => !seen.has(message._id)),
+    ].slice(0, MESSAGES_PER_SWEEP);
+
     return {
       openSuggestionCount: openSuggestions.length,
       isBacklogged: openSuggestions.length >= MAX_OPEN_SUGGESTIONS,
-      messages: messages.map((message) => ({
-        role: message.role,
-        content: message.content,
-        createdAt: message.createdAt,
-      })),
+      messages: merged.map((message) => {
+        const feedbackLabels =
+          "feedbackLabels" in message ? (message.feedbackLabels as string[]) : undefined;
+        return {
+          role: message.role,
+          content: message.content,
+          createdAt: message.createdAt,
+          ...(feedbackLabels && feedbackLabels.length > 0 ? { feedbackLabels } : {}),
+        };
+      }),
     };
   },
 });

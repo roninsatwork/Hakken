@@ -465,3 +465,106 @@ describe("Company Memories", () => {
     ]);
   });
 });
+
+describe("Outcome-weighted company ranking (self-improvement, Phase 2)", () => {
+  test("rated memories reorder within the cap; the flag restores position order", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+
+    const { companyId, criticisedId, praisedId, neutralId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const base = {
+        companyId,
+        category: "FACT",
+        applyMode: "WHEN_RELEVANT" as const,
+        status: "APPROVED" as const,
+        confidence: 0.5,
+        sourceType: "MANUAL" as const,
+        createdAt: now,
+        updatedAt: now,
+        approvedAt: now,
+        usageCount: 1,
+        lastUsedAt: now,
+      };
+      // Inserted first, so it wins the text tie and can only be displaced by
+      // its ratings.
+      const criticisedId = await ctx.db.insert("companyMemories", {
+        ...base,
+        title: "Criticised delivery note",
+        content: "Delivery slots are booked on the portal — criticised",
+        normalizedContent: "delivery slots are booked on the portal — criticised",
+        positiveFeedbackCount: 0,
+        negativeFeedbackCount: 6,
+        lastFeedbackAt: now,
+      });
+      const praisedId = await ctx.db.insert("companyMemories", {
+        ...base,
+        title: "Praised delivery note",
+        content: "Delivery slots are booked on the portal — praised",
+        normalizedContent: "delivery slots are booked on the portal — praised",
+        positiveFeedbackCount: 6,
+        negativeFeedbackCount: 0,
+        lastFeedbackAt: now,
+      });
+      const neutralId = await ctx.db.insert("companyMemories", {
+        ...base,
+        title: "Unrated delivery note",
+        content: "Delivery slots are booked on the portal — unrated",
+        normalizedContent: "delivery slots are booked on the portal — unrated",
+      });
+      return { companyId, criticisedId, praisedId, neutralId };
+    });
+
+    const ranked = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "how do I book delivery slots on the portal",
+    });
+    expect(ranked.relevant.map((match) => match.memoryId)).toEqual([praisedId, criticisedId, neutralId]);
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("systemConfig", {
+        key: "SELF_IMPROVEMENT_CONFIG",
+        value: JSON.stringify({ outcomeWeightedRanking: false }),
+        updatedAt: now,
+      });
+    });
+    const positional = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "how do I book delivery slots on the portal",
+    });
+    expect(positional.relevant.map((match) => match.memoryId)).toEqual([criticisedId, praisedId, neutralId]);
+  });
+
+  test("ALWAYS memories never reorder on ratings", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+    const { companyId, alwaysId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: now });
+      const alwaysId = await ctx.db.insert("companyMemories", {
+        companyId,
+        title: "Trading hours",
+        content: "The depot closes at 4pm on Fridays.",
+        normalizedContent: "the depot closes at 4pm on fridays.",
+        category: "INSTRUCTION",
+        applyMode: "ALWAYS",
+        status: "APPROVED",
+        confidence: 0.5,
+        sourceType: "MANUAL",
+        createdAt: now,
+        updatedAt: now,
+        approvedAt: now,
+        usageCount: 1,
+        positiveFeedbackCount: 0,
+        negativeFeedbackCount: 40,
+        lastFeedbackAt: now,
+      });
+      return { companyId, alwaysId };
+    });
+
+    const result = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "anything at all",
+    });
+    expect(result.always.map((match) => match.memoryId)).toContain(alwaysId);
+  });
+});

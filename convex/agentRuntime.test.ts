@@ -545,6 +545,41 @@ describe("agent runtime", () => {
     expect(messages.some((message) => message.role === "assistant")).toBe(true);
   });
 
+  test("a run that fails unattended writes its own reflection through the real engine", async () => {
+    // Self-improvement plan, Phase 1: nobody presses anything after the
+    // failure — the terminal-status write alone must produce the write-up.
+    //
+    // Fake timers go on before the run so the terminal write's runAfter lands
+    // on the mocked clock; a timer created under real timers cannot be pumped
+    // by finishAllScheduledFunctions and the chain becomes a race.
+    vi.useFakeTimers();
+    try {
+      const t = makeTest();
+      const { agentId, threadId } = await seedAgentRun(t);
+      generateMock.mockRejectedValueOnce(new Error("provider exploded"));
+
+      await t.action(internal.agentRuntime.runAgentObjective, {
+        threadId,
+        agentId,
+        content: "Hello",
+      });
+
+      const { run } = await runSteps(t);
+      expect(run?.status).toBe("FAILED");
+
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+
+      const reflections = await t.run(async (ctx) => await ctx.db.query("agentRunReflections").collect());
+      expect(reflections).toHaveLength(1);
+      expect(reflections[0].runId).toBe(run?._id);
+      expect(reflections[0].category).toBe("PROVIDER_FAILURE");
+      // The platform wrote it; the audit trail must not name a person.
+      expect(reflections[0].createdBy).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("attributes token usage to the run", async () => {
     const t = makeTest();
     const { agentId, threadId } = await seedAgentRun(t);

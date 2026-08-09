@@ -10,7 +10,14 @@ import {
   resolveAgentApplyMode,
   type MemoryApplyMode,
 } from "./utils/memoryApplication";
-import { buildMemorySearchQuery, rankScore } from "./utils/memoryRetrieval";
+import {
+  blendedMemoryRank,
+  buildMemorySearchQuery,
+  memoryQualityScore,
+  qualityForRanking,
+  rankScore,
+} from "./utils/memoryRetrieval";
+import { getSelfImprovementConfig } from "./selfImprovementConfig";
 
 const MEMORY_SEARCH_LIMIT_DEFAULT = 5;
 const MEMORY_SEARCH_LIMIT_MAX = 10;
@@ -62,21 +69,6 @@ function clampImportance(value: number | undefined) {
   return Math.min(Math.max(value ?? 0.5, 0), 1);
 }
 
-function getMemoryQualityScore(args: {
-  importance: number;
-  usageCount: number;
-  successCount: number;
-  failureCount: number;
-  cancelledCount: number;
-  lastUsedAt?: number;
-  updatedAt: number;
-}) {
-  const successSignal = args.usageCount > 0 ? args.successCount / args.usageCount : 0;
-  const failureSignal = args.usageCount > 0 ? (args.failureCount + args.cancelledCount) / args.usageCount : 0;
-  const ageMs = Date.now() - Math.max(args.lastUsedAt ?? 0, args.updatedAt);
-  const stalePenalty = ageMs > 90 * 24 * 60 * 60 * 1000 ? 0.15 : 0;
-  return Math.min(Math.max(args.importance + successSignal * 0.35 - failureSignal * 0.45 - stalePenalty, 0), 1);
-}
 
 export const getForAgent = adminQuery({
   args: {
@@ -201,7 +193,7 @@ export const getQualityForAgent = adminQuery({
       const failureCount = scopedUsages.filter((usage) => usage.outcome === "FAILED").length;
       const cancelledCount = scopedUsages.filter((usage) => usage.outcome === "CANCELLED").length;
       const lastUsedAt = scopedUsages[0]?.usedAt;
-      const qualityScore = getMemoryQualityScore({
+      const qualityScore = memoryQualityScore({
         importance: memory.importance,
         usageCount: scopedUsages.length,
         successCount,
@@ -209,6 +201,17 @@ export const getQualityForAgent = adminQuery({
         cancelledCount,
         lastUsedAt,
         updatedAt: memory.updatedAt,
+        now: Date.now(),
+      });
+      // What ranking actually used, so "why did this memory move" has an
+      // answer on the screen rather than in a debugger.
+      const rankingQuality = qualityForRanking({
+        importance: memory.importance,
+        successCount: memory.successCount,
+        failureCount: memory.failureCount,
+        cancelledCount: memory.cancelledCount,
+        lastOutcomeAt: memory.lastOutcomeAt,
+        now: Date.now(),
       });
       const flags = [
         scopedUsages.length === 0 ? "UNUSED" : undefined,
@@ -225,6 +228,7 @@ export const getQualityForAgent = adminQuery({
         cancelledCount,
         lastUsedAt,
         qualityScore,
+        rankingQuality,
         flags,
       };
     }));
@@ -317,10 +321,40 @@ export const searchMemoryInternal = internalQuery({
       // carries and which would otherwise reach the model twice.
       .take(limit * 2);
 
-    return matches
-      .filter((memory) => resolveAgentApplyMode(memory) === "WHEN_RELEVANT")
+    const kept = matches.filter((memory) => resolveAgentApplyMode(memory) === "WHEN_RELEVANT");
+
+    const config = await getSelfImprovementConfig(ctx.db);
+    if (!config.outcomeWeightedRanking) {
+      return kept
+        .slice(0, limit)
+        .map((memory, index, list) => toRuntimeAgentMemory(memory, rankScore(index, list.length)));
+    }
+
+    // Outcome-weighted: text relevance keeps 70% of the say, track record 30%
+    // (self-improvement plan, Phase 2). Reordering only — every match the
+    // positional path would return is still returned, in different order.
+    const now = Date.now();
+    const scored = kept.map((memory, index) => ({
+      memory,
+      blended: blendedMemoryRank({
+        positionalScore: rankScore(index, kept.length),
+        quality: qualityForRanking({
+          importance: memory.importance,
+          successCount: memory.successCount,
+          failureCount: memory.failureCount,
+          cancelledCount: memory.cancelledCount,
+          lastOutcomeAt: memory.lastOutcomeAt,
+          now,
+        }),
+      }),
+      index,
+    }));
+    // Stable on the original search order for equal scores.
+    scored.sort((a, b) => b.blended - a.blended || a.index - b.index);
+
+    return scored
       .slice(0, limit)
-      .map((memory, index, kept) => toRuntimeAgentMemory(memory, rankScore(index, kept.length)));
+      .map((entry) => toRuntimeAgentMemory(entry.memory, entry.blended));
   },
 });
 

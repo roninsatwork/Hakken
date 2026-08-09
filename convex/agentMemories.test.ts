@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -480,5 +480,269 @@ describe("Agent Memories", () => {
       ["FACT", "WHEN_RELEVANT"],
       ["INSTRUCTION", "ALWAYS"],
     ]);
+  });
+});
+
+describe("Outcome-weighted ranking (self-improvement, Phase 2)", () => {
+  async function seedRankingFixture(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Ranking Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { companyId, agentId };
+    });
+  }
+
+  /** Two memories the text index cannot tell apart, with opposite histories. */
+  async function seedTwins(
+    t: ReturnType<typeof convexTest>,
+    args: { agentId: Id<"agents">; companyId: Id<"companies"> },
+  ) {
+    const now = Date.now();
+    return await t.run(async (ctx) => {
+      // Seeded newest-first so the troubled twin wins the positional tie and
+      // the healthy one can only reach the front through its track record.
+      const troubledId = await ctx.db.insert("agentMemories", {
+        agentId: args.agentId,
+        companyId: args.companyId,
+        kind: "FACT",
+        applyMode: "WHEN_RELEVANT",
+        content: "Invoice queries go to the billing inbox — troubled twin",
+        normalizedContent: "invoice queries go to the billing inbox — troubled twin",
+        importance: 0.5,
+        isActive: true,
+        successCount: 0,
+        failureCount: 6,
+        cancelledCount: 0,
+        lastOutcomeAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const healthyId = await ctx.db.insert("agentMemories", {
+        agentId: args.agentId,
+        companyId: args.companyId,
+        kind: "FACT",
+        applyMode: "WHEN_RELEVANT",
+        content: "Invoice queries go to the billing inbox — healthy twin",
+        normalizedContent: "invoice queries go to the billing inbox — healthy twin",
+        importance: 0.5,
+        isActive: true,
+        successCount: 6,
+        failureCount: 0,
+        cancelledCount: 0,
+        lastOutcomeAt: now,
+        createdAt: now - 1000,
+        updatedAt: now - 1000,
+      });
+      // A third equally-matching row with no history. Three matches narrow
+      // the positional gaps enough that a track record can flip neighbours —
+      // with only two, text keeps its 70% say and nothing can move, which is
+      // itself the designed behaviour.
+      const fillerId = await ctx.db.insert("agentMemories", {
+        agentId: args.agentId,
+        companyId: args.companyId,
+        kind: "FACT",
+        applyMode: "WHEN_RELEVANT",
+        content: "Invoice queries go to the billing inbox — no history yet",
+        normalizedContent: "invoice queries go to the billing inbox — no history yet",
+        importance: 0.5,
+        isActive: true,
+        createdAt: now - 2000,
+        updatedAt: now - 2000,
+      });
+      return { troubledId, healthyId, fillerId };
+    });
+  }
+
+  test("a healthy track record outranks a troubled one; the flag restores position order", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId } = await seedRankingFixture(t);
+    const { troubledId, healthyId, fillerId } = await seedTwins(t, { agentId, companyId });
+
+    const ranked = await t.query(internal.agentMemories.searchMemoryInternal, {
+      agentId,
+      companyId,
+      queryText: "invoice queries billing inbox",
+    });
+    // The troubled twin wins the text tie, but its history pulls it behind
+    // the healthy one; the neutral row cannot leap positions on no record.
+    expect(ranked.map((memory) => memory.id)).toEqual([healthyId, troubledId, fillerId]);
+
+    // Off means byte-identical to the old positional behaviour.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("systemConfig", {
+        key: "SELF_IMPROVEMENT_CONFIG",
+        value: JSON.stringify({ outcomeWeightedRanking: false }),
+        updatedAt: Date.now(),
+      });
+    });
+    const positional = await t.query(internal.agentMemories.searchMemoryInternal, {
+      agentId,
+      companyId,
+      queryText: "invoice queries billing inbox",
+    });
+    expect(positional.map((memory) => memory.id)).toEqual([troubledId, healthyId, fillerId]);
+    expect(positional[0].score).toBe(1);
+  });
+
+  test("no memory is excluded by its score, however bad the history", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId } = await seedRankingFixture(t);
+    const { troubledId, healthyId, fillerId } = await seedTwins(t, { agentId, companyId });
+
+    const ranked = await t.query(internal.agentMemories.searchMemoryInternal, {
+      agentId,
+      companyId,
+      queryText: "invoice queries billing inbox",
+    });
+    expect(ranked.map((memory) => memory.id).sort()).toEqual(
+      [troubledId, healthyId, fillerId].sort()
+    );
+  });
+
+  test("ALWAYS memories are injected regardless of any counter state", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId } = await seedRankingFixture(t);
+    const now = Date.now();
+    const alwaysId = await t.run(async (ctx) =>
+      await ctx.db.insert("agentMemories", {
+        agentId,
+        companyId,
+        kind: "INSTRUCTION",
+        applyMode: "ALWAYS",
+        content: "Always confirm the customer's site before quoting.",
+        normalizedContent: "always confirm the customer's site before quoting.",
+        importance: 0.5,
+        isActive: true,
+        successCount: 0,
+        failureCount: 40,
+        cancelledCount: 0,
+        lastOutcomeAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+    );
+
+    const always = await t.query(internal.agentMemories.getAlwaysMemoriesInternal, { agentId });
+    expect(always.map((memory) => memory.id)).toContain(alwaysId);
+  });
+
+  test("terminal status counts each run once, and a re-terminal shifts the count", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId } = await seedRankingFixture(t);
+    const { runId, memoryId } = await t.run(async (ctx) => {
+      const memoryId = await seedAgentMemory(ctx, {
+        agentId,
+        companyId,
+        content: "Deliveries are booked through the depot portal.",
+      });
+      const runId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        triggerType: "CHAT",
+        objective: "Book a delivery",
+        status: "RUNNING",
+        startedAt: 100,
+        updatedAt: 100,
+      });
+      // The run consulted the same memory twice; that is still one run.
+      for (const usedAt of [110, 120]) {
+        await ctx.db.insert("agentMemoryUsage", {
+          memoryId,
+          agentId,
+          companyId,
+          runId,
+          score: 1,
+          queryText: "delivery booking",
+          outcome: "OBSERVED",
+          usedAt,
+          updatedAt: usedAt,
+        });
+      }
+      return { runId, memoryId };
+    });
+
+    const { updateMemoryUsageOutcomeForRun } = await import("./agentRunStateService");
+    await t.run(async (ctx) => {
+      await updateMemoryUsageOutcomeForRun(ctx, runId, "FAILED");
+    });
+
+    let memory = await t.run(async (ctx) => await ctx.db.get(memoryId));
+    expect(memory?.failureCount).toBe(1);
+    expect(memory?.successCount ?? 0).toBe(0);
+
+    // Idempotent on the same status.
+    await t.run(async (ctx) => {
+      await updateMemoryUsageOutcomeForRun(ctx, runId, "FAILED");
+    });
+    memory = await t.run(async (ctx) => await ctx.db.get(memoryId));
+    expect(memory?.failureCount).toBe(1);
+
+    // Recovery lands SUCCESS: the failure is taken back, not stacked under.
+    await t.run(async (ctx) => {
+      await updateMemoryUsageOutcomeForRun(ctx, runId, "SUCCESS");
+    });
+    memory = await t.run(async (ctx) => await ctx.db.get(memoryId));
+    expect(memory?.failureCount).toBe(0);
+    expect(memory?.successCount).toBe(1);
+  });
+
+  test("the backfill migration rebuilds counters from historical usage", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, agentId } = await seedRankingFixture(t);
+    const { memoryId } = await t.run(async (ctx) => {
+      const memoryId = await seedAgentMemory(ctx, {
+        agentId,
+        companyId,
+        content: "Backfilled history memory.",
+      });
+      for (const [index, outcome] of (["SUCCESS", "SUCCESS", "FAILED"] as const).entries()) {
+        const runId = await ctx.db.insert("agentRuns", {
+          agentId,
+          companyId,
+          triggerType: "CHAT",
+          objective: `Historical run ${index}`,
+          status: outcome,
+          startedAt: 100 + index,
+          completedAt: 200 + index,
+          updatedAt: 200 + index,
+        });
+        await ctx.db.insert("agentMemoryUsage", {
+          memoryId,
+          agentId,
+          companyId,
+          runId,
+          score: 1,
+          queryText: "history",
+          outcome,
+          usedAt: 100 + index,
+          updatedAt: 200 + index,
+        });
+      }
+      return { memoryId };
+    });
+
+    // The runner processes batches through the scheduler, so the clock has to
+    // be pumped for any rows to be touched.
+    vi.useFakeTimers();
+    try {
+      await t.mutation(internal.dataMigrations.run, {
+        name: "2026-08-09-agent-memory-outcome-counters",
+      });
+      await t.finishAllScheduledFunctions(vi.runAllTimers);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const memory = await t.run(async (ctx) => await ctx.db.get(memoryId));
+    expect(memory?.successCount).toBe(2);
+    expect(memory?.failureCount).toBe(1);
+    expect(memory?.cancelledCount).toBe(0);
   });
 });

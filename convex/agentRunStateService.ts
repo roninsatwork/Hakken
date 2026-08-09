@@ -48,6 +48,48 @@ export async function updateMemoryUsageOutcomeForRun(
     .withIndex("by_run", (q) => q.eq("runId", runId))
     .take(AGENT_RUN_MEMORY_USAGE_LIMIT);
 
+  /*
+   * Cache the outcome on the memory row itself, one count per run however
+   * many times the run consulted the memory. Ranking reads these counters
+   * (self-improvement plan, Phase 2); doing the aggregation here keeps the
+   * per-message search free of a usage-table fan-out.
+   *
+   * A run can reach a terminal status twice — recovery marks FAILED, a resume
+   * later lands SUCCESS — so the previous outcome (uniform across the run's
+   * rows, because this function writes them together) is decremented before
+   * the new one is counted.
+   */
+  const counterKey = {
+    SUCCESS: "successCount",
+    FAILED: "failureCount",
+    CANCELLED: "cancelledCount",
+  } as const;
+
+  const rowsByMemory = new Map<Id<"agentMemories">, typeof usageRows>();
+  for (const usage of usageRows) {
+    const rows = rowsByMemory.get(usage.memoryId) ?? [];
+    rows.push(usage);
+    rowsByMemory.set(usage.memoryId, rows);
+  }
+
+  for (const [memoryId, rows] of rowsByMemory) {
+    const previous = rows.find((row) => row.outcome !== "OBSERVED")?.outcome as
+      | TerminalRunStatus
+      | undefined;
+    if (previous === status) continue;
+
+    const memory = await ctx.db.get(memoryId);
+    if (!memory) continue;
+    const counts = {
+      successCount: memory.successCount ?? 0,
+      failureCount: memory.failureCount ?? 0,
+      cancelledCount: memory.cancelledCount ?? 0,
+    };
+    if (previous) counts[counterKey[previous]] = Math.max(0, counts[counterKey[previous]] - 1);
+    counts[counterKey[status]] += 1;
+    await ctx.db.patch(memoryId, { ...counts, lastOutcomeAt: now });
+  }
+
   await Promise.all(usageRows.map((usage) =>
     ctx.db.patch(usage._id, {
       outcome: status,

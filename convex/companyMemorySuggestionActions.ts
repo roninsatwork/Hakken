@@ -47,7 +47,7 @@ export const sweepCompany = internalAction({
     const input: {
       openSuggestionCount: number;
       isBacklogged: boolean;
-      messages: Array<{ role: string; content: string; createdAt: number }>;
+      messages: Array<{ role: string; content: string; createdAt: number; feedbackLabels?: string[] }>;
     } = await ctx.runQuery(internal.companyMemorySuggestions.getSweepInputInternal, {
       companyId: args.companyId,
       since: args.since,
@@ -64,7 +64,12 @@ export const sweepCompany = internalAction({
       return { suggested: 0 };
     }
 
-    const sweptTo = input.messages[input.messages.length - 1].createdAt;
+    // Flagged conversations are listed ahead of the chronological window, so
+    // the last entry is no longer necessarily the newest — the marker takes
+    // the true maximum or unrated conversations would be re-read forever.
+    // A flagged conversation can be older than the marker (asked before,
+    // rated after), so the floor is the marker itself — it never moves back.
+    const sweptTo = Math.max(args.since, ...input.messages.map((message) => message.createdAt));
 
     // A queue nobody has emptied does not need more added to it, and the
     // marker still moves so the same conversations are not re-read later.
