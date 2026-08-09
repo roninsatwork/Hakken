@@ -50,7 +50,7 @@ a company-less swarm reads global knowledge only.
 knowledge wrapper the other sites use. Pre-existing, unchanged, worth its own
 look.
 
-## Phase 2 — Workflow retries and a dead-letter queue — PARTIALLY DONE 2026-08-09
+## Phase 2 — Workflow retries and a dead-letter queue — DONE 2026-08-09 (review surface: existing screen)
 
 **Built and tested:** `workflowRetryService.ts` (transient-error classifier,
 deny-by-default retryable-node policy — only `agentNode` qualifies today, with
@@ -61,11 +61,16 @@ path so fan-out collision safety applies unchanged; `executeNode`'s catch now
 consults the policy. Steps carry a 1-based `attempt`. 7 new tests, including
 the acceptance property that side-effecting node types never retry.
 
-**Still to do:** an end-to-end test driving the real `executeNode` through
-fail-twice-succeed-third; and a decision on the review surface — FAILED
-executions already appear in the admin executions list with the attempt count
-on their steps, which may be enough, or may deserve a filtered
-"needs attention" view.
+**End-to-end proof (same day):** `workflowRetryEndToEnd.test.ts` drives the
+real `executeNode` — real claim, real requeue, real finalize; only the agent
+objective is stood in for — through fail-twice-succeed-third. The step ends
+SUCCESS on attempt 3 with the survived error still visible, the execution
+completes, and the objective ran exactly three times.
+
+**Review surface:** FAILED executions appear in the existing admin executions
+list with per-step attempt counts and errors. A dedicated filtered
+"needs attention" view remains available as a small follow-up if Anthony wants
+one.
 
 **What:** a workflow step that fails for a transient reason (network, provider
 hiccup, rate limit) retries with backoff — a small number of attempts — before
