@@ -14,7 +14,7 @@ Workflow administration is under the admin route group:
 - `src/app/(dashboard)/admin/workflows/schedules/new/page.tsx` creates a standalone schedule.
 - `src/app/(dashboard)/admin/workflows/schedules/[id]/page.tsx` edits a standalone schedule.
 
-The visual node components live in `src/ui/components/workflows/`. `src/ui/components/workflows/WorkflowSidebar.tsx` is the drag source for node types. `src/ui/components/workflows/ConfigDrawer.tsx` edits trigger, API action, database, logic, iterator, merge, wait, approval, email, and generic mapping fields. `src/ui/components/workflows/AgentEditorModal.tsx` configures inline agent nodes and can promote non-global agents to global agents. `src/ui/components/workflows/AgentNode.tsx` renders workflow agent nodes with live model labels and schema field chips. `src/ui/components/workflows/types.ts` defines the client-side node data shape used by the designer.
+The visual node components live in `src/ui/components/workflows/`. `src/ui/components/workflows/WorkflowSidebar.tsx` is the drag source for node types. `src/ui/components/workflows/ConfigDrawer.tsx` edits trigger, API action, database, logic, iterator, merge, wait, approval, email, and generic mapping fields. Webhook trigger help uses `src/lib/convexHttpActionsUrl.ts` to display a Convex HTTP Actions origin from `CONVEX_SITE_URL`, falling back to the standard `.cloud` to `.site` derivation only when that environment variable is absent. `src/ui/components/workflows/AgentEditorModal.tsx` configures inline agent nodes and can promote non-global agents to global agents. `src/ui/components/workflows/AgentNode.tsx` renders workflow agent nodes with live model labels and schema field chips. `src/ui/components/workflows/types.ts` defines the client-side node data shape used by the designer.
 
 Schedules have an additional builder split between `src/app/(dashboard)/admin/workflows/schedules/_components/ScheduleBuilder.tsx` and `src/app/(dashboard)/admin/workflows/schedules/_lib/scheduleConfig.ts`. The builder serializes schedule choices into a versioned JSON `intervalStr`, while the backend service still supports legacy strings and legacy JSON schedule contracts.
 
@@ -69,6 +69,13 @@ Workflow CRUD and schedule management are super-admin-only. `convex/workflows.ts
 Database nodes have a separate runtime guard in `convex/workflowEngine.ts`. The runtime loads the workflow creator and treats a creator with `SUPER_ADMIN` as unrestricted for database operations. If the creator is not a super admin, database operations are limited to an allowlist and force or verify the creator's company id. Non-super-admin database selects must use supported indexed query contracts or a document id that belongs to the creator's company. Inserts and updates force the creator company id and reject attempts to cross company boundaries. This matters even though the public UI currently limits workflow authoring to super admins, because runtime paths and tests cover tenant boundary behavior defensively.
 
 Public webhook execution is exposed through internal/public trigger paths rather than the admin UI alone. `convex/workflows.ts` has `createPublicWorkflowRunInternal`, which creates a tenant-scoped webhook execution only for active workflows whose `triggerType` is `WEBHOOK` and whose `workflow.companyId` matches the supplied public trigger company id. Company mismatches are reported as the same not-found/not-configured failure as missing, inactive, or non-webhook workflows. The mutation trims and limits public initial input to 20,000 characters. The HTTP action `handleWebhook` reads `workflowId` from the query string, requires an active webhook workflow, and verifies `x-sonae-secret` against the stored `webhookSecret` using constant-time comparison. It intentionally does not accept the secret in the URL. `handleWebhook` also rejects oversized payloads with 413 before execution, first by checking a numeric `content-length` header when present and then by checking the actual request text length.
+
+The webhook endpoint displayed to admins must use the Convex HTTP Actions site
+origin, not the browser client URL. Production passes `CONVEX_SITE_URL` through
+the Docker build and Cloud Run runtime so `ConfigDrawer` can show
+`<site-origin>/api/webhooks/workflow?workflowId=<id>`. Keep this aligned with
+`Dockerfile`, `.github/workflows/deploy.yml`, `.env.example`, and
+[Deployment](./deployment.md) when deployment variables change.
 
 ## Designer Behavior
 

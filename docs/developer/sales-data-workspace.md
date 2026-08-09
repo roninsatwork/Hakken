@@ -104,8 +104,27 @@ sales work before destructive clears and deletes sales imports, row tables,
 customer/prospect records, research data, market-discovery data, and opportunity
 reports in batches.
 
+There are two implemented reset scopes:
+
+- `resetSalesData` clears the derived Sales Data state for the current
+  workspace while preserving the imported workbook. It is used from the customer
+  side of the workflow, where re-finding and re-mapping the spreadsheet would be
+  the expensive part.
+- `clearAllSalesData` clears the entire Sales Data module for the current
+  workspace, imported workbook included. It is exposed from
+  `/app/[workspace]/spreadsheet-import` through an inline arm-and-confirm button
+  shown only when a current import exists.
+
+`clearAllSalesData` first calls `getRunningSalesWorkInternal` and refuses while
+research jobs, market-discovery jobs, or opportunity reports are still
+`RUNNING`. The clear then re-enters `clearAllWorkspaceSalesDataBatchInternal`
+until every company-scoped Sales Data table has been swept or the batch cap is
+reached. Research job items are deleted through their parent research jobs
+before job rows are removed, because job items do not carry a company-led index.
+
 Treat reset actions as destructive tenant operations. UI copy and docs should
-not describe them as cosmetic cleanup.
+not describe them as cosmetic cleanup, and new Sales Data tables must be added
+to the full-clear sweep and its coverage test when they are introduced.
 
 ## Opportunity Reports
 

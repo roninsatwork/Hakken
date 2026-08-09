@@ -65,7 +65,7 @@ The deployment sequence is managed by `.github/workflows/deploy.yml`:
 
 1. Testing firewall: `npm audit --omit=dev --audit-level=high`, `npm run lint`, `npm run typecheck`, `npm run test:run`, and `npm run build`.
 2. Convex synchrony: `npx convex deploy` with `CONVEX_DEPLOY_KEY`.
-3. Container build: Docker image built with `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_DEPLOYMENT` build args.
+3. Container build: Docker image built with `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` build args.
 4. Registry push: image pushed to Google Artifact Registry.
 5. Cloud Run rollout: image deployed to the `sonae-app` service in `us-central1` with port `3000`.
 

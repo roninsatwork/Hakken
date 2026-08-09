@@ -72,6 +72,11 @@ Scheduled workflows are intended to run automatically. When a saved workflow gra
 
 Webhook workflows expose an endpoint that an external system can call with a `POST` request. The builder displays the endpoint format. A secure webhook secret is generated for webhook workflows and must be sent in the `x-sonae-secret` request header. The secret is not accepted in the URL, which reduces the chance of leaking it through proxy or browser logs. The request body becomes the initial workflow payload and must stay within the current 20,000-character limit. If the workflow is inactive, is no longer configured for webhooks, has the wrong secret, or receives an oversized payload, the webhook should not run.
 
+The endpoint shown in the builder comes from the configured Convex HTTP Actions
+site origin. In deployed environments, that origin must be configured separately
+from the normal Convex client URL so webhook examples point at the route that
+actually serves `/api/webhooks/workflow`.
+
 ## Configuring Agent Nodes
 
 An AI Agent node can use an inline agent that belongs to the workflow or an existing global agent. When opening the agent editor, you can set the agent name, instructions, expected input variables, output variables, model behavior, reasoning settings, internet access, and temperature. The mapping tab controls how upstream workflow data is passed into the agent.

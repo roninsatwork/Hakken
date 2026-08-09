@@ -59,6 +59,7 @@ scripts, and operator procedures change.
 - [Comax Opportunity Report Plan](./plans/active/comax-opportunity-report-plan.md) — active plan for prospect valuation, chain gap analysis, opportunity-report tools, and the workspace opportunity report screen.
 - [Research Agent Autopilot Plan](./plans/active/research-agent-autopilot-plan.md) — active plan for turning customer research and prospecting sweeps into a supervised queue-backed job.
 - [Governance And Trust Plan](./plans/active/governance-and-trust-plan.md) — delivered 2026-08-06; kept active for its framework test and recorded decisions. Covers the AI register, risk classification, evidence export, the Governance section, and the roles, one-time-code sign-in and personal-data-rights work behind it.
+- [Audit Trail Plan](./plans/active/audit-trail-plan.md) — active plan for the real audit-trail screen, filters, detail view, event export, and trust-report path.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - [Handover](./plans/active/HANDOVER.md) — current platform-hardening handover state and verification context.

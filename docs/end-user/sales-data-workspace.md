@@ -100,5 +100,19 @@ they remove imported workbook rows, customer/prospect records, research jobs,
 research findings, market-discovery data, and opportunity report data depending
 on the selected clear action.
 
-Only use clear actions when the workspace is deliberately being reset for a new
-import or demo.
+There are two clear scopes:
+
+- The customer-screen clear is for emptying the CRM and derived sales-data
+  records while keeping the currently imported workbook available.
+- The import-screen clear is for starting again from nothing. It clears the
+  imported workbook record as well as rows, customers, prospects, research
+  findings, research jobs, market-discovery data, and opportunity reports.
+
+The full import-screen clear uses an inline two-step confirmation and refuses to
+run while sales research, market discovery, or opportunity-report work is still
+running. Stop or wait for those jobs before clearing the workspace.
+
+Only use either clear action when the workspace is deliberately being reset for a
+new import or demo. If the goal is to compare several different workbooks, use
+the import-screen clear before uploading the next workbook so findings and
+reports from the previous file do not carry over.

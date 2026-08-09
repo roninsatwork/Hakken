@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-08-08 12:10 BST +0100
+Last reviewed: 2026-08-09 17:05 BST +0100
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -119,6 +119,12 @@ as the durable documentation work queue.
   and Sales Data workspace doc pairs, refreshed `/verify`, one-time-code, email
   preview, read-only user-directory, and moved-approval-route docs, and updated
   the route, Convex, schema, and script coverage maps.
+- Refresh documentation after the import-screen full-clear and workflow webhook
+  origin fixes. The Sales Data guide pair now distinguishes the CRM-preserving
+  reset from the import-screen full clear, including running-job refusal and
+  workbook deletion. The workflow guide pair and deployment guide now record
+  that webhook examples use `CONVEX_SITE_URL` for the Convex HTTP Actions site
+  origin rather than guessing from the public Convex client URL.
 
 ### Remaining Follow-Up
 

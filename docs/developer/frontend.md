@@ -83,7 +83,7 @@ Always treat `undefined` query results as loading. Do not interpret loading as a
 
 Uploads should use the central upload policies in `src/lib/constants/uploads.ts` and the relevant Convex upload URL mutation. Do not add direct browser-to-third-party upload paths for product data without a documented security decision.
 
-Shared frontend helpers should stay boring and reusable. `src/hooks/useDebounce.ts` is the shared delayed-search hook used by admin search surfaces. `src/hooks/useProgressiveLoading.ts` is the localized staged-loading text helper used by assistant composer states. `src/lib/chatTelemetry.ts` contains display-only token and approximate GBP chat-cost helpers for chat-log screens; it uses simple model-name heuristics and fixed rates, so do not treat it as billing authority.
+Shared frontend helpers should stay boring and reusable. `src/hooks/useDebounce.ts` is the shared delayed-search hook used by admin search surfaces. `src/hooks/useProgressiveLoading.ts` is the localized staged-loading text helper used by assistant composer states. `src/lib/chatTelemetry.ts` contains display-only token and approximate GBP chat-cost helpers for chat-log screens; it uses simple model-name heuristics and fixed rates, so do not treat it as billing authority. `src/lib/convexHttpActionsUrl.ts` resolves the Convex HTTP Actions site origin for workflow webhook examples from `CONVEX_SITE_URL`, with the `.cloud` to `.site` fallback kept only for default Convex deployments.
 
 ## Localization
 
