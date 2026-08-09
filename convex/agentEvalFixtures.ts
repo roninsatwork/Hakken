@@ -1554,6 +1554,66 @@ export const archiveSuitePreset = adminMutation({
  * the thread's user, so an eval run under no user would be denied every tool the
  * agent actually relies on and would grade an agent that cannot do its job.
  */
+/** What the rehearsal action needs from a fixture, and nothing else. */
+export const getFixtureForRehearsalInternal = internalQuery({
+  args: { fixtureId: v.id("agentEvalFixtures") },
+  handler: async (ctx, args): Promise<{
+    agentId: Id<"agents">;
+    companyId: Id<"companies"> | undefined;
+    objective: string;
+    expectedToolPlanJson: string | undefined;
+    status: string;
+  } | null> => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) return null;
+    return {
+      agentId: fixture.agentId,
+      companyId: fixture.companyId,
+      objective: fixture.objective,
+      expectedToolPlanJson: fixture.expectedToolPlanJson,
+      status: fixture.status,
+    };
+  },
+});
+
+/**
+ * Run a fixture as a rehearsal: the real loop against the real model, writes
+ * recorded instead of performed, and the recorded behaviour graded against the
+ * fixture's expected tool plan.
+ *
+ * The contract eval (`runSmokeEval`) asks whether the agent is *configured* to
+ * call the right tools; this asks whether, faced with the objective, it *does*.
+ * Scheduled rather than awaited — a real model call has no place inside a
+ * mutation — and the verdict lands as the run's final grading step.
+ */
+export const runRehearsalEval = adminMutation({
+  args: {
+    agentId: v.id("agents"),
+    fixtureId: v.id("agentEvalFixtures"),
+  },
+  handler: async (ctx, args): Promise<{ scheduled: boolean }> => {
+    const { userId, user } = ctx;
+    const agent = await ctx.db.get(args.agentId);
+    if (!agent) throw new Error("Agent not found");
+
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture || fixture.agentId !== args.agentId) {
+      throw new Error("Eval fixture does not belong to this agent");
+    }
+    if (fixture.status !== "ACTIVE") {
+      throw new Error("Only an active fixture can be rehearsed.");
+    }
+    assertAdminCanAccessCompany(user, fixture.companyId);
+
+    await ctx.scheduler.runAfter(0, internal.agentEvalGradingActions.runRehearsalEvalInternal, {
+      fixtureId: args.fixtureId,
+      userId,
+    });
+
+    return { scheduled: true };
+  },
+});
+
 export const createEvalThreadInternal = internalMutation({
   args: {
     agentId: v.id("agents"),

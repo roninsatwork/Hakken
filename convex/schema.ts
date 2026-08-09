@@ -572,6 +572,10 @@ export default defineSchema({
     providerModelId: v.optional(v.string()),
     costGBP: v.number(), // Processed cost for this transaction
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
+    // Set when the run was a rehearsal: real model spend (kept in cost
+    // figures), but a drill, not customer traffic — interaction analytics
+    // filter on this.
+    isRehearsal: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_agent", ["agentId", "createdAt"])

@@ -951,6 +951,22 @@ export const getReplayExecutionContextInternal = internalQuery({
   },
 });
 
+/**
+ * The recorded behaviour of one run, in the shape the rehearsal grader reads.
+ * Ids and arguments stay out: grading compares which handlers were invoked,
+ * and the run detail screen already shows the rest.
+ */
+export const getToolCallRecordsForRunInternal = internalQuery({
+  args: { runId: v.id("agentRuns") },
+  handler: async (ctx, args) => {
+    const calls = await ctx.db
+      .query("agentToolCalls")
+      .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
+      .take(200);
+    return calls.map((call) => ({ handlerMapping: call.handlerMapping, status: call.status }));
+  },
+});
+
 export const getLatestStepIndexInternal = internalQuery({
   args: {
     runId: v.id("agentRuns"),

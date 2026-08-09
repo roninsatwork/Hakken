@@ -139,11 +139,26 @@ approval. Three runtime tests prove: the write never reaches its handler and
 no approval row is created, reads still execute, and ordinary runs are
 byte-for-byte unchanged.
 
-**Still to do (the eval half):** fixture-driven entry (run a fixture as a
-rehearsal from the eval screen and grade the recorded would-writes against
-`expectedToolPlanJson`); exclusion of rehearsal runs from usage quotas, cost
-alerts, and analytics rollups; and labelling on the run screens so a drill is
-never read as traffic.
+**The eval half — done 2026-08-09:**
+- `runRehearsalEval` (admin mutation on the fixtures module) validates agent,
+  fixture ownership and status, then schedules
+  `runRehearsalEvalInternal`: the drill runs through the real loop, and
+  `gradeRehearsalToolPlan` (pure, tested) compares the handlers the run
+  performed (reads) or rehearsed (writes) against the fixture's expected tool
+  plan. The verdict lands as a grading step on the run's own record. Proven
+  end to end both ways: a drill making the expected write grades PASSED; one
+  that never calls it grades FAILED naming the missing handler. DENIED/FAILED
+  calls do not count as performed; a crashed drill fails regardless.
+- **Exclusions, with one deliberate deviation from this plan's first draft:**
+  usage quotas were never touched by drills (the message quota is chat-side).
+  Model cost of a drill is *kept* in cost figures and alerts — the spend is
+  real, and hiding it would falsify the books. What is excluded is traffic:
+  drill transactions carry `isRehearsal`, so interaction analytics can tell a
+  drill from a customer.
+
+**Still to do (UI, with Anthony watching):** the "Rehearse" button on the eval
+screen, a drill badge on the run screens, and analytics dashboards actually
+filtering on the transaction flag.
 
 **What:** today's readiness checks validate configuration and grade prose
 answers, but never run the agent through its actual loop with tools. Add a

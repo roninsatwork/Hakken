@@ -2612,6 +2612,12 @@ describe("rehearsal runs", () => {
     expect(handlerRan).toBe(0);
     const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
     expect(approvals).toHaveLength(0);
+
+    // The spend is real and stays in the ledger — flagged as a drill, so
+    // interaction analytics can leave it out of traffic.
+    const transactions = await t.run(async (ctx) => await ctx.db.query("agentTransactions").collect());
+    expect(transactions.length).toBeGreaterThan(0);
+    expect(transactions.every((tx) => tx.isRehearsal === true)).toBe(true);
   });
 
   test("reads still execute for real inside a rehearsal", async () => {
@@ -2667,5 +2673,100 @@ describe("rehearsal runs", () => {
     expect(toolCalls).toHaveLength(1);
     // No rehearsal flag, no behaviour change: the write goes to its normal fate.
     expect(toolCalls[0].status).not.toBe("REHEARSED");
+  });
+});
+
+/**
+ * The eval half of Phase 4: a fixture run as a rehearsal, graded on what the
+ * drill actually did. Through the real pieces — the genuine loop with writes
+ * recorded, then the grading step appended to the run's own record.
+ */
+describe("rehearsal evals", () => {
+  async function seedFixture(t: TestConvex, args: {
+    agentId: Id<"agents">;
+    companyId: Id<"companies">;
+    userId: Id<"users">;
+    expectedToolPlanJson?: string;
+  }) {
+    return await t.run(async (ctx) => {
+      const sourceRunId = await ctx.db.insert("agentRuns", {
+        agentId: args.agentId,
+        triggerType: "MANUAL",
+        objective: "seed",
+        status: "SUCCESS",
+        startedAt: 1,
+        updatedAt: 1,
+      });
+      return await ctx.db.insert("agentEvalFixtures", {
+        agentId: args.agentId,
+        companyId: args.companyId,
+        sourceRunId,
+        createdBy: args.userId,
+        type: "TOOL_PLAN",
+        objective: "Record a note about refunds.",
+        expectedToolPlanJson: args.expectedToolPlanJson,
+        expectedFinalOutputRubric: "Records the note.",
+        sourceEvidenceJson: "{}",
+        tags: [],
+        status: "ACTIVE",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+    });
+  }
+
+  test("a drill that makes the expected write grades PASSED on the run record", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bindWriteTool(t, agentId, userId);
+    const fixtureId = await seedFixture(t, {
+      agentId, companyId, userId,
+      expectedToolPlanJson: JSON.stringify([{ handlerMapping: "knowledge.search" }]),
+    });
+
+    generateMock.mockResolvedValueOnce(
+      toolCallResponse([{ name: "knowledge_search", args: { query: "note it down" } }])
+    );
+    generateMock.mockResolvedValueOnce(textResponse("Drill done."));
+
+    const verdict = await t.action(internal.agentEvalGradingActions.runRehearsalEvalInternal, {
+      fixtureId,
+      userId,
+    });
+
+    expect(verdict.status).toBe("PASSED");
+    expect(verdict.missing).toEqual([]);
+
+    // The verdict is part of the run's own durable record.
+    const { run, steps } = await runSteps(t, verdict.runId);
+    expect(run?.isRehearsal).toBe(true);
+    const gradingStep = steps[steps.length - 1];
+    expect(gradingStep.status).toBe("SUCCESS");
+    expect(gradingStep.output).toContain("PASSED");
+  });
+
+  test("a drill that never makes the expected call grades FAILED, naming it", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    const fixtureId = await seedFixture(t, {
+      agentId, companyId, userId,
+      expectedToolPlanJson: JSON.stringify([{ handlerMapping: "notification.send" }]),
+    });
+
+    // The model answers directly without touching any tool.
+    generateMock.mockResolvedValueOnce(textResponse("I'd rather just chat."));
+
+    const verdict = await t.action(internal.agentEvalGradingActions.runRehearsalEvalInternal, {
+      fixtureId,
+      userId,
+    });
+
+    expect(verdict.status).toBe("FAILED");
+    expect(verdict.missing).toEqual(["notification.send"]);
+
+    const { steps } = await runSteps(t, verdict.runId);
+    const gradingStep = steps[steps.length - 1];
+    expect(gradingStep.status).toBe("FAILED");
+    expect(gradingStep.output).toContain("notification.send");
   });
 });

@@ -151,6 +151,7 @@ import type * as providerHttpService from "../providerHttpService.js";
 import type * as publicApi from "../publicApi.js";
 import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
+import type * as rehearsalEvalService from "../rehearsalEvalService.js";
 import type * as resendEmailService from "../resendEmailService.js";
 import type * as salesData from "../salesData.js";
 import type * as salesDataComaxProvisioning from "../salesDataComaxProvisioning.js";
@@ -365,6 +366,7 @@ declare const fullApi: ApiFromModules<{
   publicApi: typeof publicApi;
   purgeScheduleService: typeof purgeScheduleService;
   purges: typeof purges;
+  rehearsalEvalService: typeof rehearsalEvalService;
   resendEmailService: typeof resendEmailService;
   salesData: typeof salesData;
   salesDataComaxProvisioning: typeof salesDataComaxProvisioning;

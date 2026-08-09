@@ -3,7 +3,7 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import {
@@ -14,6 +14,7 @@ import {
   type GradeVerdict,
 } from "./agentEvalGradingService";
 import { calculateModelCostGBP } from "./aiCostService";
+import { gradeRehearsalToolPlan } from "./rehearsalEvalService";
 
 /** More than this is a runaway, not a confidence interval. */
 const MAX_SAMPLE_COUNT = 5;
@@ -255,5 +256,72 @@ export const gradeSmokeEvalWithModel = internalAction({
         providerModelId,
       });
     }
+  },
+});
+
+/**
+ * Execute one fixture as a rehearsal and grade what was recorded.
+ *
+ * The heavy lifting is elsewhere: `runTriggeredAgentObjective` with
+ * `rehearsal: true` runs the genuine loop with writes captured as REHEARSED,
+ * and `gradeRehearsalToolPlan` is the pure judgement. This action is the
+ * plumbing between them, plus the grading step that makes the verdict part of
+ * the run's own durable record — where every other judgement about a run
+ * already lives.
+ */
+export const runRehearsalEvalInternal = internalAction({
+  args: {
+    fixtureId: v.id("agentEvalFixtures"),
+    userId: v.id("users"),
+  },
+  // Explicit so the fixtures module and this one can reference each other
+  // through the generated api without TypeScript giving up on both.
+  handler: async (ctx, args): Promise<{ runId: Id<"agentRuns">; status: "PASSED" | "FAILED"; missing: string[] }> => {
+    const fixture = await ctx.runQuery(internal.agentEvalFixtures.getFixtureForRehearsalInternal, {
+      fixtureId: args.fixtureId,
+    });
+    if (!fixture || fixture.status !== "ACTIVE") {
+      throw new Error("Rehearsal fixture is missing or no longer active.");
+    }
+
+    const { runId } = await ctx.runAction(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId: fixture.agentId,
+      objective: `Rehearsal eval: ${fixture.objective}`,
+      triggerType: "MANUAL",
+      companyId: fixture.companyId,
+      userId: args.userId,
+      rehearsal: true,
+    });
+
+    const [runState, toolCalls] = await Promise.all([
+      ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, { runId }),
+      ctx.runQuery(internal.agentRuns.getToolCallRecordsForRunInternal, { runId }),
+    ]);
+
+    const grade = gradeRehearsalToolPlan({
+      expectedToolPlanJson: fixture.expectedToolPlanJson,
+      toolCalls,
+      runStatus: runState?.status ?? "FAILED",
+    });
+
+    const stepIndex = await ctx.runQuery(internal.agentRuns.getLatestStepIndexInternal, { runId });
+    await ctx.runMutation(internal.agentRuns.appendStepInternal, {
+      runId,
+      agentId: fixture.agentId,
+      companyId: fixture.companyId,
+      stepIndex: stepIndex + 1,
+      kind: "FINAL",
+      status: grade.status === "PASSED" ? "SUCCESS" : "FAILED",
+      input: JSON.stringify({ rehearsalEval: true, fixtureId: args.fixtureId }),
+      output: JSON.stringify({
+        status: grade.status,
+        expected: grade.expected,
+        performed: grade.performed,
+        missing: grade.missing,
+        failures: grade.failures,
+      }),
+    });
+
+    return { runId, status: grade.status, missing: grade.missing };
   },
 });

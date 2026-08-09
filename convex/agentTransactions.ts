@@ -122,6 +122,7 @@ export const insertTransactionInternal = internalMutation({
     outputTokens: v.number(),
     costGBP: v.number(),
     status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
+    isRehearsal: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("agentTransactions", {

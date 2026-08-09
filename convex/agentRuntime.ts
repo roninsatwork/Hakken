@@ -1962,6 +1962,10 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 threadId,
                 userId: owner.userId,
                 companyId,
+                // Drills carry their flag into the ledger: the spend is real
+                // and stays in cost figures, but interaction analytics must
+                // not read a rehearsal as customer traffic.
+                ...(isRehearsalRun ? { isRehearsal: true } : {}),
                 actionContext: "Sandbox Execution",
                 modelUsed: modelConfig.modelId,
                 providerKey: modelConfig.providerKey,
