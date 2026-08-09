@@ -1112,10 +1112,10 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
         // Read once for this action rather than per call. A refusal is written by a
         // person while the run is parked, so the list cannot change while this
         // action is in flight; a resumed run enters here again and re-reads it.
-        const refusedToolCalls = parseRefusedToolCalls(
-            (await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, { runId }))
-                ?.refusedToolCallsJson,
-        );
+        const loopRunState = await ctx.runQuery(internal.agentRuns.getRunExecutionStateInternal, { runId });
+        const refusedToolCalls = parseRefusedToolCalls(loopRunState?.refusedToolCallsJson);
+        // On the run record so checkpoint resume inherits it without threading.
+        const isRehearsalRun = loopRunState?.isRehearsal === true;
 
         /**
          * Wind up a run that was stopped from outside.
@@ -1512,6 +1512,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 const wasRefused = refusedToolCalls.includes(refusedKey);
 
                 if (
+                    !isRehearsalRun &&
                     !wasRefused &&
                     schemaValidation.ok &&
                     toolMetadata &&
@@ -1609,7 +1610,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     continue;
                 }
 
-                let toolStatus: "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED" = "FAILED";
+                let toolStatus: "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED" | "REHEARSED" = "FAILED";
                 let toolError: string | undefined;
                 let toolResponsePayload;
 
@@ -1625,6 +1626,24 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     toolResponsePayload = buildToolResultPayload({
                         status: "error",
                         error: toolError,
+                    });
+                } else if (
+                    isRehearsalRun &&
+                    toolMetadata &&
+                    toolMetadata.sideEffectLevel !== "READ" &&
+                    (accessDecision.allowed || isConfirmationRequiredDenial(accessDecision.reason))
+                ) {
+                    // Rehearsal: the write is recorded with its arguments, not
+                    // performed — including writes an autonomous agent would
+                    // have been allowed to make without asking. Reads execute
+                    // for real; hard denials (role, tenant) still deny below.
+                    toolStatus = "REHEARSED";
+                    toolResponsePayload = buildToolResultPayload({
+                        status: "success",
+                        data: {
+                            rehearsed: true,
+                            note: "Rehearsal run: this action was recorded as would-execute and NOT performed. Continue as if it succeeded.",
+                        },
                     });
                 } else if (!accessDecision.allowed) {
                     toolStatus = "DENIED";
@@ -1994,6 +2013,7 @@ async function runTriggeredOnAgentLoop(ctx: ActionCtx, args: {
   scheduleId?: Id<"schedules">;
   companyId?: Id<"companies">;
   userId?: Id<"users">;
+  rehearsal?: boolean;
 }): Promise<{ output: string; runId: Id<"agentRuns"> }> {
   const stream = createStreamState();
   const promptCache: { name?: string } = {};
@@ -2024,6 +2044,7 @@ async function runTriggeredOnAgentLoop(ctx: ActionCtx, args: {
         // single step cannot call a tool and then use what came back, which is
         // most of what an agent is for.
         maxSteps: limits.maxSteps,
+        ...(args.rehearsal ? { isRehearsal: true } : {}),
       });
     } else {
       await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
@@ -2090,6 +2111,9 @@ export const runTriggeredAgentObjective = internalAction({
     scheduleId: v.optional(v.id("schedules")),
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
+    // Run the drill: real model, real reads, every non-read tool call
+    // recorded instead of performed. See the improvement plan, Phase 4.
+    rehearsal: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<{ output: string; runId: Id<"agentRuns"> }> => {
     let runId = args.runId;
@@ -2119,6 +2143,7 @@ export const runTriggeredAgentObjective = internalAction({
           scheduleId: args.scheduleId,
           companyId: args.companyId,
           userId: args.userId,
+          rehearsal: args.rehearsal,
         });
       }
 
@@ -2155,6 +2180,7 @@ export const runTriggeredAgentObjective = internalAction({
           providerKey: modelConfig.providerKey,
           providerModelId: modelConfig.providerModelId,
           maxSteps: 1,
+          ...(args.rehearsal ? { isRehearsal: true } : {}),
         });
       } else {
         await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {

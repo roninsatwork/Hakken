@@ -124,7 +124,26 @@ generates: the provider adapters currently wait for the complete answer.
 **Remaining if wanted:** onText in the OpenAI/Anthropic/OpenRouter assistant
 adapters, ~1 day each.
 
-## Phase 4 — Evals that exercise the real runtime (1–2 weeks)
+## Phase 4 — Evals that exercise the real runtime — FOUNDATION DONE 2026-08-09
+
+**Built and tested (the runtime half):** rehearsal runs. `agentRuns` carries
+`isRehearsal` (on the record, so checkpoint resume inherits it);
+`runTriggeredAgentObjective` takes `rehearsal: true` and threads it through
+both its paths. Inside the objective loop, a non-read tool call in a rehearsal
+is recorded with its arguments as status `REHEARSED` — a new tool-call status,
+distinct from SUCCESS (nothing happened) and DENIED (nothing was refused) —
+and the model is told to continue as if it succeeded. This includes writes an
+autonomous agent would have made without asking; reads execute for real; hard
+denials (role, tenant) still deny. The run completes instead of parking on
+approval. Three runtime tests prove: the write never reaches its handler and
+no approval row is created, reads still execute, and ordinary runs are
+byte-for-byte unchanged.
+
+**Still to do (the eval half):** fixture-driven entry (run a fixture as a
+rehearsal from the eval screen and grade the recorded would-writes against
+`expectedToolPlanJson`); exclusion of rehearsal runs from usage quotas, cost
+alerts, and analytics rollups; and labelling on the run screens so a drill is
+never read as traffic.
 
 **What:** today's readiness checks validate configuration and grade prose
 answers, but never run the agent through its actual loop with tools. Add a

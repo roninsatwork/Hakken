@@ -2560,3 +2560,112 @@ describe("provider selection", () => {
     expect(errorLog?.responseContent).not.toContain("requires a Google Vertex model");
   });
 });
+
+/**
+ * Phase 4 foundation: rehearsal runs.
+ *
+ * A rehearsal executes the real loop — real model turns, real reads — but a
+ * non-read tool call is recorded as "would have done this" instead of being
+ * performed. What these pin down: the write never reaches its handler, its
+ * arguments are captured, the run completes instead of parking on approval,
+ * and reads still execute for real.
+ */
+describe("rehearsal runs", () => {
+  test("a write is recorded with its arguments, not performed, and the run completes", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bindWriteTool(t, agentId, userId);
+
+    let handlerRan = 0;
+    toolExecutionProbe.afterExecute = async () => {
+      handlerRan += 1;
+    };
+
+    generateMock.mockResolvedValueOnce(
+      toolCallResponse([{ name: "knowledge_search", args: { query: "delete everything" } }])
+    );
+    generateMock.mockResolvedValueOnce(textResponse("Drill complete."));
+
+    const result = await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Rehearse the destructive path.",
+      triggerType: "MANUAL",
+      companyId,
+      userId,
+      rehearsal: true,
+    });
+
+    const { run } = await runSteps(t);
+    // The drill finished — it did not park waiting for a person to approve a
+    // write that was never going to happen.
+    expect(run?.status).toBe("SUCCESS");
+    expect(run?.isRehearsal).toBe(true);
+    expect(result.output).toBe("Drill complete.");
+
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls).toHaveLength(1);
+    expect(toolCalls[0].status).toBe("REHEARSED");
+    // The would-write is captured with its arguments — that is what grading reads.
+    expect(toolCalls[0].argumentsJson).toContain("delete everything");
+
+    // The handler itself never ran, and no approval was ever created.
+    expect(handlerRan).toBe(0);
+    const approvals = await t.run(async (ctx) => await ctx.db.query("agentRunApprovals").collect());
+    expect(approvals).toHaveLength(0);
+  });
+
+  test("reads still execute for real inside a rehearsal", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bindKnowledgeSearchTool(t, agentId, userId);
+
+    let handlerRan = 0;
+    toolExecutionProbe.afterExecute = async () => {
+      handlerRan += 1;
+    };
+
+    generateMock.mockResolvedValueOnce(
+      toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }])
+    );
+    generateMock.mockResolvedValueOnce(textResponse("Grounded answer."));
+
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Answer from knowledge.",
+      triggerType: "MANUAL",
+      companyId,
+      userId,
+      rehearsal: true,
+    });
+
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls).toHaveLength(1);
+    // A read is harmless and its result is what makes the drill realistic.
+    expect(toolCalls[0].status).toBe("SUCCESS");
+    expect(handlerRan).toBe(1);
+  });
+
+  test("an ordinary run still executes its writes exactly as before", async () => {
+    const t = makeTest();
+    const { agentId, companyId, userId } = await seedAgentRun(t);
+    await bindWriteTool(t, agentId, userId);
+
+    generateMock.mockResolvedValueOnce(
+      toolCallResponse([{ name: "knowledge_search", args: { query: "as usual" } }])
+    );
+    generateMock.mockResolvedValueOnce(textResponse("Done."));
+
+    await t.action(internal.agentRuntime.runTriggeredAgentObjective, {
+      agentId,
+      objective: "Ordinary run.",
+      triggerType: "MANUAL",
+      companyId,
+      userId,
+    });
+
+    const toolCalls = await t.run(async (ctx) => await ctx.db.query("agentToolCalls").collect());
+    expect(toolCalls).toHaveLength(1);
+    // No rehearsal flag, no behaviour change: the write goes to its normal fate.
+    expect(toolCalls[0].status).not.toBe("REHEARSED");
+  });
+});

@@ -640,6 +640,12 @@ export default defineSchema({
       v.literal("EVENT")
     ),
     objective: v.string(),
+    // A rehearsal executes the real loop — real model, real reads — but every
+    // non-read tool call is recorded as "would have done this" instead of
+    // performed. The flag lives on the run so checkpoint resume inherits it,
+    // and so quotas, cost alerts, and analytics can exclude drills from
+    // traffic. See the improvement plan, Phase 4.
+    isRehearsal: v.optional(v.boolean()),
     // Which check this run was of, when it was one.
     //
     // The fixture id was only ever recorded inside a run *step's* metadata JSON, so
@@ -861,7 +867,9 @@ export default defineSchema({
       v.literal("NOT_IMPLEMENTED"),
       v.literal("FAILED"),
       v.literal("DENIED"),
-      v.literal("CANCELLED")
+      v.literal("CANCELLED"),
+      // Recorded, not executed: this call happened inside a rehearsal run.
+      v.literal("REHEARSED")
     ),
     requiredRole: v.union(v.literal("ADMIN"), v.literal("SUPER_ADMIN")),
     sideEffectLevel: v.union(

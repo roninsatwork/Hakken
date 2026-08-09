@@ -237,7 +237,7 @@ export function resolveAgentObjectiveLimits(
   };
 }
 
-type ToolCallStatus = "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED";
+type ToolCallStatus = "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED" | "REHEARSED";
 
 /**
  * How a tool outcome appears in the run's step timeline.
@@ -250,7 +250,9 @@ type ToolCallStatus = "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CAN
  * set out to. The precise reason stays on the tool call itself.
  */
 export function getAgentStepStatusFromToolStatus(status: ToolCallStatus) {
-  return status === "SUCCESS" ? "SUCCESS" : "FAILED";
+  // A rehearsed call is the drill going to plan, not a failure: the agent
+  // asked for the right write and the platform recorded it as intended.
+  return status === "SUCCESS" || status === "REHEARSED" ? "SUCCESS" : "FAILED";
 }
 
 export function shouldStopForToolBudget(args: {

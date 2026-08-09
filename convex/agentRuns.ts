@@ -106,7 +106,11 @@ const toolCallStatusValidator = v.union(
   v.literal("NOT_IMPLEMENTED"),
   v.literal("FAILED"),
   v.literal("DENIED"),
-  v.literal("CANCELLED")
+  v.literal("CANCELLED"),
+  // A rehearsal run recorded this write instead of performing it. Distinct
+  // from SUCCESS because nothing happened, and from DENIED because nothing
+  // was refused — the fixture is graded on what the agent *would* have done.
+  v.literal("REHEARSED")
 );
 
 const sideEffectLevelValidator = v.union(
@@ -985,6 +989,7 @@ export const getRunExecutionStateInternal = internalQuery({
       companyId: run.companyId,
       userId: run.userId,
       refusedToolCallsJson: run.refusedToolCallsJson,
+      isRehearsal: run.isRehearsal === true,
     };
   },
 });
@@ -1993,6 +1998,7 @@ export const createRunInternal = internalMutation({
     maxSteps: v.optional(v.number()),
     maxCostGBP: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
+    isRehearsal: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
