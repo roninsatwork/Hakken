@@ -194,9 +194,10 @@ The automation requires the following secrets to be configured in GitHub Actions
 - `GCP_CREDENTIALS`: Required for Google Cloud authentication.
 - `GCP_PROJECT`: Required for Artifact Registry and Cloud Run deployment.
 - `NEXT_PUBLIC_CONVEX_URL`: Passed to the Docker build and Cloud Run service.
+- `CONVEX_SITE_URL`: Passed to the Docker build and Cloud Run service for HTTP action links.
 - `CONVEX_DEPLOYMENT`: Passed to the Docker build and Cloud Run service.
 
-The Cloud Run environment currently receives only `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_DEPLOYMENT` from this workflow. Runtime secrets for auth, AI providers, Resend, Firecrawl, Apify, and platform alerts must be configured in the target Convex/Cloud Run environment as appropriate; do not assume adding a GitHub secret automatically exposes it to the running service.
+The Cloud Run environment currently receives only `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` from this workflow. Runtime secrets for auth, AI providers, Resend, Firecrawl, Apify, and platform alerts must be configured in the target Convex/Cloud Run environment as appropriate; do not assume adding a GitHub secret automatically exposes it to the running service.
 
 ## Fresh Deployment Smoke Checklist
 

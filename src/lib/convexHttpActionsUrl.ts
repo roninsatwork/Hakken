@@ -15,15 +15,16 @@
  * `/api/webhooks/*` and answers "No matching routes found". Silently wrong, and
  * only at the point someone tried to use the URL.
  *
- * So the origin is configured rather than guessed. The swap survives as the
+ * So the origin comes from the existing `CONVEX_SITE_URL` setting rather than
+ * being guessed. The swap survives as the
  * fallback because most deployments of this template never map a custom domain,
  * and it is still correct for them.
  */
 export function convexHttpActionsUrl(env: {
-  NEXT_PUBLIC_CONVEX_SITE_URL?: string;
+  CONVEX_SITE_URL?: string;
   NEXT_PUBLIC_CONVEX_URL?: string;
 }): string | null {
-  const configured = env.NEXT_PUBLIC_CONVEX_SITE_URL?.trim();
+  const configured = env.CONVEX_SITE_URL?.trim();
   if (configured) {
     return configured.replace(/\/+$/, "");
   }

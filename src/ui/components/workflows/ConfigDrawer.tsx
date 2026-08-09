@@ -3,6 +3,7 @@ import { X, Save, Database, Code2, Wand2, Loader2, Zap, Clock, Webhook } from "l
 import { motion, AnimatePresence } from "framer-motion";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { convexHttpActionsUrl } from "@/src/lib/convexHttpActionsUrl";
 import type {
   WorkflowActionConfig,
   WorkflowApprovalConfig,
@@ -64,6 +65,7 @@ type ConfigDrawerProps = {
 const defaultActionConfig: WorkflowActionConfig = { method: "GET", url: "", headers: [], body: "" };
 const defaultDbConfig: WorkflowDatabaseConfig = { operation: "INSERT", tableName: "", docId: "" };
 const defaultLogicConfig: WorkflowLogicConfig = { rules: [], fallbackBranch: "" };
+const WEBHOOK_ORIGIN_PLACEHOLDER = "https://[YOUR_CONVEX_SITE_URL]";
 
 type WorkflowDbSelectIndexOption = {
   indexName: string;
@@ -180,6 +182,12 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
   const [isGenerating, setIsGenerating] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const generateConfig = useAction(api.ai.generateNodeConfig);
+  const webhookOrigin = convexHttpActionsUrl({
+    CONVEX_SITE_URL: process.env.CONVEX_SITE_URL,
+    NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
+  }) || WEBHOOK_ORIGIN_PLACEHOLDER;
+  const workflowId = typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : '[WORKFLOW_ID]';
+  const webhookEndpoint = `${webhookOrigin}/api/webhooks/workflow?workflowId=${workflowId}`;
 
   const updateDbConfig = (updates: Partial<WorkflowDatabaseConfig>) => {
     setFormData((current) => {
@@ -399,7 +407,7 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                      <p className="text-[11px] text-muted mb-2 leading-relaxed">Send a POST request to this endpoint to fire the workflow. The JSON body will be passed as the initial workflow payload.</p>
                      <div className="flex items-center gap-2 p-3 bg-background border border-border-dim rounded-[12px]">
                        <code className="text-[10px] text-brand break-all whitespace-normal block">
-                          {`${process.env.NEXT_PUBLIC_CONVEX_URL?.replace('.cloud', '.site') || 'https://[YOUR_CONVEX_SITE_URL]'}/api/webhooks/workflow?workflowId=${typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : '[WORKFLOW_ID]'}`}
+                          {webhookEndpoint}
                        </code>
                      </div>
                    </motion.div>

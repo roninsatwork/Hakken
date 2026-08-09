@@ -23,7 +23,7 @@ describe("convexHttpActionsUrl", () => {
   test("prefers the configured actions origin over any derivation", () => {
     expect(
       convexHttpActionsUrl({
-        NEXT_PUBLIC_CONVEX_SITE_URL: "https://sonae-auth.ronins.co.uk",
+        CONVEX_SITE_URL: "https://sonae-auth.ronins.co.uk",
         NEXT_PUBLIC_CONVEX_URL: "https://shiny-alligator-583.convex.cloud",
       })
     ).toBe("https://sonae-auth.ronins.co.uk");
@@ -31,12 +31,12 @@ describe("convexHttpActionsUrl", () => {
 
   test("trims a trailing slash so callers can append a path", () => {
     expect(
-      convexHttpActionsUrl({ NEXT_PUBLIC_CONVEX_SITE_URL: "https://sonae-auth.ronins.co.uk/" })
+      convexHttpActionsUrl({ CONVEX_SITE_URL: "https://sonae-auth.ronins.co.uk/" })
     ).toBe("https://sonae-auth.ronins.co.uk");
   });
 
   test("returns null when nothing is configured", () => {
     expect(convexHttpActionsUrl({})).toBeNull();
-    expect(convexHttpActionsUrl({ NEXT_PUBLIC_CONVEX_SITE_URL: "   " })).toBeNull();
+    expect(convexHttpActionsUrl({ CONVEX_SITE_URL: "   " })).toBeNull();
   });
 });

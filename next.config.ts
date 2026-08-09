@@ -4,6 +4,9 @@ import { createSecureHeaders } from 'next-secure-headers';
 import path from 'node:path';
 
 const nextConfig: NextConfig = {
+  env: {
+    CONVEX_SITE_URL: process.env.CONVEX_SITE_URL,
+  },
   // Keep physical-device capture sessions on the local development host connected to
   // Turbopack/HMR. Override this when the Mac's LAN address changes; production does
   // not use this development-only origin allow-list.

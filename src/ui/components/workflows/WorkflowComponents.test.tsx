@@ -6,6 +6,7 @@ import { getFunctionName } from "convex/server";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AgentEditorModal } from "./AgentEditorModal";
 import { AgentNode } from "./AgentNode";
+import { ConfigDrawer } from "./ConfigDrawer";
 import { GenericNode } from "./GenericNode";
 import { WorkflowSidebar } from "./WorkflowSidebar";
 
@@ -296,6 +297,42 @@ describe("workflow shared components", () => {
     expect(screen.getByText("UPDATE")).toBeInTheDocument();
     expect(screen.getByText("leads")).toBeInTheDocument();
     expect(screen.getByText("result")).toBeInTheDocument();
+  });
+
+  it("renders workflow webhook endpoints from the configured Convex HTTP actions origin", async () => {
+    const previousApiUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+    const previousSiteUrl = process.env.CONVEX_SITE_URL;
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://sonae-db.ronins.co.uk";
+    process.env.CONVEX_SITE_URL = "https://sonae-auth.ronins.co.uk";
+    window.history.pushState({}, "", "/admin/workflows/workflow_123");
+
+    try {
+      render(
+        <ConfigDrawer
+          node={{
+            id: "triggerNode-1",
+            type: "triggerNode",
+            position: { x: 0, y: 0 },
+            data: {
+              label: "Webhook Trigger",
+              _triggerType: "WEBHOOK",
+            },
+          }}
+          allNodes={[]}
+          edges={[]}
+          onClose={vi.fn()}
+          onUpdateNode={vi.fn()}
+        />
+      );
+
+      expect(await screen.findByText(
+        "https://sonae-auth.ronins.co.uk/api/webhooks/workflow?workflowId=workflow_123"
+      )).toBeInTheDocument();
+      expect(screen.queryByText(/sonae-db\.ronins\.co\.uk\/api\/webhooks/)).not.toBeInTheDocument();
+    } finally {
+      process.env.NEXT_PUBLIC_CONVEX_URL = previousApiUrl;
+      process.env.CONVEX_SITE_URL = previousSiteUrl;
+    }
   });
 
   it("renders the node library, supports drag metadata, and closes", () => {
