@@ -6,9 +6,7 @@ import { Type } from "@google/genai";
 import { internal } from "./_generated/api";
 import { requireActionAdmin, requireActionUser } from "./actionAuth";
 import {
-  createVertexEmbeddingClient,
   createVertexGenAIClient,
-  embedVertexContentWithRetry,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
@@ -24,6 +22,7 @@ import {
   selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
 import { evaluateAssistantSafety } from "./aiSafetyPolicy";
+import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { adminAction, tenantAction } from "./tenantFunctions";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
@@ -210,7 +209,6 @@ export const generateSonaeResponse = internalAction({
 
     // Embeddings only, and pinned to the region that serves the embedding
     // model. Generation in this handler goes through the provider registry.
-    const embeddingAi = createVertexEmbeddingClient();
     
     try {
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
@@ -288,39 +286,35 @@ export const generateSonaeResponse = internalAction({
         let retrievedChunkIds: string[] = [];
         
         try {
-            const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+            const queryVector = await embedRetrievalQuery(ctx, {
+                query: args.content,
                 companyId: thread?.companyId,
-            });
-            const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "assistant RAG search");
-            const userEmbeddingResp = await embedVertexContentWithRetry(embeddingAi, {
-                model: embeddingProviderModelId,
-                contents: args.content
-            }, {
                 operation: "assistantRagEmbedding",
             });
-            
-            const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
-            
-            if (queryVector && queryVector.length === embeddingModel.embeddingDimensions) {
-                // Execute multi-tier RAG search
+
+            if (queryVector) {
+                // Multi-tier hybrid search (vector + keyword, fused per scope).
                 const [companyChunks, globalChunks, threadChunks] = await Promise.all([
-                    thread?.companyId 
-                      ? ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                          vector: queryVector as number[],
+                    thread?.companyId
+                      ? searchKnowledgeScope(ctx, {
+                          queryVector,
+                          queryText: args.content,
+                          scope: { kind: "company", companyId: thread.companyId },
                           limit: 50,
-                          filter: (q) => q.eq("companyId", thread.companyId!)
-                      })
+                        })
                       : Promise.resolve([]),
-                    ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                        vector: queryVector as number[],
+                    searchKnowledgeScope(ctx, {
+                        queryVector,
+                        queryText: args.content,
+                        scope: { kind: "global" },
                         limit: 50,
-                        filter: (q) => q.eq("isGlobal", true)
                     }),
-                    ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                        vector: queryVector as number[],
+                    searchKnowledgeScope(ctx, {
+                        queryVector,
+                        queryText: args.content,
+                        scope: { kind: "thread", threadId: args.threadId },
                         limit: 50,
-                        filter: (q) => q.eq("threadId", args.threadId)
-                    })
+                    }),
                 ]);
                 
                 const allChunks = rankAssistantKnowledgeMatches({

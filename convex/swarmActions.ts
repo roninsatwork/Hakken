@@ -5,11 +5,10 @@ import { v } from "convex/values";
 import type { GenerateContentConfig } from "@google/genai";
 import { internal } from "./_generated/api";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import {
-  createVertexEmbeddingClient,
   createVertexGenAIClient,
-  embedVertexContentWithRetry,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 
@@ -90,31 +89,25 @@ export const executeSwarmObjective = internalAction({
 
        try {
            if (agent.name.includes("Architect")) {
-               const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+               const queryVector = await embedRetrievalQuery(ctx, {
+                 query: args.content,
                  companyId: tenantContext.companyId ?? undefined,
-               });
-               const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "swarm RAG search");
-               // Its own client: this handler's `ai` generates as well, and the
-               // embedding model is served from a different region than the
-               // generation models.
-               const { embeddings } = await embedVertexContentWithRetry(createVertexEmbeddingClient(), {
-                 model: embeddingProviderModelId,
-                 contents: args.content,
-               }, {
                  operation: "swarmRagEmbedding",
                });
-               
-               if (embeddings && embeddings.length > 0 && embeddings[0].values?.length === embeddingModel.embeddingDimensions) {
-                 const results = tenantContext.companyId
-                   ? await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                       vector: embeddings[0].values as number[],
-                       limit: 50,
-                       filter: (q) => q.eq("companyId", tenantContext.companyId),
-                     })
-                   : await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                       vector: embeddings[0].values as number[],
-                       limit: 50,
-                     });
+
+               if (queryVector) {
+                 // A swarm without a company reads global knowledge only. The
+                 // old fallback here searched with no filter at all, which
+                 // would have read every tenant's chunks; the closed scope
+                 // type makes that unfiltered search inexpressible now.
+                 const results = await searchKnowledgeScope(ctx, {
+                   queryVector,
+                   queryText: args.content,
+                   scope: tenantContext.companyId
+                     ? { kind: "company", companyId: tenantContext.companyId }
+                     : { kind: "global" },
+                   limit: 50,
+                 });
                  let ragContext = "";
                  for (const res of results) {
                    const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });

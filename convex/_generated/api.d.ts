@@ -120,6 +120,8 @@ import type * as knowledge from "../knowledge.js";
 import type * as knowledgeActions from "../knowledgeActions.js";
 import type * as knowledgeReembed from "../knowledgeReembed.js";
 import type * as knowledgeReembedActions from "../knowledgeReembedActions.js";
+import type * as knowledgeRetrieval from "../knowledgeRetrieval.js";
+import type * as knowledgeRetrievalService from "../knowledgeRetrievalService.js";
 import type * as knowledgeService from "../knowledgeService.js";
 import type * as localDemoSeed from "../localDemoSeed.js";
 import type * as localTestAuth from "../localTestAuth.js";
@@ -331,6 +333,8 @@ declare const fullApi: ApiFromModules<{
   knowledgeActions: typeof knowledgeActions;
   knowledgeReembed: typeof knowledgeReembed;
   knowledgeReembedActions: typeof knowledgeReembedActions;
+  knowledgeRetrieval: typeof knowledgeRetrieval;
+  knowledgeRetrievalService: typeof knowledgeRetrievalService;
   knowledgeService: typeof knowledgeService;
   localDemoSeed: typeof localDemoSeed;
   localTestAuth: typeof localTestAuth;

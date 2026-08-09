@@ -1711,6 +1711,14 @@ export default defineSchema({
     dimensions: 768, // Current text embedding provider uses 768-length vectors
     filterFields: ["companyId", "agentId", "documentId", "isGlobal", "threadId"],
   })
+    // The keyword half of hybrid retrieval: exact names and codes that are
+    // poor embedding neighbours are found here and fused with the vector
+    // ranking (see knowledgeRetrievalService.ts). Filter fields mirror the
+    // vector index so both halves can express the same tenant scoping.
+    .searchIndex("search_text", {
+      searchField: "text",
+      filterFields: ["companyId", "agentId", "threadId", "isGlobal"],
+    })
     .index("by_document", ["documentId"])
     // Which model embedded a chunk, so a re-embed after a model change is
     // countable. Without it, "how many chunks are still on the old model" meant

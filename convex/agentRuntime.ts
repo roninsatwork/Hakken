@@ -27,13 +27,12 @@ import {
 import { buildAgentSystemInstruction, buildUntrustedKnowledgeContext } from "./aiPromptAssembly";
 import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 import {
-  createVertexEmbeddingClient,
   createVertexGenAIClient,
-  embedVertexContentWithRetry,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { shouldFlushStreamedText } from "./streamingService";
+import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { calculateModelCostGBP as calculateCostGBP } from "./aiCostService";
 import {
   EXPLICIT_CACHE_TTL_SECONDS,
@@ -617,7 +616,6 @@ export const runAgentObjective = internalAction({
     }
 
     // Embeddings only, and pinned to the region that serves the embedding model.
-    const embeddingAi = createVertexEmbeddingClient();
 
     try {
         execution = await buildLoopExecutionContext(ctx, {
@@ -751,24 +749,19 @@ export const runAgentObjective = internalAction({
         // --- RAG VECTOR SEARCH PIPELINE (Agent Isolated) ---
         let ragContext = "";
         try {
-            const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+            const queryVector = await embedRetrievalQuery(ctx, {
+                query: args.content,
                 companyId: owner.companyId,
-            });
-            const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "agent RAG search");
-            const userEmbeddingResp = await embedVertexContentWithRetry(embeddingAi, {
-                model: embeddingProviderModelId,
-                contents: args.content
-            }, {
                 operation: "agentRagEmbedding",
             });
-            
-            const queryVector = userEmbeddingResp.embeddings?.[0]?.values;
-            
-            if (queryVector && queryVector.length === embeddingModel.embeddingDimensions) {
-                const vectorMatches = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                    vector: queryVector as number[],
+
+            if (queryVector) {
+                // Hybrid (vector + keyword) search of the agent's own knowledge.
+                const vectorMatches = await searchKnowledgeScope(ctx, {
+                    queryVector,
+                    queryText: args.content,
+                    scope: { kind: "agent", agentId: args.agentId },
                     limit: 100, // Matching the maximum RAG boundary limit
-                    filter: (q) => q.eq("agentId", args.agentId)
                 });
                 
                 if (vectorMatches.length > 0) {

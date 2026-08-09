@@ -1456,3 +1456,91 @@ describe("bulk file ingestion queue", () => {
     expect(second?.documentId).toBe(newerId);
   });
 });
+
+/**
+ * The keyword half of hybrid retrieval (improvement plan, Phase 1).
+ *
+ * The vector index cannot run inside convex-test, so what is provable here is
+ * the half similarity cannot do — an exact term found by text search — plus
+ * the property the closed scope type exists for: every search is fenced to
+ * one scope, and no scope reads another tenant's chunks.
+ */
+describe("hybrid retrieval: keyword search over knowledge chunks", () => {
+  async function seedChunks(t: ReturnType<typeof convexTest>) {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+      const otherCompanyId = await ctx.db.insert("companies", { name: "Rival", createdAt: 1 });
+      const documentId = await ctx.db.insert("knowledgeDocuments", {
+        title: "catalogue.md",
+        status: "ready",
+        format: "text/markdown",
+        createdAt: 1,
+      });
+      const embedding = new Array(768).fill(0);
+
+      const mine = await ctx.db.insert("knowledgeChunks", {
+        documentId,
+        companyId,
+        isGlobal: false,
+        text: "Product SO-4417 pairs with the coastal range.",
+        embedding,
+      });
+      await ctx.db.insert("knowledgeChunks", {
+        documentId,
+        companyId: otherCompanyId,
+        isGlobal: false,
+        text: "Rival's own SO-4417 notes, never visible to Acme.",
+        embedding,
+      });
+      const globalChunk = await ctx.db.insert("knowledgeChunks", {
+        documentId,
+        isGlobal: true,
+        text: "Platform-wide guidance mentioning SO-4417 for everyone.",
+        embedding,
+      });
+
+      return { companyId, otherCompanyId, mine, globalChunk };
+    });
+  }
+
+  test("an exact code is found by keyword search within the caller's scope", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, mine } = await seedChunks(t);
+
+    const results = await t.query(internal.knowledge.searchChunksByTextInternal, {
+      query: "SO-4417",
+      limit: 10,
+      scope: { kind: "company", companyId },
+    });
+
+    expect(results.map((r) => r._id)).toEqual([mine]);
+  });
+
+  test("a company scope never returns another tenant's or global chunks", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, mine } = await seedChunks(t);
+
+    const results = await t.query(internal.knowledge.searchChunksByTextInternal, {
+      query: "SO-4417",
+      limit: 10,
+      scope: { kind: "company", companyId },
+    });
+
+    // All three seeded chunks contain the term; only the caller's own may return.
+    expect(results).toHaveLength(1);
+    expect(results[0]._id).toBe(mine);
+  });
+
+  test("the global scope returns only global chunks", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { globalChunk } = await seedChunks(t);
+
+    const results = await t.query(internal.knowledge.searchChunksByTextInternal, {
+      query: "SO-4417",
+      limit: 10,
+      scope: { kind: "global" },
+    });
+
+    expect(results.map((r) => r._id)).toEqual([globalChunk]);
+  });
+});

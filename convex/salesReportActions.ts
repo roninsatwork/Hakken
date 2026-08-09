@@ -4,8 +4,7 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
-import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
-import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import {
   buildReportQueryText,
   buildSalesReportGroundingContext,
@@ -89,24 +88,19 @@ export const generateReport = internalAction({
 
         const knowledgeChunks: string[] = [];
         try {
-            const embeddingModel = await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {
+            const queryVector = await embedRetrievalQuery(ctx, {
+                query: queryText,
                 companyId: args.companyId,
-            });
-            const embeddingProviderModelId = getGoogleVertexProviderModelId(embeddingModel, "sales report RAG search");
-            const embeddingAi = createVertexEmbeddingClient();
-            const embeddingResp = await embedVertexContentWithRetry(embeddingAi, {
-                model: embeddingProviderModelId,
-                contents: queryText,
-            }, {
                 operation: "salesReportRagEmbedding",
             });
-            const queryVector = embeddingResp.embeddings?.[0]?.values;
 
-            if (queryVector && queryVector.length === embeddingModel.embeddingDimensions) {
-                const vectorMatches = await ctx.vectorSearch("knowledgeChunks", "by_embedding", {
-                    vector: queryVector as number[],
+            if (queryVector) {
+                // Hybrid (vector + keyword) search of the agent's knowledge.
+                const vectorMatches = await searchKnowledgeScope(ctx, {
+                    queryVector,
+                    queryText,
+                    scope: { kind: "agent", agentId: args.agentId },
                     limit: 50,
-                    filter: (q) => q.eq("agentId", args.agentId),
                 });
 
                 let chunkTextLength = 0;

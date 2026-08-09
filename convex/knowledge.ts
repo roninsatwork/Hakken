@@ -1394,6 +1394,49 @@ export const getChunkInternal = internalQuery({
   }
 });
 
+/**
+ * The keyword half of hybrid retrieval.
+ *
+ * Callers pass exactly one scope; the scope IS the tenancy boundary, so it is
+ * required rather than optional — an unscoped keyword search across every
+ * tenant's chunks must be inexpressible, matching the closed scope type in
+ * `knowledgeRetrievalService.ts`. Returns ids best-first; the caller fuses
+ * them with the vector ranking, so text and embeddings never leave here.
+ */
+export const searchChunksByTextInternal = internalQuery({
+  args: {
+    query: v.string(),
+    limit: v.number(),
+    scope: v.union(
+      v.object({ kind: v.literal("company"), companyId: v.id("companies") }),
+      v.object({ kind: v.literal("agent"), agentId: v.id("agents") }),
+      v.object({ kind: v.literal("thread"), threadId: v.id("threads") }),
+      v.object({ kind: v.literal("global") }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const scope = args.scope;
+    const matches = await ctx.db
+      .query("knowledgeChunks")
+      .withSearchIndex("search_text", (q) => {
+        const search = q.search("text", args.query);
+        switch (scope.kind) {
+          case "company":
+            return search.eq("companyId", scope.companyId);
+          case "agent":
+            return search.eq("agentId", scope.agentId);
+          case "thread":
+            return search.eq("threadId", scope.threadId);
+          case "global":
+            return search.eq("isGlobal", true);
+        }
+      })
+      .take(Math.min(Math.max(args.limit, 1), 100));
+
+    return matches.map((chunk) => ({ _id: chunk._id }));
+  },
+});
+
 export const saveChunksInternal = internalMutation({
   args: {
       documentId: v.id("knowledgeDocuments"),
