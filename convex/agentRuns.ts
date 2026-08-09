@@ -615,6 +615,9 @@ export const getPageForAgent = adminQuery({
           objective: run.objective,
           status: run.status,
           triggerType: run.triggerType,
+          // A drill, not traffic — the list marks it so nobody reads a
+          // rehearsal as a customer interaction.
+          isRehearsal: run.isRehearsal === true,
           startedAt: run.startedAt,
           completedAt: run.completedAt,
           costGBP: run.costGBP,

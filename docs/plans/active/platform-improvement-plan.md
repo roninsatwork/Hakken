@@ -156,9 +156,19 @@ byte-for-byte unchanged.
   drill transactions carry `isRehearsal`, so interaction analytics can tell a
   drill from a customer.
 
-**Still to do (UI, with Anthony watching):** the "Rehearse" button on the eval
-screen, a drill badge on the run screens, and analytics dashboards actually
-filtering on the transaction flag.
+**UI — done 2026-08-09, verified in Anthony's browser:** the "Rehearse"
+button sits beside "Run this check" on the fixture page (seen live on the
+Rightmove Agent fixture; not pressed — a rehearsal is a real, paid model
+run, and starting one is Anthony's call). Drill badges on the runs list and
+the run detail drawer — text-labelled, never colour-only. The badges render
+from the run's `isRehearsal` flag; no drill exists in dev data yet, so their
+first live appearance comes with the first real rehearsal.
+
+**Deliberately left:** analytics dashboards filtering drill transactions out
+of traffic counts. The flag is on every drill transaction already; applying
+it changes what the charts mean (cost keeps drills, traffic drops them), so
+the filtering lands when Anthony can look at the charts and agree with what
+they say.
 
 **What:** today's readiness checks validate configuration and grade prose
 answers, but never run the agent through its actual loop with tools. Add a

@@ -499,7 +499,16 @@ export default function AgentRunsPage() {
 
                   <td className="px-4 py-3 align-top text-[12px] text-secondary whitespace-nowrap">
                     {formatRelativeTime(run.startedAt, now)}
-                    <span className="block text-[11px] text-muted">{describeTrigger(run.triggerType)}</span>
+                    <span className="block text-[11px] text-muted">
+                      {describeTrigger(run.triggerType)}
+                      {run.isRehearsal && (
+                        // Text, not colour: a drill must be readable as a drill
+                        // by everyone, on every screen.
+                        <span className="ml-1.5 rounded-[4px] border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
+                          Rehearsal
+                        </span>
+                      )}
+                    </span>
                   </td>
 
                   <td className="px-4 py-3 align-top text-right text-[12px] text-secondary tabular-nums whitespace-nowrap">
@@ -689,6 +698,11 @@ export default function AgentRunsPage() {
                       {runDetail.run.status.replace("_", " ")}
                     </span>
                     <span className="text-[11px] font-mono text-muted">{runDetail.run.triggerType}</span>
+                    {runDetail.run.isRehearsal && (
+                      <span className="rounded-[4px] border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
+                        Rehearsal — writes recorded, not performed
+                      </span>
+                    )}
                     <span className="text-[11px] font-mono text-muted">{formatDateTime(runDetail.run.startedAt)}</span>
                     {runDetail.run.completedAt && (
                       <span className="text-[11px] font-mono text-muted">

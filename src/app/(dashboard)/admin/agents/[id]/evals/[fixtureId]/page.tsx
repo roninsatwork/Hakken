@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ClipboardCheck, Loader2, Play, XCircle } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, FlaskConical, Loader2, Play, XCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDateTime } from "@/src/lib/dates";
@@ -53,7 +53,9 @@ export default function AgentCheckDetailPage() {
 
   const detail = useQuery(api.agentEvalFixtures.getCheckDetail, { fixtureId });
   const runSmokeEval = useMutation(api.agentEvalFixtures.runSmokeEval);
+  const runRehearsalEval = useMutation(api.agentEvalFixtures.runRehearsalEval);
   const action = useAdminAction({ scope: "admin-agent-check-detail-run" });
+  const rehearseAction = useAdminAction({ scope: "admin-agent-check-detail-rehearse" });
 
   if (detail === undefined) {
     return (
@@ -89,18 +91,35 @@ export default function AgentCheckDetailPage() {
           {latest && <span className="text-[12px] text-secondary">Last run {formatDateTime(latest.completedAt)}</span>}
           {mustPass && <span className="text-[12px] text-secondary">Must pass before going live</span>}
         </div>
-        <button
-          type="button"
-          onClick={() => action.run(
-            () => runSmokeEval({ agentId, fixtureId, gradingMode: "MODEL_GRADED" }),
-            { fallbackMessage: "The check could not be run." },
-          )}
-          disabled={action.isBusy()}
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
-        >
-          {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          Run this check
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* A rehearsal runs the agent for real but records its writes instead
+              of performing them, then grades what it did. The safe way to ask
+              "would it behave?" against live data. */}
+          <button
+            type="button"
+            onClick={() => rehearseAction.run(
+              () => runRehearsalEval({ agentId, fixtureId }),
+              { fallbackMessage: "The rehearsal could not be started." },
+            )}
+            disabled={rehearseAction.isBusy() || action.isBusy()}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim bg-sidebar/50 px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-sidebar disabled:opacity-50"
+          >
+            {rehearseAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+            Rehearse
+          </button>
+          <button
+            type="button"
+            onClick={() => action.run(
+              () => runSmokeEval({ agentId, fixtureId, gradingMode: "MODEL_GRADED" }),
+              { fallbackMessage: "The check could not be run." },
+            )}
+            disabled={action.isBusy() || rehearseAction.isBusy()}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+          >
+            {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            Run this check
+          </button>
+        </div>
       </div>
 
       <section className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
