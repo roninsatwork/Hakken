@@ -444,3 +444,99 @@ describe("Ask Sonae safety generation smoke tests", () => {
         });
     });
 });
+
+/**
+ * Phase 3 of the improvement plan: the assistant path streams.
+ *
+ * `streamStartedAt` is only ever set by startStreamingAssistantMessage, so its
+ * presence on the stored row is the database-visible proof the reply arrived
+ * through the streamed path (start + finish = more than one write) rather than
+ * the single save.
+ */
+describe("assistant reply streaming", () => {
+    async function seedThread(t: ReturnType<typeof convexTest>) {
+        return await t.run(async (ctx) => {
+            const userId = await ctx.db.insert("users", {
+                email: "stream@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            });
+            return await ctx.db.insert("threads", {
+                userId,
+                title: "Streaming Test",
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
+        });
+    }
+
+    test("a long reply lands via the streamed row, tokens intact", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await seedThread(t);
+
+        const fragmentOne = "word ".repeat(30); // 150 chars — crosses the flush threshold
+        const fragmentTwo = "and then the rest of the answer.";
+        generateTextWithResolvedModelMock.mockImplementation(async (request: { onText?: (f: string) => Promise<void> }) => {
+            await request.onText?.(fragmentOne);
+            await request.onText?.(fragmentTwo);
+            return { text: fragmentOne + fragmentTwo, inputTokens: 21, outputTokens: 34 };
+        });
+
+        await t.action(internal.ai.generateSonaeResponse, { threadId, content: "Tell me everything." });
+
+        const messages = await t.run(async (ctx) =>
+            ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()
+        );
+        expect(messages).toHaveLength(1);
+        expect(messages[0].streamStartedAt).toBeDefined();
+        expect(messages[0].isStreaming).toBe(false);
+        expect(messages[0].content).toBe(fragmentOne + fragmentTwo);
+        // Accounting parity: a streamed reply carries the same usage a
+        // single-write reply would.
+        expect(messages[0].inputTokens).toBe(21);
+        expect(messages[0].outputTokens).toBe(34);
+    });
+
+    test("a provider that never streams keeps the single-write path", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await seedThread(t);
+
+        generateTextWithResolvedModelMock.mockResolvedValue({
+            text: "Short and unstreamed.",
+            inputTokens: 5,
+            outputTokens: 4,
+        });
+
+        await t.action(internal.ai.generateSonaeResponse, { threadId, content: "Quick one." });
+
+        const messages = await t.run(async (ctx) =>
+            ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()
+        );
+        expect(messages).toHaveLength(1);
+        expect(messages[0].streamStartedAt).toBeUndefined();
+        expect(messages[0].content).toBe("Short and unstreamed.");
+    });
+
+    test("a stream the provider kills mid-answer is closed, not left with a caret", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await seedThread(t);
+
+        const partial = "the answer was going well ".repeat(6); // past the threshold, so a row exists
+        generateTextWithResolvedModelMock.mockImplementation(async (request: { onText?: (f: string) => Promise<void> }) => {
+            await request.onText?.(partial);
+            throw new Error("503 Service Unavailable");
+        });
+
+        await t.action(internal.ai.generateSonaeResponse, { threadId, content: "Doomed question." });
+
+        const messages = await t.run(async (ctx) =>
+            ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()
+        );
+        // One message, not a stalled streamed row plus a separate error message.
+        expect(messages).toHaveLength(1);
+        expect(messages[0].isStreaming).toBe(false);
+        // The reader keeps what they already saw, told why it stopped.
+        expect(messages[0].content).toContain(partial.trim());
+        expect(messages[0].content).toContain("Sonae Core Offline");
+    });
+});

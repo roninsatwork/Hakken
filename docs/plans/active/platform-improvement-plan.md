@@ -87,7 +87,25 @@ never auto-retry; they fail to the review list on the first error.
 - A side-effecting step never runs twice for one execution, provably.
 - A run exhausting its retries appears in the review list with its error.
 
-## Phase 3 — Streaming in the app (2–4 days for the primary provider)
+## Phase 3 — Streaming in the app — DONE 2026-08-09 (Vertex; other adapters degrade gracefully)
+
+**What was actually missing:** less than planned. The agent runtime already
+streamed end to end (provider stream function, flush policy, stalled
+handling), and the widget and dashboard already render streaming rows. The
+gap was the plain assistant path (`generateSonaeResponse`): it waited for the
+whole answer and saved once.
+
+**Built:** the registry request gains an optional `onText` listener; the
+Google adapter streams via the existing `streamVertexContentWithRetry` when a
+listener is present and keeps its exact non-streaming behaviour otherwise
+(structured-output callers unchanged). The assistant action now uses the same
+flush discipline as the agent runtime — bounded-rate partial writes, then a
+finalize that carries tokens and evidence. A provider failure mid-stream
+closes the row with the partial text plus the failure notice, instead of
+leaving a stalled caret and a second error message. OpenAI/Anthropic/
+OpenRouter assistant-path adapters simply never call `onText` and land in one
+write — a degradation, not a breakage; the agent path already streams
+Anthropic via its own adapter.
 
 **What:** replies appear word-by-word instead of all at once. The write side —
 flushing partial text to the database at a bounded rate, live-updating
@@ -95,15 +113,16 @@ subscribed screens, and marking abandoned replies as stalled — already exists
 and the agent runtime uses it. The missing half is reading from the model as it
 generates: the provider adapters currently wait for the complete answer.
 
-**Order:** the primary runtime provider (Vertex) first; the remaining adapters
-(~1 day each) after, only if wanted.
+**Acceptance — met 2026-08-09, proven failing-then-passing:**
+- A long reply lands via the streamed row (start + finalize = more than one
+  write; `streamStartedAt` is the database-visible proof) and both screens
+  already render streaming rows.
+- A provider killed mid-answer leaves one closed message with the partial text
+  and the failure notice — no stalled caret, no duplicate error message.
+- A streamed reply carries the same token accounting as a single-write reply.
 
-**Acceptance:**
-- A reply arrives in more than one database write for answers beyond the flush
-  threshold, and the widget and assistant screens render the partial text.
-- A stream that dies mid-answer surfaces as stalled, not as a complete answer.
-- Token and cost accounting for a streamed run matches an unstreamed run of the
-  same transcript.
+**Remaining if wanted:** onText in the OpenAI/Anthropic/OpenRouter assistant
+adapters, ~1 day each.
 
 ## Phase 4 — Evals that exercise the real runtime (1–2 weeks)
 

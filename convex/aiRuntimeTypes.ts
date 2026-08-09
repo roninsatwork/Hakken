@@ -10,6 +10,13 @@ export type ResolvedAiModelConfig = {
 
 export type AiGenerationRequest = {
   model: ResolvedAiModelConfig;
+  /**
+   * Called with each text fragment as the model produces it, for word-by-word
+   * display. Optional twice over: callers that don't care omit it, and
+   * providers whose adapter has no streaming yet ignore it — the reply then
+   * arrives in one piece, which is a degradation, not a breakage.
+   */
+  onText?: (fragment: string) => Promise<void> | void;
   systemInstruction?: string;
   contents: AiContentPart[];
   temperature?: number;

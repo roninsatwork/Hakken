@@ -23,6 +23,7 @@ import {
 } from "./aiPromptAssembly";
 import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { shouldFlushStreamedText } from "./streamingService";
 import { adminAction, tenantAction } from "./tenantFunctions";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
@@ -209,7 +210,12 @@ export const generateSonaeResponse = internalAction({
 
     // Embeddings only, and pinned to the region that serves the embedding
     // model. Generation in this handler goes through the provider registry.
-    
+
+    // Above the try so the catch can close a stream the failure interrupted —
+    // a reply left marked as streaming shows a caret against an answer that is
+    // never coming.
+    const streamState = { text: "", flushedText: "", lastFlushAt: 0, messageId: undefined as Id<"messages"> | undefined };
+
     try {
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
         const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
@@ -401,30 +407,86 @@ User Prompt: ${args.content}`;
         // Push the main textual context
         payloadContents.push({ type: "text", text: combinedPrompt });
 
+        // --- STREAMED GENERATION ---
+        // The same flush discipline the agent runtime uses: accumulate text as
+        // the provider produces it, write the partial reply at a bounded rate
+        // (every subscribed client re-renders per write), and always finalize
+        // so no reply is left showing a caret. Providers whose adapter cannot
+        // stream simply never call onText, and the reply lands in one write at
+        // the end exactly as before.
+        const flushStream = async () => {
+            const pendingChars = streamState.text.length - streamState.flushedText.length;
+            const flushNow = Date.now();
+            if (!shouldFlushStreamedText({
+                pendingChars,
+                msSinceLastFlush: flushNow - streamState.lastFlushAt,
+                isFinal: false,
+            })) return;
+
+            if (streamState.messageId === undefined) {
+                streamState.messageId = await ctx.runMutation(internal.chat.startStreamingAssistantMessage, {
+                    threadId: args.threadId,
+                    content: streamState.text,
+                    modelUsed: modelConfig.modelId,
+                    providerKey: modelConfig.providerKey,
+                    providerModelId: modelConfig.providerModelId,
+                });
+            } else {
+                await ctx.runMutation(internal.chat.appendStreamingAssistantMessage, {
+                    messageId: streamState.messageId,
+                    content: streamState.text,
+                });
+            }
+            streamState.flushedText = streamState.text;
+            streamState.lastFlushAt = flushNow;
+        };
+
         const response = await generateTextWithResolvedModel({
             model: modelConfig,
             contents: payloadContents,
             systemInstruction: activeSystemInstruction,
             thinkingLevel: args.thinkingLevel,
+            onText: async (fragment) => {
+                streamState.text += fragment;
+                await flushStream();
+            },
         });
 
         const assistantReply = response.text || "I was unable to assemble a coherent analysis.";
-
-        // Write response back to DB via an internal mutation alongside the exact financial traces
-        const messageId = await ctx.runMutation(internal.chat.saveAssistantMessage, {
-            threadId: args.threadId,
-            content: assistantReply,
-            inputTokens: response.inputTokens,
-            outputTokens: response.outputTokens,
-            modelUsed: modelConfig.modelId,
-            providerKey: modelConfig.providerKey,
-            providerModelId: modelConfig.providerModelId,
-            companyMemoryEvidenceJson,
-            companyRuntimeEvidenceJson: buildCompanyRuntimeEvidence({
-                skillIds: (companySkills?.skills ?? []).map((skill) => skill.skillId),
-                sourceIds: retrievedChunkIds,
-            }),
+        const companyRuntimeEvidenceJson = buildCompanyRuntimeEvidence({
+            skillIds: (companySkills?.skills ?? []).map((skill) => skill.skillId),
+            sourceIds: retrievedChunkIds,
         });
+
+        // Finalize the streamed row, or fall back to the single write when no
+        // flush ever happened (short answer, or a non-streaming provider).
+        let messageId: Id<"messages">;
+        if (streamState.messageId !== undefined) {
+            await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+                messageId: streamState.messageId,
+                content: assistantReply,
+                inputTokens: response.inputTokens,
+                outputTokens: response.outputTokens,
+                modelUsed: modelConfig.modelId,
+                providerKey: modelConfig.providerKey,
+                providerModelId: modelConfig.providerModelId,
+                companyMemoryEvidenceJson,
+                companyRuntimeEvidenceJson,
+            });
+            messageId = streamState.messageId;
+        } else {
+            messageId = await ctx.runMutation(internal.chat.saveAssistantMessage, {
+                threadId: args.threadId,
+                content: assistantReply,
+                inputTokens: response.inputTokens,
+                outputTokens: response.outputTokens,
+                modelUsed: modelConfig.modelId,
+                providerKey: modelConfig.providerKey,
+                providerModelId: modelConfig.providerModelId,
+                companyMemoryEvidenceJson,
+                companyRuntimeEvidenceJson,
+            });
+        }
 
         // Both lists count as used: an always memory reached the model just as
         // surely as a looked-up one, and the screen's "uses" column would
@@ -445,11 +507,21 @@ User Prompt: ${args.content}`;
 
     } catch (error) {
         console.error("AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));
-        
-        await ctx.runMutation(internal.chat.saveAssistantMessage, {
-            threadId: args.threadId,
-            content: "Sonae Core Offline: An error occurred communicating with the selected AI provider. Please try again shortly."
-        });
+
+        const failureNotice = "Sonae Core Offline: An error occurred communicating with the selected AI provider. Please try again shortly.";
+        if (streamState.messageId !== undefined) {
+            // The partial answer stays visible — the reader already saw it —
+            // with the failure notice appended, and the caret stops.
+            await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
+                messageId: streamState.messageId,
+                content: `${streamState.text}\n\n${failureNotice}`,
+            });
+        } else {
+            await ctx.runMutation(internal.chat.saveAssistantMessage, {
+                threadId: args.threadId,
+                content: failureNotice,
+            });
+        }
     }
   },
 });

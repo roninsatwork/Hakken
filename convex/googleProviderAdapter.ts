@@ -4,7 +4,7 @@ import { ThinkingLevel } from "@google/genai";
 import type { GenerateContentConfig, Part } from "@google/genai";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { createVertexGenAIClient, generateVertexContentWithRetry } from "./vertexProviderService";
+import { createVertexGenAIClient, generateVertexContentWithRetry, streamVertexContentWithRetry } from "./vertexProviderService";
 
 function toGoogleParts(contents: AiGenerationRequest["contents"]): Part[] {
   return contents.map((part) => {
@@ -59,13 +59,23 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
         config.responseSchema = request.jsonSchema as GenerateContentConfig["responseSchema"];
       }
 
-      const response = await generateVertexContentWithRetry(ai, {
+      const params = {
         model: request.model.providerModelId,
         contents: toGoogleParts(request.contents),
         config,
-      }, {
-        operation: "generateText",
-      });
+      };
+
+      // With an onText listener the caller wants the words as they arrive;
+      // without one the non-streaming call keeps its exact existing behaviour
+      // (structured-output callers pass schemas, not listeners).
+      const response = request.onText
+        ? await streamVertexContentWithRetry(ai, params, {
+            operation: "generateText",
+            onText: request.onText,
+          })
+        : await generateVertexContentWithRetry(ai, params, {
+            operation: "generateText",
+          });
 
       return {
         text: response.text || "",
