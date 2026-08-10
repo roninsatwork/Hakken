@@ -1,5 +1,5 @@
 {
-  "note": "Files that hardcoded a z-index before src/ui/lib/layers.ts existed. Frozen 2026-08-01. This list may shrink, never grow — move the file onto LAYER instead of adding to it.",
+  "note": "Files that hardcoded a z-index before src/ui/lib/layers.ts existed. Frozen 2026-08-01. This list may shrink, never grow \u2014 move the file onto LAYER instead of adding to it.",
   "files": [
     "src/app/(dashboard)/admin/_components/AdminDetailLayout.tsx",
     "src/app/(dashboard)/admin/_components/AdminDetailTabs.tsx",
@@ -41,7 +41,6 @@
     "src/app/(dashboard)/app/assistant/_components/AssistantThinkingSelector.tsx",
     "src/app/(dashboard)/app/assistant/layout.tsx",
     "src/app/(dashboard)/app/assistant/page.tsx",
-    "src/app/(dashboard)/app/page.tsx",
     "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
     "src/app/(dashboard)/app/profile/page.tsx",
     "src/app/(dashboard)/app/properties/scraped-data/[id]/PropertyDescription.tsx",

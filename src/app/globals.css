@@ -89,6 +89,29 @@ h1 {
   font-size: var(--h1-size-override, 1.5rem) !important;
 }
 
+/* The product-story display face.
+   Mirrors `.ps-display` in the public site's own stylesheet so the two
+   surfaces that pitch to the same buyer speak in one voice. Bricolage is
+   loaded by the dashboard layout; the Inter fallback is what renders on any
+   route that does not load it, which degrades quietly rather than breaking. */
+.sonae-display {
+  font-family: var(--font-bricolage), var(--font-inter), ui-sans-serif, sans-serif;
+  font-weight: 640;
+  font-variation-settings: "opsz" 60;
+  letter-spacing: -0.035em;
+}
+
+/* h1 above forces its size with !important but honours the variable, which is
+   the same escape hatch `.ps-hero-h1` uses. */
+.sonae-hero-h1 {
+  --h1-size-override: clamp(30px, 3.5vw, 52px);
+  font-size: clamp(30px, 3.5vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
 /* Global Interactive Elements */
 button, 
 a, 
