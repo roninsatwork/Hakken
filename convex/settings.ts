@@ -1,26 +1,18 @@
-import { internalQuery, mutation, query } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import {
   publicQuery,
   superAdminMutation,
-  superAdminQuery,
 } from "./tenantFunctions";
 import {
-  buildWhiteLabelCustomDomainChecklist,
-  buildWhiteLabelHandoffSummary,
-  buildWhiteLabelPackagingChecklist,
   buildSettingsAuditMetadata,
   buildSettingsInsertRecord,
   buildSettingsPatch,
-  buildWhiteLabelReadiness,
   DEFAULT_SETTINGS,
-  getWhiteLabelModulePresets as getWhiteLabelModulePresetCatalog,
-  getWhiteLabelNavigationProfiles as getWhiteLabelNavigationProfileCatalog,
   isStorageLogoReference,
   mergeSettingsWithDefaults,
 } from "./settingsService";
-import { buildEmailBranding } from "./emailBrandingService";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 export const get = publicQuery({
@@ -62,13 +54,11 @@ export const update = superAdminMutation({
     emailSenderName: v.optional(v.string()),
     emailSenderAddress: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
-    fontFamily: v.optional(v.string()), // Deprecated
+    // fontFamily / fontSizeBase / subTextSizeGlobal / borderRadius retired
+    // 2026-08-10 — no longer writable; see the schema comment.
     headingFontFamily: v.optional(v.string()),
     bodyFontFamily: v.optional(v.string()),
-    fontSizeBase: v.optional(v.string()),
     headingSizeGlobal: v.optional(v.string()),
-    subTextSizeGlobal: v.optional(v.string()),
-    borderRadius: v.optional(v.string()),
 
     lightBg: v.optional(v.string()),
     lightFg: v.optional(v.string()),
@@ -79,7 +69,10 @@ export const update = superAdminMutation({
     lightMutedFg: v.optional(v.string()),
     lightSuccess: v.optional(v.string()),
     lightDestructive: v.optional(v.string()),
+    lightWarning: v.optional(v.string()),
+    lightInfo: v.optional(v.string()),
     lightRing: v.optional(v.string()),
+    lightSidebarBg: v.optional(v.string()),
 
     darkBg: v.optional(v.string()),
     darkFg: v.optional(v.string()),
@@ -90,7 +83,10 @@ export const update = superAdminMutation({
     darkMutedFg: v.optional(v.string()),
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
+    darkWarning: v.optional(v.string()),
+    darkInfo: v.optional(v.string()),
     darkRing: v.optional(v.string()),
+    darkSidebarBg: v.optional(v.string()),
     diagnosticRoutingEnabled: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
@@ -179,103 +175,6 @@ export const getEmailBranding = internalQuery({
       emailSenderName: settings?.emailSenderName,
       emailSenderAddress: settings?.emailSenderAddress,
     };
-  },
-});
-
-export const getWhiteLabelReadiness = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-
-    const settings = await ctx.db.query("systemSettings").first();
-    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
-    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
-      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
-        .find((widget) => widget.isActive);
-
-    return buildWhiteLabelReadiness({ settings, activeWidget });
-  },
-});
-
-export const getWhiteLabelModulePresets = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-    return getWhiteLabelModulePresetCatalog();
-  },
-});
-
-export const getWhiteLabelNavigationProfiles = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-    return getWhiteLabelNavigationProfileCatalog();
-  },
-});
-
-export const getWhiteLabelCustomDomainChecklist = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-
-    const settings = await ctx.db.query("systemSettings").first();
-    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
-    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
-      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
-        .find((widget) => widget.isActive);
-
-    return buildWhiteLabelCustomDomainChecklist({ settings, activeWidget });
-  },
-});
-
-export const getWhiteLabelHandoffSummary = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-
-    const settings = await ctx.db.query("systemSettings").first();
-    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
-    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
-      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
-        .find((widget) => widget.isActive);
-    const readiness = buildWhiteLabelReadiness({ settings, activeWidget });
-    const modulePresets = getWhiteLabelModulePresetCatalog();
-    const emailBranding = buildEmailBranding(settings);
-
-    return buildWhiteLabelHandoffSummary({
-      settings,
-      activeWidget,
-      readiness,
-      presets: modulePresets,
-      emailFromAddress: emailBranding.fromAddress,
-    });
-  },
-});
-
-export const getWhiteLabelPackagingChecklist = superAdminQuery({
-  args: {},
-  handler: async (ctx) => {
-
-    const settings = await ctx.db.query("systemSettings").first();
-    const activeWidgets = await ctx.db.query("widgets").withIndex("by_global_created", (q) => q.eq("isGlobal", true)).take(20);
-    const activeWidget = activeWidgets.find((widget) => widget.isActive) ??
-      (await ctx.db.query("widgets").withIndex("by_company_created").order("desc").take(50))
-        .find((widget) => widget.isActive);
-    const readiness = buildWhiteLabelReadiness({ settings, activeWidget });
-    const modulePresets = getWhiteLabelModulePresetCatalog();
-    const navigationProfiles = getWhiteLabelNavigationProfileCatalog();
-    const customDomainChecklist = buildWhiteLabelCustomDomainChecklist({ settings, activeWidget });
-    const emailBranding = buildEmailBranding(settings);
-    const handoffSummary = buildWhiteLabelHandoffSummary({
-      settings,
-      activeWidget,
-      readiness,
-      presets: modulePresets,
-      emailFromAddress: emailBranding.fromAddress,
-    });
-
-    return buildWhiteLabelPackagingChecklist({
-      handoffSummary,
-      readiness,
-      modulePresets,
-      navigationProfiles,
-      customDomainChecklist,
-    });
   },
 });
 

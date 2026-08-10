@@ -197,6 +197,7 @@ import type * as utils_inventoryRollupService from "../utils/inventoryRollupServ
 import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
 import type * as utils_memoryApplication from "../utils/memoryApplication.js";
 import type * as utils_memoryRetrieval from "../utils/memoryRetrieval.js";
+import type * as utils_messageEvidence from "../utils/messageEvidence.js";
 import type * as utils_pii from "../utils/pii.js";
 import type * as utils_salesDataModule from "../utils/salesDataModule.js";
 import type * as utils_security from "../utils/security.js";
@@ -416,6 +417,7 @@ declare const fullApi: ApiFromModules<{
   "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;
   "utils/memoryApplication": typeof utils_memoryApplication;
   "utils/memoryRetrieval": typeof utils_memoryRetrieval;
+  "utils/messageEvidence": typeof utils_messageEvidence;
   "utils/pii": typeof utils_pii;
   "utils/salesDataModule": typeof utils_salesDataModule;
   "utils/security": typeof utils_security;

@@ -13,7 +13,7 @@ type SwitchKey =
   | "outcomeWeightedRanking"
   | "endUserFeedback"
   | "retrievalPriors"
-  | "autoApplyLowRisk";
+  | "autonomousMemory";
 
 type SwitchState = Record<SwitchKey, boolean>;
 
@@ -48,10 +48,11 @@ const LEARNING_SWITCHES: Array<{ key: SwitchKey; label: string; sub: string }> =
 /**
  * The self-improvement switches from docs/plans/active/self-improvement-plan.md.
  *
- * The first four switches control learning that only reorders or proposes —
- * a person still approves every new memory. The autonomy switch is different
- * in kind, which is why it renders apart with its own warning: it is the one
- * setting on this screen that lets the AI believe something no one approved.
+ * The first four switches control learning that reorders or scores. The
+ * autonomy switch below them is different in kind — with it on, what the AI
+ * learns is saved to memory immediately, with no per-memory approval (owner
+ * decision, 2026-08-10). It renders apart with its own explanation because
+ * it is the one switch that changes who writes memory.
  */
 export function SelfImprovementSection() {
   const config = useQuery(api.selfImprovementConfig.getConfig, {});
@@ -113,18 +114,19 @@ export function SelfImprovementSection() {
       <div className="flex flex-col gap-3">
         {LEARNING_SWITCHES.map((entry) => renderToggle(entry.key, entry.label, entry.sub))}
 
-        <div className="mt-2 rounded-[16px] border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col gap-3">
+        <div className="mt-2 rounded-[16px] border border-warning/30 bg-warning/5 p-4 flex flex-col gap-3">
           <p className="text-[12px] text-secondary leading-relaxed">
-            The switch below is different from the ones above. With it on, the AI may
-            save certain low-risk facts to its own memory without anyone approving
-            them first — they are marked, reviewable, and expire after 30 days unless
-            confirmed, but they change answers from the moment they are saved. Leave
-            it off unless that trade has been decided deliberately.
+            The switch below is different from the ones above. With it on, what
+            the AI learns is saved to its memory straight away — nothing waits
+            for approval. Every self-saved memory is labelled &ldquo;Saved by the
+            AI&rdquo; on the Memory screens, is written to the audit trail, and
+            can be removed at any time. Off: suggestions queue for a person to
+            approve, as before.
           </p>
           {renderToggle(
-            "autoApplyLowRisk",
-            "Autonomous memory (low-risk facts only)",
-            "The AI saves LOW-risk facts and summaries itself, on probation, capped per day. Off: every memory waits for approval."
+            "autonomousMemory",
+            "Autonomous memory",
+            "The AI saves what it learns immediately, on its own. Off: every new memory waits for approval."
           )}
         </div>
 

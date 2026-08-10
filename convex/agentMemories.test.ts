@@ -304,6 +304,73 @@ describe("Agent Memories", () => {
     });
   });
 
+  test("a rehearsal run's outcome never reaches memory quality counters", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { agentId, companyId, adminId, drillRunId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Drill Co", createdAt: now });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Drilled Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const drillRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        userId: adminId,
+        triggerType: "CHAT",
+        objective: "Rehearse the weekly summary.",
+        status: "RUNNING",
+        isRehearsal: true,
+        startedAt: now,
+        updatedAt: now,
+      });
+      return { agentId, companyId, adminId, drillRunId };
+    });
+
+    const memoryId = await t.run(async (ctx) => seedAgentMemory(ctx, {
+      agentId,
+      companyId,
+      userId: adminId,
+      content: "Weekly summaries should include open blockers.",
+      createdBy: adminId,
+    }));
+
+    await t.mutation(internal.agentMemories.recordUsageInternal, {
+      runId: drillRunId,
+      agentId,
+      companyId,
+      queryText: "weekly summary blockers",
+      memories: [{ memoryId, score: 1.3 }],
+    });
+    // The drill "succeeds" — but its tool results were fabricated, so the
+    // success must not be counted as the memory's track record.
+    await t.mutation(internal.agentRuns.updateRunStatusInternal, {
+      runId: drillRunId,
+      status: "SUCCESS",
+      finalOutput: "Rehearsed.",
+    });
+
+    const state = await t.run(async (ctx) => ({
+      memory: await ctx.db.get(memoryId),
+      usage: await ctx.db
+        .query("agentMemoryUsage")
+        .withIndex("by_run", (q) => q.eq("runId", drillRunId))
+        .collect(),
+    }));
+    expect(state.memory?.successCount ?? 0).toBe(0);
+    expect(state.memory?.failureCount ?? 0).toBe(0);
+    expect(state.memory?.lastOutcomeAt).toBeUndefined();
+    // The consultation itself stays visible, but the outcome is never stamped.
+    expect(state.usage).toHaveLength(1);
+    expect(state.usage[0].outcome).toBe("OBSERVED");
+  });
+
   test("an Always memory reaches the agent even when the message shares no words with it", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

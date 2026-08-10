@@ -17,6 +17,10 @@ import type {
   MovementTrackingDebugState,
 } from "../../../_lib/movementTrackingCalibration";
 import { getMovementTrackingHealthSummary } from "../../../_lib/movementTrackingCalibration";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../../_lib/movementPalette";
 
 type MovementTrackingDebugOverlayProps = {
   calibration: MovementCalibration | null;
@@ -134,7 +138,7 @@ export default function MovementTrackingDebugOverlay({
 
   return (
     <aside
-      className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-y-auto rounded-2xl border border-[#a8d5ba]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}
+      className={`pointer-events-none absolute ${placementClass} top-28 z-20 max-h-[calc(100vh-9rem)] w-80 overflow-y-auto rounded-2xl border border-[${MOVEMENT_MINT}]/20 bg-black/75 p-4 text-xs text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}
       data-movement-avatar-expressions={JSON.stringify(debugState?.avatarExpressions ?? null)}
       data-movement-avatar-head={JSON.stringify(debugState?.avatarHead ?? null)}
       data-movement-avatar-hands={JSON.stringify(debugState?.avatarHands ?? null)}
@@ -149,7 +153,7 @@ export default function MovementTrackingDebugOverlay({
       data-movement-spine-drive={JSON.stringify(debugState?.spineDrive ?? null)}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="font-black uppercase tracking-[0.18em] text-[#a8d5ba]">{title}</div>
+        <div className={`font-black uppercase tracking-[0.18em] text-[${MOVEMENT_MINT}]`}>{title}</div>
         <div className={`rounded-full border px-2 py-1 font-mono text-[10px] ${healthToneClass}`}>
           {healthSummary.label}
         </div>
@@ -210,7 +214,7 @@ export default function MovementTrackingDebugOverlay({
       </div>
 
       <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-2 font-mono text-[11px] text-white/65">
-        <div className="mb-1 font-black uppercase tracking-[0.16em] text-[#a8d5ba]">
+        <div className={`mb-1 font-black uppercase tracking-[0.16em] text-[${MOVEMENT_MINT}]`}>
           Camera / Bounds
         </div>
         <div>
@@ -277,8 +281,8 @@ export default function MovementTrackingDebugOverlay({
       </div>
 
       {retarget ? (
-        <div className="mt-3 rounded-lg border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 font-mono text-[11px] text-white/70">
-          <div className="mb-2 font-black uppercase tracking-[0.16em] text-[#a8d5ba]">
+        <div className={`mt-3 rounded-lg border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-2 font-mono text-[11px] text-white/70`}>
+          <div className={`mb-2 font-black uppercase tracking-[0.16em] text-[${MOVEMENT_MINT}]`}>
             Retarget Metrics
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
@@ -301,8 +305,8 @@ export default function MovementTrackingDebugOverlay({
       ) : null}
 
       {motionFrameRef ? (
-        <div className="mt-3 rounded-lg border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 p-2 font-mono text-[11px] text-white/70">
-          <div className="mb-2 font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
+        <div className={`mt-3 rounded-lg border border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 p-2 font-mono text-[11px] text-white/70`}>
+          <div className={`mb-2 font-black uppercase tracking-[0.16em] text-[${MOVEMENT_SALMON}]`}>
             Motion Frame
           </div>
           {motionFrame ? (
@@ -399,8 +403,8 @@ export default function MovementTrackingDebugOverlay({
         </div>
       ) : null}
 
-      <div className="mt-3 rounded-lg border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 text-[11px] text-[#edf7f0]">
-        <div className="mb-1 font-black uppercase tracking-[0.16em] text-[#a8d5ba]">
+      <div className={`mt-3 rounded-lg border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-2 text-[11px] text-[#edf7f0]`}>
+        <div className={`mb-1 font-black uppercase tracking-[0.16em] text-[${MOVEMENT_MINT}]`}>
           Health
         </div>
         {healthSummary.warnings.map((warning) => (

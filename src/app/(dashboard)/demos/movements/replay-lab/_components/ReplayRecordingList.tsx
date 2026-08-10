@@ -7,6 +7,10 @@ import {
   getRecordingLabel,
 } from "../_lib/replayLabHelpers";
 import type { LoadedReplayRecording, ReplayLabRecording } from "../_lib/replayLabHelpers";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 type ReplayRecordingListProps = {
   activeRecordingId: Id<"movements"> | null;
@@ -64,7 +68,7 @@ export default function ReplayRecordingList({
               key={recording._id}
               className={`grid min-w-[230px] max-w-[250px] grid-cols-[auto_minmax(0,1fr)] gap-2 rounded-[8px] border p-2 transition-colors ${
                 selected
-                  ? "border-[#f6ccbe]/60 bg-[#f6ccbe]/10 text-foreground"
+                  ? `border-[${MOVEMENT_SALMON}]/60 bg-[${MOVEMENT_SALMON}]/10 text-foreground`
                   : "border-border-dim bg-background/50 text-secondary hover:border-border"
               }`}
             >
@@ -73,7 +77,7 @@ export default function ReplayRecordingList({
                 checked={included}
                 onChange={() => onToggleRecordingSelection(recording._id)}
                 aria-label={`Select recording ${recording.title}`}
-                className="mt-0.5 h-4 w-4 accent-[#f6ccbe]"
+                className={`mt-0.5 h-4 w-4 accent-[${MOVEMENT_SALMON}]`}
               />
               <button
                 type="button"
@@ -92,9 +96,9 @@ export default function ReplayRecordingList({
                   </span>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                     recordingAnalysis?.pass && countFailures(recordingAnalysis, "warning") === 0
-                      ? "bg-[#a8d5ba]/15 text-[#a8d5ba]"
+                      ? `bg-[${MOVEMENT_MINT}]/15 text-[${MOVEMENT_MINT}]`
                       : recordingAnalysis
-                        ? "bg-[#f6ccbe]/15 text-[#f6ccbe]"
+                        ? `bg-[${MOVEMENT_SALMON}]/15 text-[${MOVEMENT_SALMON}]`
                         : "bg-white/5 text-muted"
                   }`}
                   >

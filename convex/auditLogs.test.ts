@@ -1,7 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api, internal } from "./_generated/api";
-import { AUDIT_PURGE_ACTION } from "./auditLogService";
+import { api } from "./_generated/api";
 import schema from "./schema";
 
 describe("Audit log access controls", () => {
@@ -26,11 +25,10 @@ describe("Audit log access controls", () => {
       });
     });
 
-    await expect(userClient.query(api.auditLogs.getConfig)).resolves.toBeNull();
     await expect(userClient.query(api.auditLogs.getRecentLogs)).resolves.toEqual([]);
   });
 
-  test("super-admin users can update audit config and read recent logs", async () => {
+  test("super-admin users read recent logs with the actor named", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const superAdminId = await t.run(async (ctx) => {
@@ -43,26 +41,18 @@ describe("Audit log access controls", () => {
 
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
-    await superAdminClient.mutation(api.auditLogs.updateConfig, {
-      enabled: true,
-      retentionDays: 45,
-      dayOfMonth: 10,
-      hourOfDay: 3,
+    await t.run(async (ctx) => {
+      await ctx.db.insert("auditLogs", {
+        actorId: superAdminId,
+        actionType: "UPDATE_SYSTEM_PREFERENCES",
+        entityType: "systemConfig",
+        timestamp: Date.now(),
+      });
     });
-
-    const config = await superAdminClient.query(api.auditLogs.getConfig);
-    if (!config) {
-      throw new Error("Expected audit purge config for super admin");
-    }
-    expect(config.enabled).toBe(true);
-    expect(config.retentionDays).toBe(45);
-    expect(config.dayOfMonth).toBe(10);
-    expect(config.hourOfDay).toBe(3);
-    expect(config.nextRunTimestamp).toBeGreaterThan(0);
 
     const logs = await superAdminClient.query(api.auditLogs.getRecentLogs);
     expect(logs).toHaveLength(1);
-    expect(logs[0].actionType).toBe("UPDATE_AUDIT_PURGE_CONFIG");
+    expect(logs[0].actionType).toBe("UPDATE_SYSTEM_PREFERENCES");
     expect(logs[0].actorName).toBe("Admin User");
   });
 });
@@ -120,90 +110,6 @@ describe("audit trail tenancy", () => {
     );
 
     expect(await t.withIdentity({ subject: userId }).query(api.auditLogs.getRecentLogs, {})).toEqual([]);
-  });
-});
-
-/**
- * Retention removed the oldest entries and wrote nothing to say it had. A trail
- * that can be quietly shortened, with nothing recording the shortening, is the
- * one thing a review will not accept.
- *
- * See docs/plans/active/audit-trail-plan.md.
- */
-describe("a clear-out leaves a record of itself", () => {
-  const DAY_MS = 24 * 60 * 60 * 1000;
-
-  test("removes what is past retention and records that it did", async () => {
-    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
-
-    await t.run(async (ctx) => {
-      for (let index = 0; index < 3; index++) {
-        await ctx.db.insert("auditLogs", {
-          actionType: "TEST_ACTION",
-          entityType: "systemConfig",
-          timestamp: Date.now() - 90 * DAY_MS,
-        });
-      }
-      // Inside retention, and so untouched.
-      await ctx.db.insert("auditLogs", {
-        actionType: "RECENT_ACTION",
-        entityType: "systemConfig",
-        timestamp: Date.now(),
-      });
-    });
-
-    await t.mutation(internal.auditLogs.executePurge, { retentionDays: 30 });
-
-    const remaining = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
-    const actions = remaining.map((log) => log.actionType).sort();
-
-    expect(actions).toEqual([AUDIT_PURGE_ACTION, "RECENT_ACTION"]);
-
-    const summary = remaining.find((log) => log.actionType === AUDIT_PURGE_ACTION);
-    expect(JSON.parse(summary?.metadata ?? "{}")).toMatchObject({
-      recordsRemoved: 3,
-      keptFor: "30 days",
-    });
-    // Nobody did this. Naming whoever last edited the retention setting as the
-    // person who deleted the records would be a fiction.
-    expect(summary?.actorId).toBeUndefined();
-  });
-
-  test("its own records survive the next clear-out", async () => {
-    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
-
-    await t.run(async (ctx) => {
-      await ctx.db.insert("auditLogs", {
-        actionType: AUDIT_PURGE_ACTION,
-        entityType: "auditLogs",
-        entityId: "RETENTION",
-        timestamp: Date.now() - 400 * DAY_MS,
-      });
-      await ctx.db.insert("auditLogs", {
-        actionType: "TEST_ACTION",
-        entityType: "systemConfig",
-        timestamp: Date.now() - 90 * DAY_MS,
-      });
-    });
-
-    await t.mutation(internal.auditLogs.executePurge, { retentionDays: 30 });
-
-    const remaining = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
-
-    // The old summary is well past retention and still there. Two now: the one
-    // that survived, and the one this run wrote.
-    expect(remaining.filter((log) => log.actionType === AUDIT_PURGE_ACTION)).toHaveLength(2);
-    expect(remaining.some((log) => log.actionType === "TEST_ACTION")).toBe(false);
-  });
-
-  test("a run that removed nothing writes nothing", async () => {
-    // Otherwise the hourly cron buries the runs that did remove something.
-    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
-
-    await t.mutation(internal.auditLogs.executePurge, { retentionDays: 30 });
-
-    const remaining = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
-    expect(remaining).toEqual([]);
   });
 });
 

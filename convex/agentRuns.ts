@@ -2142,6 +2142,12 @@ export const updateRunStatusInternal = internalMutation({
       // runAfter(0) siblings, because the candidate pass reads reflections and
       // racing them would make it blind to the one thing a failed run has to
       // teach (self-improvement plan, Phase 1).
+      // Rehearsals end without teaching: their tool results were fabricated,
+      // so neither reflection nor the candidate pass should run. The grading
+      // half of a drill is scheduled by the eval flow, not from here.
+      if (existingRun.isRehearsal) {
+        return;
+      }
       if (args.status === "FAILED" || args.status === "CANCELLED") {
         await ctx.scheduler.runAfter(0, internal.agentRunReflections.createForRunInternal, {
           runId: args.runId,

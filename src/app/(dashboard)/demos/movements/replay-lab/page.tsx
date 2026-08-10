@@ -106,6 +106,13 @@ import {
   replayMotionFrameHistoryForBuild,
   replayShouldPresentTimedRootMotionRef,
 } from "./_lib/replayLabHelpers";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../_lib/movementPalette";
 
 function publishReplayLabDebug(value: unknown) {
   (window as Window & {
@@ -1341,9 +1348,9 @@ export default function MovementReplayLabPage() {
 
           <div className="flex items-center gap-2 rounded-[10px] border border-border-dim bg-sidebar/50 px-3 py-2 text-xs text-secondary">
             {hasRunBatch && batchSummary.errors === 0 && batchSummary.warnings === 0 ? (
-              <CheckCircle2 className="h-4 w-4 text-[#a8d5ba]" />
+              <CheckCircle2 className={`h-4 w-4 text-[${MOVEMENT_MINT}]`} />
             ) : (
-              <AlertTriangle className="h-4 w-4 text-[#f6ccbe]" />
+              <AlertTriangle className={`h-4 w-4 text-[${MOVEMENT_SALMON}]`} />
             )}
             <span>
               {getBatchStatusLabel({
@@ -1361,11 +1368,11 @@ export default function MovementReplayLabPage() {
             <h2 className="mr-1 text-xs font-bold uppercase tracking-wide text-foreground">Batch</h2>
             {[
               ["Selected", selectedCount, "text-foreground"],
-              ["Clean", hasRunBatch ? batchSummary.clean : "--", "text-[#a8d5ba]"],
-              ["Setup", hasRunBatch ? `${batchSummary.setupBlocked}/${batchAnalyses.length}` : "--", batchSummary.setupBlocked > 0 ? "text-[#f6ccbe]" : "text-[#a8d5ba]"],
-              ["Visual", hasRunBatch ? `${Math.round(batchSummary.visualMatchScore * 100)}%` : "--", "text-[#f6ccbe]"],
+              ["Clean", hasRunBatch ? batchSummary.clean : "--", `text-[${MOVEMENT_MINT}]`],
+              ["Setup", hasRunBatch ? `${batchSummary.setupBlocked}/${batchAnalyses.length}` : "--", batchSummary.setupBlocked > 0 ? `text-[${MOVEMENT_SALMON}]` : `text-[${MOVEMENT_MINT}]`],
+              ["Visual", hasRunBatch ? `${Math.round(batchSummary.visualMatchScore * 100)}%` : "--", `text-[${MOVEMENT_SALMON}]`],
               ["Errors", hasRunBatch ? batchSummary.errors : "--", "text-[#f28b82]"],
-              ["Warnings", hasRunBatch ? batchSummary.warnings : "--", "text-[#f6ccbe]"],
+              ["Warnings", hasRunBatch ? batchSummary.warnings : "--", `text-[${MOVEMENT_SALMON}]`],
             ].map(([label, value, valueClass]) => (
               <div
                 key={label}
@@ -1398,7 +1405,7 @@ export default function MovementReplayLabPage() {
                 type="button"
                 onClick={runAlignmentBatch}
                 disabled={selectedCount === 0 || isRunInProgress}
-                className="inline-flex h-8 items-center gap-2 rounded-[8px] bg-[#f6ccbe] px-3 text-xs font-bold text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:cursor-not-allowed disabled:opacity-50"
+                className={`inline-flex h-8 items-center gap-2 rounded-[8px] bg-[${MOVEMENT_SALMON}] px-3 text-xs font-bold text-[${MOVEMENT_INK}] transition-colors hover:bg-[${MOVEMENT_CREAM}] disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {isRunInProgress ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4" />}
                 {isRunInProgress ? "Running..." : "Run Selected Recordings"}
@@ -1475,11 +1482,11 @@ export default function MovementReplayLabPage() {
             <div className="flex min-h-0 flex-col gap-2">
               <section
                 ref={replaySceneRef}
-                className="relative min-h-[940px] flex-1 overflow-hidden rounded-[8px] border border-border-dim bg-[#07070b] 2xl:min-h-[1080px]"
+                className={`relative min-h-[940px] flex-1 overflow-hidden rounded-[8px] border border-border-dim bg-[${MOVEMENT_SCENE_BG}] 2xl:min-h-[1080px]`}
                 data-testid="movement-replay-avatar-section"
               >
                 <div className="grid h-full min-h-0 grid-rows-2 gap-px bg-border-dim">
-                  <div className="relative min-h-0 bg-[#07070b]">
+                  <div className={`relative min-h-0 bg-[${MOVEMENT_SCENE_BG}]`}>
                     <div className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-secondary">
                       Source
                     </div>
@@ -1496,7 +1503,7 @@ export default function MovementReplayLabPage() {
                       </div>
                     )}
                   </div>
-                  <div className="relative min-h-0 bg-[#07070b]" data-testid="movement-replay-avatar-scene">
+                  <div className={`relative min-h-0 bg-[${MOVEMENT_SCENE_BG}]`} data-testid="movement-replay-avatar-scene">
                     <div className="absolute left-3 top-3 z-10 rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-secondary">
                       Avatar
                     </div>
@@ -1533,7 +1540,7 @@ export default function MovementReplayLabPage() {
                     {replaySession ? (
                       <MovementMatchScene>
                         <MovementSourceSkeleton
-                          color="#f6ccbe"
+                          color={MOVEMENT_SALMON}
                           landmarksRef={replaySourceMotionRef}
                           positionOffset={[0, 0, 0]}
                         />
@@ -1620,7 +1627,7 @@ export default function MovementReplayLabPage() {
                       }}
                       disabled={frameCount <= 1}
                       aria-label={isPlaying ? "Pause replay" : "Play replay"}
-                      className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f6ccbe] text-[#17131d] transition-colors hover:bg-[#f7efe7] disabled:opacity-50"
+                      className={`flex h-12 w-12 items-center justify-center rounded-full bg-[${MOVEMENT_SALMON}] text-[${MOVEMENT_INK}] transition-colors hover:bg-[${MOVEMENT_CREAM}] disabled:opacity-50`}
                     >
                       {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
                     </button>
@@ -1651,7 +1658,7 @@ export default function MovementReplayLabPage() {
                       setIsPlaying(false);
                       setFrameIndex(Number.parseInt(event.target.value, 10));
                     }}
-                    className="min-w-[220px] flex-1 accent-[#f6ccbe]"
+                    className={`min-w-[220px] flex-1 accent-[${MOVEMENT_SALMON}]`}
                   />
                   <span
                     ref={replayFrameLabelRef}
@@ -1673,15 +1680,15 @@ export default function MovementReplayLabPage() {
                     const sourceFrame = sourceFrameByIndex.get(index);
                     const isStartBlocked = sourceFrame?.startReadinessState === "blocked";
                     const markerClass = selected
-                      ? "border-[#f6ccbe] bg-[#f6ccbe]"
+                      ? `border-[${MOVEMENT_SALMON}] bg-[${MOVEMENT_SALMON}]`
                       : severity === "error"
                         ? "border-[#f28b82] bg-[#f28b82]/70"
                         : severity === "warning"
-                          ? "border-[#f6ccbe] bg-[#f6ccbe]/45"
+                          ? `border-[${MOVEMENT_SALMON}] bg-[${MOVEMENT_SALMON}]/45`
                           : isStartBlocked
-                            ? "border-[#f6ccbe] bg-[#f6ccbe]/30"
+                            ? `border-[${MOVEMENT_SALMON}] bg-[${MOVEMENT_SALMON}]/30`
                           : quality >= 0.8
-                            ? "border-[#a8d5ba] bg-[#a8d5ba]/50"
+                            ? `border-[${MOVEMENT_MINT}] bg-[${MOVEMENT_MINT}]/50`
                             : "border-border-dim bg-background";
 
                     return (

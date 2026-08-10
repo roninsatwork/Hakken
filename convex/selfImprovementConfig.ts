@@ -4,9 +4,13 @@
  * One systemConfig row holds the whole object. An absent row means every
  * default; a malformed row means every default too, because a bad config
  * write must never be able to take the assistant down. Each field guards one
- * phase of the plan, and `autoApplyLowRisk` is the deliberate exception to
- * the platform's human-gate contract — it ships false and stays false until
- * that decision is taken explicitly (plan, Phase 5).
+ * phase of the plan.
+ *
+ * `autonomousMemory` replaces the never-wired `autoApplyLowRisk`: on
+ * 2026-08-10 the owner decided memory learning is fully automatic — what the
+ * AI learns is saved immediately, with no per-memory approval. Auto-saved
+ * memories are marked `autoApplied`, audited, and removable; this switch is
+ * the platform-wide brake.
  */
 
 import { v } from "convex/values";
@@ -26,11 +30,11 @@ export type SelfImprovementConfig = {
   /** Phase 4: knowledge fusion adds the bounded evidence prior. */
   retrievalPriors: boolean;
   /**
-   * Phase 5: LOW-risk FACT/SUMMARY candidates may apply without a person.
-   * Default false, and flipping it is a product decision, not a tidy-up —
-   * see the decision gate in the plan before touching this.
+   * Phase 5, decided 2026-08-10: memory candidates apply immediately with no
+   * per-memory approval. Auto-saved memories carry `autoApplied` and an
+   * audit row, and stay removable from the memory screens.
    */
-  autoApplyLowRisk: boolean;
+  autonomousMemory: boolean;
 };
 
 export const SELF_IMPROVEMENT_DEFAULTS: SelfImprovementConfig = {
@@ -38,7 +42,7 @@ export const SELF_IMPROVEMENT_DEFAULTS: SelfImprovementConfig = {
   outcomeWeightedRanking: true,
   endUserFeedback: true,
   retrievalPriors: true,
-  autoApplyLowRisk: false,
+  autonomousMemory: true,
 };
 
 /**
@@ -67,7 +71,7 @@ export function parseSelfImprovementConfig(value: string | undefined | null): Se
     outcomeWeightedRanking: pick("outcomeWeightedRanking"),
     endUserFeedback: pick("endUserFeedback"),
     retrievalPriors: pick("retrievalPriors"),
-    autoApplyLowRisk: pick("autoApplyLowRisk"),
+    autonomousMemory: pick("autonomousMemory"),
   };
 }
 
@@ -93,7 +97,7 @@ export const updateConfig = superAdminMutation({
     outcomeWeightedRanking: v.boolean(),
     endUserFeedback: v.boolean(),
     retrievalPriors: v.boolean(),
-    autoApplyLowRisk: v.boolean(),
+    autonomousMemory: v.boolean(),
   },
   handler: async (ctx, args) => {
     const { userId } = ctx;
@@ -103,7 +107,7 @@ export const updateConfig = superAdminMutation({
       outcomeWeightedRanking: args.outcomeWeightedRanking,
       endUserFeedback: args.endUserFeedback,
       retrievalPriors: args.retrievalPriors,
-      autoApplyLowRisk: args.autoApplyLowRisk,
+      autonomousMemory: args.autonomousMemory,
     };
     const value = JSON.stringify(next);
 

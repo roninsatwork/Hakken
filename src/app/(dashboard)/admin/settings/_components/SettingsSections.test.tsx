@@ -3,12 +3,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AppearanceSettingsSection } from "./AppearanceSettingsSection";
 import { IdentitySettingsSection } from "./IdentitySettingsSection";
-import { WhiteLabelCustomDomainChecklistSection } from "./WhiteLabelCustomDomainChecklistSection";
-import { WhiteLabelHandoffSummarySection } from "./WhiteLabelHandoffSummarySection";
-import { WhiteLabelModulePresetsSection } from "./WhiteLabelModulePresetsSection";
-import { WhiteLabelNavigationProfilesSection } from "./WhiteLabelNavigationProfilesSection";
-import { WhiteLabelPackagingChecklistSection } from "./WhiteLabelPackagingChecklistSection";
-import { WhiteLabelReadinessSection } from "./WhiteLabelReadinessSection";
 import type { SystemSettingsFormData } from "./types";
 
 vi.mock("next/image", () => ({
@@ -238,11 +232,13 @@ describe("settings sections", () => {
 
   it("edits appearance typography and palette fields", () => {
     const setFormData = vi.fn();
+    // Fonts are stored as named keys, never raw CSS: the old dropdown's
+    // literal `var(--font-sans)` value is exactly what created the variable
+    // cycle that broke the app's font.
     const formData: SystemSettingsFormData = {
-      headingFontFamily: "var(--font-sans)",
-      bodyFontFamily: "var(--font-sans)",
+      headingFontFamily: "default",
+      bodyFontFamily: "default",
       headingSizeGlobal: "1.5rem",
-      subTextSizeGlobal: "13px",
       darkBg: "#000000",
       lightBg: "#ffffff",
       brandColorHex: "#aa5500",
@@ -251,7 +247,7 @@ describe("settings sections", () => {
     render(<AppearanceSettingsSection formData={formData} setFormData={setFormData} t={t} />);
 
     fireEvent.change(screen.getAllByRole("combobox")[0], {
-      target: { value: "var(--font-mono)" },
+      target: { value: "mono" },
     });
     fireEvent.change(screen.getAllByRole("combobox")[2], { target: { value: "2.25rem" } });
     fireEvent.change(screen.getAllByDisplayValue("#000000")[0], { target: { value: "#111111" } });
@@ -259,174 +255,15 @@ describe("settings sections", () => {
     fireEvent.change(screen.getByDisplayValue("#aa5500"), { target: { value: "#ff6600" } });
 
     expect(screen.getByText("Appearance")).toBeInTheDocument();
-    expect(setFormData).toHaveBeenCalledWith({ ...formData, headingFontFamily: "var(--font-mono)" });
+    expect(setFormData).toHaveBeenCalledWith({ ...formData, headingFontFamily: "mono" });
     expect(setFormData).toHaveBeenCalledWith({ ...formData, headingSizeGlobal: "2.25rem" });
     expect(setFormData).toHaveBeenCalledWith({ ...formData, darkBg: "#111111" });
     expect(setFormData).toHaveBeenCalledWith({ ...formData, lightBg: "#EEEEEE" });
     expect(setFormData).toHaveBeenCalledWith({ ...formData, brandColorHex: "#FF6600" });
+
+    // No dropdown offers a raw CSS value any more.
+    const options = Array.from(document.querySelectorAll("option")).map((option) => option.value);
+    expect(options.some((value) => value.includes("var("))).toBe(false);
   });
 
-  it("renders code-backed white-label readiness score and evidence", () => {
-    render(
-      <WhiteLabelReadinessSection
-        formData={{ platformName: "Sonae" }}
-        readiness={{
-          score: 5 / 7,
-          readyCount: 5,
-          pendingCount: 0,
-          manualCount: 2,
-          totalCount: 7,
-          nextActions: ["email", "production"],
-          items: [
-            { key: "identity", status: "ready", evidence: "Acme Ops" },
-            { key: "logos", status: "ready", evidence: "light+dark" },
-            { key: "brandColor", status: "ready", evidence: "#123456" },
-            { key: "diagnostics", status: "ready", evidence: "disabled" },
-            { key: "widget", status: "ready", href: "/admin/ai/widget", evidence: "active-branded-widget" },
-            { key: "email", status: "manual", command: "RESEND_FROM_EMAIL", evidence: "confirm-deployment-sender" },
-            { key: "production", status: "manual", command: "npm run setup:validate -- --profile=production", evidence: "requires-production-runbook" },
-          ],
-        }}
-        t={t}
-      />
-    );
-
-    expect(screen.getByText("71%")).toBeInTheDocument();
-    expect(screen.getByText(/active-branded-widget/)).toBeInTheDocument();
-    expect(screen.getByText("RESEND_FROM_EMAIL")).toBeInTheDocument();
-  });
-
-  it("renders code-backed white-label module presets", () => {
-    render(
-      <WhiteLabelModulePresetsSection
-        presets={[
-          {
-            key: "knowledgeAssistant",
-            href: "/admin/agents",
-            linkLabelKey: "agents",
-            readinessDependencies: ["identity", "logos", "brandColor", "diagnostics", "production"],
-            visible: ["assistantWorkspace", "knowledgeSurfaces", "reportsOptional"],
-            owner: ["agentBuilderEvals", "modelDefaults", "systemHealth"],
-            handoff: ["replaceDemoKnowledge", "runReleaseGate", "keepDiagnosticsDisabled"],
-          },
-        ]}
-        t={t}
-      />
-    );
-
-    expect(screen.getByText("Knowledge Assistant")).toBeInTheDocument();
-    expect(screen.getByText("Assistant workspace")).toBeInTheDocument();
-    expect(screen.getByText("Run the release gate")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open agents/i })).toHaveAttribute("href", "/admin/agents");
-  });
-
-  it("renders the white-label handoff summary", () => {
-    render(
-      <WhiteLabelHandoffSummarySection
-        formData={{ platformName: "Sonae" }}
-        summary={{
-          productName: "Acme Ops",
-          brandColorHex: "#123456",
-          readinessScore: 6 / 7,
-          logoMode: "light-and-dark",
-          emailFromAddress: "Acme Ops <ops@example.com>",
-          widgetStatus: "ready",
-          widgetEvidence: "active-branded-widget",
-          diagnosticsStatus: "ready",
-          productionStatus: "manual",
-          nextActions: ["production"],
-          recommendedPresetKeys: ["knowledgeAssistant"],
-        }}
-        t={t}
-      />
-    );
-
-    expect(screen.getByText("Acme Ops")).toBeInTheDocument();
-    expect(screen.getByText("Acme Ops <ops@example.com>")).toBeInTheDocument();
-    expect(screen.getByText("86%")).toBeInTheDocument();
-    expect(screen.getByText("Active branded widget")).toBeInTheDocument();
-    expect(screen.getByText("Production setup validation")).toBeInTheDocument();
-    expect(screen.getByText("Knowledge Assistant")).toBeInTheDocument();
-  });
-
-  it("renders code-backed white-label navigation profiles", () => {
-    render(
-      <WhiteLabelNavigationProfilesSection
-        profiles={[
-          {
-            key: "customerWorkspace",
-            visible: ["appDashboard", "assistant", "reports", "organization"],
-            owner: ["systemSettings", "systemHealth"],
-            hide: ["adminCompanies", "releaseCenter"],
-            implementationNotes: ["tenantScoped", "preserveAdminRoutes", "keepServerAuthz"],
-          },
-        ]}
-        t={t}
-      />
-    );
-
-    expect(screen.getByText("Customer Workspace")).toBeInTheDocument();
-    expect(screen.getByText("App dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Companies admin")).toBeInTheDocument();
-    expect(screen.getByText("Treat navigation hiding as presentation only; keep server authorization.")).toBeInTheDocument();
-  });
-
-  it("renders and copies the white-label packaging checklist", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: { writeText },
-    });
-
-    render(
-      <WhiteLabelPackagingChecklistSection
-        checklist={{
-          title: "Acme Ops white-label packaging checklist",
-          productName: "Acme Ops",
-          readinessPercent: 86,
-          sections: [
-            {
-              key: "brand",
-              title: "Brand handoff",
-              items: ["Product name: Acme Ops", "Runtime sender: Acme Ops <ops@example.com>"],
-            },
-          ],
-          markdown: "# Acme Ops white-label packaging checklist\n\n- Product name: Acme Ops",
-        }}
-        t={t}
-      />
-    );
-
-    expect(screen.getByText("Acme Ops white-label packaging checklist")).toBeInTheDocument();
-    expect(screen.getByText("Acme Ops is 86% ready for white-label packaging.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Copy checklist" }));
-    expect(await screen.findByText("Copied")).toBeInTheDocument();
-    expect(writeText).toHaveBeenCalledWith("# Acme Ops white-label packaging checklist\n\n- Product name: Acme Ops");
-  });
-
-  it("renders custom domain readiness evidence", () => {
-    render(
-      <WhiteLabelCustomDomainChecklistSection
-        checklist={{
-          readyCount: 2,
-          pendingCount: 0,
-          manualCount: 4,
-          totalCount: 6,
-          items: [
-            { key: "appHost", status: "manual", evidence: "confirm-primary-app-host", command: "hosting-provider-domain" },
-            { key: "widgetDomains", status: "ready", evidence: "https://acme.example" },
-            { key: "emailDomain", status: "ready", evidence: "example.com" },
-            { key: "dnsTls", status: "manual", evidence: "confirm-dns-and-tls-with-hosting-provider", command: "dns-and-tls-validation" },
-            { key: "redirects", status: "manual", evidence: "confirm-apex-www-and-legacy-redirects" },
-            { key: "tenantIsolation", status: "manual", evidence: "confirm-domain-to-tenant-routing-before-runtime-hiding" },
-          ],
-        }}
-        t={t}
-      />
-    );
-
-    expect(screen.getByText("Widget domain allowlist")).toBeInTheDocument();
-    expect(screen.getByText("https://acme.example")).toBeInTheDocument();
-    expect(screen.getByText("dns-and-tls-validation")).toBeInTheDocument();
-    expect(screen.getByText("These checks are planning evidence only.")).toBeInTheDocument();
-  });
 });

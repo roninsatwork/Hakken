@@ -813,6 +813,82 @@ export const approveCandidate = adminMutation({
   },
 });
 
+/**
+ * Apply a platform-proposed candidate with no person involved — the
+ * autonomous-memory path (owner decision, 2026-08-10). Same writes as
+ * `approveCandidate`, but no actor anywhere: the memory is marked
+ * `autoApplied` instead, and the audit row records that it was automatic.
+ *
+ * Returns null instead of throwing when the candidate cannot be applied
+ * (already reviewed, or an ALWAYS suggestion when the ALWAYS slots are full)
+ * — those stay PROPOSED for a person, since capacity is a product rule the
+ * platform must not silently bend.
+ */
+export async function autoApplyCompanyCandidate(
+  ctx: MutationCtx,
+  candidateId: Id<"companyMemoryCandidates">,
+) {
+  const candidate = await ctx.db.get(candidateId);
+  if (!candidate || candidate.status !== "PROPOSED") return null;
+
+  const applyMode = resolveCompanyApplyMode(candidate);
+  try {
+    await assertAlwaysCapacity(ctx, candidate.companyId, applyMode);
+  } catch {
+    return null;
+  }
+
+  const now = Date.now();
+  const memoryId = await ctx.db.insert("companyMemories", {
+    companyId: candidate.companyId,
+    title: normalizeTitle(candidate.title, candidate.content),
+    content: candidate.content,
+    normalizedContent: candidate.normalizedContent,
+    category: candidate.category,
+    applyMode,
+    status: "APPROVED",
+    confidence: candidate.confidence,
+    sourceType: candidate.sourceType,
+    sourceIdsJson: candidate.sourceIdsJson,
+    autoApplied: true,
+    createdAt: now,
+    updatedAt: now,
+    approvedAt: now,
+    usageCount: 0,
+  });
+
+  await ctx.db.patch(candidateId, {
+    status: "APPROVED",
+    reviewedAt: now,
+    appliedMemoryId: memoryId,
+    updatedAt: now,
+  });
+
+  await ctx.db.insert("auditLogs", {
+    actionType: "APPROVE_COMPANY_MEMORY_CANDIDATE",
+    entityId: candidateId,
+    entityType: "companyMemoryCandidates",
+    companyId: candidate.companyId,
+    timestamp: now,
+    metadata: buildAuditMetadata({
+      memoryId,
+      category: candidate.category,
+      contentLength: candidate.content.length,
+      automatic: true,
+    }),
+  });
+  await recordCompanyAiDriftEvent(ctx, {
+    companyId: candidate.companyId,
+    sourceType: "MEMORY",
+    sourceId: memoryId,
+    reason: "Company memory was saved automatically under the autonomous-memory switch.",
+    affectedEvalCategories: ["MEMORY_USAGE", "NO_HALLUCINATION", "WIDGET_READINESS"],
+    createdAt: now,
+  });
+
+  return memoryId;
+}
+
 export const rejectCandidate = adminMutation({
   args: {
     candidateId: v.id("companyMemoryCandidates"),

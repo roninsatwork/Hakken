@@ -7,6 +7,13 @@ import type { MediaPipeVisionStatus } from "../_hooks/useMediaPipeVision";
 import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../_lib/movementCameraConstraints";
 import type { MovementCapturePreflight } from "../_lib/movementCapturePreflight";
 import MovementCapturePreflightPanel from "./MovementCapturePreflightPanel";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../_lib/movementPalette";
 
 type MovementCapturePanelProps = {
   webcamRef: RefObject<Webcam | null>;
@@ -99,7 +106,7 @@ export default function MovementCapturePanel({
 
   return (
     <div className="flex w-full flex-col gap-3">
-      <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-[#07070b] border border-white/10 shadow-[0_30px_90px_rgba(246,204,190,0.10)]">
+      <div className={`relative w-full aspect-video rounded-3xl overflow-hidden bg-[${MOVEMENT_SCENE_BG}] border border-white/10 shadow-[0_30px_90px_rgba(246,204,190,0.10)]`}>
       <Webcam
         ref={webcamRef}
         onUserMediaError={onCameraError}
@@ -118,7 +125,7 @@ export default function MovementCapturePanel({
         <div className="px-4 py-2 bg-black/50 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-3">
           <div
             className={`w-3 h-3 rounded-full ${
-              isPoseReady ? "bg-[#a8d5ba] shadow-[0_0_12px_rgba(168,213,186,0.75)]" : "bg-[#f6ccbe] animate-pulse"
+              isPoseReady ? `bg-[${MOVEMENT_MINT}] shadow-[0_0_12px_rgba(168,213,186,0.75)]` : `bg-[${MOVEMENT_SALMON}] animate-pulse`
             }`}
           />
           <Typography className="text-white text-sm font-medium">{visionLabel}</Typography>
@@ -192,7 +199,7 @@ export default function MovementCapturePanel({
             </>
           ) : (
             <>
-              <Typography className="block text-xs font-black uppercase tracking-[0.24em] text-[#f6ccbe]">
+              <Typography className={`block text-xs font-black uppercase tracking-[0.24em] text-[${MOVEMENT_SALMON}]`}>
                 Get ready
               </Typography>
               <Typography className="mt-3 block text-2xl font-bold text-white">
@@ -231,7 +238,7 @@ export default function MovementCapturePanel({
             className={`px-8 py-3 rounded-full font-bold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
               isRecording
                 ? "bg-red-500 hover:bg-red-600 shadow-[0_0_20px_#ef4444]"
-                : "bg-[#f6ccbe] text-[#17131d] hover:bg-[#f7efe7] shadow-[0_0_20px_rgba(246,204,190,0.34)]"
+                : `bg-[${MOVEMENT_SALMON}] text-[${MOVEMENT_INK}] hover:bg-[${MOVEMENT_CREAM}] shadow-[0_0_20px_rgba(246,204,190,0.34)]`
             }`}
           >
             {isRecording

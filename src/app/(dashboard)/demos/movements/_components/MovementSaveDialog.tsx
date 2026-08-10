@@ -13,6 +13,11 @@ import type {
   MovementSpineGoal,
 } from "../_lib/movementTypes";
 import { summarizeMovementCommissioningFailures } from "../_lib/movementCommissioningFailurePresentation";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_SALMON,
+} from "../_lib/movementPalette";
 
 type MovementSaveDialogProps = {
   isOpen: boolean;
@@ -89,7 +94,7 @@ export default function MovementSaveDialog({
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
             placeholder="e.g., Tall Spine Flow"
-            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f6ccbe]/50 focus:ring-1 focus:ring-[#f6ccbe]/50 transition-all"
+            className={`bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[${MOVEMENT_SALMON}]/50 focus:ring-1 focus:ring-[${MOVEMENT_SALMON}]/50 transition-all`}
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -99,7 +104,7 @@ export default function MovementSaveDialog({
           <select
             value={difficulty}
             onChange={(event) => onDifficultyChange(event.target.value as MovementDifficulty)}
-            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f6ccbe]/50 transition-all appearance-none"
+            className={`bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[${MOVEMENT_SALMON}]/50 transition-all appearance-none`}
           >
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
@@ -113,7 +118,7 @@ export default function MovementSaveDialog({
           <select
             value={spineGoal}
             onChange={(event) => onSpineGoalChange(event.target.value as MovementSpineGoal)}
-            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f6ccbe]/50 transition-all appearance-none"
+            className={`bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[${MOVEMENT_SALMON}]/50 transition-all appearance-none`}
           >
             {MOVEMENT_SPINE_GOAL_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -134,7 +139,7 @@ export default function MovementSaveDialog({
             value={primaryCue}
             onChange={(event) => onPrimaryCueChange(event.target.value)}
             placeholder="e.g., Keep ribs over hips"
-            className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#f6ccbe]/50 focus:ring-1 focus:ring-[#f6ccbe]/50 transition-all"
+            className={`bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[${MOVEMENT_SALMON}]/50 focus:ring-1 focus:ring-[${MOVEMENT_SALMON}]/50 transition-all`}
           />
         </div>
         <fieldset className="flex flex-col gap-3">
@@ -147,7 +152,7 @@ export default function MovementSaveDialog({
                 key={option.value}
                 className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
                   bodyFocus.includes(option.value)
-                    ? "border-[#f6ccbe]/50 bg-[#f6ccbe]/15 text-[#f6ccbe]"
+                    ? `border-[${MOVEMENT_SALMON}]/50 bg-[${MOVEMENT_SALMON}]/15 text-[${MOVEMENT_SALMON}]`
                     : "border-white/10 bg-white/5 text-secondary hover:text-foreground"
                 }`}
               >
@@ -215,7 +220,7 @@ export default function MovementSaveDialog({
         <button
           onClick={onSave}
           disabled={!canSave}
-          className="w-full mt-4 bg-[#f6ccbe] hover:bg-[#f7efe7] text-[#17131d] font-bold py-3 px-4 rounded-xl shadow-[0_0_20px_rgba(246,204,190,0.34)] transition-all disabled:opacity-50 disabled:shadow-none"
+          className={`w-full mt-4 bg-[${MOVEMENT_SALMON}] hover:bg-[${MOVEMENT_CREAM}] text-[${MOVEMENT_INK}] font-bold py-3 px-4 rounded-xl shadow-[0_0_20px_rgba(246,204,190,0.34)] transition-all disabled:opacity-50 disabled:shadow-none`}
         >
           {isSaving ? "Saving..." : "Save Practice"}
         </button>

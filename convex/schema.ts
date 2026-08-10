@@ -81,13 +81,21 @@ export default defineSchema({
     // so it must never be hardcoded into a seeded AI rule.
     salesContactEmail: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
-    fontFamily: v.optional(v.string()), // Deprecated, keep for legacy
-    headingFontFamily: v.optional(v.string()),
-    bodyFontFamily: v.optional(v.string()),
+    // Retired 2026-08-10 (theme compliance plan): kept only so historic rows
+    // stay valid. No screen writes them and nothing reads them any more.
+    // fontFamily silently overrode the body font from legacy data;
+    // subTextSizeGlobal targeted a CSS class used nowhere; fontSizeBase had
+    // no editor; borderRadius steered 36 corners out of ~1,300.
+    fontFamily: v.optional(v.string()),
     fontSizeBase: v.optional(v.string()),
-    headingSizeGlobal: v.optional(v.string()),
     subTextSizeGlobal: v.optional(v.string()),
     borderRadius: v.optional(v.string()),
+
+    // Stored as named keys ("default" | "mono"); legacy rows may hold raw
+    // CSS strings, normalized on read (src/lib/themeFonts.ts).
+    headingFontFamily: v.optional(v.string()),
+    bodyFontFamily: v.optional(v.string()),
+    headingSizeGlobal: v.optional(v.string()),
 
     lightBg: v.optional(v.string()),
     lightFg: v.optional(v.string()),
@@ -98,7 +106,12 @@ export default defineSchema({
     lightMutedFg: v.optional(v.string()),
     lightSuccess: v.optional(v.string()),
     lightDestructive: v.optional(v.string()),
+    lightWarning: v.optional(v.string()),
+    lightInfo: v.optional(v.string()),
     lightRing: v.optional(v.string()),
+    // Falls back to the card colour when absent, preserving the old
+    // behaviour where cards and sidebar were one colour.
+    lightSidebarBg: v.optional(v.string()),
 
     darkBg: v.optional(v.string()),
     darkFg: v.optional(v.string()),
@@ -109,13 +122,11 @@ export default defineSchema({
     darkMutedFg: v.optional(v.string()),
     darkSuccess: v.optional(v.string()),
     darkDestructive: v.optional(v.string()),
+    darkWarning: v.optional(v.string()),
+    darkInfo: v.optional(v.string()),
     darkRing: v.optional(v.string()),
+    darkSidebarBg: v.optional(v.string()),
     diagnosticRoutingEnabled: v.optional(v.boolean()),
-    // Which white-label navigation profile this deployment uses. Previously the
-    // profiles were advisory text in an admin screen that nothing consumed.
-    // Kept a scalar because SystemSettingsFormData carries scalars only; the
-    // resolver also supports per-deployment overrides if that is ever needed.
-    navigationProfileKey: v.optional(v.string()),
   }),
 
   aiProviders: defineTable({
@@ -725,6 +736,10 @@ export default defineSchema({
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_company_status_started", ["companyId", "status", "startedAt"])
     .index("by_replay_source_started", ["replayOfRunId", "startedAt"])
+    // Retention: terminal runs age out on completedAt (agentRunHistory
+    // pipeline). Missing completedAt sorts first, so range queries must
+    // bound below with gt(0) to exclude still-running rows.
+    .index("by_completed", ["completedAt"])
     .index("by_status_started", ["status", "startedAt"])
     .index("by_thread_started", ["threadId", "startedAt"])
     .index("by_workflow_started", ["workflowId", "startedAt"])
@@ -1328,6 +1343,12 @@ export default defineSchema({
     failureCount: v.optional(v.number()),
     cancelledCount: v.optional(v.number()),
     lastOutcomeAt: v.optional(v.number()),
+    /**
+     * Saved by the platform itself under the autonomous-memory switch, with
+     * no person approving it. Shown as a label on the memory screens so what
+     * the AI taught itself is always visible and removable.
+     */
+    autoApplied: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
     createdBy: v.optional(v.id("users")),
@@ -1417,6 +1438,12 @@ export default defineSchema({
     positiveFeedbackCount: v.optional(v.number()),
     negativeFeedbackCount: v.optional(v.number()),
     lastFeedbackAt: v.optional(v.number()),
+    /**
+     * Saved by the platform itself under the autonomous-memory switch, with
+     * no person approving it. Shown as a label on the memory screens so what
+     * the AI taught itself is always visible and removable.
+     */
+    autoApplied: v.optional(v.boolean()),
   })
     .index("by_company_updated", ["companyId", "updatedAt"])
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
@@ -2594,7 +2621,15 @@ export default defineSchema({
       v.literal("workflowLogs"),
       v.literal("userLogins"),
       v.literal("chatHistory"),
-      v.literal("auditLogs")
+      v.literal("auditLogs"),
+      v.literal("publicApiRequests"),
+      v.literal("authEvents"),
+      v.literal("aiActionRequests"),
+      v.literal("analyticsSnapshots"),
+      v.literal("webhookDeliveries"),
+      v.literal("agentRunHistory"),
+      v.literal("agentTransactions"),
+      v.literal("purgeHistory")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
     status: v.union(
@@ -2606,6 +2641,14 @@ export default defineSchema({
     recordsPurged: v.number(),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
+    // Patched every batch so the stall reaper can tell a slow run from a
+    // dead one. A run whose transaction aborts at commit time cannot mark
+    // itself FAILED (the patch rolls back with it); the reaper does.
+    lastProgressAt: v.optional(v.number()),
+    // Storage ids whose deletion failed during a chat purge. The owning
+    // message row is gone, so this list is the only record that the blob
+    // exists and needs manual recovery.
+    leakedStorageIds: v.optional(v.array(v.string())),
     error: v.optional(v.string()),
     actorId: v.optional(v.id("users")), // Super Admin who manually triggered it
   })

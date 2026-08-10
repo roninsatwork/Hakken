@@ -4,6 +4,13 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { AVATAR_ROSTER } from "@/src/lib/constants/avatars";
 import { ArrowRight, GraduationCap, Sparkles, UserRound } from "lucide-react";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../../../_lib/movementPalette";
 
 interface Props {
   playerAvatarUrl: string;
@@ -32,7 +39,7 @@ function AvatarColumn({
 }: AvatarColumnProps) {
   return (
     <section className="flex min-w-0 flex-col">
-      <div className={`mb-4 flex items-center gap-3 rounded-2xl px-5 py-4 text-[#17131d] ${accentClassName}`}>
+      <div className={`mb-4 flex items-center gap-3 rounded-2xl px-5 py-4 text-[${MOVEMENT_INK}] ${accentClassName}`}>
         {icon}
         <h3 className="text-base font-black uppercase tracking-[0.16em] sm:text-lg">{label}</h3>
       </div>
@@ -73,14 +80,14 @@ export default function AvatarSelectorLobby({
   onStart,
 }: Props) {
   const lobby = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[#07070b] px-4 py-8">
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-[${MOVEMENT_SCENE_BG}] px-4 py-8`}>
       <style>{`nextjs-portal { display: none !important; }`}</style>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(246,204,190,0.18),transparent_34%),radial-gradient(circle_at_76%_10%,rgba(168,213,186,0.13),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_45%)]" />
 
       <div className="relative z-10 flex w-full max-w-7xl flex-col gap-8">
         <div className="flex flex-col gap-5 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex max-w-3xl flex-col">
-            <span className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-[#f6ccbe]/[0.25] bg-[#f6ccbe]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#f6ccbe]">
+            <span className={`mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-[${MOVEMENT_SALMON}]/[0.25] bg-[${MOVEMENT_SALMON}]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[${MOVEMENT_SALMON}]`}>
               <Sparkles className="h-3.5 w-3.5" />
               Private posture studio
             </span>
@@ -95,7 +102,7 @@ export default function AvatarSelectorLobby({
           <button
             type="button"
             onClick={onStart}
-            className="group flex w-full items-center justify-center gap-4 rounded-2xl bg-[#f7efe7] px-8 py-4 text-sm font-black uppercase tracking-[0.16em] text-[#17131d] shadow-[0_20px_60px_rgba(246,204,190,0.14)] transition-colors hover:bg-[#f6ccbe] sm:w-auto"
+            className={`group flex w-full items-center justify-center gap-4 rounded-2xl bg-[${MOVEMENT_CREAM}] px-8 py-4 text-sm font-black uppercase tracking-[0.16em] text-[${MOVEMENT_INK}] shadow-[0_20px_60px_rgba(246,204,190,0.14)] transition-colors hover:bg-[${MOVEMENT_SALMON}] sm:w-auto`}
           >
             Begin Practice
             <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-2" />
@@ -104,20 +111,20 @@ export default function AvatarSelectorLobby({
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
           <AvatarColumn
-            accentClassName="bg-[#f6ccbe]"
+            accentClassName={`bg-[${MOVEMENT_SALMON}]`}
             icon={<UserRound className="h-6 w-6" />}
             label="Student"
             selectedUrl={playerAvatarUrl}
-            selectedIndicatorClassName="text-[#f6ccbe]"
+            selectedIndicatorClassName={`text-[${MOVEMENT_SALMON}]`}
             onSelect={setPlayerAvatarUrl}
           />
 
           <AvatarColumn
-            accentClassName="bg-[#a8d5ba]"
+            accentClassName={`bg-[${MOVEMENT_MINT}]`}
             icon={<GraduationCap className="h-6 w-6" />}
             label="Coach"
             selectedUrl={instructorAvatarUrl}
-            selectedIndicatorClassName="text-[#a8d5ba]"
+            selectedIndicatorClassName={`text-[${MOVEMENT_MINT}]`}
             onSelect={setInstructorAvatarUrl}
           />
         </div>

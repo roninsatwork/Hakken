@@ -13,6 +13,11 @@ import {
   frameLandmarks,
   selectStripFrameIndexes,
 } from "../_lib/replayLabHelpers";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../../_lib/movementPalette";
 
 export function buildReplayStudioFixLog({
   analysis,
@@ -67,7 +72,7 @@ export function useReplayLabCaptures({
     try {
       const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(replaySceneRef.current, {
-        backgroundColor: "#07070b",
+        backgroundColor: MOVEMENT_SCENE_BG,
         logging: false,
         scale: Math.min(window.devicePixelRatio || 1, 2),
         useCORS: true,
@@ -112,7 +117,7 @@ export function useReplayLabCaptures({
       stripCanvas.width = panelWidth * indexes.length;
       stripCanvas.height = panelHeight + labelHeight;
 
-      stripContext.fillStyle = "#07070b";
+      stripContext.fillStyle = MOVEMENT_SCENE_BG;
       stripContext.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
       stripContext.textBaseline = "top";
 
@@ -126,10 +131,10 @@ export function useReplayLabCaptures({
         drawMovementSkeleton(tempContext, frameLandmarks(frame), panelWidth, panelHeight);
         stripContext.fillStyle = "#111118";
         stripContext.fillRect(x, 0, panelWidth, labelHeight);
-        stripContext.fillStyle = index === safeFrameIndex ? "#f6ccbe" : "#d7d7dd";
+        stripContext.fillStyle = index === safeFrameIndex ? MOVEMENT_SALMON : "#d7d7dd";
         stripContext.font = "16px ui-monospace, SFMono-Regular, Menlo, monospace";
         stripContext.fillText(`frame ${index}`, x + 14, 10);
-        stripContext.fillStyle = sourceFrame?.canStartGame ? "#a8d5ba" : "#f6ccbe";
+        stripContext.fillStyle = sourceFrame?.canStartGame ? MOVEMENT_MINT : MOVEMENT_SALMON;
         stripContext.font = "13px ui-monospace, SFMono-Regular, Menlo, monospace";
         stripContext.fillText(compactCaptureLabel(startGateLabel), x + 14, 36);
         stripContext.drawImage(tempCanvas, x, labelHeight);

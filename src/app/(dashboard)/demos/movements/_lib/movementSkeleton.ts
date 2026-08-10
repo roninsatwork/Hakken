@@ -2,6 +2,10 @@ import type { MovementFrame, MovementLandmark } from "./movementTypes";
 import type { MovementDeepCaptureSurfaceAnchor } from "./movementDeepCaptureContract";
 import { getFrameLandmarks } from "./movementFrameCodec";
 import { buildMovementSpineModel, type MovementSpinePoint } from "./movementSpineMetrics";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "./movementPalette";
 
 export const MOVEMENT_POSE_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 7],
@@ -107,8 +111,8 @@ function toCanvasPoint(point: MovementSpinePoint, width: number, height: number)
 }
 
 function getSpineColor(score: number) {
-  if (score >= 75) return "#a8d5ba";
-  if (score >= 50) return "#f6ccbe";
+  if (score >= 75) return MOVEMENT_MINT;
+  if (score >= 50) return MOVEMENT_SALMON;
   return "#f28b82";
 }
 

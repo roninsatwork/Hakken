@@ -1,5 +1,8 @@
 import Typography from "@/src/ui/atoms/typography";
 import type { MovementCapturePreflight } from "../_lib/movementCapturePreflight";
+import {
+  MOVEMENT_SALMON,
+} from "../_lib/movementPalette";
 
 export default function MovementCapturePreflightPanel({
   capturePreflight,
@@ -33,7 +36,7 @@ export default function MovementCapturePreflightPanel({
           <span className={`rounded-full border px-3 py-1 ${
             capturePreflight.deepCaptureReady
               ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-              : "border-[#f6ccbe]/30 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+              : `border-[${MOVEMENT_SALMON}]/30 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
           }`}>
             Deep Capture {capturePreflight.readyChannelCount}/{capturePreflight.totalChannelCount}
           </span>
@@ -56,7 +59,7 @@ export default function MovementCapturePreflightPanel({
                 channel.status === "ready"
                   ? "text-emerald-300"
                   : channel.status === "planned"
-                    ? "text-[#f6ccbe]"
+                    ? `text-[${MOVEMENT_SALMON}]`
                     : channel.status === "partial"
                       ? "text-amber-200"
                       : "text-red-300"

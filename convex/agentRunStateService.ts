@@ -42,6 +42,13 @@ export async function updateMemoryUsageOutcomeForRun(
   runId: Id<"agentRuns">,
   status: TerminalRunStatus,
 ) {
+  // A rehearsal's outcome is fabricated — its writes were recorded, not
+  // performed — so it must not move the quality counters ranking reads.
+  // Guarded here, at the single stamping point, so every terminal path
+  // (including stall recovery) is covered.
+  const run = await ctx.db.get(runId);
+  if (run?.isRehearsal) return;
+
   const now = Date.now();
   const usageRows = await ctx.db
     .query("agentMemoryUsage")

@@ -26,6 +26,7 @@ import {
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 import { describeStepKind, describeStepStatus } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { STATUS_TONE_CLASSES, type StatusTone } from "@/src/ui/atoms/statusTone";
 import { useToast } from "@/src/context/ToastContext";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
@@ -79,15 +80,15 @@ function formatSignedCurrencyDelta(value: number | undefined) {
   return `${prefix}${formatMoney(value)}`;
 }
 
-function getStatusTone(status: RunStatus, continued = false) {
-  if (status === "SUCCESS") return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+function getStatusTone(status: RunStatus, continued = false): StatusTone {
+  if (status === "SUCCESS") return "success";
   // A handover wears a working colour, not a failure's: the queue moved on to
   // the next run by design.
-  if (status === "FAILED" && continued) return "text-sky-500 bg-sky-500/10 border-sky-500/20";
-  if (status === "FAILED") return "text-red-500 bg-red-500/10 border-red-500/20";
-  if (status === "CANCELLED") return "text-amber-500 bg-amber-500/10 border-amber-500/20";
-  if (status === "PENDING_APPROVAL") return "text-indigo-500 bg-indigo-500/10 border-indigo-500/20";
-  return "text-sky-500 bg-sky-500/10 border-sky-500/20";
+  if (status === "FAILED" && continued) return "info";
+  if (status === "FAILED") return "danger";
+  if (status === "CANCELLED") return "warning";
+  if (status === "PENDING_APPROVAL") return "info";
+  return "info";
 }
 
 function canReplay(status: RunStatus) {
@@ -102,29 +103,29 @@ function canLearnFrom(status: RunStatus) {
   return status === "SUCCESS" || status === "FAILED" || status === "CANCELLED";
 }
 
-function getSmokeEvalTone(status: RunStatus) {
-  if (status === "SUCCESS") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
-  if (status === "FAILED") return "border-red-500/20 bg-red-500/10 text-red-500";
-  if (status === "CANCELLED") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
-  return "border-sky-500/20 bg-sky-500/10 text-sky-500";
+function getSmokeEvalTone(status: RunStatus): StatusTone {
+  if (status === "SUCCESS") return "success";
+  if (status === "FAILED") return "danger";
+  if (status === "CANCELLED") return "warning";
+  return "info";
 }
 
 function getSmokeEvalModeLabel(mode: string) {
   return mode === "MODEL_GRADED" ? "Model graded" : "Contract";
 }
 
-function getStepTone(status: string) {
-  if (status === "SUCCESS") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
-  if (status === "FAILED") return "border-red-500/20 bg-red-500/10 text-red-500";
-  if (status === "SKIPPED") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
-  return "border-sky-500/20 bg-sky-500/10 text-sky-500";
+function getStepTone(status: string): StatusTone {
+  if (status === "SUCCESS") return "success";
+  if (status === "FAILED") return "danger";
+  if (status === "SKIPPED") return "warning";
+  return "info";
 }
 
-function getStepDiffTone(changeType: string) {
-  if (changeType === "ADDED") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
-  if (changeType === "REMOVED") return "border-red-500/20 bg-red-500/10 text-red-500";
-  if (changeType === "CHANGED") return "border-amber-500/20 bg-amber-500/10 text-amber-500";
-  return "border-border-dim bg-white/[0.03] text-muted";
+function getStepDiffTone(changeType: string): StatusTone {
+  if (changeType === "ADDED") return "success";
+  if (changeType === "REMOVED") return "danger";
+  if (changeType === "CHANGED") return "warning";
+  return "neutral";
 }
 
 
@@ -461,7 +462,7 @@ export default function AgentRunsPage() {
                   className="group border-b border-border-dim/40 last:border-b-0 hover:bg-white/[0.02] transition-colors"
                 >
                   <td className="px-4 py-3 align-top">
-                    <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${getStatusTone(run.status, Boolean(run.continuedByRunId))}`}>
+                    <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${STATUS_TONE_CLASSES[getStatusTone(run.status, Boolean(run.continuedByRunId))]}`}>
                       {describeRunStatus(run.status, Boolean(run.continuedByRunId))}
                     </span>
                   </td>
@@ -504,7 +505,7 @@ export default function AgentRunsPage() {
                       {run.isRehearsal && (
                         // Text, not colour: a drill must be readable as a drill
                         // by everyone, on every screen.
-                        <span className="ml-1.5 rounded-[4px] border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
+                        <span className="ml-1.5 rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
                           Rehearsal
                         </span>
                       )}
@@ -608,7 +609,7 @@ export default function AgentRunsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getSmokeEvalTone(entry.status)}`}>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getSmokeEvalTone(entry.status)]}`}>
                           {entry.status.replace("_", " ")}
                         </span>
                         <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
@@ -631,7 +632,7 @@ export default function AgentRunsPage() {
                   </div>
 
                   {(entry.finalOutput || entry.error) && (
-                    <p className={`text-[12px] leading-relaxed line-clamp-2 ${entry.status === "FAILED" ? "text-red-400" : "text-secondary"}`}>
+                    <p className={`text-[12px] leading-relaxed line-clamp-2 ${entry.status === "FAILED" ? "text-destructive" : "text-secondary"}`}>
                       {entry.error || entry.finalOutput}
                     </p>
                   )}
@@ -639,7 +640,7 @@ export default function AgentRunsPage() {
                   {entry.missingToolMappings.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {entry.missingToolMappings.map((mapping) => (
-                        <span key={mapping} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-red-500/20 bg-red-500/10 text-red-400">
+                        <span key={mapping} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-destructive/20 bg-destructive/10 text-destructive">
                           missing {mapping}
                         </span>
                       ))}
@@ -649,7 +650,7 @@ export default function AgentRunsPage() {
                   {entry.expectedBlockedActionSummaries.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {entry.expectedBlockedActionSummaries.map((summary) => (
-                        <span key={summary} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-300">
+                        <span key={summary} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-warning/20 bg-warning/10 text-warning">
                           blocked {summary}
                         </span>
                       ))}
@@ -694,12 +695,12 @@ export default function AgentRunsPage() {
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(runDetail.run.status)}`}>
+                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.run.status)]}`}>
                       {runDetail.run.status.replace("_", " ")}
                     </span>
                     <span className="text-[11px] font-mono text-muted">{runDetail.run.triggerType}</span>
                     {runDetail.run.isRehearsal && (
-                      <span className="rounded-[4px] border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">
+                      <span className="rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
                         Rehearsal — writes recorded, not performed
                       </span>
                     )}
@@ -734,7 +735,7 @@ export default function AgentRunsPage() {
                   <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">
                     {runDetail.run.error ? "Error" : "Final output"}
                   </div>
-                  <p className={`text-[12px] leading-relaxed whitespace-pre-wrap ${runDetail.run.error ? "text-red-400" : "text-secondary"}`}>
+                  <p className={`text-[12px] leading-relaxed whitespace-pre-wrap ${runDetail.run.error ? "text-destructive" : "text-secondary"}`}>
                     {runDetail.run.error || runDetail.run.finalOutput}
                   </p>
                 </div>
@@ -756,7 +757,7 @@ export default function AgentRunsPage() {
                     {runDetail.evalFixtureContext.fixtures.map((fixture) => (
                       <span key={fixture.fixtureId} className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${
                         fixture.status === "ACTIVE"
-                          ? "border-sky-500/20 bg-sky-500/10 text-sky-300"
+                          ? "border-info/20 bg-info/10 text-info"
                           : "border-border-dim bg-white/[0.03] text-muted"
                       }`}>
                         {fixture.type.toLowerCase().replaceAll("_", " ")} {fixture.status.toLowerCase()}
@@ -782,7 +783,7 @@ export default function AgentRunsPage() {
                     type="button"
                     onClick={() => handleReplay(runDetail.run._id, "SAME_VERSION")}
                     disabled={action.isBusy(runDetail.run._id)}
-                    className="px-3 py-2 rounded-[8px] border border-indigo-500/20 bg-indigo-500/10 text-indigo-300 text-[12px] font-semibold hover:bg-indigo-500/15 transition-all disabled:opacity-50 flex items-center gap-2"
+                    className="px-3 py-2 rounded-[8px] border border-info/20 bg-info/10 text-info text-[12px] font-semibold hover:bg-info/15 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
                     {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
                     Run again as it was
@@ -793,7 +794,7 @@ export default function AgentRunsPage() {
                     type="button"
                     onClick={() => handleReflect(runDetail.run._id)}
                     disabled={action.isBusy(runDetail.run._id)}
-                    className="px-3 py-2 rounded-[8px] border border-sky-500/20 bg-sky-500/10 text-sky-300 text-[12px] font-semibold hover:bg-sky-500/15 transition-all disabled:opacity-50 flex items-center gap-2"
+                    className="px-3 py-2 rounded-[8px] border border-info/20 bg-info/10 text-info text-[12px] font-semibold hover:bg-info/15 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
                     {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
                     Ask what it would change
@@ -823,7 +824,7 @@ export default function AgentRunsPage() {
                     </p>
                   </div>
                   {runDetail.run.replayMode && (
-                    <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-sky-500/20 bg-sky-500/10 text-sky-300 self-start">
+                    <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info self-start">
                       {runDetail.run.replayMode.replace("_", " ").toLowerCase()}
                     </span>
                   )}
@@ -843,10 +844,10 @@ export default function AgentRunsPage() {
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(runDetail.replayContext.sourceRun.status)}`}>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.replayContext.sourceRun.status)]}`}>
                           original {runDetail.replayContext.sourceRun.status.replace("_", " ")}
                         </span>
-                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusTone(runDetail.replayContext.comparison.replayStatus)}`}>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.replayContext.comparison.replayStatus)]}`}>
                           replay {runDetail.replayContext.comparison.replayStatus.replace("_", " ")}
                         </span>
                       </div>
@@ -878,7 +879,7 @@ export default function AgentRunsPage() {
                                 <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
                                   step {diff.stepIndex}
                                 </span>
-                                <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStepDiffTone(diff.changeType)}`}>
+                                <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStepDiffTone(diff.changeType)]}`}>
                                   {diff.changeType.toLowerCase()}
                                 </span>
                                 {diff.durationDeltaMs !== undefined && (
@@ -901,7 +902,7 @@ export default function AgentRunsPage() {
                                   <div className="flex flex-col gap-1">
                                     <div className="flex flex-wrap gap-2">
                                       <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{diff.source.kind.replace("_", " ")}</span>
-                                      <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.source.status === "FAILED" ? "text-red-400" : "text-secondary"}`}>
+                                      <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.source.status === "FAILED" ? "text-destructive" : "text-secondary"}`}>
                                         {diff.source.status}
                                       </span>
                                     </div>
@@ -917,7 +918,7 @@ export default function AgentRunsPage() {
                                   <div className="flex flex-col gap-1">
                                     <div className="flex flex-wrap gap-2">
                                       <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{diff.replay.kind.replace("_", " ")}</span>
-                                      <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.replay.status === "FAILED" ? "text-red-400" : "text-secondary"}`}>
+                                      <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.replay.status === "FAILED" ? "text-destructive" : "text-secondary"}`}>
                                         {diff.replay.status}
                                       </span>
                                     </div>
@@ -946,7 +947,7 @@ export default function AgentRunsPage() {
                         className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 text-left hover:bg-white/[0.05] transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
                       >
                         <span className="text-[12px] text-secondary break-all">{replay.runId}</span>
-                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border self-start sm:self-auto ${getStatusTone(replay.status)}`}>
+                        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border self-start sm:self-auto ${STATUS_TONE_CLASSES[getStatusTone(replay.status)]}`}>
                           {replay.status.replace("_", " ")}
                         </span>
                       </button>
@@ -985,7 +986,7 @@ export default function AgentRunsPage() {
                         <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
                           {step.stepIndex}. {describeStepKind(step.kind)}
                         </span>
-                        <span className={`text-[11px] px-2 py-1 rounded-md border ${getStepTone(step.status)}`}>
+                        <span className={`text-[11px] px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStepTone(step.status)]}`}>
                           {describeStepStatus(step.status)}
                         </span>
                         {step.durationMs !== undefined && (
@@ -1011,7 +1012,7 @@ export default function AgentRunsPage() {
                             <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">
                               {step.errorPreview ? "What went wrong" : "What came back"}
                             </div>
-                            <pre className={`text-[11px] whitespace-pre-wrap overflow-x-auto ${step.errorPreview ? "text-red-400" : "text-secondary"}`}>
+                            <pre className={`text-[11px] whitespace-pre-wrap overflow-x-auto ${step.errorPreview ? "text-destructive" : "text-secondary"}`}>
                               {step.errorPreview || step.outputPreview}
                             </pre>
                           </div>
@@ -1031,12 +1032,12 @@ export default function AgentRunsPage() {
                     {(step.linkedToolCalls.length > 0 || step.linkedApprovals.length > 0) && (
                       <div className="flex flex-wrap gap-2">
                         {step.linkedToolCalls.map((toolCall) => (
-                          <span key={toolCall.toolCallId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-sky-500/20 bg-sky-500/10 text-sky-300">
+                          <span key={toolCall.toolCallId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info">
                             tool {toolCall.handlerMapping}: {toolCall.status.toLowerCase().replace("_", " ")}
                           </span>
                         ))}
                         {step.linkedApprovals.map((approval) => (
-                          <span key={approval.approvalId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-indigo-500/20 bg-indigo-500/10 text-indigo-300">
+                          <span key={approval.approvalId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info">
                             approval {approval.status.toLowerCase()}
                           </span>
                         ))}
@@ -1057,7 +1058,7 @@ export default function AgentRunsPage() {
                         <div className="text-[13px] font-semibold text-foreground truncate">{toolCall.normalizedToolName}</div>
                         <div className="text-[11px] font-mono text-muted truncate">{toolCall.handlerMapping}</div>
                       </div>
-                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${toolCall.status === "SUCCESS" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : toolCall.status === "FAILED" || toolCall.status === "DENIED" ? "border-red-500/20 bg-red-500/10 text-red-500" : "border-sky-500/20 bg-sky-500/10 text-sky-500"}`}>
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[toolCall.status === "SUCCESS" ? "success" : toolCall.status === "FAILED" || toolCall.status === "DENIED" ? "danger" : "info"]}`}>
                         {toolCall.status.replace("_", " ")}
                       </span>
                     </div>
@@ -1083,7 +1084,7 @@ export default function AgentRunsPage() {
                       </pre>
                     </div>
                     {(toolCall.resultJson || toolCall.error) && (
-                      <p className={`text-[12px] leading-relaxed line-clamp-4 ${toolCall.error ? "text-red-400" : "text-secondary"}`}>
+                      <p className={`text-[12px] leading-relaxed line-clamp-4 ${toolCall.error ? "text-destructive" : "text-secondary"}`}>
                         {toolCall.error || toolCall.resultJson}
                       </p>
                     )}
@@ -1098,7 +1099,7 @@ export default function AgentRunsPage() {
                 {runDetail.approvals.map((approval) => (
                   <div key={approval._id} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border w-fit ${approval.status === "APPROVED" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500" : approval.status === "REJECTED" ? "border-red-500/20 bg-red-500/10 text-red-500" : "border-sky-500/20 bg-sky-500/10 text-sky-500"}`}>
+                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border w-fit ${STATUS_TONE_CLASSES[approval.status === "APPROVED" ? "success" : approval.status === "REJECTED" ? "danger" : "info"]}`}>
                         {approval.status}
                       </span>
                       <span className="text-[11px] font-mono text-muted">{formatDateTime(approval.requestedAt)}</span>
@@ -1398,7 +1399,7 @@ function RowMenu({
                 }}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[8px] text-[12.5px] text-left transition-colors disabled:opacity-50 ${
                   item.danger
-                    ? "text-rose-400 hover:bg-rose-500/10"
+                    ? "text-destructive hover:bg-destructive/10"
                     : "text-secondary hover:text-foreground hover:bg-white/[0.05]"
                 }`}
               >

@@ -33,6 +33,7 @@ import {
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { shouldFlushStreamedText } from "./streamingService";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence, type MessageEvidence } from "./utils/messageEvidence";
 import { calculateModelCostGBP as calculateCostGBP } from "./aiCostService";
 import {
   EXPLICIT_CACHE_TTL_SECONDS,
@@ -726,6 +727,9 @@ export const runAgentObjective = internalAction({
         }
 
         // The company's when-relevant memories, which this path never read.
+        // Held for the message's evidence trail as well as the prompt, so a
+        // rating on the answer can find the memories behind it.
+        let ratedCompanyMemories: Parameters<typeof buildCompanyMemoryEvidence>[0] = [];
         if (owner.companyId) {
             const companyMemories = await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
                 companyId: owner.companyId,
@@ -733,6 +737,7 @@ export const runAgentObjective = internalAction({
                 limit: 5,
             });
             if (companyMemories.relevant.length > 0) {
+                ratedCompanyMemories = companyMemories.relevant;
                 currentUserContent += buildUntrustedKnowledgeContext({
                     sourceLabel: "company memory",
                     chunks: companyMemories.relevant.map((memory) => `${memory.title}: ${memory.content}`),
@@ -748,6 +753,10 @@ export const runAgentObjective = internalAction({
 
         // --- RAG VECTOR SEARCH PIPELINE (Agent Isolated) ---
         let ragContext = "";
+        // The chunks that actually reached the prompt, for the evidence trail —
+        // this is what lets the knowledge-evidence sweep credit a rated answer
+        // back to its sources.
+        const includedChunkIds: string[] = [];
         try {
             const queryVector = await embedRetrievalQuery(ctx, {
                 query: args.content,
@@ -781,6 +790,7 @@ export const runAgentObjective = internalAction({
                           }
                           chunkTexts.push(chunk.text);
                           chunkTextLength += chunk.text.length;
+                          includedChunkIds.push(res._id);
                        }
                     }
 
@@ -815,6 +825,16 @@ export const runAgentObjective = internalAction({
             conversationHistory,
             stream,
             promptCache,
+            // The same trail the assistant path writes, so an agent's answer is
+            // just as ratable: memory counters and the knowledge-evidence sweep
+            // both read it off the message.
+            messageEvidence: {
+                companyMemoryEvidenceJson: buildCompanyMemoryEvidence(ratedCompanyMemories),
+                companyRuntimeEvidenceJson: buildCompanyRuntimeEvidence({
+                    skillIds: [],
+                    sourceIds: includedChunkIds,
+                }),
+            },
             state: {
                 stepIndex: preLoopStepIndex,
                 loopIndex: 0,
@@ -985,10 +1005,18 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
      * left behind is billed storage for a conversation nobody is having.
      */
     promptCache: { name?: string };
+    /**
+     * What reached the model behind this reply — company memories and
+     * knowledge chunks — written onto the final assistant message so a rating
+     * can be traced back to its sources. Absent for scheduled runs (no chat
+     * message to rate) and for checkpoint resumes (the pre-loop assembly that
+     * knew the ids is gone; a resumed run's answer is simply evidence-less).
+     */
+    messageEvidence?: MessageEvidence;
     state: ObjectiveLoopState;
     runStartedAt: number;
 }) {
-        const { runId, threadId, objective, execution, conversationHistory, stream, state, runStartedAt } = params;
+        const { runId, threadId, objective, execution, conversationHistory, stream, state, runStartedAt, messageEvidence } = params;
         const agentId = params.agentId;
         const { owner, modelConfig, provider, systemInstruction, temperature, toolDeclarations, providerTools, toolMetadataByName, limits } = execution;
         const config = execution.modelDoc;
@@ -1908,6 +1936,8 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 modelUsed: modelConfig.modelId,
                 providerKey: modelConfig.providerKey,
                 providerModelId: modelConfig.providerModelId,
+                companyMemoryEvidenceJson: messageEvidence?.companyMemoryEvidenceJson,
+                companyRuntimeEvidenceJson: messageEvidence?.companyRuntimeEvidenceJson,
             });
             stream.messageId = undefined;
         } else if (threadId !== undefined) {
@@ -1918,7 +1948,9 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 outputTokens: outTokens,
                 modelUsed: modelConfig.modelId,
                 providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId
+                providerModelId: modelConfig.providerModelId,
+                companyMemoryEvidenceJson: messageEvidence?.companyMemoryEvidenceJson,
+                companyRuntimeEvidenceJson: messageEvidence?.companyRuntimeEvidenceJson,
             });
         }
 

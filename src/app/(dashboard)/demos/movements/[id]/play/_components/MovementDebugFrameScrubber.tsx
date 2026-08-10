@@ -4,6 +4,11 @@ import { Bookmark, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import type { MovementInstructorRetargetAnalysis } from "../../../_hooks/useMovementInstructorPlayback";
 import type { MovementDebugQaPreset } from "../../../_lib/movementDebugQaPresets";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../../_lib/movementPalette";
 
 type MovementDebugFrameScrubberProps = {
   frameCount: number;
@@ -183,17 +188,17 @@ export default function MovementDebugFrameScrubber({
   const formatPresetCases = (preset: MovementDebugQaPreset) => preset.cases.join(" / ");
 
   return (
-    <div className="pointer-events-auto absolute left-1/2 top-32 z-[60] w-[34rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-[#a8d5ba]/25 bg-black/70 p-3 text-[#edf7f0] shadow-2xl backdrop-blur-2xl">
+    <div className={`pointer-events-auto absolute left-1/2 top-32 z-[60] w-[34rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-2xl border border-[${MOVEMENT_MINT}]/25 bg-black/70 p-3 text-[#edf7f0] shadow-2xl backdrop-blur-2xl`}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-[#a8d5ba]">
+          <div className={`text-[10px] font-black uppercase tracking-[0.18em] text-[${MOVEMENT_MINT}]`}>
             Debug Scrub
           </div>
           <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-white/60">
             <span>Frame</span>
             <input
               aria-label="Debug frame number"
-              className="h-7 w-20 rounded-lg border border-white/10 bg-white/10 px-2 text-center font-mono text-white outline-none transition focus:border-[#a8d5ba]/60"
+              className={`h-7 w-20 rounded-lg border border-white/10 bg-white/10 px-2 text-center font-mono text-white outline-none transition focus:border-[${MOVEMENT_MINT}]/60`}
               defaultValue={Math.min(frameIndex + 1, frameCount)}
               max={frameCount}
               min={1}
@@ -234,7 +239,7 @@ export default function MovementDebugFrameScrubber({
           <button
             type="button"
             aria-label={isPlaying ? "Pause debug playback" : "Resume debug playback"}
-            className="grid h-10 w-10 place-items-center rounded-full bg-[#f7efe7] text-[#121016] transition hover:bg-white"
+            className={`grid h-10 w-10 place-items-center rounded-full bg-[${MOVEMENT_CREAM}] text-[#121016] transition hover:bg-white`}
             onClick={toggleDebugPlayback}
           >
             {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="h-5 w-5 fill-current" />}
@@ -251,7 +256,7 @@ export default function MovementDebugFrameScrubber({
           <button
             type="button"
             aria-label="Previous debug marker"
-            className="grid h-9 w-9 place-items-center rounded-full border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 text-[#effff4] transition hover:bg-[#a8d5ba]/18 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/25"
+            className={`grid h-9 w-9 place-items-center rounded-full border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 text-[#effff4] transition hover:bg-[${MOVEMENT_MINT}]/18 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/25`}
             disabled={markerFrames.length === 0}
             onClick={() => jumpToAdjacentMarker("previous")}
             title="Previous QA preset or analysis hotspot"
@@ -261,7 +266,7 @@ export default function MovementDebugFrameScrubber({
           <button
             type="button"
             aria-label="Next debug marker"
-            className="grid h-9 w-9 place-items-center rounded-full border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 text-[#effff4] transition hover:bg-[#a8d5ba]/18 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/25"
+            className={`grid h-9 w-9 place-items-center rounded-full border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 text-[#effff4] transition hover:bg-[${MOVEMENT_MINT}]/18 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/25`}
             disabled={markerFrames.length === 0}
             onClick={() => jumpToAdjacentMarker("next")}
             title="Next QA preset or analysis hotspot"
@@ -273,7 +278,7 @@ export default function MovementDebugFrameScrubber({
 
       <input
         aria-label="Movement debug frame"
-        className="mt-3 h-2 w-full cursor-pointer accent-[#a8d5ba]"
+        className={`mt-3 h-2 w-full cursor-pointer accent-[${MOVEMENT_MINT}]`}
         max={maxFrameIndex}
         min={0}
         onChange={(event) => jumpToFrame(Number(event.target.value))}
@@ -296,8 +301,8 @@ export default function MovementDebugFrameScrubber({
                 aria-label={`Jump to ${label} debug marker at frame ${marker.frameIndex + 1}`}
                 className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border transition ${
                   isActive
-                    ? "border-[#effff4] bg-[#a8d5ba] shadow-[0_0_0_4px_rgba(168,213,186,0.18)]"
-                    : "border-[#a8d5ba]/45 bg-black/80 hover:bg-[#a8d5ba]/45"
+                    ? `border-[#effff4] bg-[${MOVEMENT_MINT}] shadow-[0_0_0_4px_rgba(168,213,186,0.18)]`
+                    : `border-[${MOVEMENT_MINT}]/45 bg-black/80 hover:bg-[${MOVEMENT_MINT}]/45`
                 }`}
                 key={marker.id}
                 onClick={() => jumpToFrame(marker.frameIndex)}
@@ -312,7 +317,7 @@ export default function MovementDebugFrameScrubber({
 
       {qaPresets.length > 0 ? (
         <div className="mt-3 border-t border-white/10 pt-3">
-          <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#f6ccbe]">
+          <div className={`mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[${MOVEMENT_SALMON}]`}>
             QA Presets
           </div>
           <div className="flex flex-wrap gap-2">
@@ -332,8 +337,8 @@ export default function MovementDebugFrameScrubber({
                     preset.frameIndex === null
                       ? "cursor-not-allowed border-white/10 bg-white/5 text-white/35"
                       : isActive
-                        ? "border-[#a8d5ba]/60 bg-[#a8d5ba]/20 text-[#effff4]"
-                        : "border-[#f6ccbe]/25 bg-[#f6ccbe]/12 text-[#fff4ee] hover:bg-[#f6ccbe]/20"
+                        ? `border-[${MOVEMENT_MINT}]/60 bg-[${MOVEMENT_MINT}]/20 text-[#effff4]`
+                        : `border-[${MOVEMENT_SALMON}]/25 bg-[${MOVEMENT_SALMON}]/12 text-[#fff4ee] hover:bg-[${MOVEMENT_SALMON}]/20`
                   }`}
                   disabled={preset.frameIndex === null}
                   key={preset.id}
@@ -350,8 +355,8 @@ export default function MovementDebugFrameScrubber({
             })}
           </div>
           {activePresets.length > 0 ? (
-            <div className="mt-3 rounded-lg border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 font-mono text-[10px] text-white/70">
-              <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
+            <div className={`mt-3 rounded-lg border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-2 font-mono text-[10px] text-white/70`}>
+              <div className={`font-black uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
                 Active Proof
               </div>
               {activePresets.map((preset) => (
@@ -367,7 +372,7 @@ export default function MovementDebugFrameScrubber({
 
       {analysisHotspots.length > 0 ? (
         <div className="mt-3 border-t border-white/10 pt-3">
-          <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#a8d5ba]">
+          <div className={`mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-[${MOVEMENT_MINT}]`}>
             Analysis Hotspots
           </div>
           <div className="flex flex-wrap gap-2">
@@ -379,8 +384,8 @@ export default function MovementDebugFrameScrubber({
                   aria-label={`Jump to ${hotspot.label} analysis hotspot at frame ${hotspot.frameIndex + 1}`}
                   className={`min-h-8 rounded-full border px-3 py-1 text-left font-mono text-[10px] font-black uppercase tracking-[0.08em] transition ${
                     isActive
-                      ? "border-[#a8d5ba]/60 bg-[#a8d5ba]/20 text-[#effff4]"
-                      : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#effff4] hover:bg-[#a8d5ba]/18"
+                      ? `border-[${MOVEMENT_MINT}]/60 bg-[${MOVEMENT_MINT}]/20 text-[#effff4]`
+                      : `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[#effff4] hover:bg-[${MOVEMENT_MINT}]/18`
                   }`}
                   key={hotspot.id}
                   onClick={() => jumpToFrame(hotspot.frameIndex)}
@@ -393,8 +398,8 @@ export default function MovementDebugFrameScrubber({
             })}
           </div>
           {activeHotspots.length > 0 ? (
-            <div className="mt-3 rounded-lg border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 font-mono text-[10px] text-white/70">
-              <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
+            <div className={`mt-3 rounded-lg border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-2 font-mono text-[10px] text-white/70`}>
+              <div className={`font-black uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
                 Active Hotspot
               </div>
               {activeHotspots.map((hotspot) => (
@@ -411,7 +416,7 @@ export default function MovementDebugFrameScrubber({
       {recordingAnalysis ? (
         <div className="mt-3 grid grid-cols-4 gap-2 border-t border-white/10 pt-3 font-mono text-[10px] text-white/60">
           <div>
-            <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
+            <div className={`font-black uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
               Peak Squat
             </div>
             <div>
@@ -422,19 +427,19 @@ export default function MovementDebugFrameScrubber({
             </div>
           </div>
           <div>
-            <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
+            <div className={`font-black uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
               Left Knee
             </div>
             <div>{formatPeak(recordingAnalysis.peakLeftKneeLift, (frame) => frame.leftKneeLift)}</div>
           </div>
           <div>
-            <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
+            <div className={`font-black uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
               Right Knee
             </div>
             <div>{formatPeak(recordingAnalysis.peakRightKneeLift, (frame) => frame.rightKneeLift)}</div>
           </div>
           <div>
-            <div className="font-black uppercase tracking-[0.14em] text-[#a8d5ba]">
+            <div className={`font-black uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
               Single Knee
             </div>
             <div>

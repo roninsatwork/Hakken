@@ -11,6 +11,7 @@ import {
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { STATUS_TONE_CLASSES, toneForStatus, type StatusTone } from "@/src/ui/atoms/statusTone";
 
 export type AdminRuleTableRow = {
   _id: Id<"aiRules">;
@@ -45,11 +46,20 @@ type AdminRulesTableProps = {
   };
 };
 
-function getPriorityColor(priority: string) {
-  if (priority === "CRITICAL") return "text-rose-500 bg-rose-500/10 border-rose-500/20";
-  if (priority === "HIGH") return "text-orange-500 bg-orange-500/10 border-orange-500/20";
-  if (priority === "NORMAL") return "text-blue-500 bg-blue-500/10 border-blue-500/20";
-  return "text-secondary bg-foreground/5 border-border-dim";
+/**
+ * Rule priorities are a four-step scale (LOW/NORMAL/HIGH/CRITICAL), so NORMAL
+ * reads as info and HIGH as warning — only CRITICAL is danger. toneForStatus
+ * covers anything else that ends up in the priority column.
+ */
+const PRIORITY_TONES: Record<string, StatusTone> = {
+  CRITICAL: "danger",
+  HIGH: "warning",
+  NORMAL: "info",
+  LOW: "neutral",
+};
+
+function priorityTone(priority: string): StatusTone {
+  return PRIORITY_TONES[priority] ?? toneForStatus(priority);
 }
 
 export function AdminRulesTable({
@@ -110,7 +120,7 @@ export function AdminRulesTable({
               className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
             >
               <td className="px-5 py-4 align-middle">
-                <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${getPriorityColor(rule.priority)}`}>
+                <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${STATUS_TONE_CLASSES[priorityTone(rule.priority)]}`}>
                   {rule.priority}
                 </div>
               </td>
@@ -129,7 +139,7 @@ export function AdminRulesTable({
                   className="hover:text-foreground transition-colors p-1 flex justify-end w-full"
                   title={rule.isActive ? labels.deactivate : labels.activate}
                 >
-                  <Power className={`w-4 h-4 ${rule.isActive ? "text-orange-500" : "opacity-40"}`} />
+                  <Power className={`w-4 h-4 ${rule.isActive ? "text-warning" : "opacity-40"}`} />
                 </button>
               </td>
               <td className="px-5 py-4 align-middle text-right">
@@ -151,7 +161,7 @@ export function AdminRulesTable({
                     className="transition-colors group/trash p-1"
                     title={labels.delete}
                   >
-                    <Trash2 className="w-4 h-4 text-rose-500/60 group-hover/trash:text-rose-500" />
+                    <Trash2 className="w-4 h-4 text-destructive/60 group-hover/trash:text-destructive" />
                   </button>
                 </div>
               </td>

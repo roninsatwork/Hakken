@@ -207,6 +207,12 @@ export const executeNode = internalAction({
     // Read by the catch block's retry decision; set once known.
     let failedNodeType: string | undefined = undefined;
     let claimedAttempt = 1;
+    // Both feed the retry decision's `firstAttemptMayHaveActed`: once the
+    // node's real work has finished, an error from the bookkeeping after it
+    // must not re-run the node; and an autonomous agent's tool writes skip
+    // the approval gate, so a re-run could repeat them.
+    let nodeWorkCompleted = false;
+    let agentIsAutonomous = false;
     try {
       const execution = await ctx.runQuery(internal.workflowExecutions.getExecution, { id: args.executionId });
       if (!execution || execution.status === "FAILED") {
@@ -245,18 +251,23 @@ export const executeNode = internalAction({
       });
 
       if (node.type === "agentNode" && currentNodeData._agentId) {
+        const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: currentNodeData._agentId });
+        agentIsAutonomous = agent?.autonomousToolExecution === true;
         const agentResult = await executeAgentRuntimeNode(ctx, {
           agentId: currentNodeData._agentId,
           resolvedInput,
           workflowId: args.workflowId,
           executionId: args.executionId,
         });
+        // The agent has done whatever it was going to do; an error past this
+        // point is bookkeeping, and a retry would run the agent again.
+        nodeWorkCompleted = true;
         outputPayload = agentResult.output;
         await ctx.runMutation(internal.workflowEngine.linkAgentRunToStep, {
           stepId: lockedStepId,
           agentRunId: agentResult.runId,
         });
-      } 
+      }
       else if (node.type === "actionNode") {
         try {
           outputPayload = await executeApiActionRuntimeNode({ currentNodeData, globalStatePayload });
@@ -341,6 +352,7 @@ export const executeNode = internalAction({
       else {
         outputPayload = executeBypassNode({ nodeType: node.type, resolvedInput });
       }
+      nodeWorkCompleted = true;
 
       // Finalize the step, append to State memory, and find downstream tasks
       const downstreamNodesToSchedule = await ctx.runMutation(internal.workflowEngine.finalizeNodeStep, {
@@ -370,6 +382,7 @@ export const executeNode = internalAction({
         errorMessage,
         nodeType: failedNodeType,
         attemptJustFailed: claimedAttempt,
+        firstAttemptMayHaveActed: nodeWorkCompleted || agentIsAutonomous,
       });
 
       if (decision.action === "retry" && lockedStepId) {
@@ -378,15 +391,23 @@ export const executeNode = internalAction({
           error: errorMessage,
         });
         if (requeued) {
-          await ctx.scheduler.runAfter(decision.delayMs, internal.workflowRuntime.executeNode, {
-            workflowId: args.workflowId,
-            executionId: args.executionId,
-            nodeId: args.nodeId,
-          });
-          return;
+          try {
+            await ctx.scheduler.runAfter(decision.delayMs, internal.workflowRuntime.executeNode, {
+              workflowId: args.workflowId,
+              executionId: args.executionId,
+              nodeId: args.nodeId,
+            });
+            return;
+          } catch (scheduleError: unknown) {
+            // The step is requeued but nothing will come for it. Without this
+            // it sits PENDING forever with the execution stuck RUNNING —
+            // invisible to the review list. Fail it honestly instead.
+            console.error(`Failed to schedule retry for node ${args.nodeId}:`, scheduleError);
+          }
         }
-        // The step was not requeueable (already finalized elsewhere); fall
-        // through to the ordinary failure so nothing is silently swallowed.
+        // The step was not requeueable (already finalized elsewhere) or the
+        // retry could not be scheduled; fall through to the ordinary failure
+        // so nothing is silently swallowed.
       }
 
       await ctx.runMutation(internal.workflowEngine.failNodeStep, {

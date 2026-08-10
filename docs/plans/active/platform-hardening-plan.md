@@ -441,13 +441,13 @@ consumed by nothing.
 
 **Delivered:**
 
-- `src/lib/navigationVisibility.ts` — the rule, pure and React-free, 9 tests.
-  Unclassified keys stay **visible**: deny-by-default would silently delete any
-  newly added menu item on every deployment using a profile.
-- `systemSettings.navigationProfileKey` — a deployment can now select a profile.
-- `SidebarNavigation.tsx` — 35 items carry a `navKey`, and `NavItem` /
-  `SubNavItem` exclude themselves via context rather than 29 call sites each
-  being wrapped in a conditional that someone would eventually forget.
+> **Removed 2026-08-10.** All of this was deleted with the white-label
+> feature. `systemSettings.navigationProfileKey` never had a writer — no
+> screen, mutation or script could set it — so the resolved hidden-key set
+> was always empty and every nav item always rendered. The claim below that
+> "a deployment can now select a profile" was never true. What it cost while
+> it sat there: a schema field, a context field, `src/lib/navigationVisibility.ts`
+> with 9 tests, a `navKey` on 44 sidebar props, and a context provider.
 - Parent sections carry keys too. Hiding only a child left an empty expandable
   heading behind — caught by a test, not by review.
 
@@ -1345,10 +1345,8 @@ deployment details, which a fresh template directory has none of. The generated
 API index is pruned directly instead — two mechanical lines per module — and the
 operator's first `npx convex dev` confirms it matches.
 
-**Kept on purpose:** the white-label navigation profiles still name `properties`
-and `arcade` in their `hide` lists. Hiding a nav item that does not exist is a
-no-op, and a product that later adds its own properties module inherits the same
-decision.
+**Superseded 2026-08-10:** the navigation profiles that named `properties` and
+`arcade` in their `hide` lists were deleted with the white-label feature.
 
 ---
 

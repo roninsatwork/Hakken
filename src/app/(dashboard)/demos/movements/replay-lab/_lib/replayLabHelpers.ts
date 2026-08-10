@@ -20,6 +20,11 @@ import {
 import {
   type MovementTrackingDebugState,
 } from "../../_lib/movementTrackingCalibration";
+import {
+  MOVEMENT_ALERT_SOFT,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 export function replayMotionFrameHistoryForBuild<T>({
   isPlaying,
@@ -242,9 +247,9 @@ export function extractKnownOwner(fallbacks: Record<string, string> | undefined,
 }
 
 export function avatarFollowCriterionClass(status: AvatarFollowCriterionStatus) {
-  if (status === "blocked") return "text-[#ffb0b0]";
-  if (status === "review") return "text-[#f6ccbe]";
-  if (status === "pass") return "text-[#a8d5ba]";
+  if (status === "blocked") return `text-[${MOVEMENT_ALERT_SOFT}]`;
+  if (status === "review") return `text-[${MOVEMENT_SALMON}]`;
+  if (status === "pass") return `text-[${MOVEMENT_MINT}]`;
   return "text-muted";
 }
 

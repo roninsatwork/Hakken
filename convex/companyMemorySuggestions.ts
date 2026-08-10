@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { autoApplyCompanyCandidate } from "./companyMemories";
+import { getSelfImprovementConfig } from "./selfImprovementConfig";
 
 /**
  * Filling the memory suggestion queue.
@@ -264,6 +266,7 @@ export const recordSweepInternal = internalMutation({
   handler: async (ctx, args) => {
     const now = Date.now();
     let suggested = 0;
+    const config = await getSelfImprovementConfig(ctx.db);
 
     for (const suggestion of args.suggestions ?? []) {
       const content = normalizeText(suggestion.content);
@@ -302,7 +305,7 @@ export const recordSweepInternal = internalMutation({
         .take(200);
       if (duplicateMemory.some((entry) => entry.normalizedContent === normalizedContent)) continue;
 
-      await ctx.db.insert("companyMemoryCandidates", {
+      const candidateId = await ctx.db.insert("companyMemoryCandidates", {
         companyId: args.companyId,
         title: normalizeText(suggestion.title).slice(0, MEMORY_TITLE_MAX_CHARS),
         content,
@@ -323,6 +326,14 @@ export const recordSweepInternal = internalMutation({
         updatedAt: now,
       });
       suggested += 1;
+
+      // Autonomous memory (owner decision, 2026-08-10): the suggestion is
+      // saved straight into company memory, marked autoApplied. Only an
+      // ALWAYS suggestion with no free ALWAYS slot stays waiting for a
+      // person, because that cap is a product rule.
+      if (config.autonomousMemory) {
+        await autoApplyCompanyCandidate(ctx, candidateId);
+      }
     }
 
     const existing = await ctx.db

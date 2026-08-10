@@ -5,6 +5,10 @@ import {
   getMovementProofRehearsalScoreSummary,
 } from "../_lib/movementProofRehearsalEvidence";
 import type { getProofRehearsalReadiness } from "../_lib/replayLabHelpers";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 type ReplayProofRehearsalPanelProps = {
   onJumpToEvidence: (recordingId: string, frameIndex: number) => void;
@@ -36,7 +40,7 @@ export default function ReplayProofRehearsalPanel({
             {MOVEMENT_NEXT_PROOF_REHEARSAL_ITEMS.length} blocker recordings queued before promotion
           </div>
         </div>
-        <span className="rounded-full border border-[#f6ccbe]/25 bg-[#f6ccbe]/10 px-2 py-1 font-mono text-[11px] text-[#f6ccbe]">
+        <span className={`rounded-full border border-[${MOVEMENT_SALMON}]/25 bg-[${MOVEMENT_SALMON}]/10 px-2 py-1 font-mono text-[11px] text-[${MOVEMENT_SALMON}]`}>
           no-recording prep
         </span>
       </div>
@@ -51,7 +55,7 @@ export default function ReplayProofRehearsalPanel({
             {proofRehearsalReadiness.state}
           </span>
         </div>
-        <div className="mt-1 font-semibold text-[#f6ccbe]">{proofRehearsalReadiness.label}</div>
+        <div className={`mt-1 font-semibold text-[${MOVEMENT_SALMON}]`}>{proofRehearsalReadiness.label}</div>
         <div className="mt-0.5 leading-snug">{proofRehearsalReadiness.detail}</div>
       </div>
       <div
@@ -122,9 +126,9 @@ export default function ReplayProofRehearsalPanel({
                     <div
                       className={`mt-1 font-mono text-[11px] ${
                         scoreSummary.scoreState === "meets-threshold"
-                          ? "text-[#a8d5ba]"
+                          ? `text-[${MOVEMENT_MINT}]`
                           : scoreSummary.scoreState === "below-threshold"
-                            ? "text-[#f6ccbe]"
+                            ? `text-[${MOVEMENT_SALMON}]`
                             : "text-muted"
                       }`}
                       data-testid="movement-replay-proof-rehearsal-score"

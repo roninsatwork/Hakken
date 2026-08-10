@@ -37,6 +37,21 @@ describe("decideStepFailure", () => {
       decideStepFailure({ errorMessage: "Agent not found", nodeType: "agentNode", attemptJustFailed: 1 })
     ).toEqual({ action: "fail" });
   });
+
+  test("a first attempt that may have acted never retries, transient or not", () => {
+    // Two ways an agentNode loses its safety argument: the agent runs its
+    // write tools autonomously (no approval gate to stop a repeat), or the
+    // node's work finished and the error came from the bookkeeping after it.
+    // The caller reports both through the same flag, and it beats everything.
+    expect(
+      decideStepFailure({
+        errorMessage: transient,
+        nodeType: "agentNode",
+        attemptJustFailed: 1,
+        firstAttemptMayHaveActed: true,
+      })
+    ).toEqual({ action: "fail" });
+  });
 });
 
 describe("isTransientWorkflowError", () => {

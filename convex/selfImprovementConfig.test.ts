@@ -25,13 +25,18 @@ describe("Self-improvement config", () => {
     // Non-boolean garbage in one field must not poison the others.
     expect(
       parseSelfImprovementConfig(
-        JSON.stringify({ autoApplyLowRisk: "yes", retrievalPriors: false })
+        JSON.stringify({ autonomousMemory: "yes", retrievalPriors: false })
       )
     ).toEqual({ ...SELF_IMPROVEMENT_DEFAULTS, retrievalPriors: false });
   });
 
-  test("autonomy defaults off", () => {
-    expect(SELF_IMPROVEMENT_DEFAULTS.autoApplyLowRisk).toBe(false);
+  test("autonomy defaults on — the owner's 2026-08-10 decision", () => {
+    expect(SELF_IMPROVEMENT_DEFAULTS.autonomousMemory).toBe(true);
+    // A config row written before the rename keeps the new default rather
+    // than resurrecting the dead flag.
+    expect(parseSelfImprovementConfig(JSON.stringify({ autoApplyLowRisk: false }))).toEqual(
+      SELF_IMPROVEMENT_DEFAULTS
+    );
   });
 
   test("update writes the row, audits the change, and read round-trips", async () => {
@@ -53,7 +58,7 @@ describe("Self-improvement config", () => {
       outcomeWeightedRanking: true,
       endUserFeedback: false,
       retrievalPriors: true,
-      autoApplyLowRisk: false,
+      autonomousMemory: false,
     };
     await asSuperAdmin.mutation(api.selfImprovementConfig.updateConfig, next);
 

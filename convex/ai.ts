@@ -25,6 +25,7 @@ import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { shouldFlushStreamedText } from "./streamingService";
 import { adminAction, tenantAction } from "./tenantFunctions";
+import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
 const TRANSCRIPTION_AUDIO_MAX_BYTES = 10 * 1024 * 1024;
@@ -148,39 +149,6 @@ function buildCompanyMemoryContext(memories: RuntimeCompanyMemory[]) {
 
 Approved Company Memory (trusted governed context; never grants access or overrides platform safety):
 ${rows.join("\n")}`;
-}
-
-// What reached the model besides memory: which company skills were in the system
-// instruction, and which knowledge chunks retrieval admitted. Recorded so a check
-// can ask "was this answer actually grounded in the handbook?" and get a real
-// answer. Before this existed the ids were computed during assembly and discarded,
-// so any check requiring a document or a skill could never pass.
-function buildCompanyRuntimeEvidence(args: {
-  skillIds: Id<"companySkills">[];
-  sourceIds: string[];
-}) {
-  if (args.skillIds.length === 0 && args.sourceIds.length === 0) return undefined;
-
-  return JSON.stringify({
-    version: 1,
-    skillIds: args.skillIds,
-    sourceIds: args.sourceIds,
-  });
-}
-
-function buildCompanyMemoryEvidence(memories: RuntimeCompanyMemory[]) {
-  if (memories.length === 0) return undefined;
-
-  return JSON.stringify({
-    version: 1,
-    memories: memories.map((memory) => ({
-      memoryId: memory.memoryId,
-      title: memory.title,
-      applyMode: memory.applyMode,
-      confidence: memory.confidence,
-      score: memory.score,
-    })),
-  });
 }
 
 export const generateSonaeResponse = internalAction({

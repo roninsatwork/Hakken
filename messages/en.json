@@ -1440,16 +1440,13 @@
       "appearance": {
         "title": "Theming & Typography",
         "typography": "Typography & Fonts",
-        "typographySub": "Select font families and base text sizes for the entire platform.",
+        "typographySub": "Fonts and heading size for the dashboard app.",
         "headingFont": "Heading Font",
         "bodyFont": "Body Font",
-        "headingSize": "Heading Base Size",
-        "subTextSize": "Small Text Size",
+        "headingSize": "H1 Size",
         "fonts": {
           "inter": "Inter (Sans-Serif)",
-          "jetbrains": "JetBrains Mono",
-          "playfair": "Playfair Display",
-          "outfit": "Outfit"
+          "jetbrains": "JetBrains Mono"
         },
         "sizes": {
           "tighter": "Tighter (1.25rem)",
@@ -1475,8 +1472,32 @@
         "destructive": "Error / Delete",
         "focusRing": "Focus Outline",
         "brandOrigin": "Brand Origin",
-        "brandOriginSub": "The primary accent color for the entire system.",
-        "brandColor": "Brand Accent Color"
+        "brandOriginSub": "The primary accent for the dashboard app and the chat widget's default colour.",
+        "brandColor": "Brand Accent Color",
+        "scope": "Applies to the dashboard app. The public website, sign-in screen, and emails have their own fixed designs.",
+        "headingFontSub": "Used by page and panel headings.",
+        "bodyFontSub": "Used by everything else the app writes.",
+        "headingSizeSub": "Sizes the main page title only.",
+        "semanticOpsSub": "Status pills and messages across the app.",
+        "bgBaseSub": "The page behind everything.",
+        "cardSurfacesSub": "Panels, tables, and pop-up boxes on most screens.",
+        "sidebar": "Sidebar",
+        "sidebarSub": "The left navigation rail. Reset matches it to cards.",
+        "primaryTextSub": "Headings and the text you read most.",
+        "secondaryTextSub": "Supporting text: table rows, labels, summaries.",
+        "mutedText": "Muted Text",
+        "mutedTextSub": "The faintest text: hints, timestamps, empty screens. Used on nearly every screen.",
+        "hoverBlocksSub": "The background flash when the pointer rests on menus and rows.",
+        "bordersSub": "Lines around cards, tables, and inputs.",
+        "successSub": "Good news: passed checks, healthy agents, saved states.",
+        "destructiveSub": "Bad news and delete buttons: failures, errors, removals.",
+        "warning": "Warning",
+        "warningSub": "Needs a look: pending approvals, reviews, risk flags.",
+        "info": "Info",
+        "infoSub": "In motion: running jobs and activity indicators.",
+        "focusRingSub": "The outline on the item keyboard focus is on. Adopted screen by screen.",
+        "brandColorSub": "Buttons, links, highlights, and glows.",
+        "reset": "Reset"
       },
       "economics": {
         "title": "Billing & Subscriptions",
@@ -1495,33 +1516,13 @@
         "title": "Data Security",
         "redaction": "Inbound Prompt Masking",
         "redactionSub": "Automatic PII shielding for incoming user prompts before they reach the model.",
-        "mfaPolicy": "System MFA Policy",
-        "mfaSub": "Force multi-factor authentication for all users.",
         "masterToggle": "Enable Data Masking Engine",
         "masterToggleSub": "Turn on privacy masking for sensitive fields in incoming user queries.",
         "maskEmails": "Mask Email Addresses",
         "maskCreditCards": "Mask Credit Card Numbers",
         "maskNi": "Mask National ID Numbers",
         "maskPhones": "Mask Phone Numbers",
-        "maskPhonesSub": "Hide mobile and landline numbers in incoming prompts.",
-        "purgeEngine": "Automated Data Retention",
-        "purgeSub": "Automatically delete old logs and records according to schedule.",
-        "purgeToggle": "Enable Data Retention Policies",
-        "purgeToggleSub": "The system will automatically delete records older than the selected retention period.",
-        "retention": "Retention Period",
-        "days": {
-          "7": "7 Days",
-          "14": "14 Days",
-          "30": "30 Days",
-          "90": "90 Days",
-          "365": "1 Year"
-        },
-        "monthlyDispatch": "Purge Frequency",
-        "everyDay": "{day}{suffix} of the month",
-        "executionTime": "Execution Target",
-        "hourLabel": "{hour}:00",
-        "purgeCapNote": "Limits database overload.",
-        "nextRun": "Next Scheduled Execution"
+        "maskPhonesSub": "Hide mobile and landline numbers in incoming prompts."
       },
       "audit": {
         "title": "System Audit Logs",
@@ -1542,308 +1543,6 @@
         "routingMatrixOn": "On",
         "routingMatrixOff": "Off"
       },
-      "whiteLabel": {
-        "title": "White-Label Readiness",
-        "subtitle": "Review the configuration needed before this starter becomes a customer-facing product.",
-        "open": "Open",
-        "summary": {
-          "score": "Score",
-          "ready": "Ready",
-          "pending": "Pending",
-          "manual": "Manual",
-          "manualHint": "Needs a person, outside Sonae"
-        },
-        "status": {
-          "ready": "Ready",
-          "pending": "Pending",
-          "manual": "Review"
-        },
-        "items": {
-          "identity": {
-            "label": "Product identity",
-            "ready": "The platform name has been changed from the starter default.",
-            "pending": "Set a customer-facing product name in Core Identity."
-          },
-          "logos": {
-            "label": "Light and dark logos",
-            "ready": "Both logo variants are configured for themed surfaces.",
-            "pending": "Upload both light and dark logo variants before handoff."
-          },
-          "brandColor": {
-            "label": "Brand accent",
-            "ready": "A valid global brand color is configured.",
-            "pending": "Set a six-digit HEX brand accent in Global Aesthetics."
-          },
-          "diagnostics": {
-            "label": "Diagnostic routes",
-            "ready": "Developer diagnostic routing is disabled for product handoff.",
-            "pending": "Disable diagnostic routing unless this build is still in engineering review."
-          },
-          "widget": {
-            "label": "Widget branding",
-            "ready": "An active widget has custom brand styling, greeting, placeholder, logo, and a restricted domain allowlist.",
-            "pending": "Configure an active widget with custom branding and a restricted domain allowlist.",
-            "manual": "Review the public chat widget name, greeting, color, logo, placeholder, starters, and domain allowlist."
-          },
-          "email": {
-            "label": "Email sender",
-            "ready": "A stored sender address is configured for branded runtime emails.",
-            "manual": "Confirm the deployment uses the intended sender name and domain for auth, workflow, and platform alert emails."
-          },
-          "production": {
-            "label": "Production setup validation",
-            "manual": "Run the production setup validator before deployment handoff and keep the output with release notes."
-          }
-        },
-        "detected": "Detected",
-        "fixThis": "Fix this"
-      },
-      "handoffSummary": {
-        "title": "Brand Handoff Summary",
-        "subtitle": "Confirm the identity, widget, and email posture that will travel with a vertical starter.",
-        "emailNote": "Used by runtime email helpers unless the deployment overrides RESEND_FROM_EMAIL.",
-        "fields": {
-          "product": "Product",
-          "email": "Runtime sender",
-          "readiness": "Readiness score",
-          "widget": "Widget posture",
-          "diagnostics": "Diagnostics",
-          "production": "Production gate",
-          "nextActions": "Next actions",
-          "recommendedPresets": "Ready presets"
-        },
-        "logoModes": {
-          "light-and-dark": "Light and dark logo variants are configured.",
-          "partial": "Only one logo variant is configured.",
-          "missing": "Logo variants still need to be uploaded."
-        },
-        "widget": {
-          "ready": "Active branded widget",
-          "needs-review": "Needs widget review"
-        },
-        "diagnostics": {
-          "ready": "Disabled for handoff",
-          "needs-review": "Still enabled"
-        },
-        "production": {
-          "manual": "Run setup validation before handoff"
-        },
-        "empty": {
-          "nextActions": "No automatic next action is currently queued.",
-          "recommendedPresets": "Complete more readiness checks before a preset is marked ready."
-        }
-      },
-      "modulePresets": {
-        "title": "Module Presets",
-        "subtitle": "Use these starter bundles to decide which app and operator surfaces belong in a vertical build.",
-        "sections": {
-          "visible": "Visible modules",
-          "owner": "Owner surfaces",
-          "handoff": "Handoff checks"
-        },
-        "links": {
-          "agents": "Open agents",
-          "widget": "Open widget",
-          "health": "Open health"
-        },
-        "items": {
-          "assistantWorkspace": "Assistant workspace",
-          "knowledgeSurfaces": "Knowledge surfaces",
-          "reportsOptional": "Reports only when needed",
-          "agentBuilderEvals": "Agent builder and evals",
-          "modelDefaults": "Model defaults",
-          "systemHealth": "System Health",
-          "replaceDemoKnowledge": "Replace demo knowledge",
-          "runReleaseGate": "Run the release gate",
-          "keepDiagnosticsDisabled": "Keep diagnostics disabled",
-          "publicWidget": "Public widget",
-          "customerChatHistory": "Customer chat history",
-          "knowledgeQa": "Knowledge QA",
-          "widgetSetup": "Widget setup",
-          "connectorMarketplace": "Connector marketplace",
-          "approvalsInbox": "Approvals inbox",
-          "setAllowedDomains": "Set allowed domains",
-          "reviewWidgetBranding": "Review widget branding",
-          "testEscalationPolicy": "Test escalation policy",
-          "dashboardReports": "Dashboard and reports",
-          "workflowsSchedules": "Workflows and schedules",
-          "approvalsRuns": "Approvals and runs",
-          "auditLedger": "Audit ledger",
-          "confirmRoleAccess": "Confirm role access",
-          "setScheduleOwners": "Set schedule owners",
-          "exportHealthReport": "Export health report"
-        },
-        "presets": {
-          "knowledgeAssistant": {
-            "title": "Knowledge Assistant",
-            "summary": "A focused internal assistant backed by approved company knowledge and release gates.",
-            "visible": {
-              "0": "Assistant workspace",
-              "1": "Knowledge surfaces",
-              "2": "Reports only when needed"
-            },
-            "owner": {
-              "0": "Agent builder and evals",
-              "1": "Model defaults",
-              "2": "System Health"
-            },
-            "handoff": {
-              "0": "Replace demo knowledge",
-              "1": "Run the release gate",
-              "2": "Keep diagnostics disabled"
-            }
-          },
-          "supportWidget": {
-            "title": "Support Widget",
-            "summary": "A public chat widget starter with governed escalation, knowledge, and domain controls.",
-            "visible": {
-              "0": "Public widget",
-              "1": "Customer chat history",
-              "2": "Knowledge QA"
-            },
-            "owner": {
-              "0": "Widget setup",
-              "1": "Connector marketplace",
-              "2": "Approvals inbox"
-            },
-            "handoff": {
-              "0": "Set allowed domains",
-              "1": "Review widget branding",
-              "2": "Test escalation policy"
-            }
-          },
-          "operatorWorkspace": {
-            "title": "Operator Workspace",
-            "summary": "A heavier admin/operator starter for workflows, schedules, run review, and operational reporting.",
-            "visible": {
-              "0": "Dashboard and reports",
-              "1": "Workflows and schedules",
-              "2": "Approvals and runs"
-            },
-            "owner": {
-              "0": "Release Center",
-              "1": "System Health",
-              "2": "Audit ledger"
-            },
-            "handoff": {
-              "0": "Confirm role access",
-              "1": "Set schedule owners",
-              "2": "Export health report"
-            }
-          }
-        }
-      },
-      "navigationProfiles": {
-        "title": "Navigation Profiles",
-        "subtitle": "Preview which route groups a vertical starter should show, reserve for operators, or hide during packaging.",
-        "sections": {
-          "visible": "Visible",
-          "owner": "Owner-only",
-          "hide": "Hide candidates",
-          "notes": "Implementation notes"
-        },
-        "items": {
-          "appDashboard": "App dashboard",
-          "assistant": "Assistant",
-          "reports": "Reports",
-          "organization": "Organization settings",
-          "systemSettings": "System Settings",
-          "systemHealth": "System Health",
-          "adminCompanies": "Companies admin",
-          "apiKeys": "API keys",
-          "publicWidget": "Public widget",
-          "customerChatHistory": "Customer chat history",
-          "knowledgeQa": "Knowledge QA",
-          "widgetSetup": "Widget setup",
-          "globalKnowledge": "Global Knowledge",
-          "chatLogs": "Chat logs",
-          "properties": "Properties",
-          "arcade": "Arcade",
-          "diagnostics": "Diagnostics",
-          "adminDashboard": "Admin dashboard",
-          "agents": "Agents",
-          "workflows": "Workflows",
-          "approvals": "Approvals",
-          "runObservatory": "Run Observatory",
-          "auditLogs": "Audit logs",
-          "tenantScoped": "Persist visibility per tenant or product package.",
-          "preserveAdminRoutes": "Keep admin routes reachable for authorized operators.",
-          "keepServerAuthz": "Treat navigation hiding as presentation only; keep server authorization.",
-          "domainAllowlist": "Pair public routes with widget domain allowlists.",
-          "widgetBranding": "Review widget branding before exposing public chat.",
-          "emailSender": "Confirm the runtime sender before customer-facing email.",
-          "superAdminOnly": "Keep owner-only routes scoped to super-admin operators.",
-          "auditRouteChanges": "Audit route visibility changes.",
-          "documentHiddenRoutes": "Document hidden routes in the build handoff."
-        },
-        "profiles": {
-          "customerWorkspace": {
-            "title": "Customer Workspace",
-            "summary": "A minimal internal app shell for tenant users with owner tooling kept outside the customer path."
-          },
-          "supportWidget": {
-            "title": "Support Widget",
-            "summary": "A public support starter focused on the widget, conversation review, and knowledge quality."
-          },
-          "operatorConsole": {
-            "title": "Operator Console",
-            "summary": "A governed admin console for teams managing agents, workflows, approvals, releases, and observability."
-          }
-        }
-      },
-      "customDomain": {
-        "title": "Custom Domain Readiness",
-        "subtitle": "Plan the host, widget, email, DNS, TLS, redirect, and tenant-routing checks for a branded deployment.",
-        "loading": "Preparing custom domain readiness...",
-        "note": "These checks are planning evidence only. DNS, TLS, and domain-to-tenant routing still need hosting-provider setup and developer review before runtime route hiding.",
-        "summary": {
-          "ready": "Ready",
-          "pending": "Pending",
-          "manual": "Manual",
-          "total": "Total"
-        },
-        "status": {
-          "ready": "Ready",
-          "pending": "Pending",
-          "manual": "Review"
-        },
-        "items": {
-          "appHost": {
-            "label": "Primary app host",
-            "manual": "Confirm the production app domain with the hosting provider."
-          },
-          "widgetDomains": {
-            "label": "Widget domain allowlist",
-            "ready": "The active widget has restricted allowed domains.",
-            "pending": "Set restricted allowed domains before exposing the public widget."
-          },
-          "emailDomain": {
-            "label": "Email sender domain",
-            "ready": "A branded sender domain is configured.",
-            "manual": "Confirm the branded email sender or deployment override."
-          },
-          "dnsTls": {
-            "label": "DNS and TLS",
-            "manual": "Validate DNS records and TLS certificates outside the app."
-          },
-          "redirects": {
-            "label": "Redirect policy",
-            "manual": "Confirm apex, www, and legacy route redirect behavior."
-          },
-          "tenantIsolation": {
-            "label": "Tenant routing isolation",
-            "manual": "Confirm custom domains map to the correct tenant and preserve server authorization."
-          }
-        }
-      },
-      "packagingChecklist": {
-        "title": "Packaging Checklist",
-        "subtitle": "Copy a developer handoff artifact that combines brand, readiness, module, and navigation evidence.",
-        "loading": "Preparing packaging checklist...",
-        "copy": "Copy checklist",
-        "copied": "Copied",
-        "summary": "{productName} is {readinessPercent}% ready for white-label packaging."
-      },
       "purges": {
         "title": "Log Retention & Purge Policies",
         "subtitle": "Configure retention periods and execution crons to restrict platform data bloat. Purges run platform-wide.",
@@ -1856,12 +1555,18 @@
           "actions": "Actions",
           "runNow": "Run Now",
           "configure": "Configure",
-          "stop": "Cancel Execution"
+          "stop": "Cancel Execution",
+          "previewNow": "~{count} records past retention now",
+          "previewCapped": "over {count} records past retention now",
+          "previewNone": "nothing past retention",
+          "searchPlaceholder": "Search data categories",
+          "filterAll": "All",
+          "noMatches": "No categories match"
         },
         "categories": {
           "agentLogs": {
             "title": "Agent Execution Logs",
-            "description": "Raw prompt and response payloads generated during Agent tool executions and AI reasoning."
+            "description": "The agent activity log feed. Full run histories (steps, tool calls, payloads) are covered separately by Agent Run History."
           },
           "workflowLogs": {
             "title": "Workflow Execution Logs",
@@ -1878,6 +1583,38 @@
           "auditLogs": {
             "title": "System Audit Ledger",
             "description": "Immutable security logging tracking admin events, impersonations, user modifications, and role changes."
+          },
+          "agentRunHistory": {
+            "title": "Agent Run History",
+            "description": "Finished agent runs with their steps, tool calls, reflections, memory-usage records and feedback. Approval records and cost records are kept. The platform's fastest-growing data."
+          },
+          "agentTransactions": {
+            "title": "Agent Cost Records",
+            "description": "Per-call token and cost records behind spend reporting. Kept longer than run detail so finance history survives."
+          },
+          "publicApiRequests": {
+            "title": "Public API Requests",
+            "description": "One record per public API request, including rejected and rate-limited calls."
+          },
+          "authEvents": {
+            "title": "Sign-in Events",
+            "description": "Every sign-in attempt, including failed and throttled ones. Successful session logins are covered by User Login Audits."
+          },
+          "aiActionRequests": {
+            "title": "Rate-limit Counters",
+            "description": "Short-lived counters behind AI action rate limits. Nothing reads them past their window."
+          },
+          "analyticsSnapshots": {
+            "title": "Analytics Snapshots",
+            "description": "Daily usage rollups per platform, company and user. The default keeps over a year so year-on-year comparisons survive."
+          },
+          "webhookDeliveries": {
+            "title": "Webhook Deliveries",
+            "description": "Delivery attempts per event and destination, including request and response previews."
+          },
+          "purgeHistory": {
+            "title": "Purge History",
+            "description": "The purge system's own ledger. Cleans itself; the newest 200 entries are always kept whatever the retention says."
           }
         },
         "intervals": {
@@ -1904,8 +1641,6 @@
             "status": "Status",
             "purged": "Purged Records",
             "started": "Started At",
-            "duration": "Duration",
-            "actor": "Actor",
             "empty": "No purge history entries recorded.",
             "system": "System Cron",
             "manual": "Manual",
@@ -1913,13 +1648,17 @@
             "running": "Running",
             "failed": "Failed",
             "cancelled": "Cancelled"
-          }
+          },
+          "searchPlaceholder": "Search purge history",
+          "allPipelines": "All categories",
+          "allStatuses": "All statuses",
+          "showingRange": "Showing {start}-{end} of {total} loaded"
         },
         "modals": {
           "confirm": {
             "title": "Trigger Manual Purge",
             "body": "Are you absolutely sure you want to trigger a manual purge for {category}? This will permanently delete all records older than {cutoffDate} ({days} days retention).",
-            "warning": "This action is irreversible and will cascade-delete all child records and associated storage files.",
+            "warning": "This action is irreversible. It deletes the records this category describes, including its listed child records and storage files; anything a category deliberately keeps (approvals, cost records) survives.",
             "cancel": "Cancel",
             "confirm": "Trigger Purge"
           },
@@ -1951,6 +1690,19 @@
             "success": "Policy successfully updated."
           }
         }
+      },
+      "nav": {
+        "identity": "Identity",
+        "coreIdentity": "Core Identity",
+        "aesthetics": "Global Aesthetics",
+        "security": "Security",
+        "systemSecurity": "System Security",
+        "retention": "Retention Rules",
+        "options": "System Options",
+        "diagnostics": "Developer Diagnostics",
+        "selfImprovement": "Self-Improvement",
+        "approvals": "Agent Approval Window",
+        "purgeHistory": "Purge History"
       }
     },
     "auditLogs": {

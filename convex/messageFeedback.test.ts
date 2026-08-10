@@ -306,12 +306,13 @@ describe("Message feedback (self-improvement, Phase 3)", () => {
 
     // The generator reads rating and labels, not source — a user's praise
     // produces the same "successful pattern" draft an operator's would.
+    // Autonomous memory is on by default, so the draft lands APPLIED.
     await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId });
     const candidates = await t.run(async (ctx) =>
       await ctx.db
         .query("agentMemoryCandidates")
         .withIndex("by_agent_status_created", (q) =>
-          q.eq("agentId", agentId as Id<"agents">).eq("status", "PROPOSED")
+          q.eq("agentId", agentId as Id<"agents">).eq("status", "APPLIED")
         )
         .collect()
     );

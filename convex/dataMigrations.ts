@@ -96,6 +96,12 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * existed would otherwise rank as if they had no history, when the history
    * has been in the usage table all along. One count per run, matching the
    * live stamping in `agentRunStateService`.
+   *
+   * DO NOT RE-RUN once the agentRunHistory retention pipeline has fired on
+   * a deployment: that pipeline deletes old `agentMemoryUsage` rows, so a
+   * rebuild from what remains would silently shrink every memory's counters
+   * (retention-and-purge-plan, Phase 2.3). The cached counters are the
+   * authoritative record from then on.
    */
   "2026-08-09-agent-memory-outcome-counters": async (ctx, cursor, batchSize) => {
     const page = await ctx.db.query("agentMemories").paginate({ cursor, numItems: batchSize });

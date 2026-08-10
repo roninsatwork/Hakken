@@ -19,6 +19,13 @@ import {
   getMovementSpineGoalLabel,
 } from "../_lib/movementSpineIntent";
 import { analyzeMovementSpineFrames } from "../_lib/movementSpineReview";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../_lib/movementPalette";
 
 export default function MovementDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -56,7 +63,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
     return (
       <>
         <Header />
-        <div className="flex items-center justify-center py-24 text-[#f6ccbe] animate-pulse font-medium">
+        <div className={`flex items-center justify-center py-24 text-[${MOVEMENT_SALMON}] animate-pulse font-medium`}>
           Loading practice data...
         </div>
       </>
@@ -103,7 +110,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
             Recorded on {new Date(movement.createdAt).toLocaleDateString()} at {new Date(movement.createdAt).toLocaleTimeString()}
           </Typography>
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <span className="rounded-full border border-[#f6ccbe]/25 bg-[#f6ccbe]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#f6ccbe]">
+            <span className={`rounded-full border border-[${MOVEMENT_SALMON}]/25 bg-[${MOVEMENT_SALMON}]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[${MOVEMENT_SALMON}]`}>
               {spineGoalLabel}
             </span>
             {bodyFocus.map((focus) => (
@@ -118,7 +125,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
           <div className="flex flex-wrap items-center gap-3 pt-3">
             <Link
               href={`/demos/movements/${movement._id}/play?guidedPreview=1`}
-              className="inline-flex items-center gap-2 rounded-[10px] bg-[#f6ccbe] px-4 py-2 text-[13px] font-bold text-[#17131d] shadow-[0_0_20px_rgba(246,204,190,0.24)] transition-colors hover:bg-[#f7efe7]"
+              className={`inline-flex items-center gap-2 rounded-[10px] bg-[${MOVEMENT_SALMON}] px-4 py-2 text-[13px] font-bold text-[${MOVEMENT_INK}] shadow-[0_0_20px_rgba(246,204,190,0.24)] transition-colors hover:bg-[${MOVEMENT_CREAM}]`}
             >
               <Sparkles className="h-4 w-4" />
               Guided Preview
@@ -153,7 +160,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                 <Typography className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Routine Summary</Typography>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <CheckCircle2 className={`w-5 h-5 text-[${MOVEMENT_SALMON}] mt-0.5`} />
                     <div className="flex flex-col">
                       <Typography className="text-sm font-medium text-foreground block">Recording</Typography>
                       <Typography className="text-xs text-muted-foreground mt-0.5 block">
@@ -162,7 +169,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <Clock className={`w-5 h-5 text-[${MOVEMENT_SALMON}] mt-0.5`} />
                     <div className="flex flex-col">
                       <Typography className="text-sm font-medium text-foreground block">Duration</Typography>
                       <Typography className="text-xs text-muted-foreground mt-0.5 block">
@@ -171,7 +178,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Activity className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <Activity className={`w-5 h-5 text-[${MOVEMENT_SALMON}] mt-0.5`} />
                     <div className="flex flex-col">
                       <Typography className="text-sm font-medium text-foreground block">Posture Moments</Typography>
                       <Typography className="text-xs text-muted-foreground mt-0.5 block">
@@ -180,7 +187,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <Sparkles className={`w-5 h-5 text-[${MOVEMENT_SALMON}] mt-0.5`} />
                     <div className="flex flex-col">
                       <Typography className="text-sm font-medium text-foreground block">Spine Goal</Typography>
                       <Typography className="text-xs text-muted-foreground mt-0.5 block">
@@ -189,7 +196,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-[#f6ccbe] mt-0.5" />
+                    <CheckCircle2 className={`w-5 h-5 text-[${MOVEMENT_SALMON}] mt-0.5`} />
                     <div className="flex flex-col">
                       <Typography className="text-sm font-medium text-foreground block">Instructor Cue</Typography>
                       <Typography className="text-xs text-muted-foreground mt-0.5 block">
@@ -211,7 +218,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                         <Typography className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           Avg stack
                         </Typography>
-                        <Typography className="mt-1 text-2xl font-black text-[#f6ccbe]">
+                        <Typography className={`mt-1 text-2xl font-black text-[${MOVEMENT_SALMON}]`}>
                           {spineReview.averageStackScore}%
                         </Typography>
                       </div>
@@ -219,7 +226,7 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                         <Typography className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           Symmetry
                         </Typography>
-                        <Typography className="mt-1 text-2xl font-black text-[#a8d5ba]">
+                        <Typography className={`mt-1 text-2xl font-black text-[${MOVEMENT_MINT}]`}>
                           {spineReview.averageSymmetryScore}%
                         </Typography>
                       </div>
@@ -228,13 +235,13 @@ export default function MovementDetailsPage({ params }: { params: Promise<{ id: 
                       {spineReviewMoments.map((moment) => (
                         <div
                           key={moment.label}
-                          className="rounded-2xl border border-white/10 bg-[#07070b]/60 p-3"
+                          className={`rounded-2xl border border-white/10 bg-[${MOVEMENT_SCENE_BG}]/60 p-3`}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <Typography className="text-xs font-bold text-foreground">
                               {moment.label}
                             </Typography>
-                            <span className="rounded-full bg-[#f6ccbe]/10 px-2 py-1 text-[10px] font-bold text-[#f6ccbe]">
+                            <span className={`rounded-full bg-[${MOVEMENT_SALMON}]/10 px-2 py-1 text-[10px] font-bold text-[${MOVEMENT_SALMON}]`}>
                               Frame {moment.frameIndex}
                             </span>
                           </div>

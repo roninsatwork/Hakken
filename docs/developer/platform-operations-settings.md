@@ -4,8 +4,10 @@ Platform operations settings cover API keys, webhook delivery logs, maintenance 
 
 ## Product Surface
 
-- `src/app/(dashboard)/admin/settings/page.tsx` renders the main system settings workspace for identity, appearance, security, audit, options, white-label readiness, and purges.
-- `src/app/(dashboard)/admin/settings/_components/settingsTabs.ts` defines the supported tab ids: `identity`, `appearance`, `security`, `audit`, `options`, and `purges`.
+- `src/app/(dashboard)/admin/settings/(system)/layout.tsx` renders the two-level settings menu: Identity, Security, White Label, and System Options, each opening the screens beneath it. It sits in a `(system)` route group so the sibling Plans, API Keys, Analytics and Scripts routes do not inherit it.
+- Each section is its own route and saves only itself: `(system)/identity`, `(system)/identity/aesthetics`, `(system)/security`, `(system)/security/retention`, and `(system)/options` plus `self-improvement`, `approvals`.
+- `src/app/(dashboard)/admin/settings/page.tsx` is now only an entry point: it forwards `/admin/settings` and every legacy `?tab=` link to the route that replaced it, using `_components/settingsTabs.ts`.
+- `src/app/(dashboard)/admin/settings/_components/useSystemSettingsForm.ts` holds the `systemSettings` document for the three screens that write it (Core Identity, Global Aesthetics, Developer Diagnostics), each with its own save.
 - `src/app/(dashboard)/admin/settings/_components/PurgesSettingsSection.tsx` renders unified purge configuration, manual purge confirmation, cancellation, and recent purge history.
 - `src/app/(dashboard)/admin/settings/analytics/page.tsx` manages the global analytics tracking id and renders seven-day analytics data-health checks.
 - `src/app/(dashboard)/admin/settings/api-keys/page.tsx` manages tenant-scoped API keys.
@@ -20,17 +22,16 @@ Shared admin table components and `ADMIN_PAGE_SIZE` are used for API keys, webho
 
 ## System Settings Shell
 
-`admin/settings/page.tsx` coordinates several global settings modules:
+The settings screens read and write these modules:
 
 - `api.settings.get`, `api.settings.update`, and `api.settings.generateUploadUrl` for platform identity, logos, appearance, email sender values, theme tokens, and diagnostic routing.
-- `api.settings.getWhiteLabelReadiness`, module preset, navigation profile, custom-domain checklist, handoff summary, and packaging checklist queries for white-label packaging evidence.
 - `api.system.getPiiConfig` and `api.system.updatePiiConfig` for PII masking configuration.
-- `api.auditLogs.getConfig`, `api.auditLogs.updateConfig`, and `api.auditLogs.getRecentLogs` for the older audit retention configuration and audit feed.
+- `api.auditLogs.getRecentLogs` for the audit feed. The separate audit-only retention engine that used to sit on the security tab has been removed; `api.purges.*` is the only thing that clears audit records.
 - `api.purges.*` through `PurgesSettingsSection` for the unified purge engine.
 
-Only `identity`, `appearance`, `security`, `options`, and `purges` save state from this page. The audit tab is a read-only feed. Preserve that distinction when adding settings tabs so read-only evidence views do not accidentally write stale form state.
+Each screen owns its own save button, so a save only writes that screen. The single header button this replaced wrote the whole settings document from whichever tab was open. The six White Label screens are read-only evidence views and render no save at all — keep that distinction when adding a screen.
 
-Logo uploads use the `adminImage` frontend policy and `settings.generateUploadUrl`; backend validation still happens when settings are saved. Settings updates write `UPDATE_SYSTEM_PREFERENCES` audit logs from `convex/settings.ts`, while PII and audit config updates write their own audit entries from `convex/system.ts` and `convex/auditLogs.ts`.
+Logo uploads use the `adminImage` frontend policy and `settings.generateUploadUrl`; backend validation still happens when settings are saved. Settings updates write `UPDATE_SYSTEM_PREFERENCES` audit logs from `convex/settings.ts`, while PII updates write their own audit entries from `convex/system.ts`.
 
 ## API Keys
 

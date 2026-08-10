@@ -7,6 +7,10 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { getStudioRoutineTitle } from "../_lib/movementPresentation";
 import { getMovementSpineGoalLabel } from "../_lib/movementSpineIntent";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_PANEL_BG,
+} from "../_lib/movementPalette";
 
 type MovementLibraryTableProps = {
   movements: Doc<"movements">[];
@@ -41,7 +45,7 @@ function MovementActionButton({
     tone === "primary"
       ? "bg-brand/15 text-brand hover:bg-brand/20"
       : tone === "debug"
-        ? "bg-[#a8d5ba]/10 text-[#a8d5ba] hover:bg-[#a8d5ba]/15 hover:text-white"
+        ? `bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}] hover:bg-[${MOVEMENT_MINT}]/15 hover:text-white`
       : tone === "danger"
         ? "text-secondary hover:bg-red-500/10 hover:text-red-500"
         : "text-secondary hover:bg-foreground/5 hover:text-foreground";
@@ -59,7 +63,7 @@ function MovementActionButton({
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-[#111018] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-xl group-hover/action:block group-focus-within/action:block"
+        className={`pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-[${MOVEMENT_PANEL_BG}] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-xl group-hover/action:block group-focus-within/action:block`}
       >
         {tooltip}
       </span>

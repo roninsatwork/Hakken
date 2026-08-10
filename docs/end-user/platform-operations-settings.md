@@ -6,7 +6,7 @@ For task-level incident health checks and maintenance scripts, see [System Healt
 
 ## Where To Find It
 
-- `/admin/settings` opens the main system settings workspace for identity, appearance, security, audit, options, white-label readiness, and unified purges.
+- `/admin/settings` opens system settings, which groups its screens under four menus: Identity, Security, White Label, and System Options. Old `?tab=` links forward to the screen that replaced them.
 - `/admin/settings/api-keys` creates and revokes tenant-scoped API keys.
 - `/admin/settings/analytics` manages the platform analytics tracking id and shows analytics data-health checks.
 - `/admin/settings/scripts` lists allowlisted maintenance scripts.
@@ -20,9 +20,14 @@ Access depends on role and scope. Super admins can review platform-wide data whe
 
 ## Main System Settings
 
-The main settings workspace uses tabs for identity, appearance, security, audit, options, and purges. Identity and appearance control platform name, logos, pricing display values, fonts, colors, radius, and email sender presentation. Security covers PII handling and the older audit retention configuration. Audit shows recent audit activity. Options include operational toggles such as diagnostic routing. Purges opens the unified retention pipelines.
+System settings groups its screens under four menus, each opening the screens that belong to it.
 
-The same page also shows white-label readiness, module presets, navigation profiles, custom-domain checklist, handoff summary, and packaging checklist information. Use those sections when preparing a branded customer environment or verifying that platform identity, widget, email, diagnostic routing, and production-readiness requirements are complete.
+- **Identity** — Core Identity (platform name, logos, pricing display values, email sender presentation) and Global Aesthetics (fonts, colours, radius).
+- **Security** — System Security (PII handling) and Logs & Retention (the retention pipelines, and the only place that decides how long any record is kept).
+- **White Label** — Readiness, Brand Handoff, Module Presets, Navigation Profiles, Custom Domain, and Packaging. These are read-only evidence views for preparing a branded customer environment; use them to check that identity, widget, email, diagnostic routing, and production-readiness requirements are complete before handing a deployment over.
+- **System Options** — Developer Diagnostics, Self-Improvement (how the AI learns), and Agent Approval Window (how long a paused agent run waits for a person).
+
+Each screen saves only itself, so a save on one screen never commits changes left on another.
 
 Logo uploads use the admin image upload policy. Settings changes can affect every tenant, so confirm whether the change is global branding, a customer package requirement, or only a local test before saving.
 

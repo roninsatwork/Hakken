@@ -42,6 +42,7 @@ import {
 import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
@@ -301,7 +302,14 @@ export default function CompanyAiMemoryPage() {
               className="group border-b border-border-dim/50 transition-colors hover:bg-foreground/[0.02]"
             >
               <td className="px-4 py-3">
-                <div className="text-[13px] font-semibold text-foreground">{memory.title}</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-foreground">{memory.title}</span>
+                  {memory.autoApplied && (
+                    <StatusPill tone="warning">
+                      Saved by the AI
+                    </StatusPill>
+                  )}
+                </div>
                 <p className="mt-1 whitespace-pre-line text-[12px] leading-relaxed text-secondary line-clamp-3">
                   {memory.content}
                 </p>
@@ -380,7 +388,7 @@ export default function CompanyAiMemoryPage() {
                   type="button"
                   onClick={() => handleApprove(candidate)}
                   disabled={action.isBusy(candidate._id)}
-                  className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-50"
+                  className="inline-flex h-8 items-center justify-center gap-2 rounded-[8px] border border-success/20 bg-success/10 px-3 text-[12px] font-semibold text-success transition-colors hover:bg-success/15 disabled:opacity-50"
                 >
                   {action.isBusy(candidate._id)
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -468,7 +476,7 @@ export default function CompanyAiMemoryPage() {
               type="button"
               onClick={handleArchive}
               disabled={action.isBusy()}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[8px] bg-destructive px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
@@ -509,7 +517,7 @@ export default function CompanyAiMemoryPage() {
               type="button"
               onClick={handleReject}
               disabled={action.isBusy()}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[8px] bg-destructive px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
               Turn down

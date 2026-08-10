@@ -431,6 +431,55 @@ describe("agent runtime", () => {
     expect(messages.some((message) => message.content === "Here is the answer.")).toBe(true);
   });
 
+  test("an agent answer carries the evidence trail, so a rating moves memory counters", async () => {
+    const t = makeTest();
+    const { agentId, threadId, companyId, userId } = await seedAgentRun(t);
+
+    const memoryId = await t.run(async (ctx) => await ctx.db.insert("companyMemories", {
+      companyId,
+      title: "Refund policy",
+      content: "The refund policy is five working days.",
+      normalizedContent: "the refund policy is five working days.",
+      category: "POLICY",
+      applyMode: "WHEN_RELEVANT",
+      status: "APPROVED",
+      confidence: 0.9,
+      sourceType: "MANUAL",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      usageCount: 0,
+    }));
+
+    generateMock.mockResolvedValueOnce(textResponse("Refunds take five working days."));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId,
+      agentId,
+      content: "What is our refund policy?",
+    });
+
+    const message = await t.run(async (ctx) => {
+      const messages = await ctx.db.query("messages").collect();
+      return messages.find((entry) => entry.role === "assistant" && entry.content === "Refunds take five working days.");
+    });
+    expect(message).toBeDefined();
+    const evidence = JSON.parse(message?.companyMemoryEvidenceJson ?? "null") as {
+      memories?: Array<{ memoryId: string }>;
+    } | null;
+    expect(evidence?.memories?.map((entry) => entry.memoryId)).toContain(memoryId);
+
+    // The loop closes: the thread owner rates the answer and the memory's
+    // counters move. Before the runtime wrote evidence, this rating moved
+    // nothing — agent answers were invisible to the feedback loop.
+    const owner = t.withIdentity({ subject: userId });
+    await owner.mutation(api.messageFeedback.upsertForMessage, {
+      messageId: message!._id,
+      rating: "POSITIVE",
+    });
+    const memory = await t.run(async (ctx) => await ctx.db.get(memoryId));
+    expect(memory?.positiveFeedbackCount).toBe(1);
+  });
+
   test("executes every tool call in a parallel batch, not just the first", async () => {
     // The runtime previously read functionCalls[0] only, so the remaining calls
     // were dropped and the transcript no longer matched what the model asked

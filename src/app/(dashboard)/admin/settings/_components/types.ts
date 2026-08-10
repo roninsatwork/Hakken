@@ -1,7 +1,5 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-export type SettingsTab = "identity" | "appearance" | "security" | "options" | "purges";
-
 export type PiiConfig = {
   enabled?: boolean;
   maskEmails?: boolean;
@@ -10,19 +8,24 @@ export type PiiConfig = {
   maskNinos?: boolean;
 };
 
-export type AuditConfig = {
-  enabled: boolean;
-  retentionDays: number;
-  dayOfMonth: number;
-  hourOfDay: number;
-  nextRunTimestamp?: number;
-};
-
 export type SystemSettingsFormData = Partial<Doc<"systemSettings">> & {
   [key: string]: string | number | boolean | undefined;
 };
 
-export type PurgePipelineKey = "agentLogs" | "workflowLogs" | "userLogins" | "chatHistory" | "auditLogs";
+export type PurgePipelineKey =
+  | "agentLogs"
+  | "workflowLogs"
+  | "userLogins"
+  | "chatHistory"
+  | "auditLogs"
+  | "publicApiRequests"
+  | "authEvents"
+  | "aiActionRequests"
+  | "analyticsSnapshots"
+  | "webhookDeliveries"
+  | "agentRunHistory"
+  | "agentTransactions"
+  | "purgeHistory";
 
 export type PurgePipelineConfig = {
   enabled?: boolean;
@@ -52,4 +55,18 @@ export type AuditLogRow = {
   metadata?: string;
 };
 
-export const purgePipelineKeys: PurgePipelineKey[] = ["agentLogs", "workflowLogs", "userLogins", "chatHistory", "auditLogs"];
+export const purgePipelineKeys: PurgePipelineKey[] = [
+  "agentLogs",
+  "agentRunHistory",
+  "agentTransactions",
+  "workflowLogs",
+  "userLogins",
+  "authEvents",
+  "chatHistory",
+  "auditLogs",
+  "publicApiRequests",
+  "aiActionRequests",
+  "analyticsSnapshots",
+  "webhookDeliveries",
+  "purgeHistory",
+];

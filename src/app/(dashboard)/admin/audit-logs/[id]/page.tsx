@@ -72,7 +72,7 @@ export default function AuditLogDetail() {
    return (
       <div className="flex flex-col gap-6 w-full antialiased pb-20">
          <Link
-            href="/admin/settings?tab=audit"
+            href="/admin/governance/audit-trail"
             className="flex items-center gap-2 text-[13px] text-secondary hover:text-foreground transition-colors w-fit group"
          >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

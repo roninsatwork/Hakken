@@ -10,6 +10,9 @@ import {
 } from "../../../_lib/vrmRigging";
 import type { MovementMotionFrame } from "../../../_lib/movementMotionFrame";
 import type { MovementTruthSkeletonSegment } from "../../../_lib/movementTruthSkeleton";
+import {
+  MOVEMENT_SALMON,
+} from "../../../_lib/movementPalette";
 
 const SOURCE_BONES: Array<[number, number]> = [
   [0, 7],
@@ -76,7 +79,7 @@ function clamp01(value: number) {
 }
 
 export default function MovementSourceSkeleton({
-  color = "#f6ccbe",
+  color = MOVEMENT_SALMON,
   landmarksRef,
   mirrorX = false,
   mode = "source",

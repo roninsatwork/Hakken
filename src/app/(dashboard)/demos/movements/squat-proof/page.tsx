@@ -39,6 +39,13 @@ import {
   resolveMovementAvatarSetup,
   type MovementAvatarSetupState,
 } from "../_lib/movementAvatarSetup";
+import {
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_PANEL_BG,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../_lib/movementPalette";
 
 function toProofMode(value: string | null): MovementAvatarProofMode {
   return toMovementAvatarProofMode(value) ?? "squat";
@@ -244,7 +251,7 @@ export default function MovementSquatProofPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-hidden bg-[#07070b]">
+    <div className={`fixed inset-0 z-[9999] overflow-hidden bg-[${MOVEMENT_SCENE_BG}]`}>
       <style>{`nextjs-portal { display: none !important; }`}</style>
       <MovementMatchScene>
         <VrmAvatar
@@ -261,14 +268,14 @@ export default function MovementSquatProofPage() {
           name="Player avatar"
         />
         <MovementSourceSkeleton
-          color="#a8d5ba"
+          color={MOVEMENT_MINT}
           landmarksRef={livePoseRef}
           positionOffset={[2.4, 0, 0]}
         />
       </MovementMatchScene>
 
-      <div className="pointer-events-none absolute left-[264px] top-6 z-20 max-h-[calc(100vh-48px)] w-[400px] overflow-y-auto rounded-lg border border-white/10 bg-[#111018]/90 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.35)] backdrop-blur">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f6ccbe]">Avatar Proof</p>
+      <div className={`pointer-events-none absolute left-[264px] top-6 z-20 max-h-[calc(100vh-48px)] w-[400px] overflow-y-auto rounded-lg border border-white/10 bg-[${MOVEMENT_PANEL_BG}]/90 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.35)] backdrop-blur`}>
+        <p className={`text-xs font-bold uppercase tracking-[0.18em] text-[${MOVEMENT_SALMON}]`}>Avatar Proof</p>
         <h1 className="mt-2 text-2xl font-black text-white">Synthetic player camera poses</h1>
         <p className="mt-3 text-sm leading-6 text-white/62">
           Left is the camera skeleton. Right is the player avatar using the same live-avatar path as practice.
@@ -279,7 +286,7 @@ export default function MovementSquatProofPage() {
               key={proofMode}
               className={`rounded-lg px-3 py-3 text-sm font-bold transition ${
                 mode === proofMode
-                  ? "bg-[#f6ccbe] text-[#17131d]"
+                  ? `bg-[${MOVEMENT_SALMON}] text-[${MOVEMENT_INK}]`
                   : "border border-white/15 bg-white/5 text-white"
               }`}
               data-testid={`proof-mode-${proofMode}`}
@@ -289,7 +296,7 @@ export default function MovementSquatProofPage() {
             </button>
           ))}
         </div>
-        <div className="mt-4 space-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#a8d5ba]">
+        <div className={`mt-4 space-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-[${MOVEMENT_MINT}]`}>
           <p data-testid="proof-current-mode">Current proof state: {MOVEMENT_AVATAR_PROOF_LABELS[mode]}</p>
           <p data-testid="proof-debug-baseline">Baseline: {debugState?.fallbacks.baseline ?? "pending"}</p>
           <p data-testid="proof-debug-spine">Spine: {debugState?.fallbacks.spine ?? "pending"}</p>

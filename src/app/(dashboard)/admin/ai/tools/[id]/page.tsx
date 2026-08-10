@@ -82,13 +82,13 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
   };
 
   const roleClasses = {
-    ADMIN: "hover:bg-orange-500/10 hover:border-orange-500/20 hover:text-orange-500",
-    SUPER_ADMIN: "hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-500",
+    ADMIN: "hover:bg-warning/10 hover:border-warning/20 hover:text-warning",
+    SUPER_ADMIN: "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive",
   };
-  
+
   const selectedRoleClasses = {
-    ADMIN: "bg-orange-500/20 border-orange-500/50 text-orange-500",
-    SUPER_ADMIN: "bg-rose-500/20 border-rose-500/50 text-rose-500",
+    ADMIN: "bg-warning/20 border-warning/50 text-warning",
+    SUPER_ADMIN: "bg-destructive/20 border-destructive/50 text-destructive",
   };
 
   if (tool === undefined) {

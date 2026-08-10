@@ -53,7 +53,6 @@ Developer docs are for coding agents and engineers working on Sonae. They cover 
 - [System Health And Platform Alerts](./system-health-and-platform-alerts.md)
 - [System Settings And Branding](./system-settings-and-branding.md)
 - [Temporary Posture Studio Demo](./temporary-posture-studio-demo.md)
-- [White-Label Packaging Data Builders](./white-label-packaging-data-builders.md)
 - [Workflow Automation](./workflow-automation.md)
 - [Workflow Runtime Internals](./workflow-runtime-internals.md)
 - [Property Research And Board Reports](./property-research-and-reports.md)

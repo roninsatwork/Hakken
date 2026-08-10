@@ -128,7 +128,7 @@ Settings pages use `SettingBlock` and `ColorInput` from `src/app/(dashboard)/adm
 
 `ColorInput` renders a label, uppercase HEX display value, and hidden native color input backed by a visible swatch. It emits uppercase values through `onChange`.
 
-White-label settings sections have their own components and are documented in [White-Label Packaging Data Builders](./white-label-packaging-data-builders.md). The broader settings storage and runtime token behavior is documented in [System Settings And Branding](./system-settings-and-branding.md).
+The broader settings storage and runtime token behavior is documented in [System Settings And Branding](./system-settings-and-branding.md).
 
 ## Rule Tables And Safety Warnings
 

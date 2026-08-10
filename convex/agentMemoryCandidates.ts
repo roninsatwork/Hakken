@@ -7,6 +7,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { resolveAgentApplyMode } from "./utils/memoryApplication";
+import { getSelfImprovementConfig } from "./selfImprovementConfig";
 
 const MEMORY_CONTENT_MAX_CHARS = 4000;
 const CANDIDATE_LIMIT = 200;
@@ -554,7 +555,12 @@ function getCandidateDrafts(args: {
 
 async function applyCandidateMemory(ctx: Pick<MutationCtx, "db">, args: {
   candidate: Doc<"agentMemoryCandidates">;
-  userId: Id<"users">;
+  /**
+   * Absent on the autonomous path: the platform applied it, and naming an
+   * admin who was not involved would be a lie the audit trail repeats. The
+   * memory is then marked `autoApplied` instead.
+   */
+  userId?: Id<"users">;
   now: number;
 }) {
   const normalizedContent = validateMemoryContent(args.candidate.content);
@@ -574,19 +580,19 @@ async function applyCandidateMemory(ctx: Pick<MutationCtx, "db">, args: {
     isActive: true,
     createdAt: args.now,
     updatedAt: args.now,
-    createdBy: args.userId,
+    ...(args.userId ? { createdBy: args.userId } : { autoApplied: true }),
   });
 
   await ctx.db.patch(args.candidate._id, {
     status: "APPLIED",
-    reviewedBy: args.userId,
+    ...(args.userId ? { reviewedBy: args.userId } : {}),
     reviewedAt: args.now,
     appliedMemoryId: memoryId,
     updatedAt: args.now,
   });
 
   await ctx.db.insert("auditLogs", {
-    actorId: args.userId,
+    ...(args.userId ? { actorId: args.userId } : {}),
     actionType: "APPLY_AGENT_MEMORY_CANDIDATE",
     entityId: args.candidate._id,
     entityType: "agentMemoryCandidates",
@@ -598,6 +604,7 @@ async function applyCandidateMemory(ctx: Pick<MutationCtx, "db">, args: {
       memoryId,
       kind: args.candidate.kind,
       riskLevel: args.candidate.riskLevel,
+      automatic: !args.userId,
     }),
   });
 
@@ -618,7 +625,12 @@ async function generateCandidatesForRun(ctx: MutationCtx, args: {
 }) {
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
+    // A drill's tool results are fabricated ("continue as if it succeeded"),
+    // so nothing it did is experience worth proposing — for the automatic
+    // pass and the admin button alike.
+    if (run.isRehearsal) return { createdIds: [], appliedIds: [] };
     const userId = args.userId;
+    const config = await getSelfImprovementConfig(ctx.db);
 
     const [reflections, feedback, existingCandidates, steps, toolCalls, approvals] = await Promise.all([
       ctx.db
@@ -758,9 +770,15 @@ async function generateCandidatesForRun(ctx: MutationCtx, args: {
       });
 
       const candidate = await ctx.db.get(candidateId);
-      // Auto-apply still needs a person to have asked for it: nothing reaches
-      // an agent's memory off the back of a scheduled pass alone.
-      if (candidate && userId && args.autoApplyLowRisk === true && shouldAutoApply(candidate)) {
+      // Autonomous memory (owner decision, 2026-08-10): what the AI learns is
+      // saved immediately — no per-memory approval. The candidate row is kept
+      // as the record of where the memory came from, the memory is marked
+      // autoApplied, and the settings switch is the platform-wide brake.
+      if (candidate && config.autonomousMemory) {
+        const memoryId = await applyCandidateMemory(ctx, { candidate, userId, now });
+        appliedIds.push(memoryId);
+      } else if (candidate && userId && args.autoApplyLowRisk === true && shouldAutoApply(candidate)) {
+        // The older admin-triggered path, still honoured when the switch is off.
         const memoryId = await applyCandidateMemory(ctx, { candidate, userId, now });
         appliedIds.push(memoryId);
       }

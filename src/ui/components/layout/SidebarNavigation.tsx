@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, createContext, useContext, useMemo, useState } from "react";
+import { Component, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   // template:remove:start arcade
@@ -38,25 +38,10 @@ import { useTheme } from "next-themes";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
-import {
-  isNavItemVisible,
-  resolveHiddenNavKeys,
-  type NavigationProfile,
-} from "@/src/lib/navigationVisibility";
-import { getWhiteLabelNavigationProfiles } from "@/convex/settingsService";
 // template:remove:start salesData
 import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
 import { isWorkspaceSectionPath, workspaceSlug } from "@/src/lib/workspaceSlug";
 // template:remove:end
-
-/**
- * Navigation keys hidden for this deployment.
- *
- * Held in context so `NavItem` and `SubNavItem` can exclude themselves. The
- * alternative — wrapping all 29 call sites in a conditional — is the kind of
- * thing that gets forgotten when someone adds the 30th.
- */
-const HiddenNavKeysContext = createContext<Set<string>>(new Set());
 
 interface NavItemProps {
   icon: React.ElementType<{ className?: string }>;
@@ -68,14 +53,9 @@ interface NavItemProps {
   onClick?: () => void;
   children?: React.ReactNode;
   href?: string;
-  /** Stable identifier used by white-label navigation profiles. */
-  navKey?: string;
 }
 
-function SubNavItem({ label, isActive, onClick, href, navKey, badge, badgeAtLimit }: { label: string, isActive: boolean, onClick: () => void, href?: string, navKey?: string, badge?: number, badgeAtLimit?: boolean }) {
-  const hiddenNavKeys = useContext(HiddenNavKeysContext);
-  if (!isNavItemVisible(navKey, hiddenNavKeys)) return null;
-
+function SubNavItem({ label, isActive, onClick, href, badge, badgeAtLimit }: { label: string, isActive: boolean, onClick: () => void, href?: string, badge?: number, badgeAtLimit?: boolean }) {
   // Absent at zero rather than a grey "0". A badge that is always there stops
   // being read, and the whole point of this one is that it means something.
   const showBadge = typeof badge === "number" && badge > 0;
@@ -123,8 +103,7 @@ function SubNavItem({ label, isActive, onClick, href, navKey, badge, badgeAtLimi
   );
 }
 
-function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, onClick, children, href, navKey }: NavItemProps) {
-  const hiddenNavKeys = useContext(HiddenNavKeysContext);
+function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, onClick, children, href }: NavItemProps) {
   const content = (
     <>
       {isActive && (
@@ -172,8 +151,6 @@ function NavItem({ icon: Icon, label, isActive, hasChildren, isOpen, onToggle, o
       </button>
     );
   };
-
-  if (!isNavItemVisible(navKey, hiddenNavKeys)) return null;
 
   return (
     <div className="flex flex-col mb-0.5 relative">
@@ -320,6 +297,24 @@ function SalesDataNavItem({
 }
 // template:remove:end
 
+/**
+ * The system settings screens, as opposed to the other things that live under
+ * `/admin/settings/`.
+ *
+ * Plans, API Keys, Analytics and Scripts are sibling routes with their own
+ * sidebar entries, so "System Settings" cannot simply claim the whole path.
+ * It used to match `/admin/settings` exactly, which stopped working when the
+ * one tabbed page became a route per section.
+ */
+const SYSTEM_SETTINGS_SECTIONS = ['identity', 'security', 'white-label', 'options'];
+
+function isSystemSettingsRoute(pathname: string) {
+  if (pathname === '/admin/settings') return true;
+  return SYSTEM_SETTINGS_SECTIONS.some((section) => (
+    pathname === `/admin/settings/${section}` || pathname.startsWith(`/admin/settings/${section}/`)
+  ));
+}
+
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
   if (pathname.startsWith('/admin/health')) return 'Health';
@@ -339,8 +334,9 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin/workflows') return 'Manage Workflows';
   if (pathname.startsWith('/admin/settings/scripts')) return 'Scripts';
   if (pathname.startsWith('/admin/settings/api-keys')) return 'API Keys';
+  if (pathname.startsWith('/admin/settings/plans')) return 'Plans';
   if (pathname === '/admin/settings/analytics') return 'Analytics';
-  if (pathname.startsWith('/admin/settings')) return 'System Settings';
+  if (isSystemSettingsRoute(pathname)) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
   // template:remove:start properties
@@ -477,20 +473,8 @@ export default function SidebarNavigation() {
     setSectionOverrides(prev => ({ ...prev, [section]: !openSections[section] }));
   };
 
-  // White-label navigation profiles are static definitions, so this needs no
-  // extra query. With no profile selected nothing is hidden.
-  const hiddenNavKeys = useMemo(() => {
-    const profile = settings.navigationProfileKey
-      ? getWhiteLabelNavigationProfiles().find((candidate) => candidate.key === settings.navigationProfileKey)
-      : undefined;
-
-    return resolveHiddenNavKeys({
-      profile: (profile as NavigationProfile | undefined) ?? null,
-    });
-  }, [settings.navigationProfileKey]);
 
   return (
-    <HiddenNavKeysContext.Provider value={hiddenNavKeys}>
     <AnimatePresence mode="wait">
       {isSidebarOpen && (
         <motion.aside
@@ -546,14 +530,14 @@ export default function SidebarNavigation() {
                       <NavItem
                         icon={LayoutDashboard}
                         label={t('dashboard')}
-                        href="/admin" navKey="adminDashboard"
+                        href="/admin"
                         isActive={activeItem === 'Admin Dashboard' || (pathname === '/admin')}
                         onClick={() => setActiveItem('Admin Dashboard')}
                       />
                     )}
 
                     {canSeeAdminSections && (
-                      <NavItem navKey="adminCompanies"
+                      <NavItem
                         icon={Building2}
                         label={t('companies')}
                         isActive={activeItem === 'Companies' || pathname.startsWith('/admin/companies')}
@@ -562,11 +546,11 @@ export default function SidebarNavigation() {
                         isOpen={openSections.companies}
                         onToggle={() => toggleSection('companies')}
                       >
-                        <SubNavItem label={t('manageCompanies')} href="/admin/companies" navKey="adminCompanies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
+                        <SubNavItem label={t('manageCompanies')} href="/admin/companies" isActive={pathname.startsWith('/admin/companies')} onClick={() => setActiveItem('Companies')} />
                       </NavItem>
                     )}
 
-                    <NavItem navKey="globalAi"
+                    <NavItem
                       icon={Bot}
                       label={t('ai')}
                       isActive={activeItem === 'Artificial Intelligence' || pathname.startsWith('/admin/ai')}
@@ -575,16 +559,16 @@ export default function SidebarNavigation() {
                       isOpen={openSections.ai}
                       onToggle={() => toggleSection('ai')}
                     >
-                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" navKey="globalAi" isActive={pathname === '/admin/ai' || (pathname.startsWith('/admin/ai') && !pathname.startsWith('/admin/ai/tools'))} onClick={() => setActiveItem('Artificial Intelligence')} />
+                      <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" isActive={pathname === '/admin/ai' || (pathname.startsWith('/admin/ai') && !pathname.startsWith('/admin/ai/tools'))} onClick={() => setActiveItem('Artificial Intelligence')} />
                       {/* Nothing linked here. The tool catalogue was reachable
                           only by typing the URL, which is why the one screen
                           deciding what an agent can actually do had never been
                           opened. */}
-                      <SubNavItem label={t('tools')} href="/admin/ai/tools" navKey="tools" isActive={pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Tools')} />
+                      <SubNavItem label={t('tools')} href="/admin/ai/tools" isActive={pathname.startsWith('/admin/ai/tools')} onClick={() => setActiveItem('Tools')} />
                     </NavItem>
 
                     {canSeeAdminSections && (
-                      <NavItem navKey="agents"
+                      <NavItem
                         icon={Workflow}
                         label={t('agents')}
                         isActive={
@@ -601,11 +585,11 @@ export default function SidebarNavigation() {
                         isOpen={openSections.agents}
                         onToggle={() => toggleSection('agents')}
                       >
-                        <SubNavItem label={t('manageAgents')} href="/admin/agents" navKey="agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
+                        <SubNavItem label={t('manageAgents')} href="/admin/agents" isActive={pathname.startsWith('/admin/agents')} onClick={() => setActiveItem('Manage Agents')} />
 
-                        <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" navKey="workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
-                        <SubNavItem label={t('workflowRuns')} href="/admin/workflows/executions" navKey="workflowRuns" isActive={pathname.startsWith('/admin/workflows/executions')} onClick={() => setActiveItem('Workflow Runs')} badge={pendingWorkflowApprovals?.count} badgeAtLimit={pendingWorkflowApprovals?.atLimit} />
-                        <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" navKey="schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
+                        <SubNavItem label={t('manageWorkflows')} href="/admin/workflows" isActive={pathname === '/admin/workflows'} onClick={() => setActiveItem('Manage Workflows')} />
+                        <SubNavItem label={t('workflowRuns')} href="/admin/workflows/executions" isActive={pathname.startsWith('/admin/workflows/executions')} onClick={() => setActiveItem('Workflow Runs')} badge={pendingWorkflowApprovals?.count} badgeAtLimit={pendingWorkflowApprovals?.atLimit} />
+                        <SubNavItem label={t('schedules')} href="/admin/workflows/schedules" isActive={pathname.startsWith('/admin/workflows/schedules')} onClick={() => setActiveItem('Schedules')} />
                       </NavItem>
                     )}
 
@@ -626,7 +610,7 @@ export default function SidebarNavigation() {
                       nowhere else, because two places showing the same queue is
                       worse than one place in the wrong section.
                     */}
-                    <NavItem navKey="governance"
+                    <NavItem
                       icon={ShieldCheck}
                       label={t('governance')}
                       isActive={pathname.startsWith('/admin/governance')}
@@ -635,16 +619,16 @@ export default function SidebarNavigation() {
                       isOpen={openSections.governance}
                       onToggle={() => toggleSection('governance')}
                     >
-                      <SubNavItem label={t('governanceOverview')} href="/admin/governance" navKey="governanceOverview" isActive={pathname === '/admin/governance'} onClick={() => setActiveItem('Governance')} />
-                      <SubNavItem label={t('aiRegister')} href="/admin/governance/register" navKey="aiRegister" isActive={pathname.startsWith('/admin/governance/register')} onClick={() => setActiveItem('Governance')} />
-                      <SubNavItem label={t('governanceApprovals')} href="/admin/governance/approvals" navKey="approvals" isActive={pathname.startsWith('/admin/governance/approvals')} onClick={() => setActiveItem('Governance')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
-                      <SubNavItem label={t('auditTrail')} href="/admin/governance/audit-trail" navKey="auditTrail" isActive={pathname.startsWith('/admin/governance/audit-trail')} onClick={() => setActiveItem('Governance')} />
-                      <SubNavItem label={t('policiesInForce')} href="/admin/governance/policies" navKey="policiesInForce" isActive={pathname.startsWith('/admin/governance/policies')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('governanceOverview')} href="/admin/governance" isActive={pathname === '/admin/governance'} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('aiRegister')} href="/admin/governance/register" isActive={pathname.startsWith('/admin/governance/register')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('governanceApprovals')} href="/admin/governance/approvals" isActive={pathname.startsWith('/admin/governance/approvals')} onClick={() => setActiveItem('Governance')} badge={pendingApprovals?.count} badgeAtLimit={pendingApprovals?.atLimit} />
+                      <SubNavItem label={t('auditTrail')} href="/admin/governance/audit-trail" isActive={pathname.startsWith('/admin/governance/audit-trail')} onClick={() => setActiveItem('Governance')} />
+                      <SubNavItem label={t('policiesInForce')} href="/admin/governance/policies" isActive={pathname.startsWith('/admin/governance/policies')} onClick={() => setActiveItem('Governance')} />
                     </NavItem>
 
                     {canSeeAdminSections && (
                       <>
-                        <NavItem navKey="systemSettings"
+                        <NavItem
                           icon={Settings}
                           label={t('settings')}
                           isActive={(pathname.startsWith('/admin/settings') &&
@@ -658,13 +642,13 @@ export default function SidebarNavigation() {
                           isOpen={openSections.settings}
                           onToggle={() => toggleSection('settings')}
                         >
-                          <SubNavItem label={t('systemSettings')} href="/admin/settings" navKey="systemSettings" isActive={activeItem === 'System Settings' && pathname === '/admin/settings'} onClick={() => setActiveItem('System Settings')} />
-                          <SubNavItem label="Plans" href="/admin/settings/plans" navKey="plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
-                          <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" navKey="apiKeys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
-                          <SubNavItem label={t('analytics')} href="/admin/settings/analytics" navKey="analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
+                          <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={isSystemSettingsRoute(pathname)} onClick={() => setActiveItem('System Settings')} />
+                          <SubNavItem label="Plans" href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
+                          <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
+                          <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />
                         </NavItem>
 
-                        <NavItem navKey="maintenance"
+                        <NavItem
                           icon={Wrench}
                           label={t('maintenance')}
                           isActive={activeItem === 'Maintenance' ||
@@ -684,12 +668,12 @@ export default function SidebarNavigation() {
                               the same question at two altitudes, answered twice in
                               different words, both leading with counters that read
                               zero on a healthy platform. */}
-                          <SubNavItem label={t('health')} href="/admin/health" navKey="health" isActive={pathname.startsWith('/admin/health')} onClick={() => setActiveItem('Health')} />
-                          <SubNavItem label={t('scripts')} href="/admin/settings/scripts" navKey="scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
-                          <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" navKey="diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
+                          <SubNavItem label={t('health')} href="/admin/health" isActive={pathname.startsWith('/admin/health')} onClick={() => setActiveItem('Health')} />
+                          <SubNavItem label={t('scripts')} href="/admin/settings/scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
+                          <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>
 
-                        <NavItem navKey="systemAdmins"
+                        <NavItem
                           icon={ShieldCheck}
                           label={t('userManagement')}
                           isActive={activeItem === 'System Admins' || pathname.startsWith('/admin/super-admins')}
@@ -698,8 +682,8 @@ export default function SidebarNavigation() {
                           isOpen={openSections.superAdmins}
                           onToggle={() => toggleSection('superAdmins')}
                         >
-                          <SubNavItem label={t('allUsers')} href="/admin/directory" navKey="userDirectory" isActive={pathname.startsWith('/admin/directory')} onClick={() => setActiveItem('All Users')} />
-                          <SubNavItem label={t('systemAdmins')} href="/admin/super-admins" navKey="systemAdmins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
+                          <SubNavItem label={t('allUsers')} href="/admin/directory" isActive={pathname.startsWith('/admin/directory')} onClick={() => setActiveItem('All Users')} />
+                          <SubNavItem label={t('systemAdmins')} href="/admin/super-admins" isActive={pathname === '/admin/super-admins'} onClick={() => setActiveItem('System Admins')} />
                           <SubNavItem label={t('invitations')} href="/admin/super-admins/invite" isActive={pathname.startsWith('/admin/super-admins/invite')} onClick={() => setActiveItem('System Admins')} />
                         </NavItem>
                       </>
@@ -710,7 +694,7 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={LayoutDashboard}
                       label={t('dashboard')}
-                      href="/app" navKey="appDashboard"
+                      href="/app"
                       isActive={activeItem === 'Dashboard' || (pathname === '/app')}
                       onClick={() => setActiveItem('Dashboard')}
                     />
@@ -718,7 +702,7 @@ export default function SidebarNavigation() {
                     <NavItem
                       icon={Bot}
                       label={`Ask ${settings.platformName}`}
-                      href="/app/assistant" navKey="assistant"
+                      href="/app/assistant"
                       isActive={activeItem === 'Assistant' || pathname.startsWith('/app/assistant')}
                       onClick={() => setActiveItem('Assistant')}
                     />
@@ -734,12 +718,12 @@ export default function SidebarNavigation() {
                       onToggle={() => toggleSection('reports')}
                     >
                       <SubNavItem label="Information" href="/app/reports/information" isActive={pathname.startsWith('/app/reports/information')} onClick={() => setActiveItem('Reports')} />
-                      <SubNavItem label="Sales Report" href="/app/reports" navKey="reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
+                      <SubNavItem label="Sales Report" href="/app/reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
                     </NavItem>
                     {/* template:remove:end */}
 
                     {/* template:remove:start properties */}
-                    <NavItem navKey="properties"
+                    <NavItem
                       icon={Home}
                       label={t('properties')}
                       isActive={activeItem === 'Properties' || pathname.startsWith('/app/properties')}
@@ -780,8 +764,8 @@ export default function SidebarNavigation() {
                       onToggle={() => toggleSection('demos')}
                     >
                       <SubNavItem label="Information" href="/demos/movements/information" isActive={pathname.startsWith('/demos/movements/information')} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Studio Library" href="/demos/movements" navKey="postureStudio" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
-                      <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" navKey="replayAlignment" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label="Studio Library" href="/demos/movements" isActive={pathname === '/demos/movements'} onClick={() => setActiveItem('Demos')} />
+                      <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
 
                     </NavItem>
                     {/* template:remove:end */}
@@ -794,7 +778,7 @@ export default function SidebarNavigation() {
                       never a platform administrator.
                     */}
                     {(user?.role === "ADMIN" || user?.role === "AUDITOR") && (
-                      <NavItem navKey="workspaceGovernance"
+                      <NavItem
                         icon={ShieldCheck}
                         label={t('governance')}
                         isActive={pathname.startsWith('/app/governance')}
@@ -803,10 +787,10 @@ export default function SidebarNavigation() {
                         isOpen={openSections.workspaceGovernance}
                         onToggle={() => toggleSection('workspaceGovernance')}
                       >
-                        <SubNavItem label={t('governanceOverview')} href="/app/governance" navKey="workspaceGovernanceOverview" isActive={pathname === '/app/governance'} onClick={() => setActiveItem('Workspace Governance')} />
-                        <SubNavItem label={t('aiRegister')} href="/app/governance/register" navKey="workspaceAiRegister" isActive={pathname.startsWith('/app/governance/register')} onClick={() => setActiveItem('Workspace Governance')} />
-                        <SubNavItem label={t('auditTrail')} href="/app/governance/audit-trail" navKey="workspaceAuditTrail" isActive={pathname.startsWith('/app/governance/audit-trail')} onClick={() => setActiveItem('Workspace Governance')} />
-                        <SubNavItem label={t('policiesInForce')} href="/app/governance/policies" navKey="workspacePolicies" isActive={pathname.startsWith('/app/governance/policies')} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('governanceOverview')} href="/app/governance" isActive={pathname === '/app/governance'} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('aiRegister')} href="/app/governance/register" isActive={pathname.startsWith('/app/governance/register')} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('auditTrail')} href="/app/governance/audit-trail" isActive={pathname.startsWith('/app/governance/audit-trail')} onClick={() => setActiveItem('Workspace Governance')} />
+                        <SubNavItem label={t('policiesInForce')} href="/app/governance/policies" isActive={pathname.startsWith('/app/governance/policies')} onClick={() => setActiveItem('Workspace Governance')} />
                       </NavItem>
                     )}
 
@@ -820,9 +804,9 @@ export default function SidebarNavigation() {
                         isOpen={openSections.organization}
                         onToggle={() => toggleSection('organization')}
                       >
-                        <SubNavItem label="Dashboard" href="/app/settings" navKey="organization" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
-                        <SubNavItem label="Team Members" href="/app/settings/team" navKey="organizationTeam" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
-                        <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" navKey="diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
+                        <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
+                        <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
+                        <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                       </NavItem>
                     )}
 
@@ -837,7 +821,7 @@ export default function SidebarNavigation() {
                         isOpen={openSections.arcade}
                         onToggle={() => toggleSection('arcade')}
                       >
-                        <SubNavItem label="Ronin's Run" href="/app/arcade/ronins-run" navKey="arcade" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
+                        <SubNavItem label="Ronin's Run" href="/app/arcade/ronins-run" isActive={activeItem === 'RoninsRun'} onClick={() => setActiveItem('RoninsRun')} />
                       </NavItem>
                     )}
                     {/* template:remove:end */}
@@ -872,6 +856,5 @@ export default function SidebarNavigation() {
         </motion.aside>
       )}
     </AnimatePresence>
-    </HiddenNavKeysContext.Provider>
   );
 }

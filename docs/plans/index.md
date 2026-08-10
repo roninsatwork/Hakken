@@ -148,15 +148,39 @@ completed work.
 - [Self-Improvement Plan](./active/self-improvement-plan.md) — the plan to
   close the four learning loops that already collect signal and throw it away:
   automatic reflection on failed runs, outcome-weighted memory ranking,
-  end-user feedback in chat, and retrieval priors from rated answers — while
-  keeping the human approval gate on every new belief. Owns the
-  `SELF_IMPROVEMENT_CONFIG` kill switches, the future `messageFeedback` and
-  `knowledgeChunkStats` tables, and the decision gate on autonomous memory
-  writing (Phase 5, default off, not to be built unbidden). Read it before
+  end-user feedback in chat, and retrieval priors from rated answers. Owns the
+  `SELF_IMPROVEMENT_CONFIG` kill switches and the `messageFeedback` and
+  `knowledgeChunkStats` tables. Phase 5 was decided 2026-08-10: memory
+  learning is **fully autonomous** (`autonomousMemory`, default on) — new
+  memories save immediately, labelled and audited, with no per-memory
+  approval; the recorded decision in the plan says why and what still
+  guards it. Read it before
   touching memory ranking in `convex/agentMemories.ts` or
   `convex/companyMemories.ts`, `convex/agentRunReflections.ts`,
   `convex/agentMemoryCandidates.ts`, `convex/companyMemorySuggestions.ts`, or
   the fusion in `convex/knowledgeRetrievalService.ts`.
+- [Retention And Purge Plan](./active/retention-and-purge-plan.md) — the
+  plan to make the Log Retention & Purges engine actually work now that the
+  platform has real history to delete: a stuck-run reaper, a rebuilt chat
+  purge that stops orphaning feedback and leaking storage blobs, dispatcher
+  hardening, five cheap new pipelines (public API requests, auth events,
+  rate-limit counters, analytics snapshots, webhook deliveries), the big
+  agent-run-history pipeline with its cascade rules, and a staged live
+  proof on dev data ending in an enablement runbook. Owns `convex/purges.ts`,
+  `convex/purgeScheduleService.ts`, the retention screen, and the decision
+  record on what retention must never delete (approvals, learning tables,
+  cost history). Read it before adding any table that grows with time, or
+  before deleting anything in bulk.
+- [Theme Compliance Plan](./active/theme-compliance-plan.md) — the plan to
+  make the Global Aesthetics screen truthful: fix the live font-cycle and
+  save-corruption bugs, add the warning/info/sidebar/muted tokens the app
+  actually needs, replace ~2,000 hardcoded colour sites with a StatusPill
+  atom and four semantic tones, put usage descriptions on every row, and pin
+  the drift with a ratchet test. Owns `src/context/SystemSettingsContext.tsx`,
+  the `@theme` block in `src/app/globals.css`, the Aesthetics screen, and
+  `useSystemSettingsForm`. Scope is the dashboard app only — the public
+  site, login, and emails keep their own fixed designs by owner decision.
+  Read it before adding a colour, a status pill, or a settings row anywhere.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -197,6 +221,8 @@ If work touches how the AI learns over time — memory ranking, run reflections,
 feedback collection, memory suggestion queues, or retrieval priors — use the
 Self-Improvement Plan, which takes its eval fixtures from the AI Checks Plan
 and its approvals philosophy from the Agent Autonomy And Approvals Plan.
+If work touches theme tokens, the Aesthetics screen, status colours, or adds
+any hardcoded colour to the dashboard app, use the Theme Compliance Plan.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the
 Documentation Coverage Audit. If work touches the other named admin UX screens,
 use the Admin UI/UX Plan.

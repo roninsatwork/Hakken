@@ -2,6 +2,12 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { MovementReplayAnalysis } from "../../_lib/movementReplayAnalyzer";
 import { formatNumber } from "../_lib/replayLabHelpers";
 import type { AvatarFollowBatchStatus, ReplayLabRecording } from "../_lib/replayLabHelpers";
+import {
+  MOVEMENT_ALERT,
+  MOVEMENT_ALERT_SOFT,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 type ReplaySetupReviewItem = {
   analysis: MovementReplayAnalysis;
@@ -57,14 +63,14 @@ export default function ReplayBatchReviewPanels({
               key={recording._id}
               type="button"
               onClick={() => onJumpToFrame(recording._id, topMessage.firstFrameIndex)}
-              className="rounded-[8px] border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 p-2 text-left text-xs text-secondary transition-colors hover:border-[#f6ccbe]/40 hover:bg-[#f6ccbe]/15"
+              className={`rounded-[8px] border border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 p-2 text-left text-xs text-secondary transition-colors hover:border-[${MOVEMENT_SALMON}]/40 hover:bg-[${MOVEMENT_SALMON}]/15`}
               data-blocked-frame-count={setupAnalysis.metrics.startReadinessBlockedFrameCount}
               data-first-frame-index={topMessage.firstFrameIndex}
               data-testid="movement-replay-setup-review-item"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="truncate font-semibold text-foreground">{recording.title}</span>
-                <span className="shrink-0 font-mono text-[#f6ccbe]">
+                <span className={`shrink-0 font-mono text-[${MOVEMENT_SALMON}]`}>
                   {setupAnalysis.metrics.startReadinessBlockedFrameCount} blocked
                 </span>
               </div>
@@ -78,7 +84,7 @@ export default function ReplayBatchReviewPanels({
           ))}
         </div>
       ) : (
-        <div className="mt-2 rounded-[8px] border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 text-xs text-[#a8d5ba]">
+        <div className={`mt-2 rounded-[8px] border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-2 text-xs text-[${MOVEMENT_MINT}]`}>
           Selected recordings did not report start-gate blockers.
         </div>
       )}
@@ -112,10 +118,10 @@ export default function ReplayBatchReviewPanels({
                 onClick={() => onJumpToFrame(item.recording._id, worstFrameIndex)}
                 className={`rounded-[8px] border p-2 text-left text-xs transition-colors ${
                   item.status === "blocked"
-                    ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0] hover:border-[#ff8f8f]/50"
+                    ? `border-[${MOVEMENT_ALERT}]/25 bg-[${MOVEMENT_ALERT}]/10 text-[${MOVEMENT_ALERT_SOFT}] hover:border-[${MOVEMENT_ALERT}]/50`
                     : item.status === "review"
-                      ? "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe] hover:border-[#f6ccbe]/45"
-                      : "border-[#a8d5ba]/20 bg-[#a8d5ba]/10 text-[#a8d5ba] hover:border-[#a8d5ba]/45"
+                      ? `border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}] hover:border-[${MOVEMENT_SALMON}]/45`
+                      : `border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}] hover:border-[${MOVEMENT_MINT}]/45`
                 }`}
                 data-avatar-follow-issue={item.issueCode}
                 data-avatar-follow-status={item.status}

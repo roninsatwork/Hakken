@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import { adminMutation, adminQuery, tenantMutation } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { getSelfImprovementConfig } from "./selfImprovementConfig";
 
 const FEEDBACK_COMMENT_LIMIT = 2000;
 const FEEDBACK_PAGE_LIMIT = 500;
@@ -142,6 +143,13 @@ export const upsertForRunAsEndUser = tenantMutation({
   },
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
+
+    // The same switch that governs the chat rating controls: off means
+    // collection stops, not just the buttons — a stale client that still
+    // shows them must not keep writing.
+    const config = await getSelfImprovementConfig(ctx.db);
+    if (!config.endUserFeedback) throw new Error("Feedback is switched off");
+
     const run = await ctx.db.get(args.runId);
     if (!run) throw new Error("Run not found");
 
@@ -170,10 +178,24 @@ export const upsertForRunAsEndUser = tenantMutation({
         source: "END_USER",
         updatedAt: now,
       });
+      await ctx.db.insert("auditLogs", {
+        actorId: userId,
+        actionType: "UPDATE_AGENT_RUN_FEEDBACK",
+        entityId: existing._id,
+        entityType: "agentRunFeedback",
+        companyId: run.companyId,
+        timestamp: now,
+        metadata: JSON.stringify({
+          runId: args.runId,
+          rating: args.rating,
+          labels,
+          source: "END_USER",
+        }),
+      });
       return existing._id;
     }
 
-    return await ctx.db.insert("agentRunFeedback", {
+    const feedbackId = await ctx.db.insert("agentRunFeedback", {
       runId: args.runId,
       agentId: run.agentId,
       companyId: run.companyId,
@@ -185,6 +207,21 @@ export const upsertForRunAsEndUser = tenantMutation({
       createdAt: now,
       updatedAt: now,
     });
+    await ctx.db.insert("auditLogs", {
+      actorId: userId,
+      actionType: "CREATE_AGENT_RUN_FEEDBACK",
+      entityId: feedbackId,
+      entityType: "agentRunFeedback",
+      companyId: run.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({
+        runId: args.runId,
+        rating: args.rating,
+        labels,
+        source: "END_USER",
+      }),
+    });
+    return feedbackId;
   },
 });
 

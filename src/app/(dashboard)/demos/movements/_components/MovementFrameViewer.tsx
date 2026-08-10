@@ -6,6 +6,13 @@ import { drawMovementSkeleton } from "../_lib/movementSkeleton";
 import { getFrameLandmarks } from "../_lib/movementFrameCodec";
 import { buildMovementSpineModel } from "../_lib/movementSpineMetrics";
 import type { MovementFrame } from "../_lib/movementTypes";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../_lib/movementPalette";
 
 type MovementFrameViewerProps = {
   frames: MovementFrame[];
@@ -87,9 +94,9 @@ export default function MovementFrameViewer({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative w-full aspect-video bg-[#07070b] border border-white/10 rounded-3xl overflow-hidden shadow-[0_30px_90px_rgba(246,204,190,0.08)]">
+      <div className={`relative w-full aspect-video bg-[${MOVEMENT_SCENE_BG}] border border-white/10 rounded-3xl overflow-hidden shadow-[0_30px_90px_rgba(246,204,190,0.08)]`}>
         {isLoading ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[#f6ccbe] animate-pulse font-medium tracking-wide">
+          <div className={`absolute inset-0 flex items-center justify-center text-[${MOVEMENT_SALMON}] animate-pulse font-medium tracking-wide`}>
             Preparing posture sequence...
           </div>
         ) : error ? (
@@ -123,7 +130,7 @@ export default function MovementFrameViewer({
           <button
             onClick={() => setIsPlaying((playing) => !playing)}
             aria-label={isPlaying ? "Pause routine preview" : "Play routine preview"}
-            className="p-3 rounded-full bg-[#f6ccbe] hover:bg-[#f7efe7] text-[#17131d] transition-colors shadow-[0_0_15px_rgba(246,204,190,0.35)] flex-shrink-0"
+            className={`p-3 rounded-full bg-[${MOVEMENT_SALMON}] hover:bg-[${MOVEMENT_CREAM}] text-[${MOVEMENT_INK}] transition-colors shadow-[0_0_15px_rgba(246,204,190,0.35)] flex-shrink-0`}
           >
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
           </button>
@@ -137,13 +144,13 @@ export default function MovementFrameViewer({
               setIsPlaying(false);
               setCurrentFrameIndex(Number.parseInt(event.target.value, 10));
             }}
-            className="w-full accent-[#f6ccbe]"
+            className={`w-full accent-[${MOVEMENT_SALMON}]`}
           />
           <span className="text-xs text-muted-foreground font-mono min-w-[72px] text-right">
             {safeFrameIndex} / {frames.length}
           </span>
           {currentSpineModel && (
-            <span className="hidden min-w-[150px] text-right text-xs font-bold uppercase tracking-wide text-[#a8d5ba] sm:block">
+            <span className={`hidden min-w-[150px] text-right text-xs font-bold uppercase tracking-wide text-[${MOVEMENT_MINT}] sm:block`}>
               Spine {currentSpineModel.neutralStackScore}%
             </span>
           )}
@@ -154,7 +161,7 @@ export default function MovementFrameViewer({
         <button
           onClick={() => setIsPlaying((playing) => !playing)}
           disabled={isLoading || !hasFrames}
-          className="w-full bg-[#f6ccbe] hover:bg-[#f7efe7] text-[#17131d] font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(246,204,190,0.35)] transition-all disabled:opacity-50"
+          className={`w-full bg-[${MOVEMENT_SALMON}] hover:bg-[${MOVEMENT_CREAM}] text-[${MOVEMENT_INK}] font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(246,204,190,0.35)] transition-all disabled:opacity-50`}
         >
           {toggleLabel}
         </button>

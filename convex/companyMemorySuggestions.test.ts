@@ -100,13 +100,30 @@ describe("company memory suggestions", () => {
 
     expect(result.suggested).toBe(1);
 
-    const waiting = await t.run(async (ctx) => await ctx.db
-      .query("companyMemoryCandidates")
-      .withIndex("by_company_status_created", (q) => q.eq("companyId", companyId).eq("status", "PROPOSED"))
-      .collect());
-    expect(waiting.map((candidate) => candidate.title)).toEqual(["Hours"]);
-    // Proposed by the platform, so no admin is named as its author.
-    expect(waiting[0].createdBy).toBeUndefined();
+    // Autonomous memory (owner decision, 2026-08-10): the one suggestion that
+    // survived the filters is saved into company memory immediately — nothing
+    // waits for a person, and the memory is labelled as the AI's own write.
+    const state = await t.run(async (ctx) => ({
+      waiting: await ctx.db
+        .query("companyMemoryCandidates")
+        .withIndex("by_company_status_created", (q) => q.eq("companyId", companyId).eq("status", "PROPOSED"))
+        .collect(),
+      applied: await ctx.db
+        .query("companyMemoryCandidates")
+        .withIndex("by_company_status_created", (q) => q.eq("companyId", companyId).eq("status", "APPROVED"))
+        .collect(),
+      memories: await ctx.db
+        .query("companyMemories")
+        .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "APPROVED"))
+        .collect(),
+    }));
+    expect(state.waiting).toEqual([]);
+    expect(state.applied.map((candidate) => candidate.title)).toEqual(["Hours"]);
+    // Saved by the platform, so no admin is named as its author.
+    expect(state.applied[0].createdBy).toBeUndefined();
+    const autoMemory = state.memories.find((memory) => memory.title === "Hours");
+    expect(autoMemory?.autoApplied).toBe(true);
+    expect(autoMemory?.createdBy).toBeUndefined();
   });
 
   test("a quiet company costs nothing and still records that it was looked at", async () => {

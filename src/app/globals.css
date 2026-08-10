@@ -14,10 +14,21 @@
   --color-muted: var(--text-muted);
   --color-hover: var(--bg-hover);
   
-  /* Sonae Brand */
-  --color-brand: var(--color-brand, #ff5a1f);
-  --color-success: var(--color-success, #10b981);
-  --color-destructive: var(--color-destructive, #ef4444);
+  /* Sonae Brand.
+     The source variables (--brand, --success-src, --destructive-src, --ring)
+     are written by SystemSettingsContext; the hex here is the real fallback
+     for first paint and for deployments that never saved a theme. The names
+     differ from the token on purpose: `--color-brand: var(--color-brand, …)`
+     is a self-referential cycle and its fallback can never fire. */
+  --color-brand: var(--brand, #ff5a1f);
+  --color-success: var(--success-src, #10b981);
+  --color-destructive: var(--destructive-src, #ef4444);
+  /* The two status tones the app renders constantly but never had tokens
+     for: warning (review/pending/risk, previously hardcoded amber) and info
+     (running/neutral activity, previously hardcoded sky). Defaults are the
+     values the app was already painting by hand. */
+  --color-warning: var(--warning-src, #f59e0b);
+  --color-info: var(--info-src, #38bdf8);
   --color-ring: var(--ring, rgba(255, 90, 31, 0.4));
 
   /* Shapes */
@@ -27,6 +38,12 @@
 }
 
 :root {
+  /* "R, G, B" of the brand colour, for rgba(var(--brand-rgb), a) glow
+     shadows. Overridden by SystemSettingsContext when a brand colour is
+     saved; both spellings exist because call sites grew up using both. */
+  --brand-rgb: 255, 90, 31;
+  --color-brand-rgb: var(--brand-rgb);
+
   --bg-main: #fcfcfc;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
@@ -70,10 +87,6 @@ h1, h2, h3, h4, h5, h6 {
 
 h1 {
   font-size: var(--h1-size-override, 1.5rem) !important;
-}
-
-p.header-subtitle {
-  font-size: var(--subtitle-size-override, 13px) !important;
 }
 
 /* Global Interactive Elements */

@@ -19,6 +19,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { formatDate } from "@/src/lib/dates";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { StatusPill } from "@/src/ui/atoms/StatusPill";
+import { toneForStatus } from "@/src/ui/atoms/statusTone";
 
 type InspectKnowledgeDocumentPageProps = {
   params: Promise<{
@@ -26,13 +28,6 @@ type InspectKnowledgeDocumentPageProps = {
     documentId: Id<"knowledgeDocuments">;
   }>;
 };
-
-function getStatusClasses(status: string) {
-  if (status === "ready") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
-  if (status === "failed") return "border-red-500/30 bg-red-500/10 text-red-300";
-  if (status === "processing") return "border-amber-500/30 bg-amber-500/10 text-amber-300";
-  return "border-border-dim bg-black/20 text-secondary";
-}
 
 function isEmbeddingUseCaseError(message: string | undefined) {
   return !!message && (
@@ -99,9 +94,13 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${getStatusClasses(document.status)}`}>
+              <StatusPill
+                // PROCESSING is not yet in the shared status map; keep its amber semantics.
+                tone={document.status === "processing" ? "warning" : toneForStatus(document.status)}
+                className="rounded-md px-2 py-1 font-normal uppercase font-mono tracking-widest"
+              >
                 {document.status}
-              </span>
+              </StatusPill>
               <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
                 {document.format}
               </span>
@@ -124,7 +123,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
             type="button"
             onClick={handleRetry}
             disabled={isRetrying}
-            className="h-9 px-4 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-200 text-[13px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
+            className="h-9 px-4 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[13px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
           >
             {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
             Retry ingestion
@@ -133,24 +132,24 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
       </header>
 
       {retryError && (
-        <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] text-red-200">
+        <div className="rounded-[8px] border border-destructive/20 bg-destructive/10 px-4 py-3 text-[13px] text-destructive">
           {retryError}
         </div>
       )}
 
       {document.lastIngestionError && (
-        <section className="rounded-[8px] border border-red-500/25 bg-red-500/10 px-4 py-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2 text-red-200">
+        <section className="rounded-[8px] border border-destructive/25 bg-destructive/10 px-4 py-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="w-4 h-4" />
             <h2 className="text-[14px] font-semibold">Ingestion failed</h2>
           </div>
-          <pre className="text-[12px] text-red-100 whitespace-pre-wrap break-words leading-relaxed">
+          <pre className="text-[12px] text-destructive whitespace-pre-wrap break-words leading-relaxed">
             {document.lastIngestionError}
           </pre>
           {hasEmbeddingConfigError && (
-            <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-[13px] text-amber-100 leading-relaxed">
+            <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-3 py-3 text-[13px] text-warning leading-relaxed">
               This is an AI model configuration issue. Set the company embedding default to a Google Vertex model that supports the embedding use case, then retry ingestion.
-              <Link href={modelsHref} className="ml-2 font-semibold text-amber-200 hover:underline">
+              <Link href={modelsHref} className="ml-2 font-semibold text-warning hover:underline">
                 Open AI Models
               </Link>
             </div>
@@ -182,18 +181,18 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
         </div>
       </section>
 
-      <section className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex gap-3 text-amber-200">
+      <section className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-3 flex gap-3 text-warning">
         <Database className="w-4 h-4 mt-0.5 shrink-0" />
         <p className="text-[13px] leading-relaxed">{inspection.safetyNotice}</p>
       </section>
 
       {inspection.embeddingDrift && (
-        <section className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-4 flex flex-col gap-3 text-amber-100">
+        <section className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-4 flex flex-col gap-3 text-warning">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
             <h2 className="text-[14px] font-semibold">Embedding model drift detected</h2>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-[11px] font-mono text-amber-100/80">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-[11px] font-mono text-warning/80">
             <div>Stored: {inspection.embeddingDrift.storedModelId || "unknown"} ({inspection.embeddingDrift.storedDimensions || "?"} dims)</div>
             <div>Active: {inspection.embeddingDrift.activeModelId} ({inspection.embeddingDrift.activeDimensions || "?"} dims)</div>
           </div>

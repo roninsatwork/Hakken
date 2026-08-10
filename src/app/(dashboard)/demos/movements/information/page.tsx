@@ -22,8 +22,11 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { CaptureExplorer, CaptureFlow } from "./_components/MovementInfoVisuals";
+import {
+  MOVEMENT_SALMON,
+} from "../_lib/movementPalette";
 
-const ACCENT = "#f6ccbe";
+const ACCENT = MOVEMENT_SALMON;
 
 const REQUIREMENTS = [
   {

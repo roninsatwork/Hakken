@@ -3,12 +3,31 @@ import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { SELF_IMPROVEMENT_CONFIG_KEY, SELF_IMPROVEMENT_DEFAULTS } from "./selfImprovementConfig";
 
 const paginationOpts = { numItems: 10, cursor: null };
+
+type TestConvex = ReturnType<typeof convexTest>;
+
+/**
+ * Autonomous memory is the default, so tests exercising the approval queue
+ * switch it off explicitly — they are the record of what the off position
+ * still has to do.
+ */
+async function switchAutonomousMemoryOff(t: TestConvex) {
+  await t.run(async (ctx) => {
+    await ctx.db.insert("systemConfig", {
+      key: SELF_IMPROVEMENT_CONFIG_KEY,
+      value: JSON.stringify({ ...SELF_IMPROVEMENT_DEFAULTS, autonomousMemory: false }),
+      updatedAt: Date.now(),
+    });
+  });
+}
 
 describe("Agent Memory Candidates", () => {
   test("admins can generate, approve, reject, and auto-apply scoped memory candidates", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await switchAutonomousMemoryOff(t);
 
     const { adminAId, adminBId, agentId, successRunId, failedRunId, skillId, skillVersionId } = await t.run(async (ctx) => {
       const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
@@ -446,26 +465,101 @@ describe("Agent Memory Candidates", () => {
     void adminId;
 
     // No admin pressed anything: this is the pass that runs when a run ends.
+    // Under autonomous memory (the default), what it learns is saved
+    // immediately — marked as the AI's own write, with an audit row.
     const first = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: firstRunId });
     expect(first.createdIds).toHaveLength(1);
-    expect(first.appliedIds).toEqual([]);
+    expect(first.appliedIds).toHaveLength(1);
+
+    const state = await t.run(async (ctx) => ({
+      memory: await ctx.db.get(first.appliedIds[0]),
+      candidate: await ctx.db.get(first.createdIds[0]),
+      proposed: await ctx.db
+        .query("agentMemoryCandidates")
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+        .collect(),
+      audits: await ctx.db.query("auditLogs").collect(),
+    }));
+    // Saved by the platform: labelled, unauthored, and audited as automatic.
+    expect(state.memory?.autoApplied).toBe(true);
+    expect(state.memory?.createdBy).toBeUndefined();
+    expect(state.candidate?.status).toBe("APPLIED");
+    expect(state.proposed).toEqual([]);
+    const applyAudit = state.audits.find((entry) => entry.actionType === "APPLY_AGENT_MEMORY_CANDIDATE");
+    expect(applyAudit).toBeDefined();
+    expect(applyAudit?.actorId).toBeUndefined();
+
+    // A second run wording it identically must not save it twice. Dedupe used
+    // to be scoped to a single run, so this produced a duplicate every time.
+    const second = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: secondRunId });
+    expect(second.createdIds).toEqual([]);
+    expect(second.appliedIds).toEqual([]);
+  });
+
+  test("a rehearsal run proposes nothing, even when an admin asks", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { agentId, adminId, drillRunId } = await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Drill Co", createdAt: now });
+      const adminId = await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Drilled Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const drillRunId = await ctx.db.insert("agentRuns", {
+        agentId,
+        companyId,
+        userId: adminId,
+        triggerType: "CHAT",
+        objective: "Summarize pipeline risk",
+        status: "SUCCESS",
+        isRehearsal: true,
+        finalOutput: "Rehearsed.",
+        startedAt: now,
+        completedAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("agentRunFeedback", {
+        runId: drillRunId,
+        agentId,
+        companyId,
+        userId: adminId,
+        rating: "POSITIVE",
+        labels: ["GOOD_ANSWER"],
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { agentId, adminId, drillRunId };
+    });
+
+    // The automatic pass: fabricated experience teaches nothing.
+    const automatic = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: drillRunId });
+    expect(automatic).toEqual({ createdIds: [], appliedIds: [] });
+
+    // The admin button gets the same answer — the drill's tool results were
+    // invented, whoever asks.
+    const adminClient = t.withIdentity({ subject: adminId });
+    const manual = await adminClient.mutation(api.agentMemoryCandidates.generateForRun, {
+      runId: drillRunId,
+      autoApplyLowRisk: false,
+    });
+    expect(manual).toEqual({ createdIds: [], appliedIds: [] });
 
     const proposed = await t.run(async (ctx) => await ctx.db
       .query("agentMemoryCandidates")
       .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
       .collect());
-    expect(proposed).toHaveLength(1);
-    // Proposed by the platform, so no admin is named as its author.
-    expect(proposed[0].createdBy).toBeUndefined();
-
-    // A second run wording it identically must not queue it twice. Dedupe used
-    // to be scoped to a single run, so this produced a duplicate every time.
-    const second = await t.mutation(internal.agentMemoryCandidates.generateForRunInternal, { runId: secondRunId });
-    expect(second.createdIds).toEqual([]);
+    expect(proposed).toEqual([]);
   });
 
   test("a suggestion turned down once is not proposed by the next run", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await switchAutonomousMemoryOff(t);
 
     const { agentId, adminId, firstRunId, secondRunId } = await t.run(async (ctx) => {
       const now = Date.now();

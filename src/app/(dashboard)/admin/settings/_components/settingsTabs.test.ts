@@ -1,21 +1,25 @@
-import { describe, expect, test } from "vitest";
-import { isSettingsTab } from "./settingsTabs";
+import { describe, expect, it } from "vitest";
+import { DEFAULT_SETTINGS_ROUTE, resolveLegacySettingsRoute } from "./settingsTabs";
 
-describe("settings tabs", () => {
-  test("accepts supported settings tab ids", () => {
-    expect(isSettingsTab("identity")).toBe(true);
-    expect(isSettingsTab("appearance")).toBe(true);
-    expect(isSettingsTab("security")).toBe(true);
-    expect(isSettingsTab("options")).toBe(true);
-    expect(isSettingsTab("purges")).toBe(true);
+/**
+ * Settings was one page with `?tab=` links for its whole life, so those links
+ * are in bookmarks and docs. They resolve to the routes that replaced them
+ * rather than dropping the reader on a 404.
+ */
+describe("resolveLegacySettingsRoute", () => {
+  it("sends each old tab to the screen that replaced it", () => {
+    expect(resolveLegacySettingsRoute("identity")).toBe("/admin/settings/identity");
+    expect(resolveLegacySettingsRoute("appearance")).toBe("/admin/settings/identity/aesthetics");
+    expect(resolveLegacySettingsRoute("security")).toBe("/admin/settings/security");
+    expect(resolveLegacySettingsRoute("purges")).toBe("/admin/settings/security/retention");
+    expect(resolveLegacySettingsRoute("options")).toBe("/admin/settings/options");
   });
 
-  test("rejects unknown or empty tab ids", () => {
-    expect(isSettingsTab("billing")).toBe(false);
-    // Retired: the audit trail moved under Governance, and a stale bookmark
-    // should land on the default tab rather than an empty one.
-    expect(isSettingsTab("audit")).toBe(false);
-    expect(isSettingsTab("")).toBe(false);
-    expect(isSettingsTab(null)).toBe(false);
+  it("falls back to the default screen for no tab and for tabs that no longer exist", () => {
+    expect(resolveLegacySettingsRoute(null)).toBe(DEFAULT_SETTINGS_ROUTE);
+    expect(resolveLegacySettingsRoute("")).toBe(DEFAULT_SETTINGS_ROUTE);
+    // The audit trail moved to Governance; a stale link must still land somewhere.
+    expect(resolveLegacySettingsRoute("audit")).toBe(DEFAULT_SETTINGS_ROUTE);
+    expect(resolveLegacySettingsRoute("billing")).toBe(DEFAULT_SETTINGS_ROUTE);
   });
 });

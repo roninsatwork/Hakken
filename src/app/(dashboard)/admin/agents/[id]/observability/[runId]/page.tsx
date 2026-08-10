@@ -33,8 +33,8 @@ import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 const TONE_CLASS: Record<WaterfallRow["tone"], string> = {
   thinking: "bg-secondary/40",
   tool: "bg-brand",
-  waiting: "bg-amber-500/70",
-  failed: "bg-rose-500",
+  waiting: "bg-warning/70",
+  failed: "bg-destructive",
 };
 
 /**
@@ -309,7 +309,7 @@ export default function AgentJobDetailPage() {
 
       {notice && (
         <p
-          className={`text-[12.5px] ${notice.tone === "good" ? "text-emerald-500" : "text-rose-500"}`}
+          className={`text-[12.5px] ${notice.tone === "good" ? "text-success" : "text-destructive"}`}
           role="status"
         >
           {notice.text}
@@ -322,9 +322,9 @@ export default function AgentJobDetailPage() {
       />
 
       {run.error && (
-        <div className="rounded-[12px] border border-rose-500/20 bg-rose-500/[0.06] px-4 py-3">
+        <div className="rounded-[12px] border border-destructive/20 bg-destructive/[0.06] px-4 py-3">
           <div className="text-[11.5px] text-muted mb-1">Why it stopped</div>
-          <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-rose-400">{run.error}</p>
+          <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-destructive">{run.error}</p>
         </div>
       )}
 
@@ -473,10 +473,10 @@ function RecordLine({
 }) {
   return (
     <div className="border-t border-border-dim/40 first:border-t-0 py-2 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-      <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${good ? "bg-emerald-500" : "bg-foreground/25"}`} />
+      <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${good ? "bg-success" : "bg-foreground/25"}`} />
       <span className="text-[12.5px] font-medium text-foreground">{subject}</span>
       <span className="text-[12.5px] text-secondary min-w-0">{detail}</span>
-      {note && <span className="text-[12px] text-amber-500 basis-full pl-4">{note}</span>}
+      {note && <span className="text-[12px] text-warning basis-full pl-4">{note}</span>}
       {(sourceName || sourceUrl) && (
         sourceUrl ? (
           <a
@@ -671,7 +671,7 @@ function Pane({ title, body, isError }: { title: string; body: string; isError?:
       <div className="text-[11px] text-muted mb-1.5">{title}</div>
       <pre
         className={`text-[11.5px] leading-relaxed font-mono m-0 px-3 py-2.5 rounded-[10px] border border-border-dim bg-sidebar/60 overflow-x-auto whitespace-pre-wrap break-words max-h-[280px] ${
-          isError ? "text-rose-400" : "text-secondary"
+          isError ? "text-destructive" : "text-secondary"
         }`}
       >
         {body}
@@ -687,7 +687,7 @@ function outcomeLabel(outcome: string | undefined) {
 }
 
 function outcomeTone(outcome: string | undefined) {
-  if (outcome === "SUCCESS") return "bg-emerald-500/10 text-emerald-500";
-  if (outcome === "FAILED") return "bg-rose-500/10 text-rose-500";
+  if (outcome === "SUCCESS") return "bg-success/10 text-success";
+  if (outcome === "FAILED") return "bg-destructive/10 text-destructive";
   return "bg-foreground/5 text-muted";
 }

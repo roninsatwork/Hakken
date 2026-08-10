@@ -2,9 +2,12 @@
 
 import { useId, useState } from "react";
 import { Eye, Hand, PersonStanding, ScanFace } from "lucide-react";
+import {
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
-const BODY = "#f6ccbe"; // Posture Studio salmon
-const FACE = "#f6ccbe";
+const BODY = MOVEMENT_SALMON; // Posture Studio salmon
+const FACE = MOVEMENT_SALMON;
 const HANDS = "#8fb8e0";
 const EYES = "#ff5a1f";
 

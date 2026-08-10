@@ -22,6 +22,14 @@
  * is a model call plus reads, its writes are its own run records, and any
  * real-world action a tool takes sits behind the approval gate. It is also
  * where transient provider errors actually happen.
+ *
+ * Two situations void that argument even for `agentNode`, and the caller
+ * reports them through `firstAttemptMayHaveActed`:
+ * - the agent runs with `autonomousToolExecution`, so its write tools skip
+ *   the approval gate — a re-run re-performs whatever they did;
+ * - the node's real work had already finished and the error came from the
+ *   bookkeeping after it, so a "retry" would run the whole node again.
+ * Either way the step fails to the review list exactly as it always has.
  */
 
 /** Total tries a step gets, first attempt included. */
@@ -73,8 +81,16 @@ export function decideStepFailure(args: {
   errorMessage: string;
   nodeType: string | undefined;
   attemptJustFailed: number;
+  /**
+   * True when the failed attempt cannot prove it did nothing externally
+   * visible — its main work had already completed, or its agent executes
+   * write tools without the approval gate. Overrides everything: such a
+   * step never retries.
+   */
+  firstAttemptMayHaveActed?: boolean;
 }): { action: "retry"; delayMs: number } | { action: "fail" } {
   if (
+    args.firstAttemptMayHaveActed !== true &&
     isRetryableNodeType(args.nodeType) &&
     isTransientWorkflowError(args.errorMessage) &&
     args.attemptJustFailed < MAX_STEP_ATTEMPTS

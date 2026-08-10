@@ -4,14 +4,11 @@ Use this checklist when turning Sonae into a new customer-specific or vertical p
 
 The goal is to make product-specific changes through configuration, translations, templates, seed data, and extension points before editing core runtime code.
 
-For the System Options workflow, use `docs/operator/white-label-packaging-operator-guide.md`.
-
 ## 1. Product Identity
 
 - Set the product/platform name through system settings.
 - Replace logo URLs through system settings or uploaded logo storage.
 - Confirm light and dark theme tokens are set through settings rather than hardcoded CSS.
-- Review System Settings > System Options > White-Label Readiness before handoff.
 - Review System Settings > System Options > Brand Handoff Summary and confirm product name, logo mode, brand color, runtime sender, widget posture, diagnostics posture, production gate, and ready presets.
 - Replace customer-facing product copy in `messages/en.json` and `messages/it.json`.
 - Keep English and Italian locale dictionaries in parity.

@@ -45,6 +45,8 @@ import {
   type CollectedFile,
 } from "./knowledgeUploadUtils";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { StatusPill } from "@/src/ui/atoms/StatusPill";
+import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
 
 type KnowledgeScope =
   | { type: "global" }
@@ -517,10 +519,10 @@ export function KnowledgeManager({
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
           {[
             { label: "Documents", value: qualitySummary ? qualitySummary.totals.documents.toLocaleString() : "...", tone: "text-foreground" },
-            { label: "Ready", value: qualitySummary ? qualitySummary.totals.ready.toLocaleString() : "...", tone: "text-[#10b981]" },
-            { label: "Ingesting", value: qualitySummary ? (qualitySummary.totals.pending + qualitySummary.totals.processing).toLocaleString() : "...", tone: "text-amber-400" },
-            { label: "Failed", value: qualitySummary ? qualitySummary.totals.failed.toLocaleString() : "...", tone: "text-red-400" },
-            { label: "Drift", value: qualitySummary ? qualitySummary.totals.embeddingDrift.toLocaleString() : "...", tone: "text-amber-300" },
+            { label: "Ready", value: qualitySummary ? qualitySummary.totals.ready.toLocaleString() : "...", tone: "text-success" },
+            { label: "Ingesting", value: qualitySummary ? (qualitySummary.totals.pending + qualitySummary.totals.processing).toLocaleString() : "...", tone: "text-warning" },
+            { label: "Failed", value: qualitySummary ? qualitySummary.totals.failed.toLocaleString() : "...", tone: "text-destructive" },
+            { label: "Drift", value: qualitySummary ? qualitySummary.totals.embeddingDrift.toLocaleString() : "...", tone: "text-warning" },
             { label: "Chunks", value: qualitySummary ? qualitySummary.totals.sampledChunks.toLocaleString() : "...", tone: "text-secondary" },
           ].map((item) => (
             <div key={item.label} className="rounded-[8px] border border-border-dim bg-sidebar/30 px-4 py-3">
@@ -552,9 +554,7 @@ export function KnowledgeManager({
                 <span
                   key={term.term}
                   className={`px-2 py-1 rounded-[6px] border text-[11px] ${
-                    term.covered
-                      ? "border-[#10b981]/20 bg-[#10b981]/10 text-[#10b981]"
-                      : "border-amber-500/20 bg-amber-500/10 text-amber-300"
+                    STATUS_TONE_CLASSES[term.covered ? "success" : "warning"]
                   }`}
                 >
                   {term.term}
@@ -593,7 +593,7 @@ export function KnowledgeManager({
           </div>
 
           {qualityActionError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">{qualityActionError}</span>
             </div>
@@ -648,7 +648,7 @@ export function KnowledgeManager({
                   ))}
                 </div>
               )}
-              <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex gap-3 text-amber-200">
+              <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-3 flex gap-3 text-warning">
                 <Database className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-[13px] leading-relaxed">{retrievalTest.safetyNotice}</p>
               </div>
@@ -657,9 +657,9 @@ export function KnowledgeManager({
         </div>
 
         {qualitySummary && qualitySummary.flaggedDocuments.length > 0 && (
-          <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex flex-col gap-3">
+          <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-3 flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-2 text-amber-300">
+              <div className="flex items-center gap-2 text-warning">
                 <AlertTriangle className="w-4 h-4" />
                 <span className="text-[13px] font-semibold">Knowledge quality items need review</span>
               </div>
@@ -667,7 +667,7 @@ export function KnowledgeManager({
                 type="button"
                 onClick={handleRepairFlaggedDocuments}
                 disabled={isBulkRepairing}
-                className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-200 text-[12px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
+                className="h-8 px-3 rounded-[8px] border border-warning/20 bg-black/20 text-warning text-[12px] font-semibold flex items-center justify-center gap-2 w-fit disabled:opacity-50"
               >
                 {isBulkRepairing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                 Repair all flagged
@@ -685,12 +685,12 @@ export function KnowledgeManager({
                       {item.lastIngestedAt && <span>fresh {formatDate(item.lastIngestedAt)}</span>}
                     </div>
                     {item.embeddingDrift && (
-                      <div className="text-[11px] text-amber-200 mt-1 truncate">
+                      <div className="text-[11px] text-warning mt-1 truncate">
                         {item.embeddingDrift.storedModelId || "unknown model"} {"->"} {item.embeddingDrift.activeModelId}
                       </div>
                     )}
                     {item.lastIngestionError && (
-                      <div className="text-[11px] text-red-200 mt-1 truncate">
+                      <div className="text-[11px] text-destructive mt-1 truncate">
                         {item.lastIngestionError}
                       </div>
                     )}
@@ -698,14 +698,14 @@ export function KnowledgeManager({
                   {renderInspectAction(
                     item.documentId,
                     documents.find((entry) => entry._id === item.documentId),
-                    "px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-300 text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-40",
+                    "px-3 py-1.5 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-40",
                     "Inspect",
                   )}
                   <AdminWriteButton
                     type="button"
                     onClick={() => handleRetryDocument(item.documentId)}
                     disabled={repairingDocumentIds[item.documentId]}
-                    className="px-3 py-1.5 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-200 text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-[8px] border border-warning/20 bg-black/20 text-warning text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-50"
                   >
                     {repairingDocumentIds[item.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                     Repair
@@ -765,7 +765,7 @@ export function KnowledgeManager({
             <div className="bg-sidebar/30 border border-border-dim rounded-[16px] p-6">
               <h3 className="text-sm font-bold mb-4">Website URL</h3>
               {websiteError && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span className="font-medium">{websiteError}</span>
                 </div>
@@ -778,12 +778,12 @@ export function KnowledgeManager({
                   onKeyDown={handleMapUrl}
                   placeholder="+Add website URL and press Enter"
                   disabled={isMapping || isQueueing}
-                  className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-[#10b981] transition-colors pr-10"
+                  className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-success transition-colors pr-10"
                 />
                 {isMapping ? (
-                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#10b981] animate-spin" />
+                  <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-success animate-spin" />
                 ) : (
-                  <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#10b981] scale-x-[-1]" />
+                  <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-success scale-x-[-1]" />
                 )}
               </div>
 
@@ -878,7 +878,7 @@ export function KnowledgeManager({
                         <AdminWriteButton
                           onClick={() => setRootToDelete(root)}
                           title="Delete Complete Domain"
-                          className="p-1.5 rounded-lg text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                          className="p-1.5 rounded-lg text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </AdminWriteButton>
@@ -920,9 +920,9 @@ export function KnowledgeManager({
                               {document.sourceUrl}
                             </a>
                             <div className="flex items-center gap-3">
-                              {document.status === "pending" && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-sm">Pending</span>}
-                              {document.status === "processing" && <span className="text-[10px] uppercase font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
-                              {document.status === "failed" && <span className="text-[10px] uppercase font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-sm flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Failed</span>}
+                              {document.status === "pending" && <StatusPill tone="warning" className="rounded-sm border-0 uppercase font-bold">Pending</StatusPill>}
+                              {document.status === "processing" && <StatusPill tone="warning" icon={<Loader2 className="w-3 h-3 animate-spin" />} className="rounded-sm border-0 uppercase font-bold">Processing</StatusPill>}
+                              {document.status === "failed" && <StatusPill tone="danger" icon={<AlertTriangle className="w-3 h-3" />} className="rounded-sm border-0 uppercase font-bold">Failed</StatusPill>}
                               {renderInspectAction(
                                 document._id,
                                 document,
@@ -932,7 +932,7 @@ export function KnowledgeManager({
                                 <AdminWriteButton
                                   onClick={() => handleRetryDocument(document._id)}
                                   disabled={repairingDocumentIds[document._id]}
-                                  className="text-secondary hover:text-amber-300 transition-colors opacity-50 group-hover:opacity-100 disabled:opacity-50"
+                                  className="text-secondary hover:text-warning transition-colors opacity-50 group-hover:opacity-100 disabled:opacity-50"
                                   title="Retry ingestion"
                                 >
                                   {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
@@ -940,7 +940,7 @@ export function KnowledgeManager({
                               )}
                               <AdminWriteButton
                                 onClick={() => setDocumentToDelete(document)}
-                                className="text-secondary hover:text-red-500 transition-colors opacity-50 group-hover:opacity-100"
+                                className="text-secondary hover:text-destructive transition-colors opacity-50 group-hover:opacity-100"
                                 title="Delete Document"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -999,9 +999,9 @@ export function KnowledgeManager({
                           if (!evidence) return null;
                           return (
                             <div className="flex items-center gap-2 text-[11px]">
-                              <span className="text-sky-400">{evidence.positiveEvidence} rated helpful</span>
+                              <span className="text-info">{evidence.positiveEvidence} rated helpful</span>
                               <span className="text-muted">·</span>
-                              <span className="text-amber-400">{evidence.negativeEvidence} rated not right</span>
+                              <span className="text-warning">{evidence.negativeEvidence} rated not right</span>
                             </div>
                           );
                         })()}
@@ -1010,19 +1010,19 @@ export function KnowledgeManager({
 
                     <div className="flex items-center gap-4">
                       {document.status === "processing" && (
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-amber-500 tracking-widest uppercase font-mono px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Ingesting
-                        </div>
+                        <StatusPill tone="warning" size="md" icon={<Loader2 className="w-3.5 h-3.5 animate-spin" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
+                          Ingesting
+                        </StatusPill>
                       )}
                       {document.status === "ready" && (
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-[#10b981] tracking-widest uppercase font-mono px-3 py-1.5 rounded-full bg-[#10b981]/10 border border-[#10b981]/30">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Ready
-                        </div>
+                        <StatusPill tone="success" size="md" icon={<CheckCircle2 className="w-3.5 h-3.5" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
+                          Ready
+                        </StatusPill>
                       )}
                       {document.status === "failed" && (
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-red-500 tracking-widest uppercase font-mono px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Failed
-                        </div>
+                        <StatusPill tone="danger" size="md" icon={<AlertTriangle className="w-3.5 h-3.5" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
+                          Failed
+                        </StatusPill>
                       )}
 
                       {renderInspectAction(
@@ -1035,7 +1035,7 @@ export function KnowledgeManager({
                         <AdminWriteButton
                           onClick={() => handleRetryDocument(document._id)}
                           disabled={repairingDocumentIds[document._id]}
-                          className="p-2 rounded-lg border border-transparent text-secondary hover:text-amber-300 hover:bg-amber-500/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          className="p-2 rounded-lg border border-transparent text-secondary hover:text-warning hover:bg-warning/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                           title="Retry ingestion"
                         >
                           {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
@@ -1044,7 +1044,7 @@ export function KnowledgeManager({
 
                       <AdminWriteButton
                         onClick={() => setDocumentToDelete(document)}
-                        className="p-2 rounded-lg border border-transparent text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 rounded-lg border border-transparent text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                         title="Delete Document"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1088,7 +1088,7 @@ export function KnowledgeManager({
       >
         <div className="flex flex-col gap-6 w-full pt-4">
           {fileError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">{fileError}</span>
             </div>
@@ -1174,7 +1174,7 @@ export function KnowledgeManager({
                   <div key={entry.key} className="flex items-start gap-3 px-3 py-2">
                     <div className="mt-0.5 flex-shrink-0">
                       {entry.status === "failed" ? (
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
                       ) : entry.status === "queued" ? (
                         <CheckCircle2 className="w-4 h-4 text-brand" />
                       ) : entry.status === "uploading" ? (
@@ -1185,7 +1185,7 @@ export function KnowledgeManager({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] text-foreground truncate" title={entry.title}>{entry.title}</p>
-                      <p className={`text-[12px] ${entry.status === "failed" ? "text-red-500" : "text-secondary"}`}>
+                      <p className={`text-[12px] ${entry.status === "failed" ? "text-destructive" : "text-secondary"}`}>
                         {entry.status === "failed"
                           ? `Failed — ${entry.error || "upload did not complete"}`
                           : UPLOAD_STATUS_LABELS[entry.status]}
@@ -1225,7 +1225,7 @@ export function KnowledgeManager({
             {deleteDocumentDescription(documentToDelete?.title)}
           </p>
           {documentDeleteError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-[13px] flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span className="font-medium">{documentDeleteError}</span>
             </div>
@@ -1241,7 +1241,7 @@ export function KnowledgeManager({
             <AdminWriteButton
               onClick={handleConfirmDocumentDelete}
               disabled={isDeletingDocument}
-              className="px-4 py-2 rounded-md bg-red-500 text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-red-600 disabled:opacity-50"
+              className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-destructive/90 disabled:opacity-50"
             >
               {isDeletingDocument && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Delete Document
@@ -1294,7 +1294,7 @@ export function KnowledgeManager({
                   {documentInspection.document.embeddingDimensions && <span>{documentInspection.document.embeddingDimensions} dimensions</span>}
                 </div>
                 {documentInspection.document.lastIngestionError && (
-                  <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 px-3 py-2 text-[12px] text-red-200">
+                  <div className="rounded-[8px] border border-destructive/20 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
                     {documentInspection.document.lastIngestionError}
                   </div>
                 )}
@@ -1304,7 +1304,7 @@ export function KnowledgeManager({
                       type="button"
                       onClick={() => handleRetryDocument(documentInspection.document.documentId)}
                       disabled={repairingDocumentIds[documentInspection.document.documentId]}
-                      className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-amber-500/10 text-amber-200 text-[12px] font-semibold flex items-center gap-2 disabled:opacity-50"
+                      className="h-8 px-3 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[12px] font-semibold flex items-center gap-2 disabled:opacity-50"
                     >
                       {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                       Retry ingestion
@@ -1313,18 +1313,18 @@ export function KnowledgeManager({
                 )}
               </div>
 
-              <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex gap-3 text-amber-200">
+              <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-3 flex gap-3 text-warning">
                 <Database className="w-4 h-4 mt-0.5 shrink-0" />
                 <p className="text-[13px] leading-relaxed">{documentInspection.safetyNotice}</p>
               </div>
 
               {documentInspection.embeddingDrift && (
-                <div className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 flex flex-col gap-2 text-amber-100">
+                <div className="rounded-[8px] border border-warning/20 bg-warning/10 px-4 py-3 flex flex-col gap-2 text-warning">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" />
                     <span className="text-[13px] font-semibold">Embedding model drift detected</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-amber-100/80">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-warning/80">
                     <div>Stored: {documentInspection.embeddingDrift.storedModelId || "unknown"} ({documentInspection.embeddingDrift.storedDimensions || "?"} dims)</div>
                     <div>Active: {documentInspection.embeddingDrift.activeModelId} ({documentInspection.embeddingDrift.activeDimensions || "?"} dims)</div>
                   </div>
@@ -1332,7 +1332,7 @@ export function KnowledgeManager({
                     type="button"
                     onClick={() => handleRetryDocument(documentInspection.document.documentId)}
                     disabled={repairingDocumentIds[documentInspection.document.documentId]}
-                    className="h-8 px-3 rounded-[8px] border border-amber-500/20 bg-black/20 text-amber-100 text-[12px] font-semibold flex items-center gap-2 w-fit disabled:opacity-50"
+                    className="h-8 px-3 rounded-[8px] border border-warning/20 bg-black/20 text-warning text-[12px] font-semibold flex items-center gap-2 w-fit disabled:opacity-50"
                   >
                     {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                     Re-embed with active model
@@ -1409,7 +1409,7 @@ export function KnowledgeManager({
             <AdminWriteButton
               onClick={handleConfirmBulkDelete}
               disabled={isDeletingBulk}
-              className="px-4 py-2 rounded-md bg-red-500 text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-red-600"
+              className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-destructive/90"
             >
               {isDeletingBulk && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Delete Everything

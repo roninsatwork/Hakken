@@ -277,15 +277,15 @@ describe("Automatic reflection (self-improvement, Phase 1)", () => {
     const candidates = await t.run(async (ctx) =>
       await ctx.db
         .query("agentMemoryCandidates")
-        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "APPLIED"))
         .collect()
     );
     expect(candidates.length).toBeGreaterThan(0);
     // The reflection-sourced draft proves the chain ran in order: the
     // candidate pass saw a reflection that did not exist when the run ended.
     expect(candidates.some((candidate) => candidate.proposedBy === "SYSTEM_REFLECTION")).toBe(true);
-    // Nothing applied: proposals only, per the human-gate contract.
-    expect(candidates.every((candidate) => candidate.status === "PROPOSED")).toBe(true);
+    // Autonomous memory (owner decision, 2026-08-10): what the run taught is
+    // saved immediately, authored by nobody, labelled as the AI's own write.
     expect(candidates.every((candidate) => candidate.createdBy === undefined)).toBe(true);
   });
 
@@ -349,10 +349,11 @@ describe("Automatic reflection (self-improvement, Phase 1)", () => {
 
     // The MISSED_CONTEXT operator feedback still yields a draft on its own,
     // proving the candidate pass was not lost with the reflection switch.
+    // Autonomous memory is on by default, so the draft lands APPLIED.
     const candidates = await t.run(async (ctx) =>
       await ctx.db
         .query("agentMemoryCandidates")
-        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "PROPOSED"))
+        .withIndex("by_agent_status_created", (q) => q.eq("agentId", agentId).eq("status", "APPLIED"))
         .collect()
     );
     expect(candidates.length).toBeGreaterThan(0);

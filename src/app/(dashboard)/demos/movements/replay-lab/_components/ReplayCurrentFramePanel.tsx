@@ -14,6 +14,12 @@ import {
   getReplayStudioParitySnapshot,
 } from "../_lib/replayLabHelpers";
 import ReplayAgentDiagnosisPanel from "./ReplayAgentDiagnosisPanel";
+import {
+  MOVEMENT_ALERT,
+  MOVEMENT_ALERT_SOFT,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 type ReplayStudioParitySnapshot = ReturnType<typeof getReplayStudioParitySnapshot>;
 
@@ -156,8 +162,8 @@ export default function ReplayCurrentFramePanel({
             <span
               className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
                 currentSourceFrame?.canStartGame
-                  ? "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
-                  : "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                  ? `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}]`
+                  : `border-[${MOVEMENT_SALMON}]/35 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
               }`}
             >
               {currentStartReadinessStatus}
@@ -225,7 +231,7 @@ export default function ReplayCurrentFramePanel({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="rounded-[6px] border border-border-dim bg-background/45 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-secondary transition hover:border-[#f6ccbe]/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  className={`rounded-[6px] border border-border-dim bg-background/45 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-secondary transition hover:border-[${MOVEMENT_SALMON}]/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50`}
                   data-testid="movement-replay-export-fix-log"
                   disabled={!analysis}
                   onClick={onExportFixLog}
@@ -235,10 +241,10 @@ export default function ReplayCurrentFramePanel({
                 <span
                   className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
                     avatarFollowAcceptanceStatus === "blocked-for-acceptance"
-                      ? "border-[#ff8f8f]/35 bg-[#ff8f8f]/10 text-[#ffb0b0]"
+                      ? `border-[${MOVEMENT_ALERT}]/35 bg-[${MOVEMENT_ALERT}]/10 text-[${MOVEMENT_ALERT_SOFT}]`
                       : avatarFollowAcceptanceStatus === "review-only"
-                        ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
-                        : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                        ? `border-[${MOVEMENT_SALMON}]/35 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
+                        : `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}]`
                   }`}
                 >
                   {avatarFollowAcceptanceStatus}
@@ -325,8 +331,8 @@ export default function ReplayCurrentFramePanel({
                     type="button"
                     className={`rounded-[6px] border px-2 py-1 text-left text-[11px] transition ${
                       frame.status === "blocked"
-                        ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0] hover:border-[#ff8f8f]/50"
-                        : "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe] hover:border-[#f6ccbe]/45"
+                        ? `border-[${MOVEMENT_ALERT}]/25 bg-[${MOVEMENT_ALERT}]/10 text-[${MOVEMENT_ALERT_SOFT}] hover:border-[${MOVEMENT_ALERT}]/50`
+                        : `border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}] hover:border-[${MOVEMENT_SALMON}]/45`
                     }`}
                     onClick={() => onSeekFrame(frame.frameIndex)}
                   >
@@ -343,8 +349,8 @@ export default function ReplayCurrentFramePanel({
               <div
                 className={`mt-2 rounded-[6px] border px-2 py-1.5 text-[11px] ${
                   currentReplayStudioFrameVerdict?.status === "blocked"
-                    ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0]"
-                    : "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                    ? `border-[${MOVEMENT_ALERT}]/25 bg-[${MOVEMENT_ALERT}]/10 text-[${MOVEMENT_ALERT_SOFT}]`
+                    : `border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
                 }`}
                 data-testid="movement-replay-current-frame-failure"
               >
@@ -402,8 +408,8 @@ export default function ReplayCurrentFramePanel({
                     key={`${failure.code}-${index}`}
                     className={`rounded-[6px] border px-2 py-1 text-[11px] ${
                       failure.severity === "error"
-                        ? "border-[#ff8f8f]/25 bg-[#ff8f8f]/10 text-[#ffb0b0]"
-                        : "border-[#f6ccbe]/20 bg-[#f6ccbe]/10 text-[#f6ccbe]"
+                        ? `border-[${MOVEMENT_ALERT}]/25 bg-[${MOVEMENT_ALERT}]/10 text-[${MOVEMENT_ALERT_SOFT}]`
+                        : `border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
                     }`}
                     data-avatar-follow-issue-severity={failure.severity}
                     data-testid="movement-replay-avatar-follow-issue"
@@ -497,8 +503,8 @@ export default function ReplayCurrentFramePanel({
               <span
                 className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
                   gamePathParityNeedsReview
-                    ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
-                    : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                    ? `border-[${MOVEMENT_SALMON}]/35 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
+                    : `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}]`
                 }`}
               >
                 {gamePathParityLabel}
@@ -569,8 +575,8 @@ export default function ReplayCurrentFramePanel({
                 <span
                   className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
                     rootMotionNeedsReview
-                      ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
-                      : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                      ? `border-[${MOVEMENT_SALMON}]/35 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
+                      : `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}]`
                   }`}
                 >
                   {rootMotionLabel}
@@ -588,7 +594,7 @@ export default function ReplayCurrentFramePanel({
                   <polyline
                     fill="none"
                     points={rootPathStrip.polyline}
-                    stroke="#a8d5ba"
+                    stroke={MOVEMENT_MINT}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
@@ -598,7 +604,7 @@ export default function ReplayCurrentFramePanel({
                   <circle
                     cx={currentRootPathPoint.px}
                     cy={currentRootPathPoint.py}
-                    fill="#f6ccbe"
+                    fill={MOVEMENT_SALMON}
                     r="2.6"
                   />
                 ) : null}
@@ -668,8 +674,8 @@ export default function ReplayCurrentFramePanel({
                 <span
                   className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
                     replayStudioParity?.label === "diverged"
-                      ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
-                      : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                      ? `border-[${MOVEMENT_SALMON}]/35 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
+                      : `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}]`
                   }`}
                 >
                   {replayStudioParity?.label ?? "pending"}
@@ -702,7 +708,7 @@ export default function ReplayCurrentFramePanel({
                   {replayStudioParity.diffs.slice(0, 4).map((diff) => (
                     <div
                       key={diff}
-                      className="rounded-[6px] border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 px-2 py-1 font-mono text-[10px] text-[#f6ccbe]"
+                      className={`rounded-[6px] border border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 px-2 py-1 font-mono text-[10px] text-[${MOVEMENT_SALMON}]`}
                     >
                       {diff}
                     </div>
@@ -730,13 +736,13 @@ export default function ReplayCurrentFramePanel({
           <h3 className="text-xs font-bold uppercase tracking-wide text-muted">Frame Flags</h3>
           <div className="mt-2 flex flex-col gap-2">
             {currentFrameFailures.length === 0 ? (
-              <div className="rounded-[8px] border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-2 text-xs text-[#a8d5ba]">
+              <div className={`rounded-[8px] border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-2 text-xs text-[${MOVEMENT_MINT}]`}>
                 No current-code flags.
               </div>
             ) : currentFrameFailures.map((failure, index) => (
               <div
                 key={`${failure.code}-${index}`}
-                className="rounded-[8px] border border-[#f6ccbe]/20 bg-[#f6ccbe]/10 p-2 text-xs text-[#f6ccbe]"
+                className={`rounded-[8px] border border-[${MOVEMENT_SALMON}]/20 bg-[${MOVEMENT_SALMON}]/10 p-2 text-xs text-[${MOVEMENT_SALMON}]`}
               >
                 <div className="font-mono">{failure.code}</div>
                 <div className="mt-1 text-secondary">{failure.detail}</div>

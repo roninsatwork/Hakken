@@ -77,11 +77,11 @@ function ResearchJobPanel({ agentId }: { agentId: Id<"agents"> }) {
   const isRunning = job.status === "RUNNING";
   const tone =
     job.status === "COMPLETE"
-      ? "text-emerald-500"
+      ? "text-success"
       : job.status === "RUNNING"
         ? "text-brand"
         : job.status === "COMPLETE_WITH_EXCEPTIONS"
-          ? "text-amber-500"
+          ? "text-warning"
           : "text-secondary";
 
   return (
@@ -147,7 +147,7 @@ function ResearchJobPanel({ agentId }: { agentId: Id<"agents"> }) {
               key={`${record.subject}-${record.at}-${index}`}
               className="border-t border-border-dim/40 first:border-t-0 py-1.5 flex items-baseline gap-x-3"
             >
-              <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${record.saved ? "bg-emerald-500" : "bg-foreground/25"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full self-center shrink-0 ${record.saved ? "bg-success" : "bg-foreground/25"}`} />
               <span className="text-[12px] font-medium text-foreground whitespace-nowrap">{record.subject}</span>
               <span className="text-[12px] text-secondary truncate min-w-0">{record.detail}</span>
             </div>
@@ -157,7 +157,7 @@ function ResearchJobPanel({ agentId }: { agentId: Id<"agents"> }) {
 
       {job.exceptions.length > 0 && (
         <div className="flex flex-col gap-1 pt-1">
-          <p className="text-[12px] text-amber-500">What it could not do</p>
+          <p className="text-[12px] text-warning">What it could not do</p>
           {job.exceptions.slice(0, 8).map((exception) => (
             <p key={exception.name} className="text-[12px] text-secondary">
               {exception.name} — {exception.reason}
@@ -393,9 +393,9 @@ function Vital({
           <span
             className={
               change.direction === "up"
-                ? "text-emerald-500 font-medium"
+                ? "text-success font-medium"
                 : change.direction === "down"
-                  ? "text-rose-500 font-medium"
+                  ? "text-destructive font-medium"
                   : "text-muted font-medium"
             }
           >
@@ -434,10 +434,10 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
         </div>
         <div className="flex gap-4 text-[11.5px] text-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-emerald-500" /> Finished
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-success" /> Finished
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-[3px] bg-rose-500" /> Failed
+            <span className="w-2.5 h-2.5 rounded-[3px] bg-destructive" /> Failed
           </span>
         </div>
       </div>
@@ -490,11 +490,11 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
                 </div>
 
                 {day.failed > 0 && (
-                  <div className="bg-rose-500 rounded-t-[3px]" style={{ height: `${Math.max(failedHeight, 3)}px` }} />
+                  <div className="bg-destructive rounded-t-[3px]" style={{ height: `${Math.max(failedHeight, 3)}px` }} />
                 )}
                 {day.succeeded > 0 && (
                   <div
-                    className={`bg-emerald-500 ${day.failed > 0 ? "" : "rounded-t-[3px]"}`}
+                    className={`bg-success ${day.failed > 0 ? "" : "rounded-t-[3px]"}`}
                     style={{ height: `${Math.max(succeededHeight, 3)}px` }}
                   />
                 )}
@@ -561,7 +561,7 @@ function FailureGroups({
                   reading as urgent. */}
               <span
                 className={`w-1 self-stretch rounded-[3px] shrink-0 ${
-                  index === 0 ? "bg-rose-500" : "bg-amber-500"
+                  index === 0 ? "bg-destructive" : "bg-warning"
                 }`}
               />
               <div className="flex-1 min-w-0">
@@ -582,7 +582,7 @@ function FailureGroups({
               </div>
               <span
                 className={`text-[11.5px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap tabular-nums shrink-0 ${
-                  index === 0 ? "bg-rose-500/10 text-rose-500" : "bg-amber-500/10 text-amber-500"
+                  index === 0 ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
                 }`}
               >
                 {formatCount(group.count)} {group.count === 1 ? "job" : "jobs"}
@@ -640,7 +640,7 @@ function ToolReliability({
                   <td className="py-2.5 pr-3 text-foreground truncate max-w-0">
                     {describeToolName(tool.handlerMapping, toolNameByHandler)}
                     {tool.notImplemented > 0 && (
-                      <span className="block text-[11px] text-amber-500 mt-0.5">
+                      <span className="block text-[11px] text-warning mt-0.5">
                         {formatCount(tool.notImplemented)} of these went to a tool that is not connected
                       </span>
                     )}
@@ -652,7 +652,7 @@ function ToolReliability({
                     <div className="flex items-center gap-2">
                       <span className="h-[5px] flex-1 rounded-[3px] bg-border-dim overflow-hidden min-w-[30px]">
                         <span
-                          className={`block h-full rounded-[3px] ${struggling ? "bg-rose-500" : "bg-emerald-500"}`}
+                          className={`block h-full rounded-[3px] ${struggling ? "bg-destructive" : "bg-success"}`}
                           style={{ width: `${Math.round(rate * 100)}%` }}
                         />
                       </span>
@@ -767,15 +767,15 @@ function LatestJobs({
 function StatusPill({ status, continued = false }: { status: string; continued?: boolean }) {
   const tone =
     status === "SUCCESS"
-      ? "bg-emerald-500/10 text-emerald-500"
+      ? "bg-success/10 text-success"
       // A handover wears a working colour: the queue moved to the next run by
       // design, and red here taught people to distrust a healthy job.
       : status === "FAILED" && continued
-        ? "bg-sky-500/10 text-sky-500"
+        ? "bg-info/10 text-info"
         : status === "FAILED"
-          ? "bg-rose-500/10 text-rose-500"
+          ? "bg-destructive/10 text-destructive"
           : status === "PENDING_APPROVAL"
-            ? "bg-amber-500/10 text-amber-500"
+            ? "bg-warning/10 text-warning"
             : status === "RUNNING" || status === "QUEUED"
               ? "bg-brand/10 text-brand"
               : "bg-foreground/5 text-secondary";

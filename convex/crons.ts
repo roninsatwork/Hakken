@@ -77,19 +77,22 @@ crons.interval(
   {}
 );
 
-// Run hourly dispatcher to evaluate auto-purge schedule
-crons.hourly(
-  "audit-log-purge-dispatcher",
-  { minuteUTC: 0 },
-  internal.auditLogs.dispatcher,
-  {}
-);
-
 // Run hourly dispatcher to evaluate unified scheduled data purges
 crons.hourly(
   "unified-data-purge-dispatcher",
   { minuteUTC: 15 },
   internal.purges.dispatcher,
+  {}
+);
+
+// A purge batch that dies at commit time cannot mark itself FAILED — the
+// patch rolls back with the transaction — so the history row sticks RUNNING
+// forever and blocks the retention screen. Same failure mode agent runs
+// already have a sweeper for; this is the purge system's.
+crons.interval(
+  "purge-stall-reaper",
+  { minutes: 10 },
+  internal.purges.reapStalePurges,
   {}
 );
 

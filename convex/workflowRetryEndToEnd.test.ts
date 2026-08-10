@@ -111,4 +111,63 @@ describe("workflow retry, end to end", () => {
 
     expect(objectiveProbe.calls).toBe(3);
   });
+
+  test("an autonomous agent's step fails on the first transient error instead of re-running", async () => {
+    // With autonomousToolExecution on, the agent's write tools skip the
+    // approval gate, so the engine cannot prove a re-run would not repeat a
+    // real-world action. The step must take the pre-retry path: one try,
+    // straight to the review list.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    objectiveProbe.calls = 0;
+
+    const { workflowId, executionId, stepId } = await t.run(async (ctx) => {
+      const agentId = await ctx.db.insert("agents", {
+        name: "Autonomous Probe",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        autonomousToolExecution: true,
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "autonomous-wf",
+        isActive: true,
+        triggerType: "MANUAL",
+        nodes: JSON.stringify([{ id: "n1", type: "agentNode", data: { _agentId: agentId } }]),
+        edges: "[]",
+        createdAt: 1,
+        updatedAt: 1,
+      });
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId,
+        status: "RUNNING",
+        triggerType: "MANUAL",
+        startedAt: 1,
+      });
+      const stepId = await ctx.db.insert("workflowExecutionSteps", {
+        executionId,
+        nodeId: "n1",
+        input: "{}",
+        status: "PENDING",
+        startedAt: 1,
+      });
+      return { workflowId, executionId, stepId };
+    });
+
+    await t.action(internal.workflowRuntime.executeNode, {
+      workflowId,
+      executionId,
+      nodeId: "n1",
+    });
+
+    await t.run(async (ctx) => {
+      const step = await ctx.db.get(stepId);
+      expect(step?.status).toBe("FAILED");
+      // Never requeued: attempt stays at its first value.
+      expect(step?.attempt ?? 1).toBe(1);
+      expect((await ctx.db.get(executionId))?.status).toBe("FAILED");
+    });
+    expect(objectiveProbe.calls).toBe(1);
+  });
 });

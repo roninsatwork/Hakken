@@ -6,7 +6,6 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 
 - [Local Demo Seed Runbook](./local-demo-seed-runbook.md)
 - [Local Test Auth Runbook](./local-test-auth-runbook.md)
-- [White-Label Packaging Operator Guide](./white-label-packaging-operator-guide.md)
 - [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)
 
 ## Demo Operations
@@ -18,4 +17,4 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 
 ## Coverage Status
 
-The 2026-07-30 documentation coverage audit found the current operator docs aligned with the operator workflows visible in the repository: local auth, demo seed, white-label packaging, vertical packaging, and movement-demo operations. Add new operator runbooks only when a real internal workflow exists, and track broader documentation follow-up in [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).
+The 2026-07-30 documentation coverage audit found the current operator docs aligned with the operator workflows visible in the repository: local auth, demo seed, vertical packaging, and movement-demo operations. Add new operator runbooks only when a real internal workflow exists, and track broader documentation follow-up in [Documentation Coverage Audit](../plans/active/documentation-coverage-audit.md).

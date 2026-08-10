@@ -170,6 +170,18 @@ When debugging Game Studio movement, do not ask the user to repeat live motions 
 - Preserve tenant isolation in Convex queries and mutations. Scope non-super-admin access by company.
 - Mutations that manage users must prevent privilege escalation. Admins must not create, edit, or delete super-admin privileges.
 - Resolve AI model choices from stored configuration instead of hardcoding model literals in runtime paths.
+- Never hardcode colours in dashboard UI. No raw Tailwind palette classes
+  (`text-red-500`, `bg-amber-500/10`, …) and no hex in class strings
+  (`text-[#10b981]`) — use the theme tokens (`success`, `destructive`,
+  `warning`, `info`, `brand`, `background`, `card`, `sidebar`, `foreground`,
+  `secondary`, `muted`, `hover`, `border-dim`) and the `StatusPill` /
+  `toneForStatus` atoms in `src/ui/atoms/` for status colouring. The ratchet
+  test `src/theme-drift.test.ts` fails any change that raises the hardcoded
+  count; when you remove hardcoded colours, lower its baseline in the same
+  commit. Do not add a new local `getStatusColor`-style helper — extend
+  `src/ui/atoms/statusTone.ts` instead. Sanctioned exceptions: the public
+  site's own palette, `movementPalette.ts`, `chartPalette.ts`. See
+  `docs/plans/active/theme-compliance-plan.md`.
 - Avoid committing generated reports, build output, local caches, or scratch artifacts.
 
 ## Code Quality Priorities

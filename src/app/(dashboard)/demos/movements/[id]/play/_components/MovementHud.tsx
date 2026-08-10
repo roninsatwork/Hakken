@@ -7,6 +7,13 @@ import { ArrowLeft, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
 import Typography from "@/src/ui/atoms/typography";
 import type { MediaPipeVisionStatus } from "../../../_hooks/useMediaPipeVision";
 import { MOVEMENT_BODY_TRACKING_VIDEO_CONSTRAINTS } from "../../../_lib/movementCameraConstraints";
+import {
+  MOVEMENT_CREAM,
+  MOVEMENT_INK,
+  MOVEMENT_MINT,
+  MOVEMENT_PANEL_BG,
+  MOVEMENT_SALMON,
+} from "../../../_lib/movementPalette";
 
 type MovementHudProps = {
   movementTitle: string;
@@ -128,7 +135,7 @@ export default function MovementHud({
 
   return (
     <div className="relative z-10 flex h-full flex-col p-8 pointer-events-none" style={{ isolation: "isolate" }}>
-      <div className="flex items-center justify-between rounded-[28px] border border-white/10 bg-[#111018]/[0.72] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl pointer-events-auto">
+      <div className={`flex items-center justify-between rounded-[28px] border border-white/10 bg-[${MOVEMENT_PANEL_BG}]/[0.72] p-3 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl pointer-events-auto`}>
         <div className="flex items-center gap-2">
           <Link href="/demos/movements" className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.14em] text-white/[0.68] transition-colors hover:border-white/20 hover:text-white">
             <ArrowLeft className="h-4 w-4" /> Leave Studio
@@ -146,7 +153,7 @@ export default function MovementHud({
 
         <div className="flex items-center gap-6 px-8">
           <div className="flex flex-col items-end">
-            <Typography className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#a8d5ba]">
+            <Typography className={`text-[10px] font-bold uppercase tracking-[0.22em] text-[${MOVEMENT_MINT}]`}>
               Guided Sequence
             </Typography>
             <Typography className="mt-1 text-xl font-black uppercase leading-none tracking-tight text-white">
@@ -159,10 +166,10 @@ export default function MovementHud({
           </span>
         </div>
 
-        <div className="flex items-center gap-4 rounded-2xl border border-[#f6ccbe]/[0.16] bg-[#f6ccbe]/[0.08] px-6 py-2">
-          <Sparkles className="h-6 w-6 text-[#f6ccbe]" />
+        <div className={`flex items-center gap-4 rounded-2xl border border-[${MOVEMENT_SALMON}]/[0.16] bg-[${MOVEMENT_SALMON}]/[0.08] px-6 py-2`}>
+          <Sparkles className={`h-6 w-6 text-[${MOVEMENT_SALMON}]`} />
           <div className="flex flex-col">
-            <Typography className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#f6ccbe]">Score</Typography>
+            <Typography className={`text-[10px] font-bold uppercase tracking-[0.2em] text-[${MOVEMENT_SALMON}]`}>Score</Typography>
             <Typography
               className="mt-1 text-3xl font-black leading-none text-white"
               data-testid="movement-hud-score"
@@ -175,11 +182,11 @@ export default function MovementHud({
 
       {isStartGateActive ? (
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 z-30 w-[min(88vw,760px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border-2 border-[#f6ccbe]/50 bg-[#111018]/95 px-8 py-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl"
+          className={`pointer-events-none absolute left-1/2 top-1/2 z-30 w-[min(88vw,760px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border-2 border-[${MOVEMENT_SALMON}]/50 bg-[${MOVEMENT_PANEL_BG}]/95 px-8 py-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.62)] backdrop-blur-2xl`}
           data-testid="movement-game-readiness-banner"
           role="status"
         >
-          <p className="text-sm font-black uppercase tracking-[0.24em] text-[#a8d5ba]">
+          <p className={`text-sm font-black uppercase tracking-[0.24em] text-[${MOVEMENT_MINT}]`}>
             {startReadinessStatus === "countdown" ? "Position detected" : "Camera setup"}
           </p>
           {startReadinessStatus === "countdown" ? (
@@ -190,7 +197,7 @@ export default function MovementHud({
               >
                 {Math.max(startReadinessCountdownSeconds, 1)}
               </p>
-              <p className="mt-3 text-xl font-bold text-[#f6ccbe] sm:text-2xl">
+              <p className={`mt-3 text-xl font-bold text-[${MOVEMENT_SALMON}] sm:text-2xl`}>
                 Perfect — stay there.
               </p>
             </>
@@ -206,13 +213,13 @@ export default function MovementHud({
       ) : null}
 
       <div className="mt-auto flex items-end justify-between gap-4 pointer-events-auto">
-        <div className="flex min-w-0 max-w-[min(78vw,380px)] items-center gap-4 rounded-full border border-white/10 bg-[#111018]/[0.72] p-2 pr-6 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl sm:max-w-none sm:pr-8">
+        <div className={`flex min-w-0 max-w-[min(78vw,380px)] items-center gap-4 rounded-full border border-white/10 bg-[${MOVEMENT_PANEL_BG}]/[0.72] p-2 pr-6 shadow-[0_20px_80px_rgba(0,0,0,0.34)] backdrop-blur-3xl sm:max-w-none sm:pr-8`}>
           <div className="flex items-center gap-4">
             <button
               onClick={onTogglePlaying}
               disabled={isPlaybackDisabled}
               aria-label={isPlaying ? "Pause practice" : "Start practice"}
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#f7efe7] text-[#17131d] transition-all hover:scale-105 hover:bg-[#f6ccbe] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[${MOVEMENT_CREAM}] text-[${MOVEMENT_INK}] transition-all hover:scale-105 hover:bg-[${MOVEMENT_SALMON}] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100`}
             >
               {isPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="h-7 w-7 fill-current" />}
             </button>
@@ -220,7 +227,7 @@ export default function MovementHud({
               <span className="truncate text-lg font-bold tracking-wide text-white">
                 {practiceLabel}
               </span>
-              <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${isPlaying ? "text-[#a8d5ba]" : "text-[#f6ccbe]"}`}>
+              <span className={`truncate text-xs font-black uppercase tracking-[0.2em] ${isPlaying ? `text-[${MOVEMENT_MINT}]` : `text-[${MOVEMENT_SALMON}]`}`}>
                 {controlReadinessLabel}
               </span>
               {visionError && (
@@ -234,7 +241,7 @@ export default function MovementHud({
               )}
               {cameraNeedsAttention && !isPreviewMode && (
                 <div className="mt-1 flex max-w-[260px] flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#f6ccbe]">
+                  <span className={`text-[10px] font-black uppercase tracking-[0.16em] text-[${MOVEMENT_SALMON}]`}>
                     {cameraError ?? "Allow camera access"}
                   </span>
                 </div>

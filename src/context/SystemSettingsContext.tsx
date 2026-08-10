@@ -4,6 +4,23 @@ import React, { createContext, useContext, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "next-themes";
+import { resolveFontFamily } from "@/src/lib/themeFonts";
+
+/**
+ * "R, G, B" for a hex colour, for the glow shadows that need
+ * `rgba(var(--brand-rgb), a)`. Returns undefined for anything that is not a
+ * plain 3- or 6-digit hex, so a bad value clears the variable rather than
+ * producing a broken rgba().
+ */
+function hexToRgbTriplet(hex: string | undefined): string | undefined {
+  if (!hex) return undefined;
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) return undefined;
+  let value = match[1];
+  if (value.length === 3) value = value.split("").map((c) => c + c).join("");
+  const num = parseInt(value, 16);
+  return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+}
 
 type SettingsType = {
   platformName: string;
@@ -17,8 +34,6 @@ type SettingsType = {
   borderRadius?: string;
   logoUrlLight?: string;
   logoUrlDark?: string;
-  /** White-label navigation profile; filters the sidebar when set. */
-  navigationProfileKey?: string;
 
   lightBg?: string;
   lightFg?: string;
@@ -29,7 +44,10 @@ type SettingsType = {
   lightMutedFg?: string;
   lightSuccess?: string;
   lightDestructive?: string;
+  lightWarning?: string;
+  lightInfo?: string;
   lightRing?: string;
+  lightSidebarBg?: string;
 
   darkBg?: string;
   darkFg?: string;
@@ -40,7 +58,10 @@ type SettingsType = {
   darkMutedFg?: string;
   darkSuccess?: string;
   darkDestructive?: string;
+  darkWarning?: string;
+  darkInfo?: string;
   darkRing?: string;
+  darkSidebarBg?: string;
   diagnosticRoutingEnabled?: boolean;
 };
 
@@ -53,72 +74,55 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
   // Inject CSS Variables dynamically based on the active theme
   useEffect(() => {
     if (!settings) return;
-    
-    const root = document.documentElement;
 
-    // 1. Global Non-Themed Overrides
-    if (settings.brandColorHex) {
-       root.style.setProperty('--color-brand', settings.brandColorHex);
-    }
-    if (settings.borderRadius) {
-       root.style.setProperty('--radius-lg', settings.borderRadius);
-    }
-    if (settings.headingFontFamily) {
-       root.style.setProperty('--font-heading', settings.headingFontFamily);
-    }
-    if (settings.bodyFontFamily) {
-       root.style.setProperty('--font-sans', settings.bodyFontFamily);
-    }
-    if (settings.headingSizeGlobal) {
-       root.style.setProperty('--h1-size-override', settings.headingSizeGlobal);
-    }
-    if (settings.subTextSizeGlobal) {
-       root.style.setProperty('--subtitle-size-override', settings.subTextSizeGlobal);
-    }
-    
+    const root = document.documentElement;
+    // Set when there is a value, REMOVE when there is not. The old injector
+    // only ever set, so a field cleared in the DB (or absent for the current
+    // theme) kept its stale inline value until a full reload.
+    const apply = (name: string, value: string | undefined) => {
+      if (value) root.style.setProperty(name, value);
+      else root.style.removeProperty(name);
+    };
+
+    // 1. Global Non-Themed Overrides.
+    //
+    // Source variables carry their own names (--brand, --success-src, …) and
+    // globals.css maps them into the @theme tokens with a real fallback.
+    // Writing --color-brand directly here used to make the @theme fallback
+    // `var(--color-brand, #FF5A1F)` self-referential — a cycle, so the hex
+    // never fired and brand colour only existed after JS hydration.
+    apply('--brand', settings.brandColorHex);
+    apply('--brand-rgb', hexToRgbTriplet(settings.brandColorHex));
+    apply('--font-heading', resolveFontFamily(settings.headingFontFamily));
+    // Never write a value into the variable it references: fonts are stored
+    // as named keys and resolved to concrete stacks (src/lib/themeFonts.ts).
+    apply('--font-sans', resolveFontFamily(settings.bodyFontFamily));
+    apply('--h1-size-override', settings.headingSizeGlobal);
+
     // 2. Themed Overrides
     const active = theme === 'system' ? systemTheme : theme;
-    
-    if (active === 'dark') {
-       if (settings.darkBg) {
-          root.style.setProperty('--bg-main', settings.darkBg);
-          root.style.setProperty('--radial-outer', settings.darkBg);
-       }
-       if (settings.darkFg) root.style.setProperty('--text-primary', settings.darkFg);
-       if (settings.darkCardBg) {
-          root.style.setProperty('--bg-card', settings.darkCardBg);
-          root.style.setProperty('--bg-sidebar', settings.darkCardBg);
-          root.style.setProperty('--radial-inner', settings.darkCardBg);
-       }
-       if (settings.darkCardFg) root.style.setProperty('--text-secondary', settings.darkCardFg);
-       if (settings.darkBorder) root.style.setProperty('--border-subtle', settings.darkBorder);
-       if (settings.darkMuted) root.style.setProperty('--bg-hover', settings.darkMuted);
-       if (settings.darkMutedFg) root.style.setProperty('--text-muted', settings.darkMutedFg);
-       
-       if (settings.darkSuccess) root.style.setProperty('--color-success', settings.darkSuccess);
-       if (settings.darkDestructive) root.style.setProperty('--color-destructive', settings.darkDestructive);
-       if (settings.darkRing) root.style.setProperty('--ring', settings.darkRing);
-    } else {
-       if (settings.lightBg) {
-          root.style.setProperty('--bg-main', settings.lightBg);
-          root.style.setProperty('--radial-outer', settings.lightBg);
-       }
-       if (settings.lightFg) root.style.setProperty('--text-primary', settings.lightFg);
-       if (settings.lightCardBg) {
-          root.style.setProperty('--bg-card', settings.lightCardBg);
-          root.style.setProperty('--bg-sidebar', settings.lightCardBg);
-          root.style.setProperty('--radial-inner', settings.lightCardBg);
-       }
-       if (settings.lightCardFg) root.style.setProperty('--text-secondary', settings.lightCardFg);
-       if (settings.lightBorder) root.style.setProperty('--border-subtle', settings.lightBorder);
-       if (settings.lightMuted) root.style.setProperty('--bg-hover', settings.lightMuted);
-       if (settings.lightMutedFg) root.style.setProperty('--text-muted', settings.lightMutedFg);
-       
-       if (settings.lightSuccess) root.style.setProperty('--color-success', settings.lightSuccess);
-       if (settings.lightDestructive) root.style.setProperty('--color-destructive', settings.lightDestructive);
-       if (settings.lightRing) root.style.setProperty('--ring', settings.lightRing);
-    }
-    
+    const dark = active === 'dark';
+    const pick = (darkValue: string | undefined, lightValue: string | undefined) =>
+      dark ? darkValue : lightValue;
+
+    apply('--bg-main', pick(settings.darkBg, settings.lightBg));
+    apply('--radial-outer', pick(settings.darkBg, settings.lightBg));
+    apply('--text-primary', pick(settings.darkFg, settings.lightFg));
+    apply('--bg-card', pick(settings.darkCardBg, settings.lightCardBg));
+    // The sidebar has its own colour, falling back to the card colour so
+    // deployments themed before the field existed keep their look.
+    apply('--bg-sidebar', pick(settings.darkSidebarBg, settings.lightSidebarBg)
+      ?? pick(settings.darkCardBg, settings.lightCardBg));
+    apply('--radial-inner', pick(settings.darkCardBg, settings.lightCardBg));
+    apply('--text-secondary', pick(settings.darkCardFg, settings.lightCardFg));
+    apply('--border-subtle', pick(settings.darkBorder, settings.lightBorder));
+    apply('--bg-hover', pick(settings.darkMuted, settings.lightMuted));
+    apply('--text-muted', pick(settings.darkMutedFg, settings.lightMutedFg));
+    apply('--success-src', pick(settings.darkSuccess, settings.lightSuccess));
+    apply('--destructive-src', pick(settings.darkDestructive, settings.lightDestructive));
+    apply('--warning-src', pick(settings.darkWarning, settings.lightWarning));
+    apply('--info-src', pick(settings.darkInfo, settings.lightInfo));
+    apply('--ring', pick(settings.darkRing, settings.lightRing));
   }, [settings, theme, systemTheme]);
 
   if (settings === undefined) {
@@ -127,13 +131,10 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
 
   return (
     <SystemSettingsContext.Provider value={settings}>
-       <div 
-         className="w-full h-full relative" 
-         style={{ 
-           fontFamily: settings.fontFamily || 'var(--font-sans)',
-           fontSize: settings.fontSizeBase || '100%'
-         }}
-       >
+       {/* The wrapper used to carry inline fontFamily/fontSize from the
+           retired `fontFamily`/`fontSizeBase` fields, which let legacy data
+           silently override the body font chosen on the Aesthetics screen. */}
+       <div className="w-full h-full relative">
           {children}
        </div>
     </SystemSettingsContext.Provider>

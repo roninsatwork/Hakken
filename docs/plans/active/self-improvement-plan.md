@@ -26,10 +26,23 @@ the signal is already collected and then thrown away.** Closing them is what
   feedback instead of waiting for an admin to press buttons.
 
 Full autonomy — the AI writing to its own memory unattended — is Phase 5, a
-separately-argued product decision with its own kill switch, and it ships
-**default off**. Do not build Phase 5 without an explicit instruction from
-Anthony; the decision gate at the end of this document says what evidence to
-bring to that conversation.
+separately-argued product decision with its own kill switch, and it originally
+shipped **default off** behind the decision gate at the end of this document.
+
+> **Decision taken, 2026-08-10.** Anthony was shown the middle path (auto-apply
+> low-risk only, probation, expiry) and explicitly chose **fully automatic —
+> no per-memory approvals**, in chat, twice. As built: every agent memory
+> candidate and every company sweep suggestion applies immediately;
+> `autonomousMemory` (default **true**) in `SELF_IMPROVEMENT_CONFIG` replaces
+> the never-wired `autoApplyLowRisk` and is the platform-wide brake, toggleable
+> on System Options. What remains of the gate: auto-saved memories carry
+> `autoApplied: true`, render a "Saved by the AI" label on both memory screens,
+> write an actor-less audit row marked `automatic`, and stay removable; an
+> ALWAYS suggestion with no free ALWAYS slot stays PROPOSED because the cap is
+> a product rule; safety screening, rejected-fingerprint suppression, and
+> dedupe run unchanged before any save; rehearsal runs never reach any of it.
+> Do not "restore" the approval queue as a drift fix — turning the switch off
+> is the supported way back.
 
 ## As built, 2026-08-09
 

@@ -48,16 +48,16 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
 
   const priorityClasses = {
     LOW: "hover:bg-foreground/5 hover:border-border-dim",
-    NORMAL: "hover:bg-blue-500/10 hover:border-blue-500/20 hover:text-blue-500",
-    HIGH: "hover:bg-orange-500/10 hover:border-orange-500/20 hover:text-orange-500",
-    CRITICAL: "hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-500",
+    NORMAL: "hover:bg-info/10 hover:border-info/20 hover:text-info",
+    HIGH: "hover:bg-warning/10 hover:border-warning/20 hover:text-warning",
+    CRITICAL: "hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive",
   };
 
   const selectedClasses = {
     LOW: "bg-foreground/10 border-foreground/30 text-foreground",
-    NORMAL: "bg-blue-500/20 border-blue-500/50 text-blue-500",
-    HIGH: "bg-orange-500/20 border-orange-500/50 text-orange-500",
-    CRITICAL: "bg-rose-500/20 border-rose-500/50 text-rose-500",
+    NORMAL: "bg-info/20 border-info/50 text-info",
+    HIGH: "bg-warning/20 border-warning/50 text-warning",
+    CRITICAL: "bg-destructive/20 border-destructive/50 text-destructive",
   };
 
   return (

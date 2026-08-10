@@ -2,11 +2,35 @@ import { motion } from "framer-motion";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BarChart3, Network, PieChart as PieChartIcon } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+import {
+  CHART_SERIES_AMBER,
+  CHART_SERIES_BLUE,
+  CHART_SERIES_EMERALD,
+  CHART_SERIES_ORANGE,
+  CHART_SERIES_ROSE,
+  CHART_SERIES_SLATE,
+  CHART_SERIES_TEAL,
+  CHART_SERIES_VIOLET,
+} from "@/src/ui/components/charts/chartPalette";
 import type { ModelDistributionRow, ProviderDistributionRow, TimelinePoint } from "./types";
 import { formatTokenAxisTick } from "./costFormatters";
 
-const MODEL_COLORS = ["#8b5cf6", "#10b981", "#f43f5e", "#3b82f6", "#f59e0b", "#14b8a6"];
-const PROVIDER_COLORS = ["#14b8a6", "#3b82f6", "#f97316", "#94a3b8", "#8b5cf6", "#f43f5e"];
+const MODEL_COLORS = [
+  CHART_SERIES_VIOLET,
+  CHART_SERIES_EMERALD,
+  CHART_SERIES_ROSE,
+  CHART_SERIES_BLUE,
+  CHART_SERIES_AMBER,
+  CHART_SERIES_TEAL,
+];
+const PROVIDER_COLORS = [
+  CHART_SERIES_TEAL,
+  CHART_SERIES_BLUE,
+  CHART_SERIES_ORANGE,
+  CHART_SERIES_SLATE,
+  CHART_SERIES_VIOLET,
+  CHART_SERIES_ROSE,
+];
 
 function formatProviderName(providerKey: string) {
   if (providerKey === "google") return "Google Vertex AI";
@@ -45,7 +69,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
           >
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
               <div className="flex items-center gap-3">
-                <PieChartIcon className="w-4 h-4 text-[#8b5cf6] opacity-80" />
+                <PieChartIcon className="w-4 h-4 opacity-80" style={{ color: CHART_SERIES_VIOLET }} />
                 <h2 className="text-[14px] font-bold text-foreground">Model Invocations</h2>
               </div>
               <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
@@ -108,7 +132,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
           >
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
               <div className="flex items-center gap-3">
-                <Network className="w-4 h-4 text-[#14b8a6] opacity-80" />
+                <Network className="w-4 h-4 opacity-80" style={{ color: CHART_SERIES_TEAL }} />
                 <h2 className="text-[14px] font-bold text-foreground">Provider Distribution</h2>
               </div>
               <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
@@ -172,7 +196,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
           >
             <div className="px-6 py-5 border-b border-border-dim bg-[#00000008] dark:bg-[#ffffff08] flex flex-col gap-1.5 rounded-t-[24px]">
               <div className="flex items-center gap-3">
-                <BarChart3 className="w-4 h-4 text-[#10b981] opacity-80" />
+                <BarChart3 className="w-4 h-4 opacity-80" style={{ color: CHART_SERIES_EMERALD }} />
                 <h2 className="text-[14px] font-bold text-foreground">Token Flux</h2>
               </div>
               <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">
@@ -214,8 +238,8 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                         color: "#888",
                       }}
                     />
-                    <Bar dataKey="inputTokens" name="Input (Context)" stackId="a" fill="#10b981" radius={[0, 0, 4, 4]} />
-                    <Bar dataKey="outputTokens" name="Output (Gen)" stackId="a" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="inputTokens" name="Input (Context)" stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="outputTokens" name="Output (Gen)" stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

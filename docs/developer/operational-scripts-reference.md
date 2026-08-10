@@ -71,10 +71,8 @@ human workflow around deterministic local auth.
 | Script | Purpose |
 | --- | --- |
 | `npm run demo:local:seed` | Seeds local demo data. |
-| `npm run template:build` | Builds the reusable template output. |
 
-Use [Local Demo Seed Runbook](../operator/local-demo-seed-runbook.md),
-[White-Label Packaging Operator Guide](../operator/white-label-packaging-operator-guide.md),
+Use [Local Demo Seed Runbook](../operator/local-demo-seed-runbook.md)
 and [Vertical App Packaging Checklist](../operator/vertical-app-packaging-checklist.md)
 when these scripts are part of a handoff or packaging process.
 

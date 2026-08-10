@@ -1,6 +1,10 @@
 import type { MovementReplayAnalysis } from "../../_lib/movementReplayAnalyzer";
 import type { MovementTrackingDebugState } from "../../_lib/movementTrackingCalibration";
 import { countFailures, formatNumber, getFailureGroups } from "../_lib/replayLabHelpers";
+import {
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 type ReplayAnalysisReviewSectionsProps = {
   analysis: MovementReplayAnalysis | null;
@@ -103,7 +107,7 @@ export default function ReplayAnalysisReviewSections({
         {!analysis ? (
           <div className="text-sm text-secondary">Waiting for analysis.</div>
         ) : failureGroups.length === 0 ? (
-          <div className="rounded-[8px] border border-[#a8d5ba]/20 bg-[#a8d5ba]/10 p-3 text-sm text-[#a8d5ba]">
+          <div className={`rounded-[8px] border border-[${MOVEMENT_MINT}]/20 bg-[${MOVEMENT_MINT}]/10 p-3 text-sm text-[${MOVEMENT_MINT}]`}>
             No replay flags for this stored recording.
           </div>
         ) : failureGroups.map((group) => (
@@ -112,7 +116,7 @@ export default function ReplayAnalysisReviewSections({
             className="rounded-[8px] border border-border-dim bg-background/50 p-3 text-sm"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="font-mono text-xs text-[#f6ccbe]">{group.code}</span>
+              <span className={`font-mono text-xs text-[${MOVEMENT_SALMON}]`}>{group.code}</span>
               <span className="text-xs uppercase tracking-wide text-muted">
                 {group.count} · {group.severity}
                 {typeof group.firstFrame === "number" ? ` · first ${group.firstFrame}` : ""}

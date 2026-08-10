@@ -95,6 +95,10 @@ import {
   getMovementStartReadinessMessage,
 } from "../../_lib/movementSetupRecoveryCue";
 import type { VrmMotionFrame, VrmMotionPayload, VrmPoseLandmark } from "../../_lib/vrmRigging";
+import {
+  MOVEMENT_SALMON,
+  MOVEMENT_SCENE_BG,
+} from "../../_lib/movementPalette";
 
 type MotionFrame = VrmMotionFrame;
 
@@ -1444,7 +1448,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
   if (!movement || isFramesLoading || isGameProofPacketLoading) {
     const loadingStudio = (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07070b] text-[#f6ccbe] animate-pulse font-medium">
+      <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[${MOVEMENT_SCENE_BG}] text-[${MOVEMENT_SALMON}] animate-pulse font-medium`}>
         <style>{`nextjs-portal { display: none !important; }`}</style>
         Preparing posture studio...
       </div>
@@ -1455,7 +1459,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
 
   if (gameProofPacketError) {
     const packetError = (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#07070b] px-8 text-center text-[#f6ccbe] font-medium">
+      <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[${MOVEMENT_SCENE_BG}] px-8 text-center text-[${MOVEMENT_SALMON}] font-medium`}>
         Game proof packet failed: {gameProofPacketError}
       </div>
     );
@@ -1477,7 +1481,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
   const routineTitle = getStudioRoutineTitle(movement.title);
 
   const studio = (
-    <div className="fixed inset-0 z-[9999] flex h-screen w-screen flex-col overflow-hidden bg-[#07070b]">
+    <div className={`fixed inset-0 z-[9999] flex h-screen w-screen flex-col overflow-hidden bg-[${MOVEMENT_SCENE_BG}]`}>
       <style>{`nextjs-portal { display: none !important; }`}</style>
       <MovementMatchScene>
         <VrmAvatar
@@ -1501,7 +1505,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
         {isDebugTracking ? (
           <>
             <MovementSourceSkeleton
-              color="#f6ccbe"
+              color={MOVEMENT_SALMON}
               landmarksRef={effectiveInstructorCurrentLmRef}
               mirrorX
               positionOffset={[-5, 0, 0]}

@@ -1,6 +1,12 @@
 import type { ReplayStudioRepairPacket } from "../../_lib/movementReplayStudioRepairPacket";
 import type { ReplayAgentDiagnosisNavigationTarget } from "../_lib/replayAgentDiagnosisNavigation";
 import { formatNumber } from "../_lib/replayLabHelpers";
+import {
+  MOVEMENT_ALERT,
+  MOVEMENT_ALERT_SOFT,
+  MOVEMENT_MINT,
+  MOVEMENT_SALMON,
+} from "../../_lib/movementPalette";
 
 type ReplayAgentDiagnosisPanelProps = {
   navigationTargets?: ReplayAgentDiagnosisNavigationTarget[];
@@ -27,7 +33,7 @@ export default function ReplayAgentDiagnosisPanel({
     artifactFreshnessStatus === "not-required" ||
     artifactFreshnessStatus === "recomputed"
     ? "text-secondary"
-    : "text-[#f6ccbe]";
+    : `text-[${MOVEMENT_SALMON}]`;
 
   return (
     <div
@@ -39,10 +45,10 @@ export default function ReplayAgentDiagnosisPanel({
         <span
           className={`rounded-[6px] border px-2 py-0.5 font-mono text-[10px] uppercase ${
             repairPacket.verdict.status === "blocked"
-              ? "border-[#ff8f8f]/35 bg-[#ff8f8f]/10 text-[#ffb0b0]"
+              ? `border-[${MOVEMENT_ALERT}]/35 bg-[${MOVEMENT_ALERT}]/10 text-[${MOVEMENT_ALERT_SOFT}]`
               : repairPacket.verdict.status === "review-only" || repairPacket.verdict.status === "not-supported"
-                ? "border-[#f6ccbe]/35 bg-[#f6ccbe]/10 text-[#f6ccbe]"
-                : "border-[#a8d5ba]/25 bg-[#a8d5ba]/10 text-[#a8d5ba]"
+                ? `border-[${MOVEMENT_SALMON}]/35 bg-[${MOVEMENT_SALMON}]/10 text-[${MOVEMENT_SALMON}]`
+                : `border-[${MOVEMENT_MINT}]/25 bg-[${MOVEMENT_MINT}]/10 text-[${MOVEMENT_MINT}]`
           }`}
           data-testid="movement-replay-agent-diagnosis-status"
         >

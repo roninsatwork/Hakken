@@ -12,6 +12,9 @@ import MovementDeleteDialog from "./_components/MovementDeleteDialog";
 import MovementLibraryTable from "./_components/MovementLibraryTable";
 import { MOVEMENT_SPINE_GOAL_OPTIONS } from "./_lib/movementSpineIntent";
 import type { MovementSpineGoal } from "./_lib/movementTypes";
+import {
+  MOVEMENT_SALMON,
+} from "./_lib/movementPalette";
 
 export default function MovementsLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,7 +112,7 @@ export default function MovementsLibraryPage() {
           onClick={() => setSpineGoalFilter("all")}
           className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
             spineGoalFilter === "all"
-              ? "border-[#f6ccbe]/50 bg-[#f6ccbe]/15 text-[#f6ccbe]"
+              ? `border-[${MOVEMENT_SALMON}]/50 bg-[${MOVEMENT_SALMON}]/15 text-[${MOVEMENT_SALMON}]`
               : "border-border-dim bg-sidebar/40 text-secondary hover:text-foreground"
           }`}
         >
@@ -122,7 +125,7 @@ export default function MovementsLibraryPage() {
             onClick={() => setSpineGoalFilter(option.value)}
             className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition-colors ${
               spineGoalFilter === option.value
-                ? "border-[#f6ccbe]/50 bg-[#f6ccbe]/15 text-[#f6ccbe]"
+                ? `border-[${MOVEMENT_SALMON}]/50 bg-[${MOVEMENT_SALMON}]/15 text-[${MOVEMENT_SALMON}]`
                 : "border-border-dim bg-sidebar/40 text-secondary hover:text-foreground"
             }`}
           >

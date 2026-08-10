@@ -47,6 +47,8 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/MemoryFields";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { StatusPill } from "@/src/ui/atoms/StatusPill";
+import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/atoms/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
@@ -111,33 +113,16 @@ function MemoryTrackRecord({ memory }: { memory: AgentMemory }) {
   }
 
   const label = troubleCount > successCount ? "Review" : "Helping";
-  const labelClass = troubleCount > successCount
-    ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
-    : "text-sky-400 bg-sky-500/10 border-sky-500/20";
+  const tone = troubleCount > successCount ? "warning" : "info";
 
   return (
     <div className="flex flex-col gap-1">
-      <span className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${labelClass}`}>
-        {label}
-      </span>
+      <StatusPill tone={tone}>{label}</StatusPill>
       <span className="text-[11px] text-secondary">
         {successCount} helped · {troubleCount} in failed runs
       </span>
     </div>
   );
-}
-
-function getRiskColor(risk: string) {
-  if (risk === "HIGH") return "text-red-400 bg-red-500/10 border-red-500/20";
-  if (risk === "MEDIUM") return "text-amber-400 bg-amber-500/10 border-amber-500/20";
-  return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-}
-
-function getStatusColor(status: string) {
-  if (status === "PROPOSED" || status === "GENERATED") return "text-sky-300 bg-sky-500/10 border-sky-500/20";
-  if (status === "APPLIED" || status === "CONVERTED") return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-  if (status === "REJECTED" || status === "DISMISSED") return "text-red-400 bg-red-500/10 border-red-500/20";
-  return "text-secondary bg-foreground/5 border-border-dim";
 }
 
 function getReviewTypeLabel(value: string) {
@@ -180,7 +165,7 @@ function SourceRunDetail({ sourceRun, agentId }: { sourceRun: SourceRunSummary |
     <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{sourceRun.triggerType}</span>
-        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${getStatusColor(sourceRun.status)}`}>
+        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(sourceRun.status)]}`}>
           {sourceRun.status}
         </span>
         <span className="text-[10px] font-mono text-muted">{formatDateTime(sourceRun.startedAt)}</span>
@@ -208,10 +193,10 @@ function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary |
   const versionLabel = typeof sourceSkill.versionNumber === "number" ? `v${sourceSkill.versionNumber}` : "pinned version";
 
   return (
-    <div className="rounded-[8px] border border-sky-500/20 bg-sky-500/10 px-3 py-2 flex flex-col gap-1">
+    <div className="rounded-[8px] border border-info/20 bg-info/10 px-3 py-2 flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] uppercase font-mono tracking-widest text-sky-300">Skill attribution</span>
-        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${getRiskColor(sourceSkill.riskLevel)}`}>
+        <span className="text-[10px] uppercase font-mono tracking-widest text-info">Skill attribution</span>
+        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(sourceSkill.riskLevel)]}`}>
           {sourceSkill.riskLevel}
         </span>
         <span className="text-[10px] font-mono text-muted">{versionLabel}</span>
@@ -231,10 +216,10 @@ function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary |
 }
 
 function getOperationColor(operation: PatchPreviewRow["operation"]) {
-  if (operation === "APPEND") return "text-sky-300 bg-sky-500/10 border-sky-500/20";
-  if (operation === "CREATE") return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
-  if (operation === "REVIEW") return "text-amber-300 bg-amber-500/10 border-amber-500/20";
-  return "text-secondary bg-foreground/5 border-border-dim";
+  if (operation === "APPEND") return STATUS_TONE_CLASSES.info;
+  if (operation === "CREATE") return STATUS_TONE_CLASSES.success;
+  if (operation === "REVIEW") return STATUS_TONE_CLASSES.warning;
+  return STATUS_TONE_CLASSES.neutral;
 }
 
 function PatchPreview({
@@ -313,8 +298,8 @@ function ReviewMetadata({
           {reviewedAt && <span>{formatDateTime(reviewedAt)}</span>}
         </div>
       )}
-      {reason && <p className="text-red-300 leading-relaxed">{reason}</p>}
-      {appliedEffect && <p className="text-emerald-300 leading-relaxed">{appliedEffect}</p>}
+      {reason && <p className="text-destructive leading-relaxed">{reason}</p>}
+      {appliedEffect && <p className="text-success leading-relaxed">{appliedEffect}</p>}
     </div>
   );
 }
@@ -594,6 +579,11 @@ export default function AgentMemoryPage() {
               className="group border-b border-border-dim/50 transition-colors hover:bg-foreground/[0.02]"
             >
               <td className="px-4 py-3">
+                {memory.autoApplied && (
+                  <StatusPill tone="warning" className="mb-1">
+                    Saved by the AI
+                  </StatusPill>
+                )}
                 <p className="whitespace-pre-line text-[12px] leading-relaxed text-secondary line-clamp-3">
                   {memory.content}
                 </p>
@@ -660,7 +650,7 @@ export default function AgentMemoryPage() {
               <div key={candidate.candidateId} className="flex flex-col gap-3 px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">Memory</span>
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${getRiskColor(candidate.riskLevel)}`}>
+                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(candidate.riskLevel)]}`}>
                     {candidate.riskLevel}
                   </span>
                 </div>
@@ -678,7 +668,7 @@ export default function AgentMemoryPage() {
                       type="button"
                       onClick={() => handleApproveCandidate(candidate.candidateId)}
                       disabled={action.isBusy(`memory:${candidate.candidateId}`)}
-                      className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-emerald-500/20 bg-emerald-500/10 px-3 text-[12px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/15 disabled:opacity-50"
+                      className="inline-flex h-8 items-center gap-2 rounded-[8px] border border-success/20 bg-success/10 px-3 text-[12px] font-semibold text-success transition-colors hover:bg-success/15 disabled:opacity-50"
                     >
                       {action.isBusy(`memory:${candidate.candidateId}`)
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -708,7 +698,7 @@ export default function AgentMemoryPage() {
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
                     {getReviewTypeLabel(suggestion.type)}
                   </span>
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${getRiskColor(suggestion.riskLevel)}`}>
+                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(suggestion.riskLevel)]}`}>
                     {suggestion.riskLevel}
                   </span>
                 </div>
@@ -757,14 +747,14 @@ export default function AgentMemoryPage() {
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
                     {getReviewTypeLabel(reflection.category)}
                   </span>
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${getRiskColor(reflection.riskLevel)}`}>
+                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(reflection.riskLevel)]}`}>
                     {reflection.riskLevel}
                   </span>
                 </div>
                 <p className="text-[12px] leading-relaxed text-secondary">{reflection.rootCause}</p>
                 <SourceRunDetail sourceRun={reflection.sourceRun} agentId={agentId} />
                 {reflection.proposedEvalFixture && (
-                  <p className="text-[11px] leading-relaxed text-sky-300">Eval: {reflection.proposedEvalFixture}</p>
+                  <p className="text-[11px] leading-relaxed text-info">Eval: {reflection.proposedEvalFixture}</p>
                 )}
                 <ReviewMetadata
                   reviewedAt={reflection.reviewedAt}
@@ -857,7 +847,7 @@ export default function AgentMemoryPage() {
               type="button"
               onClick={handleDelete}
               disabled={action.isBusy()}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[8px] bg-destructive px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
@@ -895,7 +885,7 @@ export default function AgentMemoryPage() {
               type="button"
               onClick={handleRejectCandidate}
               disabled={action.isBusy()}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[8px] bg-destructive px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
               Turn down
