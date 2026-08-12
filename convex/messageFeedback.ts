@@ -12,6 +12,7 @@
 
 import { v } from "convex/values";
 
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
@@ -92,6 +93,34 @@ async function adjustMemoryFeedbackCounters(
   }
 }
 
+/**
+ * Offer a typed correction to the memory review queue.
+ *
+ * The queue is the admin's; this only proposes. A correction with no
+ * workspace has nowhere to go, and a rejected idea is silently dropped —
+ * neither is worth an error in front of somebody who was trying to help.
+ */
+async function proposeCorrection(
+  ctx: MutationCtx,
+  args: {
+    companyId: Id<"companies"> | undefined;
+    correction: string;
+    messageId: Id<"messages">;
+    threadId: Id<"threads">;
+    userId: Id<"users">;
+  },
+) {
+  if (!args.companyId) return;
+
+  await ctx.runMutation(internal.companyMemories.proposeCorrectionCandidate, {
+    companyId: args.companyId,
+    correction: args.correction,
+    messageId: args.messageId,
+    threadId: args.threadId,
+    createdBy: args.userId,
+  });
+}
+
 export const upsertForMessage = tenantMutation({
   args: {
     messageId: v.id("messages"),
@@ -145,6 +174,19 @@ export const upsertForMessage = tenantMutation({
         comment,
         updatedAt: now,
       });
+
+      // Only a newly typed correction proposes; changing a rating on a row
+      // whose correction was already suggested must not queue it twice.
+      if (comment && comment !== existing.comment && existing.countsTowardLearning) {
+        await proposeCorrection(ctx, {
+          companyId: message.companyId ?? thread.companyId,
+          correction: comment,
+          messageId: args.messageId,
+          threadId: message.threadId,
+          userId,
+        });
+      }
+
       return existing._id;
     }
 
@@ -160,7 +202,7 @@ export const upsertForMessage = tenantMutation({
       await adjustMemoryFeedbackCounters(ctx, { message, next: args.rating });
     }
 
-    return await ctx.db.insert("messageFeedback", {
+    const feedbackId = await ctx.db.insert("messageFeedback", {
       messageId: args.messageId,
       threadId: message.threadId,
       companyId: message.companyId ?? thread.companyId,
@@ -172,6 +214,18 @@ export const upsertForMessage = tenantMutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    if (comment && countsTowardLearning) {
+      await proposeCorrection(ctx, {
+        companyId: message.companyId ?? thread.companyId,
+        correction: comment,
+        messageId: args.messageId,
+        threadId: message.threadId,
+        userId,
+      });
+    }
+
+    return feedbackId;
   },
 });
 
@@ -207,6 +261,9 @@ export const getMineForThread = tenantQuery({
           messageId: row.messageId,
           rating: row.rating,
           labels: row.labels,
+          // So the surface can show that a correction was already sent
+          // rather than inviting the same one twice.
+          hasCorrection: Boolean(row.comment),
         })),
     };
   },

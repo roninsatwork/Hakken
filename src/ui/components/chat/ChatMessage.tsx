@@ -11,6 +11,7 @@ import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
 import { useSmoothStreamText } from "@/src/hooks/useSmoothStreamText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { MessageFeedbackControls } from "./MessageFeedbackControls";
+import { AnswerEvidence } from "./AnswerEvidence";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
@@ -97,7 +98,10 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       {/* Rating only once the reply has finished writing itself, and never on
           platform notices — a quota message is not an answer. */}
       {!isStreaming && presentation !== "stalled" && !message.systemKey && (
-        <MessageFeedbackControls message={message} />
+        <>
+          <MessageFeedbackControls message={message} />
+          <AnswerEvidence messageId={message._id} />
+        </>
       )}
 
       {!isStreaming && (

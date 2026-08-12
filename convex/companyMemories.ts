@@ -34,6 +34,13 @@ const RUNTIME_MEMORY_LIMIT_MAX = 8;
  */
 const RETAINED_CATEGORY = "OTHER";
 
+/**
+ * One person saying an answer was wrong is a lead, not a fact, so a
+ * correction enters the queue below anything the platform inferred from a
+ * pattern across runs.
+ */
+const CORRECTION_CONFIDENCE = 0.3;
+
 const applyModeValidator = v.union(
   v.literal("ALWAYS"),
   v.literal("WHEN_RELEVANT")
@@ -694,6 +701,67 @@ export const restoreMemory = adminMutation({
     });
 
     return true;
+  },
+});
+
+/**
+ * A correction typed by whoever was given the answer.
+ *
+ * `createCandidate` below is the admin door and stays that way — an ordinary
+ * person must not gain write access to memory. This is the narrow path for a
+ * correction instead: internal, so nothing in a browser reaches it directly,
+ * and it proposes rather than writes. It joins the same queue an admin
+ * already reviews, with low confidence, because one person's correction is a
+ * lead rather than a fact.
+ *
+ * Returns null rather than throwing when the idea was already turned down.
+ * The correction itself is still worth storing, and the person who typed it
+ * should not be shown an error about a review queue they cannot see.
+ */
+export const proposeCorrectionCandidate = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    correction: v.string(),
+    messageId: v.id("messages"),
+    threadId: v.id("threads"),
+    createdBy: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<Id<"companyMemoryCandidates"> | null> => {
+    let content: string;
+    try {
+      content = normalizeContent(args.correction);
+    } catch {
+      // Empty, over-long, or refused by the safety policy. The feedback row
+      // still stands; only the suggestion is dropped.
+      return null;
+    }
+
+    const rejectedFingerprint = getRejectedFingerprint(content);
+    const alreadyRejected = await ctx.db
+      .query("companyMemoryCandidates")
+      .withIndex("by_company_rejected_fingerprint", (q) =>
+        q.eq("companyId", args.companyId).eq("rejectedFingerprint", rejectedFingerprint)
+      )
+      .first();
+    if (alreadyRejected) return null;
+
+    const now = Date.now();
+    return await ctx.db.insert("companyMemoryCandidates", {
+      companyId: args.companyId,
+      title: normalizeTitle(undefined, content),
+      content,
+      normalizedContent: content.toLowerCase(),
+      category: RETAINED_CATEGORY,
+      applyMode: "WHEN_RELEVANT",
+      sourceType: "CHAT",
+      sourceIdsJson: JSON.stringify({ messageId: args.messageId, threadId: args.threadId }),
+      reason: "Typed by the person who was given the answer, when they marked it not right.",
+      confidence: CORRECTION_CONFIDENCE,
+      status: "PROPOSED",
+      createdBy: args.createdBy,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 

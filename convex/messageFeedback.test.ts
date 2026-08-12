@@ -110,7 +110,7 @@ describe("Message feedback (self-improvement, Phase 3)", () => {
     });
     expect(mine.enabled).toBe(true);
     expect(mine.ratings).toEqual([
-      { messageId: seed.assistantMessageId, rating: "POSITIVE", labels: ["GREAT_ANSWER"] },
+      { messageId: seed.assistantMessageId, rating: "POSITIVE", labels: ["GREAT_ANSWER"], hasCorrection: false },
     ]);
   });
 
@@ -317,5 +317,110 @@ describe("Message feedback (self-improvement, Phase 3)", () => {
         .collect()
     );
     expect(candidates.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * A thumbs-down said an answer was wrong and never said what right would
+   * have been. The correction is the expensive signal; it proposes to the
+   * review queue and never rewrites the reply that was given.
+   */
+  describe("typed corrections", () => {
+    test("a correction is stored and proposed to the review queue", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { userAId, companyAId, assistantMessageId } = await seedChat(t);
+
+      await t.withIdentity({ subject: userAId }).mutation(api.messageFeedback.upsertForMessage, {
+        messageId: assistantMessageId,
+        rating: "NEGATIVE",
+        comment: "The depot closes at 6pm on Fridays, not 4pm.",
+      });
+
+      const state = await t.run(async (ctx) => ({
+        feedback: await ctx.db.query("messageFeedback").collect(),
+        candidates: await ctx.db.query("companyMemoryCandidates").collect(),
+        message: await ctx.db.get(assistantMessageId),
+      }));
+
+      expect(state.feedback[0].comment).toBe("The depot closes at 6pm on Fridays, not 4pm.");
+      expect(state.candidates).toHaveLength(1);
+      expect(state.candidates[0]).toMatchObject({
+        companyId: companyAId,
+        sourceType: "CHAT",
+        status: "PROPOSED",
+        createdBy: userAId,
+      });
+      // It proposes; it never edits the answer that was given.
+      expect(state.message?.content).toBe("The depot closes at 4pm on Fridays.");
+    });
+
+    test("a thumbs-down with no correction behaves exactly as before", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { userAId, assistantMessageId } = await seedChat(t);
+
+      await t.withIdentity({ subject: userAId }).mutation(api.messageFeedback.upsertForMessage, {
+        messageId: assistantMessageId,
+        rating: "NEGATIVE",
+        labels: ["INCORRECT"],
+      });
+
+      const candidates = await t.run(async (ctx) => ctx.db.query("companyMemoryCandidates").collect());
+      expect(candidates).toHaveLength(0);
+    });
+
+    test("changing the rating afterwards does not queue the same correction twice", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { userAId, assistantMessageId } = await seedChat(t);
+      const asUser = t.withIdentity({ subject: userAId });
+
+      await asUser.mutation(api.messageFeedback.upsertForMessage, {
+        messageId: assistantMessageId,
+        rating: "NEGATIVE",
+        comment: "It closes at 6pm.",
+      });
+      await asUser.mutation(api.messageFeedback.upsertForMessage, {
+        messageId: assistantMessageId,
+        rating: "NEGATIVE",
+        comment: "It closes at 6pm.",
+      });
+
+      const candidates = await t.run(async (ctx) => ctx.db.query("companyMemoryCandidates").collect());
+      expect(candidates).toHaveLength(1);
+    });
+
+    test("an idea already turned down is not proposed again, and the correction is still kept", async () => {
+      const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+      const { userAId, companyAId, assistantMessageId } = await seedChat(t);
+
+      await t.run(async (ctx) => {
+        const now = Date.now();
+        await ctx.db.insert("companyMemoryCandidates", {
+          companyId: companyAId,
+          content: "It closes at 6pm.",
+          normalizedContent: "it closes at 6pm.",
+          category: "OTHER",
+          sourceType: "CHAT",
+          confidence: 0.3,
+          status: "REJECTED",
+          rejectedFingerprint: "it closes at 6pm.",
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+
+      await t.withIdentity({ subject: userAId }).mutation(api.messageFeedback.upsertForMessage, {
+        messageId: assistantMessageId,
+        rating: "NEGATIVE",
+        comment: "It closes at 6pm.",
+      });
+
+      const state = await t.run(async (ctx) => ({
+        proposed: (await ctx.db.query("companyMemoryCandidates").collect()).filter((row) => row.status === "PROPOSED"),
+        feedback: await ctx.db.query("messageFeedback").collect(),
+      }));
+
+      // Silently not re-proposed — but the person's words are still recorded.
+      expect(state.proposed).toHaveLength(0);
+      expect(state.feedback[0].comment).toBe("It closes at 6pm.");
+    });
   });
 });

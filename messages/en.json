@@ -2613,7 +2613,22 @@
         "showOlder": "Show older conversations"
       },
       "you": "You asked",
-      "copy": "Copy"
+      "copy": "Copy",
+      "answer": {
+        "save": "Save this",
+        "saved": "Saved",
+        "savedPending": "Sent for review",
+        "saveFailed": "Could not save"
+      },
+      "evidence": {
+        "why": "Why this answer",
+        "hide": "Hide",
+        "documents": "Documents used",
+        "memories": "Memories applied",
+        "skills": "Skills in force",
+        "always": "always on",
+        "none": "Nothing was retrieved for this answer — it came from the model and your instructions alone."
+      }
     },
     "costs": {
       "title": "AI Running Costs",
@@ -3200,5 +3215,14 @@
     "markAllRead": "Mark all read",
     "open": "Notifications",
     "waiting": "{count} unread"
+  },
+  "knowledgeReview": {
+    "title": "Knowledge review",
+    "subtitle": "Answers your team saved, waiting to be added",
+    "empty": "Nothing waiting. Answers saved by the team appear here before they become searchable.",
+    "approve": "Add to knowledge",
+    "reject": "Turn down",
+    "savedBy": "Saved by",
+    "reasonPlaceholder": "Why not? Optional."
   }
 }

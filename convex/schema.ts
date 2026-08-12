@@ -1796,6 +1796,24 @@ export default defineSchema({
     embeddingModelId: v.optional(v.string()),
     embeddingProviderModelId: v.optional(v.string()),
     embeddingDimensions: v.optional(v.number()),
+    /**
+     * Whether a person may contribute this document without being an admin.
+     *
+     * Absent means approved — every document that existed before saved
+     * answers keeps working exactly as it did. A `PENDING` document is never
+     * ingested, so it has no chunks and retrieval cannot reach it; approval
+     * is what starts ingestion. That is the whole guard: unapproved content
+     * is not "filtered out" at query time, it is simply not there.
+     */
+    reviewStatus: v.optional(v.union(
+      v.literal("PENDING"),
+      v.literal("APPROVED"),
+      v.literal("REJECTED")
+    )),
+    submittedBy: v.optional(v.id("users")),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+    rejectionReason: v.optional(v.string()),
     lastQueuedAt: v.optional(v.number()),
     lastIngestionStartedAt: v.optional(v.number()),
     lastIngestedAt: v.optional(v.number()),
@@ -1804,6 +1822,7 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
     .index("by_company_format", ["companyId", "format", "createdAt"])
+    .index("by_company_review", ["companyId", "reviewStatus", "createdAt"])
     .index("by_thread", ["threadId", "createdAt"])
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_agent_format", ["agentId", "format", "createdAt"])

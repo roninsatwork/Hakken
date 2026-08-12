@@ -130,6 +130,7 @@ import type * as localTestAuth from "../localTestAuth.js";
 import type * as magicLinkUrlService from "../magicLinkUrlService.js";
 import type * as maintenanceScriptRegistry from "../maintenanceScriptRegistry.js";
 import type * as maintenanceScripts from "../maintenanceScripts.js";
+import type * as messageEvidence from "../messageEvidence.js";
 import type * as messageFeedback from "../messageFeedback.js";
 import type * as movements from "../movements.js";
 import type * as notifications from "../notifications.js";
@@ -352,6 +353,7 @@ declare const fullApi: ApiFromModules<{
   magicLinkUrlService: typeof magicLinkUrlService;
   maintenanceScriptRegistry: typeof maintenanceScriptRegistry;
   maintenanceScripts: typeof maintenanceScripts;
+  messageEvidence: typeof messageEvidence;
   messageFeedback: typeof messageFeedback;
   movements: typeof movements;
   notifications: typeof notifications;

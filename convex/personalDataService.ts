@@ -113,7 +113,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     ["companyEvalCases", ["archivedBy", "createdBy"]],
     ["companyEvalRuns", ["createdBy"]],
     ["aiRules", ["createdBy"]],
-    ["knowledgeDocuments", ["createdBy"]],
+    ["knowledgeDocuments", ["createdBy", "submittedBy", "reviewedBy"]],
     ["agents", ["ownerId"]],
     ["agentEvalSuitePresets", ["createdBy"]],
     ["toolConnectors", ["createdBy"]],

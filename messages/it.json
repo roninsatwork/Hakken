@@ -2613,7 +2613,22 @@
         "showOlder": "Mostra conversazioni precedenti"
       },
       "you": "Hai chiesto",
-      "copy": "Copia"
+      "copy": "Copia",
+      "answer": {
+        "save": "Salva",
+        "saved": "Salvato",
+        "savedPending": "Inviato per revisione",
+        "saveFailed": "Impossibile salvare"
+      },
+      "evidence": {
+        "why": "Perché questa risposta",
+        "hide": "Nascondi",
+        "documents": "Documenti usati",
+        "memories": "Memorie applicate",
+        "skills": "Competenze attive",
+        "always": "sempre attiva",
+        "none": "Nulla è stato recuperato per questa risposta — deriva solo dal modello e dalle tue istruzioni."
+      }
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",
@@ -3200,5 +3215,14 @@
     "markAllRead": "Segna tutte come lette",
     "open": "Notifiche",
     "waiting": "{count} non lette"
+  },
+  "knowledgeReview": {
+    "title": "Revisione conoscenza",
+    "subtitle": "Risposte salvate dal team, in attesa di essere aggiunte",
+    "empty": "Nulla in attesa. Le risposte salvate dal team appaiono qui prima di diventare ricercabili.",
+    "approve": "Aggiungi alla conoscenza",
+    "reject": "Rifiuta",
+    "savedBy": "Salvato da",
+    "reasonPlaceholder": "Perché no? Facoltativo."
   }
 }

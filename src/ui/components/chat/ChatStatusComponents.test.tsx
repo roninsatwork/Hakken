@@ -21,6 +21,14 @@ vi.mock("@/convex/_generated/api", () => ({
       getMineForThread: "getMineForThread",
       upsertForMessage: "upsertForMessage",
     },
+    // The rating row now also offers "Save this".
+    knowledge: {
+      saveAnswerToKnowledge: "saveAnswerToKnowledge",
+    },
+    // And every answer can show its own workings.
+    messageEvidence: {
+      getForMessage: "getForMessage",
+    },
   },
 }));
 
