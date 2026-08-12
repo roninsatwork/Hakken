@@ -53,6 +53,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   { table: "agentMemories", fields: ["userId"], treatment: "ERASE", reason: "What an assistant remembered about them." },
   { table: "movements", fields: ["createdBy"], treatment: "ERASE", reason: "A recording of their body." },
   { table: "movementDebugSessions", fields: ["createdBy"], treatment: "ERASE", reason: "A recording of their body." },
+  { table: "notifications", fields: ["userId"], treatment: "ERASE", reason: "Their inbox. A notification exists only for the person it was sent to." },
 
   // --- Kept deliberately, because they are the evidence -----------------
   {
@@ -78,6 +79,13 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     fields: ["actorId"],
     treatment: "RETAIN",
     reason: "The record of who ran a maintenance script against live data.",
+  },
+
+  {
+    table: "tasks",
+    fields: ["assigneeUserId", "createdByUserId", "completedByUserId"],
+    treatment: "DISSOCIATE",
+    reason: "The work belongs to the workspace, not to the person. Erasing the task with the person would delete work somebody still has to do; the names come off and the job stays.",
   },
 
   // --- Shared records that merely note who touched them -----------------

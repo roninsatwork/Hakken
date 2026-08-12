@@ -11,6 +11,8 @@ const useMutationMock = vi.hoisted(() => vi.fn());
 vi.mock("convex/react", () => ({
   useMutation: (...args: unknown[]) => useMutationMock(...args),
   useQuery: (...args: unknown[]) => useQueryMock(...args),
+  // The header now carries the notification bell, which pages its own list.
+  usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: () => {}, isLoading: false }),
 }));
 
 vi.mock("@/convex/_generated/api", () => ({
@@ -22,6 +24,12 @@ vi.mock("@/convex/_generated/api", () => ({
     },
     chat: {
       getThreadHeading: "chat:getThreadHeading",
+    },
+    notifications: {
+      countMineUnread: "notifications:countMineUnread",
+      listMine: "notifications:listMine",
+      markRead: "notifications:markRead",
+      markAllMineRead: "notifications:markAllMineRead",
     },
   },
 }));

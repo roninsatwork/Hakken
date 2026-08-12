@@ -19,6 +19,8 @@ import {
   buildEmailDeliveryOutput,
   buildEmailMessage,
   buildEmailSimulationOutput,
+  buildTaskNodeOutput,
+  buildWorkflowTask,
   buildMergeNodeOutput,
   buildWorkflowScheduleDecision,
   createWorkflowRuntimeContext,
@@ -151,6 +153,48 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
   });
 
   return buildEmailDeliveryOutput({ dispatchId: data, toAddresses, subject });
+}
+
+/**
+ * Hand a job to a person from a workflow.
+ *
+ * The connector that has been sitting blocked in the outstanding list —
+ * blocked only because Sonae had no concept of a task. The tenant comes from
+ * the workflow's own owner, exactly as the agent node resolves it, so a
+ * template cannot address work into another workspace.
+ */
+async function executeTaskRuntimeNode(ctx: ActionCtx, args: {
+  workflowId: Id<"workflows">;
+  currentNodeData: Record<string, unknown>;
+  globalStatePayload: Record<string, unknown>;
+}) {
+  const workflow = await ctx.runQuery(internal.workflows.internalGet, { id: args.workflowId });
+  const creator = workflow?.createdBy
+    ? await ctx.runQuery(internal.users.getUserInternal, { userId: workflow.createdBy })
+    : null;
+  const companyId = creator?.companyId;
+  if (!companyId) {
+    throw new Error("This workflow has no workspace, so it cannot raise a task for anyone.");
+  }
+
+  const wanted = buildWorkflowTask({
+    nodeData: args.currentNodeData,
+    globalStatePayload: args.globalStatePayload,
+  });
+
+  const created: { taskId: Id<"tasks">; assigned: boolean } = await ctx.runMutation(
+    internal.tasks.createTaskFromWorkflow,
+    {
+      companyId,
+      title: wanted.title,
+      detail: wanted.detail,
+      assigneeEmail: wanted.assigneeEmail,
+      dueAt: wanted.dueAt,
+      workflowId: args.workflowId,
+    },
+  );
+
+  return buildTaskNodeOutput({ taskId: created.taskId, title: wanted.title, assigned: created.assigned });
 }
 
 async function scheduleDownstreamNodes(ctx: ActionCtx, args: {
@@ -347,6 +391,17 @@ export const executeNode = internalAction({
           });
         } catch(error: unknown) {
              throw new Error("Email dispatch failed: " + getRuntimeErrorMessage(error));
+        }
+      }
+      else if (node.type === "taskNode") {
+        try {
+          outputPayload = await executeTaskRuntimeNode(ctx, {
+            workflowId: args.workflowId,
+            currentNodeData,
+            globalStatePayload,
+          });
+        } catch (error: unknown) {
+          throw new Error("Raising a task failed: " + getRuntimeErrorMessage(error));
         }
       }
       else {

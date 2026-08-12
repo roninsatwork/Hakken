@@ -3160,5 +3160,45 @@
       "failedTitle": "Report non riuscito",
       "failedBody": "L'esecuzione è terminata senza completare il report: {reason}"
     }
+  },
+  "tasks": {
+    "title": "Attività",
+    "subtitle": "Lavoro in attesa di qualcuno",
+    "empty": "Nulla in attesa. Le attività create da te, da un agente o da un flusso appaiono qui.",
+    "emptyMine": "Nulla assegnato a te.",
+    "new": "Nuova attività",
+    "titlePlaceholder": "Cosa c'è da fare?",
+    "assignee": "Per",
+    "unassigned": "Chiunque",
+    "due": "Scadenza",
+    "noDue": "Nessuna data",
+    "create": "Aggiungi attività",
+    "cancel": "Annulla",
+    "all": "Tutti",
+    "mine": "Le mie",
+    "done": "Fatto",
+    "reopen": "Riapri",
+    "dismiss": "Annulla attività",
+    "showMore": "Mostra altro",
+    "groups": {
+      "overdue": "In ritardo",
+      "today": "Oggi",
+      "week": "Questa settimana",
+      "later": "Più avanti",
+      "done": "Fatte",
+      "cancelled": "Annullate"
+    },
+    "raisedBy": {
+      "AGENT": "Creata da un agente",
+      "WORKFLOW": "Creata da un flusso"
+    },
+    "openCount": "{count} aperte"
+  },
+  "notifications": {
+    "title": "Notifiche",
+    "empty": "Nulla di nuovo.",
+    "markAllRead": "Segna tutte come lette",
+    "open": "Notifiche",
+    "waiting": "{count} non lette"
   }
 }

@@ -7,6 +7,8 @@ import {
   buildDatabaseOperationInput,
   buildEmailDeliveryOutput,
   buildEmailMessage,
+  buildTaskNodeOutput,
+  buildWorkflowTask,
   buildEmailSimulationOutput,
   buildMergeNodeOutput,
   buildWorkflowScheduleDecision,
@@ -420,5 +422,62 @@ describe("workflow runtime service", () => {
     expect(() => executeWaitNode({ _waitConfig: { delaySeconds: {} } }, {})).toThrow("Wait node config");
     expect(() => executeApprovalNode({ _approvalConfig: { previewTarget: 123 } }, {})).toThrow("Approval node config");
     expect(() => executeIteratorNode({ _iteratorConfig: { listVariable: 123 } }, {})).toThrow("Iterator node config");
+  });
+});
+
+/**
+ * The task node lets a workflow hand a job to a person — the connector that
+ * sat blocked in the outstanding list because Sonae had no concept of a task.
+ * The author writes the words; the run fills the blanks.
+ */
+describe("task node", () => {
+  test("substitutes run data into the task it raises", () => {
+    const task = buildWorkflowTask({
+      nodeData: {
+        _taskConfig: {
+          title: "Chase {{customer.name}}",
+          detail: "No orders since {{customer.lastOrder}}",
+          assigneeEmail: "{{owner.email}}",
+          dueDate: "2026-09-01",
+        },
+      },
+      globalStatePayload: {
+        customer: { name: "Tesco Watford", lastOrder: "March" },
+        owner: { email: "james@ronins.co.uk" },
+      },
+    });
+
+    expect(task).toMatchObject({
+      title: "Chase Tesco Watford",
+      detail: "No orders since March",
+      assigneeEmail: "james@ronins.co.uk",
+    });
+    expect(task.dueAt).toEqual(expect.any(Number));
+  });
+
+  test("a task with no title is refused rather than raised blank", () => {
+    expect(() =>
+      buildWorkflowTask({ nodeData: { _taskConfig: { title: "   " } }, globalStatePayload: {} }),
+    ).toThrow("must include a title");
+  });
+
+  test("a date the author templated badly is dropped, not stored as a deadline", () => {
+    // Better undated than wrongly dated: somebody would work to it.
+    const task = buildWorkflowTask({
+      nodeData: { _taskConfig: { title: "Do the thing", dueDate: "next tuesday" } },
+      globalStatePayload: {},
+    });
+    expect(task.dueAt).toBeUndefined();
+  });
+
+  test("config of the wrong shape is rejected with a readable reason", () => {
+    expect(() =>
+      buildWorkflowTask({ nodeData: { _taskConfig: { title: 12 } }, globalStatePayload: {} }),
+    ).toThrow("Task node config");
+  });
+
+  test("the node reports what it raised so downstream nodes can use it", () => {
+    const output = JSON.parse(buildTaskNodeOutput({ taskId: "task_1", title: "Chase Tesco", assigned: true }));
+    expect(output).toMatchObject({ _system: { task: true }, taskId: "task_1", assigned: true });
   });
 });

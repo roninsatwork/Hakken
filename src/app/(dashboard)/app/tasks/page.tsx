@@ -1,0 +1,306 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { motion } from "framer-motion";
+import { Check, ListChecks, Plus, RotateCcw, Sparkles, Workflow, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { formatTaskDue, groupTasks, type TaskGroup } from "@/src/lib/taskGrouping";
+import Header from "@/src/ui/components/layout/Header";
+import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import { LAYER } from "@/src/ui/lib/layers";
+
+const TASK_PAGE_SIZE = 30;
+
+/**
+ * The list of work waiting on somebody.
+ *
+ * Grouped by when it is due rather than when it was made, because the only
+ * question anyone asks a to-do list is "what needs me today". Overdue leads;
+ * finished and dropped work sits at the bottom as a record rather than a
+ * queue.
+ */
+export default function TasksPage() {
+  const t = useTranslations("tasks");
+
+  const [mineOnly, setMineOnly] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newAssignee, setNewAssignee] = useState<string>("");
+  const [newDue, setNewDue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { results: tasks, status, loadMore } = usePaginatedQuery(
+    api.tasks.listTasks,
+    { mineOnly: mineOnly || undefined },
+    { initialNumItems: TASK_PAGE_SIZE },
+  );
+  const team = useQuery(api.tasks.listAssignableMembers, {});
+  const createTask = useMutation(api.tasks.createTask);
+  const completeTask = useMutation(api.tasks.completeTask);
+  const reopenTask = useMutation(api.tasks.reopenTask);
+  const cancelTask = useMutation(api.tasks.cancelTask);
+
+  // Read after mount so the server and first client render agree on grouping.
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const tick = setTimeout(() => setNow(Date.now()), 0);
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => {
+      clearTimeout(tick);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const grouped = groupTasks(tasks, now || Date.now());
+  const nameFor = (userId?: Id<"users">) =>
+    team?.find((member) => member._id === userId)?.name
+    || team?.find((member) => member._id === userId)?.email
+    || null;
+
+  const handleCreate = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!newTitle.trim() || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await createTask({
+        title: newTitle.trim(),
+        ...(newAssignee ? { assigneeUserId: newAssignee as Id<"users"> } : {}),
+        ...(newDue ? { dueAt: new Date(`${newDue}T12:00:00`).getTime() } : {}),
+      });
+      setNewTitle("");
+      setNewAssignee("");
+      setNewDue("");
+      setIsAdding(false);
+    } catch (error) {
+      console.error("Failed to create task", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <Header />
+      <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              <ListChecks className="w-6 h-6 text-brand" />
+              {t("title")}
+            </h1>
+            <p className="text-[13px] text-secondary mt-1">{t("subtitle")}</p>
+          </div>
+
+          <div className={`relative ${LAYER.PAGE_CHROME} flex items-center gap-2`}>
+            <div className="flex rounded-[10px] border border-border-dim p-0.5">
+              <button
+                type="button"
+                onClick={() => setMineOnly(false)}
+                aria-pressed={!mineOnly}
+                className={`px-3 py-1.5 rounded-[8px] text-[12px] transition-colors ${!mineOnly ? "bg-foreground/10 text-foreground" : "text-secondary hover:text-foreground"}`}
+              >
+                {t("all")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMineOnly(true)}
+                aria-pressed={mineOnly}
+                className={`px-3 py-1.5 rounded-[8px] text-[12px] transition-colors ${mineOnly ? "bg-foreground/10 text-foreground" : "text-secondary hover:text-foreground"}`}
+              >
+                {t("mine")}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsAdding(!isAdding)}
+              className="h-8 px-3 inline-flex items-center gap-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:brightness-110 active:scale-95 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {t("new")}
+            </button>
+          </div>
+        </div>
+
+        {isAdding && (
+          <motion.form
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            onSubmit={handleCreate}
+            className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-foreground/[0.02] p-4"
+          >
+            <input
+              autoFocus
+              value={newTitle}
+              onChange={(event) => setNewTitle(event.target.value)}
+              placeholder={t("titlePlaceholder")}
+              className="w-full bg-transparent border-0 border-b border-border-dim rounded-none px-0 pb-2 text-[15px] text-foreground focus:outline-none focus:border-brand/50 placeholder:text-muted/70"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-[12px] text-muted">
+                {t("assignee")}
+                <select
+                  value={newAssignee}
+                  onChange={(event) => setNewAssignee(event.target.value)}
+                  className="bg-transparent border border-border-dim rounded-[8px] px-2 py-1 text-[12px] text-foreground focus:outline-none focus:border-brand/50"
+                >
+                  <option value="">{t("unassigned")}</option>
+                  {team?.map((member) => (
+                    <option key={member._id} value={member._id}>
+                      {member.name || member.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex items-center gap-2 text-[12px] text-muted">
+                {t("due")}
+                <input
+                  type="date"
+                  value={newDue}
+                  onChange={(event) => setNewDue(event.target.value)}
+                  className="bg-transparent border border-border-dim rounded-[8px] px-2 py-1 text-[12px] text-foreground focus:outline-none focus:border-brand/50"
+                />
+              </label>
+
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAdding(false)}
+                  className="px-3 py-1.5 text-[12px] text-secondary hover:text-foreground transition-colors"
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newTitle.trim() || isSaving}
+                  className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium disabled:opacity-40 hover:brightness-110 transition-all"
+                >
+                  {t("create")}
+                </button>
+              </div>
+            </div>
+          </motion.form>
+        )}
+
+        {tasks.length === 0 && status !== "LoadingFirstPage" ? (
+          <SonaeEmptyState
+            icon={ListChecks}
+            title={t("title")}
+            description={mineOnly ? t("emptyMine") : t("empty")}
+          />
+        ) : (
+          <div className="flex flex-col">
+            {grouped.map((section) => (
+              <section key={section.group} className="flex flex-col">
+                <div className="flex items-center gap-2.5 pt-6 pb-1 first:pt-0">
+                  <span
+                    className={`text-[9px] font-medium tracking-[0.16em] uppercase ${
+                      section.group === "overdue" ? "text-brand" : "text-muted"
+                    }`}
+                  >
+                    {t(`groups.${section.group}` as `groups.${TaskGroup}`)}
+                  </span>
+                  <span aria-hidden="true" className="flex-1 h-px bg-border-dim" />
+                </div>
+
+                <ul className="flex flex-col">
+                  {section.tasks.map((task) => {
+                    const isSettled = task.status !== "OPEN";
+                    const assignee = nameFor(task.assigneeUserId);
+                    const due = formatTaskDue(task.dueAt);
+
+                    return (
+                      <li
+                        key={task._id}
+                        className="group flex items-start gap-3 py-2.5 border-b border-border-dim last:border-b-0"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            isSettled ? reopenTask({ taskId: task._id }) : completeTask({ taskId: task._id })
+                          }
+                          aria-label={isSettled ? t("reopen") : t("done")}
+                          className={`mt-0.5 w-4 h-4 rounded-[5px] border flex items-center justify-center flex-shrink-0 transition-colors ${
+                            task.status === "DONE"
+                              ? "bg-brand border-brand text-white"
+                              : "border-border-dim hover:border-brand/60"
+                          }`}
+                        >
+                          {task.status === "DONE" && <Check className="w-2.5 h-2.5" />}
+                          {task.status === "CANCELLED" && <X className="w-2.5 h-2.5 text-muted" />}
+                        </button>
+
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                          <span
+                            className={`text-[14px] leading-snug ${
+                              isSettled ? "text-muted line-through decoration-muted/40" : "text-foreground"
+                            }`}
+                          >
+                            {task.title}
+                          </span>
+                          {task.detail && <span className="text-[12px] text-muted">{task.detail}</span>}
+
+                          <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted">
+                            {assignee && <span>{assignee}</span>}
+                            <span>{due ?? t("noDue")}</span>
+                            {task.createdBySource !== "PERSON" && (
+                              <span className="inline-flex items-center gap-1">
+                                {task.createdBySource === "AGENT" ? (
+                                  <Sparkles className="w-3 h-3 text-brand" />
+                                ) : (
+                                  <Workflow className="w-3 h-3 text-brand" />
+                                )}
+                                {t(`raisedBy.${task.createdBySource}` as "raisedBy.AGENT" | "raisedBy.WORKFLOW")}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+
+                        {task.status === "OPEN" && (
+                          <button
+                            type="button"
+                            onClick={() => cancelTask({ taskId: task._id })}
+                            aria-label={t("dismiss")}
+                            className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-7 h-7 rounded-[8px] flex items-center justify-center text-muted hover:text-foreground hover:bg-foreground/5 transition-all"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {task.status === "DONE" && (
+                          <button
+                            type="button"
+                            onClick={() => reopenTask({ taskId: task._id })}
+                            aria-label={t("reopen")}
+                            className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-7 h-7 rounded-[8px] flex items-center justify-center text-muted hover:text-foreground hover:bg-foreground/5 transition-all"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+
+            {status === "CanLoadMore" && (
+              <button
+                type="button"
+                onClick={() => loadMore(TASK_PAGE_SIZE)}
+                className="mt-5 self-start text-[12px] text-muted hover:text-foreground transition-colors"
+              >
+                {t("showMore")}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

@@ -3160,5 +3160,45 @@
       "failedTitle": "Report failed",
       "failedBody": "The run ended without finishing the report: {reason}"
     }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "subtitle": "Work waiting on someone",
+    "empty": "Nothing waiting. Tasks raised by you, an agent or a workflow appear here.",
+    "emptyMine": "Nothing assigned to you.",
+    "new": "New task",
+    "titlePlaceholder": "What needs doing?",
+    "assignee": "For",
+    "unassigned": "Anyone",
+    "due": "Due",
+    "noDue": "No date",
+    "create": "Add task",
+    "cancel": "Cancel",
+    "all": "Everyone",
+    "mine": "Mine",
+    "done": "Done",
+    "reopen": "Reopen",
+    "dismiss": "Cancel task",
+    "showMore": "Show more",
+    "groups": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "week": "This week",
+      "later": "Later",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "raisedBy": {
+      "AGENT": "Raised by an agent",
+      "WORKFLOW": "Raised by a workflow"
+    },
+    "openCount": "{count} open"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Nothing new.",
+    "markAllRead": "Mark all read",
+    "open": "Notifications",
+    "waiting": "{count} unread"
   }
 }

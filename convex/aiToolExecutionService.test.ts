@@ -383,6 +383,10 @@ describe("ai tool execution service", () => {
       // Writes the board report from the agent's own knowledge and memory —
       // the one way a scheduled agent run ends in a saved report.
       "salesReports.generate",
+      // Hands a job to a person, so a finding does not die in a run log
+      // nobody returns to. A WRITE, so it needs approval unless the agent
+      // has been given autonomy deliberately.
+      "task.create",
       // Reads a web page. The first handler here that reaches outside the
       // platform rather than into our own database.
       "web.scrape",

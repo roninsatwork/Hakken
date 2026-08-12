@@ -49,6 +49,13 @@ export type EmailConfig = {
   body?: string;
 };
 
+export type TaskConfig = {
+  title?: string;
+  detail?: string;
+  assigneeEmail?: string;
+  dueDate?: string;
+};
+
 export type LogicConfig = {
   fallbackBranch?: string;
   rules?: Array<{
@@ -196,6 +203,16 @@ function isEmailConfig(value: unknown): value is EmailConfig {
   );
 }
 
+function isTaskConfig(value: unknown): value is TaskConfig {
+  if (!isRecord(value)) return false;
+  return (
+    (typeof value.title === "undefined" || typeof value.title === "string") &&
+    (typeof value.detail === "undefined" || typeof value.detail === "string") &&
+    (typeof value.assigneeEmail === "undefined" || typeof value.assigneeEmail === "string") &&
+    (typeof value.dueDate === "undefined" || typeof value.dueDate === "string")
+  );
+}
+
 function isLogicConfig(value: unknown): value is LogicConfig {
   if (!isRecord(value)) return false;
   if (typeof value.fallbackBranch !== "undefined" && typeof value.fallbackBranch !== "string") return false;
@@ -295,6 +312,14 @@ export function getEmailConfig(nodeData: WorkflowNodeData): EmailConfig {
   const config = nodeData._emailConfig ?? {};
   if (!isEmailConfig(config)) {
     throw new Error("Email node config must include optional string to/from/subject/body values.");
+  }
+  return config;
+}
+
+export function getTaskConfig(nodeData: WorkflowNodeData): TaskConfig {
+  const config = nodeData._taskConfig ?? {};
+  if (!isTaskConfig(config)) {
+    throw new Error("Task node config must include optional string title/detail/assigneeEmail/dueDate values.");
   }
   return config;
 }
@@ -460,6 +485,50 @@ export function buildEmailMessage(args: {
   }
 
   return { fromAddress, toAddresses, subject, body };
+}
+
+/**
+ * What the task node will raise, with run data substituted in.
+ *
+ * The same discipline the email node uses: the author writes the words and
+ * the run fills the blanks, so a workflow can say "Chase {{customer.name}}"
+ * and get a task per customer.
+ */
+export function buildWorkflowTask(args: {
+  nodeData: WorkflowNodeData;
+  globalStatePayload: WorkflowStatePayload;
+}) {
+  const config = getTaskConfig(args.nodeData);
+  const title = resolveTemplate(config.title || "", args.globalStatePayload).trim();
+  if (!title) throw new Error("Task node config must include a title.");
+
+  const detail = resolveTemplate(config.detail || "", args.globalStatePayload).trim();
+  const assigneeEmail = resolveTemplate(config.assigneeEmail || "", args.globalStatePayload).trim();
+  const dueDate = resolveTemplate(config.dueDate || "", args.globalStatePayload).trim();
+
+  let dueAt: number | undefined;
+  if (dueDate) {
+    const parsed = Date.parse(`${dueDate}T12:00:00`);
+    // A date the author templated badly is dropped rather than stored as a
+    // deadline somebody then works to.
+    if (!Number.isNaN(parsed)) dueAt = parsed;
+  }
+
+  return {
+    title,
+    detail: detail || undefined,
+    assigneeEmail: assigneeEmail || undefined,
+    dueAt,
+  };
+}
+
+export function buildTaskNodeOutput(args: { taskId: string; title: string; assigned: boolean }) {
+  return JSON.stringify({
+    _system: { task: true },
+    taskId: args.taskId,
+    title: args.title,
+    assigned: args.assigned,
+  });
 }
 
 export function buildDatabaseNodeOutput(args: { operation: DatabaseOperation; tableName: string; result: unknown }) {

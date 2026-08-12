@@ -200,6 +200,40 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    key: "sonae-tasks",
+    name: "Tasks",
+    description: "Lets an agent leave a job for a person, instead of only writing an answer nobody returns to.",
+    category: "PROFILE",
+    authMode: "NONE",
+    tenantAvailability: "TENANT_RESTRICTED",
+    requiredScopes: ["task:write"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Raise a task",
+        description:
+          "Creates a task for someone in this workspace. Give the person's email address to assign it; leave it out and the task waits for whoever picks it up.",
+        handlerMapping: "task.create",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "WRITE",
+        confirmationRequired: true,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["title"],
+          properties: {
+            title: { type: "string", description: "What needs doing, in one line." },
+            detail: { type: "string", description: "Any context the person will need. Optional." },
+            assigneeEmail: {
+              type: "string",
+              description: "The email address of the person in this workspace it is for. Optional.",
+            },
+            dueDate: { type: "string", description: "When it is due, as YYYY-MM-DD. Optional." },
+          },
+        }),
+      },
+    ],
+  },
+  {
     key: "http-rest",
     name: "Call an API",
     description: "Lets an agent call another system over the web. You set the address and the credentials; the agent only chooses what to ask for.",

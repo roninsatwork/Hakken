@@ -102,13 +102,15 @@ users.
 **Size.** Four to five days, and worth doing just before starting the next
 client product rather than now.
 
-### 6. A task connector for workflows (`workflow.task.create`)
+### 6. A task connector for workflows — DONE 2026-08-12
 
-**What it is.** Lets a workflow create a task for a person to do. Cannot be
-built yet because Sonae has no concept of a task — that data model and an admin
-screen for it have to exist first.
-
-**Size.** Three to four days including the groundwork.
+Built under `docs/plans/active/tasks-and-notifications-plan.md`, which put the
+groundwork in first: a `tasks` table, `/app/tasks`, and an in-app notification
+so an assignee is told. A workflow raises one through the `taskNode` node
+type; an agent raises one through the `task.create` tool, which is a WRITE and
+so needs approval unless that agent has autonomy. Both name a person by email
+and resolve it against their own workspace only, so a templated value cannot
+address work into another tenant.
 
 ### 7. Restore the missing Italian page title
 

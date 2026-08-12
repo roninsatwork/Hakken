@@ -200,6 +200,24 @@ completed work.
   `convex/anthropicStreamService.ts`. Provider resolution stays with the
   OpenRouter And Model Scale Plan. Read it before touching how any assistant
   reply reaches the message row.
+- [Tasks And Notifications Plan](./active/tasks-and-notifications-plan.md) —
+  the plan for the two primitives the platform has never had: a task, meaning
+  work held for a named person, and an in-app notification, meaning the
+  platform reaching that person somewhere other than their inbox. Owns the
+  `tasks` and `notifications` tables, `/app/tasks`, the header bell, the
+  `task.create` agent tool and the `taskNode` workflow node, and it closes
+  `OUTSTANDING-TASKS.md` item 6. Read it before adding anything that assigns
+  work to a person or tells them something happened. A task is not an
+  approval — approvals stay with the Agent Autonomy And Approvals Plan.
+- [Closing The Loop Plan](./active/closing-the-loop-plan.md) — the plan for
+  four features that each turn something the platform already records into
+  something a person can use: typing the correction a thumbs-down cannot
+  carry, saving a good answer into company knowledge, showing the evidence a
+  reply already stores, and asking a question on a schedule so Sonae reports
+  when the answer moves. Owns `scheduledQuestions`, the correction field on
+  `messageFeedback.comment`, and the evidence panel. It feeds the
+  Self-Improvement Plan's candidate queue without changing its rules, and
+  raises the tasks and notifications the Tasks And Notifications Plan owns.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -240,6 +258,13 @@ If work touches how the AI learns over time — memory ranking, run reflections,
 feedback collection, memory suggestion queues, or retrieval priors — use the
 Self-Improvement Plan, which takes its eval fixtures from the AI Checks Plan
 and its approvals philosophy from the Agent Autonomy And Approvals Plan.
+If work touches what happens to a reply after it is given — correcting it,
+saving it, showing why it said what it said, or re-asking it on a schedule —
+use the Closing The Loop Plan.
+If work touches assigning work to a person, or telling someone in the app that
+something happened, use the Tasks And Notifications Plan. It takes approval
+behaviour from the Agent Autonomy And Approvals Plan and email from the Email
+Design System Plan; it owns neither.
 If work touches how an assistant reply streams into the message row — an
 adapter's `onText` behaviour, the streaming mutations, or the flush policy —
 use the Assistant Streaming All Providers Plan, which takes provider

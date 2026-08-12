@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useSyncExternalStore } from "react";
+import React, { useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
+import { LAYER } from "@/src/ui/lib/layers";
 
 interface SonaeModalProps {
   isOpen: boolean;
@@ -21,6 +22,10 @@ const sizeClasses = {
   lg: 'max-w-3xl',
   xl: 'max-w-5xl',
 };
+
+/** Everything a keyboard can land on inside the dialog. */
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function useMounted() {
   return useSyncExternalStore(
@@ -39,22 +44,89 @@ export default function SonaeModal({
   size = 'md'
 }: SonaeModalProps) {
   const mounted = useMounted();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusTo = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+
+  /**
+   * The three things a dialog owes a keyboard.
+   *
+   * This is the app's only modal, used for delete confirmations, the agent
+   * editor and everything between, and it had none of them: Escape did
+   * nothing, Tab walked out of the dialog into the page behind it, and a
+   * screen reader was never told a dialog had opened. One fix here reaches
+   * every screen that uses it.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    returnFocusTo.current = document.activeElement as HTMLElement | null;
+
+    const focusFirst = setTimeout(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+      (first ?? dialogRef.current)?.focus();
+    }, 0);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      // Wrap at both ends, so focus cannot walk out into the page behind.
+      if (event.shiftKey && (active === first || !dialogRef.current.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      clearTimeout(focusFirst);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      // Back where they were, so closing does not dump focus at the top of
+      // the page.
+      returnFocusTo.current?.focus?.();
+    };
+  }, [isOpen, onClose]);
 
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className={`fixed inset-0 ${LAYER.OVERLAY} flex items-center justify-center p-6`}>
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
+            aria-hidden="true"
             className="absolute inset-0 bg-black/60 backdrop-blur-[12px]"
           />
 
           {/* Dialog Body */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            {...(title ? { "aria-labelledby": titleId } : {})}
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.9, y: 30, filter: "blur(10px)" }}
             animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.9, y: 30, filter: "blur(10px)" }}
@@ -74,7 +146,8 @@ export default function SonaeModal({
             {/* Close Button - Floating Tactical Circle */}
             <button
               onClick={onClose}
-              className="absolute top-6 right-6 z-50 text-muted hover:text-foreground transition-all p-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:scale-110 active:scale-95"
+              aria-label="Close"
+              className="absolute top-6 right-6 text-muted hover:text-foreground transition-all p-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:scale-110 active:scale-95"
             >
               <X className="w-5 h-5" />
             </button>
@@ -82,7 +155,7 @@ export default function SonaeModal({
             {/* Header Content */}
             <div className="px-10 pt-12 pb-6 flex flex-col gap-2 relative z-10">
               {title && (
-                <h2 className="text-2xl font-light text-foreground tracking-[0.12em] uppercase opacity-90">
+                <h2 id={titleId} className="text-2xl font-light text-foreground tracking-[0.12em] uppercase opacity-90">
                   {title}
                 </h2>
               )}

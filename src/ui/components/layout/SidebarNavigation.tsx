@@ -17,6 +17,7 @@ import {
   Globe,
   // template:remove:end
   Bot,
+  ListChecks,
   ShieldCheck,
   Settings,
   Workflow,
@@ -339,6 +340,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (isSystemSettingsRoute(pathname)) return 'System Settings';
   if (pathname === '/app') return 'Dashboard';
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
+  if (pathname.startsWith('/app/tasks')) return 'Tasks';
   // template:remove:start properties
   if (pathname.startsWith('/app/properties')) return 'Properties';
   // template:remove:end
@@ -705,6 +707,14 @@ export default function SidebarNavigation() {
                       href="/app/assistant"
                       isActive={activeItem === 'Assistant' || pathname.startsWith('/app/assistant')}
                       onClick={() => setActiveItem('Assistant')}
+                    />
+
+                    <NavItem
+                      icon={ListChecks}
+                      label="Tasks"
+                      href="/app/tasks"
+                      isActive={activeItem === 'Tasks' || pathname.startsWith('/app/tasks')}
+                      onClick={() => setActiveItem('Tasks')}
                     />
 
                     {/* template:remove:start salesReports */}

@@ -7,6 +7,7 @@ import {
   Building2,
   Gamepad2,
   LayoutDashboard,
+  ListChecks,
   LineChart,
   User,
   Settings,
@@ -26,6 +27,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
+import { NotificationBell } from "./NotificationBell";
 
 interface HeaderProps {
   onOpenModal?: () => void;
@@ -72,6 +74,7 @@ export function getAssistantThreadIdFromPath(pathname: string) {
 
 function getAppHeaderSegments(pathname: string, t: HeaderTranslator, platformName: string, dashboardLabel: string) {
   if (pathname.startsWith("/app/assistant")) return [`Ask ${platformName}`];
+  if (pathname.startsWith("/app/tasks")) return ["Tasks"];
   if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
   if (pathname.startsWith("/app/properties/scraped-data")) return [t("properties"), t("propertiesScrapedData")];
   if (pathname.startsWith("/app/properties/logs")) return [t("properties"), "Logs"];
@@ -115,6 +118,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
     ? Bot
     : pathname.startsWith("/admin/companies") || pathname.startsWith("/app/properties")
       ? Building2
+      : pathname.startsWith("/app/tasks")
+      ? ListChecks
       : pathname.startsWith("/app/reports")
         ? LineChart
         : pathname.startsWith("/app/arcade") || pathname.startsWith("/demos")
@@ -210,7 +215,9 @@ export default function Header({ onOpenModal }: HeaderProps) {
       </nav>
 
       {/* Profile & Utility Actions */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3">
+        <NotificationBell />
+
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}

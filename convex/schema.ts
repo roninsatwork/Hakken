@@ -404,6 +404,63 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
 
+  /**
+   * Work the platform is holding for a named person.
+   *
+   * Deliberately not an approval. `agentRunApprovals` answers "may the agent
+   * do this, yes or no" and halts a run until someone says; a task says "here
+   * is work for you" and nothing waits on it. Conflating the two would put a
+   * to-do list in the path of a running agent.
+   *
+   * `sourceUrl` is how a task points back at the screen that produced it — an
+   * opportunity report that raises twelve tasks is useless if none of them
+   * can say where they came from.
+   */
+  tasks: defineTable({
+    companyId: v.id("companies"),
+    title: v.string(),
+    detail: v.optional(v.string()),
+    assigneeUserId: v.optional(v.id("users")),
+    dueAt: v.optional(v.number()),
+    status: v.union(v.literal("OPEN"), v.literal("DONE"), v.literal("CANCELLED")),
+    /** Absent when a machine raised it; `createdBySource` says which. */
+    createdByUserId: v.optional(v.id("users")),
+    createdBySource: v.union(v.literal("PERSON"), v.literal("AGENT"), v.literal("WORKFLOW")),
+    sourceRunId: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    completedByUserId: v.optional(v.id("users")),
+  })
+    .index("by_company_status", ["companyId", "status", "dueAt"])
+    .index("by_assignee_status", ["assigneeUserId", "status", "dueAt"]),
+
+  /**
+   * The platform telling one person that something happened.
+   *
+   * A record rather than a side channel: only `notifyUserInternal` writes
+   * these, called by the thing that actually happened, so a notification can
+   * never claim an event that did not occur. Read state belongs to the one
+   * person named in `userId` — marking read must never touch a colleague's
+   * copy, which is why there is no shared "seen" flag anywhere here.
+   *
+   * In-app only. Email already exists and has its own plan.
+   */
+  notifications: defineTable({
+    userId: v.id("users"),
+    companyId: v.optional(v.id("companies")),
+    /** e.g. "TASK_ASSIGNED", "APPROVAL_WAITING", "AGENT_RUN_FAILED". */
+    kind: v.string(),
+    title: v.string(),
+    body: v.optional(v.string()),
+    /** Where pressing it should go. */
+    href: v.optional(v.string()),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_user_created", ["userId", "createdAt"])
+    .index("by_user_unread", ["userId", "readAt"]),
+
   auditLogs: defineTable({
     /**
      * The admin who did it, when a person did.

@@ -132,6 +132,7 @@ import type * as maintenanceScriptRegistry from "../maintenanceScriptRegistry.js
 import type * as maintenanceScripts from "../maintenanceScripts.js";
 import type * as messageFeedback from "../messageFeedback.js";
 import type * as movements from "../movements.js";
+import type * as notifications from "../notifications.js";
 import type * as oneTimeCodeService from "../oneTimeCodeService.js";
 import type * as oneTimeCodes from "../oneTimeCodes.js";
 import type * as openaiAgentProvider from "../openaiAgentProvider.js";
@@ -185,6 +186,7 @@ import type * as swarmActions from "../swarmActions.js";
 import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
 import type * as systemService from "../systemService.js";
+import type * as tasks from "../tasks.js";
 import type * as tenantFunctions from "../tenantFunctions.js";
 import type * as toolConnectorDefinitions from "../toolConnectorDefinitions.js";
 import type * as userActivityService from "../userActivityService.js";
@@ -352,6 +354,7 @@ declare const fullApi: ApiFromModules<{
   maintenanceScripts: typeof maintenanceScripts;
   messageFeedback: typeof messageFeedback;
   movements: typeof movements;
+  notifications: typeof notifications;
   oneTimeCodeService: typeof oneTimeCodeService;
   oneTimeCodes: typeof oneTimeCodes;
   openaiAgentProvider: typeof openaiAgentProvider;
@@ -405,6 +408,7 @@ declare const fullApi: ApiFromModules<{
   swarmRuntime: typeof swarmRuntime;
   system: typeof system;
   systemService: typeof systemService;
+  tasks: typeof tasks;
   tenantFunctions: typeof tenantFunctions;
   toolConnectorDefinitions: typeof toolConnectorDefinitions;
   userActivityService: typeof userActivityService;

@@ -798,6 +798,48 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       idempotencyKey,
     });
   },
+  /**
+   * Raise a task for a person.
+   *
+   * The agent chooses the words; it does not choose the tenant. `companyId`
+   * comes from the run's own context, and the assignee is checked against
+   * that tenant inside the mutation — so an id a model invented, or lifted
+   * from a document it read, cannot hand work to somebody in another
+   * workspace.
+   *
+   * WRITE rather than READ, so it needs human approval unless the agent has
+   * been given autonomy deliberately.
+   */
+  "task.create": async (input) => {
+    if (!input.companyId) {
+      throw new Error("Creating a task requires a tenant context.");
+    }
+
+    const title = getStringToolArg(input.args, "title");
+    const detail = getOptionalStringToolArg(input.args, "detail");
+    const assigneeEmail = getOptionalStringToolArg(input.args, "assigneeEmail");
+    const dueDate = getOptionalStringToolArg(input.args, "dueDate");
+
+    // A date the model wrote is parsed here and dropped if it is nonsense,
+    // rather than being stored as a wrong deadline somebody then works to.
+    let dueAt: number | undefined;
+    if (dueDate) {
+      const parsed = Date.parse(`${dueDate}T12:00:00`);
+      if (Number.isNaN(parsed)) {
+        throw new Error("dueDate must be a calendar date, formatted YYYY-MM-DD.");
+      }
+      dueAt = parsed;
+    }
+
+    return await input.ctx.runMutation(internal.tasks.createTaskFromAgent, {
+      companyId: input.companyId,
+      title,
+      detail,
+      assigneeEmail,
+      dueAt,
+      runId: input.runId,
+    });
+  },
   "notification.send": async (input) => {
     if (!input.companyId) {
       throw new Error("Notifications require a tenant context.");

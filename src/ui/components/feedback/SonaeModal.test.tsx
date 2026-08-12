@@ -1,39 +1,95 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { expect, test, describe, vi } from 'vitest';
-import SonaeModal from './SonaeModal';
+import React from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import SonaeModal from "./SonaeModal";
 
-describe("UI Layer: Custom Sonae Modal Integrity", () => {
-  test("Modal remains hidden when isOpen is false", () => {
-    const handleClose = vi.fn();
+vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: new Proxy(
+    {},
+    {
+      get: (_target, tag: string) => {
+        const MotionComponent = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(
+          ({ children, ...props }, ref) => React.createElement(tag, { ...props, ref }, children),
+        );
+        MotionComponent.displayName = `MotionMock(${tag})`;
+        return MotionComponent;
+      },
+    },
+  ),
+}));
+
+/**
+ * This is the app's only modal — delete confirmations, the agent editor,
+ * everything between — and it shipped with none of what a keyboard or a
+ * screen reader needs. These tests are the reason it cannot regress: one
+ * component, every screen.
+ */
+describe("SonaeModal accessibility", () => {
+  it("announces itself as a dialog and names itself by its title", () => {
     render(
-      <SonaeModal isOpen={false} onClose={handleClose} title="Hidden Modal">
-        <p>Secret Content</p>
-      </SonaeModal>
+      <SonaeModal isOpen onClose={vi.fn()} title="Confirm deletion">
+        <button type="button">Erase</button>
+      </SonaeModal>,
     );
 
-    expect(screen.queryByText("Hidden Modal")).toBeNull();
-    expect(screen.queryByText("Secret Content")).toBeNull();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    // Named by its own heading rather than left anonymous.
+    expect(dialog).toHaveAccessibleName("Confirm deletion");
   });
 
-  test("Modal renders in the body portal when isOpen is true and tracks close events", () => {
-    const handleClose = vi.fn();
-    const { baseElement } = render(
-      <SonaeModal isOpen={true} onClose={handleClose} title="Sonae Admin Settings">
-        <div data-testid="internal-modal-content">Mission Critical Form</div>
-      </SonaeModal>
+  it("closes on Escape", () => {
+    const onClose = vi.fn();
+    render(
+      <SonaeModal isOpen onClose={onClose} title="Confirm deletion">
+        <button type="button">Erase</button>
+      </SonaeModal>,
     );
 
-    // Ensure it correctly mounted via framer-motion and react-dom portal
-    expect(screen.getByText("Sonae Admin Settings")).toBeInTheDocument();
-    expect(screen.getByTestId("internal-modal-content")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
-    // Verify close buttons function without breaking layout
-    const buttons = baseElement.querySelectorAll("button");
-    const closeBtn = Array.from(buttons).find((b) => b.innerHTML.includes('<line') || b.className.includes('absolute'));
-    
-    if (closeBtn) {
-        fireEvent.click(closeBtn);
-        expect(handleClose).toHaveBeenCalledTimes(1);
-    }
+  it("keeps Tab inside the dialog rather than letting it walk into the page behind", () => {
+    render(
+      <SonaeModal isOpen onClose={vi.fn()} title="Confirm deletion">
+        <button type="button">Cancel</button>
+        <button type="button">Erase</button>
+      </SonaeModal>,
+    );
+
+    const erase = screen.getByRole("button", { name: "Erase" });
+    const close = screen.getByRole("button", { name: "Close" });
+
+    // Forwards off the last control wraps to the first.
+    erase.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+
+    // Backwards off the first wraps to the last.
+    close.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(erase);
+  });
+
+  it("gives the close control a name instead of leaving it an unlabelled icon", () => {
+    render(
+      <SonaeModal isOpen onClose={vi.fn()} title="Confirm deletion">
+        <p>Body</p>
+      </SonaeModal>,
+    );
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+  });
+
+  it("renders nothing at all when closed", () => {
+    render(
+      <SonaeModal isOpen={false} onClose={vi.fn()} title="Confirm deletion">
+        <p>Body</p>
+      </SonaeModal>,
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
