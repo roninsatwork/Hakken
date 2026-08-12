@@ -14,8 +14,15 @@
  */
 
 import { OPENROUTER_PROVIDER_KEY } from "./aiModelService";
+import { withProviderRetry } from "./aiProviderRetryService";
+import { createOpenRouterStreamAccumulator, type OpenRouterStreamEvent } from "./openrouterMessageService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { assertTextOnlyContents, requestProviderJson, type ProviderFetch } from "./providerHttpService";
+import {
+  assertTextOnlyContents,
+  readProviderSseStream,
+  requestProviderJson,
+  type ProviderFetch,
+} from "./providerHttpService";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -191,6 +198,19 @@ export function createOpenRouterProviderAdapter(args: {
           ]
         : [{ role: "user", content: userText }];
 
+      // With an onText listener the caller wants the words as they arrive;
+      // without one the non-streaming call keeps its exact existing behaviour
+      // (structured-output callers pass schemas, not listeners).
+      if (request.onText) {
+        return await streamOpenRouterText({
+          apiKey: config.apiKey,
+          chatUrl: config.chatUrl,
+          fetchImpl,
+          request,
+          messages,
+        });
+      }
+
       const payload = await requestProviderJson({
         providerKey: OPENROUTER_PROVIDER_KEY,
         providerName: "OpenRouter",
@@ -228,6 +248,68 @@ export function createOpenRouterProviderAdapter(args: {
         outputTokens: payload.usage?.completion_tokens,
       };
     },
+  };
+}
+
+/**
+ * The streamed half of the adapter, imitating `openrouterAgentProvider`.
+ *
+ * Same wire, same accumulator, same retry rule: retry only while no fragment
+ * has been delivered, because once the reader has seen text a retry would
+ * replay the answer from the beginning.
+ */
+async function streamOpenRouterText(args: {
+  apiKey: string;
+  chatUrl: string;
+  fetchImpl: ProviderFetch;
+  request: AiGenerationRequest;
+  messages: Array<{ role: string; content: string }>;
+}): Promise<AiGenerationResponse> {
+  const { request } = args;
+
+  let delivered = false;
+  const accumulator = createOpenRouterStreamAccumulator({
+    onText: async (fragment) => {
+      delivered = true;
+      await request.onText?.(fragment);
+    },
+  });
+
+  await withProviderRetry({
+    providerKey: OPENROUTER_PROVIDER_KEY,
+    providerName: "OpenRouter",
+    operation: "generateText",
+    shouldRetry: () => !delivered,
+  }, async () => {
+    const response = await args.fetchImpl(args.chatUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.apiKey}`,
+        "Content-Type": "application/json",
+        accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        model: request.model.providerModelId,
+        stream: true,
+        // Asked for explicitly: without it the final frame carries no usage,
+        // and a reply with no token counts cannot be costed.
+        stream_options: { include_usage: true },
+        messages: args.messages,
+        temperature: request.temperature,
+        max_tokens: request.maxOutputTokens,
+      }),
+    });
+
+    await readProviderSseStream(response, "OpenRouter", (payload) =>
+      accumulator.handle(payload as OpenRouterStreamEvent));
+  });
+
+  const result = accumulator.result();
+  return {
+    // Trimmed for parity with the single-write path's extraction.
+    text: result.text.trim(),
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
   };
 }
 

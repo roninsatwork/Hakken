@@ -2515,39 +2515,38 @@
     "assistant": {
       "welcome": {
         "greetings": {
-          "morning": "Good Morning",
-          "afternoon": "Good Afternoon",
-          "evening": "Good Evening",
-          "night": "Good Evening",
+          "morning": "Good morning",
+          "afternoon": "Good afternoon",
+          "evening": "Good evening",
+          "night": "Good evening",
           "default": "Welcome"
         },
         "subtitle": "How can I assist your workflow today?",
         "recording": "Recording securely...",
         "transcribing": "Transcribing perfectly...",
-        "inputPlaceholder": "Enter a prompt for {platformName}",
-        "footer": "{platformName} Assistant is AI and can make mistakes, please check all responses."
-      },
-      "loadingStages": {
-        "stage1": {
-          "0": "Waking up assistant...",
-          "1": "Reading your prompt...",
-          "2": "Analyzing requirements..."
+        "inputPlaceholder": "Ask anything, or paste something to work on",
+        "footer": "{platformName} Assistant is AI and can make mistakes, please check all responses.",
+        "question": "What are we working on?",
+        "replyPlaceholder": "Reply to {platformName}",
+        "starters": {
+          "summarise": {
+            "title": "Summarise a document",
+            "hint": "Something you've uploaded"
+          },
+          "draft": {
+            "title": "Draft a message",
+            "hint": "An email, a note, a reply"
+          },
+          "explain": {
+            "title": "Explain something",
+            "hint": "In plain language"
+          },
+          "plan": {
+            "title": "Plan a piece of work",
+            "hint": "Break it into steps"
+          }
         },
-        "stage2": {
-          "0": "Gathering context...",
-          "1": "Consulting Sonae rules...",
-          "2": "Reviewing reference data..."
-        },
-        "stage3": {
-          "0": "Structuring response...",
-          "1": "Synthesizing knowledge...",
-          "2": "Double-checking facts..."
-        },
-        "stage4": {
-          "0": "Polishing explanation...",
-          "1": "Applying final details...",
-          "2": "Delivering response..."
-        }
+        "stamp": "Prepared"
       },
       "controls": {
         "tools": "Tools",
@@ -2557,25 +2556,27 @@
           "stop": "Stop recording"
         },
         "engine": {
-          "label": "Select Engine",
-          "title": "Verified Grid Engines",
-          "defaultDesc": "Active production capability"
+          "label": "Select model",
+          "title": "Model"
         },
         "reasoning": {
-          "title": "Agent Reasoning Effort",
+          "title": "Thinking",
           "levels": {
             "NONE": "Fast",
-            "LOW": "Low Focus",
-            "MEDIUM": "Deep Focus",
-            "HIGH": "Max Focus"
+            "LOW": "Brief thinking",
+            "MEDIUM": "Deep thinking",
+            "HIGH": "Maximum thinking"
           },
           "descriptions": {
-            "NONE": "Instant standard responses",
-            "LOW": "Quick verification thoughts",
-            "MEDIUM": "Standard problem solving",
-            "HIGH": "Complex autonomous reasoning"
+            "NONE": "Answers straight away",
+            "LOW": "Thinks for a moment first",
+            "MEDIUM": "Reasons it through before answering",
+            "HIGH": "The longest, most careful reasoning"
           }
-        }
+        },
+        "attach": "Attach",
+        "speak": "Speak",
+        "send": "Send"
       },
       "errors": {
         "mic": {
@@ -2584,7 +2585,35 @@
           "description": "Your browser has explicitly blocked {platformName} from accessing the native Web Speech API microphone proxy.",
           "instruction": "Click the microphone icon located in your browser's top URL search bar and select 'Allow'."
         }
-      }
+      },
+      "stages": {
+        "thinking": "Thinking...",
+        "checking": "Checking your request...",
+        "readingFiles": "Reading your files...",
+        "searchingKnowledge": "Searching your knowledge...",
+        "writing": "Writing..."
+      },
+      "composer": {
+        "modelMenuTitle": "Model",
+        "selectModel": "Select model",
+        "thinkingMenuTitle": "Thinking",
+        "fastName": "Fast",
+        "fastDescription": "Answers straight away",
+        "lowName": "Brief thinking",
+        "lowDescription": "Thinks for a moment first",
+        "mediumName": "Deep thinking",
+        "mediumDescription": "Reasons it through before answering",
+        "highName": "Maximum thinking",
+        "highDescription": "The longest, most careful reasoning"
+      },
+      "history": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "earlier": "Earlier",
+        "showOlder": "Show older conversations"
+      },
+      "you": "You asked",
+      "copy": "Copy"
     },
     "costs": {
       "title": "AI Running Costs",

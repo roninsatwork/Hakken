@@ -98,6 +98,21 @@ values, only whether they are present. Both report `e2eBackdoorExposed`, which
 is `true` only if the e2e auth backdoor is somehow enabled in production — treat
 that as an incident.
 
+## Error Monitoring
+
+The Next.js application has optional Sentry monitoring through `src/instrumentation.ts`, `src/instrumentation-client.ts`, `src/lib/errorMonitoring.ts`, and `src/lib/initErrorMonitoring.ts`. It is off by default: without `NEXT_PUBLIC_SENTRY_DSN`, initialization is a no-op and errors remain in application logs. When enabled, browser, server, edge/request, and existing `reportError` funnel events are captured. Default PII collection stays disabled; `reportError` context must still never contain customer data, request bodies, credentials, or secrets.
+
+Runtime variables are:
+
+- `NEXT_PUBLIC_SENTRY_DSN` to enable monitoring
+- `NEXT_PUBLIC_SENTRY_ENVIRONMENT`, where only `production` selects production and other values resolve to development
+- `NEXT_PUBLIC_SENTRY_RELEASE` for commit or image correlation
+- `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE`, a fraction from 0 to 1; invalid values resolve to 0 and tracing defaults off
+
+Readable production stack traces additionally need the build-time `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN`. `next.config.ts` uploads source maps only when all three are present. Their absence must not fail local or CI builds; error events can still arrive with minified stacks.
+
+These public runtime variables must be available while building the browser bundle, not added only after the image is built. The current deploy workflow does not pass Sentry variables into the Docker build or Cloud Run service, so a production operator must extend the deployment environment deliberately before treating monitoring as active. Verify one controlled non-sensitive error in the Sentry project after rollout and confirm its environment and release tags.
+
 ## Rolling Back
 
 Find the SHA you want (the deploy job's summary prints the deployed SHA, and

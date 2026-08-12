@@ -2,23 +2,36 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, Plus, Loader2, Search, PencilLine, Check, Trash2 } from "lucide-react";
+import { Plus, Loader2, Search, PencilLine, Check, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Id } from "@/convex/_generated/dataModel";
+import { formatThreadStamp, groupThreadsByDay } from "@/src/lib/threadGrouping";
+
+/** One sidebar page. Small enough to load instantly, big enough to scroll. */
+export const THREAD_PAGE_SIZE = 25;
 
 export default function ChatHistoryList() {
-  const threads = useQuery(api.chat.getThreads);
+  const t = useTranslations("ai.assistant.history");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Pages from the database, and the search asks the database too — the
+  // previous version loaded the newest 100 and filtered those in the
+  // browser, so older conversations were unfindable by scroll or search.
+  const { results: threads, status: threadsStatus, loadMore } = usePaginatedQuery(
+    api.chat.getThreads,
+    { searchTerm: searchQuery.trim() || undefined },
+    { initialNumItems: THREAD_PAGE_SIZE },
+  );
+
   const renameThread = useMutation(api.chat.renameThread);
   const deleteThread = useMutation(api.chat.deleteThread);
   const pathname = usePathname();
   const router = useRouter();
-
-  // Local UI State
-  const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<Id<"threads"> | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
@@ -30,11 +43,16 @@ export default function ChatHistoryList() {
     setMounted(true);
   }, []);
 
-  // Derive filtered threads dynamically based on user search
-  const filteredThreads = threads?.filter(thread => {
-    const title = thread.title || "New Conversation";
-    return title.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Read once per render pass rather than per row, and only after mount, so
+  // the server and the first client render agree on the grouping.
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    setNow(Date.now());
+    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const grouped = groupThreadsByDay(threads, now || Date.now());
 
   const handleRenameSubmit = async (threadId: Id<"threads">) => {
     if (!editTitle.trim() || isRenaming) return;
@@ -71,16 +89,19 @@ export default function ChatHistoryList() {
           </Link>
         </div>
         
-        {/* Universal Search Filter Constraint */}
-        {threads && threads.length > 0 && (
+        {/* Search asks the database over the whole history. Kept visible
+            while a term is typed, or a no-match search would hide its own
+            input. Underlined rather than boxed: one less rectangle in a rail
+            that is already a plane. */}
+        {(threads.length > 0 || searchQuery.trim().length > 0) && (
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted transition-colors group-focus-within:text-brand" />
-            <input 
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted transition-colors group-focus-within:text-brand" />
+            <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full bg-background/50 border border-border-dim rounded-[14px] pl-9 pr-4 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand/40 focus:ring-0 transition-all placeholder:text-muted/60"
+              className="w-full bg-transparent border-0 border-b border-border-dim rounded-none pl-6 pr-1 pb-2 text-[13px] text-foreground focus:outline-none focus:border-brand/50 focus:ring-0 transition-colors placeholder:text-muted/60"
             />
           </div>
         )}
@@ -88,24 +109,38 @@ export default function ChatHistoryList() {
 
       {/* Intelligence Pipeline Loop */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide flex flex-col gap-1.5 relative px-1 pb-4">
-        {threads === undefined ? (
+        {threadsStatus === "LoadingFirstPage" ? (
           <div className="flex items-center justify-center h-20 opacity-50">
             <Loader2 className="w-4 h-4 animate-spin text-secondary" />
           </div>
+        ) : threads.length === 0 && searchQuery.trim() ? (
+          <span className="text-[13px] text-muted font-light mt-4 block text-center leading-relaxed">
+            No chats matched &quot;{searchQuery}&quot;
+          </span>
         ) : threads.length === 0 ? (
           <span className="text-[13px] text-muted font-light mt-4 block text-center leading-relaxed px-4">
             No previous conversations. Start exploring Sonae.
           </span>
-        ) : filteredThreads?.length === 0 ? (
-          <span className="text-[13px] text-muted font-light mt-4 block text-center leading-relaxed">
-            No chats matched &quot;{searchQuery}&quot;
-          </span>
         ) : (
           <AnimatePresence>
-            {filteredThreads?.map((thread, i) => {
+            {grouped.flatMap((group) => [
+              <div
+                key={`group-${group.bucket}`}
+                className="flex items-center gap-2.5 pt-4 pb-1 first:pt-0"
+              >
+                <span className="text-[9px] font-medium tracking-[0.16em] uppercase text-muted">
+                  {t(group.bucket)}
+                </span>
+                <span aria-hidden="true" className="flex-1 h-px bg-border-dim" />
+              </div>,
+              ...group.threads.map((thread, i) => {
               const isActive = pathname.includes(thread._id);
               const isEditingThisContext = editingId === thread._id;
               const displayTitle = thread.title || "New Conversation";
+              const stamp = formatThreadStamp({
+                updatedAt: thread.updatedAt ?? thread._creationTime,
+                bucket: group.bucket,
+              });
 
               return (
                 <motion.div
@@ -117,9 +152,8 @@ export default function ChatHistoryList() {
                 >
                   {isEditingThisContext ? (
                     // Editing Mutator Mode
-                    <div className="flex items-center gap-2 p-2 px-3 rounded-[12px] bg-foreground/5 border border-brand/30 shadow-sm shadow-brand/10">
-                      <MessageSquare className="w-4 h-4 text-brand/80 flex-shrink-0" />
-                      <input 
+                    <div className="flex items-center gap-2 py-1.5 pl-3 pr-1 border-l-2 border-brand bg-foreground/[0.03]">
+                      <input
                         autoFocus
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
@@ -140,17 +174,22 @@ export default function ChatHistoryList() {
                   ) : (
                     // Standard Viewing Mode
                     <>
+                      {/* A thin accent bar marks the live conversation
+                          instead of a filled block — quieter, and it reads
+                          at a glance down a column of similar titles. */}
                       <Link
                         href={`/app/assistant/${thread._id}`}
-                        className={`flex items-center gap-3 w-full p-3 pr-10 rounded-[12px] border transition-all text-left ${
-                          isActive 
-                            ? "bg-foreground/5 border-border-dim shadow-sm" 
-                            : "bg-transparent border-transparent hover:bg-foreground/[0.03]"
+                        className={`flex items-baseline gap-3 w-full py-2 pl-3 pr-9 border-l-2 transition-colors text-left ${
+                          isActive
+                            ? "border-brand text-foreground"
+                            : "border-transparent hover:border-border-dim"
                         }`}
                       >
-                        <MessageSquare className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? "text-foreground" : "text-muted group-hover:text-secondary"}`} />
-                        <span className={`text-[13px] truncate ${isActive ? "text-foreground font-medium" : "text-secondary font-light group-hover:text-foreground/80"}`}>
+                        <span className={`flex-1 min-w-0 truncate text-[13px] ${isActive ? "text-foreground font-medium" : "text-secondary font-light group-hover:text-foreground/80"}`}>
                           {displayTitle}
+                        </span>
+                        <span className="text-[10px] tabular-nums text-muted flex-shrink-0 group-hover:opacity-0 transition-opacity">
+                          {stamp}
                         </span>
                       </Link>
 
@@ -184,8 +223,25 @@ export default function ChatHistoryList() {
                   )}
                 </motion.div>
               );
-            })}
+              }),
+            ])}
           </AnimatePresence>
+        )}
+
+        {/* Older conversations, a page at a time */}
+        {threadsStatus === "CanLoadMore" && (
+          <button
+            type="button"
+            onClick={() => loadMore(THREAD_PAGE_SIZE)}
+            className="mt-3 w-full py-2 text-[12px] text-muted hover:text-foreground transition-colors text-left pl-3"
+          >
+            {t("showOlder")}
+          </button>
+        )}
+        {threadsStatus === "LoadingMore" && (
+          <div className="flex items-center justify-center py-3 opacity-50">
+            <Loader2 className="w-4 h-4 animate-spin text-secondary" />
+          </div>
         )}
       </div>
 

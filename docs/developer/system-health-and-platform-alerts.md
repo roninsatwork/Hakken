@@ -1,6 +1,6 @@
 # System Health And Platform Alerts Developer Guide
 
-System health is Sonae's operational risk report for analytics drift, agent failures, schedules, approvals, tool failures, provider failures, and cost pressure. Platform alerts are the daily email path built from the same health report.
+System health is Sonae's in-product operational risk report for analytics drift, agent failures, schedules, approvals, tool failures, provider failures, and cost pressure. Platform alerts are the daily email path built from the same health report. Optional Sentry monitoring covers unexpected Next.js browser/server errors separately; see [Infrastructure And Deployment](./deployment.md#error-monitoring).
 
 Read this before changing `analyticsCron.getSystemHealthForAdmin`, health signal thresholds, platform alert emails, analytics health checks, or the System Health settings page. For the broader operations surface, see [Platform Operations Settings](./platform-operations-settings.md).
 

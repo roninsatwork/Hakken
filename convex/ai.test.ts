@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, describe, vi } from "vitest";
 import { convexTest } from "convex-test";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import {
@@ -14,11 +14,13 @@ const {
     createVertexGenAIClientMock,
     createVertexEmbeddingClientMock,
     embedVertexContentWithRetryMock,
+    generateVertexContentWithRetryMock,
     generateTextWithResolvedModelMock,
 } = vi.hoisted(() => ({
     createVertexGenAIClientMock: vi.fn(() => ({})),
     createVertexEmbeddingClientMock: vi.fn(() => ({})),
     embedVertexContentWithRetryMock: vi.fn(),
+    generateVertexContentWithRetryMock: vi.fn(),
     generateTextWithResolvedModelMock: vi.fn(),
 }));
 
@@ -29,6 +31,7 @@ vi.mock("./vertexProviderService", async (importOriginal) => {
         createVertexGenAIClient: createVertexGenAIClientMock,
         createVertexEmbeddingClient: createVertexEmbeddingClientMock,
         embedVertexContentWithRetry: embedVertexContentWithRetryMock,
+        generateVertexContentWithRetry: generateVertexContentWithRetryMock,
     };
 });
 
@@ -44,6 +47,7 @@ beforeEach(() => {
     createVertexGenAIClientMock.mockClear();
     createVertexEmbeddingClientMock.mockClear();
     embedVertexContentWithRetryMock.mockReset();
+    generateVertexContentWithRetryMock.mockReset();
     generateTextWithResolvedModelMock.mockReset();
 });
 
@@ -538,5 +542,105 @@ describe("assistant reply streaming", () => {
         // The reader keeps what they already saw, told why it stopped.
         expect(messages[0].content).toContain(partial.trim());
         expect(messages[0].content).toContain("Sonae Core Offline");
+    });
+});
+
+/**
+ * The pre-reply stage pill says only what the run is doing. The run writes a
+ * stage as it enters each phase and must clear it however it exits, or the
+ * pill would keep claiming work after the reply landed.
+ */
+describe("assistant stage notes", () => {
+    async function seedStageThread(t: ReturnType<typeof convexTest>) {
+        return await t.run(async (ctx) => {
+            const userId = await ctx.db.insert("users", {
+                email: "stages@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            });
+            return await ctx.db.insert("threads", {
+                userId,
+                title: "Stage Test",
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
+        });
+    }
+
+    test("a stage can be written and cleared", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await seedStageThread(t);
+
+        await t.mutation(internal.chat.setAssistantStage, { threadId, stage: "WRITING" });
+        let thread = await t.run(async (ctx) => ctx.db.get(threadId));
+        expect(thread?.assistantStage).toBe("WRITING");
+        expect(thread?.assistantStageAt).toEqual(expect.any(Number));
+
+        await t.mutation(internal.chat.setAssistantStage, { threadId });
+        thread = await t.run(async (ctx) => ctx.db.get(threadId));
+        expect(thread?.assistantStage).toBeUndefined();
+        expect(thread?.assistantStageAt).toBeUndefined();
+    });
+
+    test("a successful reply leaves no stage behind", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await seedStageThread(t);
+
+        generateTextWithResolvedModelMock.mockResolvedValue({
+            text: "All done.",
+            inputTokens: 3,
+            outputTokens: 2,
+        });
+
+        await t.action(internal.ai.generateSonaeResponse, { threadId, content: "Quick one." });
+
+        const thread = await t.run(async (ctx) => ctx.db.get(threadId));
+        expect(thread?.assistantStage).toBeUndefined();
+    });
+
+    test("a provider failure leaves no stage behind either", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await seedStageThread(t);
+
+        generateTextWithResolvedModelMock.mockRejectedValue(new Error("503 Service Unavailable"));
+
+        await t.action(internal.ai.generateSonaeResponse, { threadId, content: "Doomed question." });
+
+        const thread = await t.run(async (ctx) => ctx.db.get(threadId));
+        expect(thread?.assistantStage).toBeUndefined();
+    });
+});
+
+/**
+ * Every dictation failed with a 404 while ordinary chat on the same
+ * provider worked, because this one call pinned its own region and the
+ * project did not serve the transcription model there. The regression to
+ * prevent is the pin itself: transcription must ask the same configured
+ * region as every other generation call.
+ */
+describe("voice transcription", () => {
+    test("asks the platform's configured region, not a hardcoded one", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const userId = await t.run(async (ctx) =>
+            ctx.db.insert("users", {
+                email: "dictation@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            })
+        );
+
+        generateVertexContentWithRetryMock.mockResolvedValue({ text: "hello there" });
+
+        const asUser = t.withIdentity({ subject: userId });
+        const text = await asUser.action(api.ai.transcribeAudio, {
+            audioBase64: Buffer.from("tiny audio").toString("base64"),
+            mimeType: "audio/webm;codecs=opus",
+        });
+
+        expect(text).toBe("hello there");
+        expect(createVertexGenAIClientMock).toHaveBeenCalledTimes(1);
+        // No location override: the factory's own default (env-configured
+        // region) must decide, exactly as it does for chat.
+        expect(createVertexGenAIClientMock).toHaveBeenCalledWith();
     });
 });

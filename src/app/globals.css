@@ -161,3 +161,19 @@ button * {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-brand);
 }
+
+/**
+ * Hide a scrollbar while keeping the scrolling.
+ *
+ * `scrollbar-hide` was used in nine places — the transcript, the history
+ * rail, the composer — but was never defined, so it silently did nothing and
+ * every one of those surfaces showed a scroll thumb the design never
+ * intended. Defining it once makes the existing markup mean what it says.
+ */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

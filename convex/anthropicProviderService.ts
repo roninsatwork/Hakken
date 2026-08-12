@@ -1,8 +1,15 @@
 "use node";
 
 import { ANTHROPIC_PROVIDER_KEY } from "./aiModelService";
+import { withProviderRetry } from "./aiProviderRetryService";
+import { createAnthropicStreamAccumulator, type AnthropicStreamEvent } from "./anthropicStreamService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { assertTextOnlyContents, requestProviderJson, type ProviderFetch } from "./providerHttpService";
+import {
+  assertTextOnlyContents,
+  readProviderSseStream,
+  requestProviderJson,
+  type ProviderFetch,
+} from "./providerHttpService";
 
 const ANTHROPIC_API_VERSION = "2023-06-01";
 const DEFAULT_MAX_TOKENS = 1024;
@@ -88,6 +95,13 @@ export function createAnthropicProviderAdapter(args: {
         .map((part) => part.text)
         .join("\n\n");
 
+      // With an onText listener the caller wants the words as they arrive;
+      // without one the non-streaming call keeps its exact existing behaviour
+      // (structured-output callers pass schemas, not listeners).
+      if (request.onText) {
+        return await streamAnthropicText({ config, fetchImpl, request, input });
+      }
+
       const payload = await requestProviderJson({
         providerKey: ANTHROPIC_PROVIDER_KEY,
         providerName: "Anthropic",
@@ -128,6 +142,68 @@ export function createAnthropicProviderAdapter(args: {
         outputTokens: payload.usage?.output_tokens,
       };
     },
+  };
+}
+
+/**
+ * The streamed half of the adapter, imitating `anthropicAgentProvider`.
+ *
+ * Same wire, same accumulator, same retry rule: retry only while no fragment
+ * has been delivered, because once the reader has seen text a retry would
+ * replay the answer from the beginning.
+ */
+async function streamAnthropicText(args: {
+  config: ReturnType<typeof buildAnthropicProviderConfig>;
+  fetchImpl: ProviderFetch;
+  request: AiGenerationRequest;
+  input: string;
+}): Promise<AiGenerationResponse> {
+  const { request } = args;
+
+  let delivered = false;
+  const accumulator = createAnthropicStreamAccumulator({
+    onText: async (fragment) => {
+      delivered = true;
+      await request.onText?.(fragment);
+    },
+  });
+
+  await withProviderRetry({
+    providerKey: ANTHROPIC_PROVIDER_KEY,
+    providerName: "Anthropic",
+    operation: "generateText",
+    shouldRetry: () => !delivered,
+  }, async () => {
+    const response = await args.fetchImpl(args.config.baseUrl, {
+      method: "POST",
+      headers: {
+        "x-api-key": args.config.apiKey,
+        "anthropic-version": args.config.apiVersion,
+        "Content-Type": "application/json",
+        accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        model: request.model.providerModelId,
+        stream: true,
+        // Anthropic requires max_tokens; the same default the single-write
+        // path uses.
+        max_tokens: request.maxOutputTokens ?? DEFAULT_MAX_TOKENS,
+        system: request.systemInstruction,
+        temperature: request.temperature,
+        messages: [{ role: "user", content: args.input }],
+      }),
+    });
+
+    await readProviderSseStream(response, "Anthropic", (payload) =>
+      accumulator.handle(payload as AnthropicStreamEvent));
+  });
+
+  const result = accumulator.result();
+  return {
+    // Trimmed for parity with the single-write path's extraction.
+    text: result.text.trim(),
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
   };
 }
 

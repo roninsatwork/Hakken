@@ -8,6 +8,7 @@ import { Bot, Send, Loader2, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
+import { useSmoothStreamText } from "@/src/hooks/useSmoothStreamText";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { widgetMessageDisplayText } from "@/src/lib/widgetSystemMessages";
 import { useParams } from "next/navigation";
@@ -31,10 +32,17 @@ function WidgetAssistantContent({
 }) {
     const presentation = useStreamPresentation(message);
 
+    // Types out the throttled database lumps at a readable pace; the caret
+    // follows the reveal so a reply still being typed still reads as live.
+    const reveal = useSmoothStreamText({
+        content,
+        isStreaming: presentation === "streaming",
+    });
+
     return (
         <>
-            <SonaeMarkdown content={content} />
-            {presentation === "streaming" && (
+            <SonaeMarkdown content={reveal.text} />
+            {(presentation === "streaming" || reveal.isRevealing) && (
                 <span
                     role="status"
                     aria-label="Still writing"

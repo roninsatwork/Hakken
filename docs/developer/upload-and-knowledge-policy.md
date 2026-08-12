@@ -7,7 +7,7 @@ This document records the shared upload and ingestion policy used by Sonae.
 - Chat document uploads: `src/ui/components/chat/ChatInput.tsx` and `src/app/(dashboard)/app/assistant/page.tsx`, with upload URL generation in `convex/chat.ts` and backend attachment validation in `convex/chatService.ts`.
 - Agent chat attachments: `convex/agentRuntime.runAgentObjective` receives validated chat `fileIds`, parses supported documents with `convex/utils/fileParser.ts`, and appends extracted text as untrusted prompt context for that agent turn.
 - Thread knowledge ingestion: `convex/knowledge.saveChatDocument`, which verifies thread ownership before saving thread-scoped knowledge.
-- Admin knowledge uploads: agent, company, and global knowledge pages, enforced again by `convex/knowledge.saveDocument`.
+- Admin knowledge uploads: agent, company, and global knowledge pages, including Markdown and bounded multi-file/folder upload, enforced again by `convex/knowledge.saveDocument`.
 - Manual text knowledge: `convex/knowledge.saveManualText`.
 - Website knowledge ingestion: `convex/knowledge.queueWebsiteUrls` and `convex/knowledgeActions.mapWebsite`, guarded by SSRF checks.
 - Admin images: user profile photos, agent avatars, system logos, company widget logos, and global widget logos.
@@ -35,11 +35,13 @@ Current document types:
 - Excel
 - Word `.docx`
 
-The frontend document preflight accepts the configured MIME types and also falls back to common file extensions for documents: `.csv`, `.txt`, `.docx`, `.pdf`, `.xls`, and `.xlsx`. The backend validation uses stored metadata content type and remains the final gate after upload.
+The frontend document preflight accepts the configured MIME types and also falls back to common file extensions for documents: `.csv`, `.txt`, `.docx`, `.pdf`, `.xls`, and `.xlsx`. Knowledge upload has a deliberate wider policy that also accepts `.md` and `.markdown`; assistant chat does not accept Markdown as a separate file type. The backend validation uses stored metadata content type and remains the final gate after upload.
 
 Agent runtime document parsing uses the stored blob MIME type after the chat attachment has passed backend validation. PDF, Excel, Word, CSV, and text files are parsed through `convex/utils/fileParser.ts`. Each parsed document is capped to 50,000 characters before joining, and `runAgentObjective` caps the final user prompt plus attached document context to 10,000 characters before provider execution. The attached text is wrapped as untrusted context, not as system instructions.
 
-Persisted admin and thread knowledge ingestion uses a narrower extraction path in `convex/knowledgeActions.ts`: PDF and Word `.docx` files have dedicated parsers, while CSV, plain text, and other accepted document MIME types fall back to UTF-8 decoding. Excel uploads pass the shared validation policy today, but spreadsheet-specific extraction is not implemented for persisted knowledge. Either add an Excel parser to knowledge ingestion or narrow the accepted knowledge upload policy before documenting spreadsheets as reliable knowledge sources.
+Persisted admin and thread knowledge ingestion uses a narrower extraction path in `convex/knowledgeActions.ts`: PDF and Word `.docx` files have dedicated parsers, while CSV, Markdown, plain text, and other accepted document MIME types fall back to UTF-8 decoding. Markdown then has YAML frontmatter removed and can use its frontmatter title. Excel uploads pass the shared validation policy today, but spreadsheet-specific extraction is not implemented for persisted knowledge. Either add an Excel parser to knowledge ingestion or narrow the accepted knowledge upload policy before documenting spreadsheets as reliable knowledge sources.
+
+The admin knowledge UI accepts up to 500 files per batch and uploads at concurrency four. Folder uploads retain relative paths after the common root and omit reserved OKF `index.md` and `log.md` files; direct uploads of those filenames remain allowed. Backend ingestion drains pending file records through a transactionally claimed queue so one failed document does not stop the rest of the batch.
 
 ## Storage Metadata Validation
 

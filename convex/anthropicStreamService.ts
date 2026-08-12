@@ -7,12 +7,12 @@
  * hands back whole chunks with accumulated text, Anthropic emits a sequence of
  * typed events that only make sense in aggregate.
  *
- * Two things make that worth separating into pure functions. Framing is easy to
- * get subtly wrong — an SSE payload can be split mid-line across network chunks,
- * and a parser that assumes chunk boundaries are line boundaries loses text
- * intermittently under load and never in a test. And a tool call arrives as a
- * name in one event and its arguments as a series of JSON *fragments* in later
- * ones, so nothing is usable until the block closes.
+ * What makes this worth a pure function: a tool call arrives as a name in one
+ * event and its arguments as a series of JSON *fragments* in later ones, so
+ * nothing is usable until the block closes. SSE framing itself is the shared
+ * `parseProviderSseChunk` in `providerHttpService` — this file predated it
+ * with a private copy, retired when the assistant streaming work touched
+ * this path.
  */
 
 export type AnthropicStreamEvent = {
@@ -31,45 +31,6 @@ export type AnthropicStreamEvent = {
   };
   usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number };
 };
-
-/**
- * Split a stream chunk into complete SSE payloads, keeping any partial tail.
- *
- * The caller feeds the returned `remainder` back in with the next chunk. This is
- * the whole reason framing lives here: a network chunk boundary has nothing to
- * do with a line boundary, so `data: {"text":"hel` and `lo"}` can arrive
- * separately. Parsing each chunk independently drops that event, and it happens
- * only under load — never in a test that feeds whole messages.
- */
-export function parseSseChunk(chunk: string, buffer: string) {
-  const combined = buffer + chunk;
-  const lines = combined.split("\n");
-  // The last element is whatever followed the final newline — possibly a
-  // half-received line, so it is held back rather than parsed.
-  const remainder = lines.pop() ?? "";
-
-  const events: AnthropicStreamEvent[] = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // `event:` lines duplicate the `type` inside the payload, and blank lines
-    // separate events; neither carries data.
-    if (!trimmed.startsWith("data:")) continue;
-
-    const payload = trimmed.slice("data:".length).trim();
-    if (payload.length === 0 || payload === "[DONE]") continue;
-
-    try {
-      events.push(JSON.parse(payload) as AnthropicStreamEvent);
-    } catch {
-      // A payload that will not parse is skipped rather than failing the run.
-      // The alternative is aborting a half-delivered answer over one malformed
-      // frame, which is worse for the reader than a missing fragment.
-      continue;
-    }
-  }
-
-  return { events, remainder };
-}
 
 export type AccumulatedToolCall = { id: string; name: string; args: Record<string, unknown> };
 

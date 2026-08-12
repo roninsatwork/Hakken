@@ -79,7 +79,7 @@ Feedback, reflections, memory candidates, and improvement suggestions are intent
 - `convex/agentMemories.ts` stores active memories and memory quality/usage signals.
 - `convex/agentImprovementSuggestions.ts` proposes reviewed improvements.
 
-Generated artifacts should stay reviewable. Do not silently apply prompt, rule, memory, tool-schema, routing, approval-policy, or skill changes from generated suggestions.
+Generated prompt, rule, tool-schema, routing, approval-policy, skill, and eval changes must stay reviewable. Memory candidates follow `SELF_IMPROVEMENT_CONFIG.autonomousMemory`: when enabled they can become active memories immediately after the existing safety, duplicate, and rejection-fingerprint checks. Auto-applied memory is labelled, audited, and removable. When disabled, the existing candidate approval/rejection queue remains in force.
 
 The memory review inbox combines memory candidates, improvement suggestions, and reflections. It supports open, reviewed, high-risk, and all modes, plus reviewer filtering. Keep review decisions company-scoped.
 
@@ -92,6 +92,22 @@ Fixtures can be created from runs or manually. Implemented fixture types include
 Run-derived fixtures collect run status, error, final output, tool plan, blocked actions, approval evidence, memory usage, feedback, reflection, and version snapshot context. This makes production failures reusable as regression tests.
 
 Smoke evals can be contract-based or model-graded. Model grading is queued through `convex/agentEvalGradingActions.ts` when required. Suite presets group fixtures by release gate, skill coverage, or other operational tags.
+
+Rehearsal evals run a fixture through the real agent loop with `isRehearsal` set on the run. Read-only tools execute normally. Write, external, and destructive tool calls are recorded with `REHEARSED` status rather than dispatched, so the run exercises model choice and tool planning without changing customer or external state. `convex/rehearsalEvalService.ts` grades the resulting tool-call handlers against `expectedToolPlanJson`: the run must end `SUCCESS` and every expected handler must have `SUCCESS` or `REHEARSED` evidence. Extra calls do not fail the fixture. The eval detail page starts rehearsals and the run list/detail label rehearsal traffic and linked drill results.
+
+Rehearsal is not a connector acceptance test. It proves the agent chose the expected side-effecting handler, not that the external destination would accept the call.
+
+## Self-Improvement Configuration
+
+`convex/selfImprovementConfig.ts` stores one audited `SELF_IMPROVEMENT_CONFIG` object. Missing, malformed, or partially old configuration falls back field-by-field to defaults; all five switches currently default on:
+
+- `autoReflection` schedules deterministic reflection for failed and cancelled runs
+- `outcomeWeightedRanking` blends memory usage outcomes into relevant-memory ordering
+- `endUserFeedback` exposes Helpful and Not right controls on assistant messages
+- `retrievalPriors` applies bounded, decaying chunk evidence to hybrid retrieval
+- `autonomousMemory` immediately applies safe memory candidates instead of waiting for review
+
+The super-admin settings route `/admin/settings/options/self-improvement` updates the complete object and writes an `UPDATE_SYSTEM_PREFERENCES` audit row containing previous and next values. Keep each runtime call site behind its own switch and do not infer one behavior from another.
 
 ## Version Snapshots
 
@@ -125,6 +141,8 @@ Focused tests include:
 - `convex/agentMemories.test.ts`
 - `convex/agentImprovementSuggestions.test.ts`
 - `convex/agentEvalFixtures.test.ts`
+- `convex/rehearsalEvalService.test.ts`
+- `convex/selfImprovementConfig.test.ts`
 - `convex/agentVersions.test.ts`
 - release tests where release behavior is changed
 - UI tests under `src/app/(dashboard)/admin/agents/[id]/runs`, `evals`, `memory`, and `settings`

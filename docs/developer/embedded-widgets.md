@@ -71,6 +71,10 @@ The security boundary is `createWidgetThread`:
 
 Widget threads inherit the widget company id and linked agent id. The chat message send path receives `dynamicAgentId` from the iframe when the widget has an agent, but anonymous widget conversations cannot switch to a different agent after the thread is created. If the supplied dynamic agent would change the thread's agent id, `api.chat.sendMessage` rejects the request instead of patching the thread.
 
+Company message allocation still applies to anonymous widget threads, but `quotaRefusalMessage` must not expose tenant billing state to a public visitor. It returns the generic temporary-unavailability copy for an anonymous widget and the explicit allocation/admin guidance only for signed-in app threads. PII redaction runs before the quota gate so even a refused user message is stored in masked form when the firewall is enabled.
+
+Quota notices carry `systemKey: "quotaRefusal"`. `src/lib/widgetSystemMessages.ts` translates that platform-authored message from `navigator.language` because anonymous visitors do not have the app's locale cookie. Italian is implemented; unknown keys and languages fall back to stored English. Keep this dictionary limited to platform messages and never run model output through it.
+
 `createWidgetThread` generates a high-entropy access token, stores only its SHA-256 hash on the thread, and returns the raw token to the iframe session. The iframe stores the thread id and raw token in widget-specific localStorage keys, `sonae_widget_{widgetId}_thread` and `sonae_widget_{widgetId}_token`. If only one value is present on load, the iframe clears the partial session and creates a fresh thread/token pair before sending messages.
 
 Anonymous widget calls into chat access helpers must pass the raw token as `widgetAccessToken`; otherwise `canAccessThread` returns false and `assertCanAccessThread` throws `Unauthorized: Invalid widget session`. This prevents a visitor who learns a thread id from reading or writing that widget thread without the browser-held session credential.

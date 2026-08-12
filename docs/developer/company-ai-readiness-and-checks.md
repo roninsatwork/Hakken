@@ -174,6 +174,8 @@ The company memory page uses admin pagination, search, modal editing, archive
 and restore flows, candidate approval, and candidate rejection. It resolves
 older memories without `applyMode` by falling back from the legacy category.
 
+`convex/companyMemorySuggestions.ts` runs the company-message evidence sweep. Its record mutation reuses the normal memory safety checks, duplicate normalization, and rejected-fingerprint suppression. When `SELF_IMPROVEMENT_CONFIG.autonomousMemory` is true, an accepted-safe suggestion is inserted directly into `companyMemories` with auto-applied evidence and an audit row; otherwise it remains in `companyMemoryCandidates` for approval or rejection. Keep the UI able to distinguish and remove auto-applied memory.
+
 Always-applied memories are capped by `MAX_ALWAYS_MEMORIES`. Preserve that cap
 when changing memory UI or runtime application.
 

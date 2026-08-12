@@ -14,6 +14,15 @@ completed work.
   runtime, and reusability work. Its current handover states that all planned
   days are complete, but the document remains in `active/` as the detailed
   write-up until it is deliberately archived.
+- [Platform Improvement Plan](./active/platform-improvement-plan.md) — the
+  delivered follow-up covering shared hybrid retrieval, workflow retry safety,
+  assistant streaming, rehearsal evals, and Sentry-backed error monitoring.
+  Read it for the cross-feature acceptance record and use the more specific
+  active plans where ownership has since split out.
+- [Widget Messages Spend From The Company's Plan](./active/widget-plan-quota-plan.md) —
+  the implemented decision that anonymous widget messages share the company's
+  plan allocation, while quota refusals hide billing state, preserve PII
+  redaction, and localize the platform-authored notice from browser language.
 - [Admin UI/UX Plan](./active/admin-ux-plan.md) — the current admin usability
   plan for model catalogue, Skill Center, skill detail, model defaults, system
   options, API keys, and related admin surfaces.
@@ -181,6 +190,16 @@ completed work.
   `useSystemSettingsForm`. Scope is the dashboard app only — the public
   site, login, and emails keep their own fixed designs by owner decision.
   Read it before adding a colour, a status pill, or a settings row anywhere.
+- [Assistant Streaming All Providers Plan](./active/assistant-streaming-all-providers-plan.md) —
+  the plan to make plain assistant replies stream word by word on OpenRouter,
+  OpenAI, and Anthropic, matching what Google Vertex and the agent loop already
+  do. Owns the `onText` behaviour of the three assistant-path provider
+  adapters (`convex/openaiProviderService.ts`,
+  `convex/anthropicProviderService.ts`, `convex/openrouterProviderService.ts`)
+  and the retirement of the private SSE parser in
+  `convex/anthropicStreamService.ts`. Provider resolution stays with the
+  OpenRouter And Model Scale Plan. Read it before touching how any assistant
+  reply reaches the message row.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -221,6 +240,10 @@ If work touches how the AI learns over time — memory ranking, run reflections,
 feedback collection, memory suggestion queues, or retrieval priors — use the
 Self-Improvement Plan, which takes its eval fixtures from the AI Checks Plan
 and its approvals philosophy from the Agent Autonomy And Approvals Plan.
+If work touches how an assistant reply streams into the message row — an
+adapter's `onText` behaviour, the streaming mutations, or the flush policy —
+use the Assistant Streaming All Providers Plan, which takes provider
+resolution from the OpenRouter And Model Scale Plan.
 If work touches theme tokens, the Aesthetics screen, status colours, or adds
 any hardcoded colour to the dashboard app, use the Theme Compliance Plan.
 If work touches the public pre-login site, use the Public Website Plan. If work touches documentation coverage, use the

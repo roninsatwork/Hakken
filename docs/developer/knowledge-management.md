@@ -1,6 +1,6 @@
 # Knowledge Management
 
-Knowledge management is implemented by `convex/knowledge.ts`, `convex/knowledgeActions.ts`, `convex/knowledgeService.ts`, shared upload policy helpers, the reusable `KnowledgeManager` admin feature, and assistant thread upload flows. It supports global, company, agent, and thread-scoped documents.
+Knowledge management is implemented by `convex/knowledge.ts`, `convex/knowledgeActions.ts`, `convex/knowledgeService.ts`, `convex/knowledgeRetrieval.ts`, shared upload policy helpers, the reusable `KnowledgeManager` admin feature, and assistant thread upload flows. It supports global, company, agent, and thread-scoped documents.
 
 ## Route Map
 
@@ -9,6 +9,7 @@ Knowledge management is implemented by `convex/knowledge.ts`, `convex/knowledgeA
 - `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` re-exports the company knowledge page for the company AI submenu.
 - `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx` renders agent knowledge.
 - `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx` is the shared admin knowledge UI.
+- `src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils.ts` walks dropped folders, preserves relative paths, caps batches, skips reserved OKF bundle files, and limits browser upload concurrency.
 - `src/app/(dashboard)/app/assistant/page.tsx` and thread routes use chat-thread document APIs for assistant attachments.
 
 ## Data Model
@@ -56,7 +57,9 @@ Standard users cannot upload admin knowledge documents. Thread knowledge is narr
 
 ## Ingestion Pipeline
 
-File and manual text ingestion schedules `internal.knowledgeActions.ingestDocument`. The action reads stored file content or manual text, extracts PDFs with `pdf-extraction`, extracts Word `.docx` files with `mammoth`, and otherwise falls back to UTF-8 text decoding before chunking. CSV and plain text work through that text fallback. Although the shared upload policy currently accepts Excel MIME types, admin and thread knowledge ingestion does not yet use the richer Excel parser from `convex/utils/fileParser.ts`; do not promise reliable spreadsheet extraction for persisted knowledge until that implementation is added. After text extraction, `convex/utils/knowledgeActionsService.ts` normalizes whitespace and chunks content with the current 1,000-character target and 200-character overlap, adjusting overlap safely when a caller supplies smaller chunk sizes. Ingestion then resolves the active embedding model through stored AI model defaults, embeds chunks with Vertex, and saves chunk batches through `internal.knowledge.saveChunksInternal`.
+File and manual text ingestion schedules `internal.knowledgeActions.ingestDocument`. The action reads stored file content or manual text, extracts PDFs with `pdf-extraction`, extracts Word `.docx` files with `mammoth`, and otherwise falls back to UTF-8 text decoding before chunking. CSV, Markdown, and plain text work through that text fallback. Markdown is then prepared by `prepareKnowledgeMarkdown`: YAML frontmatter is removed from searchable text and its `title` can replace the uploaded filename. Although the shared upload policy currently accepts Excel MIME types, admin and thread knowledge ingestion does not yet use the richer Excel parser from `convex/utils/fileParser.ts`; do not promise reliable spreadsheet extraction for persisted knowledge until that implementation is added. After text extraction, `convex/utils/knowledgeActionsService.ts` normalizes whitespace and chunks content with the current 1,000-character target and 200-character overlap, adjusting overlap safely when a caller supplies smaller chunk sizes. Ingestion then resolves the active embedding model through stored AI model defaults, embeds chunks with Vertex, and saves chunk batches through `internal.knowledge.saveChunksInternal`.
+
+Bulk uploads accept at most 500 files per gesture. `knowledgeUploadUtils.ts` walks nested folder entries, retains relative paths after dropping the common top-level folder, skips `index.md` and `log.md` only when they are part of a folder bundle, and uploads at concurrency four. `saveDocument` can defer ingestion so the browser can finish creating pending records first. `startPendingFileIngestion` then starts the fixed-width backend queue; `processKnowledgeFileQueue` claims one pending non-URL document transactionally, ingests it, records failure on that document without blocking later files, and reschedules until the queue is empty. Keep the file queue distinct from `processWebsiteQueue`; URL documents must never be claimed as uploaded files or vice versa.
 
 Website ingestion uses Firecrawl and the shared URL safety helper in `convex/utils/security.ts`:
 
@@ -79,7 +82,11 @@ Quality flags include:
 
 `getQualitySummary` samples scoped documents, counts flags, reports active embedding model information, and returns recommendations. Agent summaries can compare ready chunks with agent profile terms and warn when important terms appear uncovered.
 
-`inspectDocument` returns document metadata and a bounded chunk preview. Previews sanitize potentially dangerous chunk text before display. `testRetrieval` performs a bounded token/phrase scoring pass over scoped chunks so admins can validate expected retrieval behavior without running a full chat.
+`inspectDocument` returns document metadata and a bounded chunk preview. Previews sanitize potentially dangerous chunk text before display.
+
+Production retrieval is centralized in `convex/knowledgeRetrieval.ts`. It embeds the query, runs vector and scoped text search in parallel for each explicit company, agent, thread, or global scope, and fuses the rankings with reciprocal rank fusion from `convex/knowledgeRetrievalService.ts`. Keyword failure is best-effort: vector results can still proceed. When `retrievalPriors` is enabled, recent positive and negative message evidence adds a decaying, bounded per-chunk prior that may move a result a few places but cannot replace relevance or remove the only matching source. The closed scope union deliberately makes an unscoped cross-tenant search impossible to express.
+
+`testRetrieval` remains an admin inspection helper rather than a full simulation of every runtime prompt path. Keep its user-facing explanation honest when production ranking changes.
 
 ## Repair And Cleanup
 
@@ -95,10 +102,12 @@ Current coverage includes:
 - `convex/knowledgeActions.test.ts` for action auth, Firecrawl mapping, queue processing, and ingestion failure handling
 - `convex/knowledgeService.test.ts` for scope helpers and document/chunk record builders
 - `convex/knowledgeActionsService.test.ts` for chunking helpers
+- `convex/knowledgeRetrievalService.test.ts` for reciprocal-rank fusion and bounded evidence priors
+- `src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils.test.ts` for folder traversal, limits, path naming, reserved OKF files, and upload concurrency
 - `src/app/(dashboard)/admin/_features/knowledge/*.test.*` for the shared admin UI and website grouping utilities
 
 When changing knowledge ingestion, run the Convex knowledge tests and any UI tests for `KnowledgeManager`. When changing supported file types or size limits, update upload policy tests and user docs together.
 
 ## Maintenance Notes
 
-Keep embedding model resolution configuration-driven. Do not hardcode runtime model literals in knowledge ingestion paths. Preserve SSRF checks for website ingestion and tenant-aware filters for vector retrieval. Knowledge is customer data, so deletion, repair, and inspection must stay scope-aware.
+Keep embedding model resolution configuration-driven. Do not hardcode runtime model literals in knowledge ingestion paths. Preserve SSRF checks for website ingestion and the explicit tenant scope contract in the shared hybrid retrieval spine. Knowledge is customer data, so upload, retrieval, deletion, repair, and inspection must stay scope-aware.

@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-08-09 17:05 BST +0100
+Last reviewed: 2026-08-11
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -125,37 +125,40 @@ as the durable documentation work queue.
   workbook deletion. The workflow guide pair and deployment guide now record
   that webhook examples use `CONVEX_SITE_URL` for the Convex HTTP Actions site
   origin rather than guessing from the public Convex client URL.
+- Refresh the knowledge pair for Markdown ingestion, OKF folder uploads,
+  bounded browser concurrency, frontmatter title handling, queued processing,
+  and hybrid retrieval with source evidence.
+- Refresh the workflow pair and runtime guide for transient-only retries on
+  safe agent nodes, including attempt limits, backoff, side-effect exclusions,
+  and recorded retry evidence.
+- Refresh agent, Company AI, and operations guides for rehearsal evals,
+  automatic reflection, self-improvement controls, and autonomous memory.
+- Refresh assistant and widget guides for provider-independent streaming,
+  Convex-backed stream rows, progressive reveal pacing, feedback controls,
+  anonymous widget quota privacy, and PII redaction order.
+- Refresh deployment and system-health guides for optional Sentry monitoring,
+  privacy defaults, source-map credentials, and the current deploy-workflow
+  boundary.
+- Refresh the central, end-user, developer, and plans indexes, then update the
+  Convex/schema coverage references for all implementation files discovered in
+  this pass.
 
 ### Remaining Follow-Up
 
-1. Public website route drift: `src/app/(public)/_components/home/WhatSonaeIs.tsx`
-   links to `/platform`, and `ContactLink` falls back to `/contact`, but those
-   routes are still pending in `docs/plans/active/public-website-plan.md`. Do
-   not fix this from documentation automation. Handle it under the public
-   website plan with explicit user approval because it changes public product
-   behaviour.
-2. Company AI follow-up: the current overview, checks, memory, and skills routes
-   are now documented, but the active Company AI readiness rebuild and AI Checks
-   plans still own follow-up semantics. Refresh the pair when those plans settle.
-3. Sales Data follow-up: the current workbook import, imported table browser,
-   customer/prospect list, customer profile, research/prospecting context,
-   market-discovery backend, reset actions, and workspace Opportunity Report are
-   now documented. Refresh the pair when import semantics, research job flow,
-   market discovery, reset behavior, or opportunity-report workflow changes.
-4. Thin-doc review: some audience guides are concise by design, but future
-   runs should review the shorter end-user and developer documents when their
-   implementation areas change. A short guide is not automatically wrong, but
-   it should still be useful enough for the intended audience.
-5. Active-plan lifecycle: several active plans are detailed investigations or
-   handovers. Future agents should archive or mark them complete only after
-   confirming the implementation state and receiving approval when scope or
-   roadmap status changes.
-6. Public website documentation: when `/platform`, `/showcase`, `/trust`, and
-   `/contact` ship, add or refresh the appropriate end-user/operator/developer
-   documentation and indexes in the same documentation pass.
-7. Operator coverage: current operator docs cover local auth, demo seed,
-   movement demos, and packaging. Add operator runbooks only when a real
-   operational workflow exists; do not create speculative runbooks.
+No incomplete, stale, inaccurate, missing, or questionable documentation item
+was found after the final re-audit. The next run should rebuild the queue from
+the then-current implementation rather than treating this result as permanent.
+
+The public website still contains links to routes owned by
+`docs/plans/active/public-website-plan.md` that have not shipped. That is a
+product implementation item, not documentation work: the current public-site
+guide already records the boundary. Do not add speculative route documentation
+or change product behavior from this automation.
+
+Continue to refresh Company AI, Sales Data, active-plan lifecycle, and operator
+coverage only when their implementation changes or a real new operating
+procedure appears. Do not create speculative runbooks or mark roadmap work
+complete from documentation evidence alone.
 
 ## Validation Notes
 

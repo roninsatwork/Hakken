@@ -68,3 +68,42 @@ export function getStreamPresentation(args: {
 /** Shown in place of an abandoned reply so the reader is never left hanging. */
 export const STREAM_STALLED_MESSAGE =
   "This reply stopped unexpectedly and could not be completed. Please try again.";
+
+/**
+ * The real phases of a plain assistant reply, for the pre-reply status pill.
+ *
+ * These replaced a client-side rotation of invented phrases on a 1.2s timer.
+ * The contract is honesty: a stage is written by the run as it enters that
+ * phase, appears only if the phase actually runs, and lasts exactly as long
+ * as the phase does. `READING_FILES` only ever shows when the message carried
+ * attachments still being processed; `SEARCHING_KNOWLEDGE` only when
+ * retrieval actually runs.
+ */
+export const ASSISTANT_STAGES = [
+  "CHECKING",
+  "READING_FILES",
+  "SEARCHING_KNOWLEDGE",
+  "WRITING",
+] as const;
+
+export type AssistantStage = (typeof ASSISTANT_STAGES)[number];
+
+/**
+ * Which stage the pill may honestly show right now.
+ *
+ * A crashed run cannot clear its stage, so anything older than the longest a
+ * run may take is ignored rather than displayed — same reasoning as the
+ * stream staleness guard. An unknown value (a newer deployment's stage read
+ * by an older client, or vice versa) is dropped rather than guessed at.
+ */
+export function getPresentableAssistantStage(args: {
+  stage?: string;
+  stageAt?: number;
+  now: number;
+}): AssistantStage | null {
+  if (!args.stage || args.stageAt === undefined) return null;
+  if (args.now - args.stageAt >= STREAM_STALE_AFTER_MS) return null;
+  return (ASSISTANT_STAGES as readonly string[]).includes(args.stage)
+    ? (args.stage as AssistantStage)
+    : null;
+}

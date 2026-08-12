@@ -3,6 +3,7 @@ import {
   STREAM_FLUSH_CHARS,
   STREAM_FLUSH_INTERVAL_MS,
   STREAM_STALE_AFTER_MS,
+  getPresentableAssistantStage,
   getStreamPresentation,
   isStreamStale,
   shouldFlushStreamedText,
@@ -59,5 +60,32 @@ describe("abandoned replies", () => {
     expect(
       getStreamPresentation({ isStreaming: true, streamStartedAt: 0, now: STREAM_STALE_AFTER_MS + 1 }),
     ).toBe("stalled");
+  });
+});
+
+describe("the pre-reply stage pill", () => {
+  test("shows a known stage the run wrote just now", () => {
+    expect(
+      getPresentableAssistantStage({ stage: "SEARCHING_KNOWLEDGE", stageAt: 1_000, now: 2_000 }),
+    ).toBe("SEARCHING_KNOWLEDGE");
+  });
+
+  test("ignores a stage a crashed run left behind", () => {
+    // A hard-killed action cannot clear its stage; showing it days later
+    // would claim work that is not happening.
+    expect(
+      getPresentableAssistantStage({ stage: "WRITING", stageAt: 0, now: STREAM_STALE_AFTER_MS }),
+    ).toBeNull();
+  });
+
+  test("drops an unknown stage value rather than guessing", () => {
+    expect(
+      getPresentableAssistantStage({ stage: "REticulating splines", stageAt: 1_000, now: 2_000 }),
+    ).toBeNull();
+  });
+
+  test("no stage, no claim", () => {
+    expect(getPresentableAssistantStage({ now: 1_000 })).toBeNull();
+    expect(getPresentableAssistantStage({ stage: "WRITING", now: 1_000 })).toBeNull();
   });
 });

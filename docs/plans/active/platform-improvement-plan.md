@@ -122,7 +122,9 @@ generates: the provider adapters currently wait for the complete answer.
 - A streamed reply carries the same token accounting as a single-write reply.
 
 **Remaining if wanted:** onText in the OpenAI/Anthropic/OpenRouter assistant
-adapters, ~1 day each.
+adapters, ~1 day each. — Done 2026-08-11 under
+`assistant-streaming-all-providers-plan.md`, which owns those adapters'
+streaming behaviour from here.
 
 ## Phase 4 — Evals that exercise the real runtime — FOUNDATION DONE 2026-08-09
 

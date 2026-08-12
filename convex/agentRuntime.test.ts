@@ -2560,8 +2560,10 @@ describe("evals run the agent that ships", () => {
       });
     });
 
-    const visible = await t.withIdentity({ subject: userId }).query(api.chat.getThreads, {});
-    expect(visible.every((thread) => thread.purpose !== "EVAL")).toBe(true);
+    const visible = await t.withIdentity({ subject: userId }).query(api.chat.getThreads, {
+      paginationOpts: { numItems: 50, cursor: null },
+    });
+    expect(visible.page.every((thread) => thread.purpose !== "EVAL")).toBe(true);
   });
 
   test("an agent that answers nothing fails its eval", async () => {

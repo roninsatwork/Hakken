@@ -19,6 +19,7 @@ import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useUI } from "@/src/context/UIContext";
 import { useTranslations } from "next-intl";
@@ -63,6 +64,12 @@ function getAdminHeaderSegments(pathname: string, t: HeaderTranslator) {
   return [t("admin")];
 }
 
+/** The thread id in an assistant URL, when the path names one. */
+export function getAssistantThreadIdFromPath(pathname: string) {
+  const match = /^\/app\/assistant\/([^/?#]+)/.exec(pathname);
+  return match ? match[1] : null;
+}
+
 function getAppHeaderSegments(pathname: string, t: HeaderTranslator, platformName: string, dashboardLabel: string) {
   if (pathname.startsWith("/app/assistant")) return [`Ask ${platformName}`];
   if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
@@ -89,12 +96,21 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const settings = useSystemSettings();
 
   const user = useQuery(api.users.getMe);
+  // Naming the open conversation beats repeating the sidebar's own label.
+  // Skipped entirely off the assistant, so no other screen pays for it.
+  const assistantThreadId = getAssistantThreadIdFromPath(pathname);
+  const openThread = useQuery(
+    api.chat.getThreadHeading,
+    assistantThreadId ? { threadId: assistantThreadId as Id<"threads"> } : "skip",
+  );
   const recordLogin = useMutation(api.users.recordLogin);
   const recordLogout = useMutation(api.users.recordLogout);
   const profileRef = useRef<HTMLDivElement>(null);
   const headerSegments = isAdmin
     ? getAdminHeaderSegments(pathname, sidebarT)
-    : getAppHeaderSegments(pathname, sidebarT, settings.platformName, tc("dashboard"));
+    : openThread?.title
+      ? [`Ask ${settings.platformName}`, openThread.title]
+      : getAppHeaderSegments(pathname, sidebarT, settings.platformName, tc("dashboard"));
   const HeaderIcon = isAdmin && pathname.startsWith("/admin/ai")
     ? Bot
     : pathname.startsWith("/admin/companies") || pathname.startsWith("/app/properties")

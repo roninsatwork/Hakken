@@ -22,8 +22,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "../feedback/SonaeModal";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
+import { useTranslations } from "next-intl";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
+import {
+  modelSupportsThinking,
+  readRememberedThinkingLevel,
+  rememberThinkingLevel,
+  resolveThinkingLevelForModel,
+  type ThinkingLevelId,
+} from "@/src/lib/composerPreferences";
 
 interface ChatInputProps {
   threadId: Id<"threads">;
@@ -31,40 +38,31 @@ interface ChatInputProps {
   onOptimisticMessage?: (text: string | null) => void;
 }
 
-const THINKING_LEVELS = [
-  { id: "NONE", name: "Fast", description: "Instant standard responses" },
-  { id: "LOW", name: "Low Focus", description: "Quick verification thoughts" },
-  { id: "MEDIUM", name: "Deep Focus", description: "Standard problem solving" },
-  { id: "HIGH", name: "Max Focus", description: "Complex autonomous reasoning" },
-] as const;
 
-type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
 export default function ChatInput({ threadId, onUploadStateChange, onOptimisticMessage }: ChatInputProps) {
   const settings = useSystemSettings();
+  const t = useTranslations("ai.assistant.welcome");
+  const tComposer = useTranslations("ai.assistant.composer");
+  const tControls = useTranslations("ai.assistant.controls");
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  
-  const progressiveText = useProgressiveLoading(isSubmitting);
 
-  // Sync progressive text to uploadStatus when submitting (and not actively uploading files)
-  useEffect(() => {
-    if (isSubmitting) {
-      const isUploading = uploadStatus?.startsWith("Encrypting & Uploading") || uploadStatus?.startsWith("Parsing Intelligence");
-      if (!isUploading && progressiveText) {
-        setUploadStatus(progressiveText);
-        if (onUploadStateChange) {
-          onUploadStateChange(progressiveText);
-        }
-      }
-    }
-  }, [progressiveText, isSubmitting, uploadStatus, onUploadStateChange]);
-  
+  // What the assistant is doing after submit is reported by the run itself
+  // (the thread's stage pill); this component no longer invents status text.
+
+  const thinkingLevels: Array<{ id: ThinkingLevelId; name: string; description: string }> = [
+    { id: "NONE", name: tComposer("fastName"), description: tComposer("fastDescription") },
+    { id: "LOW", name: tComposer("lowName"), description: tComposer("lowDescription") },
+    { id: "MEDIUM", name: tComposer("mediumName"), description: tComposer("mediumDescription") },
+    { id: "HIGH", name: tComposer("highName"), description: tComposer("highDescription") },
+  ];
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { isRecording, isTranscribing, toggleRecording, permissionError, setPermissionError } = useVoiceToText({
@@ -78,7 +76,12 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
 
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
-  const [selectedThinking, setSelectedThinking] = useState<ThinkingLevel>(THINKING_LEVELS[0]);
+  // Restored after mount so the server and first client render agree.
+  const [selectedThinkingId, setSelectedThinkingId] = useState<ThinkingLevelId>("NONE");
+  useEffect(() => {
+    const restore = setTimeout(() => setSelectedThinkingId(readRememberedThinkingLevel()), 0);
+    return () => clearTimeout(restore);
+  }, []);
   
   const [isAutonomousMode] = useState(false);
 
@@ -116,7 +119,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 250)}px`;
+      textareaRef.current.style.height = `${Math.ceil(Math.min(textareaRef.current.scrollHeight, 250))}px`;
     }
   }, [content]);
 
@@ -165,6 +168,15 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
   const removePendingFile = (index: number) => {
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  const selectedModelData = activeModels.find((model) => model.modelId === selectedModelId);
+
+  // On this path only Google models act on the thinking setting — the other
+  // adapters ignore it — so the control is only offered where it does
+  // something. Offering "Deep thinking" on a model that cannot think would be
+  // a decorative lie.
+  const thinkingApplies = modelSupportsThinking(selectedModelData?.providerKey);
+  const selectedThinking = thinkingLevels.find((level) => level.id === selectedThinkingId) ?? thinkingLevels[0];
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -218,11 +230,18 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
           setUploadStatus(null);
         }
   
-        await sendMessage({ 
-        threadId, 
+        await sendMessage({
+        threadId,
         content: textSnapshot || "Analyzed attached documents.",
         modelId: selectedModelId || undefined,
-        thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinking.id,
+        // A model that ignores the thinking setting is never sent one, so the
+        // request matches what the screen offered.
+        thinkingLevel: isAutonomousMode
+          ? "SWARM"
+          : resolveThinkingLevelForModel({
+              remembered: selectedThinkingId,
+              modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
+            }),
         fileIds: uploadedFileIds,
       });
     } catch (error) {
@@ -237,8 +256,6 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
       if (onOptimisticMessage) onOptimisticMessage(null);
     }
   };
-
-  const selectedModelData = activeModels.find((model) => model.modelId === selectedModelId);
 
   return (
     <>
@@ -268,22 +285,17 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
           onSubmit={handleSubmit}
           className="w-full relative z-20"
         >
-          {/* Reactive Outer Envelope */}
-          <div 
+          {/* Field first, settings after: the input is unmistakably an
+              input, and the controls read as secondary because they sit
+              outside it. */}
+          <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`relative flex flex-col bg-card dark:bg-[#1e1e20] border rounded-[32px] p-4 pb-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 ${
-            isDragging 
-               ? "border-brand shadow-[0_0_40px_-5px_rgba(var(--brand),0.5)] border-dashed bg-card/80 dark:bg-[#2a2a2d] scale-[1.01]"
-               : isRecording 
-               ? "border-brand shadow-[0_0_30px_-5px_rgba(var(--brand),0.3)] bg-card/70 dark:bg-[#252528]" 
-               : "border-border-dim dark:border-white/5 focus-within:bg-card/70 dark:focus-within:bg-[#252528]"
-          }`}>
-            
-            {/* Pending Files Area */}
+            className="flex flex-col gap-2.5"
+          >
             {pendingFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3 px-1">
+              <div className="flex flex-wrap gap-2 px-0.5">
                 {pendingFiles.map((file, i) => (
                   <div key={i} className="flex items-center gap-2 bg-foreground/5 dark:bg-white/10 px-3 py-1.5 rounded-full relative group">
                     <FileText className="w-3.5 h-3.5 text-muted-foreground" />
@@ -299,25 +311,34 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                 ))}
               </div>
             )}
-            
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              multiple 
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              multiple
               accept=".pdf,.csv,.xlsx,.docx,.txt"
-              onChange={(e) => handleFileSelect(e.target.files)} 
+              onChange={(e) => handleFileSelect(e.target.files)}
             />
-            
-            {/* Top Row: Icon + Input */}
-            <div className="flex items-start gap-3 w-full pl-1">
-              <ShieldCheck className={`w-[18px] h-[18px] mt-[3px] flex-shrink-0 transition-colors ${isRecording ? "text-brand" : "text-muted/60"}`} />
+
+            {/* Items end-aligned so the send button tracks the last line as
+                the field grows rather than floating mid-box. */}
+            <div
+              className={`flex items-end gap-2.5 rounded-[12px] border bg-background/60 dark:bg-black/25 px-3.5 py-3 transition-colors ${
+                isDragging
+                  ? "border-brand border-dashed"
+                  : isRecording
+                    ? "border-brand"
+                    : "border-border-dim focus-within:border-brand/50"
+              }`}
+            >
+              <ShieldCheck className={`w-[16px] h-[16px] mb-[3px] flex-shrink-0 transition-colors ${isRecording ? "text-brand" : "text-muted/50"}`} />
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : `Enter a prompt for ${settings.platformName}`}
-                className={`w-full bg-transparent border-none outline-none focus:outline-none text-[16px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-light leading-relaxed transition-colors ${
+                placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : t("replyPlaceholder", { platformName: settings.platformName })}
+                className={`w-full bg-transparent border-none outline-none focus:outline-none text-[15px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[260px] overflow-y-auto scrollbar-hide leading-relaxed transition-colors ${
                   isRecording ? "text-brand placeholder:text-brand/50" : "text-foreground placeholder:text-muted/70"
                 }`}
                 rows={1}
@@ -328,47 +349,47 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                   }
                 }}
               />
+              <button
+                type={isSubmitting ? "button" : "submit"}
+                disabled={!content.trim() && !isSubmitting}
+                aria-label={tControls("send")}
+                className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all mb-[1px] ${
+                  content.trim() || isSubmitting
+                    ? "bg-brand text-white hover:brightness-110 active:scale-95"
+                    : "bg-foreground/10 text-muted pointer-events-none"
+                }`}
+              >
+                {isSubmitting ? <Square className="w-3 h-3 fill-current" /> : <ArrowUp className="w-4 h-4" />}
+              </button>
             </div>
 
-            {/* Bottom Row: Controls */}
-            <div className="flex flex-wrap items-center justify-between w-full mt-3 gap-2 relative">
-              
-              {/* Left Controls */}
-              <div className="flex items-center gap-1">
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isSubmitting || isRecording}
-                  className="w-10 h-10 flex items-center justify-center rounded-full transition-all hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground group"
-                  title="Upload File"
-                >
-                  <Plus className="w-[20px] h-[20px] transition-transform group-hover:scale-110" />
-                </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting || isRecording}
+                className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {tControls("attach")}
+              </button>
 
-              </div>
+              <button
+                type="button"
+                onClick={toggleRecording}
+                disabled={isTranscribing}
+                className={`h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[8px] border text-[12px] transition-colors ${
+                  isRecording
+                    ? "border-brand/40 bg-brand/10 text-brand"
+                    : "border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5"
+                }`}
+                title={isRecording ? tControls("mic.stop") : tControls("mic.start")}
+              >
+                {isRecording ? <MicOff className="w-3.5 h-3.5" /> : isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mic className="w-3.5 h-3.5" />}
+                {isRecording ? tControls("mic.stop") : tControls("speak")}
+              </button>
 
-              {/* Right Controls */}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-
-                {/* Voice Dictation (Mic) Node */}
-                <button 
-                  type="button" 
-                  onClick={toggleRecording}
-                  disabled={isTranscribing}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-all sm:mr-1 ${
-                    isRecording 
-                      ? "bg-brand/10 text-brand animate-pulse scale-105" 
-                      : isTranscribing
-                      ? "text-brand"
-                      : "hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground"
-                  }`}
-                  title={isRecording ? "Stop recording" : "Start voice dictation"}
-                >
-                  {isRecording ? <MicOff className="w-[18px] h-[18px]" /> : 
-                   isTranscribing ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : 
-                   <Mic className="w-[18px] h-[18px]" />}
-                </button>
-
+              <div className="ml-auto flex items-center gap-2">
                 {/* Database Model Selector */}
                 <div className="relative" ref={modelRef}>
                   <button 
@@ -377,21 +398,21 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                     disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
                     className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                   >
-                    <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : "Select Engine"}</span>
+                    <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : tComposer("selectModel")}</span>
                     <ChevronDown className="w-4 h-4 flex-shrink-0" />
                   </button>
 
                   <AnimatePresence>
                     {modelDropdownOpen && !isRecording && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full right-0 mb-3 w-[280px] sm:w-[320px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar"
+                        className="absolute bottom-full right-0 mb-3 w-[220px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[14px] shadow-2xl p-1.5 z-50 flex flex-col max-h-[300px] overflow-y-auto custom-scrollbar"
                       >
-                        <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1 sticky top-0 bg-card z-10">
-                          <span className="text-[12px] font-medium text-muted tracking-widest uppercase">Verified Grid Engines</span>
+                        <div className="px-3 py-2 border-b border-border-dim dark:border-white/5 mb-1 sticky top-0 bg-card z-10">
+                          <span className="text-[11px] font-medium text-muted tracking-widest uppercase">{tComposer("modelMenuTitle")}</span>
                         </div>
                         {activeModels.map((model) => (
                           <button
@@ -401,16 +422,11 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                               setSelectedModelId(model.modelId);
                               setModelDropdownOpen(false);
                             }}
-                            className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
+                            className={`flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-left transition-colors ${selectedModelId === model.modelId ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
                           >
-                            <div className="flex flex-col gap-1 min-w-0 pr-4">
-                              <span className={`text-[15px] font-medium truncate ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
-                              <span className="text-[13px] text-muted font-light truncate">{model.description || "Active production capability"}</span>
-                            </div>
+                            <span className={`text-[14px] font-medium truncate pr-3 ${selectedModelId === model.modelId ? 'text-foreground' : 'text-foreground/80'}`}>{model.friendlyName || model.displayName || model.modelId}</span>
                             {selectedModelId === model.modelId && (
-                              <div className="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
-                                <Check className="w-3 h-3 text-brand" />
-                              </div>
+                              <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                             )}
                           </button>
                         ))}
@@ -419,9 +435,10 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                   </AnimatePresence>
                 </div>
 
-                {/* Thinking Level Dropdown */}
+                {/* Thinking Level Dropdown — only for models the setting reaches */}
+                {thinkingApplies && (
                 <div className="relative" ref={thinkingRef}>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => { setThinkingDropdownOpen(!thinkingDropdownOpen); setModelDropdownOpen(false); }}
                     disabled={isRecording || isAutonomousMode}
@@ -433,34 +450,33 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
 
                   <AnimatePresence>
                     {thinkingDropdownOpen && !isRecording && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute bottom-full right-0 mb-3 w-[260px] sm:w-[300px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[24px] shadow-2xl p-2 z-50 flex flex-col"
+                        className="absolute bottom-full right-0 mb-3 w-[240px] bg-card dark:bg-[#1a1a1c] border border-border-dim dark:border-white/10 rounded-[14px] shadow-2xl p-1.5 z-50 flex flex-col"
                       >
-                        <div className="px-4 py-3 pb-2 border-b border-border-dim dark:border-white/5 mb-1">
-                          <span className="text-[12px] font-medium text-muted tracking-widest uppercase">Agent Reasoning Effort</span>
+                        <div className="px-3 py-2 border-b border-border-dim dark:border-white/5 mb-1">
+                          <span className="text-[11px] font-medium text-muted tracking-widest uppercase">{tComposer("thinkingMenuTitle")}</span>
                         </div>
-                        {THINKING_LEVELS.map((level) => (
+                        {thinkingLevels.map((level) => (
                           <button
                             key={level.id}
                             type="button"
                             onClick={() => {
-                              setSelectedThinking(level);
+                              setSelectedThinkingId(level.id);
+                              rememberThinkingLevel(level.id);
                               setThinkingDropdownOpen(false);
                             }}
-                            className={`flex items-center justify-between w-full p-4 rounded-[16px] text-left transition-colors ${selectedThinking.id === level.id ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
+                            className={`flex items-center justify-between w-full px-3 py-2 rounded-[10px] text-left transition-colors ${selectedThinkingId === level.id ? 'bg-foreground/5 dark:bg-white/10' : 'hover:bg-foreground/5 dark:hover:bg-white/5'}`}
                           >
-                            <div className="flex flex-col gap-1 pr-4 min-w-0">
-                              <span className={`text-[15px] font-medium truncate ${selectedThinking.id === level.id ? 'text-foreground' : 'text-foreground/80'}`}>{level.name}</span>
-                              <span className="text-[13px] text-muted font-light truncate">{level.description}</span>
+                            <div className="flex flex-col min-w-0 pr-3">
+                              <span className={`text-[14px] font-medium truncate ${selectedThinkingId === level.id ? 'text-foreground' : 'text-foreground/80'}`}>{level.name}</span>
+                              <span className="text-[12px] text-muted font-light truncate">{level.description}</span>
                             </div>
-                            {selectedThinking.id === level.id && (
-                              <div className="w-5 h-5 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
-                                <Check className="w-3 h-3 text-brand" />
-                              </div>
+                            {selectedThinkingId === level.id && (
+                              <Check className="w-3.5 h-3.5 text-brand flex-shrink-0" />
                             )}
                           </button>
                         ))}
@@ -468,36 +484,18 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                     )}
                   </AnimatePresence>
                 </div>
+                )}
 
-                {/* Submit / Stop Button */}
-                <button
-                  type={isSubmitting ? "button" : "submit"}
-                  disabled={!content.trim() && !isSubmitting}
-                  className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-300 ${
-                    isSubmitting 
-                      ? "bg-foreground text-background scale-95" 
-                      : content.trim() 
-                        ? "bg-foreground text-background hover:scale-105 active:scale-95" 
-                        : "bg-white/5 text-muted pointer-events-none"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <Square className="w-3.5 h-3.5 fill-current" />
-                  ) : (
-                    <ArrowUp className="w-5 h-5" />
-                  )}
-                </button>
               </div>
             </div>
           </div>
         </form>
 
-        {/* Footer Legal Copy */}
-        <div className="mt-2.5 pb-2 text-center max-w-2xl px-4 z-10 opacity-70">
-          <span className="text-[12px] text-muted font-light leading-relaxed">
-            {settings.platformName} Assistant is AI and can make mistakes, please check all responses.
-          </span>
-        </div>
+        {/* Required AI disclosure. Kept legible on purpose — it is a
+            transparency obligation, not footer decoration. */}
+        <p className="mt-2.5 pb-2 text-[11px] leading-relaxed text-secondary">
+          {settings.platformName} Assistant is AI and can make mistakes, please check all responses.
+        </p>
       </div>
 
       {/* Access Denial Matrix */}

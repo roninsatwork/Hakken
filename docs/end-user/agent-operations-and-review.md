@@ -47,7 +47,7 @@ Use run detail when investigating:
 
 Operators can label runs with feedback such as good answer, incorrect, missed context, wrong tool, bad arguments, unsafe, too expensive, too slow, approval policy issue, or should become eval.
 
-Run evidence can be used to generate reflections, memory candidates, eval fixtures, and improvement suggestions. These are reviewable artifacts. They do not automatically become durable behavior unless an operator applies or approves them.
+Run evidence can generate reflections, memory candidates, eval fixtures, and improvement suggestions. Failed and cancelled runs are reflected automatically when the platform switch is on. Prompt, tool, routing, approval-policy, skill, and eval changes remain review decisions. Memory is different: when Autonomous memory is on, approved-safe memory candidates are saved immediately, labelled as saved by the AI, audited, and remain removable; when it is off, candidates wait for an operator.
 
 Improvement suggestions may propose prompt, tool, eval, memory, routing, approval policy, or skill changes. Review the source run and risk level before applying anything, especially high-risk suggestions.
 
@@ -55,7 +55,7 @@ Improvement suggestions may propose prompt, tool, eval, memory, routing, approva
 
 Agent memory is controlled learning. The memory page shows active retained memories and a review inbox for proposed memories, reflections, and improvement suggestions.
 
-Memory candidates can be approved or rejected. Approved candidates become active memories for future agent context. Rejected candidates remain evidence but should not affect future behavior.
+Memory candidates can be approved or rejected when Autonomous memory is off. When it is on, safe candidates become active memories immediately and are marked so reviewers can distinguish them from human-approved memory. Rejected fingerprints are retained to stop the same suggestion being proposed repeatedly. Active memories can still be removed and quality-reviewed.
 
 The memory quality view can flag low-quality, unused, stale, risky, or questionable memories. Review memory quality after major prompt, skill, knowledge, or customer policy changes.
 
@@ -77,6 +77,10 @@ Implemented fixture types include:
 - cost or latency budget
 
 Smoke evals and eval suites produce readiness evidence. Some suites can require model grading. Skill-related fixtures help show whether a bound skill has enough coverage.
+
+Each fixture detail also offers **Rehearse**. A rehearsal runs the real agent loop against the configured model and performs real read-only tools, but records write, external, or destructive tool calls as `REHEARSED` instead of carrying them out. Sonae grades whether the run completed and called every tool handler required by the fixture. Rehearsal runs and drill results are labelled in run history so they are not mistaken for customer traffic.
+
+Use rehearsal when a configuration-only smoke check is not enough and you need evidence of the tool plan the agent would actually choose. It is not a production side-effect test: a recorded write proves the agent selected the action, not that the external system accepted it.
 
 Use evals before activating an agent, after changing prompts or tools, after adding high-risk skills, and after a production incident.
 

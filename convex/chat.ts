@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { redactPII } from "./utils/pii";
@@ -19,7 +20,6 @@ import {
   validateChatAttachments,
 } from "./chatService";
 
-const USER_THREAD_LIST_LIMIT = 100;
 const USER_THREAD_MESSAGE_LIMIT = 500;
 const AI_CONTEXT_MESSAGE_LIMIT = 40;
 const THREAD_DELETE_MESSAGE_BATCH_SIZE = 100;
@@ -32,21 +32,43 @@ const safetyRefusalCategoryValidator = v.union(
 
 const safetyRefusalSourceValidator = v.union(v.literal("assistant"), v.literal("agent"));
 
+/**
+ * The sidebar's conversation list, a page at a time.
+ *
+ * This used to take the newest 100 in one call: conversation 101 silently
+ * vanished from both the list and the search box, which only filtered what
+ * was already loaded. Now the list pages, and a search term asks the
+ * database over the full history instead.
+ */
 export const getThreads = tenantQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     const { userId } = ctx;
+    const term = args.searchTerm?.trim();
 
-    const threads = await ctx.db
-      .query("threads")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc") // newest first
-      .take(USER_THREAD_LIST_LIMIT);
+    const results = term
+      ? await ctx.db
+          .query("threads")
+          .withSearchIndex("search_title", (q) => q.search("title", term).eq("userId", userId))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("threads")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .order("desc") // newest first
+          .paginate(args.paginationOpts);
 
-    // Eval threads belong to the platform, not to the person who triggered
-    // them. They are visible on the agent's eval screen, not in a conversation
-    // list somebody scrolls looking for their own chats.
-    return threads.filter((thread) => thread.purpose !== "EVAL");
+    return {
+      ...results,
+      // Eval threads belong to the platform, not to the person who triggered
+      // them. They are visible on the agent's eval screen, not in a
+      // conversation list somebody scrolls looking for their own chats.
+      // Filtered after paging, so a page can run slightly short — better a
+      // short page than an eval transcript in a personal history.
+      page: results.page.filter((thread) => thread.purpose !== "EVAL"),
+    };
   },
 });
 
@@ -65,6 +87,63 @@ export const getMessages = publicQuery({
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc") // chronological order for rendering UI
       .take(USER_THREAD_MESSAGE_LIMIT);
+  },
+});
+
+/**
+ * Note which real phase the assistant run is in, for the pre-reply pill.
+ *
+ * Written by `generateSonaeResponse` as it enters each phase and cleared when
+ * the reply lands or fails, so the pill can only ever claim work that is
+ * actually happening. Passing no stage clears it.
+ */
+export const setAssistantStage = internalMutation({
+  args: {
+    threadId: v.id("threads"),
+    stage: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) return;
+    await ctx.db.patch(args.threadId, {
+      assistantStage: args.stage,
+      assistantStageAt: args.stage === undefined ? undefined : Date.now(),
+    });
+  },
+});
+
+export const getAssistantStage = publicQuery({
+  reason: "Anonymous widget visitors read their own thread's status pill; gated on the hashed widget session token, same as getMessages.",
+  args: { threadId: v.id("threads"), widgetAccessToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const current = await getCurrentUser(ctx);
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) return null;
+
+    if (!(await canAccessThread(ctx, thread, current, args.widgetAccessToken))) return null;
+
+    return {
+      stage: thread.assistantStage,
+      stageAt: thread.assistantStageAt,
+    };
+  },
+});
+
+/**
+ * Just enough of a thread to title the header bar.
+ *
+ * The bar used to repeat "Ask Sonae", which the highlighted sidebar item
+ * already says. Naming the conversation costs one small read and tells the
+ * reader something they do not already know.
+ */
+export const getThreadHeading = tenantQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) return null;
+    if (thread.userId !== ctx.userId) return null;
+
+    return { title: thread.title, updatedAt: thread.updatedAt };
   },
 });
 

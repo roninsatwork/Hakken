@@ -1,97 +1,109 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, User } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useTranslations } from "next-intl";
 import { SonaeMarkdown } from "./SonaeMarkdown";
-import Image from "next/image";
 import { formatTime } from "@/src/lib/dates";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
+import { useSmoothStreamText } from "@/src/hooks/useSmoothStreamText";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { MessageFeedbackControls } from "./MessageFeedbackControls";
 
 interface ChatMessageProps {
   message: Doc<"messages">;
 }
 
+/**
+ * A turn of the conversation, set as a document rather than as bubbles.
+ *
+ * What you asked becomes a small labelled heading — the thing the answer
+ * belongs to — and the answer sits against a hairline margin at a
+ * comfortable reading width. Long replies used to run the full width of a
+ * large monitor, which makes the eye travel a long way back for every line.
+ */
 export default function ChatMessage({ message }: ChatMessageProps) {
   const isAssistant = message.role === "assistant";
-  const user = useQuery(api.users.getMe);
+  const t = useTranslations("ai.assistant");
+  const settings = useSystemSettings();
 
   // A reply whose run was killed outright cannot mark itself finished, so a
-  // caret would blink against an answer that is never coming. Anything older
-  // than the longest a run may take is treated as abandoned and says so.
+  // caret would blink against an answer that is never coming.
   const presentation = useStreamPresentation(message);
-  const isStreaming = presentation === "streaming";
+
+  // The database receives the reply in throttled lumps by design; the reveal
+  // types those lumps out at a readable pace.
+  const reveal = useSmoothStreamText({
+    content: message.content,
+    isStreaming: presentation === "streaming",
+  });
+  // An abandoned reply must never blink a caret, even if the reveal had not
+  // finished typing out what did arrive before the run died.
+  const isStreaming =
+    presentation !== "stalled" && (presentation === "streaming" || (isAssistant && reveal.isRevealing));
+
+  if (!isAssistant) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col gap-1 mb-6"
+      >
+        <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">
+          {t("you")}
+        </span>
+        <p className="text-[15px] leading-snug tracking-[-0.01em] text-foreground whitespace-pre-wrap">
+          {message.content}
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.98, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} 
-      className={`flex gap-4 w-full ${isAssistant ? "justify-start" : "justify-end"} mb-6 lg:mb-8`}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-col gap-2.5 border-l border-border-dim pl-4 sm:pl-5 mb-9"
     >
-      {/* Assistant Avatar Branding */}
-      {isAssistant && (
-        <div className="w-8 h-8 rounded-[10px] bg-brand flex-shrink-0 flex items-center justify-center shadow-lg shadow-brand/20 mt-1">
-          <Sparkles className="w-4 h-4 text-white" />
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        <span className="w-[15px] h-[15px] rounded-[4px] bg-brand flex items-center justify-center flex-shrink-0">
+          <Sparkles className="w-2.5 h-2.5 text-white" />
+        </span>
+        <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">
+          {settings.platformName}
+        </span>
+      </div>
 
-      {/* Primary Message Bubble Container */}
-      <div 
-        className={`max-w-[95%] lg:max-w-[92%] px-5 py-4 rounded-[20px] relative ${
-          isAssistant 
-            ? "bg-sidebar/50 border border-border-dim backdrop-blur-3xl rounded-tl-[4px] shadow-md"
-            : "bg-card dark:bg-[#252528] text-foreground/90 dark:text-white/90 border border-border-dim dark:border-white/5 rounded-tr-[4px] shadow-xl dark:shadow-black/20"
-        }`}
-      >
-        <div className={`text-[14px] leading-[1.7] font-light tracking-wide ${isAssistant ? "" : "whitespace-pre-wrap"}`}>
-          {isAssistant ? (
-            <>
-              <SonaeMarkdown content={message.content} />
-              {isStreaming && (
-                <span
-                  aria-label="Still writing"
-                  role="status"
-                  className="inline-block w-[2px] h-[1.1em] -mb-[0.15em] ml-[2px] bg-brand animate-pulse"
-                />
-              )}
-              {presentation === "stalled" && (
-                <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
-              )}
-            </>
-          ) : (
-            message.content
-          )}
-        </div>
-
-        {/* Rating controls only once the reply has finished writing itself,
-            and never on platform notices — a quota message is not an answer. */}
-        {isAssistant && !isStreaming && presentation !== "stalled" && !message.systemKey && (
-          <MessageFeedbackControls message={message} />
+      {/* Held to a reading measure. Tables and code inside the markdown break
+          out to the full column on their own. */}
+      <div className="text-[14px] leading-[1.75] text-foreground/90 max-w-[34rem]">
+        <SonaeMarkdown content={reveal.text} />
+        {isStreaming && (
+          <span
+            aria-label="Still writing"
+            role="status"
+            className="inline-block w-[2px] h-[1.1em] -mb-[0.15em] ml-[2px] bg-brand animate-pulse"
+          />
         )}
-
-        {/* Ambient Subtle Timestamp Data. Hidden mid-stream: a clock next to a
-            half-written reply reads as though the answer is already finished. */}
-        {!isStreaming && (
-          <div className={`text-[10px] font-mono mt-3 uppercase tracking-widest ${isAssistant ? "text-left opacity-40" : "text-right opacity-50 dark:opacity-40"}`}>
-            {formatTime(message.createdAt, { locale: [], options: { hour: '2-digit', minute: '2-digit' } })}
-          </div>
+        {presentation === "stalled" && (
+          <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
         )}
       </div>
-      
-      {/* User Avatar Badge */}
-      {!isAssistant && (
-        <div className="w-8 h-8 rounded-[10px] bg-foreground/10 border border-foreground/30 flex-shrink-0 flex items-center justify-center backdrop-blur-md mt-1 shadow-sm overflow-hidden">
-          {user?.image ? (
-            <Image src={user.image} alt={user.name || "User"} width={32} height={32} unoptimized className="w-full h-full object-cover" />
-          ) : (
-            <User className="w-4 h-4 text-foreground/80" />
-          )}
-        </div>
+
+      {/* Rating only once the reply has finished writing itself, and never on
+          platform notices — a quota message is not an answer. */}
+      {!isStreaming && presentation !== "stalled" && !message.systemKey && (
+        <MessageFeedbackControls message={message} />
+      )}
+
+      {!isStreaming && (
+        <span className="text-[10px] font-mono uppercase tracking-widest text-muted/60">
+          {formatTime(message.createdAt, { locale: [], options: { hour: "2-digit", minute: "2-digit" } })}
+        </span>
       )}
     </motion.div>
   );

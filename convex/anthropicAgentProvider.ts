@@ -11,8 +11,9 @@ import {
 } from "./anthropicMessageService";
 import {
   createAnthropicStreamAccumulator,
-  parseSseChunk,
+  type AnthropicStreamEvent,
 } from "./anthropicStreamService";
+import { parseProviderSseChunk } from "./providerHttpService";
 import type {
   AgentProviderAdapter,
   AgentReasoningEffort,
@@ -194,9 +195,9 @@ export function createAnthropicAgentProvider(args: {
           // boundaries; decoding each chunk independently would corrupt any
           // character split across two of them.
           const chunk = decoder.decode(value, { stream: true });
-          const parsed = parseSseChunk(chunk, buffer);
+          const parsed = parseProviderSseChunk(chunk, buffer);
           buffer = parsed.remainder;
-          for (const event of parsed.events) await accumulator.handle(event);
+          for (const event of parsed.payloads) await accumulator.handle(event as AnthropicStreamEvent);
         }
       });
 

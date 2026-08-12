@@ -40,6 +40,14 @@ vi.mock("framer-motion", () => ({
   ),
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) => (key === "you" ? "You asked" : key),
+}));
+
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Sonae" }),
+}));
+
 vi.mock("next/image", () => ({
   default: ({ unoptimized, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => {
     void unoptimized;
@@ -68,13 +76,18 @@ describe("chat status components", () => {
     expect(screen.getByText(/\d{2}:\d{2}/)).toBeInTheDocument();
   });
 
-  it("renders user messages with the current user image when available", () => {
+  it("renders a user message as a labelled heading, not an avatared bubble", () => {
     useQueryMock.mockReturnValue({ image: "/user.png", name: "Ada" });
 
-    render(<ChatMessage message={{ ...baseMessage, role: "user", content: "Hello there" } as Doc<"messages">} />);
+    const { container } = render(
+      <ChatMessage message={{ ...baseMessage, role: "user", content: "Hello there" } as Doc<"messages">} />
+    );
 
     expect(screen.getByText("Hello there")).toBeInTheDocument();
-    expect(screen.getByAltText("Ada")).toBeInTheDocument();
+    expect(screen.getByText("You asked")).toBeInTheDocument();
+    // The question is the heading its answer belongs to, so it carries no
+    // avatar of its own.
+    expect(container.querySelector("img")).toBeNull();
   });
 
   it("hides swarm status for loading or empty logs", () => {

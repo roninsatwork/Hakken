@@ -113,6 +113,14 @@ The active toggle is important. Active schedules are armed and can run when thei
 
 The force-run button on the schedule list behaves differently by target type. For agent schedules, it queues a real agent run that can be reviewed from the agent run/log surfaces. For workflow schedules, the current force-run action creates a backend execution record and completes it through a heartbeat simulation rather than running the visual workflow graph. To test the real graph manually, open the workflow builder and use manual run. To test the automatic scheduled graph path, use an active schedule with a workflow whose trigger type is `SCHEDULE`.
 
+## Automatic Retry Behavior
+
+Sonae automatically retries a narrow class of workflow failures: transient provider or network failures on an AI Agent node that is safe to run again. The first retry waits about five seconds and the second waits about 25 seconds, for at most three attempts including the original try. The execution step keeps its attempt count and most recent error so an operator can see that a successful run needed recovery.
+
+Retries are deliberately denied for API actions, email, database writes, and other nodes that may already have changed an external system. Autonomous agents that can execute write tools without approval are also not retried, and neither are failures that happen after an agent's real work has already completed. Those cases fail on the first error and stay available for review. This avoids sending an email twice, repeating a POST, or applying a database write twice merely because bookkeeping or a provider response failed.
+
+Unknown or permanent errors are not retried. If a run fails, inspect the execution step and attempt count before manually starting it again; a manual rerun can repeat side effects that the automatic policy intentionally refused to repeat.
+
 ## Permissions, Boundaries, And Practical Guidance
 
 Only super admins manage workflows and schedules from these screens. This protects tenants from accidental cross-company automation and protects system settings from regular user actions. Backend checks also restrict public webhook triggers to active webhook workflows and require the webhook secret in a request header.

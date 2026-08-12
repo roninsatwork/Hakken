@@ -92,7 +92,7 @@ Before the quota check, the mutation verifies thread access, attachment policy, 
 - active company plan: use the active company plan and increment `companies.messagesUsedThisPeriod`
 - no valid plan target: allow unlimited usage without incrementing a usage row
 
-When a finite quota is exhausted, the mutation still records the attempted user message, inserts an assistant soft-block message that tells the user the AI allocation is exhausted, updates the thread timestamp, and returns without running model generation. A successful send increments the selected usage counter before PII redaction and message insertion.
+When a finite quota is exhausted, the mutation still records the attempted user message, inserts an assistant soft-block message, updates the thread timestamp, and returns without running model generation. Signed-in app threads are told that the company AI allocation is exhausted and directed to an administrator. Anonymous widget threads receive only a generic temporary-unavailability notice so the customer's billing state is not disclosed publicly. The widget notice carries `systemKey: "quotaRefusal"` for browser-language presentation. PII redaction runs before this quota branch, and a successful send increments the selected usage counter before normal message insertion.
 
 Do not describe plan quotas as a global AI feature gate unless more call sites are wired to `resolveChatQuota`, `isChatQuotaExceeded`, and `incrementChatQuota`. Provider rate limits, public API limits, workflow payload limits, upload limits, and widget upload quotas are separate controls.
 

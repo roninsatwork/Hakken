@@ -9,20 +9,24 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { useProgressiveLoading } from "@/src/hooks/useProgressiveLoading";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 import { AssistantComposer } from "./_components/AssistantComposer";
 import { AssistantHero } from "./_components/AssistantHero";
 import { AssistantModals } from "./_components/AssistantModals";
 import {
-  THINKING_LEVELS,
   appendTranscript,
   buildUnsupportedFileMessage,
   canStartAssistantThread,
   getGreetingKey,
-  type ThinkingLevelId,
 } from "./_components/assistantWelcomeUtils";
+import {
+  modelSupportsThinking,
+  readRememberedThinkingLevel,
+  rememberThinkingLevel,
+  resolveThinkingLevelForModel,
+  type ThinkingLevelId,
+} from "@/src/lib/composerPreferences";
 
 export default function AssistantWelcomePage() {
   const t = useTranslations("ai.assistant");
@@ -39,7 +43,13 @@ export default function AssistantWelcomePage() {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
-  const [selectedThinkingId, setSelectedThinkingId] = useState<ThinkingLevelId>(THINKING_LEVELS[0].id);
+  // Restored after mount so the server and first client render agree; the
+  // choice is a preference and survives the page.
+  const [selectedThinkingId, setSelectedThinkingId] = useState<ThinkingLevelId>("NONE");
+  useEffect(() => {
+    const restore = setTimeout(() => setSelectedThinkingId(readRememberedThinkingLevel()), 0);
+    return () => clearTimeout(restore);
+  }, []);
   const [isAutonomousMode] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,10 +67,10 @@ export default function AssistantWelcomePage() {
   const effectiveSelectedModelId = selectedModelId || defaultModel?.modelId || null;
   const selectedModelData = activeModels.find((model) => model.modelId === effectiveSelectedModelId);
 
-  const progressiveText = useProgressiveLoading(isSubmitting);
-  const isUploadingFiles =
-    uploadStatus?.startsWith("Encrypting & Uploading") || uploadStatus?.startsWith("Parsing Intelligence");
-  const displayedUploadStatus = isSubmitting && !isUploadingFiles && progressiveText ? progressiveText : uploadStatus;
+  // Once the message is sent this screen redirects to the thread, where the
+  // run's own stage pill reports what is actually happening; no invented
+  // status text here.
+  const displayedUploadStatus = uploadStatus;
 
   const { isRecording, isTranscribing, toggleRecording, permissionError, setPermissionError } = useVoiceToText({
     onTranscribe: (text) => setContent((previous) => appendTranscript(previous, text)),
@@ -84,7 +94,7 @@ export default function AssistantWelcomePage() {
     if (!textareaRef.current) return;
 
     textareaRef.current.style.height = "auto";
-    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 250)}px`;
+    textareaRef.current.style.height = `${Math.ceil(Math.min(textareaRef.current.scrollHeight, 250))}px`;
   }, [content]);
 
   const handleFileSelect = (files: FileList | null) => {
@@ -151,7 +161,15 @@ export default function AssistantWelcomePage() {
 
   const handleSelectThinking = (thinkingId: ThinkingLevelId) => {
     setSelectedThinkingId(thinkingId);
+    rememberThinkingLevel(thinkingId);
     setThinkingDropdownOpen(false);
+  };
+
+  // A starting point loads into the input and focuses it. It never sends on
+  // its own — the press to send stays deliberate.
+  const handlePickStarter = (text: string) => {
+    setContent(text);
+    textareaRef.current?.focus();
   };
 
   const handleStart = async (event: FormEvent) => {
@@ -201,7 +219,14 @@ export default function AssistantWelcomePage() {
         threadId,
         content: textSnapshot || "Analyzed attached documents.",
         modelId: effectiveSelectedModelId || undefined,
-        thinkingLevel: isAutonomousMode ? "SWARM" : selectedThinkingId,
+        // A model that ignores the thinking setting is never sent one, so
+        // the request matches what the screen offered.
+        thinkingLevel: isAutonomousMode
+          ? "SWARM"
+          : resolveThinkingLevelForModel({
+              remembered: selectedThinkingId,
+              modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
+            }),
         fileIds: uploadedFileIds,
       });
       router.push(`/app/assistant/${threadId}`);
@@ -218,13 +243,16 @@ export default function AssistantWelcomePage() {
   const greetingKey = getGreetingKey();
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 relative overflow-hidden bg-transparent w-full min-h-0">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50vw] h-[50vw] bg-brand/5 blur-[150px] rounded-full pointer-events-none z-0" />
-
+    // One left-aligned column: greeting, ways in, then the composer. The
+    // ambient brand glow is gone — the watermark behind the greeting does
+    // that job now without tinting the whole screen.
+    <div className="flex-1 flex flex-col justify-center relative overflow-y-auto w-full min-h-0 px-6 py-10">
+      <div className="w-full max-w-[660px] mx-auto flex flex-col gap-8">
       <AssistantHero
         firstName={firstName}
         greeting={t(`welcome.greetings.${greetingKey}`)}
-        subtitle={t("welcome.subtitle")}
+        onPickStarter={handlePickStarter}
+        t={t}
       />
 
       <AssistantComposer
@@ -253,7 +281,6 @@ export default function AssistantWelcomePage() {
         onThinkingDropdownChange={handleThinkingDropdownChange}
         onToggleRecording={toggleRecording}
         pendingFiles={pendingFiles}
-        platformName={settings.platformName}
         selectedModelData={selectedModelData}
         selectedThinkingId={selectedThinkingId}
         setContent={setContent}
@@ -262,6 +289,8 @@ export default function AssistantWelcomePage() {
         thinkingRef={thinkingRef}
         t={t}
       />
+
+      </div>
 
       <AssistantModals
         onClearUploadError={() => setUploadError(null)}

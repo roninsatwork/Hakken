@@ -20,6 +20,9 @@ vi.mock("@/convex/_generated/api", () => ({
       recordLogin: "users:recordLogin",
       recordLogout: "users:recordLogout",
     },
+    chat: {
+      getThreadHeading: "chat:getThreadHeading",
+    },
   },
 }));
 

@@ -31,6 +31,8 @@ Each screen saves only itself, so a save on one screen never commits changes lef
 
 Logo uploads use the admin image upload policy. Settings changes can affect every tenant, so confirm whether the change is global branding, a customer package requirement, or only a local test before saving.
 
+The Self-Improvement screen has five platform-wide switches: automatic reflection on failed runs, outcome-weighted memory ranking, chat feedback buttons, rated-answer influence on knowledge retrieval, and Autonomous memory. All default on when no saved configuration exists. Autonomous memory is the consequential switch: when enabled, safe memory suggestions are saved immediately, labelled as saved by the AI, audited, and remain removable; when disabled, new memory suggestions wait for a person. The other switches affect collection or ranking and do not authorize prompt, tool, skill, routing, approval-policy, or eval changes.
+
 ## API Keys
 
 API keys are tenant-scoped secrets for public API and webhook surfaces. The current scopes are:

@@ -2518,36 +2518,35 @@
           "morning": "Buongiorno",
           "afternoon": "Buon pomeriggio",
           "evening": "Buonasera",
-          "night": "Buonanotte",
+          "night": "Buonasera",
           "default": "Benvenuto"
         },
         "subtitle": "Di cosa vorresti discutere oggi?",
         "recording": "Registrazione sicura...",
         "transcribing": "Trascrizione pensiero...",
-        "inputPlaceholder": "Inserisci un prompt per {platformName}",
-        "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte."
-      },
-      "loadingStages": {
-        "stage1": {
-          "0": "Attivazione assistente...",
-          "1": "Lettura del prompt...",
-          "2": "Analisi dei requisiti..."
+        "inputPlaceholder": "Chiedi qualsiasi cosa, o incolla qualcosa su cui lavorare",
+        "footer": "L'Assistente {platformName} è un'IA e può commettere errori, si prega di verificare tutte le risposte.",
+        "question": "Su cosa lavoriamo?",
+        "replyPlaceholder": "Rispondi a {platformName}",
+        "starters": {
+          "summarise": {
+            "title": "Riassumi un documento",
+            "hint": "Qualcosa che hai caricato"
+          },
+          "draft": {
+            "title": "Scrivi un messaggio",
+            "hint": "Un'email, una nota, una risposta"
+          },
+          "explain": {
+            "title": "Spiega qualcosa",
+            "hint": "In parole semplici"
+          },
+          "plan": {
+            "title": "Pianifica un lavoro",
+            "hint": "Suddividilo in passaggi"
+          }
         },
-        "stage2": {
-          "0": "Raccolta del contesto...",
-          "1": "Consultazione regole Sonae...",
-          "2": "Revisione dati di riferimento..."
-        },
-        "stage3": {
-          "0": "Strutturazione risposta...",
-          "1": "Sintetizzazione conoscenza...",
-          "2": "Verifica dei fatti..."
-        },
-        "stage4": {
-          "0": "Rifinitura spiegazione...",
-          "1": "Applicazione dettagli finali...",
-          "2": "Consegna della risposta..."
-        }
+        "stamp": "Pronto"
       },
       "controls": {
         "tools": "Strumenti",
@@ -2557,25 +2556,27 @@
           "stop": "Ferma registrazione"
         },
         "engine": {
-          "label": "Seleziona Motore",
-          "title": "Motori Grid Verificati",
-          "defaultDesc": "Capacità di produzione attiva"
+          "label": "Seleziona modello",
+          "title": "Modello"
         },
         "reasoning": {
-          "title": "Impegno di Ragionamento Agent",
+          "title": "Riflessione",
           "levels": {
-            "NONE": "Istantaneo",
-            "LOW": "Basso Relax",
-            "MEDIUM": "Focus Profondo",
-            "HIGH": "Max Focus"
+            "NONE": "Veloce",
+            "LOW": "Riflessione breve",
+            "MEDIUM": "Riflessione approfondita",
+            "HIGH": "Riflessione massima"
           },
           "descriptions": {
-            "NONE": "Risposte standard istantanee",
-            "LOW": "Pensieri di verifica rapidi",
-            "MEDIUM": "Risoluzione problemi standard",
-            "HIGH": "Ragionamento autonomo complesso"
+            "NONE": "Risponde subito",
+            "LOW": "Riflette un momento prima di rispondere",
+            "MEDIUM": "Ragiona con calma prima di rispondere",
+            "HIGH": "Il ragionamento più lungo e accurato"
           }
-        }
+        },
+        "attach": "Allega",
+        "speak": "Parla",
+        "send": "Invia"
       },
       "errors": {
         "mic": {
@@ -2584,7 +2585,35 @@
           "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo della Web Speech API.",
           "instruction": "Clicca sull'icona del `microfono` nella barra di ricerca dell'URL del browser e seleziona \"Consenti\"."
         }
-      }
+      },
+      "stages": {
+        "thinking": "Sto pensando...",
+        "checking": "Controllo la tua richiesta...",
+        "readingFiles": "Leggo i tuoi file...",
+        "searchingKnowledge": "Cerco nelle tue conoscenze...",
+        "writing": "Scrivo..."
+      },
+      "composer": {
+        "modelMenuTitle": "Modello",
+        "selectModel": "Seleziona modello",
+        "thinkingMenuTitle": "Riflessione",
+        "fastName": "Veloce",
+        "fastDescription": "Risponde subito",
+        "lowName": "Riflessione breve",
+        "lowDescription": "Riflette un momento prima di rispondere",
+        "mediumName": "Riflessione approfondita",
+        "mediumDescription": "Ragiona con calma prima di rispondere",
+        "highName": "Riflessione massima",
+        "highDescription": "Il ragionamento più lungo e accurato"
+      },
+      "history": {
+        "today": "Oggi",
+        "yesterday": "Ieri",
+        "earlier": "Prima",
+        "showOlder": "Mostra conversazioni precedenti"
+      },
+      "you": "Hai chiesto",
+      "copy": "Copia"
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",

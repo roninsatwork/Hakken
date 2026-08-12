@@ -1,7 +1,15 @@
 import ChatHistoryList from "@/src/ui/components/chat/ChatHistoryList";
 import Header from "@/src/ui/components/layout/Header";
 
-/* This is a wrapper layout for the Sonae Assistant interface establishing the dual-pane architecture */
+/**
+ * Two planes, not two cards.
+ *
+ * The history and the conversation used to be rounded, bordered, blurred
+ * cards floating inside a page that was already a card — three frames deep
+ * before any content. They are now flat planes separated by a single
+ * hairline: the history sits on a darker ground so it recedes, and the
+ * conversation takes the light.
+ */
 export default function AssistantLayout({
   children,
 }: {
@@ -9,22 +17,15 @@ export default function AssistantLayout({
 }) {
   return (
     <div className="flex flex-col flex-1 w-full min-h-0">
-      <div className="pb-4">
-        <Header />
-      </div>
-      <div className="flex flex-1 gap-6 overflow-hidden min-h-0">
-      
-      {/* Left Column: Historical Threads & Thread Generation */}
-      <aside className="w-[300px] flex-shrink-0 hidden md:flex flex-col rounded-[20px] border border-border-dim bg-sidebar/20 backdrop-blur-xl shadow-md p-4 relative overflow-hidden z-20">
-        <ChatHistoryList />
-      </aside>
+      <Header />
+      <div className="flex flex-1 overflow-hidden min-h-0 -mx-8 -mb-8">
+        <aside className="w-[248px] flex-shrink-0 hidden md:flex flex-col bg-black/[0.14] dark:bg-black/[0.18] border-r border-border-dim px-4 py-5 relative overflow-hidden z-20">
+          <ChatHistoryList />
+        </aside>
 
-      {/* Right Column: Interaction Sandbox & Message Feeds */}
-      <main className="flex-1 flex flex-col bg-sidebar/10 border border-border-dim rounded-[24px] shadow-lg backdrop-blur-2xl relative overflow-hidden z-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
-        {children}
-      </main>
-
+        <main className="flex-1 flex flex-col relative overflow-hidden z-20 min-w-0">
+          {children}
+        </main>
       </div>
     </div>
   );

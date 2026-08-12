@@ -86,7 +86,7 @@ Skills are reusable capability packages. A skill has status, risk level, instruc
 
 Bindings store the skill version assigned to an agent. `getForAgent` can be read by company-scoped admins for accessible bindings, while binding changes are super-admin-only. Upgrade mutations create or use the latest skill version snapshot and can seed smoke eval fixtures for high-risk skills.
 
-Learning flows start from runs and reflections. Feedback, failed runs, cancelled runs, approval decisions, tool errors, and missed context can generate reflections, memory candidates, eval fixtures, and improvement suggestions. Review mutations require admin access to the record's company scope. Applying a suggestion can create agent or skill version snapshots, and the review inbox highlights high-risk learning before routine memory approval.
+Learning flows start from runs, assistant-message feedback, and reflections. Feedback, failed runs, cancelled runs, approval decisions, tool errors, and missed context can generate reflections, memory candidates, eval fixtures, and improvement suggestions. Review mutations require admin access to the record's company scope. Applying a non-memory suggestion can create agent or skill version snapshots. Memory candidates auto-apply only when `SELF_IMPROVEMENT_CONFIG.autonomousMemory` is enabled and the safety, duplicate, and prior-rejection checks pass; those memories are labelled, audited, and removable. Otherwise the review inbox owns approval and rejection.
 
 When changing this area, keep generated suggestions reviewable. Do not silently apply prompt, rule, tool-schema, routing, approval-policy, or skill-instruction changes without a review path.
 

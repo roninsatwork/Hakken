@@ -31,6 +31,8 @@ The settings screens read and write these modules:
 
 Each screen owns its own save button, so a save only writes that screen. The single header button this replaced wrote the whole settings document from whichever tab was open. The six White Label screens are read-only evidence views and render no save at all — keep that distinction when adding a screen.
 
+`/admin/settings/options/self-improvement` reads and writes the audited `SELF_IMPROVEMENT_CONFIG` through `convex/selfImprovementConfig.ts`. The five independent switches are `autoReflection`, `outcomeWeightedRanking`, `endUserFeedback`, `retrievalPriors`, and `autonomousMemory`; missing or malformed fields fall back individually to defaults, which are currently all true. Autonomous memory can write safe candidates directly to active memory, while the other switches collect or rank evidence. Do not use this configuration as authority to auto-apply prompt, tool, skill, routing, approval-policy, or eval changes.
+
 Logo uploads use the `adminImage` frontend policy and `settings.generateUploadUrl`; backend validation still happens when settings are saved. Settings updates write `UPDATE_SYSTEM_PREFERENCES` audit logs from `convex/settings.ts`, while PII updates write their own audit entries from `convex/system.ts`.
 
 ## API Keys

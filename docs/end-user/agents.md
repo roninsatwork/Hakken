@@ -54,7 +54,7 @@ The skills tab attaches active reusable skills to one agent. A skill is a capabi
 
 The knowledge, instructions, rules, integrations, and schemas tabs define what the agent can use and how it should behave. Knowledge documents supply reference material. The Instructions screen has two responsibilities: the standing job says what the agent should do when launched without a one-off instruction, and the system-prompt field sets core behavior. Rules add governance constraints. Integrations and tools define actions the agent may call. Schemas define expected input and output shapes.
 
-The memory tab supports controlled learning. It shows active memories, memory quality indicators, proposed memory candidates, reflections, and improvement suggestions. High-risk learning items need review before they should be treated as routine memory changes. Memory candidates can be approved or rejected; approved candidates become active memories.
+The memory tab supports controlled learning. It shows active memories, memory quality indicators, proposed memory candidates, reflections, and improvement suggestions. High-risk prompt, tool, routing, approval-policy, skill, and eval changes remain review work. When the platform-wide Autonomous memory switch is on, safe memory candidates are saved immediately, labelled as saved by the AI, audited, and remain removable. With that switch off, candidates wait for approval or rejection.
 
 ## Approvals
 

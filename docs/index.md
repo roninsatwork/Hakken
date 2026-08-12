@@ -28,17 +28,20 @@ This is the front door for Sonae documentation. Use the audience sections below 
 
 ## Coverage Note
 
-The latest implementation audit refreshed plan coverage and repaired stale plan
-links in developer handoff material. Future documentation upkeep should still
-treat broad guides and newly changed implementation areas as active audit
-targets, because coverage can drift as routes, Convex modules, workflows,
-scripts, and operator procedures change.
+The latest implementation audit refreshed every active-plan link and aligned
+the knowledge, workflow, agent, assistant, widget, settings, deployment, and
+coverage guides with the implementation through 2026-08-11. Future upkeep
+should still treat broad guides and newly changed implementation areas as
+active audit targets because routes, Convex modules, workflows, scripts, and
+operator procedures continue to change.
 
 ### Plans
 
 - [Plans Index](./plans/index.md)
 - [Movement Definitive Plan](./plans/active/movement-definitive-plan.md) — the single source of truth for current movement work.
 - [Platform Hardening Plan](./plans/active/platform-hardening-plan.md) — the platform hardening record for non-movement platform correctness, security, operational envelope, agent runtime, and reusability.
+- [Platform Improvement Plan](./plans/active/platform-improvement-plan.md) — delivered plan for shared hybrid retrieval, workflow retry safety, assistant streaming, rehearsal evals, and operational error monitoring.
+- [Widget Messages Spend From The Company's Plan](./plans/active/widget-plan-quota-plan.md) — implemented widget quota, billing-privacy, PII-redaction, and visitor-language decision record.
 - [Admin UI/UX Plan](./plans/active/admin-ux-plan.md) — active admin usability plan for the model catalogue, Skill Center, skill detail, model defaults, system options, API keys, and related admin screens.
 - [OpenRouter And Model Scale Plan](./plans/active/openrouter-and-model-scale-plan.md) — active AI provider/model catalogue scale plan for OpenRouter, provider resolution, paging, search indexes, and rollups.
 - [AI Checks Plan](./plans/active/ai-checks-plan.md) — active AI testing plan for company evals, agent evals, shared check vocabulary, and readiness gates.
@@ -60,6 +63,11 @@ scripts, and operator procedures change.
 - [Research Agent Autopilot Plan](./plans/active/research-agent-autopilot-plan.md) — active plan for turning customer research and prospecting sweeps into a supervised queue-backed job.
 - [Governance And Trust Plan](./plans/active/governance-and-trust-plan.md) — delivered 2026-08-06; kept active for its framework test and recorded decisions. Covers the AI register, risk classification, evidence export, the Governance section, and the roles, one-time-code sign-in and personal-data-rights work behind it.
 - [Audit Trail Plan](./plans/active/audit-trail-plan.md) — active plan for the real audit-trail screen, filters, detail view, event export, and trust-report path.
+- [Knowledge Markdown And Bulk Upload Plan](./plans/active/knowledge-markdown-and-bulk-upload-plan.md) — implemented Markdown, OKF bundle, folder-upload, and pending-file queue contract.
+- [Self-Improvement Plan](./plans/active/self-improvement-plan.md) — implemented reflection, memory-ranking, chat-feedback, retrieval-prior, and autonomous-memory control plan.
+- [Retention And Purge Plan](./plans/active/retention-and-purge-plan.md) — current retention pipeline, purge cascade, stuck-run, and enablement decision record.
+- [Theme Compliance Plan](./plans/active/theme-compliance-plan.md) — dashboard theme-token, status-tone, settings, and hardcoded-colour ratchet contract.
+- [Assistant Streaming All Providers Plan](./plans/active/assistant-streaming-all-providers-plan.md) — current provider adapter streaming contract for plain assistant replies.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./plans/active/OUTSTANDING-TASKS.md) — current queue of remaining work outside the platform hardening plan.
 - [Handover](./plans/active/HANDOVER.md) — current platform-hardening handover state and verification context.

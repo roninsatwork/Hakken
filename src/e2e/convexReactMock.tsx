@@ -1189,9 +1189,6 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   if (path === "movements:getFileUrl") {
     return null;
   }
-  if (path === "chat:getThreads") {
-    return [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", createdAt: now, updatedAt: now }];
-  }
   if (path === "chat:getMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
   if (path === "chatAdmin:getAdminThreadMessages") return readThreadMessages(String(queryArgs.threadId || "thread_e2e_seed"));
   if (path === "knowledge:getThreadDocuments") return [];
@@ -1288,6 +1285,16 @@ export function usePaginatedQuery(functionReference: FunctionReference, args?: u
   if (path === "agentRuns:getForAgent") {
     return {
       results: observabilityRunFixtures(),
+      status: "Exhausted",
+      loadMore: async () => {},
+      isLoading: false,
+    };
+  }
+
+  // The sidebar pages its conversation list now.
+  if (path === "chat:getThreads") {
+    return {
+      results: [{ _id: "thread_e2e_seed", _creationTime: now, title: "E2E Conversation", createdAt: now, updatedAt: now }],
       status: "Exhausted",
       loadMore: async () => {},
       isLoading: false,

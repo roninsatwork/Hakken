@@ -109,7 +109,11 @@ Manual runs from the designer call `api.workflows.triggerManualRun`. The mutatio
 - `emailNode` resolves email fields and either sends via Resend or records a simulated email output when `RESEND_API_KEY` is absent.
 - Unknown node types are bypassed with a structured output recording the node type and received input.
 
-After a successful node, `finalizeNodeStep` updates the step, appends the parsed output into execution state under `nodes[nodeId].output`, computes downstream readiness, creates pending downstream steps, and returns node ids that should be scheduled. If no pending, running, or approval steps remain, the execution is marked `SUCCESS`. Any thrown error calls `failNodeStep`, marks the current step failed when possible, and marks the entire execution `FAILED`.
+After a successful node, `finalizeNodeStep` updates the step, appends the parsed output into execution state under `nodes[nodeId].output`, computes downstream readiness, creates pending downstream steps, and returns node ids that should be scheduled. If no pending, running, or approval steps remain, the execution is marked `SUCCESS`.
+
+Transient retry policy is centralized in `convex/workflowRetryService.ts`. Today only `agentNode` is retryable, only when the classified error is transient, the failed attempt cannot have acted externally, and fewer than three total attempts have been claimed. Delays are 5 seconds after attempt one and 25 seconds after attempt two. API, email, database, and other side-effecting nodes deny by default. An agent node also denies retry when autonomous tool execution bypasses approvals or when its main work completed before later bookkeeping failed.
+
+`requeueStepForRetry` returns the same step to `PENDING`, increments its attempt, retains the error, and sends it back through the normal transactional claim path. If the delayed scheduler call fails after requeueing, the runtime falls through to ordinary failure rather than leaving the execution stuck. Unknown, unsafe, or exhausted failures call `failNodeStep` and mark the execution `FAILED`.
 
 Approval resumption is action-based. `/admin/workflows/executions/[id]` calls `api.workflowRuntime.resumeApprovalStep` for both `APPROVED` and `REJECTED`, with rejection behind a confirmation because it stops the whole run. Approval resumes the halted node by finalizing it with its own stored output marked approved, preserving `message` and `previewData` for downstream templates, and schedules downstream nodes immediately.
 
@@ -130,6 +134,7 @@ Relevant tests include:
 - `convex/workflows.test.ts` for workflow authorization, webhook secret generation, lifecycle audit behavior, graph validation, runtime initialization, iterator fan-out, merge behavior, approval resume, database operation tenancy, and public webhook execution.
 - `convex/ai.test.ts` for generated node-config prompt/context guardrails and AI action rate limiting.
 - `convex/workflowRuntime.test.ts` and `convex/workflowRuntimeService.test.ts` for runtime node behavior and helper output.
+- `convex/workflowRetryService.test.ts` and `convex/workflowRetryEndToEnd.test.ts` for transient classification, attempt budgets, delay policy, safe-node restrictions, and the real claim/requeue path.
 - `convex/workflowScheduleService.test.ts` for legacy and v2 schedule calculations.
 - `convex/scheduler.test.ts` for schedule authorization, CRUD, bounded lists, force run behavior, due agent schedules, and due workflow schedule dispatch.
 - `src/quality-drift.test.ts` for drift checks that include demo seed files such as `convex/seedWorkflows.ts`.

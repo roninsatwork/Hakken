@@ -33,7 +33,6 @@ type AssistantComposerProps = {
   onThinkingDropdownChange: (isOpen: boolean) => void;
   onToggleRecording: () => void;
   pendingFiles: File[];
-  platformName: string;
   selectedModelData: AssistantModel | undefined;
   selectedThinkingId: ThinkingLevelId;
   setContent: (value: string) => void;
@@ -69,7 +68,6 @@ export function AssistantComposer({
   onThinkingDropdownChange,
   onToggleRecording,
   pendingFiles,
-  platformName,
   selectedModelData,
   selectedThinkingId,
   setContent,
@@ -79,8 +77,9 @@ export function AssistantComposer({
   t,
 }: AssistantComposerProps) {
   return (
-    <div className="w-full flex justify-center z-10 absolute bottom-[10vh]">
-      <div className="w-full flex items-center justify-center flex-col px-4 sm:px-8">
+    // In flow with the greeting above it, not floated over the screen.
+    <div className="w-full">
+      <div className="w-full flex flex-col">
         <AssistantUploadStatus status={displayedUploadStatus} />
 
         <form onSubmit={onStart} className="w-full relative">
@@ -88,13 +87,7 @@ export function AssistantComposer({
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
-            className={`relative flex flex-col bg-card dark:bg-[#1e1e20] border rounded-[32px] p-4 pb-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 ${
-              isDragging
-                ? "border-brand shadow-[0_0_40px_-5px_rgba(var(--brand),0.5)] border-dashed bg-card/80 dark:bg-[#2a2a2d] scale-[1.01]"
-                : isRecording
-                  ? "border-brand shadow-[0_0_30px_-5px_rgba(var(--brand),0.3)] bg-card/70 dark:bg-[#252528]"
-                  : "border-border-dim dark:border-white/5 focus-within:bg-card/70 dark:focus-within:bg-[#252528]"
-            }`}
+            className="flex flex-col gap-2.5"
           >
             <PendingFileTray files={pendingFiles} onRemoveFile={onRemovePendingFile} />
 
@@ -107,10 +100,22 @@ export function AssistantComposer({
               onChange={(event) => handleFileSelect(event.target.files)}
             />
 
-            <div className="flex items-start gap-3 w-full pl-1">
+            {/* The field reads as a field: its own recessed surface, a real
+                border, and the send button inside it. Items end-aligned so
+                the button sits level with the last line once the box grows
+                rather than floating in the middle of it. */}
+            <div
+              className={`flex items-end gap-2.5 rounded-[12px] border bg-background/60 dark:bg-black/25 px-3.5 py-3 transition-colors ${
+                isDragging
+                  ? "border-brand border-dashed"
+                  : isRecording
+                    ? "border-brand"
+                    : "border-border-dim focus-within:border-brand/50"
+              }`}
+            >
               <ShieldCheck
-                className={`w-[18px] h-[18px] mt-[3px] flex-shrink-0 transition-colors ${
-                  isRecording ? "text-brand" : "text-muted/60"
+                className={`w-[16px] h-[16px] mb-[3px] flex-shrink-0 transition-colors ${
+                  isRecording ? "text-brand" : "text-muted/50"
                 }`}
               />
               <textarea
@@ -122,9 +127,9 @@ export function AssistantComposer({
                     ? t("welcome.recording")
                     : isTranscribing
                       ? t("welcome.transcribing")
-                      : t("welcome.inputPlaceholder", { platformName })
+                      : t("welcome.inputPlaceholder")
                 }
-                className={`w-full bg-transparent border-none outline-none focus:outline-none text-[16px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[350px] scrollbar-hide font-light leading-relaxed transition-colors ${
+                className={`w-full bg-transparent border-none outline-none focus:outline-none text-[15px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[260px] overflow-y-auto scrollbar-hide leading-relaxed transition-colors ${
                   isRecording ? "text-brand placeholder:text-brand/50" : "text-foreground placeholder:text-muted/70"
                 }`}
                 rows={1}
@@ -135,44 +140,54 @@ export function AssistantComposer({
                   }
                 }}
               />
+              <button
+                type="submit"
+                disabled={!content.trim() && !isSubmitting}
+                aria-label={t("controls.send")}
+                className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all mb-[1px] ${
+                  content.trim() || isSubmitting
+                    ? "bg-brand text-white hover:brightness-110 active:scale-95"
+                    : "bg-foreground/10 text-muted pointer-events-none"
+                }`}
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+              </button>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between w-full mt-3 gap-2 relative">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isSubmitting || isRecording}
-                  className="w-10 h-10 flex items-center justify-center rounded-full transition-all hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground group"
-                  title="Upload File"
-                >
-                  <Plus className="w-[20px] h-[20px] transition-transform group-hover:scale-110" />
-                </button>
-              </div>
+            {/* Settings sit outside the field, so they read as settings. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting || isRecording}
+                className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {t("controls.attach")}
+              </button>
 
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={onToggleRecording}
-                  disabled={isTranscribing}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-all sm:mr-1 ${
-                    isRecording
-                      ? "bg-brand/10 text-brand animate-pulse scale-105"
-                      : isTranscribing
-                        ? "text-brand"
-                        : "hover:bg-foreground/5 dark:hover:bg-white/10 text-muted hover:text-foreground"
-                  }`}
-                  title={isRecording ? t("controls.mic.stop") : t("controls.mic.start")}
-                >
-                  {isRecording ? (
-                    <MicOff className="w-[18px] h-[18px]" />
-                  ) : isTranscribing ? (
-                    <Loader2 className="w-[18px] h-[18px] animate-spin" />
-                  ) : (
-                    <Mic className="w-[18px] h-[18px]" />
-                  )}
-                </button>
+              <button
+                type="button"
+                onClick={onToggleRecording}
+                disabled={isTranscribing}
+                className={`h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[8px] border text-[12px] transition-colors ${
+                  isRecording
+                    ? "border-brand/40 bg-brand/10 text-brand"
+                    : "border-border-dim text-secondary hover:text-foreground hover:bg-foreground/5"
+                }`}
+                title={isRecording ? t("controls.mic.stop") : t("controls.mic.start")}
+              >
+                {isRecording ? (
+                  <MicOff className="w-3.5 h-3.5" />
+                ) : isTranscribing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Mic className="w-3.5 h-3.5" />
+                )}
+                {isRecording ? t("controls.mic.stop") : t("controls.speak")}
+              </button>
 
+              <div className="ml-auto flex items-center gap-2">
                 <AssistantModelSelector
                   activeModels={activeModels}
                   effectiveSelectedModelId={effectiveSelectedModelId}
@@ -186,38 +201,27 @@ export function AssistantComposer({
                   t={t}
                 />
 
-                <AssistantThinkingSelector
-                  isAutonomousMode={isAutonomousMode}
-                  isOpen={thinkingDropdownOpen}
-                  isRecording={isRecording}
-                  onOpenChange={onThinkingDropdownChange}
-                  onSelectThinking={onSelectThinking}
-                  selectedThinkingId={selectedThinkingId}
-                  selectorRef={thinkingRef}
-                  t={t}
-                />
-
-                <button
-                  type="submit"
-                  disabled={!content.trim() && !isSubmitting}
-                  className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-300 ${
-                    isSubmitting
-                      ? "bg-foreground text-background scale-95"
-                      : content.trim()
-                        ? "bg-foreground text-background hover:scale-105 active:scale-95"
-                        : "bg-white/5 text-muted pointer-events-none"
-                  }`}
-                >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowUp className="w-5 h-5" />}
-                </button>
+                {/* Only for models the setting reaches — on this path that is
+                    Google; the other adapters ignore it, so offering the knob
+                    there would be a decorative lie. */}
+                {selectedModelData?.providerKey === "google" && (
+                  <AssistantThinkingSelector
+                    isAutonomousMode={isAutonomousMode}
+                    isOpen={thinkingDropdownOpen}
+                    isRecording={isRecording}
+                    onOpenChange={onThinkingDropdownChange}
+                    onSelectThinking={onSelectThinking}
+                    selectedThinkingId={selectedThinkingId}
+                    selectorRef={thinkingRef}
+                    t={t}
+                  />
+                )}
               </div>
             </div>
           </div>
         </form>
 
-        <div className="mt-4 z-10 opacity-70 w-full text-center px-4">
-          <span className="text-[12px] text-muted font-light leading-relaxed">{footerText}</span>
-        </div>
+        <p className="mt-2.5 w-full text-[11px] leading-relaxed text-secondary">{footerText}</p>
       </div>
     </div>
   );

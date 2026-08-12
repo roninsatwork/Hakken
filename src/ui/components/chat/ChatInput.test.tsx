@@ -46,7 +46,8 @@ vi.mock('@/src/context/SystemSettingsContext', () => ({
 }))
 
 vi.mock('next-intl', () => ({
-  useTranslations: vi.fn(() => (key: string) => key),
+  useTranslations: vi.fn(() => (key: string, values?: Record<string, string>) =>
+    key === "replyPlaceholder" ? `Reply to ${values?.platformName}` : key === "send" ? "Send" : key),
   useLocale: vi.fn(() => 'en'),
 }))
 
@@ -81,7 +82,7 @@ describe('ChatInput Component', () => {
     render(<ChatInput threadId={threadId} />)
     
     // Check placeholder uses system settings
-    expect(screen.getByPlaceholderText('Enter a prompt for Sonae')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Reply to Sonae')).toBeInTheDocument()
     
     // Check legal text uses system settings
     expect(screen.getByText(/Sonae Assistant is AI/i)).toBeInTheDocument()
@@ -93,8 +94,10 @@ describe('ChatInput Component', () => {
   it('handles typing and calling sendMessage on submit', async () => {
     render(<ChatInput threadId={threadId} />)
     
-    const textarea = screen.getByPlaceholderText('Enter a prompt for Sonae')
-    const submitButton = screen.getByRole('button', { name: '' }) // Button with ArrowUp icon
+    const textarea = screen.getByPlaceholderText('Reply to Sonae')
+    // The send control now carries an accessible name rather than being an
+    // unlabelled icon button.
+    const submitButton = screen.getByRole('button', { name: 'Send' })
     
     // Type a message
     fireEvent.change(textarea, { target: { value: 'Hello AI' } })

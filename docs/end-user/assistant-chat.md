@@ -42,6 +42,8 @@ The model you choose is sent with the next message. The backend still resolves t
 
 Provider support can also differ by message shape. Plain text assistant prompts can use the configured chat provider path, but file-heavy prompts need model and provider support for the inline content Sonae sends alongside the text. If a non-default engine works for text but fails when attachments are included, retry with the default engine or ask an administrator to confirm which providers support the uploaded-file workflow.
 
+Plain-text replies stream into the conversation as they are generated on Google Vertex, OpenAI, Anthropic, and OpenRouter. The app smooths backend chunks into a readable typed reveal, speeds up when text is waiting, and finishes promptly after the provider closes. A conversation opened from history shows completed answers immediately rather than replaying their typing. If a provider fails after part of an answer has arrived, Sonae keeps the partial text, appends a provider failure notice, and stops the streaming indicator. A reply left unfinished by an interrupted backend run is shown as stalled after ten minutes with a prompt to try again.
+
 ## Choosing Reasoning Effort
 
 The thinking selector lets you choose the assistant’s reasoning effort for the message. Current options are `Fast`, `Low Focus`, `Deep Focus`, and `Max Focus`. Use `Fast` for short, straightforward tasks where speed matters. Use `Deep Focus` or `Max Focus` when you are asking for comparison, planning, detailed analysis, or work that needs more careful reasoning. Higher effort can take longer and may cost more depending on the configured AI provider.
@@ -77,6 +79,8 @@ The assistant is designed not to reveal hidden system prompts, private configura
 After you send a message, Sonae writes your message to the thread and schedules the assistant response in the background. The screen may show an optimistic version of your message while the database catches up. If files are attached, upload and processing status appears before the answer. The assistant then assembles recent conversation context, relevant uploaded or company knowledge, active company rules, the company prompt, and the selected model configuration before generating a response.
 
 If something goes wrong with the AI provider, the thread should show a clear assistant message saying the core assistant is offline or that communication with the provider failed. If a file cannot be processed, the document may show a failed processing state in areas that inspect knowledge documents, and the assistant may answer from the prompt and other available context instead. If the browser upload itself fails, your unsent prompt and pending files are restored where possible so you can try again.
+
+Finished assistant answers can show **Helpful** and **Not right** controls when platform feedback is enabled. A negative rating can be qualified as wrong, missing something, or not helpful, and you can change the rating later. Ratings are only available on your own completed assistant answers, not while text is streaming or on platform notices such as quota refusals. Feedback influences bounded learning signals; it does not rewrite the answer you already received.
 
 ## Practical Guidance
 

@@ -163,7 +163,7 @@ Listed so that nothing above has to be hedged. These are tracked in
 | Connector marketplace | 29 connector tools are defined with schemas and scopes; **2 are executable end-to-end** (knowledge search, company overview update). Five return an explicit "not implemented" result and the remainder are not registered. |
 | Connector OAuth | Install and status records exist, but there is no authorisation-code exchange, token storage, refresh, or revocation. Configuration validation checks local settings only — it does not contact the provider. |
 | MCP (Model Context Protocol) | Not supported. |
-| Response streaming | Not implemented; responses appear when the run completes. |
+| Response streaming | Built for chat: assistant and widget replies stream word by word on all four providers, and agent-backed threads already did. Structured-output surfaces (reports, node-config generation, grading) still deliver whole. See `docs/plans/active/assistant-streaming-all-providers-plan.md`. |
 | Prompt caching | Not implemented. |
 | Run cancellation and resumption | Cancellation marks the record but does not interrupt an in-flight run; failed runs cannot be resumed from a checkpoint. |
 | Agent evaluations | The default readiness check validates configuration rather than model behaviour. Model-graded evaluation exists but does not exercise the full agent runtime. |

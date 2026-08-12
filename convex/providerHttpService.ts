@@ -45,6 +45,43 @@ export function parseProviderSseChunk(chunk: string, buffer: string) {
   return { payloads, remainder };
 }
 
+/**
+ * Drain a provider's SSE response, handing each framed payload to the caller.
+ *
+ * Every streaming adapter needs the same loop: check the response, read it in
+ * network chunks, decode without splitting multi-byte characters, frame with
+ * `parseProviderSseChunk`, and dispatch. The loop is easy to copy wrongly —
+ * decoding each chunk without `stream: true` corrupts any character split
+ * across two of them, and that only ever happens under load — so it lives
+ * here once.
+ */
+export async function readProviderSseStream(
+  response: Response,
+  providerName: string,
+  onPayload: (payload: unknown) => Promise<void> | void,
+) {
+  if (!response.ok || !response.body) {
+    const detail = response.ok ? "no response body" : await response.text();
+    throw new Error(`${providerName} request failed (${response.status}): ${detail.slice(0, 500)}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+    const parsed = parseProviderSseChunk(chunk, buffer);
+    buffer = parsed.remainder;
+    for (const payload of parsed.payloads) {
+      await onPayload(payload);
+    }
+  }
+}
+
 export function assertTextOnlyContents(contents: Array<{ type: string }>, providerName: string) {
   const unsupported = contents.find((part) => part.type !== "text");
   if (unsupported) {

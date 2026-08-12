@@ -165,6 +165,14 @@ export const generateSonaeResponse = internalAction({
        throw new Error("Payload Too Large: Input exceeds maximum system context window.");
     }
 
+    // The pre-reply pill shows these stages; each is written as the run
+    // actually enters that phase, and cleared when the reply lands or fails,
+    // so the pill can only ever claim work that is happening.
+    const setStage = (stage?: string) =>
+        ctx.runMutation(internal.chat.setAssistantStage, { threadId: args.threadId, stage });
+
+    await setStage("CHECKING");
+
     const safetyDecision = evaluateAssistantSafety(args.content);
     if (!safetyDecision.allowed) {
         await ctx.runMutation(internal.chat.saveAssistantSafetyRefusal, {
@@ -173,6 +181,7 @@ export const generateSonaeResponse = internalAction({
             category: safetyDecision.category,
             source: "assistant",
         });
+        await setStage(undefined);
         return;
     }
 
@@ -196,16 +205,24 @@ export const generateSonaeResponse = internalAction({
         // Sleep the action loop natively until async chunking completes
         let docsReady = false;
         let loopCount = 0;
-        
+        let readingFilesStageSet = false;
+
         while (!docsReady && loopCount < 30) { // Max wait 60 seconds (30 * 2000ms)
             const threadDocs = await ctx.runQuery(internal.knowledge.getThreadDocumentsInternal, { threadId: args.threadId });
             const pendingDocs = threadDocs.filter((d) => d.status === "processing" || d.status === "pending");
-            
+
             if (pendingDocs.length === 0) {
                docsReady = true;
                break;
             }
-            
+
+            // Only when files genuinely are still being read, and only once —
+            // not re-written on every poll.
+            if (!readingFilesStageSet) {
+                readingFilesStageSet = true;
+                await setStage("READING_FILES");
+            }
+
             loopCount++;
             await new Promise(r => setTimeout(r, 2000));
         }
@@ -258,8 +275,9 @@ export const generateSonaeResponse = internalAction({
         // Populated only when retrieval admits chunks, so an answer with no
         // grounding records none rather than recording what was merely available.
         let retrievedChunkIds: string[] = [];
-        
+
         try {
+            await setStage("SEARCHING_KNOWLEDGE");
             const queryVector = await embedRetrievalQuery(ctx, {
                 query: args.content,
                 companyId: thread?.companyId,
@@ -414,6 +432,8 @@ User Prompt: ${args.content}`;
             streamState.lastFlushAt = flushNow;
         };
 
+        await setStage("WRITING");
+
         const response = await generateTextWithResolvedModel({
             model: modelConfig,
             contents: payloadContents,
@@ -478,6 +498,8 @@ User Prompt: ${args.content}`;
             });
         }
 
+        await setStage(undefined);
+
     } catch (error) {
         console.error("AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));
 
@@ -494,6 +516,13 @@ User Prompt: ${args.content}`;
                 threadId: args.threadId,
                 content: failureNotice,
             });
+        }
+        // Best-effort: the failure message above already replaced the pill on
+        // screen, and the stale guard would catch a stage this leaves behind.
+        try {
+            await setStage(undefined);
+        } catch {
+            // Clearing the stage must never mask the original failure.
         }
     }
   },
@@ -515,7 +544,12 @@ export const transcribeAudio = tenantAction({
       maxRequests: TRANSCRIPTION_RATE_LIMIT_PER_MINUTE,
     });
 
-    const ai = createVertexGenAIClient({ location: "us-central1" }); // Enforce central routing for stable multimodal models
+    // The platform's configured region, same as every other generation call.
+    // This call once pinned us-central1 in the name of "stable multimodal
+    // models"; the configured project did not serve the transcription model
+    // there, so every dictation failed with a 404 while ordinary chat on the
+    // same provider worked fine one region over.
+    const ai = createVertexGenAIClient();
 
     try {
         const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {

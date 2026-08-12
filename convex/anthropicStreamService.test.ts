@@ -1,19 +1,29 @@
 import { describe, expect, test, vi } from "vitest";
 import {
   createAnthropicStreamAccumulator,
-  parseSseChunk,
   parseToolArguments,
   type AnthropicStreamEvent,
 } from "./anthropicStreamService";
+import { parseProviderSseChunk } from "./providerHttpService";
 
 /**
  * The two failure modes worth engineering against here are both invisible in a
  * naive test: an event split across network chunks, and a tool call whose
  * arguments are only valid JSON once every fragment has arrived.
+ *
+ * Framing is the shared `parseProviderSseChunk` — this file's private copy was
+ * retired when the assistant streaming work touched the path. The framing
+ * tests stay here, run against the shared parser with Anthropic's own event
+ * shapes, so the split-mid-line coverage survives the retirement.
  */
 
 function sse(event: Record<string, unknown>) {
   return `event: ${event.type as string}\ndata: ${JSON.stringify(event)}\n\n`;
+}
+
+function parseEvents(chunk: string, buffer: string) {
+  const { payloads, remainder } = parseProviderSseChunk(chunk, buffer);
+  return { events: payloads as AnthropicStreamEvent[], remainder };
 }
 
 /** Feed a whole transcript through the accumulator, one chunk at a time. */
@@ -21,7 +31,7 @@ async function accumulate(chunks: string[], onText?: (fragment: string) => void)
   const accumulator = createAnthropicStreamAccumulator({ onText });
   let buffer = "";
   for (const chunk of chunks) {
-    const { events, remainder } = parseSseChunk(chunk, buffer);
+    const { events, remainder } = parseEvents(chunk, buffer);
     buffer = remainder;
     for (const event of events) await accumulator.handle(event);
   }
@@ -30,7 +40,7 @@ async function accumulate(chunks: string[], onText?: (fragment: string) => void)
 
 describe("framing", () => {
   test("parses complete events out of a chunk", () => {
-    const { events, remainder } = parseSseChunk(
+    const { events, remainder } = parseEvents(
       sse({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "hi" } }),
       "",
     );
@@ -46,24 +56,24 @@ describe("framing", () => {
     const whole = sse({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "hello" } });
     const cut = Math.floor(whole.length / 2);
 
-    const first = parseSseChunk(whole.slice(0, cut), "");
+    const first = parseEvents(whole.slice(0, cut), "");
     expect(first.events).toHaveLength(0);
     expect(first.remainder.length).toBeGreaterThan(0);
 
-    const second = parseSseChunk(whole.slice(cut), first.remainder);
+    const second = parseEvents(whole.slice(cut), first.remainder);
     expect(second.events).toHaveLength(1);
     expect(second.events[0].delta?.text).toBe("hello");
   });
 
   test("ignores event lines, blank lines and the terminator", () => {
-    const { events } = parseSseChunk("event: ping\n\ndata: [DONE]\n\n", "");
+    const { events } = parseEvents("event: ping\n\ndata: [DONE]\n\n", "");
     expect(events).toHaveLength(0);
   });
 
   test("skips a malformed payload rather than failing the stream", () => {
     // Aborting a half-delivered answer over one bad frame is worse for the
     // reader than a missing fragment.
-    const { events } = parseSseChunk(
+    const { events } = parseEvents(
       `data: {not json}\n\n${sse({ type: "message_stop" })}`,
       "",
     );

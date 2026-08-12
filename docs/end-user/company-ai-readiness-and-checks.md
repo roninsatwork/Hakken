@@ -57,8 +57,8 @@ The Company AI overview checks these areas:
 - Instructions: whether the company has its own prompt or active rules.
 - Model routing: whether company model choices are configured and whether any
   point at a model that cannot run.
-- Memory: whether approved company memories exist and whether suggestions are
-  waiting.
+- Memory: whether active company memories exist and, when review mode is used,
+  whether suggestions are waiting.
 - Skills: whether company skills are switched on and whether any switched-on
   skill is missing required tools or approval policy.
 - Checks: whether checks exist and whether must-pass checks are failing.
@@ -106,17 +106,18 @@ behavior.
 
 Company memory stores durable notes that the company's AI can use in later
 answers. A memory can apply to every answer or only when relevant. The memory
-screen supports approved memories, removed memories, and proposed suggestions.
+screen supports active memories, removed memories, and proposed suggestions.
 
 Operators can:
 
 - add a memory
 - edit a memory
 - remove or restore a memory
-- approve a suggested memory
-- reject a suggested memory with an optional reason
+- approve or reject a suggested memory when Autonomous memory is off
 - search current memories
 - review proposed suggestions
+
+When the platform-wide Autonomous memory switch is on, safe suggestions can be saved immediately instead of waiting in the review list. They are labelled as saved by the AI, written to the audit trail, and can still be removed. A previously rejected suggestion is remembered so the same proposal is not repeatedly reintroduced.
 
 There is a cap on memories that apply to every answer. Use always-on memories
 for facts or boundaries the AI must never miss. Use relevant memories for

@@ -64,6 +64,8 @@ Inside the widget iframe:
 
 Widget conversations are stored as chat threads with the widget id and source URL. The anonymous browser session also needs its widget thread credential to continue reading or sending messages in that thread, so a copied thread id alone is not enough to reopen a visitor conversation. Company operators can review company chat logs and identify widget-originated conversations.
 
+Anonymous visitors do not see the customer's plan or billing state. If the company AI allocation is exhausted, the widget gives a generic temporary-unavailability message rather than exposing that the plan limit was reached or telling a public visitor to contact an administrator. The platform stores that notice as a system message and displays the Italian version when the visitor's browser language starts with `it`; other languages fall back to the stored English text.
+
 ## Uploads
 
 The backend includes upload support for anonymous widget threads. Uploads are only accepted for an active widget, a thread that belongs to that widget, and a matching widget session credential. The current quota is ten attachment-bearing messages per widget thread, and uploaded files are validated against the widget attachment policy before being finalized.

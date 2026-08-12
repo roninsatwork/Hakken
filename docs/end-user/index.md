@@ -2,6 +2,8 @@
 
 End-user docs are customer-friendly explanations of the Sonae platform, its features, and how people use it. Keep these docs plain-English, product-focused, and free of implementation details unless a customer genuinely needs them.
 
+Current implementation alignment includes multi-provider assistant streaming and answer feedback, Markdown/OKF folder knowledge upload, safe workflow retries, rehearsal evals, autonomous-memory controls, company-plan widget quota privacy, and the rebuilt settings/retention surfaces.
+
 ## Platform
 
 - [Platform Overview](./platform-overview.md)

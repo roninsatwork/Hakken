@@ -49,14 +49,16 @@ vi.mock("@/src/ui/components/feedback/SonaeModal", () => ({
 }));
 
 const t: Translate = (key, values) => {
-  if (key === "welcome.inputPlaceholder") return `Ask ${values?.platformName}`;
+  if (key === "welcome.inputPlaceholder") return "Ask anything, or paste something to work on";
   if (key === "controls.reasoning.levels.LOW" || key === "controls.reasoning.levels.low") return "Low reasoning";
   if (key === "controls.reasoning.levels.MEDIUM" || key === "controls.reasoning.levels.medium") return "Medium reasoning";
   if (key === "controls.reasoning.descriptions.LOW" || key === "controls.reasoning.descriptions.low") return "Quick answers";
   if (key === "controls.reasoning.descriptions.MEDIUM" || key === "controls.reasoning.descriptions.medium") return "Balanced answers";
   if (key === "controls.engine.label") return "Model";
   if (key === "controls.engine.title") return "Choose engine";
-  if (key === "controls.engine.defaultDesc") return "Default model";
+  if (key === "controls.attach") return "Attach";
+  if (key === "controls.speak") return "Speak";
+  if (key === "controls.send") return "Send";
   if (key === "controls.mic.start") return "Start recording";
   if (key === "controls.mic.stop") return "Stop recording";
   if (key === "errors.mic.description") return `Allow ${values?.platformName}`;
@@ -89,14 +91,28 @@ const models = [
 
 describe("assistant shared components", () => {
   it("renders the assistant hero with optional first name", () => {
-    const { rerender } = render(<AssistantHero firstName="Ada" greeting="Good morning" subtitle="Ready when you are" />);
+    const onPick = vi.fn();
+    const { rerender } = render(<AssistantHero firstName="Ada" greeting="Good morning" onPickStarter={onPick} t={t} />);
 
-    expect(screen.getByRole("heading", { name: "Good morning, Ada" })).toBeInTheDocument();
-    expect(screen.getByText("Ready when you are")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Good morning, Ada/ })).toBeInTheDocument();
 
-    rerender(<AssistantHero firstName="" greeting="Welcome" subtitle="Start here" />);
+    rerender(<AssistantHero firstName="" greeting="Welcome" onPickStarter={onPick} t={t} />);
 
-    expect(screen.getByRole("heading", { name: "Welcome" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Welcome/ })).toBeInTheDocument();
+  });
+
+  it("loads a starting point into the composer rather than sending it", () => {
+    // Clicking a starter must never fire a request on its own — it fills the
+    // input and waits for a deliberate press.
+    const onPick = vi.fn();
+    render(<AssistantHero firstName="Ada" greeting="Good morning" onPickStarter={onPick} t={t} />);
+
+    const starters = screen.getAllByRole("button");
+    expect(starters).toHaveLength(4);
+
+    fireEvent.click(starters[0]);
+    expect(onPick).toHaveBeenCalledTimes(1);
+    expect(onPick).toHaveBeenCalledWith("welcome.starters.summarise.title");
   });
 
   it("shows upload status only when a status is present", () => {
@@ -147,7 +163,9 @@ describe("assistant shared components", () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSelectModel).toHaveBeenCalledWith("model-smart");
-    expect(screen.getByText("Default model")).toBeInTheDocument();
+    // One line per model: the menu names models and invents nothing about
+    // them — the old fallback subtitle was decoration.
+    expect(screen.queryByText("Default model")).not.toBeInTheDocument();
   });
 
   it("disables model selection when there are no active models", () => {
@@ -262,8 +280,8 @@ describe("assistant shared components", () => {
 
     const { container, rerender } = render(<AssistantComposer {...props} />);
 
-    fireEvent.change(screen.getByPlaceholderText("Ask Sonae"), { target: { value: "Hello" } });
-    fireEvent.click(screen.getByTitle("Upload File"));
+    fireEvent.change(screen.getByPlaceholderText("Ask anything, or paste something to work on"), { target: { value: "Hello" } });
+    fireEvent.click(screen.getByRole("button", { name: "Attach" }));
     fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
       target: { files: [new File(["x"], "x.txt")] },
     });

@@ -17,13 +17,17 @@ Global knowledge is only available to super admins. Company admins can manage kn
 
 Operators can add knowledge in three main ways:
 
-- File upload for PDF, CSV, Word, and text documents. Excel files currently pass the shared upload validation policy, but persisted knowledge ingestion does not yet have dedicated spreadsheet extraction, so use CSV for reliable tabular knowledge until the knowledge ingestion parser is extended.
+- File or folder upload for PDF, CSV, Word, Markdown, and text documents. Excel files currently pass the shared upload validation policy, but persisted knowledge ingestion does not yet have dedicated spreadsheet extraction, so use CSV for reliable tabular knowledge until the knowledge ingestion parser is extended.
 - Manual text for short policy, operating, or reference material.
 - Website ingestion by mapping and queueing URLs.
 
 Uploaded knowledge documents are processed into searchable chunks and embeddings. Website documents are queued for scraping and can be retried if ingestion fails.
 
 File uploads use the same document size policy as assistant attachments and are accepted up to the configured 50 MB document limit. The browser checks type and size before upload, and the backend validates the stored file again before it becomes a knowledge document. For reliable persisted knowledge extraction, prefer PDF, CSV, Word `.docx`, and plain text.
+
+The knowledge manager also accepts multiple files or a whole folder in one drop, including Open Knowledge Format (OKF) Markdown bundles. A batch is capped at 500 files and shows per-file upload progress plus retry controls for failures. Folder paths are retained in document titles so similarly named files remain distinguishable. Within a folder upload, reserved OKF `index.md` and `log.md` files are skipped because they contain navigation and update history rather than source facts; a file with either name can still be uploaded deliberately on its own.
+
+Markdown ingestion removes YAML frontmatter from searchable content and uses a frontmatter `title` when present. Other frontmatter fields are not imported as independent metadata. Review the resulting document title and chunks after uploading an unfamiliar bundle.
 
 Website ingestion is a two-step flow. First map a root URL to discover candidate pages, then queue the selected URLs for ingestion. The mapper applies URL safety checks and caps a map request at 500 links. Queued website pages behave like other documents: they can become `ready`, fail, be retried, or be deleted in bulk under the same website root.
 
@@ -46,7 +50,7 @@ Embedding drift means a ready document was embedded with different model metadat
 
 Inspection previews are untrusted reference text. They are useful for confirming chunk quality, ingestion history, and source coverage, but they should not be copied into system prompts without review.
 
-The retrieval test lets admins run a sample query against the scoped knowledge base. It searches sampled ready chunks and shows matched terms, phrase hits, source document details, and previews. Use this before release review to confirm that expected material can be found and that irrelevant material is not being returned. A passing retrieval test is evidence that the source can be found; it is not a full agent answer-quality test.
+The retrieval test lets admins run a sample query against the scoped knowledge base. Runtime knowledge retrieval combines semantic vector matches with exact keyword matches, then fuses the two rankings within the requested company, agent, thread, or global scope. Rated answers can add a small, bounded ranking preference when the platform self-improvement switch is enabled, but relevance remains the dominant signal. Use retrieval testing before release review to confirm that expected material can be found and irrelevant material is not being returned. A passing retrieval test is evidence that the source can be found; it is not a full agent answer-quality test.
 
 ## Repair And Deletion
 

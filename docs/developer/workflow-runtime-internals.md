@@ -117,7 +117,20 @@ Wait nodes return a delay through `_system.delayMs`. `scheduleDownstreamNodes` c
 
 Approval nodes return `_system.halt`. The step is left as `PENDING_APPROVAL`, no downstream nodes are created for that finalization pass, and the execution remains `RUNNING`. `resumeApprovalStep` is a `superAdminAction` and can approve or reject. Approval calls `resumeNodeStep`, which finalizes the node with its **own** stored output marked approved — not a bare placeholder, which used to overwrite the node's `message` and `previewData` and break downstream templates reading them. Rejection calls `rejectNodeApproval`, which resolves the step by `PENDING_APPROVAL` status rather than by recency, so a fanned-out iterator node cannot have a completed sibling failed instead; it marks that step and the execution failed. `expireStaleWorkflowApprovals` gives up on steps past the platform approval window. The approval path is exposed at `/admin/workflows/executions/[id]`.
 
-Any thrown runtime error is caught by `executeNode`, passed through `getRuntimeErrorMessage`, and sent to `failNodeStep`. That mutation marks the current step failed when it can identify one and marks the whole execution `FAILED`, which prevents further scheduled node work from proceeding.
+Any thrown runtime error is caught by `executeNode` and passed through `getRuntimeErrorMessage`. Retryable failures follow the policy below; all others go to `failNodeStep`, which marks the current step failed when it can identify one and marks the whole execution `FAILED`.
+
+## Retry Policy
+
+`convex/workflowRetryService.ts` is the single decision point for automatic step retries. `decideStepFailure` returns retry only when all of these are true:
+
+- the error matches a known transient provider or network pattern, including rate limits, selected 5xx responses, timeouts, unavailable or overloaded responses, and common socket or fetch failures
+- the node type is `agentNode`
+- the attempt that failed is below the three-attempt total budget
+- the caller can prove the attempt did not already perform externally visible work
+
+The last condition blocks autonomous agents whose write tools bypass approval and blocks failures after node work completed but bookkeeping failed. Every other node type is deny-by-default because API calls, emails, and database mutations may already have acted.
+
+`requeueStepForRetry` patches the claimed step back to `PENDING`, increments its one-based `attempt`, preserves the error, and lets the existing claim path own the next attempt. `workflowRuntime.executeNode` schedules that retry after 5 seconds for the first failure or 25 seconds for the second. A requeue or scheduler failure falls through to `failNodeStep`, preventing an invisible pending step and permanently running execution.
 
 ## Database Operation Safety
 
@@ -194,6 +207,8 @@ Targeted tests for this area include:
 - `convex/workflowRuntime.test.ts`
 - `convex/workflowRuntimeService.test.ts`
 - `convex/workflowExecutions.test.ts`
+- `convex/workflowRetryService.test.ts`
+- `convex/workflowRetryEndToEnd.test.ts`
 - `convex/workflowScheduleService.test.ts`
 - `convex/scheduler.test.ts`
 - `convex/webhooks.test.ts`

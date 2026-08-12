@@ -2,6 +2,8 @@
 
 Developer docs are for coding agents and engineers working on Sonae. They cover setup, architecture, implementation boundaries, quality gates, and future-agent handoff context.
 
+The current cross-cutting implementation notes cover provider-neutral assistant streaming, hybrid knowledge retrieval and bulk ingestion, workflow retry safety, rehearsal evals, self-improvement switches, widget quota privacy, Sentry integration, theme-token enforcement, and retention/purge ownership.
+
 ## Core Guides
 
 - [Getting Started](./getting-started.md)

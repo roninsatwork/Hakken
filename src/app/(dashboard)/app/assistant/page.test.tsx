@@ -28,10 +28,6 @@ vi.mock("@/src/context/SystemSettingsContext", () => ({
   useSystemSettings: () => ({ platformName: "Sonae" }),
 }));
 
-vi.mock("@/src/hooks/useProgressiveLoading", () => ({
-  useProgressiveLoading: () => null,
-}));
-
 vi.mock("@/src/hooks/useVoiceToText", () => ({
   useVoiceToText: () => ({
     isRecording: false,
@@ -43,9 +39,9 @@ vi.mock("@/src/hooks/useVoiceToText", () => ({
 }));
 
 vi.mock("./_components/AssistantHero", () => ({
-  AssistantHero: ({ firstName, greeting, subtitle }: { firstName: string; greeting: string; subtitle: string }) => (
+  AssistantHero: ({ firstName, greeting }: { firstName: string; greeting: string }) => (
     <header>
-      {greeting} {firstName} {subtitle}
+      {greeting} {firstName}
     </header>
   ),
 }));
@@ -119,7 +115,7 @@ describe("AssistantWelcomePage", () => {
   it("renders user context, enabled models, and starts a thread with the expected message payload", async () => {
     render(<AssistantWelcomePage />);
 
-    expect(screen.getByText(/Good morning Ada Ask anything/)).toBeInTheDocument();
+    expect(screen.getByText(/Good morning Ada/)).toBeInTheDocument();
     expect(screen.getByText("models:1")).toBeInTheDocument();
     expect(screen.getByText("Powered by Sonae")).toBeInTheDocument();
 

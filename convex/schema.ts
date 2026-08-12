@@ -1808,12 +1808,28 @@ export default defineSchema({
      * leak of eval transcripts into a personal history.
      */
     purpose: v.optional(v.literal("EVAL")),
+    /**
+     * What the assistant is actually doing right now, for the pre-reply pill.
+     *
+     * Written by `generateSonaeResponse` as it passes each real phase —
+     * checking, reading files, searching knowledge, writing — and cleared when
+     * the reply lands or fails. Replaced a client-side rotation of invented
+     * phrases on a timer; a stage shown on screen must be one the run is in.
+     * `assistantStageAt` lets the client ignore a stage a crashed run left
+     * behind.
+     */
+    assistantStage: v.optional(v.string()),
+    assistantStageAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId", "updatedAt"])
     .index("by_widget", ["widgetId", "updatedAt"])
     .index("by_company", ["companyId", "updatedAt"])
-    .index("by_updatedAt", ["updatedAt"]),
+    .index("by_updatedAt", ["updatedAt"])
+    // The sidebar search asks the database, not the loaded slice: a person
+    // with years of conversations must be able to find one that never made
+    // it into the first page.
+    .searchIndex("search_title", { searchField: "title", filterFields: ["userId"] }),
 
   messages: defineTable({
     threadId: v.id("threads"),

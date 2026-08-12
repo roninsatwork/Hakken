@@ -149,3 +149,243 @@ describe("openai provider service", () => {
     }
   });
 });
+
+const STREAM_MODEL = {
+  modelId: "openai:test-model",
+  providerKey: "openai",
+  providerModelId: "test-model",
+};
+
+function sseResponse(frames: unknown[]) {
+  const body = [...frames.map((frame) => `data: ${JSON.stringify(frame)}`), "data: [DONE]", ""].join("\n\n");
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
+/** A stream that delivers one frame and then dies, the way a dropped connection does. */
+function dyingSseResponse(frame: unknown) {
+  const encoder = new TextEncoder();
+  let pulls = 0;
+  const body = new ReadableStream<Uint8Array>({
+    // Pull-based so the frame is genuinely read before the failure lands;
+    // erroring inside start() can discard the queued chunk entirely.
+    pull(controller) {
+      pulls += 1;
+      if (pulls === 1) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`));
+        return;
+      }
+      controller.error(new Error("connection reset"));
+    },
+  });
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
+/**
+ * The assistant path streams on OpenAI.
+ *
+ * Streaming goes over chat completions — the same wire the agent adapter
+ * already streams on — while schema and no-listener calls keep the Responses
+ * API untouched. Same rules as every streaming path: fragments as they
+ * arrive, usage intact, retry only before the first delivered fragment.
+ */
+describe("openai assistant streaming", () => {
+  test("a reply streams through onText and lands with usage intact", async () => {
+    let captured: { url: string; body: Record<string, unknown> } | undefined;
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async (url, init) => {
+        captured = { url: String(url), body: JSON.parse(String(init?.body)) };
+        return sseResponse([
+          { choices: [{ delta: { content: "Here is " } }] },
+          { choices: [{ delta: { content: "the answer." }, finish_reason: "stop" }] },
+          { choices: [], usage: { prompt_tokens: 40, completion_tokens: 6 } },
+        ]);
+      },
+    });
+
+    const fragments: string[] = [];
+    const response = await adapter.generateText({
+      model: STREAM_MODEL,
+      systemInstruction: "Be concise.",
+      contents: [{ type: "text", text: "What is our refund policy?" }],
+      onText: (fragment) => { fragments.push(fragment); },
+    });
+
+    expect(fragments.join("")).toBe("Here is the answer.");
+    expect(response).toMatchObject({
+      text: "Here is the answer.",
+      inputTokens: 40,
+      outputTokens: 6,
+    });
+    expect(captured?.url).toBe("https://api.openai.com/v1/chat/completions");
+    expect(captured?.body).toMatchObject({
+      model: "test-model",
+      stream: true,
+      stream_options: { include_usage: true },
+      messages: [
+        { role: "system", content: "Be concise." },
+        { role: "user", content: "What is our refund policy?" },
+      ],
+    });
+  });
+
+  test("without a listener the Responses API path is untouched", async () => {
+    let captured: { url: string; body: Record<string, unknown> } | undefined;
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async (url, init) => {
+        captured = { url: String(url), body: JSON.parse(String(init?.body)) };
+        return new Response(JSON.stringify({
+          output_text: "Short and unstreamed.",
+          usage: { input_tokens: 5, output_tokens: 4 },
+        }), { status: 200 });
+      },
+    });
+
+    const response = await adapter.generateText({
+      model: STREAM_MODEL,
+      contents: [{ type: "text", text: "Quick one." }],
+    });
+
+    expect(response.text).toBe("Short and unstreamed.");
+    expect(captured?.url).toBe("https://api.openai.com/v1/responses");
+    expect(captured?.body).not.toHaveProperty("stream");
+  });
+
+  test("a failure before the first fragment retries; the retry succeeds", async () => {
+    let calls = 0;
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response("temporarily unavailable", { status: 503 });
+        }
+        return sseResponse([
+          { choices: [{ delta: { content: "Recovered." }, finish_reason: "stop" }] },
+        ]);
+      },
+    });
+
+    const response = await adapter.generateText({
+      model: STREAM_MODEL,
+      contents: [{ type: "text", text: "Try twice." }],
+      onText: () => {},
+    });
+
+    expect(calls).toBe(2);
+    expect(response.text).toBe("Recovered.");
+  }, 15_000);
+
+  test("a stream that dies after the first fragment is not retried", async () => {
+    let calls = 0;
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async () => {
+        calls += 1;
+        return dyingSseResponse({ choices: [{ delta: { content: "the answer was going well " } }] });
+      },
+    });
+
+    const fragments: string[] = [];
+    await expect(adapter.generateText({
+      model: STREAM_MODEL,
+      contents: [{ type: "text", text: "Doomed question." }],
+      onText: (fragment) => { fragments.push(fragment); },
+    })).rejects.toThrow();
+
+    // The reader saw text, so a retry would have replayed the answer.
+    expect(calls).toBe(1);
+    expect(fragments.join("")).toContain("the answer was going well");
+  });
+});
+
+/**
+ * OpenAI's reasoning-family models reject the temperature parameter with a
+ * 400. This silently broke every thread title on such models: the sidebar
+ * filled with "New Conversation" because the title call failed each time.
+ */
+describe("openai temperature rejection fallback", () => {
+  const rejection = JSON.stringify({
+    error: {
+      message: "Unsupported parameter: 'temperature' is not supported with this model.",
+      type: "invalid_request_error",
+      param: "temperature",
+      code: null,
+    },
+  });
+
+  test("a model that rejects temperature gets the call again without it", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(String(init?.body));
+        bodies.push(body);
+        if ("temperature" in body) {
+          return new Response(rejection, { status: 400 });
+        }
+        return new Response(JSON.stringify({ output_text: "A Good Title" }), { status: 200 });
+      },
+    });
+
+    const response = await adapter.generateText({
+      model: STREAM_MODEL,
+      contents: [{ type: "text", text: "Name this conversation." }],
+      temperature: 0.3,
+    });
+
+    expect(response.text).toBe("A Good Title");
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0]).toHaveProperty("temperature", 0.3);
+    expect(bodies[1]).not.toHaveProperty("temperature");
+  });
+
+  test("any other 400 still fails rather than being retried blind", async () => {
+    let calls = 0;
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response(JSON.stringify({ error: { message: "Invalid model." } }), { status: 400 });
+      },
+    });
+
+    await expect(adapter.generateText({
+      model: STREAM_MODEL,
+      contents: [{ type: "text", text: "Hello." }],
+      temperature: 0.3,
+    })).rejects.toThrow();
+    expect(calls).toBe(1);
+  });
+
+  test("the streamed path falls back the same way before any text is delivered", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const adapter = createOpenAIProviderAdapter({
+      env: { OPENAI_API_KEY: "test-key" },
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(String(init?.body));
+        bodies.push(body);
+        if ("temperature" in body) {
+          return new Response(rejection, { status: 400 });
+        }
+        return sseResponse([
+          { choices: [{ delta: { content: "Recovered." }, finish_reason: "stop" }] },
+        ]);
+      },
+    });
+
+    const fragments: string[] = [];
+    const response = await adapter.generateText({
+      model: STREAM_MODEL,
+      contents: [{ type: "text", text: "Stream this." }],
+      temperature: 0.3,
+      onText: (fragment) => { fragments.push(fragment); },
+    });
+
+    expect(response.text).toBe("Recovered.");
+    expect(fragments.join("")).toBe("Recovered.");
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).not.toHaveProperty("temperature");
+  });
+});
