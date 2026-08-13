@@ -9,6 +9,7 @@ import {
   GOOGLE_VERTEX_PROVIDER_KEY,
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
+  REALTIME_MODEL_USE_CASE,
 } from "./aiModelService";
 import { listAnthropicModels } from "./anthropicProviderService";
 import { listOpenAIModels } from "./openaiProviderService";
@@ -117,7 +118,13 @@ export function getMediaCapabilities(modelId: string) {
  * so the Model Defaults screen can offer it. Everything else stays a fact.
  */
 export function getMediaModelUseCases(modelId: string) {
-  return modelId.toLowerCase().includes("tts") ? ["speech"] : [];
+  const normalized = modelId.toLowerCase();
+  // A speech-to-speech model is the engine behind real-time voice; a
+  // text-to-speech model reads a finished answer aloud. Neither generates
+  // text, so both would otherwise be catalogued as facts no job can use.
+  if (normalized.includes("realtime")) return [REALTIME_MODEL_USE_CASE];
+  if (normalized.includes("tts")) return ["speech"];
+  return [];
 }
 
 export async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
@@ -225,9 +232,9 @@ export async function syncOpenAIModelCatalogue(ctx: ActionCtx) {
     if (!isOpenAITextGenerationModel(modelId)) {
       return {
         ...base,
-        description: "OpenAI model available to this API key. Not a text-generation model, so no platform job can run on it.",
+        description: "OpenAI model available to this API key.",
         capabilities: getMediaCapabilities(modelId),
-        supportedUseCases: [],
+        supportedUseCases: getMediaModelUseCases(modelId),
       };
     }
     return {

@@ -2596,6 +2596,10 @@
         "close": "End conversation",
         "voiceUnavailable": "The voice isn't available right now — here's the reply as text.",
         "didntCatch": "Didn't catch that — say it again?",
+        "connecting": "Connecting…",
+        "liveListening": "Listening",
+        "liveSpeaking": "Speaking",
+        "connectionLost": "The voice connection dropped. Tap to start again.",
         "micBlocked": "The microphone is blocked. Allow it in your browser's address bar, then try again."
       },
       "stages": {

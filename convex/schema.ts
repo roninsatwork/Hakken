@@ -552,6 +552,7 @@ export default defineSchema({
     actionName: v.union(
       v.literal("transcribeAudio"),
       v.literal("synthesizeSpeech"),
+      v.literal("realtimeVoiceSession"),
       v.literal("generateNodeConfig")
     ),
     requestedAt: v.number(),

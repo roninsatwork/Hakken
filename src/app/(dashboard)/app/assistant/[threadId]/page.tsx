@@ -8,7 +8,7 @@ import ChatMessage from "@/src/ui/components/chat/ChatMessage";
 import ChatInput from "@/src/ui/components/chat/ChatInput";
 import SwarmStatusCard from "@/src/ui/components/chat/SwarmStatusCard";
 import { AssistantStagePill } from "@/src/ui/components/chat/AssistantStagePill";
-import { VoiceSessionOverlay } from "@/src/ui/components/chat/VoiceSessionOverlay";
+import { RealtimeVoiceOverlay } from "@/src/ui/components/chat/RealtimeVoiceOverlay";
 import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { use, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -160,7 +160,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       </div>
 
       {voiceOpen && (
-        <VoiceSessionOverlay threadId={threadId} onClose={() => setVoiceOpen(false)} />
+        <RealtimeVoiceOverlay threadId={threadId} onClose={() => setVoiceOpen(false)} />
       )}
     </div>
   );

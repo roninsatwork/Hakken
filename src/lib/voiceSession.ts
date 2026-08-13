@@ -120,8 +120,12 @@ export type SpeechTurnConfig = {
 
 export const SPEECH_TURN_DEFAULTS: SpeechTurnConfig = {
   onsetLevel: 0.12,
-  onsetMs: 150,
-  silenceMs: 1400,
+  onsetMs: 120,
+  // Human turn-taking gaps in conversation average ~200ms; anything over a
+  // second reads as the machine being slow rather than polite. 700ms is long
+  // enough to survive a mid-sentence breath and short enough to feel like a
+  // reply rather than a wait.
+  silenceMs: 700,
   maxTurnMs: 30000,
 };
 

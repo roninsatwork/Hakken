@@ -231,6 +231,7 @@ export const MODEL_USE_CASE_DESCRIPTIONS: Record<string, string> = {
   title: "Naming a conversation from its first message. Trivial work — the cheapest model is the right one.",
   transcription: "Turning speech into text.",
   speech: "Turning text into a spoken voice. Only Google text-to-speech models can do this.",
+  realtime: "Live spoken conversation — you talk, it answers straight away and can be interrupted. Only OpenAI realtime models can do this.",
   embedding: "Turning documents into something searchable. Only embedding models can do this.",
   vision: "Reading images and screenshots.",
   "tool-calling": "Deciding which tool to use and with what arguments.",

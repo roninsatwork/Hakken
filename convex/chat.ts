@@ -559,3 +559,63 @@ export const renameThreadInternal = internalMutation({
     return true;
   },
 });
+
+const VOICE_TURN_MAX_LENGTH = 4000;
+
+/**
+ * What was said, kept like any other conversation.
+ *
+ * The realtime model answers in audio directly, so nothing goes through
+ * `sendMessage` — asking that to record the turn would start a second,
+ * written reply to a question already answered aloud. This writes the pair
+ * the session heard, so closing the overlay leaves a readable transcript in
+ * the thread under the usual retention and audit rules.
+ */
+export const recordVoiceTurn = tenantMutation({
+  args: {
+    threadId: v.id("threads"),
+    userText: v.string(),
+    assistantText: v.string(),
+    modelUsed: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<null> => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    const current = await getCurrentUser(ctx);
+    await assertCanAccessThread(ctx, thread, current, undefined);
+
+    const userText = args.userText.trim().slice(0, VOICE_TURN_MAX_LENGTH);
+    const assistantText = args.assistantText.trim().slice(0, VOICE_TURN_MAX_LENGTH);
+    if (!userText && !assistantText) return null;
+
+    const now = Date.now();
+    const dimensions = {
+      ...(thread.companyId ? { companyId: thread.companyId } : {}),
+      ...(thread.userId ? { userId: thread.userId } : {}),
+    };
+
+    if (userText) {
+      await ctx.db.insert("messages", {
+        threadId: args.threadId,
+        role: "user",
+        content: userText,
+        createdAt: now,
+        ...dimensions,
+      });
+    }
+    if (assistantText) {
+      await ctx.db.insert("messages", {
+        threadId: args.threadId,
+        role: "assistant",
+        content: assistantText,
+        createdAt: now + 1,
+        ...(args.modelUsed ? { modelUsed: args.modelUsed } : {}),
+        providerKey: "openai",
+        ...dimensions,
+      });
+    }
+
+    await ctx.db.patch(args.threadId, { updatedAt: now });
+    return null;
+  },
+});

@@ -14,6 +14,7 @@ import {
   parsePcmSampleRate,
   type VoiceSessionState,
 } from "@/src/lib/voiceSession";
+import { LAYER } from "@/src/ui/lib/layers";
 import { SpeakingCharacter } from "./SpeakingCharacter";
 
 /**
@@ -28,6 +29,10 @@ import { SpeakingCharacter } from "./SpeakingCharacter";
  * back-to-back on one AudioContext. A synthesis failure degrades the turn to
  * text with a quiet notice — a voice session must never eat an answer.
  */
+const RECORDER_SLICE_MS = 250;
+// Header slice plus ~1s of lead-in.
+const PRE_SPEECH_SLICES = 5;
+
 export function VoiceSessionOverlay({
   threadId,
   onClose,
@@ -38,6 +43,12 @@ export function VoiceSessionOverlay({
   const t = useTranslations("ai.assistant.voice");
   const settings = useSystemSettings();
   const messages = useQuery(api.chat.getMessages, { threadId });
+  // Spoken turns run on the fast model: a voice reply is heard a sentence at
+  // a time, so time-to-first-word beats depth. Falls back to the thread's own
+  // model when no fast default exists.
+  const fastModels = useQuery(api.aiModels.getActiveModels, { useCase: "fast-chat" });
+  const voiceModelId =
+    fastModels?.find((model) => model.isDefault)?.modelId ?? fastModels?.[0]?.modelId;
   const sendMessage = useMutation(api.chat.sendMessage);
   const synthesizeSpeech = useAction(api.ai.synthesizeSpeech);
   const transcribeAudio = useAction(api.ai.transcribeAudio);
@@ -77,7 +88,6 @@ export function VoiceSessionOverlay({
   // stops; the meter loop feeds it and commits the turn by itself.
   const speechDetectorRef = useRef<ReturnType<typeof createSpeechTurnDetector> | null>(null);
   const commitTurnRef = useRef<() => void>(() => {});
-  const recycleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const failedTurnsRef = useRef(0);
 
   const getAudioContext = useCallback(() => {
@@ -167,34 +177,24 @@ export function VoiceSessionOverlay({
       const recorder = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
       recorderRef.current = recorder;
       chunksRef.current = [];
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
-      };
-      recorder.start();
       speechDetectorRef.current = createSpeechTurnDetector();
 
-      // Quiet rooms must not accumulate an ever-growing silent recording:
-      // until speech is heard, the clip is thrown away and restarted.
-      if (recycleTimerRef.current) clearInterval(recycleTimerRef.current);
-      recycleTimerRef.current = setInterval(() => {
-        const current = recorderRef.current;
-        if (
-          stateRef.current !== "listening" ||
-          !current ||
-          speechDetectorRef.current?.hasHeardSpeech()
-        ) {
-          return;
+      // Recorded in slices so the silence before you speak can be thrown
+      // away: transcription time scales with clip length, and sending a
+      // minute of an empty room cost seconds per turn. The first slice is
+      // kept whatever happens — it carries the container header, without
+      // which the rest will not decode — and while nobody is speaking only
+      // the last second of slices is retained, so the clip that gets sent is
+      // your words plus a moment of lead-in.
+      recorder.ondataavailable = (event) => {
+        if (event.data.size === 0) return;
+        chunksRef.current.push(event.data);
+        if (!speechDetectorRef.current?.hasHeardSpeech() && chunksRef.current.length > PRE_SPEECH_SLICES) {
+          const [header, ...rest] = chunksRef.current;
+          chunksRef.current = [header, ...rest.slice(-PRE_SPEECH_SLICES + 1)];
         }
-        current.onstop = null;
-        current.stop();
-        chunksRef.current = [];
-        const next = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
-        next.ondataavailable = (event) => {
-          if (event.data.size > 0) chunksRef.current.push(event.data);
-        };
-        next.start();
-        recorderRef.current = next;
-      }, 15000);
+      };
+      recorder.start(RECORDER_SLICE_MS);
 
       setSessionState("listening");
     } catch {
@@ -204,10 +204,6 @@ export function VoiceSessionOverlay({
   }, [getAudioContext]);
 
   const releaseMic = useCallback(() => {
-    if (recycleTimerRef.current) {
-      clearInterval(recycleTimerRef.current);
-      recycleTimerRef.current = null;
-    }
     speechDetectorRef.current = null;
     micStreamRef.current?.getTracks().forEach((track) => track.stop());
     micStreamRef.current = null;
@@ -311,7 +307,12 @@ export function VoiceSessionOverlay({
           turnRef.current += 1;
           sentAtRef.current = Date.now();
           setSessionState("thinking");
-          await sendMessage({ threadId, content: text });
+          await sendMessage({
+            threadId,
+            content: text,
+            ...(voiceModelId ? { modelId: voiceModelId } : {}),
+            thinkingLevel: "NONE",
+          });
         } catch {
           missTurn();
         }
@@ -319,7 +320,7 @@ export function VoiceSessionOverlay({
     };
     recorder.stop();
     setSessionState("thinking");
-  }, [beginListening, releaseMic, sendMessage, t, threadId, transcribeAudio]);
+  }, [beginListening, releaseMic, sendMessage, t, threadId, transcribeAudio, voiceModelId]);
 
   // The detector commits turns from inside the meter loop; keep its target
   // pointing at the freshest callback.
@@ -401,7 +402,7 @@ export function VoiceSessionOverlay({
   // bar underneath the app header. The session owns the whole screen.
   if (!portalTarget) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-between bg-background p-6">
+    <div className={`fixed inset-0 ${LAYER.OVERLAY} flex flex-col items-center justify-between bg-background p-6`}>
       <div className="flex w-full items-start justify-between">
         <p className="text-sm text-secondary">{t("disclosure", { platformName: settings.platformName })}</p>
         <button

@@ -642,7 +642,14 @@ export const createManual = adminMutation({
     expectedBlockedActionsJson: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, args) => {
+  // Stated rather than inferred: the generated API is large enough that
+  // TypeScript stops following it and widens a caller's `fixtureId` to a plain
+  // id, which then makes `db.get` return every document type at once. Saying
+  // what comes back keeps callers — and their tests — precisely typed.
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ fixtureId: Id<"agentEvalFixtures">; sourceRunId: Id<"agentRuns"> }> => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
     if (!agent) throw new Error("Agent not found");

@@ -212,9 +212,9 @@ describe("Company AI readiness", () => {
     // showed a permanent 6/7 as a result.
     const routing = readiness.areas.find((area) => area.key === "modelRouting");
     expect(routing?.state).toBe("NOT_CONFIGURED");
-    // All nine jobs, not the seven the old hand-copied list checked — it omitted
+    // Every job in DEFAULT_MODEL_USE_CASES, not the seven the old hand-copied list checked — it omitted
     // fast-chat and transcription entirely.
-    expect(routing?.summary).toBe("All 9 jobs use the platform's model.");
+    expect(routing?.summary).toBe("All 11 jobs use the platform's model.");
   });
 
   test("a company model that cannot run needs attention, and one saved by its fallback does not", async () => {

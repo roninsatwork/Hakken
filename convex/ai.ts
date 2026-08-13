@@ -10,7 +10,7 @@ import {
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
-import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { getGoogleVertexProviderModelId, OPENAI_PROVIDER_KEY, REALTIME_MODEL_USE_CASE } from "./aiModelService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import type { Id } from "./_generated/dataModel";
 import type { AiContentPart } from "./aiRuntimeTypes";
@@ -25,6 +25,7 @@ import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { shouldFlushStreamedText } from "./streamingService";
 import { adminAction, tenantAction } from "./tenantFunctions";
+import { getOpenAIApiKey } from "./openaiProviderService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
@@ -786,4 +787,177 @@ Your job is to translate the user's plain-English intent into exact system paylo
       throw new Error("Generative Payload creation failed.");
     }
   }
+});
+
+/**
+ * Real-time voice: the browser holds a live two-way audio connection to a
+ * speech-to-speech model, instead of the record → transcribe → answer →
+ * synthesize relay the turn-based session used. That relay could not go
+ * faster than about five seconds because it is three round trips in a queue;
+ * this replies in well under one, and can be interrupted mid-sentence.
+ *
+ * The platform's OpenAI key never reaches the browser. This action mints a
+ * short-lived client secret (about a minute, single use) that can only open a
+ * realtime session, hands that to the browser, and the browser negotiates the
+ * audio connection directly. That is the vendor's supported browser path and
+ * the reason realtime voice runs on OpenAI rather than Google here: this
+ * deployment reaches Google through a service account, and the equivalent
+ * Google browser connection would mean handing the page a credential for the
+ * whole Google project. If an AI Studio key is ever added, Google's Live API
+ * offers the same one-minute browser pass and becomes a straight swap.
+ */
+
+const REALTIME_SESSION_RATE_LIMIT_PER_MINUTE = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
+/**
+ * How a spoken assistant differs from a written one.
+ *
+ * The company's own instructions still rule; this only adds what is true of
+ * speech and false of text — nobody wants a bulleted list read aloud, and a
+ * spoken answer that runs for a paragraph cannot be skimmed.
+ */
+export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
+
+- Keep answers short: one or two sentences unless asked for more.
+- No markdown, no bullet points, no headings — say it as a person would.
+- Numbers, dates and money are spoken naturally, not written as symbols.
+- If you are asked something you do not know, say so plainly and briefly.
+- You may be interrupted mid-sentence. If that happens, stop and listen.`;
+
+export const createRealtimeVoiceSession = tenantAction({
+  args: {
+    threadId: v.id("threads"),
+    voice: v.optional(v.string()),
+  },
+  // Stated rather than inferred: this handler fans out to five queries, and
+  // leaving TypeScript to work the shape out through the generated API costs
+  // enough of its inference budget that unrelated callers elsewhere lose
+  // their own types.
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ clientSecret: string; model: string; expiresAt: number | null }> => {
+    const { userId, user } = ctx;
+
+    await ctx.runMutation(internal.aiActionRequests.reserve, {
+      actorId: userId,
+      ...(user.companyId ? { companyId: user.companyId } : {}),
+      actionName: "realtimeVoiceSession",
+      windowMs: RATE_LIMIT_WINDOW_MS,
+      maxRequests: REALTIME_SESSION_RATE_LIMIT_PER_MINUTE,
+    });
+
+    const apiKey = getOpenAIApiKey({
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY,
+    });
+    if (!apiKey) {
+      throw new Error(
+        "Real-time voice needs an OpenAI key. Add OPENAI_API_KEY to this deployment."
+      );
+    }
+
+    // Which model speaks is a catalogue decision like every other job, set on
+    // the Model Defaults screen rather than pinned in this file.
+    const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+      useCase: REALTIME_MODEL_USE_CASE,
+    });
+    if (
+      modelConfig.providerKey !== OPENAI_PROVIDER_KEY ||
+      !modelConfig.providerModelId.toLowerCase().includes("realtime")
+    ) {
+      throw new Error(
+        "No real-time voice model is configured. In Model Defaults, set the Real-time voice job to an OpenAI realtime model."
+      );
+    }
+
+    const thread = await ctx.runQuery(internal.chat.getThreadInternal, {
+      threadId: args.threadId,
+    });
+    if (!thread) throw new Error("Thread not found");
+    const companyId = thread.companyId ?? user.companyId;
+
+    // The same company voice the typed assistant uses, plus the speech style.
+    const [globalSystemPrompt, activeRules, company, companySkills, companyMemories] =
+      await Promise.all([
+        ctx.runQuery(internal.system.getInternalSystemPrompt),
+        ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId }),
+        companyId
+          ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: companyId })
+          : Promise.resolve(null),
+        companyId
+          ? ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, {
+              companyId,
+              surfaceType: "COMPANY_CHAT" as const,
+            })
+          : Promise.resolve(null),
+        companyId
+          ? ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+              // The session is opened before anything is said, so there is no
+              // question to match on: this returns the company's ALWAYS
+              // memories, which is exactly what belongs in a system
+              // instruction.
+              companyId,
+              queryText: "",
+              limit: 5,
+            })
+          : Promise.resolve(null),
+      ]);
+
+    const instructions = `${buildAssistantSystemInstruction({
+      globalSystemPrompt,
+      companySystemPrompt: company?.systemPrompt,
+      activeRules: activeRules ?? [],
+      companySkills: companySkills?.skills,
+      companyMemories: companyMemories?.always,
+    })}
+
+====================
+SPEAKING OUT LOUD:
+
+${REALTIME_VOICE_STYLE}`;
+
+    const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session: {
+          type: "realtime",
+          model: modelConfig.providerModelId,
+          instructions,
+          audio: {
+            input: {
+              // The model's own end-of-speech detection: it hears the shape of
+              // a finished sentence rather than counting milliseconds of quiet,
+              // which is what made the previous version feel like waiting.
+              turn_detection: { type: "semantic_vad" },
+              transcription: { model: "whisper-1" },
+            },
+            output: { voice: args.voice ?? "marin" },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error("Realtime session error:", response.status, detail.slice(0, 500));
+      throw new Error("Could not start the real-time voice session.");
+    }
+
+    const payload = (await response.json()) as { value?: string; expires_at?: number };
+    if (!payload.value) {
+      throw new Error("Could not start the real-time voice session.");
+    }
+
+    return {
+      clientSecret: payload.value,
+      model: modelConfig.providerModelId,
+      expiresAt: payload.expires_at ?? null,
+    };
+  },
 });

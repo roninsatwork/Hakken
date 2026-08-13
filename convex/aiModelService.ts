@@ -47,6 +47,7 @@ export const OPENAI_PROVIDER_KEY = "openai";
 export const ANTHROPIC_PROVIDER_KEY = "anthropic";
 export const OPENROUTER_PROVIDER_KEY = "openrouter";
 export const EMBEDDING_MODEL_USE_CASE = "embedding";
+export const REALTIME_MODEL_USE_CASE = "realtime";
 
 /**
  * The jobs a model can be chosen for.
@@ -69,6 +70,7 @@ export const DEFAULT_MODEL_USE_CASES = [
   "title",
   "transcription",
   "speech",
+  REALTIME_MODEL_USE_CASE,
   EMBEDDING_MODEL_USE_CASE,
 ] as const;
 
@@ -141,6 +143,13 @@ export function buildModelSearchText(model: {
  * it could not run when it did not.
  */
 const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription", "speech"]);
+/**
+ * Real-time voice is one live audio connection to a speech-to-speech model,
+ * and only OpenAI offers that to a browser here: this deployment reaches
+ * Google through a service account, so the equivalent Google connection would
+ * mean handing the page a credential for the whole Google project.
+ */
+const OPENAI_ONLY_USE_CASES = new Set([REALTIME_MODEL_USE_CASE]);
 export const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow"]);
 /**
  * The providers the agent runtime has an adapter for.
@@ -161,6 +170,7 @@ export function canProviderServeUseCase(providerKey: string | undefined, useCase
   const provider = providerKey ?? GOOGLE_VERTEX_PROVIDER_KEY;
 
   if (GOOGLE_ONLY_USE_CASES.has(useCase)) return provider === GOOGLE_VERTEX_PROVIDER_KEY;
+  if (OPENAI_ONLY_USE_CASES.has(useCase)) return provider === OPENAI_PROVIDER_KEY;
   if (AGENT_CAPABLE_USE_CASES.has(useCase)) return AGENT_CAPABLE_PROVIDER_KEYS.has(provider);
   return true;
 }
@@ -177,6 +187,9 @@ export function describeUseCaseProviderLimit(useCase: string) {
   }
   if (useCase === "transcription") {
     return "Only Google models can do this job on this platform.";
+  }
+  if (useCase === REALTIME_MODEL_USE_CASE) {
+    return "Only OpenAI real-time models can do this job — pick one whose name says it is realtime.";
   }
   if (useCase === "speech") {
     return "Only Google speech models can do this job on this platform — pick one whose name says it does text-to-speech.";

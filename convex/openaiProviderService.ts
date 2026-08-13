@@ -37,7 +37,7 @@ export type OpenAIProviderEnv = {
   OPENAI_KEY?: string;
 };
 
-function getOpenAIApiKey(env: OpenAIProviderEnv) {
+export function getOpenAIApiKey(env: OpenAIProviderEnv) {
   return env.OPENAI_API_KEY?.trim() || env.OPEN_AI_API_KEY?.trim() || env.OPENAI_KEY?.trim();
 }
 
