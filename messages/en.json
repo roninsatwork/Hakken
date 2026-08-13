@@ -2575,7 +2575,7 @@
           }
         },
         "attach": "Attach",
-        "speak": "Speak",
+        "speak": "Dictate",
         "voice": "Voice",
         "send": "Send"
       },
