@@ -30,6 +30,34 @@ Recorded decisions:
    discretion; making written-chat language behaviour a stated guarantee
    is out of scope here.
 
+## The interpreter, recorded 2026-08-13
+
+Anthony raised the live speech-to-speech translation models (Google's
+`gemini-3.5-live-translate-preview`, OpenAI's `gpt-realtime-translate`,
+both around 3–4p per minute). They are worth building — but as a
+**second, separate mode**, not as the engine for this plan.
+
+The distinction that decides it: a translate model *renders* what you say
+into another language. It does not answer from company knowledge, follow
+company rules, or use skills — it interprets. So it cannot replace the
+conversation model; it earns its place as an **interpreter mode**, where
+two people who share no language talk through Sonae in the middle, live.
+That is a genuinely striking demo and a real product for a business with
+overseas customers.
+
+Availability, checked in the catalogue on 2026-08-13: OpenAI's
+`gpt-realtime-translate` is synced and available. Google's live-translate
+model is not published to this Vertex project (Google's native-audio
+conversation model, `gemini-live-2.5-flash-native-audio`, **is** — and is
+now switched on). Whichever provider is used, it stays a Model Defaults
+choice under its own job, never a hardcoded id.
+
+Sequence: the reply-language work below lands first, because it makes
+every existing surface multilingual for almost no new machinery.
+Interpreter mode follows as its own phase with its own screen — it is a
+different conversation shape (two humans, no assistant answering) and
+should not be bolted onto the assistant session.
+
 ## What is actually true today (verified 2026-08-13)
 
 **Transcription has no language handling at all.**
