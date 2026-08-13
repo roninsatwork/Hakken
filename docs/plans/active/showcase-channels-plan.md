@@ -27,6 +27,18 @@ Anthony's calls, recorded 2026-08-13:
    involved — Anthony's authenticator-protected email is untouched. Mail sent
    to Sonae's own address is delivered straight to the platform by the email
    provider.
+   **Recorded 2026-08-13: the demo address must not use a Ronins name.**
+   Ronins company policy is that all ronins.co.uk email lives on Gmail, with
+   no exceptions — so no address ending in ronins.co.uk (or any subdomain of
+   it) may ever route anywhere else. The showcase address therefore lives on
+   a separate, newly bought product domain (asksonae.com or similar) that has
+   never carried company email. When Sonae is cloned for a client, the
+   address lives on the client's domain under the client's own policy; a
+   client with a Gmail-only rule like Ronins' sees the feature demonstrated
+   on the product domain instead. A Gmail account for Sonae (burner or
+   otherwise) was considered and rejected: Google does not permit password
+   logins by software, robot logins get accounts locked, and a stored
+   password is a secret the platform refuses to hold.
 3. **Connectors stay out of scope.** Every channel in this plan is one Sonae
    owns outright (its own number, its own address, its own screen). Nothing
    here authenticates against a third-party account, so all of it survives
