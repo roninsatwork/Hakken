@@ -29,12 +29,11 @@ export function MessageFeedbackControls({ message }: { message: Doc<"messages"> 
   const feedback = useQuery(api.messageFeedback.getMineForThread, { threadId: message.threadId });
   const upsert = useMutation(api.messageFeedback.upsertForMessage);
   const saveAnswer = useMutation(api.knowledge.saveAnswerToKnowledge);
-  const me = useQuery(api.users.getMe);
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [correction, setCorrection] = useState("");
   const [correctionSent, setCorrectionSent] = useState(false);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "pending" | "failed">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 
   if (!feedback?.enabled) return null;
 
@@ -79,18 +78,16 @@ export function MessageFeedbackControls({ message }: { message: Doc<"messages"> 
   /**
    * Keep a good answer where the team will find it.
    *
-   * An admin's save goes live; anybody else's is held for an admin to
-   * approve, so the button says which happened rather than implying the
-   * answer is already searchable.
+   * Saving is trusted and takes effect immediately; a super admin can remove
+   * one afterwards from Saved answers. So the button says "Saved" and means
+   * it, rather than implying a review that no longer happens.
    */
-  const canPublishDirectly = me?.role === "ADMIN" || me?.role === "SUPER_ADMIN";
-
   const save = async () => {
-    if (saveState === "saving" || saveState === "saved" || saveState === "pending") return;
+    if (saveState === "saving" || saveState === "saved") return;
     setSaveState("saving");
     try {
       await saveAnswer({ messageId: message._id });
-      setSaveState(canPublishDirectly ? "saved" : "pending");
+      setSaveState("saved");
     } catch {
       setSaveState("failed");
     }
@@ -138,28 +135,26 @@ export function MessageFeedbackControls({ message }: { message: Doc<"messages"> 
 
         <button
           type="button"
-          disabled={saveState === "saving" || saveState === "saved" || saveState === "pending"}
+          disabled={saveState === "saving" || saveState === "saved"}
           onClick={() => void save()}
           className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
-            saveState === "saved" || saveState === "pending"
+            saveState === "saved"
               ? "border-sky-500/40 bg-sky-500/10 text-sky-500"
               : "border-border-dim text-muted hover:text-secondary hover:bg-hover/40"
           }`}
         >
           {saveState === "saving" ? (
             <Loader2 className="h-3 w-3 animate-spin" />
-          ) : saveState === "saved" || saveState === "pending" ? (
+          ) : saveState === "saved" ? (
             <Check className="h-3 w-3" />
           ) : (
             <BookmarkPlus className="h-3 w-3" />
           )}
           {saveState === "saved"
             ? tAnswer("saved")
-            : saveState === "pending"
-              ? tAnswer("savedPending")
-              : saveState === "failed"
-                ? tAnswer("saveFailed")
-                : tAnswer("save")}
+            : saveState === "failed"
+              ? tAnswer("saveFailed")
+              : tAnswer("save")}
         </button>
       </div>
 

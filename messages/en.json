@@ -2617,7 +2617,6 @@
       "answer": {
         "save": "Save this",
         "saved": "Saved",
-        "savedPending": "Sent for review",
         "saveFailed": "Could not save"
       },
       "evidence": {
@@ -3217,12 +3216,34 @@
     "waiting": "{count} unread"
   },
   "knowledgeReview": {
-    "title": "Knowledge review",
-    "subtitle": "Answers your team saved, waiting to be added",
-    "empty": "Nothing waiting. Answers saved by the team appear here before they become searchable.",
-    "approve": "Add to knowledge",
-    "reject": "Turn down",
+    "title": "Saved answers",
+    "subtitle": "Answers your team kept. They are searchable straight away — remove any that should not be.",
+    "empty": "Nothing saved yet. Answers your team keeps from a conversation appear here.",
+    "remove": "Remove",
+    "removing": "Removing",
     "savedBy": "Saved by",
-    "reasonPlaceholder": "Why not? Optional."
+    "open": "Open the conversation"
+  },
+  "watching": {
+    "title": "Watching",
+    "subtitle": "Questions Sonae re-asks, so you hear when the answer changes.",
+    "empty": "Nothing being watched. Add a question and Sonae will re-ask it and tell you when the answer moves.",
+    "new": "Watch a question",
+    "placeholder": "What should Sonae keep an eye on?",
+    "interval": "Ask",
+    "daily": "Every day",
+    "weekly": "Every week",
+    "monthly": "Every month",
+    "raisesTask": "Also raise a task when it changes",
+    "add": "Start watching",
+    "cancel": "Cancel",
+    "on": "On",
+    "off": "Paused",
+    "remove": "Remove",
+    "lastAsked": "Last asked",
+    "neverAsked": "Not asked yet",
+    "changed": "Changed",
+    "lastAnswer": "Latest answer",
+    "failed": "Last run failed"
   }
 }

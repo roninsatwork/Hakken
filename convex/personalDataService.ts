@@ -82,6 +82,12 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   },
 
   {
+    table: "scheduledQuestions",
+    fields: ["ownerUserId"],
+    treatment: "DISSOCIATE",
+    reason: "The question belongs to the workspace and keeps watching after the person who set it up has gone; only their name comes off.",
+  },
+  {
     table: "tasks",
     fields: ["assigneeUserId", "createdByUserId", "completedByUserId"],
     treatment: "DISSOCIATE",

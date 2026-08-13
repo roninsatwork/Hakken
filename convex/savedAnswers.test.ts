@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
 /**
@@ -97,30 +97,7 @@ describe("saving an answer", () => {
     ).rejects.toThrow();
   });
 
-  test("an admin's save is approved on the spot", async () => {
-    const { t, adminId, answerId } = await seedAnswer();
-
-    const documentId = await t
-      .withIdentity({ subject: adminId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
-    const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    expect(doc).toMatchObject({ reviewStatus: "APPROVED", status: "processing" });
-  });
-
-  test("a question cannot be saved as though it were an answer", async () => {
-    const { t, adminId, threadId } = await seedAnswer();
-    const questionId = await t.run(async (ctx) =>
-      (await ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect())
-        .find((row) => row.role === "user")!._id,
-    );
-
-    await expect(
-      t.withIdentity({ subject: adminId }).mutation(api.knowledge.saveAnswerToKnowledge, { messageId: questionId }),
-    ).rejects.toThrow("Only an answer can be saved");
-  });
-
-  test("a team member may save, and it is held rather than published", async () => {
+  test("a team member may save, and it goes live immediately", async () => {
     const { t, memberId, answerId } = await seedAnswer();
 
     const documentId = await t
@@ -128,73 +105,59 @@ describe("saving an answer", () => {
       .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
 
     const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    expect(doc).toMatchObject({ reviewStatus: "PENDING", submittedBy: memberId });
-    // Never queued, so it is never chunked — retrieval cannot reach it at
-    // all, rather than reaching it and being filtered.
-    expect(doc?.lastQueuedAt).toBeUndefined();
-    expect(doc?.status).toBe("pending");
-  });
-
-  test("a held answer has no chunks, so retrieval cannot see it", async () => {
-    const { t, memberId, answerId } = await seedAnswer();
-
-    await t.withIdentity({ subject: memberId }).mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
-    const chunks = await t.run(async (ctx) => ctx.db.query("knowledgeChunks").collect());
-    expect(chunks).toHaveLength(0);
-  });
-
-  test("an admin sees what is waiting and approving starts its ingestion", async () => {
-    const { t, memberId, adminId, companyId, answerId } = await seedAnswer();
-
-    const documentId = await t
-      .withIdentity({ subject: memberId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
-    const asAdmin = t.withIdentity({ subject: adminId });
-    const waiting = await asAdmin.query(api.knowledge.listPendingKnowledge, { companyId });
-    expect(waiting.map((row) => row._id)).toEqual([documentId]);
-
-    await asAdmin.mutation(api.knowledge.approveKnowledgeDocument, { documentId });
-
-    const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    expect(doc).toMatchObject({ reviewStatus: "APPROVED", reviewedBy: adminId, status: "processing" });
+    // Trusted by default: queued for ingestion there and then, and it still
+    // records who put it there.
+    expect(doc).toMatchObject({ reviewStatus: "APPROVED", submittedBy: memberId, status: "processing" });
     expect(doc?.lastQueuedAt).toEqual(expect.any(Number));
   });
 
-  test("rejecting keeps the record and never ingests it", async () => {
-    const { t, memberId, adminId, answerId } = await seedAnswer();
+  test("an admin sees every saved answer and who saved it", async () => {
+    const { t, memberId, adminId, companyId, answerId } = await seedAnswer();
 
-    const documentId = await t
-      .withIdentity({ subject: memberId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
+    await t.withIdentity({ subject: memberId }).mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
 
-    await t
+    const saved = await t
       .withIdentity({ subject: adminId })
-      .mutation(api.knowledge.rejectKnowledgeDocument, { documentId, reason: "Out of date." });
+      .query(api.knowledge.listSavedAnswers, { companyId });
 
-    const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    // What a workspace decided not to trust is part of its record.
-    expect(doc).toMatchObject({ reviewStatus: "REJECTED", rejectionReason: "Out of date." });
-    expect(doc?.lastQueuedAt).toBeUndefined();
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      title: "What are the depot hours on a Friday?",
+      savedByName: "member@test.com",
+    });
   });
 
-  test("a decision cannot be made twice", async () => {
-    const { t, memberId, adminId, answerId } = await seedAnswer();
+  test("a super admin can take one out, and its chunks go with it", async () => {
+    const { t, memberId, answerId } = await seedAnswer();
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "root@test.com", role: "SUPER_ADMIN", createdAt: Date.now() }),
+    );
 
     const documentId = await t
       .withIdentity({ subject: memberId })
       .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
 
-    const asAdmin = t.withIdentity({ subject: adminId });
-    await asAdmin.mutation(api.knowledge.approveKnowledgeDocument, { documentId });
+    // A chunk it would have been given by ingestion.
+    await t.run(async (ctx) =>
+      ctx.db.insert("knowledgeChunks", {
+        documentId,
+        isGlobal: false,
+        text: "The depot closes at 4pm on Fridays.",
+        embedding: [],
+      }),
+    );
 
-    await expect(
-      asAdmin.mutation(api.knowledge.rejectKnowledgeDocument, { documentId }),
-    ).rejects.toThrow("already been decided");
+    await t.withIdentity({ subject: superAdminId }).mutation(api.knowledge.deleteDocument, { documentId });
+    expect(await t.run(async (ctx) => ctx.db.get(documentId))).toBeNull();
+
+    // Chunks are purged in their own transaction, scheduled by the delete.
+    // Run it here so the claim "removal removes it from retrieval" is proven
+    // rather than assumed.
+    await t.mutation(internal.knowledge.purgeDocumentChunksInternal, { documentId });
+    expect(await t.run(async (ctx) => ctx.db.query("knowledgeChunks").collect())).toHaveLength(0);
   });
 
-  test("an admin from another workspace cannot approve into this one", async () => {
+  test("an admin from another workspace cannot take one out", async () => {
     const { t, memberId, otherAdminId, answerId } = await seedAnswer();
 
     const documentId = await t
@@ -202,7 +165,7 @@ describe("saving an answer", () => {
       .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
 
     await expect(
-      t.withIdentity({ subject: otherAdminId }).mutation(api.knowledge.approveKnowledgeDocument, { documentId }),
+      t.withIdentity({ subject: otherAdminId }).mutation(api.knowledge.deleteDocument, { documentId }),
     ).rejects.toThrow();
   });
 });

@@ -1281,27 +1281,20 @@ export const saveManualText = tenantMutation({
  *
  * A good reply used to be unkeepable: the same question got asked again next
  * month and answered from scratch. Saving files it as an ordinary
- * company-scoped document, so retrieval picks it up with no extra work.
- *
- * It records where it came from, because an answer with no provenance is a
- * rumour. Writing company knowledge is admin-gated everywhere else and stays
- * so here — `getWritableKnowledgeScope` is the same gate the manual-text path
- * uses, rather than a hole cut for this feature.
- */
-/**
- * Keep a good answer where the team will find it.
- *
- * A good reply used to be unkeepable: the same question got asked again next
- * month and answered from scratch. Saving files it as an ordinary
  * company-scoped document, so retrieval picks it up with no extra work, and
  * it records where it came from — an answer with no provenance is a rumour.
  *
- * Anyone in the workspace may save. An admin's save is approved on the spot;
- * anybody else's is held for review. A held document is never ingested, so
- * it has no chunks and retrieval cannot reach it: unapproved content is not
- * filtered out at query time, it is simply not there. That is the same
- * propose-then-approve shape memories already use, which is what makes it
- * safe to let a team member contribute at all.
+ * Anyone in the workspace may save, and a save goes live immediately.
+ *
+ * This started as propose-then-approve, mirroring memories. Anthony's call,
+ * 2026-08-13: a queue nobody empties is worse than no queue, and an answer
+ * the assistant itself produced is a weaker risk than a document somebody
+ * uploads. So saving is trusted by default and removal is the control —
+ * `deleteDocument` already lets a super admin (or the workspace's own admin)
+ * take one out, and purges its chunks with it, so removal genuinely removes
+ * it from retrieval rather than hiding it.
+ *
+ * `submittedBy` is kept so every saved answer still says who put it there.
  */
 export const saveAnswerToKnowledge = tenantMutation({
   args: { messageId: v.id("messages") },
@@ -1320,8 +1313,6 @@ export const saveAnswerToKnowledge = tenantMutation({
     if (user.role !== "SUPER_ADMIN" && companyId !== actingCompanyId) {
       throw new Error("Unauthorized");
     }
-
-    const canApproveOwnSave = user.role === "SUPER_ADMIN" || user.role === "ADMIN";
 
     // Saving the same answer twice keeps one copy rather than teaching
     // retrieval the same thing twice over.
@@ -1346,54 +1337,51 @@ export const saveAnswerToKnowledge = tenantMutation({
       .pop();
     const title = (question?.content ?? message.content).slice(0, 120).trim() || "Saved answer";
 
+    const now = Date.now();
     const documentId = await ctx.db.insert("knowledgeDocuments", {
       ...buildKnowledgeDocumentRecord({
         title,
         textContent: message.content,
         sourceUrl,
-        // A held document is not queued, so "pending" here would claim an
-        // ingestion that is not going to happen until somebody approves it.
-        status: canApproveOwnSave ? "processing" : "pending",
+        status: "processing",
         format: "text/plain",
         createdBy: userId,
-        createdAt: Date.now(),
-        ...(canApproveOwnSave ? { lastQueuedAt: Date.now() } : {}),
+        createdAt: now,
+        lastQueuedAt: now,
         companyId,
       }),
-      reviewStatus: canApproveOwnSave ? "APPROVED" : "PENDING",
+      reviewStatus: "APPROVED",
       submittedBy: userId,
-      ...(canApproveOwnSave ? { reviewedBy: userId, reviewedAt: Date.now() } : {}),
     });
 
-    if (canApproveOwnSave) {
-      await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, { documentId });
-    }
+    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, { documentId });
 
-    // An admin has no way to know something is waiting unless they are told.
-    if (!canApproveOwnSave) {
-      const admins = await ctx.db
+    // Told, not asked. Nothing waits on an admin now, but somebody adding to
+    // what the assistant answers from is worth their knowing about.
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+      const members = await ctx.db
         .query("users")
         .withIndex("by_company", (q) => q.eq("companyId", companyId))
         .take(200);
-      for (const admin of admins.filter((row) => row.role === "ADMIN")) {
+      for (const admin of members.filter((row) => row.role === "ADMIN")) {
         await ctx.runMutation(internal.notifications.notifyUserInternal, {
           userId: admin._id,
           companyId,
-          kind: "KNOWLEDGE_REVIEW_WAITING",
-          title: "An answer is waiting to be added to knowledge",
+          kind: "ANSWER_SAVED_TO_KNOWLEDGE",
+          title: "An answer was added to knowledge",
           body: title,
-          href: "/app/settings/knowledge-review",
+          href: "/app/settings/saved-answers",
         });
       }
     }
 
     await ctx.db.insert("auditLogs", {
-      actionType: canApproveOwnSave ? "SAVE_ANSWER_TO_KNOWLEDGE" : "SUBMIT_ANSWER_FOR_KNOWLEDGE_REVIEW",
+      actionType: "SAVE_ANSWER_TO_KNOWLEDGE",
       actorId: userId,
       entityType: "knowledgeDocuments",
       entityId: documentId,
       companyId,
-      timestamp: Date.now(),
+      timestamp: now,
       metadata: JSON.stringify({ messageId: args.messageId, threadId: message.threadId }),
     });
 
@@ -1401,85 +1389,41 @@ export const saveAnswerToKnowledge = tenantMutation({
   },
 });
 
-/** What is waiting for an admin to decide on. */
-export const listPendingKnowledge = adminQuery({
+/**
+ * Every answer the team has saved, newest first.
+ *
+ * Saving is trusted, so this is a record to check rather than a queue to
+ * clear — the control it offers is removal, not approval.
+ */
+export const listSavedAnswers = adminQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
     assertCanAccessKnowledgeScope(ctx.user, args.companyId);
 
-    return await ctx.db
+    const documents = await ctx.db
       .query("knowledgeDocuments")
-      .withIndex("by_company_review", (q) => q.eq("companyId", args.companyId).eq("reviewStatus", "PENDING"))
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
       .order("desc")
-      .take(100);
-  },
-});
+      .take(200);
 
-/**
- * Approve a held document, which is what starts its ingestion.
- *
- * Nothing about approval touches retrieval directly — approving simply lets
- * the document be chunked, and chunks are the only thing retrieval reads.
- */
-export const approveKnowledgeDocument = adminMutation({
-  args: { documentId: v.id("knowledgeDocuments") },
-  handler: async (ctx, args) => {
-    const { userId, user } = ctx;
-    const doc = await ctx.db.get(args.documentId);
-    if (!doc) throw new Error("Document not found");
-    assertCanAccessKnowledgeScope(user, doc.companyId);
-    if (doc.reviewStatus !== "PENDING") throw new Error("That has already been decided.");
+    // Saved answers are the ones somebody submitted from a conversation;
+    // uploads and website pages have their own screens.
+    const saved = documents.filter((doc) => doc.submittedBy !== undefined);
 
-    const now = Date.now();
-    await ctx.db.patch(args.documentId, {
-      reviewStatus: "APPROVED",
-      reviewedBy: userId,
-      reviewedAt: now,
-      status: "processing",
-      lastQueuedAt: now,
-    });
-
-    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, { documentId: args.documentId });
-
-    await ctx.db.insert("auditLogs", {
-      actionType: "APPROVE_KNOWLEDGE_DOCUMENT",
-      actorId: userId,
-      entityType: "knowledgeDocuments",
-      entityId: args.documentId,
-      companyId: doc.companyId,
-      timestamp: now,
-    });
-  },
-});
-
-export const rejectKnowledgeDocument = adminMutation({
-  args: { documentId: v.id("knowledgeDocuments"), reason: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    const { userId, user } = ctx;
-    const doc = await ctx.db.get(args.documentId);
-    if (!doc) throw new Error("Document not found");
-    assertCanAccessKnowledgeScope(user, doc.companyId);
-    if (doc.reviewStatus !== "PENDING") throw new Error("That has already been decided.");
-
-    const now = Date.now();
-    // Kept rather than deleted: what a workspace decided not to trust is
-    // part of the record, and it was never ingested so it reaches nothing.
-    await ctx.db.patch(args.documentId, {
-      reviewStatus: "REJECTED",
-      reviewedBy: userId,
-      reviewedAt: now,
-      rejectionReason: args.reason?.trim() || undefined,
-    });
-
-    await ctx.db.insert("auditLogs", {
-      actionType: "REJECT_KNOWLEDGE_DOCUMENT",
-      actorId: userId,
-      entityType: "knowledgeDocuments",
-      entityId: args.documentId,
-      companyId: doc.companyId,
-      timestamp: now,
-      ...(args.reason ? { metadata: JSON.stringify({ reason: args.reason }) } : {}),
-    });
+    return await Promise.all(
+      saved.map(async (doc) => {
+        const submitter = doc.submittedBy ? await ctx.db.get(doc.submittedBy) : null;
+        return {
+          _id: doc._id,
+          title: doc.title,
+          textContent: doc.textContent,
+          sourceUrl: doc.sourceUrl,
+          status: doc.status,
+          createdAt: doc.createdAt,
+          savedByName: submitter?.name ?? submitter?.email ?? null,
+        };
+      }),
+    );
   },
 });
 

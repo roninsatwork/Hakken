@@ -461,6 +461,39 @@ export default defineSchema({
     .index("by_user_created", ["userId", "createdAt"])
     .index("by_user_unread", ["userId", "readAt"]),
 
+  /**
+   * A question Sonae re-asks on a schedule, reporting when the answer moves.
+   *
+   * The scheduler could already run an agent; it could not ask a question
+   * and notice that the answer changed. That is the difference between a
+   * tool you visit and one that watches something for you.
+   *
+   * `lastAnswer` is the comparison point, so the run only has to compare
+   * against one thing rather than re-read a history. Every run costs money,
+   * which is why a question is explicitly active or not and its interval is
+   * chosen rather than inferred.
+   */
+  scheduledQuestions: defineTable({
+    companyId: v.id("companies"),
+    question: v.string(),
+    /** Absent means the workspace default at the time of each run. */
+    modelId: v.optional(v.string()),
+    intervalStr: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly")),
+    isActive: v.boolean(),
+    /** Whether a change should also raise a task, not just tell someone. */
+    raisesTask: v.boolean(),
+    ownerUserId: v.id("users"),
+    lastAnswer: v.optional(v.string()),
+    lastAskedAt: v.optional(v.number()),
+    lastChangedAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    nextRunAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company_created", ["companyId", "createdAt"])
+    .index("by_active_next_run", ["isActive", "nextRunAt"]),
+
   auditLogs: defineTable({
     /**
      * The admin who did it, when a person did.
