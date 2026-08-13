@@ -48,3 +48,5 @@ dev-export.zip
 *.jsonl
 movement_seed.json
 poseData.json
+
+.npm-cache/

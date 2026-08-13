@@ -218,6 +218,16 @@ completed work.
   field on `messageFeedback.comment` and the evidence panel. It feeds the
   Self-Improvement Plan's candidate queue without changing its rules, and
   raises the tasks and notifications the Tasks And Notifications Plan owns.
+- [Company Skills Apply Where They Are Bound](./active/company-skills-surfaces-plan.md) —
+  the plan to wire up the per-surface skill switches that the schema, readiness
+  gates, and eval categories already assume exist: the runtime filters company
+  skills through enabled COMPANY_CHAT/WIDGET bindings, import creates them on
+  by default, the admin skills list gets the two toggles, and a migration
+  backfills existing skills so deploy day changes nothing. Records the
+  decisions that skills stay always-on within their surface (no per-question
+  matching) and that agent threads keep bypassing company skills. Read it
+  before touching `getRuntimeCompanySkillsInternal`, `companySkillBindings`,
+  or the company skills screen.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -265,6 +275,10 @@ If work touches assigning work to a person, or telling someone in the app that
 something happened, use the Tasks And Notifications Plan. It takes approval
 behaviour from the Agent Autonomy And Approvals Plan and email from the Email
 Design System Plan; it owns neither.
+If work touches which skills reach a company's chat or widget — the runtime
+skill query, skill bindings, or the company skills screen — use the Company
+Skills Apply Where They Are Bound plan. The Skill Center and skill authoring
+stay with the Admin UI/UX Plan; eval content stays with the AI Checks Plan.
 If work touches how an assistant reply streams into the message row — an
 adapter's `onText` behaviour, the streaming mutations, or the flush policy —
 use the Assistant Streaming All Providers Plan, which takes provider
