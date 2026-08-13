@@ -10,6 +10,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { VoiceSessionState } from "@/src/lib/voiceSession";
 import { decodePcm16Base64 } from "@/src/lib/voiceSession";
 import {
+  buildToolResponse,
   downsampleTo16k,
   LIVE_OUTPUT_SAMPLE_RATE,
   readLiveServerMessage,
@@ -329,6 +330,37 @@ export function RealtimeVoiceOverlay({
         const event = readLiveServerMessage(String(message.data));
         if (!event) return;
 
+        // The model has stopped mid-sentence to look something up. It holds
+        // its turn until the answer goes back, so this has to be quick.
+        if (event.toolCalls?.length) {
+          setSessionState("thinking");
+          void Promise.all(
+            event.toolCalls.map(async (call) => {
+              const query = typeof call.args.query === "string" ? call.args.query : "";
+              try {
+                const result = await searchKnowledge({ threadId, query });
+                return {
+                  id: call.id,
+                  name: call.name,
+                  output:
+                    result.context ||
+                    "Nothing in the company's knowledge covers that. Say so plainly.",
+                };
+              } catch {
+                return {
+                  id: call.id,
+                  name: call.name,
+                  output: "The knowledge search failed. Say you could not check just now.",
+                };
+              }
+            })
+          ).then((results) => {
+            if (socket.readyState !== WebSocket.OPEN) return;
+            socket.send(buildToolResponse(results));
+          });
+          return;
+        }
+
         if (event.interrupted) {
           stopPlayback();
           setSessionState("listening");
@@ -372,7 +404,7 @@ export function RealtimeVoiceOverlay({
         setSessionState("idle");
       });
     },
-    [flushTurn, t]
+    [flushTurn, searchKnowledge, t, threadId]
   );
 
   const start = useCallback(async () => {

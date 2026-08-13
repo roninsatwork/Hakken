@@ -894,24 +894,24 @@ export const searchKnowledgeForVoice = tenantAction({
         companyMatches: companyChunks,
         threadMatches: threadChunks,
       });
-      if (ranked.length === 0) return { context: "" };
-
       // Far smaller than the typed budget on purpose: this is read aloud, and
       // a spoken answer is two sentences, not two pages.
-      const { chunkTexts } = await selectKnowledgeChunksWithinBudget({
-        ranked,
-        maxChars: 6000,
-        threadReserveRatio: 0.3,
-        loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
-      });
-      // Documents finding nothing does not mean the company has nothing to
-      // say: a memory may answer on its own.
-      if (chunkTexts.length === 0 && !companyId) return { context: "" };
+      const { chunkTexts } =
+        ranked.length > 0
+          ? await selectKnowledgeChunksWithinBudget({
+              ranked,
+              maxChars: 6000,
+              threadReserveRatio: 0.3,
+              loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+            })
+          : { chunkTexts: [] as string[] };
 
       // Everything the typed assistant would assemble for this question, not
       // just documents: a company memory written for exactly this situation
       // is as much an answer as a paragraph in a file, and saved answers live
       // in company knowledge so they arrive through the search above.
+      // Looked up even when no document matched — documents finding nothing
+      // does not mean the company has nothing to say.
       const memories = companyId
         ? await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
             companyId,
@@ -923,12 +923,22 @@ export const searchKnowledgeForVoice = tenantAction({
         .map((memory: { title: string; content: string }) => `- ${memory.title}: ${memory.content}`)
         .join("\n");
 
+      // Nothing found is reported as nothing found. Returning the wrapper
+      // around an empty list reads to the model as "here is your evidence",
+      // and a model handed an empty evidence block invents rather than
+      // admits — which is the one thing this must never do out loud.
+      if (chunkTexts.length === 0 && !relevantMemories) return { context: "" };
+
       return {
-        context: `${buildUntrustedKnowledgeContext({
-          sourceLabel: "global, company, and thread-scoped knowledge",
-          chunks: chunkTexts,
-          maxChars: 6000,
-        })}${
+        context: `${
+          chunkTexts.length > 0
+            ? buildUntrustedKnowledgeContext({
+                sourceLabel: "global, company, and thread-scoped knowledge",
+                chunks: chunkTexts,
+                maxChars: 6000,
+              })
+            : ""
+        }${
           relevantMemories
             ? `\n\nApproved company notes that apply here:\n${relevantMemories}`
             : ""
@@ -966,16 +976,6 @@ export const createRealtimeVoiceSession = tenantAction({
       windowMs: RATE_LIMIT_WINDOW_MS,
       maxRequests: REALTIME_SESSION_RATE_LIMIT_PER_MINUTE,
     });
-
-    const apiKey = getOpenAIApiKey({
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-      OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY,
-    });
-    if (!apiKey) {
-      throw new Error(
-        "Real-time voice needs an OpenAI key. Add OPENAI_API_KEY to this deployment."
-      );
-    }
 
     // Which model speaks is a catalogue decision like every other job, set on
     // the Model Defaults screen rather than pinned in this file.
@@ -1061,6 +1061,23 @@ ${REALTIME_VOICE_STYLE}`;
           model: modelConfig.providerModelId,
           voice: args.voice ?? "Aoede",
           instructions,
+          // The same door back to the company's knowledge the typed path
+          // gets, declared the way Google's live models expect it. It is
+          // signed into the ticket rather than sent by the page, because a
+          // browser that could choose its own tools could choose others.
+          tools: [
+            {
+              name: VOICE_KNOWLEDGE_TOOL_NAME,
+              description: VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
+              parameters: {
+                type: "OBJECT",
+                properties: {
+                  query: { type: "STRING", description: "What to look up, in a few words." },
+                },
+                required: ["query"],
+              },
+            },
+          ],
           companyId: companyId ?? null,
           threadId: args.threadId,
           expiresAt: Date.now() + 60_000,
@@ -1075,6 +1092,20 @@ ${REALTIME_VOICE_STYLE}`;
         model: modelConfig.providerModelId,
         expiresAt: Date.now() + 60_000,
       };
+    }
+
+    // Only the OpenAI transport needs an OpenAI key. Asking for one before
+    // the Google branch above meant a deployment that had deliberately chosen
+    // Google — the cheaper engine, and the standing decision here — could not
+    // start a voice session at all.
+    const apiKey = getOpenAIApiKey({
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      OPEN_AI_API_KEY: process.env.OPEN_AI_API_KEY,
+    });
+    if (!apiKey) {
+      throw new Error(
+        "Real-time voice needs an OpenAI key. Add OPENAI_API_KEY to this deployment."
+      );
     }
 
     const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {

@@ -24,10 +24,10 @@
  *   GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY   only when not on Google Cloud
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import { GoogleAuth } from "google-auth-library";
 import { WebSocket, WebSocketServer } from "ws";
+import { buildSetup, createCallerRouter } from "./protocol.mjs";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const RELAY_SECRET = process.env.VOICE_RELAY_SECRET ?? "";
@@ -35,6 +35,10 @@ const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "";
 const LOCATION = process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1";
 // A session that outlives this is a session nobody is talking to.
 const MAX_SESSION_MS = 15 * 60 * 1000;
+// The caller starts talking the instant the socket opens, while this relay is
+// still fetching its Google token. That audio is held rather than dropped, but
+// only so much of it: if Vertex never opens, this is a leak.
+const MAX_HELD_FRAMES = 200;
 
 if (!RELAY_SECRET) throw new Error("VOICE_RELAY_SECRET is required.");
 if (!PROJECT) throw new Error("GOOGLE_CLOUD_PROJECT is required.");
@@ -51,54 +55,6 @@ const auth = new GoogleAuth({
     : {}),
 });
 
-/**
- * The ticket says who is allowed to talk and what the session is. It is
- * signed by the platform, so this relay can trust its contents without
- * calling anything, and it expires in a minute — long enough to open a
- * connection, too short to be worth stealing.
- */
-function readTicket(raw) {
-  const [payloadPart, signaturePart] = String(raw ?? "").split(".");
-  if (!payloadPart || !signaturePart) throw new Error("Malformed ticket.");
-
-  const expected = createHmac("sha256", RELAY_SECRET).update(payloadPart).digest();
-  const provided = Buffer.from(signaturePart, "base64url");
-  if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
-    throw new Error("Bad ticket signature.");
-  }
-
-  const payload = JSON.parse(Buffer.from(payloadPart, "base64url").toString("utf8"));
-  if (typeof payload.expiresAt !== "number" || payload.expiresAt < Date.now()) {
-    throw new Error("Ticket expired.");
-  }
-  if (!payload.model) throw new Error("Ticket names no model.");
-  return payload;
-}
-
-/** The setup Vertex expects before any audio flows. */
-function buildSetup(ticket) {
-  return {
-    setup: {
-      model: `projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${ticket.model}`,
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: ticket.voice
-          ? { voiceConfig: { prebuiltVoiceConfig: { voiceName: ticket.voice } } }
-          : undefined,
-      },
-      // The company's rules arrive from the platform, never from the page:
-      // a browser can rewrite anything it is given, so it is given nothing.
-      systemInstruction: ticket.instructions
-        ? { parts: [{ text: ticket.instructions }] }
-        : undefined,
-      // Both sides transcribed so the conversation can be written back into
-      // the thread as ordinary messages.
-      inputAudioTranscription: {},
-      outputAudioTranscription: {},
-    },
-  };
-}
-
 const server = createServer((request, response) => {
   // Cloud Run wants a plain health endpoint.
   if (request.url === "/health") {
@@ -111,16 +67,26 @@ const server = createServer((request, response) => {
 });
 
 const relay = new WebSocketServer({ server });
+let sessionCount = 0;
 
 relay.on("connection", (browser) => {
+  const id = (sessionCount += 1);
+  const say = (message, ...rest) => console.log(`[session ${id}] ${message}`, ...rest);
+
   let vertex = null;
   let closing = false;
-  const pending = [];
+  // Owns the ticket-then-conversation ordering, and holds whatever the caller
+  // says while Vertex is still being opened. See protocol.mjs for why that
+  // ordering has to be decided synchronously.
+  const router = createCallerRouter({ secret: RELAY_SECRET, maxHeldFrames: MAX_HELD_FRAMES });
+
+  say("caller connected");
 
   const shutdown = (code, reason) => {
     if (closing) return;
     closing = true;
     clearTimeout(sessionTimer);
+    say(`closing (${code}): ${reason}`);
     try {
       browser.close(code, reason);
     } catch {
@@ -135,62 +101,62 @@ relay.on("connection", (browser) => {
 
   const sessionTimer = setTimeout(() => shutdown(1000, "Session ended."), MAX_SESSION_MS);
 
-  browser.on("message", async (data, isBinary) => {
-    // Everything after the ticket is audio, forwarded as it arrives.
-    if (vertex) {
-      if (vertex.readyState !== WebSocket.OPEN) return;
-      if (isBinary) {
-        vertex.send(
-          JSON.stringify({
-            realtimeInput: {
-              mediaChunks: [
-                { mimeType: "audio/pcm;rate=16000", data: Buffer.from(data).toString("base64") },
-              ],
-            },
-          })
-        );
-      } else {
-        // Control messages from the page are passed through untouched except
-        // for setup, which only this relay may send.
-        const text = data.toString();
-        if (!text.includes('"setup"')) vertex.send(text);
-      }
+  const openVertex = async (ticket) => {
+    let token;
+    try {
+      token = await auth.getAccessToken();
+    } catch (error) {
+      console.error(`[session ${id}] no Google credential`, error?.message ?? error);
+      shutdown(1011, "Could not authenticate with Vertex.");
       return;
     }
+    if (closing) return;
 
-    let ticket;
-    try {
-      ticket = readTicket(JSON.parse(data.toString()).ticket);
-    } catch (error) {
-      shutdown(4401, error instanceof Error ? error.message : "Refused.");
-      return;
-    }
+    say(`opening Vertex ${PROJECT}/${LOCATION} for ${ticket.model}`);
+    vertex = new WebSocket(
+      `wss://${LOCATION}-aiplatform.googleapis.com/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-    try {
-      const token = await auth.getAccessToken();
-      vertex = new WebSocket(
-        `wss://${LOCATION}-aiplatform.googleapis.com/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    vertex.on("open", () => {
+      vertex.send(JSON.stringify(buildSetup(ticket, PROJECT, LOCATION)));
+      const queued = router.release();
+      for (const frame of queued) vertex.send(frame);
+      say(`Vertex open, released ${queued.length} held frame(s)`);
+      browser.send(JSON.stringify({ type: "relay.ready" }));
+    });
 
-      vertex.on("open", () => {
-        vertex.send(JSON.stringify(buildSetup(ticket)));
-        for (const queued of pending.splice(0)) vertex.send(queued);
-        browser.send(JSON.stringify({ type: "relay.ready" }));
-      });
+    vertex.on("message", (payload) => {
+      if (browser.readyState === WebSocket.OPEN) browser.send(payload.toString());
+    });
 
-      vertex.on("message", (payload) => {
-        if (browser.readyState === WebSocket.OPEN) browser.send(payload.toString());
-      });
+    vertex.on("close", (code, reason) =>
+      shutdown(1000, `Vertex closed the session (${code}): ${reason?.toString() || "no reason"}`)
+    );
+    vertex.on("error", (error) => {
+      console.error(`[session ${id}] Vertex socket error`, error?.message ?? error);
+      shutdown(1011, "Vertex connection failed.");
+    });
+  };
 
-      vertex.on("close", () => shutdown(1000, "Vertex closed the session."));
-      vertex.on("error", (error) => {
-        console.error("Vertex socket error", error?.message ?? error);
-        shutdown(1011, "Vertex connection failed.");
-      });
-    } catch (error) {
-      console.error("Could not reach Vertex", error?.message ?? error);
-      shutdown(1011, "Could not reach Vertex.");
+  browser.on("message", (data, isBinary) => {
+    const decision = router.receive(data, isBinary);
+    switch (decision.kind) {
+      case "ticket":
+        say("ticket accepted");
+        void openVertex(decision.ticket);
+        return;
+      case "refused":
+        // Logged, not silent: a refused ticket used to look exactly like a
+        // caller who never arrived, which is a bad hour to spend.
+        console.warn(`[session ${id}] refused the ticket:`, decision.reason);
+        shutdown(4401, decision.reason);
+        return;
+      case "send":
+        if (vertex?.readyState === WebSocket.OPEN) vertex.send(decision.frame);
+        return;
+      default:
+        return;
     }
   });
 

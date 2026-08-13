@@ -80,7 +80,14 @@ export default defineConfig({
           name: 'backend',
           globals: true,
           environment: 'node',
-          include: ['convex/**/*.test.{ts,tsx}', 'scripts/**/*.test.{js,mjs,ts,tsx}'],
+          include: [
+            'convex/**/*.test.{ts,tsx}',
+            'scripts/**/*.test.{js,mjs,ts,tsx}',
+            // The voice relay is a plain Node service rather than app code,
+            // but it was unreachable by the suite and shipped a bug that only
+            // a live call could reveal. It runs with everything else now.
+            'services/**/*.test.{js,mjs,ts,tsx}',
+          ],
           /*
            * Vitest's default is 5s, which is too tight for these.
            *

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  buildToolResponse,
   downsampleTo16k,
   floatToPcm16,
   readLiveServerMessage,
@@ -57,5 +58,78 @@ describe("reading what the relay forwards", () => {
     expect(readLiveServerMessage("not json")).toBeNull();
     expect(readLiveServerMessage(JSON.stringify({ setupComplete: {} }))).toBeNull();
     expect(readLiveServerMessage(JSON.stringify({ serverContent: {} }))).toBeNull();
+  });
+});
+
+describe("reaching for the company's knowledge mid-sentence", () => {
+  test("a lookup the model asked for is recognised, with what it wants looked up", () => {
+    expect(
+      readLiveServerMessage(
+        JSON.stringify({
+          toolCall: {
+            functionCalls: [
+              { id: "call-1", name: "search_company_knowledge", args: { query: "opening hours" } },
+            ],
+          },
+        })
+      )
+    ).toEqual({
+      toolCalls: [
+        { id: "call-1", name: "search_company_knowledge", args: { query: "opening hours" } },
+      ],
+    });
+  });
+
+  test("more than one lookup in a single turn is kept, not just the first", () => {
+    const event = readLiveServerMessage(
+      JSON.stringify({
+        toolCall: {
+          functionCalls: [
+            { id: "a", name: "search_company_knowledge", args: { query: "prices" } },
+            { id: "b", name: "search_company_knowledge", args: { query: "delivery" } },
+          ],
+        },
+      })
+    );
+    expect(event?.toolCalls?.map((call) => call.id)).toEqual(["a", "b"]);
+  });
+
+  test("a call with no id is skipped — the answer would have nowhere to go", () => {
+    expect(
+      readLiveServerMessage(
+        JSON.stringify({ toolCall: { functionCalls: [{ name: "search_company_knowledge" }] } })
+      )
+    ).toBeNull();
+    expect(readLiveServerMessage(JSON.stringify({ toolCall: { functionCalls: [] } }))).toBeNull();
+  });
+
+  test("a call with no arguments still reports the call rather than being dropped", () => {
+    expect(
+      readLiveServerMessage(
+        JSON.stringify({
+          toolCall: { functionCalls: [{ id: "c", name: "search_company_knowledge" }] },
+        })
+      )
+    ).toEqual({ toolCalls: [{ id: "c", name: "search_company_knowledge", args: {} }] });
+  });
+
+  test("the answer goes back tagged with the call it answers", () => {
+    expect(
+      JSON.parse(
+        buildToolResponse([
+          { id: "call-1", name: "search_company_knowledge", output: "We open at nine." },
+        ])
+      )
+    ).toEqual({
+      toolResponse: {
+        functionResponses: [
+          {
+            id: "call-1",
+            name: "search_company_knowledge",
+            response: { output: "We open at nine." },
+          },
+        ],
+      },
+    });
   });
 });

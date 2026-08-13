@@ -53,10 +53,18 @@ function clampToPcm16(sample: number) {
   return Math.round(clamped * 32767);
 }
 
+/** A lookup the model asked for mid-sentence, and is now waiting on. */
+export type LiveToolCall = {
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+};
+
 /**
- * What the relay forwards from Vertex, reduced to the three things the
- * session actually acts on: audio to play, words to caption, and the moment
- * the model stops because the caller started talking over it.
+ * What the relay forwards from Vertex, reduced to the things the session
+ * actually acts on: audio to play, words to caption, the moment the model
+ * stops because the caller started talking over it, and a request to look
+ * something up.
  */
 export type LiveServerEvent = {
   audioBase64?: string;
@@ -65,7 +73,27 @@ export type LiveServerEvent = {
   interrupted?: boolean;
   turnComplete?: boolean;
   ready?: boolean;
+  toolCalls?: LiveToolCall[];
 };
+
+/**
+ * The answer to a lookup, in the shape Vertex expects it back. Sent on the
+ * same socket the audio uses — the model is holding its turn until it
+ * arrives, so this is the thing that unblocks the sentence.
+ */
+export function buildToolResponse(
+  results: Array<{ id: string; name: string; output: string }>
+): string {
+  return JSON.stringify({
+    toolResponse: {
+      functionResponses: results.map((result) => ({
+        id: result.id,
+        name: result.name,
+        response: { output: result.output },
+      })),
+    },
+  });
+}
 
 export function readLiveServerMessage(raw: string): LiveServerEvent | null {
   let message: Record<string, unknown>;
@@ -76,6 +104,18 @@ export function readLiveServerMessage(raw: string): LiveServerEvent | null {
   }
 
   if ((message as { type?: string }).type === "relay.ready") return { ready: true };
+
+  const toolCall = message.toolCall as
+    | { functionCalls?: Array<{ id?: string; name?: string; args?: Record<string, unknown> }> }
+    | undefined;
+  if (toolCall?.functionCalls?.length) {
+    const calls = toolCall.functionCalls
+      .filter((call): call is { id: string; name: string; args?: Record<string, unknown> } =>
+        Boolean(call.id && call.name)
+      )
+      .map((call) => ({ id: call.id, name: call.name, args: call.args ?? {} }));
+    if (calls.length > 0) return { toolCalls: calls };
+  }
 
   const serverContent = message.serverContent as
     | {
