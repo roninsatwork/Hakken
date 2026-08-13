@@ -2,13 +2,15 @@ import { beforeEach, expect, test, describe, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
-import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
+import { GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import {
     assertSpeechCapableModelId,
     assertValidSpeechPayload,
     assertValidTranscriptionPayload,
     buildNodeConfigContext,
     getBase64DecodedByteLength,
+    REALTIME_VOICE_STYLE,
+    VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
 } from "./ai";
 import { assertWithinAiActionRateLimit } from "./aiActionRequestService";
 
@@ -791,5 +793,187 @@ describe("voice transcription", () => {
         // No location override: the factory's own default (env-configured
         // region) must decide, exactly as it does for chat.
         expect(createVertexGenAIClientMock).toHaveBeenCalledWith();
+    });
+});
+
+describe("the live voice session", () => {
+    /**
+     * None of this had a single test before 2026-08-13, and two real defects
+     * lived in it: the Google path demanded an OpenAI key it never used, and
+     * it offered the model no way to reach the company's knowledge.
+     */
+    async function seedVoiceSession(t: ReturnType<typeof convexTest>) {
+        return await t.run(async (ctx) => {
+            const companyId = await ctx.db.insert("companies", {
+                name: "Voice Corp",
+                createdAt: Date.now(),
+                systemPrompt: "Always mention the guarantee.",
+            });
+            const userId = await ctx.db.insert("users", {
+                email: "caller@test.com",
+                role: "USER",
+                companyId,
+                createdAt: Date.now(),
+            });
+            const threadId = await ctx.db.insert("threads", {
+                title: "Spoken",
+                userId,
+                companyId,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
+            await ctx.db.insert("aiModels", {
+                modelId: "test-live-audio-model",
+                displayName: "Test Live Audio",
+                providerKey: "google",
+                providerModelId: "test-live-audio-model",
+                isEnabled: true,
+                isDefault: false,
+                lastSyncedAt: Date.now(),
+            });
+            await ctx.db.insert("aiModelDefaults", {
+                scope: "global",
+                useCase: "realtime",
+                providerKey: "google",
+                modelId: "test-live-audio-model",
+                updatedAt: Date.now(),
+            });
+            return { companyId, userId, threadId };
+        });
+    }
+
+    function readTicketPayload(ticket: string) {
+        return JSON.parse(Buffer.from(ticket.split(".")[0], "base64url").toString("utf8"));
+    }
+
+    /** Asserts the Google transport and narrows to it, so the fields exist. */
+    function asGoogleSession<T extends { transport: string }>(session: T) {
+        expect(session.transport).toBe("google-relay");
+        if (session.transport !== "google-relay") throw new Error("not a relay session");
+        return session as Extract<T, { transport: "google-relay" }>;
+    }
+
+    test("a Google session starts on a deployment with no OpenAI key at all", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await seedVoiceSession(t);
+
+        vi.stubEnv("VOICE_RELAY_URL", "ws://relay.test:8787");
+        vi.stubEnv("VOICE_RELAY_SECRET", "shared-secret");
+        vi.stubEnv("OPENAI_API_KEY", "");
+        vi.stubEnv("OPEN_AI_API_KEY", "");
+
+        const session = await t
+            .withIdentity({ subject: userId })
+            .action(api.ai.createRealtimeVoiceSession, { threadId });
+
+        // Google is the standing choice here precisely because it is cheaper;
+        // asking for a key belonging to the other provider made that choice
+        // impossible to actually deploy.
+        expect(asGoogleSession(session).relayUrl).toBe("ws://relay.test:8787");
+        vi.unstubAllEnvs();
+    });
+
+    test("the ticket carries the knowledge tool, so a spoken answer can be looked up", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await seedVoiceSession(t);
+
+        vi.stubEnv("VOICE_RELAY_URL", "ws://relay.test:8787");
+        vi.stubEnv("VOICE_RELAY_SECRET", "shared-secret");
+
+        const session = await t
+            .withIdentity({ subject: userId })
+            .action(api.ai.createRealtimeVoiceSession, { threadId });
+
+        const payload = readTicketPayload(asGoogleSession(session).ticket);
+        expect(payload.tools).toHaveLength(1);
+        expect(payload.tools[0].name).toBe("search_company_knowledge");
+        expect(payload.tools[0].parameters.required).toEqual(["query"]);
+        expect(payload.model).toBe("test-live-audio-model");
+        vi.unstubAllEnvs();
+    });
+
+    test("the company's own instructions ride in the ticket, not in the page", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await seedVoiceSession(t);
+
+        vi.stubEnv("VOICE_RELAY_URL", "ws://relay.test:8787");
+        vi.stubEnv("VOICE_RELAY_SECRET", "shared-secret");
+
+        const session = await t
+            .withIdentity({ subject: userId })
+            .action(api.ai.createRealtimeVoiceSession, { threadId });
+
+        // A browser can rewrite anything it is handed, so the rules must
+        // arrive signed rather than be sent up by the page.
+        expect(readTicketPayload(asGoogleSession(session).ticket).instructions).toContain(
+            "Always mention the guarantee."
+        );
+        vi.unstubAllEnvs();
+    });
+
+    test("an unconfigured relay says which settings are missing", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await seedVoiceSession(t);
+
+        vi.stubEnv("VOICE_RELAY_URL", "");
+        vi.stubEnv("VOICE_RELAY_SECRET", "");
+
+        await expect(
+            t.withIdentity({ subject: userId }).action(api.ai.createRealtimeVoiceSession, { threadId })
+        ).rejects.toThrow(/VOICE_RELAY_URL/);
+        vi.unstubAllEnvs();
+    });
+
+    test("a knowledge search that finds nothing says nothing, rather than an empty evidence block", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await seedVoiceSession(t);
+
+        // No documents, no memories: the honest answer is silence, because a
+        // model handed an empty "here is your evidence" wrapper invents
+        // rather than admits — out loud, to a caller.
+        //
+        // The embedding has to be a real one of the right width, or retrieval
+        // gives up before it ever reaches the behaviour under test.
+        embedVertexContentWithRetryMock.mockResolvedValue({
+            embeddings: [{ values: new Array(GOOGLE_VERTEX_EMBEDDING_DIMENSIONS).fill(0.1) }],
+        });
+
+        const result = await t
+            .withIdentity({ subject: userId })
+            .action(api.ai.searchKnowledgeForVoice, { threadId, query: "do you sell bicycles" });
+
+        expect(result.context).toBe("");
+    });
+
+    test("an empty question is not sent to the embedder at all", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await seedVoiceSession(t);
+
+        const result = await t
+            .withIdentity({ subject: userId })
+            .action(api.ai.searchKnowledgeForVoice, { threadId, query: "   " });
+
+        expect(result.context).toBe("");
+        expect(embedVertexContentWithRetryMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("how the voice is told to speak", () => {
+    test("it follows the speaker's language instead of asking which they want", () => {
+        expect(REALTIME_VOICE_STYLE).toMatch(/language you are spoken to in/i);
+        expect(REALTIME_VOICE_STYLE).toMatch(/switch the moment the/i);
+        // Announcing it, or offering a picker, breaks the effect the demo
+        // exists for: it should simply answer in kind.
+        expect(REALTIME_VOICE_STYLE).toMatch(/[Nn]ever announce/);
+    });
+
+    test("knowledge in another language is answered in the caller's, not read out as found", () => {
+        expect(REALTIME_VOICE_STYLE).toMatch(/never read a stored passage out in its original language/i);
+    });
+
+    test("the search itself is phrased in the language the documents are in", () => {
+        // A Portuguese question against English documents retrieves badly if
+        // the query goes in untranslated.
+        expect(VOICE_KNOWLEDGE_TOOL_DESCRIPTION).toMatch(/usually English/);
     });
 });

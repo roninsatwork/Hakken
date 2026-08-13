@@ -2,7 +2,10 @@
 
 Status: Drafted 2026-08-13 from verified code research. Phase 3 of the
 showcase channels roadmap (`showcase-channels-plan.md`). Not started.
-Depends on: `voice-session-plan.md` phase A (the `speech` use case).
+**Decision 2 is superseded and this plan needs rewriting before anyone
+builds it — see below.** The gate that blocked this phase (a spoken session
+must be able to search company knowledge) was cleared 2026-08-13.
+Depends on: the live voice session, proven working on Google via the relay.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
@@ -22,13 +25,39 @@ Recorded decisions:
 1. **Inbound only.** Sonae answers calls and never dials out — umbrella
    plan decision 1. Nothing in this plan may place, schedule, or return a
    call.
-2. **Turn-based over the provider's webhooks, not live audio streaming.**
-   The call flows as speak-then-listen turns: the telephony provider
-   transcribes the caller's turn and POSTs it to us; we answer with text
-   and audio. No websocket audio bridge, no streaming infrastructure —
-   Convex's HTTP actions (`convex/http.ts`) handle everything, exactly like
-   the webhook routes that already exist. Barge-in (interrupting Sonae
-   mid-sentence) is out of scope, same as the voice session.
+2. ~~**Turn-based over the provider's webhooks, not live audio streaming.**~~
+   **Superseded 2026-08-13 — rewrite this phase before building it.**
+
+   This was written when the voice session recorded a clip, transcribed it,
+   thought, and read a reply back. On that footing, webhook turns were the
+   right call: the phone would have sounded no worse than the screen did.
+
+   That is no longer the footing. The live voice session now holds one open
+   audio connection to a speech-to-speech model, answers in about a second,
+   and can be interrupted mid-sentence — and it is proven working on Google
+   through the platform's own relay (`services/voice-relay/`). A phone call
+   is that same loop with a different microphone. Building the webhook
+   version now would ship a demo that sounds like an automated hold system
+   standing next to a screen that does not, and the contrast would be the
+   thing the room remembers.
+
+   So: bridge the call's audio into the existing relay rather than
+   re-implementing a slower path beside it. Concretely — the provider's
+   media stream (Twilio Media Streams, or the equivalent) carries the
+   caller's audio to the relay, which already holds the model socket, mints
+   nothing itself, and refuses anything without a signed ticket. Barge-in
+   comes free: the live model already reports being interrupted, and the
+   session already acts on it.
+
+   What this changes about the size of the phase: the audio loop, the
+   knowledge search, the company's instructions and the transcript of both
+   sides all already exist and are tested. What remains genuinely new is the
+   number, the provider's media-stream handshake, and the after-call step.
+   The rewrite should make the phase smaller, not larger.
+
+   The rest of this plan — the call record, the CRM matching rules, the
+   after-call task, the consent line, the audit trail — is unaffected by
+   this change and still stands.
 3. **Twilio is the telephony provider.** The boring, dominant choice: buy
    a number, point its voice webhook at us, validate its request
    signatures. Its API key and number configuration follow the same

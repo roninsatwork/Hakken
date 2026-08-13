@@ -824,13 +824,19 @@ export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
 - No markdown, no bullet points, no headings — say it as a person would.
 - Numbers, dates and money are spoken naturally, not written as symbols.
 - If you are asked something you do not know, say so plainly and briefly.
-- You may be interrupted mid-sentence. If that happens, stop and listen.`;
+- You may be interrupted mid-sentence. If that happens, stop and listen.
+- Answer in the language you are spoken to in, and switch the moment the
+  speaker switches. Never announce that you are doing this and never ask
+  which language they would like — following them is the whole point.
+- The company's knowledge may be written in a different language from the
+  one you are speaking. Read it in whatever language you find it and answer
+  in theirs; never read a stored passage out in its original language.`;
 
 
 /** The one thing a spoken session can ask this platform for, mid-conversation. */
 export const VOICE_KNOWLEDGE_TOOL_NAME = "search_company_knowledge";
 export const VOICE_KNOWLEDGE_TOOL_DESCRIPTION =
-  "Search this company's documents and knowledge for anything you were not told directly. Use it whenever you are asked about products, services, prices, policies, opening times, people, or anything specific to this company — do not guess and do not say you cannot see the knowledge base.";
+  "Search this company's documents and knowledge for anything you were not told directly. Use it whenever you are asked about products, services, prices, policies, opening times, people, or anything specific to this company — do not guess and do not say you cannot see the knowledge base. Write the search in the language the company's documents are likely written in, usually English, even when you are speaking another language; then answer in the language you are being spoken to.";
 
 /**
  * Knowledge for a voice that is already talking.

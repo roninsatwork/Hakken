@@ -1,9 +1,31 @@
 # Ask In Any Language, Sonae Answers In Kind
 
-Status: Drafted 2026-08-13 from verified code research. Phase 2 of the
-showcase channels roadmap (`showcase-channels-plan.md`). Not started.
-Depends on: `voice-session-plan.md` (phases A–B must exist first).
-Owner: Anthony
+Status: **Reply-language work done 2026-08-13.** Phase 2 of the showcase
+channels roadmap (`showcase-channels-plan.md`). Interpreter mode is still
+to do and is a separate phase. Owner: Anthony
+
+**This plan was drafted against the old turn-based voice and its phases A–C
+below no longer describe the work.** That voice recorded a clip, transcribed
+it, generated a written reply and then read it aloud, so making it
+multilingual meant detecting a language code, threading it through the
+prompt, and choosing a matching synthesis voice. The live voice session
+replaced all three steps with one speech-to-speech model: it hears the
+caller directly and speaks directly back. There is no transcription step to
+report a language, no per-turn prompt assembly to receive one, and no
+synthesis call to pick a voice for.
+
+So the reply-language feature became an instruction rather than a pipeline,
+and it is now in `REALTIME_VOICE_STYLE` (`convex/ai.ts`): answer in the
+language you are spoken to in, switch the moment the speaker switches, never
+announce it, and never read a stored passage out in its language rather than
+theirs. The knowledge tool's description carries the other half — search in
+the language the documents are written in, usually English, then answer in
+the caller's — because a Portuguese question embedded against English
+documents retrieves badly. Covered by tests in `convex/ai.test.ts`.
+
+Phases A–C are kept below for the record and because Phase A still describes
+real work for the **dictation** path (`useVoiceToText.ts`), which is
+unchanged and still transcribes. Do not build B or C as written.
 
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
