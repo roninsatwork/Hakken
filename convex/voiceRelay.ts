@@ -35,13 +35,13 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function base64UrlToBytes(value: string) {
+export function base64UrlToBytes(value: string) {
   const padded = value.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-function base64UrlToText(value: string) {
+export function base64UrlToText(value: string) {
   return new TextDecoder().decode(base64UrlToBytes(value));
 }
 
@@ -49,7 +49,7 @@ function base64UrlToText(value: string) {
  * Verified with Web Crypto rather than a hand-rolled comparison: `verify`
  * is constant-time by contract, which a string equality check is not.
  */
-async function ticketIsAuthentic(payloadPart: string, signaturePart: string, secret: string) {
+export async function ticketIsAuthentic(payloadPart: string, signaturePart: string, secret: string) {
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),

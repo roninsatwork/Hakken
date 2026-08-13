@@ -37,6 +37,7 @@ import {
   buildGreetingNudge,
   buildTwilioClear,
   buildTwilioMedia,
+  createTranscriptCollector,
   modelAudioToPhonePayloads,
   phonePayloadToModelFrame,
   readModelSpeech,
@@ -48,6 +49,12 @@ const RELAY_SECRET = process.env.VOICE_RELAY_SECRET ?? "";
 // Where the platform answers a knowledge lookup. Absent means the spoken
 // session simply cannot look anything up — it still talks, and says so.
 const KNOWLEDGE_URL = process.env.VOICE_KNOWLEDGE_URL ?? "";
+// Where a call's transcript is filed, turn by turn, as it happens. Derived
+// from the knowledge URL because they are the same platform — stated
+// separately only if a deployment needs them apart.
+const TURNS_URL =
+  process.env.VOICE_TURNS_URL ??
+  (KNOWLEDGE_URL ? KNOWLEDGE_URL.replace(/\/api\/voice\/knowledge$/, "/api/telephony/turns") : "");
 // The model is holding its turn while this runs, so it cannot be allowed to
 // hold it indefinitely: better a plain "I could not check" than dead air.
 const KNOWLEDGE_TIMEOUT_MS = 8000;
@@ -263,14 +270,35 @@ phoneDoor.on("connection", (phone) => {
 
   let session = null;
   let streamSid = "";
+  let callSid = "";
+  let ticket = "";
   let closing = false;
+  const transcript = createTranscriptCollector();
 
   say("phone stream connected");
+
+  /**
+   * File finished turns on the call record, as they happen. Fire-and-forget
+   * on purpose: the transcript must never hold up the audio, and a failed
+   * post loses one exchange, not the call.
+   */
+  const fileTurns = (turns) => {
+    if (turns.length === 0 || !TURNS_URL || !ticket || !callSid) return;
+    fetch(TURNS_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ticket, callSid, turns }),
+      signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
+    }).catch((error) => say(`transcript post failed: ${error?.message ?? error}`));
+  };
 
   const shutdown = (reason) => {
     if (closing) return;
     closing = true;
     say(`closing: ${reason}`);
+    // The hang-up itself finishes the last exchange: whatever was said since
+    // the previous turn boundary goes on the record before the line drops.
+    fileTurns(transcript.end());
     try {
       phone.close();
     } catch {
@@ -290,6 +318,8 @@ phoneDoor.on("connection", (phone) => {
     // answered the call. Only then is there a session to open.
     if (frame.kind === "start") {
       streamSid = frame.streamSid;
+      callSid = frame.callSid;
+      ticket = frame.ticket;
       if (!frame.ticket) {
         say("no ticket on the stream — refusing the call");
         shutdown("No ticket.");
@@ -319,6 +349,10 @@ phoneDoor.on("connection", (phone) => {
 
         const speech = readModelSpeech(text);
         if (!speech || phone.readyState !== WebSocket.OPEN) return;
+
+        // Each finished exchange goes straight on the call record — the
+        // transcript exists the moment the words do, not at hang-up.
+        fileTurns(transcript.hear(speech));
 
         // The caller talked over the reply. Everything already queued on the
         // line is abandoned speech — dropped now, or it plays for seconds.

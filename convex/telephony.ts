@@ -8,9 +8,11 @@ import {
   buildRefusalTwiml,
   computeTwilioSignature,
   findNumberOwner,
+  normalisePhoneNumber,
   parseNumberOwnership,
   signaturesMatch,
 } from "./telephonyService";
+import { base64UrlToText, ticketIsAuthentic } from "./voiceRelay";
 
 /**
  * Sonae answering the phone.
@@ -167,4 +169,252 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   return twimlResponse(
     buildConnectTwiml({ disclosure: buildDisclosure(company.name), streamUrl, ticket })
   );
+});
+
+/**
+ * The transcript arriving while the call is still going.
+ *
+ * The bridge hears both sides as the live model transcribes them, and posts
+ * each finished turn here, presenting the call's own ticket. Bounded twice:
+ * the body size, and the turns a call may accumulate — a caller who never
+ * hangs up must not grow a row without end.
+ */
+const MAX_TURNS_PER_CALL = 400;
+const MAX_TURN_BODY_BYTES = 32_768;
+/** Lookups mid-call are bounded by session length, exactly as knowledge is. */
+const MAX_CALL_SESSION_MS = 15 * 60 * 1000;
+
+export const appendCallTurns = internalMutation({
+  args: {
+    providerCallId: v.string(),
+    companyId: v.id("companies"),
+    turns: v.array(
+      v.object({
+        role: v.union(v.literal("CALLER"), v.literal("SONAE")),
+        text: v.string(),
+        at: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const call = await ctx.db
+      .query("phoneCalls")
+      .withIndex("by_provider_call", (q) => q.eq("providerCallId", args.providerCallId))
+      .first();
+    // The ticket names the company; the call row must agree, or a pass for
+    // one workspace is writing into another's call record.
+    if (!call || call.companyId !== args.companyId) return;
+
+    const room = MAX_TURNS_PER_CALL - call.turns.length;
+    if (room <= 0) return;
+    await ctx.db.patch(call._id, {
+      turns: [...call.turns, ...args.turns.slice(0, room)],
+    });
+  },
+});
+
+export const handleCallTurns = httpAction(async (ctx, request) => {
+  const secret = process.env.VOICE_RELAY_SECRET?.trim();
+  if (!secret) return new Response(null, { status: 503 });
+
+  const raw = await request.text();
+  if (raw.length > MAX_TURN_BODY_BYTES) return new Response(null, { status: 413 });
+
+  let body: { ticket?: unknown; callSid?: unknown; turns?: unknown };
+  try {
+    body = JSON.parse(raw) as typeof body;
+  } catch {
+    return new Response(null, { status: 400 });
+  }
+
+  const ticket = typeof body.ticket === "string" ? body.ticket : "";
+  const callSid = typeof body.callSid === "string" ? body.callSid : "";
+  const [payloadPart, signaturePart] = ticket.split(".");
+  if (!payloadPart || !signaturePart || !callSid) return new Response(null, { status: 401 });
+
+  let authentic = false;
+  try {
+    authentic = await ticketIsAuthentic(payloadPart, signaturePart, secret);
+  } catch {
+    authentic = false;
+  }
+  if (!authentic) return new Response(null, { status: 401 });
+
+  let payload: { companyId?: string | null; expiresAt?: number };
+  try {
+    payload = JSON.parse(base64UrlToText(payloadPart)) as typeof payload;
+  } catch {
+    return new Response(null, { status: 401 });
+  }
+  if (
+    typeof payload.expiresAt !== "number" ||
+    payload.expiresAt + MAX_CALL_SESSION_MS < Date.now() ||
+    !payload.companyId
+  ) {
+    return new Response(null, { status: 401 });
+  }
+
+  const turns = Array.isArray(body.turns)
+    ? body.turns
+        .filter(
+          (turn): turn is { role: "CALLER" | "SONAE"; text: string } =>
+            !!turn &&
+            (turn.role === "CALLER" || turn.role === "SONAE") &&
+            typeof turn.text === "string" &&
+            turn.text.trim().length > 0
+        )
+        .slice(0, 40)
+        .map((turn) => ({ role: turn.role, text: turn.text.trim().slice(0, 2000), at: Date.now() }))
+    : [];
+  if (turns.length === 0) return new Response(null, { status: 200 });
+
+  await ctx.runMutation(internal.telephony.appendCallTurns, {
+    providerCallId: callSid,
+    companyId: payload.companyId as Id<"companies">,
+    turns,
+  });
+  return new Response(null, { status: 200 });
+});
+
+/**
+ * The hang-up-and-watch step.
+ *
+ * The provider says the call has ended; within seconds the transcript is
+ * summarised, the caller is matched against the CRM, a follow-up task lands
+ * with a named person, and their bell rings. Everything goes through the
+ * existing doors — the task door validates, audits and notifies on its own.
+ */
+export const markCallEnded = internalMutation({
+  args: {
+    providerCallId: v.string(),
+    outcome: v.union(v.literal("COMPLETED"), v.literal("FAILED")),
+    endedReason: v.string(),
+  },
+  handler: async (ctx, args): Promise<Id<"phoneCalls"> | null> => {
+    const call = await ctx.db
+      .query("phoneCalls")
+      .withIndex("by_provider_call", (q) => q.eq("providerCallId", args.providerCallId))
+      .first();
+    if (!call) return null;
+    // Terminal states do not regress: a late-arriving duplicate of an
+    // earlier status must not reopen a completed call.
+    if (call.status === "COMPLETED" || call.status === "FAILED") return null;
+
+    await ctx.db.patch(call._id, {
+      status: args.outcome,
+      endedAt: Date.now(),
+      endedReason: args.endedReason,
+    });
+    return call._id;
+  },
+});
+
+export const getCallInternal = internalQuery({
+  args: { callId: v.id("phoneCalls") },
+  handler: async (ctx, args) => await ctx.db.get(args.callId),
+});
+
+/** Who a call's follow-up lands with, until a per-company setting exists. */
+export const findCallAssignee = internalQuery({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args): Promise<Id<"users"> | null> => {
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(200);
+    if (users.length === 0) return null;
+    // The workspace's own admin if it has one, otherwise its earliest member
+    // — somebody always owns a caller, or the bell rings for nobody.
+    const admin = users.find((user) => user.role === "ADMIN");
+    return (admin ?? users[0])._id;
+  },
+});
+
+/**
+ * The caller matched against the workspace's own customers.
+ *
+ * Account-keyed CRM discipline: a match links the call to the customer it
+ * found; an unknown caller never becomes a CRM row. Numbers are compared
+ * normalised, because the provider sends E.164 and a spreadsheet holds
+ * whatever a person typed.
+ */
+export const matchCallerToCustomer = internalMutation({
+  args: { callId: v.id("phoneCalls") },
+  handler: async (ctx, args): Promise<string | null> => {
+    const call = await ctx.db.get(args.callId);
+    if (!call) return null;
+    const caller = normalisePhoneNumber(call.fromNumber);
+    if (!caller) return null;
+
+    const customers = await ctx.db
+      .query("salesDataCustomers")
+      .withIndex("by_company_account", (q) => q.eq("companyId", call.companyId))
+      .take(2000);
+    const match = customers.find(
+      (customer) =>
+        (customer.phone && normalisePhoneNumber(customer.phone) === caller) ||
+        (customer.mobile && normalisePhoneNumber(customer.mobile) === caller)
+    );
+    if (!match) return null;
+
+    await ctx.db.patch(args.callId, { matchedCustomerKey: match.accountNameKey });
+    return match.accountNameKey;
+  },
+});
+
+export const attachCallSummary = internalMutation({
+  args: { callId: v.id("phoneCalls"), summary: v.string(), taskId: v.optional(v.id("tasks")) },
+  handler: async (ctx, args): Promise<void> => {
+    await ctx.db.patch(args.callId, {
+      summary: args.summary,
+      ...(args.taskId ? { taskId: args.taskId } : {}),
+    });
+  },
+});
+
+/**
+ * The provider reporting how the call ended.
+ *
+ * Configured on the number as its status callback. Signature-checked exactly
+ * like the voice webhook — an unauthenticated caller must not be able to end
+ * calls, let alone trigger model spend through the summary step.
+ */
+export const handleCallStatus = httpAction(async (ctx, request) => {
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  if (!authToken) return new Response(null, { status: 503 });
+
+  const raw = await request.text();
+  if (raw.length > MAX_BODY_BYTES) return new Response(null, { status: 413 });
+
+  const params: Record<string, string> = {};
+  for (const [name, value] of new URLSearchParams(raw)) params[name] = value;
+
+  const provided = request.headers.get("X-Twilio-Signature") ?? "";
+  const signedUrl = process.env.TELEPHONY_STATUS_PUBLIC_URL?.trim() || request.url;
+  const expected = await computeTwilioSignature(signedUrl, params, authToken);
+  if (!provided || !signaturesMatch(expected, provided)) {
+    return new Response(null, { status: 403 });
+  }
+
+  const providerCallId = params.CallSid ?? "";
+  const status = params.CallStatus ?? "";
+  if (!providerCallId) return new Response(null, { status: 400 });
+
+  // Anything the provider counts as over. In-progress updates are not ours
+  // to act on — the bridge sees the call end for itself.
+  const TERMINAL = new Set(["completed", "busy", "failed", "no-answer", "canceled"]);
+  if (!TERMINAL.has(status)) return new Response(null, { status: 200 });
+
+  const callId = await ctx.runMutation(internal.telephony.markCallEnded, {
+    providerCallId,
+    outcome: status === "completed" ? ("COMPLETED" as const) : ("FAILED" as const),
+    endedReason: status,
+  });
+
+  // The finale runs after the response returns: the provider is answered
+  // immediately, and the task/bell/summary land seconds later.
+  if (callId) {
+    await ctx.scheduler.runAfter(0, internal.telephonyActions.runAfterCallStep, { callId });
+  }
+  return new Response(null, { status: 200 });
 });

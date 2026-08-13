@@ -149,6 +149,7 @@ export function readModelSpeech(raw) {
   const result = {};
   if (audioPart?.inlineData?.data) result.audioBase64 = audioPart.inlineData.data;
   if (serverContent.interrupted) result.interrupted = true;
+  if (serverContent.turnComplete) result.turnComplete = true;
   if (serverContent.inputTranscription?.text) {
     result.callerText = serverContent.inputTranscription.text;
   }
@@ -156,4 +157,37 @@ export function readModelSpeech(raw) {
     result.sonaeText = serverContent.outputTranscription.text;
   }
   return Object.keys(result).length > 0 ? result : null;
+}
+
+/**
+ * Both sides of the conversation, assembled from fragments.
+ *
+ * Transcription arrives a few words at a time, interleaved between speakers.
+ * Fragments are gathered per side and become a turn when the model finishes
+ * its own — the moment the exchange is complete — or when the call ends,
+ * which is what stops the caller's last sentence being lost with the hang-up.
+ */
+export function createTranscriptCollector() {
+  let callerText = "";
+  let sonaeText = "";
+
+  const flush = () => {
+    const turns = [];
+    if (callerText.trim()) turns.push({ role: "CALLER", text: callerText.trim() });
+    if (sonaeText.trim()) turns.push({ role: "SONAE", text: sonaeText.trim() });
+    callerText = "";
+    sonaeText = "";
+    return turns;
+  };
+
+  return {
+    /** @returns finished turns to report, empty if the exchange is mid-flow */
+    hear(speech) {
+      if (speech.callerText) callerText += speech.callerText;
+      if (speech.sonaeText) sonaeText += speech.sonaeText;
+      return speech.turnComplete ? flush() : [];
+    },
+    /** The call is over: whatever is still unspoken-for becomes the last turns. */
+    end: flush,
+  };
 }

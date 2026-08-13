@@ -11,7 +11,7 @@ import {
   handlePublicWorkflowRunTrigger,
 } from "./publicApi";
 import { handleVoiceKnowledgeLookup } from "./voiceRelay";
-import { handleIncomingCall } from "./telephony";
+import { handleCallStatus, handleCallTurns, handleIncomingCall } from "./telephony";
 
 const http = httpRouter();
 
@@ -59,6 +59,22 @@ http.route({
   path: "/api/telephony/voice",
   method: "POST",
   handler: handleIncomingCall,
+});
+
+// The bridge posting both sides of the transcript as the call happens,
+// authenticated by the call's own ticket.
+http.route({
+  path: "/api/telephony/turns",
+  method: "POST",
+  handler: handleCallTurns,
+});
+
+// The provider reporting the call has ended — which starts the finale:
+// summary, CRM match, follow-up task, bell.
+http.route({
+  path: "/api/telephony/status",
+  method: "POST",
+  handler: handleCallStatus,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

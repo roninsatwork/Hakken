@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import { linearToMuLaw, muLawToLinear } from "./telephonyAudio.mjs";
 import {
   buildGreetingNudge,
+  createTranscriptCollector,
+  readModelSpeech,
   buildTwilioClear,
   buildTwilioMedia,
   modelAudioToPhonePayloads,
@@ -154,5 +156,34 @@ describe("speaking first", () => {
     // It must also pass the relay's own frame filter — a nudge the session
     // door drops is a greeting that never happens.
     expect(Object.keys(nudge)).not.toContain("setup");
+  });
+});
+
+describe("assembling the transcript", () => {
+  test("fragments become a turn when the exchange finishes, both sides in order", () => {
+    const collector = createTranscriptCollector();
+    expect(collector.hear({ callerText: "what are " })).toEqual([]);
+    expect(collector.hear({ callerText: "your hours" })).toEqual([]);
+    expect(collector.hear({ sonaeText: "We open at nine." })).toEqual([]);
+    expect(collector.hear({ turnComplete: true })).toEqual([
+      { role: "CALLER", text: "what are your hours" },
+      { role: "SONAE", text: "We open at nine." },
+    ]);
+    // And the next exchange starts clean.
+    expect(collector.hear({ turnComplete: true })).toEqual([]);
+  });
+
+  test("a hang-up mid-sentence keeps what was said rather than losing it", () => {
+    const collector = createTranscriptCollector();
+    collector.hear({ callerText: "actually can you also" });
+    expect(collector.end()).toEqual([{ role: "CALLER", text: "actually can you also" }]);
+    expect(collector.end()).toEqual([]);
+  });
+
+  test("turn boundaries are read off the wire format the model actually sends", () => {
+    const speech = readModelSpeech(
+      JSON.stringify({ serverContent: { turnComplete: true, outputTranscription: { text: "Bye." } } })
+    );
+    expect(speech).toEqual({ turnComplete: true, sonaeText: "Bye." });
   });
 });

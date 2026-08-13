@@ -189,6 +189,7 @@ import type * as system from "../system.js";
 import type * as systemService from "../systemService.js";
 import type * as tasks from "../tasks.js";
 import type * as telephony from "../telephony.js";
+import type * as telephonyActions from "../telephonyActions.js";
 import type * as telephonyService from "../telephonyService.js";
 import type * as tenantFunctions from "../tenantFunctions.js";
 import type * as toolConnectorDefinitions from "../toolConnectorDefinitions.js";
@@ -415,6 +416,7 @@ declare const fullApi: ApiFromModules<{
   systemService: typeof systemService;
   tasks: typeof tasks;
   telephony: typeof telephony;
+  telephonyActions: typeof telephonyActions;
   telephonyService: typeof telephonyService;
   tenantFunctions: typeof tenantFunctions;
   toolConnectorDefinitions: typeof toolConnectorDefinitions;
