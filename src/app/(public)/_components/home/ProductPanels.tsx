@@ -18,10 +18,10 @@ import { ContactLink } from "../ContactLink";
  * Real build times, supplied by Anthony. Anything still null renders no badge
  * at all, because an invented figure is worse than no figure.
  */
-const PROPERTIES_BUILD_TIME: string | null = "Built and live inside 1 month";
-const REPORTS_BUILD_TIME: string | null = "Built in 1 week";
-const STUDIO_BUILD_TIME: string | null = "Built in 1 month";
-const SALES_BUILD_TIME: string | null = "Built in 1 week";
+const PROPERTIES_BUILD_TIME: string | null = "Built in one sprint";
+const REPORTS_BUILD_TIME: string | null = "Built in one sprint";
+const STUDIO_BUILD_TIME: string | null = "Built in 4 sprints";
+const SALES_BUILD_TIME: string | null = "Built in one sprint";
 
 /* Representative listings for the library screen — shape and density are real. */
 const LISTINGS = [

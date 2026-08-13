@@ -86,6 +86,7 @@ jobs:
         run: |-
           docker build --progress=plain \
             --build-arg NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} \
+            --build-arg NEXT_PUBLIC_CONTACT_URL=${{ secrets.NEXT_PUBLIC_CONTACT_URL }} \
             --build-arg CONVEX_SITE_URL=${{ secrets.CONVEX_SITE_URL }} \
             --build-arg CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }} \
             --build-arg BUILD_SHA=${{ github.sha }} \

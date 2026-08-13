@@ -24,6 +24,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_CONVEX_URL
 ENV NEXT_PUBLIC_CONVEX_URL=$NEXT_PUBLIC_CONVEX_URL
 
+# Where the public site's "Talk to us" and "Contact" go. NEXT_PUBLIC_ values
+# are baked in at build time, so this has to be here rather than on the
+# running service. Unset builds fall back to the in-app /contact route.
+ARG NEXT_PUBLIC_CONTACT_URL
+ENV NEXT_PUBLIC_CONTACT_URL=$NEXT_PUBLIC_CONTACT_URL
+
 ARG CONVEX_SITE_URL
 ENV CONVEX_SITE_URL=$CONVEX_SITE_URL
 

@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight } from "lucide-react";
 import { ensureGsap, prefersReducedMotion } from "../../_motion/motion";
 
 /**
@@ -81,12 +79,6 @@ export function WhatSonaeIs() {
               So you do not start from a blank page. You start with the hard half
               already built.
             </p>
-            {/* Points at the Platform page, which carries the full detail. */}
-            <Link href="/platform" className="ps-what-link mt-7" data-reveal>
-              <span>See how the whole thing fits together</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-
             <div className="ps-what-count mt-10" data-reveal>
               <span className="ps-what-count-now">
                 {String(active + 1).padStart(2, "0")}
