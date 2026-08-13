@@ -76,7 +76,6 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, platformNam
   if (pathname.startsWith("/app/assistant")) return [`Ask ${platformName}`];
   if (pathname.startsWith("/app/tasks")) return ["Tasks"];
   if (pathname.startsWith("/app/watching")) return ["Watching"];
-  if (pathname.startsWith("/app/settings/saved-answers")) return ["Organization", "Saved answers"];
   if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
   if (pathname.startsWith("/app/properties/scraped-data")) return [t("properties"), t("propertiesScrapedData")];
   if (pathname.startsWith("/app/properties/logs")) return [t("properties"), "Logs"];

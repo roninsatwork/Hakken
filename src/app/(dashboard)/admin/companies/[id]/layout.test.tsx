@@ -70,6 +70,8 @@ describe("CompanyDashboardLayout navigation", () => {
       // looking for AI usage would open. It lives here now.
       ["AI Usage", "/admin/companies/company123/ai/usage"],
       ["Knowledge", "/admin/companies/company123/ai/knowledge"],
+      // A saved answer is company knowledge, so it sits beside it.
+      ["Saved Answers", "/admin/companies/company123/ai/saved-answers"],
       ["Memory", "/admin/companies/company123/ai/memory"],
       ["Skills", "/admin/companies/company123/ai/skills"],
       ["Prompt", "/admin/companies/company123/ai/prompt"],

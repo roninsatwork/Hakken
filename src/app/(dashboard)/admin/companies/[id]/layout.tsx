@@ -7,10 +7,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Activity,
   AppWindow,
   ArrowLeft,
-  Activity,
-  LayoutDashboard,
+  BookmarkCheck,
   BrainCircuit,
   Building2,
   ClipboardCheck,
@@ -19,6 +19,7 @@ import {
   Database,
   FileText,
   Gauge,
+  LayoutDashboard,
   ListPlus,
   Loader2,
   MessageSquareText,
@@ -139,6 +140,13 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
             matchesCompanyRoute(pathname, `${aiHref}/knowledge`)
             || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
           ),
+        },
+        {
+          // Beside Knowledge, because a saved answer is company knowledge —
+          // just the part of it that came out of a conversation.
+          label: "Saved Answers",
+          href: `${aiHref}/saved-answers`,
+          icon: BookmarkCheck,
         },
         {
           label: "Memory",

@@ -355,7 +355,6 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
   if (pathname.startsWith('/app/settings/team')) return 'Organization Team';
-  if (pathname.startsWith('/app/settings/saved-answers')) return 'Saved Answers';
   if (pathname.startsWith('/app/settings/auth-diagnostics')) return 'Auth Diagnostics';
   if (pathname.startsWith('/app/agents')) return 'Agents';
   // template:remove:start arcade
@@ -819,7 +818,7 @@ export default function SidebarNavigation() {
                       <NavItem
                         icon={Building2}
                         label="Organization"
-                        isActive={activeItem === 'Organization Dashboard' || activeItem === 'Organization Team' || activeItem === 'Saved Answers' || activeItem === 'Auth Diagnostics'}
+                        isActive={activeItem === 'Organization Dashboard' || activeItem === 'Organization Team' || activeItem === 'Auth Diagnostics'}
                         onClick={() => setActiveItem('Organization Dashboard')}
                         hasChildren
                         isOpen={openSections.organization}
@@ -827,7 +826,6 @@ export default function SidebarNavigation() {
                       >
                         <SubNavItem label="Dashboard" href="/app/settings" isActive={activeItem === 'Organization Dashboard'} onClick={() => setActiveItem('Organization Dashboard')} />
                         <SubNavItem label="Team Members" href="/app/settings/team" isActive={activeItem === 'Organization Team'} onClick={() => setActiveItem('Organization Team')} />
-                        <SubNavItem label="Saved Answers" href="/app/settings/saved-answers" isActive={activeItem === 'Saved Answers' || pathname.startsWith('/app/settings/saved-answers')} onClick={() => setActiveItem('Saved Answers')} />
                         <SubNavItem label={t('authDiagnostics')} href="/app/settings/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/app/settings/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                       </NavItem>
                     )}
