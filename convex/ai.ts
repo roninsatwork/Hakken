@@ -10,7 +10,7 @@ import {
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
-import { getGoogleVertexProviderModelId, OPENAI_PROVIDER_KEY, REALTIME_MODEL_USE_CASE } from "./aiModelService";
+import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY, REALTIME_MODEL_USE_CASE } from "./aiModelService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import type { Id } from "./_generated/dataModel";
 import type { AiContentPart } from "./aiRuntimeTypes";
@@ -863,12 +863,23 @@ export const createRealtimeVoiceSession = tenantAction({
     const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
       useCase: REALTIME_MODEL_USE_CASE,
     });
+    // Both providers publish a speech-to-speech model and both are offered on
+    // the Defaults screen, but only OpenAI's browser transport is built so
+    // far: its live connection is WebRTC, which the browser negotiates
+    // itself, while Google's is a raw socket that needs the microphone
+    // captured and the reply played back by hand. Choosing Google therefore
+    // says so plainly rather than failing at the handshake.
+    if (modelConfig.providerKey === GOOGLE_VERTEX_PROVIDER_KEY) {
+      throw new Error(
+        "Google's live voice engine is not connected yet — only the model is. Set the Real-time voice job to an OpenAI realtime model for now."
+      );
+    }
     if (
       modelConfig.providerKey !== OPENAI_PROVIDER_KEY ||
       !modelConfig.providerModelId.toLowerCase().includes("realtime")
     ) {
       throw new Error(
-        "No real-time voice model is configured. In Model Defaults, set the Real-time voice job to an OpenAI realtime model."
+        "No real-time voice model is configured. In Model Defaults, set the Real-time voice job to a speech-to-speech model."
       );
     }
 

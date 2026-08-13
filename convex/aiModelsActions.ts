@@ -122,7 +122,14 @@ export function getMediaModelUseCases(modelId: string) {
   // A speech-to-speech model is the engine behind real-time voice; a
   // text-to-speech model reads a finished answer aloud. Neither generates
   // text, so both would otherwise be catalogued as facts no job can use.
-  if (normalized.includes("realtime")) return [REALTIME_MODEL_USE_CASE];
+  // Speech-to-speech, whatever the provider calls it: OpenAI says "realtime",
+  // Google says "live … native-audio". A live *translate* model is excluded —
+  // it renders speech between languages and answers nothing, so it is a
+  // different job (see the voice languages plan).
+  const isSpeechToSpeech =
+    !normalized.includes("translate") &&
+    (normalized.includes("realtime") || (normalized.includes("live") && normalized.includes("audio")));
+  if (isSpeechToSpeech) return [REALTIME_MODEL_USE_CASE];
   if (normalized.includes("tts")) return ["speech"];
   return [];
 }

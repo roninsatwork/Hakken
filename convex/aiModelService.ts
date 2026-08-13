@@ -144,12 +144,15 @@ export function buildModelSearchText(model: {
  */
 const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription", "speech"]);
 /**
- * Real-time voice is one live audio connection to a speech-to-speech model,
- * and only OpenAI offers that to a browser here: this deployment reaches
- * Google through a service account, so the equivalent Google connection would
- * mean handing the page a credential for the whole Google project.
+ * Real-time voice is one live audio connection to a speech-to-speech model.
+ * Both providers publish one: OpenAI's realtime family, and Google's
+ * native-audio Live models — which are markedly cheaper per minute. Which is
+ * chosen is a Model Defaults decision like every other job.
  */
-const OPENAI_ONLY_USE_CASES = new Set([REALTIME_MODEL_USE_CASE]);
+export const REALTIME_CAPABLE_PROVIDER_KEYS = new Set([
+  OPENAI_PROVIDER_KEY,
+  GOOGLE_VERTEX_PROVIDER_KEY,
+]);
 export const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow"]);
 /**
  * The providers the agent runtime has an adapter for.
@@ -170,7 +173,7 @@ export function canProviderServeUseCase(providerKey: string | undefined, useCase
   const provider = providerKey ?? GOOGLE_VERTEX_PROVIDER_KEY;
 
   if (GOOGLE_ONLY_USE_CASES.has(useCase)) return provider === GOOGLE_VERTEX_PROVIDER_KEY;
-  if (OPENAI_ONLY_USE_CASES.has(useCase)) return provider === OPENAI_PROVIDER_KEY;
+  if (useCase === REALTIME_MODEL_USE_CASE) return REALTIME_CAPABLE_PROVIDER_KEYS.has(provider);
   if (AGENT_CAPABLE_USE_CASES.has(useCase)) return AGENT_CAPABLE_PROVIDER_KEYS.has(provider);
   return true;
 }
@@ -189,7 +192,7 @@ export function describeUseCaseProviderLimit(useCase: string) {
     return "Only Google models can do this job on this platform.";
   }
   if (useCase === REALTIME_MODEL_USE_CASE) {
-    return "Only OpenAI real-time models can do this job — pick one whose name says it is realtime.";
+    return "Only speech-to-speech models can do this job — OpenAI's realtime family, or Google's live native-audio models.";
   }
   if (useCase === "speech") {
     return "Only Google speech models can do this job on this platform — pick one whose name says it does text-to-speech.";
