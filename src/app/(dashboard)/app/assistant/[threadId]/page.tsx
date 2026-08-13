@@ -8,8 +8,10 @@ import ChatMessage from "@/src/ui/components/chat/ChatMessage";
 import ChatInput from "@/src/ui/components/chat/ChatInput";
 import SwarmStatusCard from "@/src/ui/components/chat/SwarmStatusCard";
 import { AssistantStagePill } from "@/src/ui/components/chat/AssistantStagePill";
+import { VoiceSessionOverlay } from "@/src/ui/components/chat/VoiceSessionOverlay";
 import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { use, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ActiveThreadPage({ params }: { params: Promise<{ threadId: string }> }) {
   const resolvedParams = use(params);
@@ -37,6 +39,19 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
 
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [optimisticMessage, setOptimisticMessage] = useState<string | null>(null);
+
+  // Voice mode: opened from the composer's Voice button, or on arrival with
+  // ?voice=1 when the welcome screen started a spoken conversation. The
+  // param is stripped once read so a reload does not reopen the session.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  useEffect(() => {
+    if (searchParams.get("voice") === "1") {
+      setVoiceOpen(true);
+      router.replace(`/app/assistant/${threadId}`);
+    }
+  }, [router, searchParams, threadId]);
 
   // Any growth of the transcript — a new message, a streamed lump, or each
   // frame of the typed reveal — keeps the bottom in view while the reader is
@@ -135,13 +150,18 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       {/* Floating Viewport Bottom Composer Input */}
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-24 pb-0 z-40 px-6 sm:px-8 pointer-events-none flex justify-center">
         <div className="pointer-events-auto w-full max-w-[660px]">
-            <ChatInput 
-              threadId={threadId} 
+            <ChatInput
+              threadId={threadId}
               onUploadStateChange={setUploadStatus}
               onOptimisticMessage={setOptimisticMessage}
+              onOpenVoice={() => setVoiceOpen(true)}
             />
         </div>
       </div>
+
+      {voiceOpen && (
+        <VoiceSessionOverlay threadId={threadId} onClose={() => setVoiceOpen(false)} />
+      )}
     </div>
   );
 }

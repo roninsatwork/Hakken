@@ -629,10 +629,10 @@ describe("speech synthesis", () => {
     });
 
     test("a model that cannot make sound is refused with the fix in the sentence", () => {
-        expect(assertSpeechCapableModelId("gemini-2.5-flash-preview-tts")).toBe(
-            "gemini-2.5-flash-preview-tts"
+        expect(assertSpeechCapableModelId("test-speech-model-tts")).toBe(
+            "test-speech-model-tts"
         );
-        expect(() => assertSpeechCapableModelId("gemini-2.5-flash")).toThrow(
+        expect(() => assertSpeechCapableModelId("test-chat-model")).toThrow(
             "No speech model is configured"
         );
     });
@@ -660,10 +660,10 @@ describe("speech synthesis", () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         const userId = await t.run(async (ctx) => {
             await ctx.db.insert("aiModels", {
-                modelId: "google:gemini-tts",
-                displayName: "Gemini TTS",
+                modelId: "google:test-speech-model",
+                displayName: "Test Speech Model",
                 providerKey: "google",
-                providerModelId: "gemini-2.5-flash-preview-tts",
+                providerModelId: "test-speech-model-tts",
                 isEnabled: true,
                 isDefault: true,
                 lastSyncedAt: Date.now(),
@@ -696,7 +696,7 @@ describe("speech synthesis", () => {
         });
 
         const call = generateVertexContentWithRetryMock.mock.calls[0][1];
-        expect(call.model).toBe("gemini-2.5-flash-preview-tts");
+        expect(call.model).toBe("test-speech-model-tts");
         expect(call.config.responseModalities).toEqual(["AUDIO"]);
         expect(call.config.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Kore");
 

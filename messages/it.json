@@ -2576,15 +2576,27 @@
         },
         "attach": "Allega",
         "speak": "Parla",
+        "voice": "Voce",
         "send": "Invia"
       },
       "errors": {
         "mic": {
           "title": "Accesso Microfono Bloccato",
           "subtitle": "API Sicura Bloccata",
-          "description": "Il tuo browser ha esplicitamente bloccato {platformName} dall'accedere al proxy del microfono nativo della Web Speech API.",
+          "description": "Il tuo browser ha bloccato l'uso del microfono da parte di {platformName}.",
           "instruction": "Clicca sull'icona del `microfono` nella barra di ricerca dell'URL del browser e seleziona \"Consenti\"."
         }
+      },
+      "voice": {
+        "disclosure": "Stai parlando con l'IA di {platformName}",
+        "tapToTalk": "Tocca per parlare",
+        "listening": "In ascolto — tocca quando hai finito",
+        "thinking": "Sto pensando…",
+        "speaking": "Sto parlando — tocca per fermare",
+        "close": "Chiudi la voce",
+        "voiceUnavailable": "La voce non è disponibile al momento — ecco la risposta come testo.",
+        "didntCatch": "Non ho capito — tocca per riprovare.",
+        "micBlocked": "Il microfono è bloccato. Consentilo nella barra degli indirizzi del browser e riprova."
       },
       "stages": {
         "thinking": "Sto pensando...",

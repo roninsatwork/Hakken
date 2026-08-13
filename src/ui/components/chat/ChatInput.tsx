@@ -14,6 +14,7 @@ import {
   Mic,
   MicOff,
   AlertTriangle,
+  AudioLines,
   FileText,
   X
 } from "lucide-react";
@@ -36,11 +37,12 @@ interface ChatInputProps {
   threadId: Id<"threads">;
   onUploadStateChange?: (status: string | null) => void;
   onOptimisticMessage?: (text: string | null) => void;
+  onOpenVoice?: () => void;
 }
 
 
 
-export default function ChatInput({ threadId, onUploadStateChange, onOptimisticMessage }: ChatInputProps) {
+export default function ChatInput({ threadId, onUploadStateChange, onOptimisticMessage, onOpenVoice }: ChatInputProps) {
   const settings = useSystemSettings();
   const t = useTranslations("ai.assistant.welcome");
   const tComposer = useTranslations("ai.assistant.composer");
@@ -388,6 +390,19 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                 {isRecording ? <MicOff className="w-3.5 h-3.5" /> : isTranscribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mic className="w-3.5 h-3.5" />}
                 {isRecording ? tControls("mic.stop") : tControls("speak")}
               </button>
+
+              {onOpenVoice ? (
+                <button
+                  type="button"
+                  onClick={onOpenVoice}
+                  disabled={isSubmitting || isRecording}
+                  className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50"
+                  title={tControls("voice")}
+                >
+                  <AudioLines className="w-3.5 h-3.5" />
+                  {tControls("voice")}
+                </button>
+              ) : null}
 
               <div className="ml-auto flex items-center gap-2">
                 {/* Database Model Selector */}

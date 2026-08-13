@@ -2576,15 +2576,27 @@
         },
         "attach": "Attach",
         "speak": "Speak",
+        "voice": "Voice",
         "send": "Send"
       },
       "errors": {
         "mic": {
           "title": "Microphone Access Blocked",
           "subtitle": "Secure API Blocked",
-          "description": "Your browser has explicitly blocked {platformName} from accessing the native Web Speech API microphone proxy.",
+          "description": "Your browser has blocked {platformName} from using the microphone.",
           "instruction": "Click the microphone icon located in your browser's top URL search bar and select 'Allow'."
         }
+      },
+      "voice": {
+        "disclosure": "You're talking to {platformName}'s AI",
+        "tapToTalk": "Tap to talk",
+        "listening": "Listening — tap when you're done",
+        "thinking": "Thinking…",
+        "speaking": "Speaking — tap to stop",
+        "close": "Close voice",
+        "voiceUnavailable": "The voice isn't available right now — here's the reply as text.",
+        "didntCatch": "Didn't catch that — tap to try again.",
+        "micBlocked": "The microphone is blocked. Allow it in your browser's address bar, then try again."
       },
       "stages": {
         "thinking": "Thinking...",

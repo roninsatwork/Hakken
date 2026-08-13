@@ -172,6 +172,21 @@ export default function AssistantWelcomePage() {
     textareaRef.current?.focus();
   };
 
+  // A spoken conversation from a blank slate: make the thread, then land on
+  // it with voice mode opening. No message is sent here — the first thing
+  // the thread hears is whatever the person says.
+  const handleStartVoice = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const threadId = await createThread({});
+      router.push(`/app/assistant/${threadId}?voice=1`);
+    } catch (error) {
+      console.error(error);
+      setIsSubmitting(false);
+    }
+  };
+
   const handleStart = async (event: FormEvent) => {
     event.preventDefault();
     if (!canStartAssistantThread(content, pendingFiles.length, isSubmitting)) return;
@@ -280,6 +295,7 @@ export default function AssistantWelcomePage() {
         onStart={handleStart}
         onThinkingDropdownChange={handleThinkingDropdownChange}
         onToggleRecording={toggleRecording}
+        onStartVoice={handleStartVoice}
         pendingFiles={pendingFiles}
         selectedModelData={selectedModelData}
         selectedThinkingId={selectedThinkingId}

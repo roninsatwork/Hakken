@@ -1,5 +1,5 @@
 import type { DragEvent, FormEvent, RefObject } from "react";
-import { ArrowUp, Loader2, Mic, MicOff, Plus, ShieldCheck } from "lucide-react";
+import { ArrowUp, AudioLines, Loader2, Mic, MicOff, Plus, ShieldCheck } from "lucide-react";
 import { AssistantModelSelector } from "./AssistantModelSelector";
 import { AssistantThinkingSelector } from "./AssistantThinkingSelector";
 import { AssistantUploadStatus } from "./AssistantUploadStatus";
@@ -32,6 +32,7 @@ type AssistantComposerProps = {
   onStart: (event: FormEvent) => void;
   onThinkingDropdownChange: (isOpen: boolean) => void;
   onToggleRecording: () => void;
+  onStartVoice?: () => void;
   pendingFiles: File[];
   selectedModelData: AssistantModel | undefined;
   selectedThinkingId: ThinkingLevelId;
@@ -67,6 +68,7 @@ export function AssistantComposer({
   onStart,
   onThinkingDropdownChange,
   onToggleRecording,
+  onStartVoice,
   pendingFiles,
   selectedModelData,
   selectedThinkingId,
@@ -186,6 +188,19 @@ export function AssistantComposer({
                 )}
                 {isRecording ? t("controls.mic.stop") : t("controls.speak")}
               </button>
+
+              {onStartVoice ? (
+                <button
+                  type="button"
+                  onClick={onStartVoice}
+                  disabled={isSubmitting || isRecording}
+                  className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[8px] border border-border-dim text-[12px] text-secondary hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50"
+                  title={t("controls.voice")}
+                >
+                  <AudioLines className="w-3.5 h-3.5" />
+                  {t("controls.voice")}
+                </button>
+              ) : null}
 
               <div className="ml-auto flex items-center gap-2">
                 <AssistantModelSelector
