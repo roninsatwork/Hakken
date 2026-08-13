@@ -108,6 +108,18 @@ export function getMediaCapabilities(modelId: string) {
   return capabilities;
 }
 
+/**
+ * Which platform jobs a non-text model can serve, read off its id.
+ *
+ * Media models used to carry no use cases at all — catalogued as facts about
+ * the account that no job could run on. The voice session changed that for
+ * exactly one family: a Google text-to-speech model serves the `speech` job,
+ * so the Model Defaults screen can offer it. Everything else stays a fact.
+ */
+export function getMediaModelUseCases(modelId: string) {
+  return modelId.toLowerCase().includes("tts") ? ["speech"] : [];
+}
+
 export async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
   const ai = createVertexGenAIClient();
   const listed = await listVertexModels(ai);
@@ -139,14 +151,15 @@ export async function syncGoogleVertexModelCatalogue(ctx: ActionCtx) {
       // Vertex text models also take audio and images, which the generic
       // text-generation list does not claim. The hardcoded catalogue this
       // replaced said so; dropping it meant no model could be chosen to turn
-      // speech into text, and that row became unsettable. Image, video and
-      // speech models carry no use cases: they are catalogued as facts about
-      // the account, but no platform job can run on them.
+      // speech into text, and that row became unsettable. Image and video
+      // models carry no use cases — catalogued as facts about the account —
+      // but a text-to-speech model serves the `speech` job for the voice
+      // session.
       supportedUseCases: isEmbedding
         ? [EMBEDDING_MODEL_USE_CASE]
         : isTextGeneration
           ? [...getTextGenerationUseCases(model.modelId), "transcription", "vision"]
-          : [],
+          : getMediaModelUseCases(model.modelId),
       // Vertex leaves these unset on the listing. Passing undefined through
       // would clear whatever a model already had, so they are only sent when
       // Vertex actually reports them.

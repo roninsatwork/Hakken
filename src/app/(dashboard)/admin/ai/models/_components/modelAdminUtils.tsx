@@ -230,6 +230,7 @@ export const MODEL_USE_CASE_DESCRIPTIONS: Record<string, string> = {
   router: "Deciding which model or skill should handle a request. Runs on every message, so a cheap model here saves the most.",
   title: "Naming a conversation from its first message. Trivial work — the cheapest model is the right one.",
   transcription: "Turning speech into text.",
+  speech: "Turning text into a spoken voice. Only Google text-to-speech models can do this.",
   embedding: "Turning documents into something searchable. Only embedding models can do this.",
   vision: "Reading images and screenshots.",
   "tool-calling": "Deciding which tool to use and with what arguments.",

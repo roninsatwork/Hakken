@@ -551,6 +551,7 @@ export default defineSchema({
     companyId: v.optional(v.id("companies")),
     actionName: v.union(
       v.literal("transcribeAudio"),
+      v.literal("synthesizeSpeech"),
       v.literal("generateNodeConfig")
     ),
     requestedAt: v.number(),

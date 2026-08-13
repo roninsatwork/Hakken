@@ -4,6 +4,7 @@ import { assertWithinAiActionRateLimit } from "./aiActionRequestService";
 
 const aiActionNameValidator = v.union(
   v.literal("transcribeAudio"),
+  v.literal("synthesizeSpeech"),
   v.literal("generateNodeConfig")
 );
 

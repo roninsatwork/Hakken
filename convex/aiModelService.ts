@@ -68,6 +68,7 @@ export const DEFAULT_MODEL_USE_CASES = [
   "router",
   "title",
   "transcription",
+  "speech",
   EMBEDDING_MODEL_USE_CASE,
 ] as const;
 
@@ -139,7 +140,7 @@ export function buildModelSearchText(model: {
  * replaces: the screen offered any model for any job, and the reader found out
  * it could not run when it did not.
  */
-const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription"]);
+const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription", "speech"]);
 export const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow"]);
 /**
  * The providers the agent runtime has an adapter for.
@@ -176,6 +177,9 @@ export function describeUseCaseProviderLimit(useCase: string) {
   }
   if (useCase === "transcription") {
     return "Only Google models can do this job on this platform.";
+  }
+  if (useCase === "speech") {
+    return "Only Google speech models can do this job on this platform — pick one whose name says it does text-to-speech.";
   }
   if (AGENT_CAPABLE_USE_CASES.has(useCase)) {
     return "Agents need a model that can use tools while it works, which not every provider offers.";

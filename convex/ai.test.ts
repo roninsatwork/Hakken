@@ -4,6 +4,8 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";
 import {
+    assertSpeechCapableModelId,
+    assertValidSpeechPayload,
     assertValidTranscriptionPayload,
     buildNodeConfigContext,
     getBase64DecodedByteLength,
@@ -608,6 +610,105 @@ describe("assistant stage notes", () => {
 
         const thread = await t.run(async (ctx) => ctx.db.get(threadId));
         expect(thread?.assistantStage).toBeUndefined();
+    });
+});
+
+describe("speech synthesis", () => {
+    test("speech guardrails reject empty, oversized, and unknown-voice payloads before provider calls", () => {
+        expect(assertValidSpeechPayload({ text: "  Hello there. " })).toEqual({
+            text: "Hello there.",
+            voiceKey: "Kore",
+        });
+        expect(() => assertValidSpeechPayload({ text: "   " })).toThrow("Speech text is required");
+        expect(() => assertValidSpeechPayload({ text: "A".repeat(2001) })).toThrow(
+            "cannot exceed 2000"
+        );
+        expect(() => assertValidSpeechPayload({ text: "hi", voiceKey: "EvilVoice" })).toThrow(
+            "Unknown speech voice"
+        );
+    });
+
+    test("a model that cannot make sound is refused with the fix in the sentence", () => {
+        expect(assertSpeechCapableModelId("gemini-2.5-flash-preview-tts")).toBe(
+            "gemini-2.5-flash-preview-tts"
+        );
+        expect(() => assertSpeechCapableModelId("gemini-2.5-flash")).toThrow(
+            "No speech model is configured"
+        );
+    });
+
+    test("an unconfigured deployment refuses plainly instead of throwing at the provider", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const userId = await t.run(async (ctx) =>
+            ctx.db.insert("users", {
+                email: "speaker@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            })
+        );
+
+        const asUser = t.withIdentity({ subject: userId });
+        // No speech default exists, so resolution falls back to the failsafe
+        // chat model — which cannot make sound and must be refused readably.
+        await expect(
+            asUser.action(api.ai.synthesizeSpeech, { text: "Say hello." })
+        ).rejects.toThrow("No speech model is configured");
+        expect(generateVertexContentWithRetryMock).not.toHaveBeenCalled();
+    });
+
+    test("returns the configured speech model's audio and reserves the rate limit", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const userId = await t.run(async (ctx) => {
+            await ctx.db.insert("aiModels", {
+                modelId: "google:gemini-tts",
+                displayName: "Gemini TTS",
+                providerKey: "google",
+                providerModelId: "gemini-2.5-flash-preview-tts",
+                isEnabled: true,
+                isDefault: true,
+                lastSyncedAt: Date.now(),
+            });
+            return ctx.db.insert("users", {
+                email: "speaker@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            });
+        });
+
+        generateVertexContentWithRetryMock.mockResolvedValue({
+            candidates: [
+                {
+                    content: {
+                        parts: [
+                            { inlineData: { data: "QUJD", mimeType: "audio/L16;codec=pcm;rate=24000" } },
+                        ],
+                    },
+                },
+            ],
+        });
+
+        const asUser = t.withIdentity({ subject: userId });
+        const result = await asUser.action(api.ai.synthesizeSpeech, { text: "Say hello." });
+
+        expect(result).toEqual({
+            audioBase64: "QUJD",
+            mimeType: "audio/L16;codec=pcm;rate=24000",
+        });
+
+        const call = generateVertexContentWithRetryMock.mock.calls[0][1];
+        expect(call.model).toBe("gemini-2.5-flash-preview-tts");
+        expect(call.config.responseModalities).toEqual(["AUDIO"]);
+        expect(call.config.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Kore");
+
+        const reservations = await t.run(async (ctx) =>
+            ctx.db
+                .query("aiActionRequests")
+                .withIndex("by_actor_action_requested", (q) =>
+                    q.eq("actorId", userId).eq("actionName", "synthesizeSpeech")
+                )
+                .collect()
+        );
+        expect(reservations).toHaveLength(1);
     });
 });
 
