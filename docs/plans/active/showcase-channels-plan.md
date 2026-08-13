@@ -117,6 +117,28 @@ streaming. Confirmed absent; searched, zero matches.
    are talking to an AI at the start of every call. Transcripts are stored as
    conversation records subject to the same retention rules as chat.
 
+## The gate: a spoken channel must be able to search knowledge
+
+Recorded 2026-08-13, after Anthony asked a live voice session about the
+knowledge base and it answered that it could not see one — correctly.
+
+A live voice model receives the company's instructions once when the
+session opens and then talks to the caller directly; it never comes back
+to this platform, so nothing in an uploaded document reaches it. The
+typed assistant searches for every question. The voice does not.
+
+**Anthony's point, and it is decisive: a receptionist that cannot answer
+from the company's documents is not a receptionist.** Neither is a
+telephone agent — the first real question a caller asks is about a
+product, an order, or an opening time.
+
+So the knowledge-search tool (specified in `voice-session-plan.md`) is a
+**prerequisite for phases 3 and 6, not an enhancement**. Neither the
+telephone agent nor the receptionist screen may be built before a spoken
+session can search the company's knowledge mid-conversation and answer
+from what it finds. Nothing else in this roadmap is worth demonstrating
+until that is true.
+
 ## The six features, in build order
 
 ### Phase 1 — Voice-to-voice with a moving sound-shape
