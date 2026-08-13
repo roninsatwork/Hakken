@@ -12,16 +12,6 @@ crons.interval(
   {}
 );
 
-// Ask the questions somebody asked Sonae to watch, and tell them when an
-// answer moves. Shares the minute tick with workflow schedules rather than
-// adding a second clock; the action bounds its own batch.
-crons.interval(
-  "scheduled-question-dispatcher",
-  { minutes: 1 },
-  internal.scheduledQuestionActions.askDueQuestions,
-  {}
-);
-
 // Revive agent runs whose action died without reaching a terminal state, and
 // fail the ones that cannot be revived. Without this a killed action leaves a
 // run marked RUNNING and a reply marked as streaming for ever.

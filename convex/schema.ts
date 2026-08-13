@@ -473,27 +473,6 @@ export default defineSchema({
    * which is why a question is explicitly active or not and its interval is
    * chosen rather than inferred.
    */
-  scheduledQuestions: defineTable({
-    companyId: v.id("companies"),
-    question: v.string(),
-    /** Absent means the workspace default at the time of each run. */
-    modelId: v.optional(v.string()),
-    intervalStr: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly")),
-    isActive: v.boolean(),
-    /** Whether a change should also raise a task, not just tell someone. */
-    raisesTask: v.boolean(),
-    ownerUserId: v.id("users"),
-    lastAnswer: v.optional(v.string()),
-    lastAskedAt: v.optional(v.number()),
-    lastChangedAt: v.optional(v.number()),
-    lastError: v.optional(v.string()),
-    nextRunAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_company_created", ["companyId", "createdAt"])
-    .index("by_active_next_run", ["isActive", "nextRunAt"]),
-
   auditLogs: defineTable({
     /**
      * The admin who did it, when a person did.
@@ -1863,7 +1842,15 @@ export default defineSchema({
     .index("by_global", ["companyId", "agentId", "threadId", "createdAt"])
     .index("by_global_format", ["companyId", "agentId", "threadId", "format", "createdAt"])
     .index("by_status", ["status", "createdAt"])
-    .index("by_source_company", ["sourceUrl", "companyId", "agentId"]),
+    .index("by_source_company", ["sourceUrl", "companyId", "agentId"])
+    // Saved answers are the documents somebody submitted from a conversation,
+    // and they get their own screen — so they get their own index rather than
+    // being sifted out of every document the company has.
+    .index("by_company_submitted", ["companyId", "submittedBy", "createdAt"])
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["companyId"],
+    }),
 
   // Knowledge Base Vector Store
   knowledgeChunks: defineTable({

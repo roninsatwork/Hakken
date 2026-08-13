@@ -1396,34 +1396,49 @@ export const saveAnswerToKnowledge = tenantMutation({
  * clear — the control it offers is removal, not approval.
  */
 export const listSavedAnswers = adminQuery({
-  args: { companyId: v.id("companies") },
+  args: {
+    companyId: v.id("companies"),
+    searchTerm: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
   handler: async (ctx, args) => {
     assertCanAccessKnowledgeScope(ctx.user, args.companyId);
 
-    const documents = await ctx.db
-      .query("knowledgeDocuments")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .take(200);
+    // Narrowed in the database rather than the browser, so a company with a
+    // long list can still find an answer on page nine.
+    const searchTerm = args.searchTerm?.trim();
+    const page = searchTerm
+      ? await ctx.db
+          .query("knowledgeDocuments")
+          .withSearchIndex("search_title", (q) => q.search("title", searchTerm).eq("companyId", args.companyId))
+          // Saved answers are the ones somebody submitted from a conversation;
+          // uploads and website pages have their own screens.
+          .filter((q) => q.neq(q.field("submittedBy"), undefined))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("knowledgeDocuments")
+          .withIndex("by_company_submitted", (q) => q.eq("companyId", args.companyId))
+          .filter((q) => q.neq(q.field("submittedBy"), undefined))
+          .order("desc")
+          .paginate(args.paginationOpts);
 
-    // Saved answers are the ones somebody submitted from a conversation;
-    // uploads and website pages have their own screens.
-    const saved = documents.filter((doc) => doc.submittedBy !== undefined);
-
-    return await Promise.all(
-      saved.map(async (doc) => {
-        const submitter = doc.submittedBy ? await ctx.db.get(doc.submittedBy) : null;
-        return {
-          _id: doc._id,
-          title: doc.title,
-          textContent: doc.textContent,
-          sourceUrl: doc.sourceUrl,
-          status: doc.status,
-          createdAt: doc.createdAt,
-          savedByName: submitter?.name ?? submitter?.email ?? null,
-        };
-      }),
-    );
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map(async (doc) => {
+          const submitter = doc.submittedBy ? await ctx.db.get(doc.submittedBy) : null;
+          return {
+            _id: doc._id,
+            title: doc.title,
+            textContent: doc.textContent,
+            sourceUrl: doc.sourceUrl,
+            status: doc.status,
+            createdAt: doc.createdAt,
+            savedByName: submitter?.name ?? submitter?.email ?? null,
+          };
+        }),
+      ),
+    };
   },
 });
 

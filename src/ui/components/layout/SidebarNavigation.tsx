@@ -18,7 +18,6 @@ import {
   // template:remove:end
   Bot,
   ListChecks,
-  Eye,
   ShieldCheck,
   Settings,
   Workflow,
@@ -342,7 +341,6 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/app') return 'Dashboard';
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
-  if (pathname.startsWith('/app/watching')) return 'Watching';
   // template:remove:start properties
   if (pathname.startsWith('/app/properties')) return 'Properties';
   // template:remove:end
@@ -717,14 +715,6 @@ export default function SidebarNavigation() {
                       href="/app/tasks"
                       isActive={activeItem === 'Tasks' || pathname.startsWith('/app/tasks')}
                       onClick={() => setActiveItem('Tasks')}
-                    />
-
-                    <NavItem
-                      icon={Eye}
-                      label="Watching"
-                      href="/app/watching"
-                      isActive={activeItem === 'Watching' || pathname.startsWith('/app/watching')}
-                      onClick={() => setActiveItem('Watching')}
                     />
 
                     {/* template:remove:start salesReports */}

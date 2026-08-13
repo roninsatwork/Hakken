@@ -212,10 +212,10 @@ completed work.
 - [Closing The Loop Plan](./active/closing-the-loop-plan.md) — the plan for
   four features that each turn something the platform already records into
   something a person can use: typing the correction a thumbs-down cannot
-  carry, saving a good answer into company knowledge, showing the evidence a
-  reply already stores, and asking a question on a schedule so Sonae reports
-  when the answer moves. Owns `scheduledQuestions`, the correction field on
-  `messageFeedback.comment`, and the evidence panel. It feeds the
+  carry, saving a good answer into company knowledge, and showing the evidence
+  a reply already stores. A fourth — asking a question on a schedule — was
+  built, proven, and then withdrawn; the plan says why. Owns the correction
+  field on `messageFeedback.comment` and the evidence panel. It feeds the
   Self-Improvement Plan's candidate queue without changing its rules, and
   raises the tasks and notifications the Tasks And Notifications Plan owns.
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —

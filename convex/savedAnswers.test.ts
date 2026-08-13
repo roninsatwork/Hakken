@@ -118,10 +118,13 @@ describe("saving an answer", () => {
 
     const saved = await t
       .withIdentity({ subject: adminId })
-      .query(api.knowledge.listSavedAnswers, { companyId });
+      .query(api.knowledge.listSavedAnswers, {
+        companyId,
+        paginationOpts: { numItems: 10, cursor: null },
+      });
 
-    expect(saved).toHaveLength(1);
-    expect(saved[0]).toMatchObject({
+    expect(saved.page).toHaveLength(1);
+    expect(saved.page[0]).toMatchObject({
       title: "What are the depot hours on a Friday?",
       savedByName: "member@test.com",
     });

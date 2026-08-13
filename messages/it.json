@@ -3214,36 +3214,5 @@
     "markAllRead": "Segna tutte come lette",
     "open": "Notifiche",
     "waiting": "{count} non lette"
-  },
-  "knowledgeReview": {
-    "title": "Risposte salvate",
-    "subtitle": "Risposte tenute dal tuo team. Sono subito ricercabili — rimuovi quelle che non dovrebbero esserlo.",
-    "empty": "Nulla salvato. Le risposte che il team tiene da una conversazione appaiono qui.",
-    "remove": "Rimuovi",
-    "removing": "Rimozione",
-    "savedBy": "Salvato da",
-    "open": "Apri la conversazione"
-  },
-  "watching": {
-    "title": "In osservazione",
-    "subtitle": "Domande che Sonae ripete, per avvisarti quando la risposta cambia.",
-    "empty": "Nulla in osservazione. Aggiungi una domanda e Sonae la ripeterà avvisandoti quando la risposta cambia.",
-    "new": "Osserva una domanda",
-    "placeholder": "Cosa deve tenere d'occhio Sonae?",
-    "interval": "Chiedi",
-    "daily": "Ogni giorno",
-    "weekly": "Ogni settimana",
-    "monthly": "Ogni mese",
-    "raisesTask": "Crea anche un'attività quando cambia",
-    "add": "Inizia a osservare",
-    "cancel": "Annulla",
-    "on": "Attiva",
-    "off": "In pausa",
-    "remove": "Rimuovi",
-    "lastAsked": "Ultima domanda",
-    "neverAsked": "Non ancora chiesta",
-    "changed": "Cambiata",
-    "lastAnswer": "Ultima risposta",
-    "failed": "L'ultima esecuzione è fallita"
   }
 }

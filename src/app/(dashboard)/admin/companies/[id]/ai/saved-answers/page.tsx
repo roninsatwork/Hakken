@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { BookmarkCheck, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
+  AdminPaginationFooter,
   AdminRowActions,
   AdminRowIconButton,
   AdminSearchBar,
@@ -17,6 +18,7 @@ import {
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -35,10 +37,32 @@ export default function CompanySavedAnswersPage() {
   const params = useParams();
   const companyId = params.id as Id<"companies">;
 
-  const saved = useQuery(api.knowledge.listSavedAnswers, { companyId });
-  const remove = useMutation(api.knowledge.deleteDocument);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+
+  const saved = usePaginatedQuery(
+    api.knowledge.listSavedAnswers,
+    { companyId, ...(searchTerm.trim() ? { searchTerm: searchTerm.trim() } : {}) },
+    { initialNumItems: ADMIN_PAGE_SIZE },
+  );
+
+  const remove = useMutation(api.knowledge.deleteDocument);
   const [busyId, setBusyId] = useState<Id<"knowledgeDocuments"> | null>(null);
+
+  const isLoading = saved.status === "LoadingFirstPage";
+  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
+  const pageRows = saved.results.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
+  // No maintained total for a company's saved answers, so the count is what has
+  // been fetched — honest, if conservative, while more pages remain.
+  const knownTotal = saved.results.length;
+  const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
+
+  const goToPage = (next: number) => {
+    setPage(next);
+    if (saved.results.length < next * ADMIN_PAGE_SIZE && saved.status === "CanLoadMore") {
+      saved.loadMore(ADMIN_PAGE_SIZE);
+    }
+  };
 
   const handleRemove = async (documentId: Id<"knowledgeDocuments">) => {
     if (busyId) return;
@@ -51,13 +75,6 @@ export default function CompanySavedAnswersPage() {
       setBusyId(null);
     }
   };
-
-  const term = searchTerm.trim().toLowerCase();
-  const rows = (saved ?? []).filter((doc) =>
-    term.length === 0
-    || doc.title.toLowerCase().includes(term)
-    || (doc.textContent ?? "").toLowerCase().includes(term),
-  );
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
@@ -73,10 +90,29 @@ export default function CompanySavedAnswersPage() {
           </p>
         </div>
 
-        <AdminSearchBar value={searchTerm} onChange={setSearchTerm} placeholder="Search saved answers" />
+        <AdminSearchBar
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setPage(1);
+          }}
+          placeholder="Search saved answers"
+        />
       </header>
 
-      <AdminTableShell minWidthClassName="min-w-[880px]">
+      <AdminTableShell
+        minWidthClassName="min-w-[880px]"
+        footer={(
+          <AdminPaginationFooter
+            page={page}
+            totalPages={totalPages}
+            totalCount={knownTotal}
+            pageSize={ADMIN_PAGE_SIZE}
+            isLoading={isLoading}
+            onPageChange={goToPage}
+          />
+        )}
+      >
         <thead>
           <AdminTableHeaderRow>
             <AdminTableHeaderCell>Question</AdminTableHeaderCell>
@@ -87,16 +123,16 @@ export default function CompanySavedAnswersPage() {
           </AdminTableHeaderRow>
         </thead>
         <tbody>
-          {saved === undefined ? (
+          {isLoading ? (
             <AdminTableLoadingRow colSpan={5} />
-          ) : rows.length === 0 ? (
+          ) : pageRows.length === 0 ? (
             <AdminTableEmptyRow
               colSpan={5}
               icon={<BookmarkCheck className="h-8 w-8 text-muted" />}
-              label={term.length > 0 ? "Nothing matches" : "Nothing saved yet"}
+              label={searchTerm.trim() ? "Nothing matches" : "Nothing saved yet"}
             />
           ) : (
-            rows.map((doc) => (
+            pageRows.map((doc) => (
               <tr key={doc._id} className="group border-t border-border-dim">
                 <td className="max-w-[22rem] px-5 py-4 align-top text-[13px] text-foreground">
                   {doc.sourceUrl ? (

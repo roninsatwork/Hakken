@@ -1,7 +1,8 @@
 # What Sonae Learns, Keeps, Shows And Watches
 
-Status: Delivered 2026-08-13. All four phases shipped; Phase 2 shipped with
-auto-approval rather than a review queue, at Anthony's direction.
+Status: Delivered 2026-08-13. Three of the four phases stand. Phase 2 shipped
+with auto-approval rather than a review queue, and Phase 4 was built, proven
+working, and then removed at Anthony's direction — see below.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
@@ -180,12 +181,20 @@ Phase 4 (scheduled questions) ── wants tasks + notifications, which now exis
 - [x] **2** Save this answer, company knowledge document, four tests — shipped
       auto-approving, with super-admin removal, instead of a review queue
 - [x] **3** Evidence panel over recorded evidence, four tests
-- [x] **4** `scheduledQuestions`, runner, change detection, screen, five tests
+- [~] **4** `scheduledQuestions` — built, proven end to end, then withdrawn
 
 Delivered in `604ed6be7` (1–3) and `07279e645` (2's auto-approve flip, and 4).
-Phase 4 was watched end to end against the running app: switched on, picked up
-by the minute cron, answered, recorded silently as the baseline, then a changed
-answer raised exactly one notification.
+
+Phase 4 was watched working against the running app — switched on, picked up by
+the minute cron, answered, recorded silently as the baseline, then a changed
+answer raised exactly one notification — and then removed in full: table, cron,
+runner, screen and tests. Anthony's call, and the reasoning is worth keeping:
+people using the assistant want to ask a question and get an answer, and
+anything else dressed up as a feature for them is really configuration. A
+watcher that spends money on a schedule earns its place only if somebody has
+asked for that, and nobody had.
+
+Do not rebuild it without being asked.
 
 ## Reading list before touching this area
 
