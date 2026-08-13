@@ -2,6 +2,7 @@
 
 import { internalAction, action } from "./_generated/server";
 import { v } from "convex/values";
+import { createHmac } from "node:crypto";
 import { Modality, Type } from "@google/genai";
 import { internal } from "./_generated/api";
 import { requireActionAdmin, requireActionUser } from "./actionAuth";
@@ -837,7 +838,10 @@ export const createRealtimeVoiceSession = tenantAction({
   handler: async (
     ctx,
     args
-  ): Promise<{ clientSecret: string; model: string; expiresAt: number | null }> => {
+  ): Promise<
+    | { transport: "openai-webrtc"; clientSecret: string; model: string; expiresAt: number | null }
+    | { transport: "google-relay"; relayUrl: string; ticket: string; model: string; expiresAt: number }
+  > => {
     const { userId, user } = ctx;
 
     await ctx.runMutation(internal.aiActionRequests.reserve, {
@@ -863,20 +867,14 @@ export const createRealtimeVoiceSession = tenantAction({
     const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
       useCase: REALTIME_MODEL_USE_CASE,
     });
-    // Both providers publish a speech-to-speech model and both are offered on
-    // the Defaults screen, but only OpenAI's browser transport is built so
-    // far: its live connection is WebRTC, which the browser negotiates
-    // itself, while Google's is a raw socket that needs the microphone
-    // captured and the reply played back by hand. Choosing Google therefore
-    // says so plainly rather than failing at the handshake.
-    if (modelConfig.providerKey === GOOGLE_VERTEX_PROVIDER_KEY) {
-      throw new Error(
-        "Google's live voice engine is not connected yet — only the model is. Set the Real-time voice job to an OpenAI realtime model for now."
-      );
-    }
+    // Both providers publish a speech-to-speech model and both are built:
+    // OpenAI's connects the browser straight to the provider, Google's goes
+    // through our relay. Anything else cannot hold a spoken conversation at
+    // all, so say which screen fixes it rather than failing at a handshake.
     if (
-      modelConfig.providerKey !== OPENAI_PROVIDER_KEY ||
-      !modelConfig.providerModelId.toLowerCase().includes("realtime")
+      modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY &&
+      (modelConfig.providerKey !== OPENAI_PROVIDER_KEY ||
+        !modelConfig.providerModelId.toLowerCase().includes("realtime"))
     ) {
       throw new Error(
         "No real-time voice model is configured. In Model Defaults, set the Real-time voice job to a speech-to-speech model."
@@ -929,6 +927,41 @@ SPEAKING OUT LOUD:
 
 ${REALTIME_VOICE_STYLE}`;
 
+    if (modelConfig.providerKey === GOOGLE_VERTEX_PROVIDER_KEY) {
+      // Google's live models run through our own relay: Vertex issues no
+      // browser-safe credential, so the page never holds one. It gets a
+      // signed ticket instead — good for a minute, naming the session and
+      // carrying the company's instructions so a browser cannot rewrite
+      // them.
+      const relayUrl = process.env.VOICE_RELAY_URL?.trim();
+      const relaySecret = process.env.VOICE_RELAY_SECRET?.trim();
+      if (!relayUrl || !relaySecret) {
+        throw new Error(
+          "The live voice relay is not configured. Set VOICE_RELAY_URL and VOICE_RELAY_SECRET on this deployment."
+        );
+      }
+
+      const payload = Buffer.from(
+        JSON.stringify({
+          model: modelConfig.providerModelId,
+          voice: args.voice ?? "Aoede",
+          instructions,
+          companyId: companyId ?? null,
+          threadId: args.threadId,
+          expiresAt: Date.now() + 60_000,
+        })
+      ).toString("base64url");
+      const signature = createHmac("sha256", relaySecret).update(payload).digest("base64url");
+
+      return {
+        transport: "google-relay" as const,
+        relayUrl,
+        ticket: `${payload}.${signature}`,
+        model: modelConfig.providerModelId,
+        expiresAt: Date.now() + 60_000,
+      };
+    }
+
     const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
       headers: {
@@ -966,6 +999,7 @@ ${REALTIME_VOICE_STYLE}`;
     }
 
     return {
+      transport: "openai-webrtc" as const,
       clientSecret: payload.value,
       model: modelConfig.providerModelId,
       expiresAt: payload.expires_at ?? null,

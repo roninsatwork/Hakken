@@ -8,6 +8,12 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { VoiceSessionState } from "@/src/lib/voiceSession";
+import { decodePcm16Base64 } from "@/src/lib/voiceSession";
+import {
+  downsampleTo16k,
+  LIVE_OUTPUT_SAMPLE_RATE,
+  readLiveServerMessage,
+} from "@/src/lib/googleLiveVoice";
 import { LAYER } from "@/src/ui/lib/layers";
 import { SpeakingCharacter } from "./SpeakingCharacter";
 
@@ -61,6 +67,12 @@ export function RealtimeVoiceOverlay({
   const pendingUserTextRef = useRef("");
   const assistantTextRef = useRef("");
   const modelRef = useRef<string | null>(null);
+  // Google path only: the relay socket, the microphone worklet feeding it,
+  // and the playhead that keeps returned audio contiguous.
+  const relaySocketRef = useRef<WebSocket | null>(null);
+  const micNodeRef = useRef<ScriptProcessorNode | null>(null);
+  const playheadRef = useRef(0);
+  const playingSourcesRef = useRef(new Set<AudioBufferSourceNode>());
 
   // One meter for the whole session: the caller's voice while they speak, the
   // reply while it plays. Sampled at half frame rate — plenty for the shape.
@@ -113,6 +125,23 @@ export function RealtimeVoiceOverlay({
   }, [recordVoiceTurn, threadId]);
 
   const teardown = useCallback(() => {
+    try {
+      relaySocketRef.current?.close();
+    } catch {
+      /* already gone */
+    }
+    relaySocketRef.current = null;
+    micNodeRef.current?.disconnect();
+    micNodeRef.current = null;
+    for (const source of playingSourcesRef.current) {
+      try {
+        source.stop();
+      } catch {
+        /* already ended */
+      }
+    }
+    playingSourcesRef.current.clear();
+    playheadRef.current = 0;
     peerRef.current?.getSenders().forEach((sender) => sender.track?.stop());
     peerRef.current?.close();
     peerRef.current = null;
@@ -176,6 +205,124 @@ export function RealtimeVoiceOverlay({
     [flushTurn, t]
   );
 
+
+  /**
+   * Google's live voice, through the platform's relay.
+   *
+   * Vertex speaks a raw socket, so the browser does the audio work: the
+   * microphone is downsampled and streamed up continuously, and the audio
+   * that returns is queued nose-to-tail on one clock so it plays as a voice
+   * rather than a stutter. Talking over it stops playback immediately —
+   * Vertex says when it has been interrupted.
+   */
+  const startGoogleRelay = useCallback(
+    async (session: { relayUrl: string; ticket: string; model: string }) => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      micStreamRef.current = stream;
+
+      const context = new AudioContext();
+      audioContextRef.current = context;
+      const micSource = context.createMediaStreamSource(stream);
+      const micAnalyser = context.createAnalyser();
+      micAnalyser.fftSize = 256;
+      micSource.connect(micAnalyser);
+      micAnalyserRef.current = micAnalyser;
+
+      const playbackAnalyser = context.createAnalyser();
+      playbackAnalyser.fftSize = 256;
+      playbackAnalyser.connect(context.destination);
+      remoteAnalyserRef.current = playbackAnalyser;
+
+      const socket = new WebSocket(session.relayUrl);
+      socket.binaryType = "arraybuffer";
+      relaySocketRef.current = socket;
+
+      const stopPlayback = () => {
+        for (const source of playingSourcesRef.current) {
+          try {
+            source.stop();
+          } catch {
+            /* already ended */
+          }
+        }
+        playingSourcesRef.current.clear();
+        playheadRef.current = 0;
+      };
+
+      socket.addEventListener("open", () => {
+        socket.send(JSON.stringify({ ticket: session.ticket }));
+
+        // 4096 frames is about 85ms at 48kHz — small enough to feel live,
+        // large enough not to flood the socket.
+        const processor = context.createScriptProcessor(4096, 1, 1);
+        micNodeRef.current = processor;
+        processor.onaudioprocess = (event) => {
+          if (socket.readyState !== WebSocket.OPEN) return;
+          const pcm = downsampleTo16k(event.inputBuffer.getChannelData(0), context.sampleRate);
+          socket.send(pcm.buffer);
+        };
+        micSource.connect(processor);
+        // Silent sink: some browsers will not run a processor that is not
+        // connected to anything downstream.
+        const sink = context.createGain();
+        sink.gain.value = 0;
+        processor.connect(sink);
+        sink.connect(context.destination);
+        setSessionState("listening");
+      });
+
+      socket.addEventListener("message", (message) => {
+        const event = readLiveServerMessage(String(message.data));
+        if (!event) return;
+
+        if (event.interrupted) {
+          stopPlayback();
+          setSessionState("listening");
+        }
+        if (event.userTranscript) {
+          pendingUserTextRef.current += event.userTranscript;
+          setUserCaption(pendingUserTextRef.current);
+        }
+        if (event.assistantTranscript) {
+          assistantTextRef.current += event.assistantTranscript;
+          setAssistantCaption(assistantTextRef.current);
+        }
+        if (event.audioBase64) {
+          const samples = decodePcm16Base64(event.audioBase64);
+          if (samples.length > 0) {
+            const buffer = context.createBuffer(1, samples.length, LIVE_OUTPUT_SAMPLE_RATE);
+            buffer.copyToChannel(samples, 0);
+            const source = context.createBufferSource();
+            source.buffer = buffer;
+            source.connect(playbackAnalyser);
+            const startAt = Math.max(context.currentTime, playheadRef.current);
+            source.start(startAt);
+            playheadRef.current = startAt + buffer.duration;
+            playingSourcesRef.current.add(source);
+            source.onended = () => playingSourcesRef.current.delete(source);
+            setSessionState("speaking");
+          }
+        }
+        if (event.turnComplete) {
+          flushTurn();
+          setSessionState("listening");
+        }
+      });
+
+      socket.addEventListener("close", () => {
+        setNotice(t("connectionLost"));
+        setSessionState("idle");
+      });
+      socket.addEventListener("error", () => {
+        setNotice(t("connectionLost"));
+        setSessionState("idle");
+      });
+    },
+    [flushTurn, t]
+  );
+
   const start = useCallback(async () => {
     if (connecting || peerRef.current) return;
     setConnecting(true);
@@ -183,6 +330,11 @@ export function RealtimeVoiceOverlay({
     try {
       const session = await createSession({ threadId });
       modelRef.current = session.model;
+
+      if (session.transport === "google-relay") {
+        await startGoogleRelay(session);
+        return;
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -256,7 +408,7 @@ export function RealtimeVoiceOverlay({
     } finally {
       setConnecting(false);
     }
-  }, [connecting, createSession, handleServerEvent, t, teardown, threadId]);
+  }, [connecting, createSession, handleServerEvent, startGoogleRelay, t, teardown, threadId]);
 
   const close = useCallback(() => {
     flushTurn();
