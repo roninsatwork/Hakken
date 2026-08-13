@@ -1,6 +1,7 @@
 # What Sonae Learns, Keeps, Shows And Watches
 
-Status: Agreed with Anthony 2026-08-12. Not started.
+Status: Delivered 2026-08-13. All four phases shipped; Phase 2 shipped with
+auto-approval rather than a review queue, at Anthony's direction.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
@@ -175,10 +176,16 @@ Phase 4 (scheduled questions) ── wants tasks + notifications, which now exis
 
 ## Work queue
 
-- [ ] **1** Correction field, stored comment, candidate creation, five tests
-- [ ] **2** Save this answer, company knowledge document, four tests
-- [ ] **3** Evidence panel over recorded evidence, four tests
-- [ ] **4** `scheduledQuestions`, runner, change detection, screen, five tests
+- [x] **1** Correction field, stored comment, candidate creation, five tests
+- [x] **2** Save this answer, company knowledge document, four tests — shipped
+      auto-approving, with super-admin removal, instead of a review queue
+- [x] **3** Evidence panel over recorded evidence, four tests
+- [x] **4** `scheduledQuestions`, runner, change detection, screen, five tests
+
+Delivered in `604ed6be7` (1–3) and `07279e645` (2's auto-approve flip, and 4).
+Phase 4 was watched end to end against the running app: switched on, picked up
+by the minute cron, answered, recorded silently as the baseline, then a changed
+answer raised exactly one notification.
 
 ## Reading list before touching this area
 
