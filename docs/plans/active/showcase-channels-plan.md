@@ -119,20 +119,27 @@ streaming. Confirmed absent; searched, zero matches.
 
 ## The six features, in build order
 
-### Phase 1 — Voice-to-voice with a talking character
+### Phase 1 — Voice-to-voice with a moving sound-shape
 
 **What the audience sees:** you talk to Sonae on the Ask Sonae screen; it
-talks back in a natural voice while an animated character on screen speaks
-the words.
+talks back in a natural voice while an elegant animated shape moves with
+the sound — rippling as it listens, moving with the voice as it speaks.
+
+**Recorded 2026-08-13:** the character is a moving shape that represents
+sound, nothing more complex — Anthony's call. The VRM avatars were
+rejected for this surface as anime/childlike, and a realistic digital
+human was considered and not wanted. The shape is built behind a small
+swappable interface, so a face could replace it later without rework, but
+none is planned.
 
 Builds on: `useVoiceToText.ts` (hearing), streaming replies (words arrive
-progressively, so speech can begin before the answer finishes), VRM rendering
-knowledge from the movement demo.
+progressively, so speech can begin before the answer finishes).
 
-Genuinely new: text-to-speech; a voice-session mode in Ask Sonae that listens,
-speaks and shows the character; mouth movement driven by the audio.
+Genuinely new: text-to-speech; a voice-session mode in Ask Sonae that
+listens, speaks and shows the shape.
 
 This phase is the foundation — phases 2, 3 and 6 all stand on it.
+Detailed plan: `voice-session-plan.md`.
 
 ### Phase 2 — Any language in, answers come back in kind
 

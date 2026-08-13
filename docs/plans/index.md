@@ -227,8 +227,51 @@ completed work.
   that Sonae answers calls but never makes them, that the email phase builds
   the platform's first working connector (Gmail, one dedicated mailbox,
   consent-screen key, no passwords ever), and that the rest of the connector
-  catalogue stays out of scope. Each phase gets its own detailed plan before
-  build starts.
+  catalogue stays out of scope. Each phase has its own detailed plan, listed
+  next.
+- [Sonae Speaks — The Voice Session And The Talking Character](./active/voice-session-plan.md) —
+  phase 1: the voice session in Ask Sonae — speech in, spoken replies out,
+  the moving sound-shape on screen. Owns the `speech` use case, the
+  `synthesizeSpeech` action, the session surface and turn loop,
+  sentence-buffered speaking, and the `SpeakingCharacter` interface.
+  Records the decision that the character is a sound-shape (VRM avatars
+  rejected as childlike) and that barge-in and open-mic are out of scope.
+- [Ask In Any Language, Sonae Answers In Kind](./active/voice-languages-plan.md) —
+  phase 2: the reply follows the language of the caller's latest turn.
+  Owns language detection in `transcribeAudio`'s return shape, the
+  reply-language rule for voice turns, and the language→voice map.
+- [Sonae Answers The Phone](./active/telephone-agent-plan.md) — phase 3:
+  the inbound number, the turn-based call loop over provider webhooks,
+  and the hang-up-and-watch finale. Owns the `phoneCalls` table and its
+  purge pipeline, the `/api/telephony/voice` route, the call log and call
+  detail screens, and the per-company "inbound goes to" assignee setting
+  it shares with the photo plan. Records the decisions that calls are
+  turn-based (no audio streaming), the call loop is read-only while live,
+  and unknown callers become tasks, not CRM rows.
+- [Show Sonae A Photo And It Acts](./active/photo-actions-plan.md) —
+  phase 4: photos into chat and widget, vision-aware model routing, and
+  the human-confirmed action chip that files a task from what the photo
+  says. Owns the `chatImage` upload policy, attachment rendering, the
+  vision gate in model resolution, the widget attach flow over the
+  dormant upload endpoints, and the fix for the agent path silently
+  dropping images. Records the decision that photos are inline evidence,
+  never ingested knowledge.
+- [The Gmail Inbox That Answers Itself](./active/gmail-inbox-plan.md) —
+  phase 5: the platform's first working connector. Owns the generic OAuth
+  consent plumbing (authorize/callback routes, encrypted
+  `connectorOAuthTokens`, refresh, real revocation), the `google-gmail`
+  connector definition and its read/reply tools with hard reply rails,
+  the mailbox watcher, the answer-versus-task rules, and the
+  `mailboxMessages` table with its purge pipeline. Records the decisions
+  that replies go out through Gmail itself (threading, human-visible
+  Sent) and that the connected mailbox is a dedicated account, never a
+  person's.
+- [The Receptionist Screen](./active/receptionist-kiosk-plan.md) —
+  phase 6: the walk-up kiosk. Owns the `/kiosk/[widgetId]` surface on the
+  widget's anonymous machinery, the kiosk enable flag, tap-to-wake,
+  inactivity reset and token rotation between visitors, and kiosk health
+  on the admin widget screen. Records the decisions that the kiosk is a
+  widget presented differently, and that wake words are out of scope.
 - [Company Skills Apply Where They Are Bound](./active/company-skills-surfaces-plan.md) —
   the plan to wire up the per-surface skill switches that the schema, readiness
   gates, and eval categories already assume exist: the runtime filters company
@@ -286,12 +329,18 @@ If work touches assigning work to a person, or telling someone in the app that
 something happened, use the Tasks And Notifications Plan. It takes approval
 behaviour from the Agent Autonomy And Approvals Plan and email from the Email
 Design System Plan; it owns neither.
-If work touches a new way of reaching Sonae — voice in or out, a telephone
-number, inbound email, acting on photos, or a kiosk surface — use the Sonae
-Can Be Spoken To, Phoned, Emailed, And Shown A Photo plan, which owns the
-build order and channel decisions; tasks raised from any channel stay with
-the Tasks And Notifications Plan, and outbound email styling stays with the
-Email Design System Plan.
+If work touches a new way of reaching Sonae, the umbrella Sonae Can Be
+Spoken To, Phoned, Emailed, And Shown A Photo plan owns the build order and
+the channel decisions, and the six phase plans own their features: voice
+sessions, speech synthesis, and the sound-shape belong to the Voice Session
+plan; reply language and voice-per-language to the Voice Languages plan;
+the phone number, call loop, and call records to the Telephone Agent plan;
+images in chat or widget and acting on them to the Photo Actions plan;
+OAuth consent plumbing, token storage, and the connected mailbox to the
+Gmail Inbox plan; the walk-up surface to the Receptionist Kiosk plan.
+Tasks raised from any channel stay with the Tasks And Notifications Plan,
+outbound platform email styling stays with the Email Design System Plan,
+and approvals behaviour stays with the Agent Autonomy And Approvals Plan.
 If work touches which skills reach a company's chat or widget — the runtime
 skill query, skill bindings, or the company skills screen — use the Company
 Skills Apply Where They Are Bound plan. The Skill Center and skill authoring
