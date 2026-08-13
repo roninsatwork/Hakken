@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -41,6 +42,12 @@ export function VoiceSessionOverlay({
   const transcribeAudio = useAction(api.ai.transcribeAudio);
 
   const [sessionState, setSessionState] = useState<VoiceSessionState>("idle");
+  // Resolved after mount so the portal target is never read during a server
+  // render or a mid-refresh window where the document is not ready.
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
   const [level, setLevel] = useState(0);
   const [userCaption, setUserCaption] = useState("");
   const [assistantCaption, setAssistantCaption] = useState("");
@@ -319,8 +326,12 @@ export function VoiceSessionOverlay({
           ? { label: t("speaking"), onClick: abandonSpeaking }
           : { label: t("thinking"), onClick: undefined };
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-background p-6">
+  // A portal to the body: the dashboard shell transforms its workspace, which
+  // turns `fixed` into "fixed inside the shell" and slides this overlay's top
+  // bar underneath the app header. The session owns the whole screen.
+  if (!portalTarget) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-between bg-background p-6">
       <div className="flex w-full items-start justify-between">
         <p className="text-sm text-secondary">{t("disclosure", { platformName: settings.platformName })}</p>
         <button
@@ -350,6 +361,7 @@ export function VoiceSessionOverlay({
         {userCaption ? <p className="text-sm text-secondary">{userCaption}</p> : null}
         {assistantCaption ? <p className="text-base text-foreground">{assistantCaption}</p> : null}
       </div>
-    </div>
+    </div>,
+    portalTarget
   );
 }
