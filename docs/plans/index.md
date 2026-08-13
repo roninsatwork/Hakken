@@ -218,6 +218,15 @@ completed work.
   field on `messageFeedback.comment` and the evidence panel. It feeds the
   Self-Improvement Plan's candidate queue without changing its rules, and
   raises the tasks and notifications the Tasks And Notifications Plan owns.
+- [Sonae Can Be Spoken To, Phoned, Emailed, And Shown A Photo](./active/showcase-channels-plan.md) —
+  the showcase roadmap giving the one brain more doors: voice-to-voice with a
+  talking character, spoken answers in the caller's own language, an inbound
+  telephone agent with the hang-up-and-watch finale, acting on photos, Sonae's
+  own self-answering email address, and the receptionist kiosk screen. Owns
+  the build order and the recorded decisions that Sonae answers calls but
+  never makes them, that the email door is Sonae's own address (no mailboxes,
+  no OAuth, no MFA), and that connectors stay out of scope. Each phase gets
+  its own detailed plan before build starts.
 - [Company Skills Apply Where They Are Bound](./active/company-skills-surfaces-plan.md) —
   the plan to wire up the per-surface skill switches that the schema, readiness
   gates, and eval categories already assume exist: the runtime filters company
@@ -275,6 +284,12 @@ If work touches assigning work to a person, or telling someone in the app that
 something happened, use the Tasks And Notifications Plan. It takes approval
 behaviour from the Agent Autonomy And Approvals Plan and email from the Email
 Design System Plan; it owns neither.
+If work touches a new way of reaching Sonae — voice in or out, a telephone
+number, inbound email, acting on photos, or a kiosk surface — use the Sonae
+Can Be Spoken To, Phoned, Emailed, And Shown A Photo plan, which owns the
+build order and channel decisions; tasks raised from any channel stay with
+the Tasks And Notifications Plan, and outbound email styling stays with the
+Email Design System Plan.
 If work touches which skills reach a company's chat or widget — the runtime
 skill query, skill bindings, or the company skills screen — use the Company
 Skills Apply Where They Are Bound plan. The Skill Center and skill authoring
