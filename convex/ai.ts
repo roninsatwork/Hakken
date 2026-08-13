@@ -904,14 +904,35 @@ export const searchKnowledgeForVoice = tenantAction({
         threadReserveRatio: 0.3,
         loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
       });
-      if (chunkTexts.length === 0) return { context: "" };
+      // Documents finding nothing does not mean the company has nothing to
+      // say: a memory may answer on its own.
+      if (chunkTexts.length === 0 && !companyId) return { context: "" };
+
+      // Everything the typed assistant would assemble for this question, not
+      // just documents: a company memory written for exactly this situation
+      // is as much an answer as a paragraph in a file, and saved answers live
+      // in company knowledge so they arrive through the search above.
+      const memories = companyId
+        ? await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
+            companyId,
+            queryText: query,
+            limit: 5,
+          })
+        : null;
+      const relevantMemories = (memories?.relevant ?? [])
+        .map((memory: { title: string; content: string }) => `- ${memory.title}: ${memory.content}`)
+        .join("\n");
 
       return {
-        context: buildUntrustedKnowledgeContext({
+        context: `${buildUntrustedKnowledgeContext({
           sourceLabel: "global, company, and thread-scoped knowledge",
           chunks: chunkTexts,
           maxChars: 6000,
-        }),
+        })}${
+          relevantMemories
+            ? `\n\nApproved company notes that apply here:\n${relevantMemories}`
+            : ""
+        }`,
       };
     } catch (error) {
       console.error("Voice knowledge search failed", error);
