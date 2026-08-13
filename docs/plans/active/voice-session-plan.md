@@ -48,6 +48,49 @@ Recorded decisions:
    apply unchanged, and the session states clearly that an AI is speaking
    (umbrella plan commitment 7).
 
+## Real-time voice runs on Vertex, through a relay — recorded 2026-08-13
+
+Anthony's decision, twice stated and binding: **Google models for cost,
+and Vertex only — never AI Studio.** Google's live native-audio model is
+roughly five to ten times cheaper per spoken minute than OpenAI's
+realtime family, and this deployment already reaches Google through
+Vertex.
+
+The obstacle, verified rather than assumed: **Vertex does not issue
+ephemeral tokens.** OpenAI mints a one-minute browser pass and Google's
+AI Studio side does too, but Vertex has no equivalent — its only
+credential is the service account, which is a key to the whole Google
+project and can never be handed to a web page. Signing a JWT in the
+browser to trade for an access token was considered and rejected for the
+same reason: it requires the service account key in the page.
+
+**So the audio does not go browser-to-Vertex. It goes browser → our own
+relay → Vertex.** A small WebSocket service holds the Vertex connection
+using the service account; the browser holds a connection to the relay
+and never sees a Google credential. This is the architecture Google's own
+samples use for Vertex, and it is the only one that satisfies both the
+cost decision and the security rule.
+
+Binding details:
+
+1. **The relay runs on Cloud Run, in the same Google project.** Same
+   billing, same service account, no new vendor, and credentials come
+   from the environment rather than a key file. Dev and live are the same
+   service with different URLs — the scalability point Anthony raised
+   about not doing environment-specific hacks.
+2. **The browser must prove who it is.** Convex mints a short-lived,
+   single-use ticket naming the company, the thread and the session
+   configuration; the relay refuses anything else. A stranger who finds
+   the relay's address gets nothing.
+3. **The system instruction is set by the ticket, not the browser.** The
+   company's rules, skills and memories reach Vertex from our server —
+   a page can never rewrite what the assistant has been told.
+4. **Which model speaks stays a Model Defaults choice.** The relay is
+   told the model; it does not carry one.
+5. **OpenAI's WebRTC path stays** as the fallback while the relay is
+   built, and remains selectable afterwards. Nothing about the session
+   screen, the shape or the transcript changes with the engine.
+
 ## What is actually true today (verified 2026-08-13)
 
 **Hearing exists and is turn-based.** `src/hooks/useVoiceToText.ts` (90
