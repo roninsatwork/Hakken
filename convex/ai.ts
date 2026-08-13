@@ -826,6 +826,100 @@ export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
 - If you are asked something you do not know, say so plainly and briefly.
 - You may be interrupted mid-sentence. If that happens, stop and listen.`;
 
+
+/** The one thing a spoken session can ask this platform for, mid-conversation. */
+export const VOICE_KNOWLEDGE_TOOL_NAME = "search_company_knowledge";
+export const VOICE_KNOWLEDGE_TOOL_DESCRIPTION =
+  "Search this company's documents and knowledge for anything you were not told directly. Use it whenever you are asked about products, services, prices, policies, opening times, people, or anything specific to this company — do not guess and do not say you cannot see the knowledge base.";
+
+/**
+ * Knowledge for a voice that is already talking.
+ *
+ * A live model receives the company's instructions once and then speaks to
+ * the caller directly, so nothing in an uploaded document reaches it. This is
+ * the door back: it calls this mid-sentence and answers from what comes back.
+ * It runs exactly the retrieval the typed assistant runs, so the two surfaces
+ * cannot end up knowing different things.
+ */
+export const searchKnowledgeForVoice = tenantAction({
+  args: {
+    threadId: v.id("threads"),
+    query: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ context: string }> => {
+    const query = args.query.trim().slice(0, 500);
+    if (!query) return { context: "" };
+
+    const thread = await ctx.runQuery(internal.chat.getThreadInternal, {
+      threadId: args.threadId,
+    });
+    const companyId = thread?.companyId ?? ctx.user.companyId;
+
+    try {
+      const queryVector = await embedRetrievalQuery(ctx, {
+        query,
+        companyId,
+        operation: "voiceRagEmbedding",
+      });
+      if (!queryVector) return { context: "" };
+
+      const [companyChunks, globalChunks, threadChunks] = await Promise.all([
+        companyId
+          ? searchKnowledgeScope(ctx, {
+              queryVector,
+              queryText: query,
+              scope: { kind: "company", companyId },
+              limit: 30,
+              priorCompanyId: companyId,
+            })
+          : Promise.resolve([]),
+        searchKnowledgeScope(ctx, {
+          queryVector,
+          queryText: query,
+          scope: { kind: "global" },
+          limit: 30,
+          priorCompanyId: companyId,
+        }),
+        searchKnowledgeScope(ctx, {
+          queryVector,
+          queryText: query,
+          scope: { kind: "thread", threadId: args.threadId },
+          limit: 30,
+          priorCompanyId: companyId,
+        }),
+      ]);
+
+      const ranked = rankAssistantKnowledgeMatches({
+        globalMatches: globalChunks,
+        companyMatches: companyChunks,
+        threadMatches: threadChunks,
+      });
+      if (ranked.length === 0) return { context: "" };
+
+      // Far smaller than the typed budget on purpose: this is read aloud, and
+      // a spoken answer is two sentences, not two pages.
+      const { chunkTexts } = await selectKnowledgeChunksWithinBudget({
+        ranked,
+        maxChars: 6000,
+        threadReserveRatio: 0.3,
+        loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+      });
+      if (chunkTexts.length === 0) return { context: "" };
+
+      return {
+        context: buildUntrustedKnowledgeContext({
+          sourceLabel: "global, company, and thread-scoped knowledge",
+          chunks: chunkTexts,
+          maxChars: 6000,
+        }),
+      };
+    } catch (error) {
+      console.error("Voice knowledge search failed", error);
+      return { context: "" };
+    }
+  },
+});
+
 export const createRealtimeVoiceSession = tenantAction({
   args: {
     threadId: v.id("threads"),
@@ -973,6 +1067,20 @@ ${REALTIME_VOICE_STYLE}`;
           type: "realtime",
           model: modelConfig.providerModelId,
           instructions,
+          tools: [
+            {
+              type: "function",
+              name: VOICE_KNOWLEDGE_TOOL_NAME,
+              description: VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
+              parameters: {
+                type: "object",
+                properties: {
+                  query: { type: "string", description: "What to look up, in a few words." },
+                },
+                required: ["query"],
+              },
+            },
+          ],
           audio: {
             input: {
               // The model's own end-of-speech detection: it hears the shape of

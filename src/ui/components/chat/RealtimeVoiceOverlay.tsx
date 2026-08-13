@@ -44,6 +44,7 @@ export function RealtimeVoiceOverlay({
   const settings = useSystemSettings();
   const createSession = useAction(api.ai.createRealtimeVoiceSession);
   const recordVoiceTurn = useMutation(api.chat.recordVoiceTurn);
+  const searchKnowledge = useAction(api.ai.searchKnowledgeForVoice);
 
   const [sessionState, setSessionState] = useState<VoiceSessionState>("idle");
   const [connecting, setConnecting] = useState(false);
@@ -67,6 +68,9 @@ export function RealtimeVoiceOverlay({
   const pendingUserTextRef = useRef("");
   const assistantTextRef = useRef("");
   const modelRef = useRef<string | null>(null);
+  // The data channel, kept so the answer to a knowledge lookup can be sent
+  // back into the conversation the model is already having.
+  const channelRef = useRef<RTCDataChannel | null>(null);
   // Google path only: the relay socket, the microphone worklet feeding it,
   // and the playhead that keeps returned audio contiguous.
   const relaySocketRef = useRef<WebSocket | null>(null);
@@ -191,6 +195,54 @@ export function RealtimeVoiceOverlay({
             setAssistantCaption(event.transcript);
           }
           break;
+        // The model asked to look something up. Nothing is spoken while this
+        // runs, so it has to be quick — the search is deliberately small.
+        case "response.function_call_arguments.done": {
+          const call = event as { name?: string; call_id?: string; arguments?: string };
+          if (!call.call_id) break;
+          let query = "";
+          try {
+            query = String(JSON.parse(call.arguments ?? "{}").query ?? "");
+          } catch {
+            query = "";
+          }
+          setSessionState("thinking");
+          void searchKnowledge({ threadId, query })
+            .then((result) => {
+              const channel = channelRef.current;
+              if (!channel || channel.readyState !== "open") return;
+              channel.send(
+                JSON.stringify({
+                  type: "conversation.item.create",
+                  item: {
+                    type: "function_call_output",
+                    call_id: call.call_id,
+                    output:
+                      result.context ||
+                      "Nothing in the company's knowledge covers that. Say so plainly.",
+                  },
+                })
+              );
+              channel.send(JSON.stringify({ type: "response.create" }));
+            })
+            .catch(() => {
+              const channel = channelRef.current;
+              if (channel?.readyState === "open") {
+                channel.send(
+                  JSON.stringify({
+                    type: "conversation.item.create",
+                    item: {
+                      type: "function_call_output",
+                      call_id: call.call_id,
+                      output: "The knowledge search failed. Say you could not check just now.",
+                    },
+                  })
+                );
+                channel.send(JSON.stringify({ type: "response.create" }));
+              }
+            });
+          break;
+        }
         case "response.done":
           flushTurn();
           setSessionState("listening");
@@ -367,6 +419,7 @@ export function RealtimeVoiceOverlay({
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
 
       const channel = peer.createDataChannel("oai-events");
+      channelRef.current = channel;
       channel.addEventListener("message", (message) => {
         try {
           handleServerEvent(JSON.parse(message.data));
