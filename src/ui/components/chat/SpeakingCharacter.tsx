@@ -28,8 +28,13 @@ export function SpeakingCharacter({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef(state);
   const levelRef = useRef(level);
-  stateRef.current = state;
-  levelRef.current = level;
+  // Handed to the animation loop this way rather than written during render:
+  // the loop is started once and reads whatever is current on each frame, so
+  // it must not be torn down every time the level moves.
+  useEffect(() => {
+    stateRef.current = state;
+    levelRef.current = level;
+  }, [state, level]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

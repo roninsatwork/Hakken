@@ -46,12 +46,18 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
   const router = useRouter();
   const searchParams = useSearchParams();
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceParamHandled, setVoiceParamHandled] = useState(false);
+  const arrivedWantingVoice = searchParams.get("voice") === "1";
+  // Adjusted during render rather than in an effect: opening the session is a
+  // direct consequence of how this page was arrived at, and doing it in an
+  // effect renders the closed overlay first and then immediately re-renders.
+  if (arrivedWantingVoice && !voiceParamHandled) {
+    setVoiceParamHandled(true);
+    setVoiceOpen(true);
+  }
   useEffect(() => {
-    if (searchParams.get("voice") === "1") {
-      setVoiceOpen(true);
-      router.replace(`/app/assistant/${threadId}`);
-    }
-  }, [router, searchParams, threadId]);
+    if (arrivedWantingVoice) router.replace(`/app/assistant/${threadId}`);
+  }, [arrivedWantingVoice, router, threadId]);
 
   // Any growth of the transcript — a new message, a streamed lump, or each
   // frame of the typed reveal — keeps the bottom in view while the reader is

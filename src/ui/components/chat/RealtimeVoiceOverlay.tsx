@@ -255,7 +255,7 @@ export function RealtimeVoiceOverlay({
           break;
       }
     },
-    [flushTurn, t]
+    [flushTurn, searchKnowledge, t, threadId]
   );
 
 

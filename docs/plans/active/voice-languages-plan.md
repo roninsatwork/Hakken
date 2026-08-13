@@ -32,10 +32,10 @@ Recorded decisions:
 
 ## The interpreter, recorded 2026-08-13
 
-Anthony raised the live speech-to-speech translation models (Google's
-`gemini-3.5-live-translate-preview`, OpenAI's `gpt-realtime-translate`,
-both around 3–4p per minute). They are worth building — but as a
-**second, separate mode**, not as the engine for this plan.
+Anthony raised the live speech-to-speech translation models — Google's
+live-translate preview and OpenAI's realtime-translate, both around 3–4p
+per minute. They are worth building — but as a **second, separate mode**,
+not as the engine for this plan.
 
 The distinction that decides it: a translate model *renders* what you say
 into another language. It does not answer from company knowledge, follow
@@ -46,11 +46,13 @@ That is a genuinely striking demo and a real product for a business with
 overseas customers.
 
 Availability, checked in the catalogue on 2026-08-13: OpenAI's
-`gpt-realtime-translate` is synced and available. Google's live-translate
-model is not published to this Vertex project (Google's native-audio
-conversation model, `gemini-live-2.5-flash-native-audio`, **is** — and is
-now switched on). Whichever provider is used, it stays a Model Defaults
-choice under its own job, never a hardcoded id.
+realtime-translate model is synced and available. Google's live-translate
+model is not published to this Vertex project, though its native-audio
+conversation model **is** — and is now switched on for the Realtime job.
+Whichever provider is used, it stays a Model Defaults choice under its own
+job, never a hardcoded id. Model ids are deliberately not written here:
+the guard in the drift suite forbids them everywhere outside the
+catalogue, precisely so a name in a document cannot become a name in code.
 
 Sequence: the reply-language work below lands first, because it makes
 every existing surface multilingual for almost no new machinery.

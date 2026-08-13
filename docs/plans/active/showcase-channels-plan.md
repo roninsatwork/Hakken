@@ -119,8 +119,22 @@ streaming. Confirmed absent; searched, zero matches.
 
 ## The gate: a spoken channel must be able to search knowledge
 
-Recorded 2026-08-13, after Anthony asked a live voice session about the
-knowledge base and it answered that it could not see one — correctly.
+**CLEARED 2026-08-13, proven live.** A spoken session on Google's engine
+searched the company's knowledge mid-conversation and answered from what it
+found, in Anthony's own browser. Phases 3 and 6 are unblocked.
+
+What it took, beyond the tool itself: the relay was hanging up on every
+Google call before a word reached Vertex — the page streams the microphone
+the instant its socket opens, and audio arriving while the relay was still
+fetching its Google token was being read as a second connection ticket. The
+relay had no test coverage and logged nothing on a refusal, so the failure
+looked identical to a caller who never arrived. Both are fixed: the ordering
+is decided synchronously and covered by tests that fail if it regresses, and
+every session now logs connect, ticket, Vertex handshake and close.
+
+The original reason for the gate, recorded 2026-08-13, after Anthony asked a
+live voice session about the knowledge base and it answered that it could not
+see one — correctly.
 
 A live voice model receives the company's instructions once when the
 session opens and then talks to the caller directly; it never comes back
