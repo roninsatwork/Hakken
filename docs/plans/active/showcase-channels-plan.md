@@ -22,27 +22,31 @@ Anthony's calls, recorded 2026-08-13:
    better, raises no spam or consent questions, and needs no dialling rules.
    Outbound calling is not in this plan and needs a fresh decision before
    anyone builds it.
-2. **The email door is Sonae's own address, not anyone's mailbox.** Sonae
-   never logs into an inbox, so there is no password, no OAuth, and no MFA
-   involved — Anthony's authenticator-protected email is untouched. Mail sent
-   to Sonae's own address is delivered straight to the platform by the email
-   provider.
-   **Recorded 2026-08-13: the demo address must not use a Ronins name.**
-   Ronins company policy is that all ronins.co.uk email lives on Gmail, with
-   no exceptions — so no address ending in ronins.co.uk (or any subdomain of
-   it) may ever route anywhere else. The showcase address therefore lives on
-   a separate, newly bought product domain (asksonae.com or similar) that has
-   never carried company email. When Sonae is cloned for a client, the
-   address lives on the client's domain under the client's own policy; a
-   client with a Gmail-only rule like Ronins' sees the feature demonstrated
-   on the product domain instead. A Gmail account for Sonae (burner or
-   otherwise) was considered and rejected: Google does not permit password
-   logins by software, robot logins get accounts locked, and a stored
-   password is a secret the platform refuses to hold.
-3. **Connectors stay out of scope.** Every channel in this plan is one Sonae
-   owns outright (its own number, its own address, its own screen). Nothing
-   here authenticates against a third-party account, so all of it survives
-   cloning the app for a new client.
+2. **The email door is a real Gmail inbox the agent looks at and replies
+   from.** Recorded 2026-08-13, and it supersedes two same-day earlier
+   versions of this decision (webhook-only delivery with no mailbox, then a
+   separate product domain) — both rejected by Anthony, who wants a visible
+   inbox humans can also open, and who holds the company policy that all
+   Ronins mail lives on Gmail with no exceptions. So the email phase builds
+   the platform's first working connector: Google/Gmail, through Google's
+   official consent door (OAuth), scoped to one dedicated mailbox such as
+   ask@ronins.co.uk. **MFA is not an obstacle on this route and never was:**
+   a person connects the mailbox once, signing in with their normal password
+   and authenticator, and Google issues Sonae its own revocable key for that
+   one mailbox. No password is ever seen or stored by the platform. What MFA
+   blocks — rightly — is only the crude approach of giving software a
+   password, and that approach stays rejected.
+3. **The connector catalogue stays out of scope, except Gmail.** The other
+   channels in this plan are ones Sonae owns outright (its own number, its
+   own screen). The Gmail connector is deliberately the one exception, and
+   it must be built so cloning still ships no credentials: connection keys
+   live in tenant data, never in code or config, and each clone's owner
+   connects their own mailbox through their own consent screen. For the
+   showcase the app registers as an *internal* application in Ronins'
+   Google Workspace, which keeps Google's public verification process out
+   of scope; that process only becomes a question when a future client
+   wants Gmail under a shared public registration, and per-client
+   registration is the default answer.
 
 ## What is actually true today (verified 2026-08-13)
 
@@ -64,7 +68,14 @@ widget). What is missing is *acting* on a photo, not seeing one.
 **Email goes out but never comes in.** `convex/resendEmailService.ts` sends,
 `convex/emailLayoutService.ts` renders the shared shell, and the workflow
 email node delivers (`convex/workflowRuntime.ts`). There is no inbound email
-of any kind — no address, no webhook, no parser.
+of any kind — no connected mailbox, no reader, no reply path.
+
+**Connector scaffolding exists; the working half does not.** Connector
+definitions live in `convex/toolConnectorDefinitions.ts`, install state and a
+`toolConnectorOAuthConnections` table exist (`convex/schema.ts:2236`), but
+there is no token exchange, storage, refresh, or revocation — no connector
+has ever completed a real connection. The Gmail phase builds that missing
+half, and builds it once for every connector that comes after.
 
 **Tasks and notifications exist and are the landing pad.** `tasks`
 (`convex/schema.ts:419`) and `notifications` (`convex/schema.ts:449`) are
@@ -81,9 +92,11 @@ streaming. Confirmed absent; searched, zero matches.
 
 ## Design commitments (binding on every phase)
 
-1. **No third-party authentication, ever, in this plan.** No OAuth, no
-   mailbox logins, no MFA prompts. Every channel is Sonae-owned. If a phase
-   turns out to need a connector, that phase stops and the plan is revisited.
+1. **No passwords, ever.** The platform never holds, sees, or types anyone's
+   password. The one connection in this plan (the Gmail mailbox, phase 5)
+   happens through Google's own consent screen, completed by a person with
+   their normal login and MFA, and yields a scoped, revocable key held in
+   tenant data. Any future channel that cannot work that way is out.
 2. **Every door leads to the same brain.** A call, an email, or a photo runs
    through the same company knowledge, rules, skills and memories as typed
    chat, produces a conversation record like any other, and appears in chat
@@ -157,21 +170,31 @@ Builds on: inline chat images (already working), widget image attachments,
 tasks. Genuinely new: the acting — turning what the model reads in the image
 into a task, a customer note, or a structured answer, on the user's say-so.
 
-### Phase 5 — An email address that answers itself
+### Phase 5 — A Gmail inbox that answers itself
 
-**What the audience sees:** anyone emails Sonae's own address; a correct,
-on-brand reply comes back from the company's knowledge — or, when a human is
-genuinely needed, a task and notification appear instead and the sender is
-told someone will be in touch.
+**What the audience sees:** anyone emails ask@ronins.co.uk — a real Gmail
+address with a real inbox. Sonae reads the new message and replies from that
+same address using the company's knowledge — or, when a human is genuinely
+needed, raises a task and notification instead and tells the sender someone
+will be in touch. Anyone at Ronins can open the inbox in Gmail and see
+exactly what the agent received and sent — the whole exchange is inspectable
+by a person, which is itself part of the demo.
 
-Builds on: outbound email (`resendEmailService.ts`, the shared shell), tasks
-and notifications. Genuinely new: inbound delivery — Sonae's own address, the
-provider webhook that hands mail to the platform, and the decision rules for
-answer-versus-task.
+Builds on: the connector scaffolding (`convex/toolConnectorDefinitions.ts`,
+the `toolConnectorOAuthConnections` table), tasks and notifications, the
+audit trail.
 
-Recorded here because Anthony asked: **his MFA is not a problem.** Sonae
-never touches an existing mailbox. The address is Sonae's own; mail arrives
-by webhook from the provider; there is nothing to log into.
+Genuinely new: the working half of connectors — Google's consent flow with
+token exchange, storage, refresh and revocation; a dedicated Gmail mailbox in
+Ronins' Workspace connected once by a person through Google's own login (MFA
+and all); Gmail read and reply tools for the agent; the answer-versus-task
+rules; and the connect/disconnect admin screen showing exactly which mailbox
+Sonae holds a key to.
+
+Boundaries, binding: Sonae is connected to **one dedicated mailbox only** —
+never a person's. The key is revocable from both sides (a Sonae admin screen
+and Google's own security page). Replies go only to people who emailed first.
+The agent reading or sending a mail is audited like any other tool call.
 
 ### Phase 6 — The receptionist screen
 
@@ -187,8 +210,10 @@ being solid.
 
 ## What this plan does not cover
 
-- **Connectors and third-party OAuth** — deliberately excluded, recorded
-  above.
+- **The rest of the connector catalogue** — Gmail (phase 5) is the one
+  deliberate exception, recorded above; nothing else connects to a
+  third-party account in this plan. The consent-flow plumbing phase 5 builds
+  is shared groundwork for whichever connectors come later.
 - **Outbound calling** — excluded; needs its own decision.
 - **WhatsApp and SMS** — a natural sibling of the telephone agent once a
   number exists, but a separate decision for a later day; not scoped here.

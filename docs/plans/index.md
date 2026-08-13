@@ -221,12 +221,14 @@ completed work.
 - [Sonae Can Be Spoken To, Phoned, Emailed, And Shown A Photo](./active/showcase-channels-plan.md) —
   the showcase roadmap giving the one brain more doors: voice-to-voice with a
   talking character, spoken answers in the caller's own language, an inbound
-  telephone agent with the hang-up-and-watch finale, acting on photos, Sonae's
-  own self-answering email address, and the receptionist kiosk screen. Owns
-  the build order and the recorded decisions that Sonae answers calls but
-  never makes them, that the email door is Sonae's own address (no mailboxes,
-  no OAuth, no MFA), and that connectors stay out of scope. Each phase gets
-  its own detailed plan before build starts.
+  telephone agent with the hang-up-and-watch finale, acting on photos, a
+  dedicated Gmail inbox the agent reads and replies from, and the
+  receptionist kiosk screen. Owns the build order and the recorded decisions
+  that Sonae answers calls but never makes them, that the email phase builds
+  the platform's first working connector (Gmail, one dedicated mailbox,
+  consent-screen key, no passwords ever), and that the rest of the connector
+  catalogue stays out of scope. Each phase gets its own detailed plan before
+  build starts.
 - [Company Skills Apply Where They Are Bound](./active/company-skills-surfaces-plan.md) —
   the plan to wire up the per-surface skill switches that the schema, readiness
   gates, and eval categories already assume exist: the runtime filters company
