@@ -11,6 +11,7 @@ import {
   handlePublicWorkflowRunTrigger,
 } from "./publicApi";
 import { handleVoiceKnowledgeLookup } from "./voiceRelay";
+import { handleIncomingCall } from "./telephony";
 
 const http = httpRouter();
 
@@ -50,6 +51,14 @@ http.route({
   path: "/api/voice/knowledge",
   method: "POST",
   handler: handleVoiceKnowledgeLookup,
+});
+
+// Somebody dialled the number. Verified as the telephony provider by its own
+// signature before a single model call is spent.
+http.route({
+  path: "/api/telephony/voice",
+  method: "POST",
+  handler: handleIncomingCall,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

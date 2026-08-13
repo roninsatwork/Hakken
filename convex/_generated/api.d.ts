@@ -188,6 +188,8 @@ import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
 import type * as systemService from "../systemService.js";
 import type * as tasks from "../tasks.js";
+import type * as telephony from "../telephony.js";
+import type * as telephonyService from "../telephonyService.js";
 import type * as tenantFunctions from "../tenantFunctions.js";
 import type * as toolConnectorDefinitions from "../toolConnectorDefinitions.js";
 import type * as userActivityService from "../userActivityService.js";
@@ -412,6 +414,8 @@ declare const fullApi: ApiFromModules<{
   system: typeof system;
   systemService: typeof systemService;
   tasks: typeof tasks;
+  telephony: typeof telephony;
+  telephonyService: typeof telephonyService;
   tenantFunctions: typeof tenantFunctions;
   toolConnectorDefinitions: typeof toolConnectorDefinitions;
   userActivityService: typeof userActivityService;

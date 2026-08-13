@@ -50,6 +50,31 @@ export const EMBEDDING_MODEL_USE_CASE = "embedding";
 export const REALTIME_MODEL_USE_CASE = "realtime";
 
 /**
+ * Can this model actually hold a spoken conversation?
+ *
+ * Decided from the name by rule, not from a list of ids, so a model released
+ * next month is recognised on the next catalogue sync with no code change —
+ * the same reason nothing here ever hardcodes a model.
+ *
+ * OpenAI calls it "realtime", Google calls it "live … native-audio". A live
+ * *translate* model is excluded: it renders speech between languages and
+ * answers nothing, which is a different job entirely.
+ *
+ * This is the single rule. The catalogue uses it to decide which models may
+ * be chosen for the job, and every surface that opens a spoken session uses
+ * it to check what it was handed — a chat model reaching a live audio socket
+ * fails at the provider with nothing readable saying why.
+ */
+export function isSpeechToSpeechModelId(modelId: string) {
+  const normalized = modelId.toLowerCase();
+  if (normalized.includes("translate")) return false;
+  return (
+    normalized.includes("realtime") ||
+    (normalized.includes("live") && normalized.includes("audio"))
+  );
+}
+
+/**
  * The jobs a model can be chosen for.
  *
  * `reasoning` was removed: it appeared on the Defaults screen and could be set,

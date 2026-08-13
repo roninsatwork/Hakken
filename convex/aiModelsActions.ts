@@ -7,6 +7,7 @@ import {
   ANTHROPIC_PROVIDER_KEY,
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_PROVIDER_KEY,
+  isSpeechToSpeechModelId,
   OPENAI_PROVIDER_KEY,
   OPENROUTER_PROVIDER_KEY,
   REALTIME_MODEL_USE_CASE,
@@ -122,14 +123,9 @@ export function getMediaModelUseCases(modelId: string) {
   // A speech-to-speech model is the engine behind real-time voice; a
   // text-to-speech model reads a finished answer aloud. Neither generates
   // text, so both would otherwise be catalogued as facts no job can use.
-  // Speech-to-speech, whatever the provider calls it: OpenAI says "realtime",
-  // Google says "live … native-audio". A live *translate* model is excluded —
-  // it renders speech between languages and answers nothing, so it is a
-  // different job (see the voice languages plan).
-  const isSpeechToSpeech =
-    !normalized.includes("translate") &&
-    (normalized.includes("realtime") || (normalized.includes("live") && normalized.includes("audio")));
-  if (isSpeechToSpeech) return [REALTIME_MODEL_USE_CASE];
+  // The speech-to-speech rule is shared with every surface that opens a
+  // spoken session, so the catalogue and the runtime cannot disagree.
+  if (isSpeechToSpeechModelId(normalized)) return [REALTIME_MODEL_USE_CASE];
   if (normalized.includes("tts")) return ["speech"];
   return [];
 }

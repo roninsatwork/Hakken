@@ -11,7 +11,7 @@ import {
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
-import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY, OPENAI_PROVIDER_KEY, REALTIME_MODEL_USE_CASE } from "./aiModelService";
+import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY, isSpeechToSpeechModelId, REALTIME_MODEL_USE_CASE } from "./aiModelService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import type { Id } from "./_generated/dataModel";
 import type { AiContentPart } from "./aiRuntimeTypes";
@@ -872,7 +872,10 @@ export const searchKnowledgeForVoice = tenantAction({
  */
 export const searchKnowledgeForVoiceInternal = internalAction({
   args: {
-    threadId: v.id("threads"),
+    // Absent on a phone call: there is no conversation on a screen to attach
+    // files to, so there is no thread to search. The company is then the
+    // whole of the scope, which is exactly right for a caller.
+    threadId: v.optional(v.id("threads")),
     query: v.string(),
     fallbackCompanyId: v.optional(v.id("companies")),
   },
@@ -880,9 +883,9 @@ export const searchKnowledgeForVoiceInternal = internalAction({
     const query = args.query.trim().slice(0, 500);
     if (!query) return { context: "" };
 
-    const thread = await ctx.runQuery(internal.chat.getThreadInternal, {
-      threadId: args.threadId,
-    });
+    const thread = args.threadId
+      ? await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId })
+      : null;
     const companyId = thread?.companyId ?? args.fallbackCompanyId;
 
     try {
@@ -910,13 +913,15 @@ export const searchKnowledgeForVoiceInternal = internalAction({
           limit: 30,
           priorCompanyId: companyId,
         }),
-        searchKnowledgeScope(ctx, {
-          queryVector,
-          queryText: query,
-          scope: { kind: "thread", threadId: args.threadId },
-          limit: 30,
-          priorCompanyId: companyId,
-        }),
+        args.threadId
+          ? searchKnowledgeScope(ctx, {
+              queryVector,
+              queryText: query,
+              scope: { kind: "thread", threadId: args.threadId },
+              limit: 30,
+              priorCompanyId: companyId,
+            })
+          : Promise.resolve([]),
       ]);
 
       const ranked = rankAssistantKnowledgeMatches({
@@ -981,6 +986,134 @@ export const searchKnowledgeForVoiceInternal = internalAction({
   },
 });
 
+/**
+ * Everything a live session needs to know about who it is speaking for.
+ *
+ * Assembled in one place because three surfaces now need it — the browser,
+ * the phone, and the receptionist screen after them — and a spoken channel
+ * that quietly assembles its own would end up representing the company
+ * differently depending on how you reached it.
+ */
+async function buildSpokenSessionInstructions(
+  ctx: { runQuery: (reference: never, args: never) => Promise<unknown> },
+  companyId: Id<"companies"> | undefined
+): Promise<string> {
+  const run = ctx.runQuery as unknown as (reference: unknown, args: unknown) => Promise<never>;
+  const [globalSystemPrompt, activeRules, company, companySkills, companyMemories] =
+    await Promise.all([
+      run(internal.system.getInternalSystemPrompt, {}),
+      run(internal.aiRules.getActiveRulesInternal, { companyId }),
+      companyId
+        ? run(internal.companies.getCompanyByIdInternal, { id: companyId })
+        : Promise.resolve(null),
+      companyId
+        ? run(internal.companySkills.getRuntimeCompanySkillsInternal, {
+            companyId,
+            surfaceType: "COMPANY_CHAT" as const,
+          })
+        : Promise.resolve(null),
+      companyId
+        ? run(internal.companyMemories.getRuntimeMemoriesInternal, {
+            // The session opens before anything is said, so there is no
+            // question to match on: this returns the company's ALWAYS
+            // memories, which is exactly what belongs in a system
+            // instruction.
+            companyId,
+            queryText: "",
+            limit: 5,
+          })
+        : Promise.resolve(null),
+    ]);
+
+  type InstructionInput = Parameters<typeof buildAssistantSystemInstruction>[0];
+  return `${buildAssistantSystemInstruction({
+    globalSystemPrompt,
+    companySystemPrompt: (company as { systemPrompt?: string } | null)?.systemPrompt,
+    activeRules: ((activeRules ?? []) as InstructionInput["activeRules"]),
+    companySkills: (companySkills as { skills?: InstructionInput["companySkills"] } | null)?.skills,
+    companyMemories: (companyMemories as { always?: InstructionInput["companyMemories"] } | null)
+      ?.always,
+  })}
+
+====================
+SPEAKING OUT LOUD:
+
+${REALTIME_VOICE_STYLE}`;
+}
+
+/** The knowledge door, declared the way Google's live models expect it. */
+export const VOICE_KNOWLEDGE_TOOL_DECLARATION = {
+  name: VOICE_KNOWLEDGE_TOOL_NAME,
+  description: VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      query: { type: "STRING", description: "What to look up, in a few words." },
+    },
+    required: ["query"],
+  },
+} as const;
+
+/** Signs a session's pass. Only ever called on the server, never the page. */
+export function signVoiceTicket(payload: Record<string, unknown>, secret: string) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${encoded}.${createHmac("sha256", secret).update(encoded).digest("base64url")}`;
+}
+
+/**
+ * A pass for a spoken session that has no browser and no thread behind it.
+ *
+ * A phone call is answered by a webhook, not opened by a signed-in person, so
+ * nothing about the usual path applies: there is no user to rate-limit, no
+ * conversation on a screen, and no page to hand a credential to. What there
+ * is, is a company — and that is all a caller ever needed the session to know.
+ */
+export const createVoiceTicketForCompany = internalAction({
+  args: { companyId: v.id("companies"), voice: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<string> => {
+    const relaySecret = process.env.VOICE_RELAY_SECRET?.trim();
+    if (!relaySecret) {
+      throw new Error(
+        "The live voice relay is not configured. Set VOICE_RELAY_SECRET on this deployment."
+      );
+    }
+
+    const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+      useCase: REALTIME_MODEL_USE_CASE,
+    });
+    // A call cannot fall back to the other provider: OpenAI's live model
+    // connects a browser directly to OpenAI, and there is no browser here.
+    // And it must genuinely be a speech-to-speech model — a chat model
+    // reaching a live audio socket fails at Vertex with nothing readable
+    // saying why, which on a phone is silence.
+    if (
+      modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY ||
+      !isSpeechToSpeechModelId(modelConfig.providerModelId)
+    ) {
+      throw new Error(
+        "Answering calls needs a Google live-audio model. In Model Defaults, set the Real-time voice job to one."
+      );
+    }
+
+    const instructions = await buildSpokenSessionInstructions(
+      ctx as never,
+      args.companyId
+    );
+
+    return signVoiceTicket(
+      {
+        model: modelConfig.providerModelId,
+        voice: args.voice ?? "Aoede",
+        instructions,
+        tools: [VOICE_KNOWLEDGE_TOOL_DECLARATION],
+        companyId: args.companyId,
+        expiresAt: Date.now() + 60_000,
+      },
+      relaySecret
+    );
+  },
+});
+
 export const createRealtimeVoiceSession = tenantAction({
   args: {
     threadId: v.id("threads"),
@@ -1016,11 +1149,9 @@ export const createRealtimeVoiceSession = tenantAction({
     // OpenAI's connects the browser straight to the provider, Google's goes
     // through our relay. Anything else cannot hold a spoken conversation at
     // all, so say which screen fixes it rather than failing at a handshake.
-    if (
-      modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY &&
-      (modelConfig.providerKey !== OPENAI_PROVIDER_KEY ||
-        !modelConfig.providerModelId.toLowerCase().includes("realtime"))
-    ) {
+    // One rule, shared with the catalogue that offers these models in the
+    // first place, so what may be chosen and what may be used cannot drift.
+    if (!isSpeechToSpeechModelId(modelConfig.providerModelId)) {
       throw new Error(
         "No real-time voice model is configured. In Model Defaults, set the Real-time voice job to a speech-to-speech model."
       );

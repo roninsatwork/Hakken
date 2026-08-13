@@ -102,15 +102,18 @@ export const handleVoiceKnowledgeLookup = httpAction(async (ctx, request) => {
   if (typeof payload.expiresAt !== "number" || payload.expiresAt + MAX_SESSION_MS < Date.now()) {
     return jsonResponse({ error: "Session expired." }, 401);
   }
-  if (!payload.threadId) return jsonResponse({ error: "Refused." }, 401);
+  // A session names a thread or a company. A phone call has no thread — there
+  // is no conversation on a screen to attach anything to — so a ticket
+  // carrying only a company is legitimate, and one carrying neither is not.
+  if (!payload.threadId && !payload.companyId) return jsonResponse({ error: "Refused." }, 401);
 
   // The thread decides whose knowledge is searched. The company on the ticket
   // is only a fallback for a thread that belongs to no workspace, so a
   // tampered-with company cannot reach another tenant's documents — and the
   // ticket could not be tampered with anyway, having just been verified.
   const result = await ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
-    threadId: payload.threadId as Id<"threads">,
     query,
+    ...(payload.threadId ? { threadId: payload.threadId as Id<"threads"> } : {}),
     ...(payload.companyId ? { fallbackCompanyId: payload.companyId as Id<"companies"> } : {}),
   });
 
