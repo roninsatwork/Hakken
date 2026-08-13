@@ -12,6 +12,7 @@ export type PurgePipelineKey =
   | "webhookDeliveries"
   | "agentRunHistory"
   | "agentTransactions"
+  | "phoneCalls"
   | "purgeHistory";
 
 export interface PipelineConfig {
@@ -57,6 +58,10 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   webhookDeliveries: { ...DAILY_2AM, retentionDays: 90 },
   agentRunHistory: { ...DAILY_2AM, retentionDays: 180 },
   agentTransactions: { ...DAILY_2AM, retentionDays: 400 },
+  // Transcripts of calls from members of the public, holding their phone
+  // numbers. Kept shorter than most: it is the most personal data on the
+  // platform and the least useful once the follow-up task has been done.
+  phoneCalls: { ...DAILY_2AM, retentionDays: 90 },
   // The one pipeline that ships ENABLED: it cleans only the purge system's
   // own log, which the hourly dispatcher grows even when everything else is
   // off. The newest 200 entries are always kept regardless of retention.

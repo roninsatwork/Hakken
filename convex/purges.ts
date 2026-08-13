@@ -31,6 +31,7 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("webhookDeliveries"),
   v.literal("agentRunHistory"),
   v.literal("agentTransactions"),
+  v.literal("phoneCalls"),
   v.literal("purgeHistory"),
 );
 
@@ -507,6 +508,19 @@ export const executePurgeRecursive = internalMutation({
         const batch = await ctx.db
           .query("analyticsDailySnapshots")
           .withIndex("by_date", (q) => q.lt("date", cutoffKey))
+          .take(500);
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "phoneCalls") {
+        // A call that never received its completed webhook still ages out on
+        // when it started, so a stuck IN_PROGRESS row cannot outlive the
+        // retention window holding a caller's number.
+        const batch = await ctx.db
+          .query("phoneCalls")
+          .withIndex("by_started", (q) => q.lt("startedAt", cutoffTimestamp))
           .take(500);
         for (const record of batch) {
           await ctx.db.delete(record._id);

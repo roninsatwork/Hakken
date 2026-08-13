@@ -561,6 +561,60 @@ export default defineSchema({
     .index("by_company_action_requested", ["companyId", "actionName", "requestedAt"])
     .index("by_requested", ["requestedAt"]),
 
+  /**
+   * A phone call Sonae answered.
+   *
+   * A call is not a chat thread and is deliberately not stored as one: it has
+   * a caller rather than a user, a duration, a ringing state, and an ending
+   * that happens to it rather than being chosen. Bending threads to hold all
+   * that would damage both.
+   *
+   * Only the words are kept. No call audio is ever stored — it passes through
+   * the bridge to the model and is discarded, exactly as the browser
+   * session's audio is.
+   */
+  phoneCalls: defineTable({
+    companyId: v.id("companies"),
+    /**
+     * The provider's own id for the call, and this table's idempotency key.
+     * A telephony provider will redeliver a webhook it thinks failed, so
+     * every write is keyed on this rather than inserting on arrival.
+     */
+    providerCallId: v.string(),
+    /** Personal data: masked in every list, shown only on the call itself. */
+    fromNumber: v.string(),
+    toNumber: v.string(),
+    status: v.union(
+      v.literal("RINGING"),
+      v.literal("IN_PROGRESS"),
+      v.literal("COMPLETED"),
+      v.literal("FAILED")
+    ),
+    /**
+     * Both sides of what was said, as the live model transcribed it. Bounded
+     * on write: a call that never hangs up must not grow a row without end.
+     */
+    turns: v.array(
+      v.object({
+        role: v.union(v.literal("CALLER"), v.literal("SONAE")),
+        text: v.string(),
+        at: v.number(),
+      })
+    ),
+    summary: v.optional(v.string()),
+    /** Why a call ended the way it did — read on the call detail screen. */
+    endedReason: v.optional(v.string()),
+    /** Set only when the number matched a customer already in the CRM. */
+    matchedCustomerKey: v.optional(v.string()),
+    taskId: v.optional(v.id("tasks")),
+    threadId: v.optional(v.id("threads")),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+  })
+    .index("by_company_started", ["companyId", "startedAt"])
+    .index("by_provider_call", ["providerCallId"])
+    .index("by_started", ["startedAt"]),
+
   webhookDeliveries: defineTable({
     companyId: v.id("companies"),
     eventType: v.string(),
@@ -2743,6 +2797,7 @@ export default defineSchema({
       v.literal("webhookDeliveries"),
       v.literal("agentRunHistory"),
       v.literal("agentTransactions"),
+      v.literal("phoneCalls"),
       v.literal("purgeHistory")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),
