@@ -853,13 +853,37 @@ export const searchKnowledgeForVoice = tenantAction({
     query: v.string(),
   },
   handler: async (ctx, args): Promise<{ context: string }> => {
+    return await ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
+      threadId: args.threadId,
+      query: args.query,
+      ...(ctx.user.companyId ? { fallbackCompanyId: ctx.user.companyId } : {}),
+    });
+  },
+});
+
+/**
+ * The same search, reachable without a signed-in user.
+ *
+ * A spoken session's lookup arrives from the relay, not from a browser with a
+ * session cookie — a phone call has no browser at all. The thread decides
+ * which company's knowledge is searched, so the caller cannot widen its own
+ * reach by asking; `fallbackCompanyId` only covers a thread that belongs to
+ * no company.
+ */
+export const searchKnowledgeForVoiceInternal = internalAction({
+  args: {
+    threadId: v.id("threads"),
+    query: v.string(),
+    fallbackCompanyId: v.optional(v.id("companies")),
+  },
+  handler: async (ctx, args): Promise<{ context: string }> => {
     const query = args.query.trim().slice(0, 500);
     if (!query) return { context: "" };
 
     const thread = await ctx.runQuery(internal.chat.getThreadInternal, {
       threadId: args.threadId,
     });
-    const companyId = thread?.companyId ?? ctx.user.companyId;
+    const companyId = thread?.companyId ?? args.fallbackCompanyId;
 
     try {
       const queryVector = await embedRetrievalQuery(ctx, {

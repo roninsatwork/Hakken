@@ -10,6 +10,7 @@ import {
   handlePublicRunStatus,
   handlePublicWorkflowRunTrigger,
 } from "./publicApi";
+import { handleVoiceKnowledgeLookup } from "./voiceRelay";
 
 const http = httpRouter();
 
@@ -41,6 +42,14 @@ http.route({
   path: "/api/public/v1/workflow-runs",
   method: "POST",
   handler: handlePublicWorkflowRunTrigger,
+});
+
+// The voice relay asking for company knowledge on a spoken session's behalf.
+// Authenticated by the session's own signed ticket, not a shared header.
+http.route({
+  path: "/api/voice/knowledge",
+  method: "POST",
+  handler: handleVoiceKnowledgeLookup,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

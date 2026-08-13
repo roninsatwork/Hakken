@@ -93,6 +93,40 @@ export function isCallerFrameAllowed(text) {
 }
 
 /**
+ * A lookup Vertex is waiting on, or nothing.
+ *
+ * The model stops mid-sentence when it reaches for company knowledge and
+ * holds its turn until the answer arrives, so this is read off every frame
+ * Vertex sends rather than being noticed late.
+ */
+export function readToolCalls(raw) {
+  let message;
+  try {
+    message = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const calls = message?.toolCall?.functionCalls;
+  if (!Array.isArray(calls)) return [];
+  return calls
+    .filter((call) => call?.id && call?.name)
+    .map((call) => ({ id: call.id, name: call.name, args: call.args ?? {} }));
+}
+
+/** The answer to a lookup, in the shape Vertex expects it back. */
+export function buildToolResponse(results) {
+  return JSON.stringify({
+    toolResponse: {
+      functionResponses: results.map((result) => ({
+        id: result.id,
+        name: result.name,
+        response: { output: result.output },
+      })),
+    },
+  });
+}
+
+/**
  * What to do with each frame the page sends, decided without awaiting
  * anything.
  *
@@ -124,13 +158,18 @@ export function createCallerRouter({ secret, now = () => Date.now(), maxHeldFram
     receive(data, isBinary) {
       if (!ticketAccepted) {
         let ticket;
+        let rawTicket;
         try {
-          ticket = readTicket(JSON.parse(data.toString()).ticket, secret, now());
+          rawTicket = JSON.parse(data.toString()).ticket;
+          ticket = readTicket(rawTicket, secret, now());
         } catch (error) {
           return { kind: "refused", reason: error?.message ?? "Refused." };
         }
         ticketAccepted = true;
-        return { kind: "ticket", ticket };
+        // The raw string is kept as well as its contents: the platform is
+        // shown the ticket itself when knowledge is looked up, so it can
+        // verify the signature rather than take this relay's word for it.
+        return { kind: "ticket", ticket, rawTicket };
       }
 
       let frame;

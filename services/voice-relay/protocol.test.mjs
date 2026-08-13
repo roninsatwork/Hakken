@@ -3,9 +3,11 @@ import { describe, expect, test } from "vitest";
 import {
   buildAudioFrame,
   buildSetup,
+  buildToolResponse,
   createCallerRouter,
   isCallerFrameAllowed,
   readTicket,
+  readToolCalls,
 } from "./protocol.mjs";
 
 const SECRET = "test-relay-secret";
@@ -178,5 +180,78 @@ describe("the order a call arrives in", () => {
         mediaChunks: [{ mimeType: "audio/pcm;rate=16000", data: "AAE=" }],
       },
     });
+  });
+});
+
+describe("the knowledge lookup the relay answers", () => {
+  test("a lookup is recognised, with the question the model wants answered", () => {
+    expect(
+      readToolCalls(
+        JSON.stringify({
+          toolCall: {
+            functionCalls: [
+              { id: "call-1", name: "search_company_knowledge", args: { query: "opening hours" } },
+            ],
+          },
+        })
+      )
+    ).toEqual([
+      { id: "call-1", name: "search_company_knowledge", args: { query: "opening hours" } },
+    ]);
+  });
+
+  test("more than one lookup in a turn is answered, not just the first", () => {
+    const calls = readToolCalls(
+      JSON.stringify({
+        toolCall: {
+          functionCalls: [
+            { id: "a", name: "search_company_knowledge", args: { query: "prices" } },
+            { id: "b", name: "search_company_knowledge", args: { query: "delivery" } },
+          ],
+        },
+      })
+    );
+    expect(calls.map((call) => call.id)).toEqual(["a", "b"]);
+  });
+
+  test("ordinary speech frames are not mistaken for lookups", () => {
+    expect(readToolCalls(JSON.stringify({ serverContent: { turnComplete: true } }))).toEqual([]);
+    expect(readToolCalls("not json")).toEqual([]);
+    expect(readToolCalls(JSON.stringify({ toolCall: { functionCalls: [] } }))).toEqual([]);
+  });
+
+  test("a call with no id is skipped — its answer would have nowhere to go", () => {
+    expect(
+      readToolCalls(
+        JSON.stringify({ toolCall: { functionCalls: [{ name: "search_company_knowledge" }] } })
+      )
+    ).toEqual([]);
+  });
+
+  test("the answer goes back tagged with the call it answers", () => {
+    expect(
+      JSON.parse(
+        buildToolResponse([
+          { id: "call-1", name: "search_company_knowledge", output: "We open at nine." },
+        ])
+      )
+    ).toEqual({
+      toolResponse: {
+        functionResponses: [
+          {
+            id: "call-1",
+            name: "search_company_knowledge",
+            response: { output: "We open at nine." },
+          },
+        ],
+      },
+    });
+  });
+
+  test("the raw ticket is kept, because the platform verifies it rather than trusting the relay", () => {
+    const router = createCallerRouter({ secret: SECRET, now: () => 1_000 });
+    const ticket = validTicket();
+    const decision = router.receive(JSON.stringify({ ticket }), false);
+    expect(decision.rawTicket).toBe(ticket);
   });
 });

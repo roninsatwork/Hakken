@@ -10,7 +10,6 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { VoiceSessionState } from "@/src/lib/voiceSession";
 import { decodePcm16Base64 } from "@/src/lib/voiceSession";
 import {
-  buildToolResponse,
   downsampleTo16k,
   LIVE_OUTPUT_SAMPLE_RATE,
   readLiveServerMessage,
@@ -330,34 +329,13 @@ export function RealtimeVoiceOverlay({
         const event = readLiveServerMessage(String(message.data));
         if (!event) return;
 
-        // The model has stopped mid-sentence to look something up. It holds
-        // its turn until the answer goes back, so this has to be quick.
+        // The model has stopped mid-sentence to look something up. The relay
+        // answers it — a phone call has no browser to do that in, and one
+        // place doing the searching is what stops a spoken surface quietly
+        // knowing less than the typed one. All this screen does is show that
+        // it is happening.
         if (event.toolCalls?.length) {
           setSessionState("thinking");
-          void Promise.all(
-            event.toolCalls.map(async (call) => {
-              const query = typeof call.args.query === "string" ? call.args.query : "";
-              try {
-                const result = await searchKnowledge({ threadId, query });
-                return {
-                  id: call.id,
-                  name: call.name,
-                  output:
-                    result.context ||
-                    "Nothing in the company's knowledge covers that. Say so plainly.",
-                };
-              } catch {
-                return {
-                  id: call.id,
-                  name: call.name,
-                  output: "The knowledge search failed. Say you could not check just now.",
-                };
-              }
-            })
-          ).then((results) => {
-            if (socket.readyState !== WebSocket.OPEN) return;
-            socket.send(buildToolResponse(results));
-          });
           return;
         }
 
@@ -404,7 +382,7 @@ export function RealtimeVoiceOverlay({
         setSessionState("idle");
       });
     },
-    [flushTurn, searchKnowledge, t, threadId]
+    [flushTurn, t]
   );
 
   const start = useCallback(async () => {

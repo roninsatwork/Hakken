@@ -27,10 +27,21 @@
 import { createServer } from "node:http";
 import { GoogleAuth } from "google-auth-library";
 import { WebSocket, WebSocketServer } from "ws";
-import { buildSetup, createCallerRouter } from "./protocol.mjs";
+import {
+  buildSetup,
+  buildToolResponse,
+  createCallerRouter,
+  readToolCalls,
+} from "./protocol.mjs";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const RELAY_SECRET = process.env.VOICE_RELAY_SECRET ?? "";
+// Where the platform answers a knowledge lookup. Absent means the spoken
+// session simply cannot look anything up — it still talks, and says so.
+const KNOWLEDGE_URL = process.env.VOICE_KNOWLEDGE_URL ?? "";
+// The model is holding its turn while this runs, so it cannot be allowed to
+// hold it indefinitely: better a plain "I could not check" than dead air.
+const KNOWLEDGE_TIMEOUT_MS = 8000;
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT ?? "";
 const LOCATION = process.env.GOOGLE_CLOUD_LOCATION ?? "us-central1";
 // A session that outlives this is a session nobody is talking to.
@@ -101,7 +112,51 @@ relay.on("connection", (browser) => {
 
   const sessionTimer = setTimeout(() => shutdown(1000, "Session ended."), MAX_SESSION_MS);
 
-  const openVertex = async (ticket) => {
+  /**
+   * Look the question up and hand the answer straight back to Vertex.
+   *
+   * Every failure here ends in a sentence the model can say out loud. A
+   * spoken session that goes quiet because a lookup failed is worse than one
+   * that admits it could not check — the caller has no way to tell the
+   * difference between thinking and broken.
+   */
+  const answerToolCalls = async (calls, rawTicket) => {
+    const results = await Promise.all(
+      calls.map(async (call) => {
+        if (!KNOWLEDGE_URL) {
+          return { ...call, output: "Knowledge search is unavailable. Say you cannot check." };
+        }
+        try {
+          const response = await fetch(KNOWLEDGE_URL, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ticket: rawTicket, query: String(call.args?.query ?? "") }),
+            signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
+          });
+          if (!response.ok) {
+            console.warn(`[session ${id}] knowledge lookup refused: ${response.status}`);
+            return { ...call, output: "The knowledge search failed. Say you could not check." };
+          }
+          const body = await response.json();
+          return {
+            ...call,
+            output:
+              body.context || "Nothing in the company's knowledge covers that. Say so plainly.",
+          };
+        } catch (error) {
+          console.warn(`[session ${id}] knowledge lookup failed:`, error?.message ?? error);
+          return { ...call, output: "The knowledge search failed. Say you could not check." };
+        }
+      })
+    );
+
+    if (vertex?.readyState === WebSocket.OPEN) {
+      vertex.send(buildToolResponse(results));
+      say(`answered ${results.length} knowledge lookup(s)`);
+    }
+  };
+
+  const openVertex = async (ticket, rawTicket) => {
     let token;
     try {
       token = await auth.getAccessToken();
@@ -127,7 +182,15 @@ relay.on("connection", (browser) => {
     });
 
     vertex.on("message", (payload) => {
-      if (browser.readyState === WebSocket.OPEN) browser.send(payload.toString());
+      const text = payload.toString();
+      // Forwarded first, always: the caller's screen uses these frames to
+      // show what is being said, and a lookup is what makes it show that it
+      // is thinking. Answering the lookup is this relay's job, not the
+      // page's — a phone call has no page.
+      if (browser.readyState === WebSocket.OPEN) browser.send(text);
+
+      const calls = readToolCalls(text);
+      if (calls.length > 0) void answerToolCalls(calls, rawTicket);
     });
 
     vertex.on("close", (code, reason) =>
@@ -144,7 +207,7 @@ relay.on("connection", (browser) => {
     switch (decision.kind) {
       case "ticket":
         say("ticket accepted");
-        void openVertex(decision.ticket);
+        void openVertex(decision.ticket, decision.rawTicket);
         return;
       case "refused":
         // Logged, not silent: a refused ticket used to look exactly like a
