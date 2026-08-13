@@ -243,7 +243,13 @@ export const generateSonaeResponse = internalAction({
             ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId: thread?.companyId }),
             thread?.companyId ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: thread.companyId }) : Promise.resolve(null),
             thread?.companyId
-                ? ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId: thread.companyId })
+                ? ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, {
+                    companyId: thread.companyId,
+                    // The thread says which surface is asking. Eval threads
+                    // carry no widget id, so they count as company chat and
+                    // run through the runtime that ships.
+                    surfaceType: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
+                })
                 : Promise.resolve(null),
             thread?.companyId
                 ? ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {

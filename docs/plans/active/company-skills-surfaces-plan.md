@@ -1,6 +1,8 @@
 # Company Skills Apply Where They Are Bound
 
-Status: Planned 2026-08-13. Not started.
+Status: Delivered 2026-08-13. All five steps done; proven live in a real
+browser — skill in the answer and the evidence panel with the Chat switch on,
+gone from both with it off, and the widget switch independent throughout.
 Owner: Anthony
 
 ## The decision

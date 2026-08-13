@@ -91,6 +91,57 @@ type MigrationRunner = (
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   /**
+   * Backfills enabled COMPANY_CHAT and WIDGET bindings for every ACTIVE
+   * company skill that lacks them (company-skills-surfaces plan, step 2).
+   *
+   * The runtime now reads bindings as the switch, and absence means off —
+   * so this must land in the same deploy, or every existing company's
+   * skills silently stop applying. Behaviour on deploy day is identical to
+   * the day before: skills that served every message keep serving both
+   * surfaces until somebody turns one off.
+   *
+   * Idempotent, and it never overrules a decision: a binding row that
+   * already exists — enabled or deliberately disabled — is left alone.
+   */
+  "2026-08-13-company-skill-bindings-backfill": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("companySkills").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const skill of page.page) {
+      if (skill.status !== "ACTIVE") continue;
+
+      for (const surfaceType of ["COMPANY_CHAT", "WIDGET"] as const) {
+        const existing = await ctx.db
+          .query("companySkillBindings")
+          .withIndex("by_company_skill_surface", (q) =>
+            q.eq("companyId", skill.companyId).eq("skillId", skill._id).eq("surfaceType", surfaceType))
+          .filter((q) => q.eq(q.field("surfaceId"), undefined))
+          .first();
+        if (existing) continue;
+
+        const now = Date.now();
+        await ctx.db.insert("companySkillBindings", {
+          companyId: skill.companyId,
+          skillId: skill._id,
+          surfaceType,
+          isEnabled: true,
+          // No assignedBy: nobody flipped this switch, the deploy did.
+          assignedAt: now,
+          updatedAt: now,
+        });
+        updated += 1;
+      }
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
+  /**
    * Rebuilds the outcome counters on `agentMemories` from `agentMemoryUsage`
    * (self-improvement plan, Phase 2). Memories written before the counters
    * existed would otherwise rank as if they had no history, when the history

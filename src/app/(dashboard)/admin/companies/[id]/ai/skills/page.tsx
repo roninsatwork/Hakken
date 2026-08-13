@@ -26,7 +26,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 
-type CompanySkill = Doc<"companySkills">;
+type CompanySkill = Doc<"companySkills"> & { surfaces: { chat: boolean; widget: boolean } };
 type GlobalSkill = Doc<"agentSkills">;
 type SkillStatus = CompanySkill["status"];
 
@@ -43,6 +43,7 @@ export default function CompanyAiSkillsPage() {
   const companyId = params.id as Id<"companies">;
   const importGlobalSkill = useMutation(api.companySkills.importGlobalSkill);
   const archiveSkill = useMutation(api.companySkills.archiveSkill);
+  const setBinding = useMutation(api.companySkills.setBinding);
 
   const [statusFilter] = useState<SkillStatus>("ACTIVE");
   const [companySearchTerm, setCompanySearchTerm] = useState("");
@@ -93,6 +94,17 @@ export default function CompanyAiSkillsPage() {
   };
 
 
+
+  const handleToggleSurface = async (
+    skill: CompanySkill,
+    surfaceType: "COMPANY_CHAT" | "WIDGET",
+    isEnabled: boolean,
+  ) => {
+    await action.run(() => setBinding({ skillId: skill._id, surfaceType, isEnabled }), {
+      key: `${skill._id}:${surfaceType}`,
+      fallbackMessage: "The switch could not be changed.",
+    });
+  };
 
   const handleArchiveSkill = async () => {
     if (!archiveTarget) return;
@@ -192,16 +204,17 @@ export default function CompanyAiSkillsPage() {
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="px-4 py-3 font-medium">Skill</th>
+            <th className="px-4 py-3 font-medium w-[220px]">Where it answers</th>
             <th className="px-4 py-3 font-medium w-[190px]">Added</th>
             <th className="px-4 py-3 font-medium w-[90px] text-right"></th>
           </tr>
         </thead>
         <tbody>
           {skills.status === "LoadingFirstPage" ? (
-            <AdminTableLoadingRow colSpan={3} />
+            <AdminTableLoadingRow colSpan={4} />
           ) : skills.results.length === 0 ? (
             <AdminTableEmptyRow
-              colSpan={3}
+              colSpan={4}
               icon={<BrainCircuit className="h-8 w-8 text-muted/30" />}
               label={companySearchTerm.trim() ? "No skills match that search" : "No skills yet — add one from the Skill Center"}
             />
@@ -211,6 +224,22 @@ export default function CompanyAiSkillsPage() {
                 <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
                 <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
                   {skill.description || "No description."}
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                {/* The switch the runtime reads: off here means the skill does
+                    not reach that surface's answers at all. */}
+                <div className="flex flex-col gap-1.5">
+                  <SurfaceToggle
+                    label="Answers in company chat"
+                    isEnabled={skill.surfaces.chat}
+                    onToggle={() => void handleToggleSurface(skill, "COMPANY_CHAT", !skill.surfaces.chat)}
+                  />
+                  <SurfaceToggle
+                    label="Answers on the widget"
+                    isEnabled={skill.surfaces.widget}
+                    onToggle={() => void handleToggleSurface(skill, "WIDGET", !skill.surfaces.widget)}
+                  />
                 </div>
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
@@ -328,5 +357,37 @@ export default function CompanyAiSkillsPage() {
         </div>
       </SonaeModal>
     </div>
+  );
+}
+
+function SurfaceToggle({
+  label,
+  isEnabled,
+  onToggle,
+}: {
+  label: string;
+  isEnabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="flex w-fit cursor-pointer items-center gap-2">
+      <AdminWriteButton
+        type="button"
+        role="switch"
+        aria-checked={isEnabled}
+        aria-label={label}
+        onClick={onToggle}
+        className={`relative h-[18px] w-8 shrink-0 rounded-full transition-colors ${
+          isEnabled ? "bg-brand" : "bg-foreground/15"
+        }`}
+      >
+        <span
+          className={`absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white transition-[left] ${
+            isEnabled ? "left-[16px]" : "left-[2px]"
+          }`}
+        />
+      </AdminWriteButton>
+      <span className="text-[12px] text-secondary">{label}</span>
+    </label>
   );
 }

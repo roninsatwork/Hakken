@@ -136,10 +136,19 @@ describe("Company Skills", () => {
       status: "ACTIVE",
     });
 
+    // Import switched the skill on for chat and the widget; no second step.
+    const importedSummary = await adminAClient.query(api.companySkills.getSummary, { companyId: companyAId });
+    expect(importedSummary).toMatchObject({
+      activeSkills: 1,
+      enabledBindings: 2,
+      boundActiveSkills: 1,
+    });
+
+    // Turning one surface off moves the count the readiness gates read.
     await adminAClient.mutation(api.companySkills.setBinding, {
       skillId,
-      surfaceType: "COMPANY_CHAT",
-      isEnabled: true,
+      surfaceType: "WIDGET",
+      isEnabled: false,
     });
 
     const warningSummary = await adminAClient.query(api.companySkills.getSummary, { companyId: companyAId });
@@ -180,16 +189,16 @@ describe("Company Skills", () => {
     ]);
 
     const bindings = await adminAClient.query(api.companySkills.getBindingsForSkill, { skillId });
-    expect(bindings).toHaveLength(1);
-    expect(bindings[0]).toMatchObject({
-      surfaceType: "COMPANY_CHAT",
-      isEnabled: true,
-    });
+    expect(bindings).toHaveLength(2);
+    const bySurface = Object.fromEntries(bindings.map((binding) => [binding.surfaceType, binding.isEnabled]));
+    expect(bySurface).toEqual({ COMPANY_CHAT: true, WIDGET: false });
 
     const archived = await adminAClient.mutation(api.companySkills.archiveSkill, { skillId });
+    // Only chat was still on; the deliberately disabled widget switch is not
+    // counted twice.
     expect(archived.disabledBindings).toBe(1);
     const archivedBindings = await adminAClient.query(api.companySkills.getBindingsForSkill, { skillId });
-    expect(archivedBindings[0]?.isEnabled).toBe(false);
+    expect(archivedBindings.every((binding) => !binding.isEnabled)).toBe(true);
     const archivedSummary = await adminAClient.query(api.companySkills.getSummary, { companyId: companyAId });
     expect(archivedSummary.activeSkills).toBe(0);
 
@@ -198,7 +207,10 @@ describe("Company Skills", () => {
     );
     expect(auditLogs.map((log) => log.actionType)).toEqual([
       "ADD_CENTRAL_SKILL_TO_COMPANY",
+      // Import switched both surfaces on, and each left its own trail.
       "CREATE_COMPANY_SKILL_BINDING",
+      "CREATE_COMPANY_SKILL_BINDING",
+      "UPDATE_COMPANY_SKILL_BINDING",
       "UPDATE_COMPANY_SKILL",
       "ARCHIVE_COMPANY_SKILL",
     ]);

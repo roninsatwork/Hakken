@@ -490,7 +490,7 @@ describe("agent skills", () => {
       const companyId = await ctx.db.insert("companies", { name: "Linked Co", createdAt: Date.now() });
       // The company row deliberately keeps stale text of its own. Nothing should
       // read it while the link is intact.
-      await ctx.db.insert("companySkills", {
+      const companySkillId = await ctx.db.insert("companySkills", {
         companyId,
         sourceAgentSkillId: created.skillId,
         name: "Stale name",
@@ -502,13 +502,22 @@ describe("agent skills", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      // Bound to chat, because the runtime only serves bound skills now.
+      await ctx.db.insert("companySkillBindings", {
+        companyId,
+        skillId: companySkillId,
+        surfaceType: "COMPANY_CHAT",
+        isEnabled: true,
+        assignedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
       return companyId;
     });
 
     await upload("Follow up within one working day.");
 
     const runtime = await t.run(async (ctx) => {
-      return await ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId });
+      return await ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId, surfaceType: "COMPANY_CHAT" });
     });
 
     // The company's AI reads the file, not the row beside it, and no sync ran.
@@ -664,7 +673,7 @@ describe("agent skills", () => {
     void adminId;
 
     const runtime = await t.run(async (ctx) => {
-      return await ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId });
+      return await ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, { companyId, surfaceType: "COMPANY_CHAT" });
     });
 
     expect(runtime.skills).toEqual([]);

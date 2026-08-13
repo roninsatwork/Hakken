@@ -289,19 +289,39 @@ export const getSkillsForCompany = adminQuery({
 
     // Searching narrows in the database, and the company and status narrow with
     // it, so a page comes back full rather than sifted after the fact.
-    if (searchTerm) {
-      return await ctx.db
-        .query("companySkills")
-        .withSearchIndex("search_name", (q) =>
-          q.search("name", searchTerm).eq("companyId", args.companyId).eq("status", args.status ?? "ACTIVE"))
-        .paginate(args.paginationOpts);
-    }
+    const page = searchTerm
+      ? await ctx.db
+          .query("companySkills")
+          .withSearchIndex("search_name", (q) =>
+            q.search("name", searchTerm).eq("companyId", args.companyId).eq("status", args.status ?? "ACTIVE"))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("companySkills")
+          .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", args.status ?? "ACTIVE"))
+          .order("desc")
+          .paginate(args.paginationOpts);
 
-    return await ctx.db
-      .query("companySkills")
-      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", args.status ?? "ACTIVE"))
-      .order("desc")
-      .paginate(args.paginationOpts);
+    // The screen reads the same switch the runtime does — the company-wide
+    // binding per surface — rather than keeping a parallel truth of its own.
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map(async (skill) => {
+          const bindingFor = async (surfaceType: SkillSurfaceType) =>
+            await ctx.db
+              .query("companySkillBindings")
+              .withIndex("by_company_skill_surface", (q) =>
+                q.eq("companyId", args.companyId).eq("skillId", skill._id).eq("surfaceType", surfaceType))
+              .filter((q) => q.eq(q.field("surfaceId"), undefined))
+              .first();
+          const [chat, widget] = await Promise.all([bindingFor("COMPANY_CHAT"), bindingFor("WIDGET")]);
+          return {
+            ...skill,
+            surfaces: { chat: chat?.isEnabled ?? false, widget: widget?.isEnabled ?? false },
+          };
+        }),
+      ),
+    };
   },
 });
 
@@ -382,13 +402,33 @@ export const searchImportableGlobalSkills = adminQuery({
 export const RUNTIME_COMPANY_SKILL_LIMIT = MAX_SKILLS_PER_COMPANY;
 
 export const getRuntimeCompanySkillsInternal = internalQuery({
-  args: { companyId: v.id("companies") },
+  args: {
+    companyId: v.id("companies"),
+    // The surface asking. Only the two the runtime serves are accepted:
+    // AGENT stays with the agent's own skills, and nothing consumes
+    // WORKFLOW or APP_KIT yet.
+    surfaceType: v.union(v.literal("COMPANY_CHAT"), v.literal("WIDGET")),
+  },
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("companySkills")
-      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
-      .order("desc")
-      .take(RUNTIME_COMPANY_SKILL_LIMIT + 1);
+    // The binding is the switch. No enabled binding for this surface means
+    // the skill does not apply here — absence is off, not "default on",
+    // because default-on is the painted switch with the polarity flipped.
+    const bindings = await ctx.db
+      .query("companySkillBindings")
+      .withIndex("by_company_surface_enabled", (q) =>
+        q.eq("companyId", args.companyId).eq("surfaceType", args.surfaceType).eq("isEnabled", true))
+      .take(1000);
+
+    const seen = new Set<string>();
+    const rows = [];
+    for (const binding of bindings) {
+      // Company-wide and per-widget bindings can name the same skill once each.
+      if (seen.has(binding.skillId)) continue;
+      seen.add(binding.skillId);
+      const row = await ctx.db.get(binding.skillId);
+      if (row && row.status === "ACTIVE") rows.push(row);
+    }
+    rows.sort((a, b) => b.updatedAt - a.updatedAt);
 
     const withinLimit = rows.slice(0, RUNTIME_COMPANY_SKILL_LIMIT);
     const skills = [];
@@ -555,6 +595,8 @@ export const importGlobalSkill = adminMutation({
         createdBy: userId,
         createdAt: now,
       });
+      // Revival re-enables what archiving switched off.
+      await enableDefaultBindings(ctx, { skillId: existing._id, userId });
 
       return { skillId: existing._id };
     }
@@ -623,6 +665,7 @@ export const importGlobalSkill = adminMutation({
       createdBy: userId,
       createdAt: now,
     });
+    await enableDefaultBindings(ctx, { skillId: companySkillId, userId });
 
     return { skillId: companySkillId };
   },
@@ -749,6 +792,89 @@ export const archiveSkill = adminMutation({
   },
 });
 
+type SkillSurfaceType = Doc<"companySkillBindings">["surfaceType"];
+
+/**
+ * The one place a binding row is written, so a switch flipped by an admin
+ * and a switch turned on by an import leave the same audit trail.
+ */
+export async function writeSkillBinding(
+  ctx: MutationCtx,
+  args: {
+    skill: Doc<"companySkills">;
+    skillId: Id<"companySkills">;
+    surfaceType: SkillSurfaceType;
+    surfaceId?: string;
+    isEnabled: boolean;
+    userId?: Id<"users">;
+  },
+) {
+  const now = Date.now();
+  const surfaceId = normalizeOptionalText(args.surfaceId, 160);
+  const existing = await ctx.db
+    .query("companySkillBindings")
+    .withIndex("by_company_skill_surface", (q) => q.eq("companyId", args.skill.companyId).eq("skillId", args.skillId).eq("surfaceType", args.surfaceType))
+    .filter((q) => surfaceId === undefined ? q.eq(q.field("surfaceId"), undefined) : q.eq(q.field("surfaceId"), surfaceId))
+    .first();
+
+  if (existing) {
+    if (existing.isEnabled === args.isEnabled) return existing._id;
+    await ctx.db.patch(existing._id, {
+      isEnabled: args.isEnabled,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: args.userId,
+      actionType: "UPDATE_COMPANY_SKILL_BINDING",
+      entityId: existing._id,
+      entityType: "companySkillBindings",
+      companyId: args.skill.companyId,
+      timestamp: now,
+      metadata: JSON.stringify({ skillId: args.skillId, surfaceType: args.surfaceType, surfaceId, isEnabled: args.isEnabled }),
+    });
+    return existing._id;
+  }
+
+  const bindingId = await ctx.db.insert("companySkillBindings", {
+    companyId: args.skill.companyId,
+    skillId: args.skillId,
+    surfaceType: args.surfaceType,
+    surfaceId,
+    isEnabled: args.isEnabled,
+    assignedBy: args.userId,
+    assignedAt: now,
+    updatedAt: now,
+  });
+
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "CREATE_COMPANY_SKILL_BINDING",
+    entityId: bindingId,
+    entityType: "companySkillBindings",
+    companyId: args.skill.companyId,
+    timestamp: now,
+    metadata: JSON.stringify({ skillId: args.skillId, surfaceType: args.surfaceType, surfaceId, isEnabled: args.isEnabled }),
+  });
+  return bindingId;
+}
+
+/**
+ * Import switches the skill on for the two surfaces the runtime serves, so
+ * assigning a skill keeps meaning "it works" with no second step to forget.
+ * The switch exists to turn things off.
+ */
+async function enableDefaultBindings(
+  ctx: MutationCtx,
+  args: { skillId: Id<"companySkills">; userId: Id<"users"> },
+) {
+  const skill = await ctx.db.get(args.skillId);
+  if (!skill) return;
+  for (const surfaceType of ["COMPANY_CHAT", "WIDGET"] as const) {
+    await writeSkillBinding(ctx, { skill, skillId: args.skillId, surfaceType, isEnabled: true, userId: args.userId });
+  }
+}
+
 export const setBinding = adminMutation({
   args: {
     skillId: v.id("companySkills"),
@@ -759,70 +885,23 @@ export const setBinding = adminMutation({
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
     if (skill.status === "ARCHIVED") throw new Error("Archived skills cannot be bound to surfaces.");
-    const now = Date.now();
-    const surfaceId = normalizeOptionalText(args.surfaceId, 160);
-    const existing = await ctx.db
-      .query("companySkillBindings")
-      .withIndex("by_company_skill_surface", (q) => q.eq("companyId", skill.companyId).eq("skillId", args.skillId).eq("surfaceType", args.surfaceType))
-      .filter((q) => surfaceId === undefined ? q.eq(q.field("surfaceId"), undefined) : q.eq(q.field("surfaceId"), surfaceId))
-      .first();
 
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        isEnabled: args.isEnabled,
-        updatedAt: now,
-      });
-
-      await ctx.db.insert("auditLogs", {
-        actorId: userId,
-        actionType: "UPDATE_COMPANY_SKILL_BINDING",
-        entityId: existing._id,
-        entityType: "companySkillBindings",
-        companyId: skill.companyId,
-        timestamp: now,
-        metadata: JSON.stringify({ skillId: args.skillId, surfaceType: args.surfaceType, surfaceId, isEnabled: args.isEnabled }),
-      });
-      await recordCompanyAiDriftEvent(ctx, {
-        companyId: skill.companyId,
-        sourceType: "SKILL",
-        sourceId: args.skillId,
-        reason: "Company skill binding was updated.",
-        affectedEvalCategories: ["SKILL_ROUTING", "WIDGET_READINESS", "AGENT_INHERITANCE"],
-        createdBy: userId,
-        createdAt: now,
-      });
-
-      return existing._id;
-    }
-
-    const bindingId = await ctx.db.insert("companySkillBindings", {
-      companyId: skill.companyId,
+    const bindingId = await writeSkillBinding(ctx, {
+      skill,
       skillId: args.skillId,
       surfaceType: args.surfaceType,
-      surfaceId,
+      surfaceId: args.surfaceId,
       isEnabled: args.isEnabled,
-      assignedBy: userId,
-      assignedAt: now,
-      updatedAt: now,
-    });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: userId,
-      actionType: "CREATE_COMPANY_SKILL_BINDING",
-      entityId: bindingId,
-      entityType: "companySkillBindings",
-      companyId: skill.companyId,
-      timestamp: now,
-      metadata: JSON.stringify({ skillId: args.skillId, surfaceType: args.surfaceType, surfaceId, isEnabled: args.isEnabled }),
+      userId,
     });
     await recordCompanyAiDriftEvent(ctx, {
       companyId: skill.companyId,
       sourceType: "SKILL",
       sourceId: args.skillId,
-      reason: "Company skill binding was created.",
+      reason: "Company skill binding was updated.",
       affectedEvalCategories: ["SKILL_ROUTING", "WIDGET_READINESS", "AGENT_INHERITANCE"],
       createdBy: userId,
-      createdAt: now,
+      createdAt: Date.now(),
     });
 
     return bindingId;
