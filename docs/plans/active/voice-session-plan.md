@@ -91,6 +91,30 @@ Binding details:
    built, and remains selectable afterwards. Nothing about the session
    screen, the shape or the transcript changes with the engine.
 
+## The voice cannot search knowledge yet — found 2026-08-13
+
+Anthony asked it about the knowledge base in a live session and it
+answered, honestly, that it could not see one. It cannot.
+
+The typed assistant searches the company's documents for every question
+and feeds the passages into the answer. A live voice session does not:
+the model is handed the company's instructions, rules, skills and
+standing notes once when the session opens, and thereafter speaks to the
+caller directly without ever asking this platform anything. So anything
+that lives in an uploaded document is invisible to it.
+
+**The fix is a tool, not more instructions.** Both live engines support
+calling a function mid-conversation. The session declares one — search
+the company's knowledge — and when the model calls it, the existing
+retrieval runs and the passages go back as the tool's result. That is the
+same retrieval the typed assistant uses, so the two surfaces cannot drift
+apart in what they know.
+
+This is required before any showcase: a voice demo that cannot answer
+from the company's own documents is not a demonstration of this platform.
+It also unblocks the telephone agent, which needs exactly the same tool
+for a caller asking about a product or an order.
+
 ## What is actually true today (verified 2026-08-13)
 
 **Hearing exists and is turn-based.** `src/hooks/useVoiceToText.ts` (90
