@@ -185,8 +185,14 @@ knowledge, turn by turn.
     builders.
 - New screen: a call log under the workspace (list, masked numbers,
   status) with a call detail page (full transcript, summary, linked
-  customer and task). The demo screen is this page sitting open behind
-  the presenter.
+  customer and task).
+- **The number-on-screen demo view** (Anthony's ask, 2026-08-13): the
+  call screen leads with the phone number, displayed large enough for a
+  room to read and dial, with live status beside it — ringing, in
+  progress, completed — and the latest calls beneath. This page sitting
+  open behind the presenter *is* the demo: the room dials the number they
+  can see, and watches the call, the task, and the transcript land on the
+  same screen.
 - Tests: end-to-end from completed-webhook to task+notification+audit in
   one pass; unknown caller path; matched-customer path.
 
