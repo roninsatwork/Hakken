@@ -31,10 +31,17 @@ Recorded decisions:
    exists). Speech synthesis follows the same pattern: a new `speech` use
    case, Google-only, no new accounts or keys. The exact Google voice model
    is a build-time choice.
-3. **Turn-based first.** You speak, it answers, you speak again. Interrupting
-   Sonae mid-sentence ("barge-in") and hands-free open-mic detection are
-   deliberately out of this phase — they are hard to get right and the demo
-   does not need them. The receptionist kiosk phase revisits hands-free.
+3. **Hands-free, turn-based.** Recorded 2026-08-13, superseding the earlier
+   same-day "tap to talk / tap when done" decision, which Anthony rejected
+   on first use as unnatural. One tap starts the conversation (browsers
+   require a gesture for the microphone); from there the session hears for
+   itself when the speaker starts and stops — sustained sound opens a turn,
+   a conversational pause (~1.4s) commits it — and listening resumes
+   automatically after Sonae speaks. Interrupting Sonae mid-sentence
+   ("barge-in") stays out: tapping while it speaks skips the rest instead.
+   A quiet room never accumulates a silent recording (the clip recycles
+   until speech is heard), and three missed turns in a row stop the loop
+   rather than burning the rate limit.
 4. **A voice session is a normal thread.** No new conversation machinery:
    messages land in the existing `messages` table, the transcript is visible
    afterwards in the thread like any typed chat, retention and quota rules

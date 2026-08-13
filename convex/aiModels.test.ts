@@ -1157,7 +1157,15 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     });
   });
 
-  test("embedding resolver rejects non-Google defaults to protect the 768-dimension vector index", async () => {
+  /**
+   * This used to assert a loud rejection. The runtime now honours the
+   * defaults screen's fall-through promise for every job: a default that
+   * cannot do the job is skipped, so embeddings land on the Google failsafe
+   * — the vector index is protected by the wrong model never being
+   * resolvable, and ingestion keeps working while the screen shows the
+   * "cannot do this job" warning against the saved row.
+   */
+  test("embedding resolver skips non-Google defaults and lands on the Google failsafe", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const now = Date.now();
 
@@ -1182,9 +1190,12 @@ describe("OWASP: Broken Access Control - AI Models", () => {
       });
     });
 
-    await expect(t.run(async (ctx) => {
+    const resolved = await t.run(async (ctx) => {
       return await ctx.runQuery(internal.aiModels.resolveEmbeddingModelConfigForExecution, {});
-    })).rejects.toThrow("Embedding generation currently requires a Google Vertex model");
+    });
+    expect(resolved.providerKey).toBe("google");
+    expect(resolved.source).toBe("failsafe");
+    expect(resolved.embeddingDimensions).toBe(768);
   });
 
   test("super admins can set and clear company model defaults by use case", async () => {

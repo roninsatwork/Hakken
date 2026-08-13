@@ -631,7 +631,21 @@ export const internalUpdateProviderHealth = internalMutation({
  * Every tier now asks whether the model is *servable* rather than merely
  * enabled, so a default sitting on a switched-off provider falls through to the
  * next tier instead of running.
+ *
+ * A tier must also be *capable*: the defaults screen tells the reader that a
+ * model which cannot do this job "falls through to whatever is set below it",
+ * and until this check the runtime did not honour that sentence — an OpenAI
+ * model saved as the transcription default was resolved anyway and threw at
+ * the provider boundary, taking every dictation with it.
  */
+function canModelServeUseCase(
+  model: { providerKey?: string } | null | undefined,
+  useCase: string | undefined,
+) {
+  if (!model || !useCase) return true;
+  return canProviderServeUseCase(model.providerKey, useCase);
+}
+
 async function getUseCaseDefaultModel(
   ctx: QueryCtx,
   args: { companyId?: Id<"companies">; useCase?: string },
@@ -639,17 +653,20 @@ async function getUseCaseDefaultModel(
 ) {
   if (!args.useCase) return null;
 
+  const isUsable = (model: Doc<"aiModels"> | null | undefined) =>
+    isModelServable(model, disabledProviderKeys) && canModelServeUseCase(model, args.useCase);
+
   if (args.companyId) {
     const companyDefault = await ctx.db
       .query("aiModelDefaults")
       .withIndex("by_company_use_case", (q) => q.eq("companyId", args.companyId).eq("useCase", args.useCase as string))
       .first();
     const companyModel = companyDefault ? await getModelByStableId(ctx, companyDefault.modelId) : null;
-    if (isModelServable(companyModel, disabledProviderKeys)) return companyModel;
+    if (isUsable(companyModel)) return companyModel;
 
     if (companyDefault?.fallbackModelId) {
       const fallbackModel = await getModelByStableId(ctx, companyDefault.fallbackModelId);
-      if (isModelServable(fallbackModel, disabledProviderKeys)) return fallbackModel;
+      if (isUsable(fallbackModel)) return fallbackModel;
     }
   }
 
@@ -658,11 +675,11 @@ async function getUseCaseDefaultModel(
     .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", args.useCase as string))
     .first();
   const globalModel = globalDefault ? await getModelByStableId(ctx, globalDefault.modelId) : null;
-  if (isModelServable(globalModel, disabledProviderKeys)) return globalModel;
+  if (isUsable(globalModel)) return globalModel;
 
   if (globalDefault?.fallbackModelId) {
     const fallbackModel = await getModelByStableId(ctx, globalDefault.fallbackModelId);
-    if (isModelServable(fallbackModel, disabledProviderKeys)) return fallbackModel;
+    if (isUsable(fallbackModel)) return fallbackModel;
   }
 
   return null;
@@ -723,7 +740,14 @@ async function resolveModelConfig(
     requestedModel: isModelServable(requestedModel, disabledProviderKeys) ? requestedModel : null,
     defaultModels: useCaseDefault
       ? [{ ...withInferredProvider(useCaseDefault), isDefault: true }]
-      : withInferredProviders(defaultModels).filter((model) => isModelServable(model, disabledProviderKeys)),
+      : withInferredProviders(defaultModels).filter(
+          (model) =>
+            isModelServable(model, disabledProviderKeys) &&
+            // The platform-wide default is subject to the same capability rule
+            // as a per-job default: a job no tier can serve lands on the
+            // failsafe rather than on a model that will throw.
+            canModelServeUseCase(model, args.useCase)
+        ),
   });
 }
 

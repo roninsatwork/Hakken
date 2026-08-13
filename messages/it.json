@@ -2589,13 +2589,13 @@
       },
       "voice": {
         "disclosure": "Stai parlando con l'IA di {platformName}",
-        "tapToTalk": "Tocca per parlare",
-        "listening": "In ascolto — tocca quando hai finito",
+        "start": "Avvia la conversazione",
+        "listening": "In ascolto — parla pure",
         "thinking": "Sto pensando…",
-        "speaking": "Sto parlando — tocca per fermare",
-        "close": "Chiudi la voce",
+        "speaking": "Tocca per saltare",
+        "close": "Termina la conversazione",
         "voiceUnavailable": "La voce non è disponibile al momento — ecco la risposta come testo.",
-        "didntCatch": "Non ho capito — tocca per riprovare.",
+        "didntCatch": "Non ho capito — puoi ripetere?",
         "micBlocked": "Il microfono è bloccato. Consentilo nella barra degli indirizzi del browser e riprova."
       },
       "stages": {

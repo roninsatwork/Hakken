@@ -2589,13 +2589,13 @@
       },
       "voice": {
         "disclosure": "You're talking to {platformName}'s AI",
-        "tapToTalk": "Tap to talk",
-        "listening": "Listening — tap when you're done",
+        "start": "Start conversation",
+        "listening": "Listening — just talk",
         "thinking": "Thinking…",
-        "speaking": "Speaking — tap to stop",
-        "close": "Close voice",
+        "speaking": "Tap to skip",
+        "close": "End conversation",
         "voiceUnavailable": "The voice isn't available right now — here's the reply as text.",
-        "didntCatch": "Didn't catch that — tap to try again.",
+        "didntCatch": "Didn't catch that — say it again?",
         "micBlocked": "The microphone is blocked. Allow it in your browser's address bar, then try again."
       },
       "stages": {

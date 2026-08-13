@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  createSpeechTurnDetector,
   cutSpeakableChunks,
   decodePcm16Base64,
   parsePcmSampleRate,
@@ -67,6 +68,37 @@ describe("cutSpeakableChunks", () => {
       isComplete: true,
     });
     expect(result.chunks).toEqual(["Done."]);
+  });
+});
+
+describe("createSpeechTurnDetector", () => {
+  const config = { onsetLevel: 0.1, onsetMs: 100, silenceMs: 1000, maxTurnMs: 10000 };
+
+  test("a short spike never starts a turn; sustained speech does", () => {
+    const detector = createSpeechTurnDetector(config);
+    expect(detector.update(0.5, 0)).toBe("waiting"); // spike begins
+    expect(detector.update(0.02, 50)).toBe("waiting"); // gone before onsetMs
+    expect(detector.update(0.5, 1000)).toBe("waiting");
+    expect(detector.update(0.5, 1120)).toBe("speaking"); // held past onsetMs
+    expect(detector.hasHeardSpeech()).toBe(true);
+  });
+
+  test("commits after the conversational pause, not on a mid-sentence breath", () => {
+    const detector = createSpeechTurnDetector(config);
+    detector.update(0.5, 0);
+    detector.update(0.5, 150); // speaking
+    expect(detector.update(0.02, 200)).toBe("speaking"); // breath begins
+    expect(detector.update(0.02, 800)).toBe("speaking"); // still under silenceMs
+    expect(detector.update(0.5, 900)).toBe("speaking"); // resumed — pause reset
+    expect(detector.update(0.02, 1000)).toBe("speaking");
+    expect(detector.update(0.02, 2100)).toBe("commit"); // full pause elapsed
+  });
+
+  test("a monologue commits at the backstop", () => {
+    const detector = createSpeechTurnDetector(config);
+    detector.update(0.5, 0);
+    detector.update(0.5, 150);
+    expect(detector.update(0.5, 10200)).toBe("commit");
   });
 });
 

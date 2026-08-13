@@ -613,6 +613,54 @@ describe("assistant stage notes", () => {
     });
 });
 
+describe("use-case defaults that cannot do the job", () => {
+    /**
+     * The defaults screen promises that a model which cannot do a job "falls
+     * through to whatever is set below it". The runtime used to resolve it
+     * anyway: an OpenAI model saved as the transcription default threw at the
+     * provider boundary and broke every dictation on the deployment.
+     */
+    test("an OpenAI transcription default falls through to the Google failsafe", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        await t.run(async (ctx) => {
+            await ctx.db.insert("aiModels", {
+                modelId: "openai:test-chat-model",
+                displayName: "Test Chat Model",
+                providerKey: "openai",
+                providerModelId: "test-chat-model",
+                isEnabled: true,
+                isDefault: true,
+                lastSyncedAt: Date.now(),
+            });
+            await ctx.db.insert("aiModelDefaults", {
+                scope: "global",
+                useCase: "transcription",
+                providerKey: "openai",
+                modelId: "openai:test-chat-model",
+                updatedAt: Date.now(),
+            });
+        });
+
+        const resolved = await t.run(async (ctx) =>
+            ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+                useCase: "transcription",
+            })
+        );
+
+        expect(resolved.modelId).toBe(SYSTEM_FAILSAFE_MODEL_ID);
+        expect(resolved.providerKey).toBe("google");
+
+        // The same rows still serve chat as chosen — capability filtering is
+        // per job, not a ban on the model.
+        const chatResolved = await t.run(async (ctx) =>
+            ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+                useCase: "chat",
+            })
+        );
+        expect(chatResolved.modelId).toBe("openai:test-chat-model");
+    });
+});
+
 describe("speech synthesis", () => {
     test("speech guardrails reject empty, oversized, and unknown-voice payloads before provider calls", () => {
         expect(assertValidSpeechPayload({ text: "  Hello there. " })).toEqual({

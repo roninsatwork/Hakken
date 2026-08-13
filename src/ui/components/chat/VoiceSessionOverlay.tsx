@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import {
+  createSpeechTurnDetector,
   cutSpeakableChunks,
   decodePcm16Base64,
   parsePcmSampleRate,
@@ -72,6 +73,12 @@ export function VoiceSessionOverlay({
   const turnRef = useRef(0);
   const stateRef = useRef(sessionState);
   stateRef.current = sessionState;
+  // Natural turn taking: the detector hears when the speaker starts and
+  // stops; the meter loop feeds it and commits the turn by itself.
+  const speechDetectorRef = useRef<ReturnType<typeof createSpeechTurnDetector> | null>(null);
+  const commitTurnRef = useRef<() => void>(() => {});
+  const recycleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const failedTurnsRef = useRef(0);
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
@@ -108,7 +115,15 @@ export function VoiceSessionOverlay({
             sum += centred * centred;
           }
           // RMS scaled so ordinary speech lands mid-range.
-          setLevel(Math.min(1, Math.sqrt(sum / data.length) * 4));
+          const rms = Math.min(1, Math.sqrt(sum / data.length) * 4);
+          setLevel(rms);
+          // While listening, the detector decides when the turn is over —
+          // nobody taps anything mid-conversation.
+          if (stateRef.current === "listening" && speechDetectorRef.current) {
+            if (speechDetectorRef.current.update(rms, performance.now()) === "commit") {
+              commitTurnRef.current();
+            }
+          }
         } else {
           setLevel(0);
         }
@@ -156,6 +171,31 @@ export function VoiceSessionOverlay({
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.start();
+      speechDetectorRef.current = createSpeechTurnDetector();
+
+      // Quiet rooms must not accumulate an ever-growing silent recording:
+      // until speech is heard, the clip is thrown away and restarted.
+      if (recycleTimerRef.current) clearInterval(recycleTimerRef.current);
+      recycleTimerRef.current = setInterval(() => {
+        const current = recorderRef.current;
+        if (
+          stateRef.current !== "listening" ||
+          !current ||
+          speechDetectorRef.current?.hasHeardSpeech()
+        ) {
+          return;
+        }
+        current.onstop = null;
+        current.stop();
+        chunksRef.current = [];
+        const next = new MediaRecorder(stream, preferred ? { mimeType: preferred } : undefined);
+        next.ondataavailable = (event) => {
+          if (event.data.size > 0) chunksRef.current.push(event.data);
+        };
+        next.start();
+        recorderRef.current = next;
+      }, 15000);
+
       setSessionState("listening");
     } catch {
       setMicBlocked(true);
@@ -164,6 +204,11 @@ export function VoiceSessionOverlay({
   }, [getAudioContext]);
 
   const releaseMic = useCallback(() => {
+    if (recycleTimerRef.current) {
+      clearInterval(recycleTimerRef.current);
+      recycleTimerRef.current = null;
+    }
+    speechDetectorRef.current = null;
     micStreamRef.current?.getTracks().forEach((track) => track.stop());
     micStreamRef.current = null;
     micAnalyserRef.current = null;
@@ -237,15 +282,27 @@ export function VoiceSessionOverlay({
       reader.onloadend = async () => {
         const base64 = String(reader.result ?? "");
         const audioBase64 = base64.substring(base64.indexOf(",") + 1);
+        // A missed turn resumes listening by itself — a conversation should
+        // not fall back to a button — but three misses in a row stop the
+        // loop rather than burning the rate limit against a broken setup.
+        const missTurn = () => {
+          failedTurnsRef.current += 1;
+          setNotice(t("didntCatch"));
+          if (failedTurnsRef.current >= 3) {
+            setSessionState("idle");
+          } else {
+            void beginListening();
+          }
+        };
         try {
           const mimeType = (recorder.mimeType || "audio/webm").split(";")[0];
           const transcribeResult = await transcribeAudio({ audioBase64, mimeType });
           const text = transcribeResult.trim();
           if (!text) {
-            setNotice(t("didntCatch"));
-            setSessionState("idle");
+            missTurn();
             return;
           }
+          failedTurnsRef.current = 0;
           setUserCaption(text);
           setAssistantCaption("");
           consumedRef.current = 0;
@@ -256,14 +313,19 @@ export function VoiceSessionOverlay({
           setSessionState("thinking");
           await sendMessage({ threadId, content: text });
         } catch {
-          setNotice(t("didntCatch"));
-          setSessionState("idle");
+          missTurn();
         }
       };
     };
     recorder.stop();
     setSessionState("thinking");
-  }, [releaseMic, sendMessage, t, threadId, transcribeAudio]);
+  }, [beginListening, releaseMic, sendMessage, t, threadId, transcribeAudio]);
+
+  // The detector commits turns from inside the meter loop; keep its target
+  // pointing at the freshest callback.
+  useEffect(() => {
+    commitTurnRef.current = finishListeningAndSend;
+  }, [finishListeningAndSend]);
 
   // Watch the thread for the reply to the turn we just sent, and cut every
   // newly completed sentence into the speaking queue as it arrives.
@@ -319,9 +381,17 @@ export function VoiceSessionOverlay({
 
   const primaryAction =
     sessionState === "idle"
-      ? { label: t("tapToTalk"), onClick: () => void beginListening() }
+      ? {
+          label: t("start"),
+          onClick: () => {
+            failedTurnsRef.current = 0;
+            void beginListening();
+          },
+        }
       : sessionState === "listening"
-        ? { label: t("listening"), onClick: finishListeningAndSend }
+        ? // Hands-free: the pill is a status line; tapping it commits the
+          // turn early for anyone who does not want to wait out the pause.
+          { label: t("listening"), onClick: finishListeningAndSend }
         : sessionState === "speaking"
           ? { label: t("speaking"), onClick: abandonSpeaking }
           : { label: t("thinking"), onClick: undefined };

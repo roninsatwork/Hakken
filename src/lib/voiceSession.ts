@@ -98,3 +98,64 @@ export function decodePcm16Base64(audioBase64: string): Float32Array<ArrayBuffer
 }
 
 export type VoiceSessionState = "idle" | "listening" | "thinking" | "speaking";
+
+/**
+ * Natural turn taking: the session decides for itself when the speaker has
+ * started and finished, so nobody taps anything mid-conversation.
+ *
+ * A turn starts when the level holds above `onsetLevel` for `onsetMs`
+ * (a cough or a door slam is shorter than that), and commits when the level
+ * stays below it for `silenceMs` — the conversational pause that means
+ * "your go". `maxTurnMs` is the backstop that commits a monologue rather
+ * than recording forever.
+ */
+export type SpeechTurnPhase = "waiting" | "speaking" | "commit";
+
+export type SpeechTurnConfig = {
+  onsetLevel: number;
+  onsetMs: number;
+  silenceMs: number;
+  maxTurnMs: number;
+};
+
+export const SPEECH_TURN_DEFAULTS: SpeechTurnConfig = {
+  onsetLevel: 0.12,
+  onsetMs: 150,
+  silenceMs: 1400,
+  maxTurnMs: 30000,
+};
+
+export function createSpeechTurnDetector(config: SpeechTurnConfig = SPEECH_TURN_DEFAULTS) {
+  let aboveSince: number | null = null;
+  let speechStartedAt: number | null = null;
+  let belowSince: number | null = null;
+
+  return {
+    hasHeardSpeech: () => speechStartedAt !== null,
+    update(level: number, now: number): SpeechTurnPhase {
+      if (speechStartedAt === null) {
+        if (level >= config.onsetLevel) {
+          aboveSince ??= now;
+          if (now - aboveSince >= config.onsetMs) {
+            speechStartedAt = now;
+            belowSince = null;
+            return "speaking";
+          }
+        } else {
+          aboveSince = null;
+        }
+        return "waiting";
+      }
+
+      if (now - speechStartedAt >= config.maxTurnMs) return "commit";
+
+      if (level < config.onsetLevel) {
+        belowSince ??= now;
+        if (now - belowSince >= config.silenceMs) return "commit";
+      } else {
+        belowSince = null;
+      }
+      return "speaking";
+    },
+  };
+}
