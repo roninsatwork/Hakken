@@ -33,6 +33,15 @@ import {
   createCallerRouter,
   readToolCalls,
 } from "./protocol.mjs";
+import {
+  buildGreetingNudge,
+  buildTwilioClear,
+  buildTwilioMedia,
+  modelAudioToPhonePayloads,
+  phonePayloadToModelFrame,
+  readModelSpeech,
+  readTwilioFrame,
+} from "./twilioBridge.mjs";
 
 const PORT = Number(process.env.PORT ?? 8787);
 const RELAY_SECRET = process.env.VOICE_RELAY_SECRET ?? "";
@@ -77,8 +86,29 @@ const server = createServer((request, response) => {
   response.end("This endpoint speaks WebSocket.");
 });
 
-const relay = new WebSocketServer({ server });
+const relay = new WebSocketServer({ noServer: true });
+const phoneDoor = new WebSocketServer({ noServer: true });
 let sessionCount = 0;
+
+// Two doors, one loop. A browser connects to the root and speaks the session
+// protocol directly. The telephony provider connects to /twilio and speaks
+// its own dialect — which the bridge below translates into the same session
+// protocol, over a loopback connection to the root. The phone is therefore
+// exactly "the browser's loop with a different microphone", and everything
+// the session path does (the ticket, the held frames, the knowledge
+// answering) happens once, in one place.
+server.on("upgrade", (request, socket, head) => {
+  const path = new URL(request.url ?? "/", "http://relay.local").pathname;
+  if (path === "/twilio") {
+    phoneDoor.handleUpgrade(request, socket, head, (connection) =>
+      phoneDoor.emit("connection", connection, request)
+    );
+    return;
+  }
+  relay.handleUpgrade(request, socket, head, (connection) =>
+    relay.emit("connection", connection, request)
+  );
+});
 
 relay.on("connection", (browser) => {
   const id = (sessionCount += 1);
@@ -225,6 +255,106 @@ relay.on("connection", (browser) => {
 
   browser.on("close", () => shutdown(1000, "Caller hung up."));
   browser.on("error", () => shutdown(1011, "Browser connection failed."));
+});
+
+phoneDoor.on("connection", (phone) => {
+  const id = (sessionCount += 1);
+  const say = (message) => console.log(`[call ${id}] ${message}`);
+
+  let session = null;
+  let streamSid = "";
+  let closing = false;
+
+  say("phone stream connected");
+
+  const shutdown = (reason) => {
+    if (closing) return;
+    closing = true;
+    say(`closing: ${reason}`);
+    try {
+      phone.close();
+    } catch {
+      /* already gone */
+    }
+    try {
+      session?.close();
+    } catch {
+      /* already gone */
+    }
+  };
+
+  phone.on("message", (data) => {
+    const frame = readTwilioFrame(data.toString());
+
+    // The provider's `start` carries the pass the platform minted when it
+    // answered the call. Only then is there a session to open.
+    if (frame.kind === "start") {
+      streamSid = frame.streamSid;
+      if (!frame.ticket) {
+        say("no ticket on the stream — refusing the call");
+        shutdown("No ticket.");
+        return;
+      }
+
+      // The loopback: the bridge is just another caller at the relay's own
+      // front door, indistinguishable from a browser.
+      session = new WebSocket(`ws://127.0.0.1:${PORT}/`);
+      session.binaryType = "arraybuffer";
+
+      session.on("open", () => {
+        session.send(JSON.stringify({ ticket: frame.ticket }));
+        say("session opened for the call");
+      });
+
+      session.on("message", (payload) => {
+        const text = payload.toString();
+
+        // The session is up: have Sonae speak first, the way a person
+        // answering a phone does. A screen waits for you; a phone must not.
+        if (text.includes('"relay.ready"')) {
+          session.send(buildGreetingNudge());
+          say("session ready — asked Sonae to greet the caller");
+          return;
+        }
+
+        const speech = readModelSpeech(text);
+        if (!speech || phone.readyState !== WebSocket.OPEN) return;
+
+        // The caller talked over the reply. Everything already queued on the
+        // line is abandoned speech — dropped now, or it plays for seconds.
+        if (speech.interrupted) {
+          phone.send(buildTwilioClear(streamSid));
+        }
+        if (speech.audioBase64) {
+          for (const payload of modelAudioToPhonePayloads(speech.audioBase64)) {
+            phone.send(buildTwilioMedia(streamSid, payload));
+          }
+        }
+      });
+
+      session.on("close", () => shutdown("Session ended."));
+      session.on("error", (error) => {
+        console.error(`[call ${id}] session error`, error?.message ?? error);
+        shutdown("Session failed.");
+      });
+      return;
+    }
+
+    if (frame.kind === "media") {
+      if (session?.readyState !== WebSocket.OPEN) return;
+      // The session door expects binary PCM16 — the same bytes a browser
+      // microphone sends — so the phone's audio is translated, not wrapped.
+      session.send(phonePayloadToModelFrame(frame.payload));
+      return;
+    }
+
+    if (frame.kind === "stop") {
+      shutdown("Caller hung up.");
+    }
+  });
+
+  phone.on("close", () => shutdown("Phone stream closed."));
+  phone.on("error", () => shutdown("Phone stream failed."));
 });
 
 server.listen(PORT, () => {
