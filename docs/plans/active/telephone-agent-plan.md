@@ -1,6 +1,11 @@
 # Sonae Answers The Phone
 
-Status: **Built end to end 2026-08-14; awaiting only the real number.**
+Status: **COMPLETE — proven live 2026-08-14.** Anthony dialled the real
+number, held a conversation answered from company knowledge (including a
+mid-call correction the model recovered from), hung up, and the finale
+landed: transcript, summary, follow-up task, bell, all on the Calls screen.
+His verdict, verbatim: "that worked".
+Originally:
 Everything below exists and is tested — Phase 0 (relay answers knowledge),
 the audio translation, the call record with its 90-day purge, the answering
 webhook with signature checks and admission ceilings, the media-stream

@@ -186,7 +186,7 @@ Builds on: phase 1 whole. Genuinely new: almost nothing — detecting the
 spoken language and holding the reply to it. Deliberately scheduled second
 because it is the cheapest large impression in the plan.
 
-### Phase 3 — The telephone agent, and the hang-up-and-watch finale
+### Phase 3 — The telephone agent, and the hang-up-and-watch finale — **DONE, proven live 2026-08-14**
 
 **What the audience sees:** you dial a number on speakerphone; Sonae answers,
 knows the company, and holds a conversation. You hang up — and on the screen
