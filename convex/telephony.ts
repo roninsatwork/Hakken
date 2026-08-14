@@ -1,4 +1,5 @@
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
+import { tenantQuery } from "./tenantFunctions";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -8,6 +9,7 @@ import {
   buildRefusalTwiml,
   computeTwilioSignature,
   findNumberOwner,
+  maskPhoneNumber,
   normalisePhoneNumber,
   parseNumberOwnership,
   signaturesMatch,
@@ -417,4 +419,82 @@ export const handleCallStatus = httpAction(async (ctx, request) => {
     await ctx.scheduler.runAfter(0, internal.telephonyActions.runAfterCallStep, { callId });
   }
   return new Response(null, { status: 200 });
+});
+
+/**
+ * The screen behind the presenter.
+ *
+ * The list keeps callers' numbers masked — a room full of people can read
+ * this display, and the demo is a stranger's number appearing on it. The
+ * full number exists in exactly one place: the call's own detail view.
+ */
+export const listCalls = tenantQuery({
+  args: {},
+  handler: async (
+    ctx
+  ): Promise<
+    Array<{
+      _id: Id<"phoneCalls">;
+      fromMasked: string;
+      status: "RINGING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+      startedAt: number;
+      endedAt?: number;
+      summary?: string;
+      matchedCustomerKey?: string;
+      taskId?: Id<"tasks">;
+      turnCount: number;
+    }>
+  > => {
+    const { companyId } = ctx;
+    if (!companyId) return [];
+
+    const calls = await ctx.db
+      .query("phoneCalls")
+      .withIndex("by_company_started", (q) => q.eq("companyId", companyId))
+      .order("desc")
+      .take(50);
+
+    return calls.map((call) => ({
+      _id: call._id,
+      fromMasked: maskPhoneNumber(call.fromNumber),
+      status: call.status,
+      startedAt: call.startedAt,
+      endedAt: call.endedAt,
+      summary: call.summary,
+      matchedCustomerKey: call.matchedCustomerKey,
+      taskId: call.taskId,
+      turnCount: call.turns.length,
+    }));
+  },
+});
+
+export const getCall = tenantQuery({
+  // A string, not an id: this value arrives straight from the address bar,
+  // and a mistyped link must read as "not found" rather than an error page.
+  args: { callId: v.string() },
+  handler: async (ctx, args) => {
+    const { companyId } = ctx;
+    if (!companyId) return null;
+    const callId = ctx.db.normalizeId("phoneCalls", args.callId);
+    if (!callId) return null;
+    const call = await ctx.db.get(callId);
+    // The tenant boundary, asserted on the row itself.
+    if (!call || call.companyId !== companyId) return null;
+    return call;
+  },
+});
+
+/**
+ * The company's own number, read from the same setting that routes calls to
+ * it — so the screen and the switchboard cannot disagree about what to dial.
+ */
+export const getCompanyPhoneNumber = tenantQuery({
+  args: {},
+  handler: async (ctx): Promise<string | null> => {
+    const { companyId } = ctx;
+    if (!companyId) return null;
+    const ownership = parseNumberOwnership(process.env.TELEPHONY_NUMBER_OWNERS);
+    const entry = Object.entries(ownership).find(([, owner]) => owner === companyId);
+    return entry?.[0] ?? null;
+  },
 });

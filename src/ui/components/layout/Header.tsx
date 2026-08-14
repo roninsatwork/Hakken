@@ -14,7 +14,8 @@ import {
   LogOut,
   Sidebar,
   ShieldCheck,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Phone,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -75,6 +76,7 @@ export function getAssistantThreadIdFromPath(pathname: string) {
 function getAppHeaderSegments(pathname: string, t: HeaderTranslator, platformName: string, dashboardLabel: string) {
   if (pathname.startsWith("/app/assistant")) return [`Ask ${platformName}`];
   if (pathname.startsWith("/app/tasks")) return ["Tasks"];
+  if (pathname.startsWith("/app/calls")) return ["Calls"];
   if (pathname.startsWith("/app/properties/search")) return [t("properties"), t("propertiesSearch")];
   if (pathname.startsWith("/app/properties/scraped-data")) return [t("properties"), t("propertiesScrapedData")];
   if (pathname.startsWith("/app/properties/logs")) return [t("properties"), "Logs"];
@@ -120,6 +122,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
       ? Building2
       : pathname.startsWith("/app/tasks")
       ? ListChecks
+      : pathname.startsWith("/app/calls")
+      ? Phone
       : pathname.startsWith("/app/reports")
         ? LineChart
         : pathname.startsWith("/app/arcade") || pathname.startsWith("/demos")

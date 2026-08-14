@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { Check, ListChecks, Plus, RotateCcw, Sparkles, Workflow, X } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -258,6 +259,18 @@ export default function TasksPage() {
                                 )}
                                 {t(`raisedBy.${task.createdBySource}` as "raisedBy.AGENT" | "raisedBy.WORKFLOW")}
                               </span>
+                            )}
+                            {task.sourceUrl?.startsWith("/") && (
+                              // Where this task came from — the call, the run.
+                              // Stored since tasks existed, rendered nowhere
+                              // until the phone made it matter: a follow-up
+                              // to a call is unactionable without the call.
+                              <Link
+                                href={task.sourceUrl}
+                                className="text-brand hover:underline"
+                              >
+                                {t("openSource")}
+                              </Link>
                             )}
                           </span>
                         </div>

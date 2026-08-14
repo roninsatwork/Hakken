@@ -3222,7 +3222,8 @@
       "AGENT": "Raised by an agent",
       "WORKFLOW": "Raised by a workflow"
     },
-    "openCount": "{count} open"
+    "openCount": "{count} open",
+    "openSource": "View source"
   },
   "notifications": {
     "title": "Notifications",
@@ -3230,5 +3231,35 @@
     "markAllRead": "Mark all read",
     "open": "Notifications",
     "waiting": "{count} unread"
+  },
+  "calls": {
+    "title": "Calls",
+    "subtitle": "Sonae answers this number",
+    "dialUs": "Call us on",
+    "noNumber": "No phone number is connected to this workspace yet.",
+    "live": "On a call now",
+    "idle": "Ready for the next call",
+    "recent": "Recent calls",
+    "empty": "No calls yet. The first one will appear here the moment it rings.",
+    "status": {
+      "RINGING": "Ringing",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "FAILED": "Did not finish"
+    },
+    "turns": "{count} exchanges",
+    "viewCall": "Open",
+    "caller": "Caller",
+    "sonae": "Sonae",
+    "summary": "What it was about",
+    "transcript": "The conversation",
+    "noTranscript": "Nothing was said on this call.",
+    "matchedCustomer": "Known customer",
+    "followUpTask": "Follow-up task",
+    "openTask": "Open the task",
+    "started": "Started",
+    "ended": "Ended",
+    "back": "All calls",
+    "notFound": "This call does not exist or belongs to another workspace."
   }
 }

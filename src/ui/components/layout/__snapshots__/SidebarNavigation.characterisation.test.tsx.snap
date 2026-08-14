@@ -4,6 +4,7 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
 {
   "links": [
     "Ask Sonae -> /app/assistant",
+    "Calls -> /app/calls",
     "Dashboard -> /app/settings",
     "Information -> /app/properties/information",
     "Information -> /app/reports/information",
@@ -38,6 +39,7 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
 {
   "links": [
     "Ask Sonae -> /app/assistant",
+    "Calls -> /app/calls",
     "Information -> /app/properties/information",
     "Information -> /app/reports/information",
     "Information -> /demos/movements/information",
@@ -63,6 +65,7 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
 {
   "links": [
     "Ask Sonae -> /app/assistant",
+    "Calls -> /app/calls",
     "Information -> /app/properties/information",
     "Information -> /app/reports/information",
     "Information -> /demos/movements/information",

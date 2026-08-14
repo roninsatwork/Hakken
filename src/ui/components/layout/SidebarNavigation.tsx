@@ -27,7 +27,8 @@ import {
   // template:remove:start salesData
   Table2,
   // template:remove:end
-  Wrench
+  Wrench,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Image from "next/image";
@@ -341,6 +342,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/app') return 'Dashboard';
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
+  if (pathname.startsWith('/app/calls')) return 'Calls';
   // template:remove:start properties
   if (pathname.startsWith('/app/properties')) return 'Properties';
   // template:remove:end
@@ -715,6 +717,14 @@ export default function SidebarNavigation() {
                       href="/app/tasks"
                       isActive={activeItem === 'Tasks' || pathname.startsWith('/app/tasks')}
                       onClick={() => setActiveItem('Tasks')}
+                    />
+
+                    <NavItem
+                      icon={Phone}
+                      label="Calls"
+                      href="/app/calls"
+                      isActive={activeItem === 'Calls' || pathname.startsWith('/app/calls')}
+                      onClick={() => setActiveItem('Calls')}
                     />
 
                     {/* template:remove:start salesReports */}

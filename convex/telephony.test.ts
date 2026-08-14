@@ -1,5 +1,6 @@
 import { convexTest } from "convex-test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { api } from "./_generated/api";
 import schema from "./schema";
 import { computeTwilioSignature } from "./telephonyService";
 
@@ -532,5 +533,82 @@ describe("the hang-up-and-watch finale", () => {
         expect(call.summary).toContain("transcript is attached");
         const [task] = await t.run(async (ctx) => ctx.db.query("tasks").collect());
         expect(task.detail).toContain("Hello?");
+    });
+});
+
+describe("the call screen's queries", () => {
+    const seedCallFor = async (
+        t: ReturnType<typeof convexTest>,
+        companyId: Awaited<ReturnType<typeof seedCompany>>,
+        providerCallId: string
+    ) =>
+        await t.run(async (ctx) =>
+            ctx.db.insert("phoneCalls", {
+                companyId,
+                providerCallId,
+                fromNumber: CALLER_NUMBER,
+                toNumber: CALLED_NUMBER,
+                status: "COMPLETED" as const,
+                turns: [{ role: "CALLER" as const, text: "hello", at: Date.now() }],
+                startedAt: Date.now(),
+            })
+        );
+
+    const memberOf = async (
+        t: ReturnType<typeof convexTest>,
+        companyId: Awaited<ReturnType<typeof seedCompany>>,
+        email: string
+    ) =>
+        await t.run(async (ctx) =>
+            ctx.db.insert("users", { email, role: "USER", companyId, createdAt: Date.now() })
+        );
+
+    test("the list masks every caller and stays inside the caller's workspace", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await seedCompany(t);
+        const otherCompanyId = await t.run(async (ctx) =>
+            ctx.db.insert("companies", { name: "Other", createdAt: Date.now() })
+        );
+        await seedCallFor(t, companyId, "CA-mine");
+        await seedCallFor(t, otherCompanyId, "CA-theirs");
+        const userId = await memberOf(t, companyId, "member@ronins.test");
+
+        const calls = await t
+            .withIdentity({ subject: userId })
+            .query(api.telephony.listCalls, {});
+
+        expect(calls).toHaveLength(1);
+        expect(calls[0].fromMasked).toBe("***123");
+        // The full number must not appear anywhere in the list payload.
+        expect(JSON.stringify(calls)).not.toContain(CALLER_NUMBER);
+    });
+
+    test("a call from another workspace reads as not found, not as someone else's", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await seedCompany(t);
+        const otherCompanyId = await t.run(async (ctx) =>
+            ctx.db.insert("companies", { name: "Other", createdAt: Date.now() })
+        );
+        const theirCallId = await seedCallFor(t, otherCompanyId, "CA-theirs");
+        const userId = await memberOf(t, companyId, "member@ronins.test");
+
+        const call = await t
+            .withIdentity({ subject: userId })
+            .query(api.telephony.getCall, { callId: theirCallId });
+
+        expect(call).toBeNull();
+    });
+
+    test("the company's own number comes from the same setting that routes its calls", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await seedCompany(t);
+        vi.stubEnv("TELEPHONY_NUMBER_OWNERS", JSON.stringify({ [CALLED_NUMBER]: companyId }));
+        const userId = await memberOf(t, companyId, "member@ronins.test");
+
+        const number = await t
+            .withIdentity({ subject: userId })
+            .query(api.telephony.getCompanyPhoneNumber, {});
+
+        expect(number).toBe(CALLED_NUMBER);
     });
 });

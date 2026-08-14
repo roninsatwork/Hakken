@@ -3222,7 +3222,8 @@
       "AGENT": "Creata da un agente",
       "WORKFLOW": "Creata da un flusso"
     },
-    "openCount": "{count} aperte"
+    "openCount": "{count} aperte",
+    "openSource": "Vedi origine"
   },
   "notifications": {
     "title": "Notifiche",
@@ -3230,5 +3231,35 @@
     "markAllRead": "Segna tutte come lette",
     "open": "Notifiche",
     "waiting": "{count} non lette"
+  },
+  "calls": {
+    "title": "Chiamate",
+    "subtitle": "Sonae risponde a questo numero",
+    "dialUs": "Chiamaci al",
+    "noNumber": "Nessun numero di telefono è ancora collegato a questo spazio di lavoro.",
+    "live": "In chiamata ora",
+    "idle": "Pronta per la prossima chiamata",
+    "recent": "Chiamate recenti",
+    "empty": "Ancora nessuna chiamata. La prima apparirà qui appena squilla.",
+    "status": {
+      "RINGING": "Sta squillando",
+      "IN_PROGRESS": "In corso",
+      "COMPLETED": "Completata",
+      "FAILED": "Non conclusa"
+    },
+    "turns": "{count} scambi",
+    "viewCall": "Apri",
+    "caller": "Chiamante",
+    "sonae": "Sonae",
+    "summary": "Di cosa si trattava",
+    "transcript": "La conversazione",
+    "noTranscript": "In questa chiamata non è stato detto nulla.",
+    "matchedCustomer": "Cliente conosciuto",
+    "followUpTask": "Attività di follow-up",
+    "openTask": "Apri l'attività",
+    "started": "Inizio",
+    "ended": "Fine",
+    "back": "Tutte le chiamate",
+    "notFound": "Questa chiamata non esiste o appartiene a un altro spazio di lavoro."
   }
 }
