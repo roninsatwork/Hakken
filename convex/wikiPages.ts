@@ -4,8 +4,53 @@ import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, tenantQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
-import { WIKI_PAGE_MAX_CHARS, normaliseEmail, renderPageForReading } from "./wikiRewriteService";
+import {
+  WIKI_PAGE_MAX_CHARS,
+  linkKeyFor,
+  normaliseEmail,
+  renderPageForReading,
+} from "./wikiRewriteService";
 import { normalisePhoneNumber } from "./telephonyService";
+
+const wikiKindValidator = v.union(
+  v.literal("CUSTOMER"),
+  v.literal("PRODUCT"),
+  v.literal("POLICY"),
+  v.literal("ISSUE")
+);
+
+type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE";
+
+async function getPage(
+  ctx: QueryCtx,
+  companyId: Id<"companies">,
+  kind: WikiKind,
+  subjectKey: string
+): Promise<Doc<"wikiPages"> | null> {
+  return await ctx.db
+    .query("wikiPages")
+    .withIndex("by_company_kind_subject", (q) =>
+      q.eq("companyId", companyId).eq("kind", kind).eq("subjectKey", subjectKey)
+    )
+    .unique();
+}
+
+/**
+ * A page rendered with its neighbourhood (wiki plan, phase 5): the page
+ * whole, then up to two linked pages whole — one hop, wiki-fashion. More
+ * than that is a crawl, not a briefing.
+ */
+async function renderWithNeighbours(ctx: QueryCtx, page: Doc<"wikiPages">): Promise<string> {
+  const parts = [renderPageForReading(page)];
+  for (const link of page.links.slice(0, 2)) {
+    const separator = link.indexOf(":");
+    if (separator <= 0) continue;
+    const kind = link.slice(0, separator) as WikiKind;
+    const neighbour = await getPage(ctx, page.companyId, kind, link.slice(separator + 1));
+    if (neighbour) parts.push(`Related page — ${renderPageForReading(neighbour)}`);
+  }
+  return parts.join("\n\n");
+}
 
 /**
  * The wiki's doors below the surface: what the rewrite loop and the reading
@@ -21,12 +66,70 @@ import { normalisePhoneNumber } from "./telephonyService";
 export const getCustomerPageInternal = internalQuery({
   args: { companyId: v.id("companies"), subjectKey: v.string() },
   handler: async (ctx, args): Promise<Doc<"wikiPages"> | null> => {
-    return await ctx.db
+    return await getPage(ctx, args.companyId, "CUSTOMER", args.subjectKey);
+  },
+});
+
+export const getPageOfKindInternal = internalQuery({
+  args: { companyId: v.id("companies"), kind: wikiKindValidator, subjectKey: v.string() },
+  handler: async (ctx, args): Promise<Doc<"wikiPages"> | null> => {
+    return await getPage(ctx, args.companyId, args.kind, args.subjectKey);
+  },
+});
+
+/** Mechanical bookkeeping after a topic learns from an event: both ends of
+ * the link recorded, as a set. The map is drawn from exactly this. */
+export const addLinksInternal = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    kind: wikiKindValidator,
+    subjectKey: v.string(),
+    add: v.array(v.string()),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const page = await getPage(ctx, args.companyId, args.kind, args.subjectKey);
+    if (!page) return;
+    const links = [...new Set([...page.links, ...args.add])];
+    if (links.length !== page.links.length) {
+      await ctx.db.patch(page._id, { links });
+    }
+  },
+});
+
+/**
+ * The title index (wiki plan, phase 5): topic pages matched by the words in
+ * their names — a mechanical lookup, no embeddings, exactly how a person
+ * scans a wiki's index. CUSTOMER pages are deliberately excluded: an
+ * anonymous caller must never be read another customer's page.
+ */
+export const findTopicPagesForQueryInternal = internalQuery({
+  args: { companyId: v.id("companies"), query: v.string() },
+  handler: async (ctx, args): Promise<string[]> => {
+    const queryWords = new Set(
+      args.query
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((word) => word.length >= 4)
+    );
+    if (queryWords.size === 0) return [];
+    const pages = await ctx.db
       .query("wikiPages")
-      .withIndex("by_company_kind_subject", (q) =>
-        q.eq("companyId", args.companyId).eq("kind", "CUSTOMER").eq("subjectKey", args.subjectKey)
-      )
-      .unique();
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    return pages
+      .filter((page) => page.kind !== "CUSTOMER")
+      .map((page) => {
+        const titleWords = `${page.title} ${page.subjectKey}`
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter((word) => word.length >= 4);
+        const overlap = titleWords.filter((word) => queryWords.has(word)).length;
+        return { page, overlap };
+      })
+      .filter((entry) => entry.overlap > 0)
+      .sort((a, b) => b.overlap - a.overlap)
+      .slice(0, 2)
+      .map((entry) => renderPageForReading(entry.page));
   },
 });
 
@@ -42,21 +145,19 @@ export const applyRewriteInternal = internalMutation({
     title: v.string(),
     content: v.string(),
     source: v.string(),
+    /** Absent means CUSTOMER — the phase-1 callers never say. */
+    kind: v.optional(wikiKindValidator),
   },
   handler: async (ctx, args): Promise<void> => {
+    const kind = args.kind ?? "CUSTOMER";
     const now = Date.now();
     const content = args.content.slice(0, WIKI_PAGE_MAX_CHARS);
-    const existing = await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_kind_subject", (q) =>
-        q.eq("companyId", args.companyId).eq("kind", "CUSTOMER").eq("subjectKey", args.subjectKey)
-      )
-      .unique();
+    const existing = await getPage(ctx, args.companyId, kind, args.subjectKey);
 
     if (!existing) {
       const pageId = await ctx.db.insert("wikiPages", {
         companyId: args.companyId,
-        kind: "CUSTOMER",
+        kind,
         subjectKey: args.subjectKey,
         title: args.title,
         content,
@@ -141,8 +242,10 @@ export const listCompanyPages = tenantQuery({
       )
       .map((page) => ({
         pageId: page._id,
+        kind: page.kind,
         title: page.title,
         subjectKey: page.subjectKey,
+        links: page.links,
         preview: page.content.slice(0, 160),
         rewriteCount: page.rewriteCount,
         pinnedCount: page.pinnedCorrections.length,
@@ -165,6 +268,7 @@ export const getPageDetail = tenantQuery({
       .take(20);
     return {
       pageId: page._id,
+      kind: page.kind,
       title: page.title,
       subjectKey: page.subjectKey,
       content: page.content,
@@ -306,14 +410,9 @@ export const getRenderedPageForPhoneNumber = internalQuery({
         (customer.mobile && normalisePhoneNumber(customer.mobile) === caller)
     );
     if (!match) return null;
-    const page = await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_kind_subject", (q) =>
-        q.eq("companyId", args.companyId).eq("kind", "CUSTOMER").eq("subjectKey", match.accountNameKey)
-      )
-      .unique();
+    const page = await getPage(ctx, args.companyId, "CUSTOMER", match.accountNameKey);
     if (!page) return null;
-    return { subjectKey: match.accountNameKey, pageText: renderPageForReading(page) };
+    return { subjectKey: match.accountNameKey, pageText: await renderWithNeighbours(ctx, page) };
   },
 });
 
@@ -358,13 +457,8 @@ export const getRenderedPageForWidgetThread = internalQuery({
     const email = /<([^<>]+@[^<>]+)>/.exec(gateway.content.split("\n")[0] ?? "")?.[1];
     const subjectKey = await matchEmailToCustomerKey(ctx, thread.companyId, email);
     if (!subjectKey) return null;
-    const page = await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_kind_subject", (q) =>
-        q.eq("companyId", thread.companyId!).eq("kind", "CUSTOMER").eq("subjectKey", subjectKey)
-      )
-      .unique();
-    return page ? renderPageForReading(page) : null;
+    const page = await getPage(ctx, thread.companyId, "CUSTOMER", subjectKey);
+    return page ? await renderWithNeighbours(ctx, page) : null;
   },
 });
 
@@ -372,13 +466,8 @@ export const getRenderedPageForWidgetThread = internalQuery({
 export const getRenderedCustomerPageInternal = internalQuery({
   args: { companyId: v.id("companies"), subjectKey: v.string() },
   handler: async (ctx, args): Promise<string | null> => {
-    const page = await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_kind_subject", (q) =>
-        q.eq("companyId", args.companyId).eq("kind", "CUSTOMER").eq("subjectKey", args.subjectKey)
-      )
-      .unique();
-    return page ? renderPageForReading(page) : null;
+    const page = await getPage(ctx, args.companyId, "CUSTOMER", args.subjectKey);
+    return page ? await renderWithNeighbours(ctx, page) : null;
   },
 });
 

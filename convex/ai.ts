@@ -1019,14 +1019,31 @@ export const searchKnowledgeForVoiceInternal = internalAction({
         .map((memory: { title: string; content: string }) => `- ${memory.title}: ${memory.content}`)
         .join("\n");
 
+      // The wiki's title index (wiki plan, phase 5): topic pages whose names
+      // match the question, read whole — the tended layer above the chunked
+      // library. Customer pages are excluded by the query itself: a caller
+      // must never be read another customer's page.
+      const wikiPages: string[] = companyId
+        ? await ctx.runQuery(internal.wikiPages.findTopicPagesForQueryInternal, {
+            companyId,
+            query,
+          })
+        : [];
+
       // Nothing found is reported as nothing found. Returning the wrapper
       // around an empty list reads to the model as "here is your evidence",
       // and a model handed an empty evidence block invents rather than
       // admits — which is the one thing this must never do out loud.
-      if (chunkTexts.length === 0 && !relevantMemories) return { context: "" };
+      if (chunkTexts.length === 0 && !relevantMemories && wikiPages.length === 0) {
+        return { context: "" };
+      }
 
       return {
         context: `${
+          wikiPages.length > 0
+            ? `Company wiki pages that apply here (tended by Sonae, corrected by staff):\n${wikiPages.join("\n\n")}\n\n`
+            : ""
+        }${
           chunkTexts.length > 0
             ? buildUntrustedKnowledgeContext({
                 sourceLabel: "global, company, and thread-scoped knowledge",

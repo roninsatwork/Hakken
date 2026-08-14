@@ -20,10 +20,19 @@ export const tendDispatcher = internalAction({
   args: {},
   handler: async (ctx): Promise<{ companies: number }> => {
     const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
+    let visited = 0;
     for (const companyId of companies) {
+      // Only gardens with weeds get a visit: a company whose pages are all
+      // tidy and correctly linked costs nothing tonight — and a scheduler
+      // asked to drain (as the tests do) genuinely drains.
+      const candidates = await ctx.runQuery(internal.wikiTending.getTendingCandidatesInternal, {
+        companyId,
+      });
+      if (candidates.linkRepairs.length === 0 && candidates.overgrown.length === 0) continue;
       await ctx.scheduler.runAfter(0, internal.wikiTendingActions.tendCompany, { companyId });
+      visited += 1;
     }
-    return { companies: companies.length };
+    return { companies: visited };
   },
 });
 

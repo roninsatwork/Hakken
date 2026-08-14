@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { BookOpen, Pin } from "lucide-react";
+import { BookOpen, Network, Pin } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import {
@@ -59,14 +59,25 @@ export default function WikiPagesListPage() {
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
 
-      <AdminSearchBar
-        value={search}
-        onChange={(value) => {
-          setSearch(value);
-          setPage(1);
-        }}
-        placeholder={t("searchPlaceholder")}
-      />
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <AdminSearchBar
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
+            placeholder={t("searchPlaceholder")}
+          />
+        </div>
+        <Link
+          href="/admin/ai/pages/map"
+          className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap"
+        >
+          <Network className="w-4 h-4" />
+          {t("map.open")}
+        </Link>
+      </div>
 
       <AdminTableShell
         minWidthClassName="min-w-[760px]"
@@ -111,6 +122,9 @@ export default function WikiPagesListPage() {
                     className="flex items-center gap-2 text-[14px] font-medium text-foreground hover:text-brand transition-colors"
                   >
                     {row.title}
+                    <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-medium">
+                      {t(`kinds.${row.kind}`)}
+                    </span>
                     {row.pinnedCount > 0 && (
                       <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
                         <Pin className="w-3 h-3" />

@@ -3194,9 +3194,16 @@ export default defineSchema({
    */
   wikiPages: defineTable({
     companyId: v.id("companies"),
-    // CUSTOMER pages first (phase 1); product/policy/issue kinds are phase 5.
-    kind: v.union(v.literal("CUSTOMER")),
-    // For CUSTOMER pages: the salesDataCustomers accountNameKey.
+    // CUSTOMER pages are keyed by the salesDataCustomers accountNameKey and
+    // born from matched calls and emails. The topic kinds (phase 5) are
+    // named by the model as conversations touch them: what the company
+    // sells (PRODUCT), how it works (POLICY), what keeps coming up (ISSUE).
+    kind: v.union(
+      v.literal("CUSTOMER"),
+      v.literal("PRODUCT"),
+      v.literal("POLICY"),
+      v.literal("ISSUE")
+    ),
     subjectKey: v.string(),
     title: v.string(),
     content: v.string(),

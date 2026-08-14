@@ -7,6 +7,9 @@ import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import {
   buildRewriteSystemInstruction,
   buildRewriteUserContent,
+  buildTopicSuggestionInstruction,
+  linkKeyFor,
+  parseTopicSuggestions,
   validateRewrittenPage,
 } from "./wikiRewriteService";
 
@@ -73,5 +76,69 @@ export const rewriteCustomerPageAfterEvent = internalAction({
       content: verdict.content,
       source: args.source,
     });
+
+    // What the conversation taught about the COMPANY, beyond the customer
+    // (wiki plan, phase 5): the model may name up to two topics — a product,
+    // a policy, a recurring issue. Each topic page learns, and both ends of
+    // the link are recorded so the map can draw them. Fail-open throughout.
+    try {
+      const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+        useCase: "fast-chat",
+      });
+      const suggestionResponse = await generateTextWithResolvedModel({
+        model,
+        systemInstruction: buildTopicSuggestionInstruction(),
+        contents: [{ type: "text", text: args.eventText.slice(0, 8000) }],
+      });
+      const topics = parseTopicSuggestions(suggestionResponse.text ?? "");
+
+      for (const topic of topics) {
+        const topicPage = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
+          companyId: args.companyId,
+          kind: topic.kind,
+          subjectKey: topic.slug,
+        });
+        const topicResponse = await generateTextWithResolvedModel({
+          model,
+          systemInstruction: buildRewriteSystemInstruction(),
+          contents: [
+            {
+              type: "text",
+              text: buildRewriteUserContent({
+                title: topic.slug,
+                currentContent: topicPage?.content ?? "",
+                pinnedCorrections: topicPage?.pinnedCorrections ?? [],
+                eventLabel: args.eventLabel,
+                eventText: `${topic.learned}\n\n${args.eventText.slice(0, 4000)}`,
+              }),
+            },
+          ],
+        });
+        const topicVerdict = validateRewrittenPage(topicResponse.text ?? "");
+        if (!topicVerdict.ok) continue;
+        await ctx.runMutation(internal.wikiPages.applyRewriteInternal, {
+          companyId: args.companyId,
+          kind: topic.kind,
+          subjectKey: topic.slug,
+          title: topic.slug,
+          content: topicVerdict.content,
+          source: args.source,
+        });
+        await ctx.runMutation(internal.wikiPages.addLinksInternal, {
+          companyId: args.companyId,
+          kind: "CUSTOMER",
+          subjectKey: args.subjectKey,
+          add: [linkKeyFor(topic.kind, topic.slug)],
+        });
+        await ctx.runMutation(internal.wikiPages.addLinksInternal, {
+          companyId: args.companyId,
+          kind: topic.kind,
+          subjectKey: topic.slug,
+          add: [linkKeyFor("CUSTOMER", args.subjectKey)],
+        });
+      }
+    } catch (error) {
+      console.error("Wiki topic learning failed; the customer page still stands", error);
+    }
   },
 });

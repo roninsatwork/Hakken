@@ -324,6 +324,103 @@ describe("the knowing doors' read", () => {
   });
 });
 
+describe("topic pages and the links between them", () => {
+  test("the model's topic JSON is distrusted: bad kinds, bad slugs, and excess are dropped", async () => {
+    const { parseTopicSuggestions, normaliseTopicSlug } = await import("./wikiRewriteService");
+    expect(parseTopicSuggestions("no json here")).toEqual([]);
+    expect(
+      parseTopicSuggestions(
+        JSON.stringify({
+          topics: [
+            { kind: "PRODUCT", slug: "Winter Linen Contracts", learned: "They exist." },
+            { kind: "GOSSIP", slug: "not-a-kind", learned: "Dropped." },
+            { kind: "POLICY", slug: "x", learned: "Slug too short, dropped." },
+            { kind: "ISSUE", slug: "delivery-delays", learned: "Keeps coming up." },
+            { kind: "POLICY", slug: "over-the-cap", learned: "Third topic, dropped." },
+          ],
+        })
+      )
+    ).toEqual([
+      { kind: "PRODUCT", slug: "winter-linen-contracts", learned: "They exist." },
+      { kind: "ISSUE", slug: "delivery-delays", learned: "Keeps coming up." },
+    ]);
+    // One naming rule: spacing, case and punctuation collapse to one page.
+    expect(normaliseTopicSlug("  Delivery Times!  ")).toBe("delivery-times");
+    expect(normaliseTopicSlug("x")).toBeNull();
+  });
+
+  test("links are a set on both ends, and a customer's read carries its neighbourhood", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      subjectKey: "acme",
+      title: "acme",
+      content: "Asked about winter linen.",
+      source: "PHONE_CALL:1",
+    });
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "PRODUCT",
+      subjectKey: "winter-linen-contracts",
+      title: "winter-linen-contracts",
+      content: "Seasonal contracts run October to March.",
+      source: "PHONE_CALL:1",
+    });
+    for (let i = 0; i < 2; i++) {
+      await t.mutation(internal.wikiPages.addLinksInternal, {
+        companyId,
+        kind: "CUSTOMER",
+        subjectKey: "acme",
+        add: ["PRODUCT:winter-linen-contracts"],
+      });
+    }
+
+    const page = await t.query(internal.wikiPages.getCustomerPageInternal, {
+      companyId,
+      subjectKey: "acme",
+    });
+    expect(page?.links).toEqual(["PRODUCT:winter-linen-contracts"]);
+
+    const rendered = await t.query(internal.wikiPages.getRenderedCustomerPageInternal, {
+      companyId,
+      subjectKey: "acme",
+    });
+    expect(rendered).toContain("Asked about winter linen.");
+    expect(rendered).toContain("October to March");
+  });
+
+  test("the title index finds topic pages by name and never surfaces a customer page", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "delivery-times",
+      title: "delivery-times",
+      content: "Deliveries go out Tuesdays and Fridays.",
+      source: "EMAIL:1",
+    });
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      subjectKey: "delivery-obsessed-customer",
+      title: "delivery-obsessed-customer",
+      content: "Asks about delivery every week.",
+      source: "EMAIL:1",
+    });
+
+    const matches = await t.query(internal.wikiPages.findTopicPagesForQueryInternal, {
+      companyId,
+      query: "when are your delivery days?",
+    });
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toContain("Tuesdays and Fridays");
+    expect(matches[0]).not.toContain("Asks about delivery every week.");
+  });
+});
+
 describe("the rewrite contract", () => {
   test("an empty or wildly over-long answer is refused; barely over is clamped", () => {
     expect(validateRewrittenPage("   ")).toEqual({ ok: false, reason: "empty" });

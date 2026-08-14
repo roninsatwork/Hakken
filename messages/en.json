@@ -3270,12 +3270,12 @@
     }
   },
   "aiPages": {
-    "title": "Customer Pages",
-    "subtitle": "What Sonae remembers about each customer - written and kept up to date by Sonae itself.",
-    "hint": "After every phone call or email with a known customer, Sonae rewrites their page so it stays short and current. Open a page to read it, change it, or pin a fact Sonae must always respect.",
+    "title": "Pages",
+    "subtitle": "What Sonae remembers - customers, products, policies and recurring issues - written and kept up to date by Sonae itself.",
+    "hint": "After every phone call or email with a known customer, Sonae rewrites their page - and when a conversation teaches something about a product, a policy or a recurring issue, that topic's page learns too, and the pages link up. Open a page to read it, change it, or pin a fact Sonae must always respect.",
     "searchPlaceholder": "Search customers or page text...",
     "columns": {
-      "customer": "Customer",
+      "customer": "Page",
       "remembers": "What Sonae remembers",
       "lastChange": "Last change",
       "rewrites": "Rewrites"
@@ -3327,6 +3327,19 @@
         "hint": "Each entry shows how the page read before a change, and what caused the change.",
         "none": "No changes yet."
       }
+    },
+    "kinds": {
+      "CUSTOMER": "Customer",
+      "PRODUCT": "Product",
+      "POLICY": "Policy",
+      "ISSUE": "Recurring issue"
+    },
+    "map": {
+      "open": "Map view",
+      "title": "The Map",
+      "subtitle": "Every page as a dot, every link as a line - the company's knowledge, growing after each conversation.",
+      "back": "All pages",
+      "empty": "No pages to draw yet. When Sonae speaks with known customers, the map grows on its own."
     }
   },
   "calls": {

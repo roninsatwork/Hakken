@@ -1,7 +1,19 @@
 # The Self-Improving Wiki — Sonae Tends Its Own Memory
 
-Status: Agreed with Anthony 2026-08-14. Plan approved; **build not started —
-each phase begins only when Anthony says go.**
+Status: **Delivered 2026-08-14** — Anthony said go the same evening and all
+six phases were built, tested and proven in his browser that night. Honest
+deviations from the letter of the plan, none from its spirit:
+- Phase 2's "signed-in user" door was narrowed to the doors that genuinely
+  know a customer: matched caller, mailbox sender, gateway'd widget
+  visitor. A staff member's chat has no customer identity to read.
+- Phase 4's "merge duplicate pages" is prevented rather than repaired: one
+  slug-normalisation rule at naming time means "Delivery Times" and
+  "delivery-times" are one page from birth. The gardener repairs links and
+  tidies overgrown pages, and skips gardens with no weeds.
+- Pin attribution lives in the audit trail, not on the pin: the
+  personal-data manifest proved mid-build that a user id inside the pinned
+  array would make erasure unprovable. The trail (retained as oversight
+  evidence) records who pinned; the pin itself is company knowledge.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
