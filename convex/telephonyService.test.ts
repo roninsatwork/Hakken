@@ -134,3 +134,44 @@ describe("what the provider is told to do with the call", () => {
         expect(twiml).toContain("<Hangup/>");
     });
 });
+
+describe("against Twilio's own documented example", () => {
+    /**
+     * The worked example from Twilio's security documentation: this exact
+     * URL, these params, auth token "12345", must produce this signature.
+     * If this passes, the maths is byte-for-byte Twilio's; a live mismatch
+     * is then configuration — the URL or the token — not code.
+     */
+    test("reproduces the documented signature exactly", async () => {
+        const signature = await computeTwilioSignature(
+            "https://example.com/myapp.php?foo=1&bar=2",
+            {
+                CallSid: "CA1234567890ABCDE",
+                Caller: "+14158675310",
+                Digits: "1234",
+                From: "+14158675310",
+                To: "+18005551212",
+            },
+            "12345"
+        );
+        expect(signature).toBe("L/OH5YylLD5NRKLltdqwSvS0BnU=");
+    });
+});
+
+describe("a number spaced for reading off a wall", () => {
+    test("London numbers group the way people say them", async () => {
+        const { formatPhoneNumberForDisplay } = await import("./telephonyService");
+        expect(formatPhoneNumberForDisplay("+442045724032")).toBe("+44 20 4572 4032");
+    });
+
+    test("UK mobiles group four then six", async () => {
+        const { formatPhoneNumberForDisplay } = await import("./telephonyService");
+        expect(formatPhoneNumberForDisplay("+447700900123")).toBe("+44 7700 900123");
+    });
+
+    test("anything else falls back to fours from the right", async () => {
+        const { formatPhoneNumberForDisplay } = await import("./telephonyService");
+        expect(formatPhoneNumberForDisplay("+14155552671")).toBe("+141 5555 2671");
+        expect(formatPhoneNumberForDisplay("not a number")).toBe("not a number");
+    });
+});

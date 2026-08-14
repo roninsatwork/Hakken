@@ -147,3 +147,32 @@ export function buildDisclosure(companyName: string | undefined) {
     ? `Hello. You are speaking to an A.I. assistant for ${companyName.trim()}.`
     : "Hello. You are speaking to an A.I. assistant.";
 }
+
+/**
+ * A number spaced for reading off a wall.
+ *
+ * E.164 is what machines exchange; a room reads groups. UK numbers group the
+ * way people say them — London (+44 20) as 20 XXXX XXXX, mobiles and other
+ * ten-digit nationals as XXXX XXXXXX — and anything unrecognised falls back
+ * to fours from the right, which is how strangers' numbers are read aloud
+ * everywhere. Display only: matching and storage stay on the compact form.
+ */
+export function formatPhoneNumberForDisplay(number: string) {
+  const compact = normalisePhoneNumber(number);
+  if (!compact.startsWith("+")) return number.trim();
+
+  if (compact.startsWith("+44") && compact.length === 13) {
+    const national = compact.slice(3);
+    if (national.startsWith("2")) {
+      return `+44 ${national.slice(0, 2)} ${national.slice(2, 6)} ${national.slice(6)}`;
+    }
+    return `+44 ${national.slice(0, 4)} ${national.slice(4)}`;
+  }
+
+  const digits = compact.slice(1);
+  const groups: string[] = [];
+  for (let end = digits.length; end > 0; end -= 4) {
+    groups.unshift(digits.slice(Math.max(0, end - 4), end));
+  }
+  return `+${groups.join(" ")}`;
+}

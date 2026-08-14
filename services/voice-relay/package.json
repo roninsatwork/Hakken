@@ -1,0 +1,18 @@
+{
+  "name": "sonae-voice-relay",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The live voice relay: browser or phone on one side, Vertex on the other. Stateless; everything arrives in a signed ticket.",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "google-auth-library": "^10.6.2",
+    "ws": "^8.21.0"
+  }
+}

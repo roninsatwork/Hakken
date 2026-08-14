@@ -5,6 +5,7 @@ import { Phone, PhoneCall } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { formatPhoneNumberForDisplay } from "@/convex/telephonyService";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 
@@ -57,7 +58,7 @@ export default function CallsPage() {
                 {t("dialUs")}
               </p>
               <p className="mt-3 font-mono text-5xl font-semibold tracking-tight text-foreground sm:text-7xl">
-                {number}
+                {formatPhoneNumberForDisplay(number)}
               </p>
               <p className="mt-5 inline-flex items-center gap-2 text-[13px] text-secondary">
                 {liveCall ? (

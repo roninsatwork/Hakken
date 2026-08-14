@@ -46,7 +46,8 @@ describe("CallsPage", () => {
 
     render(<CallsPage />);
 
-    expect(screen.getByText("+441234567890")).toBeInTheDocument();
+    // Spaced for reading off a wall; the compact form is what the query returns.
+    expect(screen.getByText("+44 1234 567890")).toBeInTheDocument();
     expect(screen.getByText("dialUs")).toBeInTheDocument();
     expect(screen.getByText("idle")).toBeInTheDocument();
   });

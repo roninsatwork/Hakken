@@ -174,6 +174,19 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   const signedUrl = process.env.TELEPHONY_PUBLIC_URL?.trim() || request.url;
   const expected = await computeTwilioSignature(signedUrl, params, authToken);
   if (!provided || !signaturesMatch(expected, provided)) {
+    // Also computed against the URL this server observed itself: when THAT
+    // one matches, the configured public URL is what is wrong, and the log
+    // says so in as many words. Never the signatures or the token — which
+    // URL and which fields is enough to diagnose every real case.
+    const observed = await computeTwilioSignature(request.url, params, authToken);
+    const diagnosis = !provided
+      ? "no signature header at all — this did not come through Twilio's webhook"
+      : signaturesMatch(observed, provided)
+        ? `TELEPHONY_PUBLIC_URL mismatch — Twilio signed ${request.url} but the setting says ${signedUrl}`
+        : "signature mismatch on both URLs — the auth token is wrong, or the URL in Twilio differs from both";
+    console.warn(
+      `Refused a call webhook: ${diagnosis}. CallSid=${params.CallSid ?? "none"} To=${params.To ?? "none"}`
+    );
     return twimlResponse(buildRefusalTwiml("Sorry, something went wrong. Goodbye."), 403);
   }
 
