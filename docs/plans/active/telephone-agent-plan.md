@@ -1,12 +1,14 @@
 # Sonae Answers The Phone
 
-Status: Drafted 2026-08-13, **rewritten 2026-08-13 around the live audio
-loop.** Phase 3 of the showcase channels roadmap
-(`showcase-channels-plan.md`). Not started. The gate that blocked this phase
-— a spoken session must be able to search company knowledge — was cleared
-2026-08-13 and proven live.
-Depends on: the live voice session and the relay (`services/voice-relay/`),
-working on Google via Vertex.
+Status: **Built end to end 2026-08-14; awaiting only the real number.**
+Everything below exists and is tested — Phase 0 (relay answers knowledge),
+the audio translation, the call record with its 90-day purge, the answering
+webhook with signature checks and admission ceilings, the media-stream
+bridge with barge-in and live transcript filing, the hang-up finale
+(summary, CRM match, task, bell), the Calls screen, and the quota spend.
+4,700+ tests green. What remains needs Anthony: a Twilio account, a number,
+and its three settings on the deployment — then the live proof call.
+Phase 3 of the showcase channels roadmap (`showcase-channels-plan.md`).
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
