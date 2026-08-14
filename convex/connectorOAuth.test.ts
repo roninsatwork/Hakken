@@ -322,3 +322,40 @@ describe("token table discipline", () => {
     vi.unstubAllEnvs();
   });
 });
+
+describe("connector client credentials", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  test("a deployment without a dedicated connector client falls back to the sign-in app", async () => {
+    const { getConnectorOAuthClientCredentials } = await import("./connectorOAuthProviders");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_ID", "");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_SECRET", "");
+    vi.stubEnv("AUTH_GOOGLE_ID", "auth-id");
+    vi.stubEnv("AUTH_GOOGLE_SECRET", "auth-secret");
+    expect(getConnectorOAuthClientCredentials("google")).toEqual({
+      clientId: "auth-id",
+      clientSecret: "auth-secret",
+    });
+  });
+
+  test("a dedicated connector client always wins over the sign-in app", async () => {
+    const { getConnectorOAuthClientCredentials } = await import("./connectorOAuthProviders");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_ID", "own-id");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_SECRET", "own-secret");
+    vi.stubEnv("AUTH_GOOGLE_ID", "auth-id");
+    vi.stubEnv("AUTH_GOOGLE_SECRET", "auth-secret");
+    expect(getConnectorOAuthClientCredentials("google")).toEqual({
+      clientId: "own-id",
+      clientSecret: "own-secret",
+    });
+  });
+
+  test("a half-set dedicated pair fails visibly rather than half-falling-back", async () => {
+    const { getConnectorOAuthClientCredentials } = await import("./connectorOAuthProviders");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_ID", "own-id");
+    vi.stubEnv("CONNECTOR_GOOGLE_CLIENT_SECRET", "");
+    vi.stubEnv("AUTH_GOOGLE_ID", "auth-id");
+    vi.stubEnv("AUTH_GOOGLE_SECRET", "auth-secret");
+    expect(getConnectorOAuthClientCredentials("google")).toBeNull();
+  });
+});

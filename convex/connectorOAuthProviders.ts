@@ -23,6 +23,14 @@ export type ConnectorOAuthProviderConfig = {
   clientIdEnv: string;
   clientSecretEnv: string;
   /**
+   * Environment names to fall back to when the CONNECTOR_* pair is absent.
+   * A deployment whose sign-in app and connector app are the same Google
+   * client (the live deployment is) then needs no copied settings at all —
+   * and a fresh clone of the platform is two settings simpler.
+   */
+  fallbackClientIdEnv?: string;
+  fallbackClientSecretEnv?: string;
+  /**
    * Extra query parameters the provider needs on the authorization URL.
    * Google's two are load-bearing: `access_type=offline` is what makes a
    * refresh token exist at all, and `prompt=consent` makes Google re-issue
@@ -41,6 +49,10 @@ const GOOGLE_PROVIDER: ConnectorOAuthProviderConfig = {
   revocationEndpoint: "https://oauth2.googleapis.com/revoke",
   clientIdEnv: "CONNECTOR_GOOGLE_CLIENT_ID",
   clientSecretEnv: "CONNECTOR_GOOGLE_CLIENT_SECRET",
+  // The Convex Auth sign-in client. Same Google app, different door — a
+  // deployment that has not been given a dedicated connector client uses it.
+  fallbackClientIdEnv: "AUTH_GOOGLE_ID",
+  fallbackClientSecretEnv: "AUTH_GOOGLE_SECRET",
   extraAuthorizationParams: {
     access_type: "offline",
     prompt: "consent",
@@ -71,8 +83,15 @@ export function getConnectorOAuthClientCredentials(provider: string):
   | null {
   const config = getConnectorOAuthProvider(provider);
   if (!config) return null;
-  const clientId = process.env[config.clientIdEnv]?.trim();
-  const clientSecret = process.env[config.clientSecretEnv]?.trim();
+  // The dedicated pair wins; the sign-in app's pair only answers when the
+  // dedicated pair is wholly absent — a half-set pair is a configuration
+  // mistake and must fail visibly, not half-fall-back.
+  let clientId = process.env[config.clientIdEnv]?.trim();
+  let clientSecret = process.env[config.clientSecretEnv]?.trim();
+  if (!clientId && !clientSecret && config.fallbackClientIdEnv && config.fallbackClientSecretEnv) {
+    clientId = process.env[config.fallbackClientIdEnv]?.trim();
+    clientSecret = process.env[config.fallbackClientSecretEnv]?.trim();
+  }
   if (!clientId || !clientSecret) return null;
   return { clientId, clientSecret };
 }
