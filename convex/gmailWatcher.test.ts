@@ -362,6 +362,43 @@ describe("the dressing every reply wears", () => {
     const dressed = dressReply({ body: "An answer.", companyName: "Ronins" });
     expect(dressed).toMatch(/^Hello,/);
   });
+
+  test("an Italian reply wears an Italian greeting, thanks, and disclosure", async () => {
+    const { dressReply } = await import("./gmailWatcher");
+    const dressed = dressReply({
+      body: "Costruiamo siti di ecommerce per aziende di ogni dimensione.",
+      senderFirstName: "Marco",
+      companyName: "Ronins",
+      language: "it",
+    });
+    expect(dressed).toMatch(/^Buongiorno Marco,/);
+    expect(dressed).toContain("Grazie per la sua email.");
+    expect(dressed).toContain("Ask Sonae");
+    expect(dressed).toContain("Ronins Assistente IA");
+    // The transparency duty holds in every language, with exact wording.
+    expect(dressed).toContain("scritta da un'IA e potrebbe contenere errori");
+    expect(dressed).not.toContain("Thank you for your email.");
+  });
+
+  test("a model greeting in the sender's language is not greeted twice", async () => {
+    const { dressReply } = await import("./gmailWatcher");
+    const dressed = dressReply({
+      body: "Ciao Marco,\n\nCostruiamo siti di ecommerce.",
+      senderFirstName: "Marco",
+      companyName: "Ronins",
+      language: "it",
+    });
+    expect(dressed).not.toContain("Buongiorno");
+    expect(dressed.match(/Ciao Marco,/g)).toHaveLength(1);
+    expect(dressed).toContain("scritta da un'IA");
+  });
+
+  test("a language we hold no translation for falls back to English dressing", async () => {
+    const { dressReply } = await import("./gmailWatcher");
+    const dressed = dressReply({ body: "Svar på svenska.", language: "sv", companyName: "Ronins" });
+    expect(dressed).toMatch(/^Hello,/);
+    expect(dressed).toContain("written by AI and may contain mistakes");
+  });
 });
 
 describe("full-width paragraphs", () => {

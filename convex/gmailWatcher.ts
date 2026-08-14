@@ -59,22 +59,120 @@ export function unwrapParagraphs(body: string) {
     .join("\n\n");
 }
 
+/**
+ * The fixed lines around every reply, held as approved translations rather
+ * than left to the model: the AI disclosure is a legal duty whose wording
+ * must be exact in every language, and the greeting and thank-you must match
+ * the language the customer wrote in — an Italian email with an English top
+ * and tail reads as a template, which is what Anthony sent back.
+ */
+const MAIL_DRESSING_BY_LANGUAGE: Record<
+  string,
+  { greetingNamed: string; greeting: string; thanks: string; assistant: string; disclosure: string }
+> = {
+  en: {
+    greetingNamed: "Hi {name},",
+    greeting: "Hello,",
+    thanks: "Thank you for your email.",
+    assistant: "AI assistant",
+    disclosure:
+      "This reply was written by AI and may contain mistakes. " +
+      "A colleague reads this inbox and will correct anything we got wrong.",
+  },
+  it: {
+    greetingNamed: "Buongiorno {name},",
+    greeting: "Buongiorno,",
+    thanks: "Grazie per la sua email.",
+    assistant: "Assistente IA",
+    disclosure:
+      "Questa risposta è stata scritta da un'IA e potrebbe contenere errori. " +
+      "Un collega legge questa casella di posta e correggerà eventuali inesattezze.",
+  },
+  fr: {
+    greetingNamed: "Bonjour {name},",
+    greeting: "Bonjour,",
+    thanks: "Merci pour votre e-mail.",
+    assistant: "Assistant IA",
+    disclosure:
+      "Cette réponse a été rédigée par une IA et peut contenir des erreurs. " +
+      "Un collègue lit cette boîte de réception et corrigera toute inexactitude.",
+  },
+  de: {
+    greetingNamed: "Guten Tag {name},",
+    greeting: "Guten Tag,",
+    thanks: "Vielen Dank für Ihre E-Mail.",
+    assistant: "KI-Assistent",
+    disclosure:
+      "Diese Antwort wurde von einer KI verfasst und kann Fehler enthalten. " +
+      "Ein Kollege liest dieses Postfach und korrigiert etwaige Fehler.",
+  },
+  es: {
+    greetingNamed: "Hola {name},",
+    greeting: "Hola,",
+    thanks: "Gracias por su correo.",
+    assistant: "Asistente de IA",
+    disclosure:
+      "Esta respuesta fue escrita por una IA y puede contener errores. " +
+      "Un compañero revisa esta bandeja de entrada y corregirá cualquier error.",
+  },
+  pt: {
+    greetingNamed: "Olá {name},",
+    greeting: "Olá,",
+    thanks: "Obrigado pelo seu e-mail.",
+    assistant: "Assistente de IA",
+    disclosure:
+      "Esta resposta foi escrita por uma IA e pode conter erros. " +
+      "Um colega lê esta caixa de entrada e corrigirá qualquer erro.",
+  },
+  nl: {
+    greetingNamed: "Beste {name},",
+    greeting: "Goedendag,",
+    thanks: "Bedankt voor uw e-mail.",
+    assistant: "AI-assistent",
+    disclosure:
+      "Dit antwoord is geschreven door AI en kan fouten bevatten. " +
+      "Een collega leest deze inbox en corrigeert eventuele fouten.",
+  },
+  pl: {
+    greetingNamed: "Dzień dobry {name},",
+    greeting: "Dzień dobry,",
+    thanks: "Dziękujemy za wiadomość.",
+    assistant: "Asystent AI",
+    disclosure:
+      "Ta odpowiedź została napisana przez AI i może zawierać błędy. " +
+      "Kolega czyta tę skrzynkę odbiorczą i poprawi ewentualne błędy.",
+  },
+};
+
+/**
+ * A greeting the model wrote itself, in any language we dress — detected so
+ * the code never staples a second hello on top of one.
+ */
+const GREETING_PATTERN =
+  /^(hi|hello|dear|hey|good (morning|afternoon|evening)|ciao|salve|buongiorno|buonasera|gentile|bonjour|bonsoir|cher|chère|hallo|guten (tag|morgen|abend)|sehr geehrte[rs]?|hola|buenos días|buenas tardes|estimado|estimada|olá|bom dia|boa tarde|prezado|prezada|beste|geachte|dzień dobry|szanowny|szanowna|witam)\b/i;
+
 export function dressReply(args: {
   body: string;
   senderFirstName?: string;
   companyName?: string;
+  /** Two-letter code of the language the reply is written in; English otherwise. */
+  language?: string;
 }) {
+  const dressing =
+    MAIL_DRESSING_BY_LANGUAGE[args.language?.trim().toLowerCase() ?? "en"] ??
+    MAIL_DRESSING_BY_LANGUAGE.en;
   const trimmed = unwrapParagraphs(args.body.trim());
-  const hasGreeting = /^(hi|hello|dear|hey|good (morning|afternoon|evening))\b/i.test(trimmed);
-  const greeting = args.senderFirstName ? `Hi ${args.senderFirstName},` : "Hello,";
-  const opening = hasGreeting ? trimmed : `${greeting}\n\nThank you for your email.\n\n${trimmed}`;
+  const hasGreeting = GREETING_PATTERN.test(trimmed);
+  const greeting = args.senderFirstName
+    ? dressing.greetingNamed.replace("{name}", args.senderFirstName)
+    : dressing.greeting;
+  const opening = hasGreeting ? trimmed : `${greeting}\n\n${dressing.thanks}\n\n${trimmed}`;
   const workspace = args.companyName?.trim();
   return (
     `${opening}\n\n` +
     `Ask Sonae\n` +
-    `${workspace ? `${workspace} ` : ""}AI assistant\n` +
-    `This reply was written by AI and may contain mistakes. ` +
-    `A colleague reads this inbox and will correct anything we got wrong.`
+    `${workspace ? `${workspace} ` : ""}${dressing.assistant}\n` +
+    dressing.disclosure
   );
 }
 
@@ -220,6 +318,8 @@ async function processMessage(
     body: decision.reply?.trim() || FALLBACK_HOLDING_REPLY,
     senderFirstName: senderFirstName(summary.from),
     companyName: company?.name,
+    // The fallback text is English, so its dressing must be too.
+    ...(decision.reply ? { language: decision.language } : {}),
   });
   const sent = await ctx.runAction(internal.gmailConnector.replyToMessage, {
     connectorId: connector._id,
@@ -284,7 +384,7 @@ async function decideReply(
     knowledgeContext: string;
     companyId?: Id<"companies">;
   }
-): Promise<{ reply?: string; needsHuman: boolean }> {
+): Promise<{ reply?: string; needsHuman: boolean; language?: string }> {
   try {
     // The cheap fast tier, resolved through the same catalogue door every
     // other headless caller uses (the phone's summary does exactly this).
@@ -296,7 +396,9 @@ async function decideReply(
       model: config,
       systemInstruction:
         "You write the next reply in a customer email conversation for a company, using ONLY the company " +
-        'knowledge provided. Answer with strict JSON, nothing else: {"reply": string, "needsHuman": boolean}. ' +
+        "knowledge provided. Answer with strict JSON, nothing else: " +
+        '{"reply": string, "needsHuman": boolean, "language": string}. ' +
+        'language is the two-letter ISO code of the language the reply is written in ("en", "it", "fr", ...). ' +
         "reply is a courteous, complete email answer to the customer's LATEST message, read in the light of " +
         "the whole conversation — in the sender's own language, plain text, no markdown. Do not add a " +
         "greeting line or a signature: both are added automatically around your text. Write each " +
@@ -323,9 +425,14 @@ async function decideReply(
     const text = response.text?.trim() ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return { needsHuman: true };
-    const parsed = JSON.parse(jsonMatch[0]) as { reply?: string; needsHuman?: boolean };
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      reply?: string;
+      needsHuman?: boolean;
+      language?: string;
+    };
     const reply = typeof parsed.reply === "string" && parsed.reply.trim() ? parsed.reply.trim() : undefined;
-    return { reply, needsHuman: parsed.needsHuman !== false || !reply };
+    const language = typeof parsed.language === "string" ? parsed.language.trim() : undefined;
+    return { reply, needsHuman: parsed.needsHuman !== false || !reply, language };
   } catch (error) {
     console.error("Mailbox decision failed; routing to a person", error);
     return { needsHuman: true };
