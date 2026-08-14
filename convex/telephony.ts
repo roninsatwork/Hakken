@@ -79,6 +79,71 @@ export const getCompanyForCall = internalQuery({
   },
 });
 
+
+/**
+ * Whether this call may be answered at all, decided before any model spend.
+ *
+ * Three ceilings, then the plan. Concurrency protects the relay; the
+ * per-number ceiling stops a redialling abuser spending the company's budget;
+ * the quota is commitment 6 — a call is a conversation, so answering one
+ * spends one conversation from the same allowance chat spends, and a company
+ * out of allowance hears "call back later" rather than a dead line.
+ *
+ * A mutation rather than a query, because saying yes SPENDS: the check and
+ * the spend must be one atomic step, or two simultaneous calls both pass a
+ * limit with one slot left.
+ */
+export const admitCall = internalMutation({
+  args: { companyId: v.id("companies"), fromNumber: v.string() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<"OK" | "BUSY" | "REDIALLING" | "OUT_OF_QUOTA"> => {
+    const maxConcurrent = readCeiling(process.env.TELEPHONY_MAX_CONCURRENT_CALLS, 4);
+    const maxPerNumberPerHour = readCeiling(process.env.TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR, 6);
+
+    // Newest 100 calls cover both windows: concurrency is now, and the
+    // redial window is an hour — a company taking more than 100 calls an
+    // hour has outgrown env-var ceilings and this whole arrangement.
+    const recent = await ctx.db
+      .query("phoneCalls")
+      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
+      .take(100);
+
+    const inProgress = recent.filter(
+      (call) => call.status === "RINGING" || call.status === "IN_PROGRESS"
+    );
+    if (inProgress.length >= maxConcurrent) return "BUSY";
+
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    const caller = normalisePhoneNumber(args.fromNumber);
+    const fromSameNumber = recent.filter(
+      (call) => call.startedAt > hourAgo && normalisePhoneNumber(call.fromNumber) === caller
+    );
+    if (fromSameNumber.length >= maxPerNumberPerHour) return "REDIALLING";
+
+    const company = await ctx.db.get(args.companyId);
+    if (!company) return "OUT_OF_QUOTA";
+    if (company.planId) {
+      const plan = await ctx.db.get(company.planId);
+      if (plan && plan.messageLimit !== -1) {
+        const used = company.messagesUsedThisPeriod || 0;
+        if (used >= plan.messageLimit) return "OUT_OF_QUOTA";
+        // The spend, in the same step as the check.
+        await ctx.db.patch(args.companyId, { messagesUsedThisPeriod: used + 1 });
+      }
+    }
+    return "OK";
+  },
+});
+
+/** An env ceiling: absent or nonsense means the default, never unlimited. */
+function readCeiling(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export const handleIncomingCall = httpAction(async (ctx, request) => {
   const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
   const streamUrl = process.env.TELEPHONY_STREAM_URL?.trim();
@@ -136,6 +201,22 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
       buildRefusalTwiml("Sorry, this number is not in service. Goodbye."),
       200
     );
+  }
+
+  // The ceilings, and the plan. Checked after the caller is proven to be the
+  // provider and the number proven owned — but before a record, a ticket, or
+  // a penny of model spend.
+  const admission = await ctx.runMutation(internal.telephony.admitCall, {
+    companyId: companyId as Id<"companies">,
+    fromNumber,
+  });
+  if (admission !== "OK") {
+    const refusals = {
+      BUSY: "Sorry, all our lines are busy at the moment. Please call back shortly. Goodbye.",
+      REDIALLING: "Sorry, this number has called several times recently. Please try again later. Goodbye.",
+      OUT_OF_QUOTA: "Sorry, I cannot take calls at the moment. Please call back later. Goodbye.",
+    } as const;
+    return twimlResponse(buildRefusalTwiml(refusals[admission]), 200);
   }
 
   await ctx.runMutation(internal.telephony.upsertCallOnAnswer, {

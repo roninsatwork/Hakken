@@ -277,6 +277,11 @@ phoneDoor.on("connection", (phone) => {
 
   say("phone stream connected");
 
+  // The same ceiling the browser door has. A caller who never hangs up —
+  // or a line that never delivers its end-of-call — must not hold a model
+  // session open for the rest of the day.
+  const callTimer = setTimeout(() => shutdown("Call reached its time limit."), MAX_SESSION_MS);
+
   /**
    * File finished turns on the call record, as they happen. Fire-and-forget
    * on purpose: the transcript must never hold up the audio, and a failed
@@ -295,6 +300,7 @@ phoneDoor.on("connection", (phone) => {
   const shutdown = (reason) => {
     if (closing) return;
     closing = true;
+    clearTimeout(callTimer);
     say(`closing: ${reason}`);
     // The hang-up itself finishes the last exchange: whatever was said since
     // the previous turn boundary goes on the record before the line drops.

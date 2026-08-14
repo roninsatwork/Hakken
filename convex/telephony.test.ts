@@ -612,3 +612,152 @@ describe("the call screen's queries", () => {
         expect(number).toBe(CALLED_NUMBER);
     });
 });
+
+describe("who gets answered — ceilings and the plan", () => {
+    const withOwnership = async (t: ReturnType<typeof convexTest>) => {
+        const companyId = await seedCompany(t);
+        vi.stubEnv("TELEPHONY_NUMBER_OWNERS", JSON.stringify({ [CALLED_NUMBER]: companyId }));
+        return companyId;
+    };
+
+    test("a room full of simultaneous callers hears busy, not a crash", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await withOwnership(t);
+        vi.stubEnv("TELEPHONY_MAX_CONCURRENT_CALLS", "2");
+
+        // Two live calls already on the line.
+        await t.run(async (ctx) => {
+            for (let i = 0; i < 2; i += 1) {
+                await ctx.db.insert("phoneCalls", {
+                    companyId,
+                    providerCallId: `CA-live-${i}`,
+                    fromNumber: `+44770090000${i}`,
+                    toNumber: CALLED_NUMBER,
+                    status: "IN_PROGRESS" as const,
+                    turns: [],
+                    startedAt: Date.now(),
+                });
+            }
+        });
+
+        const response = await dial(t, {
+            CallSid: "CA-third",
+            From: CALLER_NUMBER,
+            To: CALLED_NUMBER,
+        });
+
+        expect(response.status).toBe(200);
+        const twiml = await response.text();
+        expect(twiml).toContain("lines are busy");
+        expect(twiml).toContain("<Hangup/>");
+        // Refused calls leave no record and no ticket.
+        const calls = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
+        expect(calls).toHaveLength(2);
+    });
+
+    test("the same number redialling all hour gets told to stop, others still get through", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await withOwnership(t);
+        vi.stubEnv("TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "3");
+
+        await t.run(async (ctx) => {
+            for (let i = 0; i < 3; i += 1) {
+                await ctx.db.insert("phoneCalls", {
+                    companyId,
+                    providerCallId: `CA-old-${i}`,
+                    fromNumber: CALLER_NUMBER,
+                    toNumber: CALLED_NUMBER,
+                    status: "COMPLETED" as const,
+                    turns: [],
+                    startedAt: Date.now() - 10 * 60 * 1000,
+                });
+            }
+        });
+
+        const again = await dial(t, {
+            CallSid: "CA-again",
+            From: CALLER_NUMBER,
+            To: CALLED_NUMBER,
+        });
+        expect(await again.text()).toContain("called several times");
+
+        // A different caller is unaffected by somebody else's redialling.
+        const other = await dial(t, {
+            CallSid: "CA-other",
+            From: "+447700900999",
+            To: CALLED_NUMBER,
+        });
+        expect(await other.text()).toContain("A.I. assistant");
+    });
+
+    test("calls from an hour ago no longer count against the redial ceiling", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await withOwnership(t);
+        vi.stubEnv("TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "2");
+
+        await t.run(async (ctx) => {
+            for (let i = 0; i < 2; i += 1) {
+                await ctx.db.insert("phoneCalls", {
+                    companyId,
+                    providerCallId: `CA-yesterday-${i}`,
+                    fromNumber: CALLER_NUMBER,
+                    toNumber: CALLED_NUMBER,
+                    status: "COMPLETED" as const,
+                    turns: [],
+                    startedAt: Date.now() - 2 * 60 * 60 * 1000,
+                });
+            }
+        });
+
+        const response = await dial(t, {
+            CallSid: "CA-fresh",
+            From: CALLER_NUMBER,
+            To: CALLED_NUMBER,
+        });
+        expect(await response.text()).toContain("A.I. assistant");
+    });
+
+    test("a company out of plan hears call-back-later; answering spends one conversation", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await withOwnership(t);
+
+        const planId = await t.run(async (ctx) =>
+            ctx.db.insert("plans", {
+                name: "Small",
+                messageLimit: 5,
+                priceGBP: 10,
+                isActive: true,
+                createdAt: Date.now(),
+            })
+        );
+        await t.run(async (ctx) =>
+            ctx.db.patch(companyId, { planId, messagesUsedThisPeriod: 4 })
+        );
+
+        // One conversation left: this call takes it.
+        const first = await dial(t, { CallSid: "CA-q1", From: CALLER_NUMBER, To: CALLED_NUMBER });
+        expect(await first.text()).toContain("A.I. assistant");
+        const company = await t.run(async (ctx) => ctx.db.get(companyId));
+        expect(company?.messagesUsedThisPeriod).toBe(5);
+
+        // The plan is now exhausted: the next caller is told kindly.
+        const second = await dial(t, {
+            CallSid: "CA-q2",
+            From: "+447700900888",
+            To: CALLED_NUMBER,
+        });
+        expect(await second.text()).toContain("call back later");
+    });
+
+    test("a company on no plan is not rationed", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        await withOwnership(t);
+
+        const response = await dial(t, {
+            CallSid: "CA-noplan",
+            From: CALLER_NUMBER,
+            To: CALLED_NUMBER,
+        });
+        expect(await response.text()).toContain("A.I. assistant");
+    });
+});
