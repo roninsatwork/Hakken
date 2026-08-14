@@ -219,6 +219,7 @@ import type * as utils_security from "../utils/security.js";
 import type * as utils_skillLimits from "../utils/skillLimits.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
 import type * as utils_uploadPolicy from "../utils/uploadPolicy.js";
+import type * as utils_widgetEmbedPass from "../utils/widgetEmbedPass.js";
 import type * as utils_widgetOriginPolicy from "../utils/widgetOriginPolicy.js";
 import type * as utils_workflowTypes from "../utils/workflowTypes.js";
 import type * as vertexProviderService from "../vertexProviderService.js";
@@ -457,6 +458,7 @@ declare const fullApi: ApiFromModules<{
   "utils/skillLimits": typeof utils_skillLimits;
   "utils/templateParser": typeof utils_templateParser;
   "utils/uploadPolicy": typeof utils_uploadPolicy;
+  "utils/widgetEmbedPass": typeof utils_widgetEmbedPass;
   "utils/widgetOriginPolicy": typeof utils_widgetOriginPolicy;
   "utils/workflowTypes": typeof utils_workflowTypes;
   vertexProviderService: typeof vertexProviderService;

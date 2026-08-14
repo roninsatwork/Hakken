@@ -2,6 +2,23 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
+import type { Id } from "./_generated/dataModel";
+
+// createWidgetThread requires a server-minted embed pass; tests mint their
+// own with the same secret the mutation reads from the environment.
+const TEST_EMBED_SECRET = "widget-embed-test-secret";
+process.env.WIDGET_EMBED_SIGNING_SECRET = TEST_EMBED_SECRET;
+
+async function openWidgetThread(t: ReturnType<typeof convexTest>, widgetId: Id<"widgets">) {
+  const created = await t.mutation(api.widgets.createWidgetThread, {
+    widgetId,
+    sourceUrl: "https://example.com/",
+    embedPass: await mintWidgetEmbedPass({ widgetId, embedHost: "example.com", secret: TEST_EMBED_SECRET }),
+  });
+  if ("refused" in created) throw new Error(`widget session refused: ${created.refused}`);
+  return created;
+}
 
 describe("Message Quotas Enforcements", () => {
   test("Message limits strictly reject API drain when exhausted", async () => {
@@ -122,10 +139,7 @@ describe("Message Quotas Enforcements", () => {
         messagesUsedThisPeriod: 3,
       });
 
-      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
-        widgetId,
-        sourceUrl: "https://example.com/",
-      });
+      const { threadId, accessToken } = await openWidgetThread(t, widgetId);
 
       await t.mutation(api.chat.sendMessage, {
         threadId,
@@ -144,10 +158,7 @@ describe("Message Quotas Enforcements", () => {
         messagesUsedThisPeriod: 10,
       });
 
-      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
-        widgetId,
-        sourceUrl: "https://example.com/",
-      });
+      const { threadId, accessToken } = await openWidgetThread(t, widgetId);
 
       await t.mutation(api.chat.sendMessage, {
         threadId,
@@ -196,10 +207,7 @@ describe("Message Quotas Enforcements", () => {
         });
       });
 
-      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
-        widgetId,
-        sourceUrl: "https://example.com/",
-      });
+      const { threadId, accessToken } = await openWidgetThread(t, widgetId);
 
       await t.mutation(api.chat.sendMessage, {
         threadId,
@@ -225,10 +233,7 @@ describe("Message Quotas Enforcements", () => {
         messagesUsedThisPeriod: 5000,
       });
 
-      const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
-        widgetId,
-        sourceUrl: "https://example.com/",
-      });
+      const { threadId, accessToken } = await openWidgetThread(t, widgetId);
 
       await t.mutation(api.chat.sendMessage, {
         threadId,

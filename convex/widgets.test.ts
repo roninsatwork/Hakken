@@ -2,6 +2,22 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
+import { WIDGET_THREADS_PER_HOUR } from "./widgets";
+
+/** Shared with the mutations under test through the environment, the same way
+ * a real deployment shares the secret between the Next server and Convex. */
+const TEST_EMBED_SECRET = "widget-embed-test-secret";
+process.env.WIDGET_EMBED_SIGNING_SECRET = TEST_EMBED_SECRET;
+
+const embedPassFor = (widgetId: string, embedHost: string | null = "support.example.com") =>
+  mintWidgetEmbedPass({ widgetId, embedHost, secret: TEST_EMBED_SECRET });
+
+/** Narrows the union: the caller expected a session, not a refusal. */
+function expectSession<T extends object>(created: T): Exclude<T, { refused: string }> {
+  if ("refused" in created) throw new Error(`widget session refused: ${String(created.refused)}`);
+  return created as Exclude<T, { refused: string }>;
+}
 
 const widgetInput = {
   name: "Website Bot",
@@ -272,29 +288,48 @@ describe("Widget Authorization", () => {
       return { companyId, creatorId, widgetId, inactiveWidgetId, agentId, otherAgentId };
     });
 
-    // The reported source URL is client-supplied and therefore untrusted; this
-    // is a sanity filter, not the embedding boundary. Enforcement lives in the
-    // per-widget frame-ancestors header emitted by src/proxy.ts.
-    const unauthorizedSource = "Unauthorized: Source origin is not authorized for this widget.";
-    for (const sourceUrl of [
-      "javascript:alert(1)",
-      "//support.example.com",
-      "https://evil.example.net",
-      // Reads as the allowed host but resolves to evil.example.net.
-      "https://support.example.com@evil.example.net/",
-      // Suffix lookalike rather than a real subdomain.
-      "https://support.example.com.evil.example.net/",
-    ]) {
+    // The embed pass is the session boundary: minted only by our own server
+    // when it serves the widget page, over the referer host the server itself
+    // observed. A direct caller inventing a sourceUrl — the 2026-08 audit's
+    // exploit — holds no valid pass and is refused, and the refusal comes back
+    // as a value so the audit row survives the transaction.
+    const sourceUrl = "https://support.example.com/help";
+    const refusalPasses = [
+      // No pass, and outright garbage.
+      "",
+      "garbage",
+      // Signed with the wrong secret.
+      await mintWidgetEmbedPass({ widgetId, embedHost: "support.example.com", secret: "wrong-secret" }),
+      // A genuine pass for a different widget.
+      await embedPassFor(inactiveWidgetId),
+      // Genuine passes for hosts the widget does not allow, including the
+      // suffix lookalike rather than a real subdomain.
+      await embedPassFor(widgetId, "evil.example.net"),
+      await embedPassFor(widgetId, "support.example.com.evil.example.net"),
+      // A direct open (no referer) carries no host, which an allowlisted
+      // widget must refuse.
+      await embedPassFor(widgetId, null),
+      // A genuine pass minted too long ago.
+      await mintWidgetEmbedPass({
+        widgetId,
+        embedHost: "support.example.com",
+        secret: TEST_EMBED_SECRET,
+        now: Date.now() - 13 * 60 * 60 * 1000,
+      }),
+    ];
+    for (const embedPass of refusalPasses) {
       await expect(
-        t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl })
-      ).rejects.toThrow(unauthorizedSource);
+        t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl, embedPass })
+      ).resolves.toEqual({ refused: "unauthorized" });
     }
 
-    const createdThread = await t.mutation(api.widgets.createWidgetThread, {
-      widgetId,
-      sourceUrl: "https://support.example.com/help",
-    });
-    const { threadId, accessToken } = createdThread;
+    const { threadId, accessToken } = expectSession(
+      await t.mutation(api.widgets.createWidgetThread, {
+        widgetId,
+        sourceUrl,
+        embedPass: await embedPassFor(widgetId),
+      })
+    );
     expect(accessToken).toEqual(expect.any(String));
     await expect(t.query(api.chat.getMessages, { threadId })).resolves.toBeNull();
     await expect(t.query(api.chat.getMessages, { threadId, widgetAccessToken: "wrong-token" })).resolves.toBeNull();
@@ -379,7 +414,15 @@ describe("Widget Authorization", () => {
       sourceUrl: "https://support.example.com/help",
       title: "Widget Interaction",
     });
-    expect(auditLogs).toEqual([]);
+    // Every refusal above left a persisted trace — the point of refusing by
+    // return value instead of throw. Anonymous entries carry no actor.
+    const blockedEntries = auditLogs.filter((entry) => entry.actionType === "BLOCKED_WIDGET_ACCESS");
+    expect(blockedEntries).toHaveLength(refusalPasses.length);
+    for (const entry of blockedEntries) {
+      expect(entry.actorId).toBeUndefined();
+      expect(entry.companyId).toBe(companyId);
+    }
+    expect(auditLogs).toHaveLength(blockedEntries.length);
     expect(creatorId).toBeDefined();
   });
 });
@@ -422,10 +465,13 @@ describe("a photo from the widget", () => {
       return { widgetId };
     });
 
-    const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
-      widgetId,
-      sourceUrl: "https://support.example.com/help",
-    });
+    const { threadId, accessToken } = expectSession(
+      await t.mutation(api.widgets.createWidgetThread, {
+        widgetId,
+        sourceUrl: "https://support.example.com/help",
+        embedPass: await embedPassFor(widgetId),
+      })
+    );
 
     // The bytes a real widget posts to the upload URL. convex-test's
     // storage.store records no contentType, so it is written twice over: onto
@@ -463,5 +509,76 @@ describe("a photo from the widget", () => {
     // The viewable URL rides on the row, so the widget can render the thumbnail.
     expect(userMessage && "imageAttachments" in userMessage ? userMessage.imageAttachments : undefined)
       .toEqual([{ url: expect.stringContaining("http") }]);
+  });
+});
+
+describe("widget thread minting is bounded", () => {
+  async function seedWidget(t: ReturnType<typeof convexTest>, extra?: Record<string, unknown>) {
+    return await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Widget Corp", createdAt: Date.now() });
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId,
+        name: "Website Bot",
+        allowedDomains: ["example.com"],
+        isActive: true,
+        createdAt: Date.now(),
+        ...extra,
+      });
+      return { companyId, widgetId };
+    });
+  }
+
+  test("the hourly ceiling refuses the excess, logs the crossing once, and reopens with the window", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedWidget(t, {
+      threadWindowStart: Date.now(),
+      threadCountInWindow: WIDGET_THREADS_PER_HOUR - 1,
+    });
+    const sourceUrl = "https://example.com/";
+    const embedPass = await embedPassFor(widgetId, "example.com");
+
+    // The last seat in the window is granted…
+    expectSession(await t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl, embedPass }));
+
+    // …and everything after it is refused, with exactly one audit row for the
+    // whole window rather than one per attempt.
+    await expect(
+      t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl, embedPass })
+    ).resolves.toEqual({ refused: "busy" });
+    await expect(
+      t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl, embedPass })
+    ).resolves.toEqual({ refused: "busy" });
+
+    const limitedEntries = await t.run(async (ctx) =>
+      (await ctx.db.query("auditLogs").collect()).filter(
+        (entry) => entry.actionType === "RATE_LIMITED_WIDGET_THREADS"
+      )
+    );
+    expect(limitedEntries).toHaveLength(1);
+
+    // An expired window admits visitors again.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(widgetId, { threadWindowStart: Date.now() - 2 * 60 * 60 * 1000 });
+    });
+    expectSession(await t.mutation(api.widgets.createWidgetThread, { widgetId, sourceUrl, embedPass }));
+  });
+
+  test("widget sessions fail closed when the signing secret is not configured", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedWidget(t);
+
+    const previous = process.env.WIDGET_EMBED_SIGNING_SECRET;
+    delete process.env.WIDGET_EMBED_SIGNING_SECRET;
+    try {
+      await expect(
+        t.mutation(api.widgets.createWidgetThread, {
+          widgetId,
+          sourceUrl: "https://example.com/",
+          embedPass: await embedPassFor(widgetId, "example.com"),
+        })
+      ).rejects.toThrow("Widget sessions are not available right now.");
+    } finally {
+      process.env.WIDGET_EMBED_SIGNING_SECRET = previous;
+    }
   });
 });

@@ -9,7 +9,8 @@ import {
   requireSuperAdmin,
 } from "./authz";
 import { digestWidgetAccessToken } from "./chatService";
-import { allowsAnyDomain, isHostAllowed, parseHostFromUrl } from "./utils/widgetOriginPolicy";
+import { allowsAnyDomain, isHostAllowed } from "./utils/widgetOriginPolicy";
+import { verifyWidgetEmbedPass } from "./utils/widgetEmbedPass";
 import {
   validateAdminImageMetadata,
   validateStoredUpload,
@@ -336,55 +337,103 @@ export const finalizeWidgetUpload = publicMutation({
   },
 });
 
+/** How many anonymous conversations one widget will open per hour. Well above
+ * any real site's peak (the plan quota prices each message anyway); the point
+ * is that a script cannot mint threads without ceiling (2026-08 audit). */
+export const WIDGET_THREADS_PER_HOUR = 120;
+
 // Specialized thread creator for anonymous widget interactions
 export const createWidgetThread = publicMutation({
-  reason: "Anonymous site visitors start widget conversations; embedding is enforced by the per-widget frame-ancestors header in src/proxy.ts.",
+  reason: "Anonymous site visitors start widget conversations; gated on a server-minted embed pass, and embedding is enforced by the per-widget frame-ancestors header in src/proxy.ts.",
   args: {
     widgetId: v.id("widgets"),
     sourceUrl: v.string(),
+    embedPass: v.string(),
   },
   handler: async (ctx, args) => {
     // For anonymous widget interactions, the user might not be authenticated.
     const userId = (await getCurrentUser(ctx))?.userId;
-    
+
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
 
-    // `sourceUrl` is reported by code running inside the widget iframe, which
-    // means it is attacker-controlled: anyone can call this mutation directly
-    // with an approved-looking value. It is NOT the security boundary, despite
-    // what earlier comments here claimed.
-    //
-    // Embedding is actually enforced by the per-widget `frame-ancestors`
-    // header emitted in `src/proxy.ts`, which the browser evaluates against the
-    // real embedding page. The check below is a secondary sanity filter that
-    // rejects obvious misuse and produces audit signal; it shares
-    // `widgetOriginPolicy` with the middleware so the two cannot drift apart.
-    const reportedHost = parseHostFromUrl(args.sourceUrl);
-    const passesReportedOriginCheck = allowsAnyDomain(widget.allowedDomains)
-      ? true
-      : reportedHost !== null && isHostAllowed(reportedHost, widget.allowedDomains);
+    // The embed pass replaces the old caller-reported `sourceUrl` check, which
+    // anyone could satisfy by inventing an approved-looking value (2026-08
+    // audit). The pass is minted by our own server when it serves the widget
+    // page, over the referer host the server actually observed — see
+    // `utils/widgetEmbedPass.ts` for what it does and does not prove.
+    // `sourceUrl` is still stored on the thread as context, but it authorises
+    // nothing.
+    const secret = process.env.WIDGET_EMBED_SIGNING_SECRET?.trim();
+    if (!secret) {
+      // Fail closed, and say why in the server log rather than to the caller.
+      console.error("WIDGET_EMBED_SIGNING_SECRET is not configured; refusing widget sessions.");
+      throw new Error("Widget sessions are not available right now.");
+    }
 
-    if (!passesReportedOriginCheck) {
+    const verdict = await verifyWidgetEmbedPass({
+      pass: args.embedPass,
+      widgetId: args.widgetId,
+      secret,
+    });
+    const embedHost = verdict.ok ? verdict.embedHost : null;
+    const refusalReason = !verdict.ok
+      ? verdict.reason
+      : allowsAnyDomain(widget.allowedDomains)
+        ? null
+        : embedHost !== null && isHostAllowed(embedHost, widget.allowedDomains)
+          ? null
+          // A direct open (no referer) carries no host to authorise, which is
+          // only acceptable for a widget that allows every domain.
+          : "host_not_allowed";
+
+    // Refusals RETURN rather than throw: a thrown mutation rolls back its own
+    // writes, so the audit rows below would never survive (which is exactly
+    // what happened to the previous blocked-access logging — the tests proved
+    // an empty trail without noticing the irony).
+    if (refusalReason) {
         await ctx.db.insert("auditLogs", {
-          actorId: widget.createdBy,
+          // No actor: an anonymous request from the internet has no human
+          // behind it (see the auditLogs schema note).
           actionType: "BLOCKED_WIDGET_ACCESS",
           entityId: args.widgetId.toString(),
           entityType: "widgets",
           companyId: widget.companyId,
           timestamp: Date.now(),
           metadata: JSON.stringify({
+            reason: refusalReason,
             sourceUrl: args.sourceUrl,
-            reason: reportedHost === null
-              ? "Reported source URL was not an absolute http(s) URL without credentials"
-              : "Reported source host is not in the widget allowlist",
-            note: "Reported by the client and therefore untrusted; frame-ancestors is the enforced control.",
+            embedHost,
           })
         });
-        throw new Error("Unauthorized: Source origin is not authorized for this widget.");
+        return { refused: "unauthorized" as const };
     }
 
     const now = Date.now();
+
+    // Hourly minting ceiling, in the same window shape as the kiosk's session
+    // reservation. The threshold crossing is audit-logged exactly once per
+    // window so an attack leaves a mark without flooding the trail.
+    const windowStart = widget.threadWindowStart ?? 0;
+    const inWindow = now - windowStart < 60 * 60 * 1000 ? widget.threadCountInWindow ?? 0 : 0;
+    if (inWindow >= WIDGET_THREADS_PER_HOUR) {
+      if (inWindow === WIDGET_THREADS_PER_HOUR) {
+        await ctx.db.insert("auditLogs", {
+          actionType: "RATE_LIMITED_WIDGET_THREADS",
+          entityId: args.widgetId.toString(),
+          entityType: "widgets",
+          companyId: widget.companyId,
+          timestamp: now,
+          metadata: JSON.stringify({ perHour: WIDGET_THREADS_PER_HOUR }),
+        });
+        await ctx.db.patch(widget._id, { threadCountInWindow: inWindow + 1 });
+      }
+      return { refused: "busy" as const };
+    }
+    await ctx.db.patch(widget._id, {
+      threadWindowStart: inWindow === 0 ? now : windowStart,
+      threadCountInWindow: inWindow + 1,
+    });
     const accessToken = `${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
     
     const threadId = await ctx.db.insert("threads", {

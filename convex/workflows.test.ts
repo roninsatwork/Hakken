@@ -299,6 +299,63 @@ describe("OWASP: Broken Access Control - Workflows", () => {
     expect(executions).toEqual([]);
   });
 
+  test("a workflow's webhook allowance refuses the excess with 429 and schedules nothing", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { workflowId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Webhook Tenant", createdAt: Date.now() });
+      const creatorId = await ctx.db.insert("users", {
+        email: "workflow-owner@example.com",
+        role: "SUPER_ADMIN",
+      });
+      const workflowId = await ctx.db.insert("workflows", {
+        name: "Replayed Webhook Workflow",
+        companyId,
+        isActive: true,
+        triggerType: "WEBHOOK",
+        webhookSecret: "webhook-secret",
+        nodes: "[]",
+        edges: "[]",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        createdBy: creatorId,
+        // The hour's allowance is already spent.
+        webhookWindowStart: Date.now() - 60_000,
+        webhookCountInWindow: 60,
+      });
+      return { workflowId };
+    });
+
+    for (let i = 0; i < 2; i++) {
+      const response = await t.fetch(`/api/webhooks/workflow?workflowId=${workflowId}`, {
+        method: "POST",
+        headers: { "x-sonae-secret": "webhook-secret" },
+        body: "{}",
+      });
+      expect(response.status).toBe(429);
+      expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
+    }
+
+    const { executions, limitedEntries } = await t.run(async (ctx) => ({
+      executions: await ctx.db.query("workflowExecutions").collect(),
+      limitedEntries: (await ctx.db.query("auditLogs").collect()).filter(
+        (entry) => entry.actionType === "RATE_LIMITED_WORKFLOW_WEBHOOK"
+      ),
+    }));
+    expect(executions).toEqual([]);
+    // The throttling decision is recorded — once per window, not per attempt.
+    expect(limitedEntries).toHaveLength(1);
+
+    // An expired window admits triggers again, proven at the gate itself so
+    // the test does not have to run a real workflow.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(workflowId, { webhookWindowStart: Date.now() - 2 * 60 * 60 * 1000 });
+    });
+    await expect(
+      t.mutation(internal.workflows.reserveWebhookTrigger, { workflowId })
+    ).resolves.toEqual({ ok: true });
+  });
+
   test("Super admins can page and search workflows without loading the full table", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

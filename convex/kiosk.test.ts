@@ -134,4 +134,88 @@ describe("the receptionist screen", () => {
     const reservation = await t.mutation(internal.kiosk.reserveKioskSession, { widgetId });
     expect(reservation).toMatchObject({ ok: false });
   });
+
+  test("thread minting has its own hourly ceiling, audit-logged once and reopening with the window", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedKioskWidget(t, true);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(widgetId, {
+        kioskThreadWindowStart: Date.now() - 60_000,
+        kioskThreadCountInWindow: 119,
+      });
+    });
+
+    // The last seat in the window is granted, the excess is refused.
+    await expect(t.mutation(api.kiosk.createKioskThread, { widgetId })).resolves.not.toBeNull();
+    await expect(t.mutation(api.kiosk.createKioskThread, { widgetId })).resolves.toBeNull();
+    await expect(t.mutation(api.kiosk.createKioskThread, { widgetId })).resolves.toBeNull();
+
+    const limitedEntries = await t.run(async (ctx) =>
+      (await ctx.db.query("auditLogs").collect()).filter(
+        (entry) => entry.actionType === "RATE_LIMITED_KIOSK_THREADS"
+      )
+    );
+    expect(limitedEntries).toHaveLength(1);
+
+    // An expired window admits visitors again.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(widgetId, { kioskThreadWindowStart: Date.now() - 2 * 60 * 60 * 1000 });
+    });
+    await expect(t.mutation(api.kiosk.createKioskThread, { widgetId })).resolves.not.toBeNull();
+  });
+
+  test("a full conversation stops storing turns instead of storing without bound", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedKioskWidget(t, true);
+    const session = await t.mutation(api.kiosk.createKioskThread, { widgetId });
+    const { threadId, accessToken } = session!;
+
+    // Fill the conversation to its cap directly, then try to speak once more.
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 400; i++) {
+        await ctx.db.insert("messages", {
+          threadId,
+          role: i % 2 === 0 ? "user" : "assistant",
+          content: `turn ${i}`,
+          createdAt: Date.now() + i,
+        });
+      }
+    });
+
+    await t.mutation(api.kiosk.recordKioskVoiceTurn, {
+      threadId,
+      widgetAccessToken: accessToken,
+      userText: "One more thing",
+      assistantText: "Of course",
+    });
+
+    const storedCount = await t.run(async (ctx) =>
+      (await ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect()).length
+    );
+    expect(storedCount).toBe(400);
+  });
+
+  test("the heartbeat accepts one write per interval, not one per request", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { widgetId } = await seedKioskWidget(t, true);
+
+    await t.mutation(api.kiosk.recordKioskHeartbeat, { widgetId });
+    const firstSeenAt = await t.run(async (ctx) => (await ctx.db.get(widgetId))?.kioskLastSeenAt);
+    expect(firstSeenAt).toBeGreaterThan(0);
+
+    // A burst straight after moves nothing.
+    await t.mutation(api.kiosk.recordKioskHeartbeat, { widgetId });
+    await t.mutation(api.kiosk.recordKioskHeartbeat, { widgetId });
+    const afterBurst = await t.run(async (ctx) => (await ctx.db.get(widgetId))?.kioskLastSeenAt);
+    expect(afterBurst).toBe(firstSeenAt);
+
+    // Once the interval has genuinely passed, the pulse lands again.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(widgetId, { kioskLastSeenAt: Date.now() - 31_000 });
+    });
+    await t.mutation(api.kiosk.recordKioskHeartbeat, { widgetId });
+    const afterInterval = await t.run(async (ctx) => (await ctx.db.get(widgetId))?.kioskLastSeenAt);
+    expect(afterInterval).toBeGreaterThan(Date.now() - 5_000);
+  });
 });

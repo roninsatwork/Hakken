@@ -2,6 +2,12 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
+
+// createWidgetThread requires a server-minted embed pass; tests mint their
+// own with the same secret the mutation reads from the environment.
+const TEST_EMBED_SECRET = "widget-embed-test-secret";
+process.env.WIDGET_EMBED_SIGNING_SECRET = TEST_EMBED_SECRET;
 
 /**
  * Tasks hand work to a named person, so the two things worth proving are the
@@ -424,10 +430,17 @@ describe("confirming a photo action", () => {
       });
       return { widgetId };
     });
-    const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+    const created = await t.mutation(api.widgets.createWidgetThread, {
       widgetId,
       sourceUrl: "https://support.example.com/help",
+      embedPass: await mintWidgetEmbedPass({
+        widgetId,
+        embedHost: "support.example.com",
+        secret: TEST_EMBED_SECRET,
+      }),
     });
+    if ("refused" in created) throw new Error(`widget session refused: ${created.refused}`);
+    const { threadId, accessToken } = created;
     const messageId = await t.run(async (ctx) =>
       ctx.db.insert("messages", {
         threadId,

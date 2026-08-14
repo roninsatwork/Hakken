@@ -2441,6 +2441,10 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
     companyId: v.optional(v.id("companies")),
     webhookSecret: v.optional(v.string()),
+    // Webhook triggers are rate-windowed per workflow (2026-08 security
+    // audit): a leaked secret can no longer be replayed into unbounded runs.
+    webhookWindowStart: v.optional(v.number()),
+    webhookCountInWindow: v.optional(v.number()),
   })
     .index("by_name", ["name"])
     .index("by_createdAt", ["createdAt"])
@@ -2696,6 +2700,13 @@ export default defineSchema({
     kioskSessionCountInWindow: v.optional(v.number()),
     kioskLastSeenAt: v.optional(v.number()),
     kioskSessionCount: v.optional(v.number()),
+    // Anonymous thread minting is rate-windowed per widget (2026-08 security
+    // audit): the widget door and the kiosk door each keep their own hourly
+    // count, in the same shape as the kiosk session window above.
+    threadWindowStart: v.optional(v.number()),
+    threadCountInWindow: v.optional(v.number()),
+    kioskThreadWindowStart: v.optional(v.number()),
+    kioskThreadCountInWindow: v.optional(v.number()),
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_company", ["companyId"])

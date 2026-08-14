@@ -15,6 +15,20 @@ import { canAccessThread, digestWidgetAccessToken } from "./chatService";
  * is one wake tap, so sixty an hour is a busy reception desk, not a leak. */
 export const KIOSK_SESSIONS_PER_HOUR = 60;
 
+/** Thread minting gets its own, looser ceiling (2026-08 audit): a wake tap
+ * mints one thread, so a human desk never reaches this before the session
+ * ceiling above — only a script writing threads without opening sessions. */
+export const KIOSK_THREADS_PER_HOUR = 120;
+
+/** How many stored rows one kiosk conversation may hold. A conversation is
+ * one wake tap and idles out in minutes; this bounds what a stolen session
+ * token can write, not what a visitor can say. */
+export const KIOSK_THREAD_MESSAGE_CAP = 400;
+
+/** The idle screen pings every minute; accepting a write at most every half
+ * minute keeps "last seen" honest while bounding what a script can spend. */
+export const KIOSK_HEARTBEAT_MIN_INTERVAL_MS = 30_000;
+
 const VOICE_TURN_MAX_LENGTH = 4000;
 
 export const getKioskConfig = publicQuery({
@@ -61,6 +75,15 @@ export const recordKioskVoiceTurn = publicMutation({
     const userText = args.userText.trim().slice(0, VOICE_TURN_MAX_LENGTH);
     const assistantText = args.assistantText.trim().slice(0, VOICE_TURN_MAX_LENGTH);
     if (!userText && !assistantText) return null;
+
+    // A full conversation stops storing rather than storing without bound
+    // (2026-08 audit): the live call is untouched — only the transcript stops
+    // growing, at a length no real reception visit approaches.
+    const storedSoFar = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .take(KIOSK_THREAD_MESSAGE_CAP);
+    if (storedSoFar.length >= KIOSK_THREAD_MESSAGE_CAP) return null;
 
     const now = Date.now();
     const dimensions = {
@@ -114,6 +137,32 @@ export const createKioskThread = publicMutation({
     if (!widget || !widget.isActive || !widget.kioskEnabled) return null;
 
     const now = Date.now();
+
+    // Hourly minting ceiling (2026-08 audit), in the session window's shape.
+    // Returning null — not throwing — lets the audit row below persist; the
+    // screen shows its calm not-in-service line, which only a script exceeding
+    // double the session ceiling will ever see.
+    const windowStart = widget.kioskThreadWindowStart ?? 0;
+    const inWindow = now - windowStart < 60 * 60 * 1000 ? widget.kioskThreadCountInWindow ?? 0 : 0;
+    if (inWindow >= KIOSK_THREADS_PER_HOUR) {
+      if (inWindow === KIOSK_THREADS_PER_HOUR) {
+        await ctx.db.insert("auditLogs", {
+          actionType: "RATE_LIMITED_KIOSK_THREADS",
+          entityId: args.widgetId.toString(),
+          entityType: "widgets",
+          companyId: widget.companyId,
+          timestamp: now,
+          metadata: JSON.stringify({ perHour: KIOSK_THREADS_PER_HOUR }),
+        });
+        await ctx.db.patch(widget._id, { kioskThreadCountInWindow: inWindow + 1 });
+      }
+      return null;
+    }
+    await ctx.db.patch(widget._id, {
+      kioskThreadWindowStart: inWindow === 0 ? now : windowStart,
+      kioskThreadCountInWindow: inWindow + 1,
+    });
+
     const accessToken = `${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
     const threadId = await ctx.db.insert("threads", {
       companyId: widget.companyId,
@@ -215,7 +264,12 @@ export const recordKioskHeartbeat = publicMutation({
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) return null;
-    await ctx.db.patch(widget._id, { kioskLastSeenAt: Date.now() });
+    // The pulse is anonymous by necessity — the idle screen holds no session —
+    // so bound it instead (2026-08 audit): one accepted write per interval,
+    // which is all a liveness timestamp can usefully carry anyway.
+    const now = Date.now();
+    if (now - (widget.kioskLastSeenAt ?? 0) < KIOSK_HEARTBEAT_MIN_INTERVAL_MS) return null;
+    await ctx.db.patch(widget._id, { kioskLastSeenAt: now });
     return null;
   },
 });

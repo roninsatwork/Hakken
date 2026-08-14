@@ -302,6 +302,52 @@ export const runManualSync = superAdminAction({
   },
 });
 
+/** How many webhook triggers one workflow accepts per hour. Enough for any
+ * integration this platform runs; a leaked secret stops being a blank cheque
+ * (2026-08 audit). */
+export const WORKFLOW_WEBHOOK_TRIGGERS_PER_HOUR = 60;
+
+/**
+ * The webhook's admission gate: one hourly window per workflow, counted on
+ * the workflow row in the same shape as the kiosk's session window. Runs as
+ * its own mutation so a refusal — and its single once-per-window audit row —
+ * commits even though the HTTP action then answers 429.
+ */
+export const reserveWebhookTrigger = internalMutation({
+  args: { workflowId: v.id("workflows") },
+  handler: async (ctx, args): Promise<{ ok: boolean; retryAfterSeconds?: number }> => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return { ok: false, retryAfterSeconds: 3600 };
+
+    const now = Date.now();
+    const hour = 60 * 60 * 1000;
+    const windowStart = workflow.webhookWindowStart ?? 0;
+    const windowAge = now - windowStart;
+    const inWindow = windowAge < hour ? workflow.webhookCountInWindow ?? 0 : 0;
+
+    if (inWindow >= WORKFLOW_WEBHOOK_TRIGGERS_PER_HOUR) {
+      if (inWindow === WORKFLOW_WEBHOOK_TRIGGERS_PER_HOUR) {
+        await ctx.db.insert("auditLogs", {
+          actionType: "RATE_LIMITED_WORKFLOW_WEBHOOK",
+          entityId: args.workflowId.toString(),
+          entityType: "workflows",
+          companyId: workflow.companyId,
+          timestamp: now,
+          metadata: JSON.stringify({ perHour: WORKFLOW_WEBHOOK_TRIGGERS_PER_HOUR }),
+        });
+        await ctx.db.patch(workflow._id, { webhookCountInWindow: inWindow + 1 });
+      }
+      return { ok: false, retryAfterSeconds: Math.max(1, Math.ceil((hour - windowAge) / 1000)) };
+    }
+
+    await ctx.db.patch(workflow._id, {
+      webhookWindowStart: inWindow === 0 ? now : windowStart,
+      webhookCountInWindow: inWindow + 1,
+    });
+    return { ok: true };
+  },
+});
+
 export const handleWebhook = httpAction(async (ctx, request) => {
   const url = new URL(request.url);
   const workflowId = url.searchParams.get("workflowId");
@@ -338,7 +384,22 @@ export const handleWebhook = httpAction(async (ctx, request) => {
     if (payload.length > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
       return workflowInputTooLargeResponse();
     }
-    
+
+    // Only after the secret has been proven: a caller without the secret must
+    // not be able to spend a workflow's hourly allowance.
+    const reservation = await ctx.runMutation(internal.workflows.reserveWebhookTrigger, {
+      workflowId: workflow._id,
+    });
+    if (!reservation.ok) {
+      return new Response(JSON.stringify({ error: "Too many webhook triggers for this workflow. Try again later." }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(reservation.retryAfterSeconds ?? 3600),
+        },
+      });
+    }
+
     const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
       workflowId: workflow._id,
       companyId: workflow.companyId,
