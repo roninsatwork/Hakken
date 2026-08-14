@@ -240,14 +240,19 @@ async function processMessage(
     const assignee = await ctx.runQuery(internal.telephony.findCallAssignee, {
       companyId: connector.companyId,
     });
+    // Bounded to the task field's own ceiling — a long email must shorten
+    // the task, never fail it (the first over-length mail killed the filing
+    // while the reply had already gone, leaving no task at all).
+    const detail = (
+      `Sonae replied with what the company knowledge covers and told the sender a ` +
+      `colleague will follow up with the specifics.\n\nFrom: ${summary.from}\n` +
+      `Their message:\n${newestBody.slice(0, 900)}\n\n` +
+      `What Sonae sent:\n${replyBody.slice(0, 900)}`
+    ).slice(0, 2000);
     taskId = await ctx.runMutation(internal.tasks.createTaskInternal, {
       companyId: connector.companyId,
       title: `Answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 120)}"`,
-      detail:
-        `Sonae replied with what the company knowledge covers and told the sender a ` +
-        `colleague will follow up with the specifics.\n\nFrom: ${summary.from}\n` +
-        `Their message:\n${newestBody.slice(0, 2000)}\n\n` +
-        `What Sonae sent:\n${replyBody.slice(0, 1500)}`,
+      detail,
       ...(assignee ? { assigneeUserId: assignee } : {}),
       createdBySource: "AGENT" as const,
     });

@@ -71,10 +71,26 @@ export function buildReplyMime(args: {
     ...(args.inReplyTo ? [`In-Reply-To: ${args.inReplyTo}`] : []),
     ...(args.references ? [`References: ${args.references}`] : []),
     'Content-Type: text/plain; charset="UTF-8"',
+    // Base64 on purpose: without a declared transfer encoding, the mail
+    // transport is free to hard-wrap long lines itself — which is exactly
+    // what it did, re-introducing the mid-paragraph line breaks the reply
+    // pipeline had already removed. An encoded body cannot be rewrapped,
+    // and non-ASCII (a £ sign in a price) survives intact.
+    "Content-Transfer-Encoding: base64",
     "MIME-Version: 1.0",
   ];
-  const message = `${headers.join("\r\n")}\r\n\r\n${args.body}`;
+  const bodyBase64 = base64EncodeBytes(new TextEncoder().encode(args.body)).replace(
+    /(.{76})/g,
+    "$1\r\n"
+  );
+  const message = `${headers.join("\r\n")}\r\n\r\n${bodyBase64}`;
   return base64UrlEncode(message);
+}
+
+function base64EncodeBytes(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
 }
 
 function base64UrlEncode(value: string) {

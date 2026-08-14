@@ -3269,5 +3269,15 @@
     "ended": "Ended",
     "back": "All calls",
     "notFound": "This call does not exist or belongs to another workspace."
+  },
+  "reception": {
+    "title": "Reception",
+    "subtitle": "A full-screen assistant for a tablet at a desk or a stand — visitors tap once and talk.",
+    "screenLabel": "Your reception screen",
+    "open": "Open the screen",
+    "lastSeen": "Screen last seen {when} · {count} conversations so far",
+    "neverSeen": "The screen has not been opened yet.",
+    "empty": "No reception screen is switched on yet.",
+    "emptyHint": "An administrator switches one on from the widget's settings. Once it's on, it appears here ready to open."
   }
 }

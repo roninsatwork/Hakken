@@ -3269,5 +3269,15 @@
     "ended": "Fine",
     "back": "Tutte le chiamate",
     "notFound": "Questa chiamata non esiste o appartiene a un altro spazio di lavoro."
+  },
+  "reception": {
+    "title": "Reception",
+    "subtitle": "Un assistente a schermo intero per un tablet alla reception o a uno stand — i visitatori toccano e parlano.",
+    "screenLabel": "Il tuo schermo reception",
+    "open": "Apri lo schermo",
+    "lastSeen": "Schermo visto l'ultima volta {when} · {count} conversazioni finora",
+    "neverSeen": "Lo schermo non è ancora stato aperto.",
+    "empty": "Nessuno schermo reception è ancora attivo.",
+    "emptyHint": "Un amministratore lo attiva dalle impostazioni del widget. Una volta attivo, appare qui pronto da aprire."
   }
 }

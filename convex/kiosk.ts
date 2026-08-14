@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { publicMutation, publicQuery } from "./tenantFunctions";
+import { publicMutation, publicQuery, tenantQuery } from "./tenantFunctions";
 import { canAccessThread, digestWidgetAccessToken } from "./chatService";
 
 /**
@@ -177,6 +177,33 @@ export const reserveKioskSession = internalMutation({
       kioskSessionCount: (widget.kioskSessionCount ?? 0) + 1,
     });
     return { ok: true };
+  },
+});
+
+/**
+ * The Reception screen page in the app: every kiosk this workspace has
+ * switched on, with its health — so finding and opening the demo is one
+ * click from the main menu, not an admin scavenger hunt.
+ */
+export const listMyReceptionScreens = tenantQuery({
+  args: {},
+  handler: async (ctx) => {
+    const { companyId } = ctx;
+    if (!companyId) return [];
+    // Bounded: a workspace configures widgets by hand, in single figures.
+    const widgets = await ctx.db
+      .query("widgets")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .take(100);
+    return widgets
+      .filter((widget) => widget.isActive && widget.kioskEnabled)
+      .map((widget) => ({
+        widgetId: widget._id,
+        name: widget.name,
+        themePrimaryColor: widget.themePrimaryColor ?? "#000000",
+        lastSeenAt: widget.kioskLastSeenAt ?? null,
+        sessionCount: widget.kioskSessionCount ?? 0,
+      }));
   },
 });
 

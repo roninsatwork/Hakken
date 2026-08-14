@@ -115,6 +115,15 @@ async function seedConnectedGmail(t: ReturnType<typeof convexTest>) {
   return { t, superAdminId, companyId, connectorId };
 }
 
+
+/** Decode a sent MIME: headers as text, base64 body decoded back to text. */
+function decodeSentMime(raw: string) {
+  const mime = Buffer.from(raw, "base64url").toString();
+  const [headerPart, ...bodyParts] = mime.split("\r\n\r\n");
+  const body = Buffer.from(bodyParts.join("\r\n\r\n").replace(/\r\n/g, ""), "base64").toString("utf8");
+  return { mime, headers: headerPart, body };
+}
+
 const CUSTOMER_MESSAGE: StubMessage = {
   id: "msg-1",
   threadId: "thread-1",
@@ -155,16 +164,18 @@ describe("gmail reply rails", () => {
 
     expect(result).toMatchObject({ ok: true, sent: true });
     expect(sent).not.toBeNull();
-    const mime = decodeBase64Url(sent!.raw);
-    // To the sender, in their thread, under their message id.
-    expect(mime).toContain("To: priya@customer.co.uk");
-    expect(mime).toContain("Subject: Re: Opening hours?");
-    expect(mime).toContain("In-Reply-To: <abc@customer.co.uk>");
+    const { headers: mimeHeaders, body: mimeBody } = decodeSentMime(sent!.raw);
+    // To the sender, in their thread, under their message id — and encoded,
+    // so no mail transport can rewrap the paragraphs on the way through.
+    expect(mimeHeaders).toContain("To: priya@customer.co.uk");
+    expect(mimeHeaders).toContain("Subject: Re: Opening hours?");
+    expect(mimeHeaders).toContain("In-Reply-To: <abc@customer.co.uk>");
+    expect(mimeHeaders).toContain("Content-Transfer-Encoding: base64");
     expect(sent!.threadId).toBe("thread-1");
     // The quoted trail: the reply carries what it answers, so it reads as a
     // conversation in any client, threading support or none.
-    expect(mime).toContain("Priya Shah <priya@customer.co.uk> wrote:");
-    expect(mime).toContain("> Hi — what are your opening hours?");
+    expect(mimeBody).toContain("Priya Shah <priya@customer.co.uk> wrote:");
+    expect(mimeBody).toContain("> Hi — what are your opening hours?");
 
     const { rows, audits } = await t.run(async (ctx) => ({
       rows: await ctx.db.query("mailboxMessages").collect(),

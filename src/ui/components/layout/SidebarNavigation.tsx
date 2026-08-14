@@ -29,6 +29,7 @@ import {
   // template:remove:end
   Wrench,
   Phone,
+  MonitorSpeaker,
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import Image from "next/image";
@@ -343,6 +344,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
   if (pathname.startsWith('/app/calls')) return 'Calls';
+  if (pathname.startsWith('/app/reception')) return 'Reception';
   // template:remove:start properties
   if (pathname.startsWith('/app/properties')) return 'Properties';
   // template:remove:end
@@ -725,6 +727,14 @@ export default function SidebarNavigation() {
                       href="/app/calls"
                       isActive={activeItem === 'Calls' || pathname.startsWith('/app/calls')}
                       onClick={() => setActiveItem('Calls')}
+                    />
+
+                    <NavItem
+                      icon={MonitorSpeaker}
+                      label="Reception"
+                      href="/app/reception"
+                      isActive={activeItem === 'Reception' || pathname.startsWith('/app/reception')}
+                      onClick={() => setActiveItem('Reception')}
                     />
 
                     {/* template:remove:start salesReports */}

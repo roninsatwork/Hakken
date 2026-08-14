@@ -177,6 +177,15 @@ async function seedMailbox(t: ReturnType<typeof convexTest>) {
   return { ...ids, connectorId };
 }
 
+
+/** Decode a sent MIME: headers as text, base64 body decoded back to text. */
+function decodeSentMime(raw: string) {
+  const mime = Buffer.from(raw, "base64url").toString();
+  const [headerPart, ...bodyParts] = mime.split("\r\n\r\n");
+  const body = Buffer.from(bodyParts.join("\r\n\r\n").replace(/\r\n/g, ""), "base64").toString("utf8");
+  return { mime, headers: headerPart, body };
+}
+
 const QUESTION: StubMessage = {
   id: "q-1",
   threadId: "thread-q1",
@@ -238,7 +247,7 @@ describe("the mailbox that answers itself", () => {
 
     // The sender heard the useful part straight away...
     expect(sends).toHaveLength(1);
-    const holding = Buffer.from(sends[0].raw, "base64url").toString();
+    const holding = decodeSentMime(sends[0].raw).body;
     expect(holding).toContain("colleague will follow up");
 
     // ...and a person owns the answer, with the bell rung.
@@ -264,7 +273,7 @@ describe("the mailbox that answers itself", () => {
 
     // The sender still hears something rather than silence.
     expect(sends).toHaveLength(1);
-    const fallback = Buffer.from(sends[0].raw, "base64url").toString();
+    const fallback = decodeSentMime(sends[0].raw).body;
     expect(fallback).toContain("colleague will come back");
 
     const { rows, tasks } = await t.run(async (ctx) => ({
