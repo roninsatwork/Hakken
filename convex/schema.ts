@@ -3202,10 +3202,12 @@ export default defineSchema({
     content: v.string(),
     // Subject keys of pages this page mentions; the map is drawn from these.
     links: v.array(v.string()),
+    // No user id on the pin itself: who pinned it lives in the audit trail
+    // (WIKI_PAGE_PIN, retained as oversight evidence), so a person's erasure
+    // never has to reach inside this array to be provably complete.
     pinnedCorrections: v.array(
       v.object({
         text: v.string(),
-        pinnedByUserId: v.optional(v.id("users")),
         pinnedAt: v.number(),
       })
     ),

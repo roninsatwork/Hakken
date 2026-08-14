@@ -18,6 +18,7 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
     expect(screen.getByRole("link", { name: "Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
+    expect(screen.getByRole("link", { name: "Customer Pages" })).toHaveAttribute("href", "/admin/ai/pages");
     expect(screen.getByRole("button", { name: "Instructions" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Widget" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Models" })).toBeInTheDocument();

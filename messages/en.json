@@ -3269,6 +3269,64 @@
       "Aoede": "Warm and easy — the default"
     }
   },
+  "aiPages": {
+    "title": "Customer Pages",
+    "subtitle": "What Sonae remembers about each customer - written and kept up to date by Sonae itself.",
+    "hint": "After every phone call or email with a known customer, Sonae rewrites their page so it stays short and current. Open a page to read it, change it, or pin a fact Sonae must always respect.",
+    "searchPlaceholder": "Search customers or page text...",
+    "columns": {
+      "customer": "Customer",
+      "remembers": "What Sonae remembers",
+      "lastChange": "Last change",
+      "rewrites": "Rewrites"
+    },
+    "empty": "No pages yet",
+    "emptyState": "No pages yet. When Sonae speaks with a known customer on the phone or by email, their page appears here.",
+    "emptySearch": "Nothing matches that search.",
+    "sources": {
+      "phone": "Phone call",
+      "email": "Email",
+      "human": "Edited by staff"
+    },
+    "detail": {
+      "subtitle": "Last change: {source}, {date}. Rewritten {count} times.",
+      "back": "All customer pages",
+      "notFound": "This page does not exist or belongs to another workspace.",
+      "success": {
+        "title": "Saved",
+        "message": "The page has been updated."
+      },
+      "errors": {
+        "saveTitle": "The change was not saved",
+        "save": "Something went wrong saving the change. Try again."
+      },
+      "sources": {
+        "phone": "Phone call",
+        "email": "Email",
+        "human": "Edited by staff"
+      },
+      "pinned": {
+        "title": "Pinned by staff",
+        "hint": "Facts pinned here are permanent. Sonae reads them with every page but can never change or remove them - only a person can.",
+        "none": "Nothing pinned yet.",
+        "placeholder": "Write a fact Sonae must always respect...",
+        "add": "Pin it",
+        "remove": "Remove this pinned fact"
+      },
+      "body": {
+        "title": "The page",
+        "hint": "Written and kept current by Sonae. You can edit it directly - your edit is recorded in the history like any other change.",
+        "save": "Save the page",
+        "saving": "Saving...",
+        "discard": "Discard changes"
+      },
+      "history": {
+        "title": "History",
+        "hint": "Each entry shows how the page read before a change, and what caused the change.",
+        "none": "No changes yet."
+      }
+    }
+  },
   "calls": {
     "title": "Calls",
     "subtitle": "Sonae answers this number",

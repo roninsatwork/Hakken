@@ -3269,6 +3269,64 @@
       "Aoede": "Calda e naturale — la predefinita"
     }
   },
+  "aiPages": {
+    "title": "Pagine Clienti",
+    "subtitle": "Ciò che Sonae ricorda di ogni cliente — scritto e tenuto aggiornato da Sonae stessa.",
+    "hint": "Dopo ogni telefonata o email con un cliente conosciuto, Sonae riscrive la sua pagina perché resti breve e aggiornata. Apri una pagina per leggerla, modificarla o fissare un fatto che Sonae deve sempre rispettare.",
+    "searchPlaceholder": "Cerca clienti o testo delle pagine...",
+    "columns": {
+      "customer": "Cliente",
+      "remembers": "Cosa ricorda Sonae",
+      "lastChange": "Ultima modifica",
+      "rewrites": "Riscritture"
+    },
+    "empty": "Ancora nessuna pagina",
+    "emptyState": "Ancora nessuna pagina. Quando Sonae parla con un cliente conosciuto al telefono o via email, la sua pagina appare qui.",
+    "emptySearch": "Nessun risultato per questa ricerca.",
+    "sources": {
+      "phone": "Telefonata",
+      "email": "Email",
+      "human": "Modificata dallo staff"
+    },
+    "detail": {
+      "subtitle": "Ultima modifica: {source}, {date}. Riscritta {count} volte.",
+      "back": "Tutte le pagine clienti",
+      "notFound": "Questa pagina non esiste o appartiene a un altro spazio di lavoro.",
+      "success": {
+        "title": "Salvato",
+        "message": "La pagina è stata aggiornata."
+      },
+      "errors": {
+        "saveTitle": "La modifica non è stata salvata",
+        "save": "Qualcosa è andato storto durante il salvataggio. Riprova."
+      },
+      "sources": {
+        "phone": "Telefonata",
+        "email": "Email",
+        "human": "Modificata dallo staff"
+      },
+      "pinned": {
+        "title": "Fissato dallo staff",
+        "hint": "I fatti fissati qui sono permanenti. Sonae li legge con ogni pagina ma non può mai cambiarli o rimuoverli — solo una persona può farlo.",
+        "none": "Ancora niente di fissato.",
+        "placeholder": "Scrivi un fatto che Sonae deve sempre rispettare...",
+        "add": "Fissa",
+        "remove": "Rimuovi questo fatto fissato"
+      },
+      "body": {
+        "title": "La pagina",
+        "hint": "Scritta e tenuta aggiornata da Sonae. Puoi modificarla direttamente — la tua modifica viene registrata nella cronologia come ogni altra.",
+        "save": "Salva la pagina",
+        "saving": "Salvataggio...",
+        "discard": "Annulla le modifiche"
+      },
+      "history": {
+        "title": "Cronologia",
+        "hint": "Ogni voce mostra come si leggeva la pagina prima di una modifica, e cosa ha causato la modifica.",
+        "none": "Ancora nessuna modifica."
+      }
+    }
+  },
   "calls": {
     "title": "Chiamate",
     "subtitle": "Sonae risponde a questo numero",

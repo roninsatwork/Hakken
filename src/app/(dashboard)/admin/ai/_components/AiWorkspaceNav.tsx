@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   AudioLines,
   BarChart3,
+  BookOpen,
   BrainCircuit,
   Check,
   ChevronDown,
@@ -167,6 +168,12 @@ const workspaceTabs = [
     href: "/admin/ai/skills",
     icon: FileText,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/skills"),
+  },
+  {
+    label: "Customer Pages",
+    href: "/admin/ai/pages",
+    icon: BookOpen,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/pages"),
   },
   {
     label: "Widget",
