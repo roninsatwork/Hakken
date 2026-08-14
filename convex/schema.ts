@@ -559,6 +559,7 @@ export default defineSchema({
       v.literal("transcribeAudio"),
       v.literal("synthesizeSpeech"),
       v.literal("realtimeVoiceSession"),
+      v.literal("voicePreview"),
       v.literal("generateNodeConfig")
     ),
     requestedAt: v.number(),

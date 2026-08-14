@@ -3243,16 +3243,24 @@
   "aiVoice": {
     "title": "Voce",
     "subtitle": "La voce con cui parla Sonae — su Ask Sonae, al telefono e sullo schermo della reception.",
-    "hint": "Una sola voce per ogni porta. Le nuove conversazioni vocali la usano subito; una chiamata già in corso mantiene la voce con cui è iniziata.",
-    "save": "Salva",
-    "loading": "Caricamento",
+    "hint": "Questa è la voce che i clienti sentono quando Sonae parla. Premi Ascolta per sentire una voce. Premi \"Usa questa voce\" per attivarla — il cambio vale subito per le nuove conversazioni.",
+    "columns": {
+      "voice": "Voce",
+      "sound": "Come suona",
+      "actions": "Azioni"
+    },
+    "listen": "Ascolta",
+    "stop": "Ferma",
+    "use": "Usa questa voce",
+    "current": "In uso",
     "success": {
       "title": "Voce salvata",
       "message": "Le nuove conversazioni vocali useranno questa voce ovunque Sonae parli."
     },
-    "error": {
-      "title": "La voce non è stata salvata",
-      "message": "Qualcosa è andato storto durante il salvataggio. Riprova."
+    "errors": {
+      "saveTitle": "La voce non è stata salvata",
+      "save": "Qualcosa è andato storto durante il salvataggio. Riprova.",
+      "preview": "L'anteprima non può essere riprodotta. Riprova tra un momento."
     },
     "voices": {
       "Kore": "Decisa e chiara",
