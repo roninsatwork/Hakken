@@ -203,7 +203,7 @@ contact, raises the task, and stores the transcript.
 
 This is the flagship demo and the reason phases 1 and 2 come first.
 
-### Phase 4 — Show it a photo, and it acts
+### Phase 4 — Show it a photo, and it acts — **BUILT, proven on dev in a browser 2026-08-14; Anthony's own phone demo outstanding**
 
 **What the audience sees:** a photo of a delivery note, a broken part or a
 price ticket goes into chat or the widget; Sonae reads it, explains it, and

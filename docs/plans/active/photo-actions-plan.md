@@ -1,7 +1,17 @@
 # Show Sonae A Photo And It Acts
 
-Status: Drafted 2026-08-13 from verified code research. Phase 4 of the
-showcase channels roadmap (`showcase-channels-plan.md`). Not started.
+Status: **Built and proven on dev 2026-08-14.** Phases A–D are all delivered:
+photos into chat (A), the widget camera and the agent path that can see (B),
+and the confirming tap that files a task (C) are tested end to end, and the
+whole loop ran live against dev in a browser (D): a photographed note went
+into the widget, the model read it correctly, proposed "Reorder HP 305A
+printer toner" with its reasoning, and one tap filed the task to the
+workspace owner with the bell. What remains of the Phase D demo is only
+Anthony performing it from a real phone — which also needs the widget
+embedded on a page his phone can reach; the dev widget currently allows
+`localhost` only (set via the widget screen's Integration tab, whose
+"Authorized Domains" field is where any demo site must be added).
+Phase 4 of the showcase channels roadmap (`showcase-channels-plan.md`).
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,

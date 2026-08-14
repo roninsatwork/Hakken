@@ -30,7 +30,8 @@ import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
-import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { shouldFlushStreamedText } from "./streamingService";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence, type MessageEvidence } from "./utils/messageEvidence";
@@ -678,7 +679,7 @@ export const runAgentObjective = internalAction({
 
         // Add the current user prompt
         let currentUserContent = args.content;
-        
+
         if (args.fileIds && args.fileIds.length > 0) {
             const documentText = await parseDocuments(ctx, args.fileIds);
             if (documentText) {
@@ -687,6 +688,44 @@ export const runAgentObjective = internalAction({
                     chunks: [documentText],
                     maxChars: 10000,
                 });
+            }
+        }
+
+        // A photo can only ride to a model that can see it. Only the Google
+        // adapter takes inlineData parts — every other adapter refuses
+        // non-text content at the boundary — so on any other model the reply
+        // says the photo went unread instead of silently eating it. This path
+        // used to be the silently-eating one; the widget always routes here.
+        const imageParts: Content["parts"] = [];
+        let imageNotice = "";
+        if (args.fileIds && args.fileIds.length > 0) {
+            const contentTypes = await ctx.runQuery(internal.chat.getAttachmentContentTypesInternal, {
+                fileIds: args.fileIds,
+            });
+            const imageFileIds = args.fileIds.filter((_, index) => contentTypes[index]?.startsWith("image/"));
+            if (imageFileIds.length > 0 && modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY) {
+                imageNotice =
+                    "\n\n*You attached a photo, but the model this conversation runs on cannot look at images, so it was not read. An administrator can fix this by moving the agent to a Google model.*";
+            } else {
+                for (const fileId of imageFileIds) {
+                    try {
+                        const fileUrl = await ctx.storage.getUrl(fileId);
+                        if (!fileUrl) continue;
+                        const fileResponse = await fetch(fileUrl);
+                        if (!fileResponse.ok) continue;
+                        const arrayBuffer = await fileResponse.arrayBuffer();
+                        // Same ceiling the plain-chat path holds for inline processing.
+                        if (arrayBuffer.byteLength > 5242880) continue;
+                        imageParts.push({
+                            inlineData: {
+                                mimeType: fileResponse.headers.get("content-type") || "application/octet-stream",
+                                data: Buffer.from(arrayBuffer).toString("base64"),
+                            },
+                        });
+                    } catch (e) {
+                        console.error("Failed to inline attached image for agent turn:", fileId, e);
+                    }
+                }
             }
         }
 
@@ -746,9 +785,16 @@ export const runAgentObjective = internalAction({
             }
         }
 
+        // A photo turn may end in a structured follow-up proposal, generated
+        // in this same reply rather than by a second model call.
+        if (imageParts.length > 0) {
+            currentUserContent += PHOTO_ACTION_PROPOSAL_INSTRUCTION;
+        }
+
         conversationHistory.push({
             role: "user",
-            parts: [{ text: currentUserContent }]
+            // Text first: downstream grounding appends to parts[0].text.
+            parts: [{ text: currentUserContent }, ...(imageParts ?? [])]
         });
 
         // --- RAG VECTOR SEARCH PIPELINE (Agent Isolated) ---
@@ -828,6 +874,8 @@ export const runAgentObjective = internalAction({
             // The same trail the assistant path writes, so an agent's answer is
             // just as ratable: memory counters and the knowledge-evidence sweep
             // both read it off the message.
+            replyNotice: imageNotice || undefined,
+            photoTurn: imageParts.length > 0 || undefined,
             messageEvidence: {
                 companyMemoryEvidenceJson: buildCompanyMemoryEvidence(ratedCompanyMemories),
                 companyRuntimeEvidenceJson: buildCompanyRuntimeEvidence({
@@ -1013,6 +1061,19 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
      * knew the ids is gone; a resumed run's answer is simply evidence-less).
      */
     messageEvidence?: MessageEvidence;
+    /**
+     * A sentence appended verbatim to the reply — today, the admission that an
+     * attached photo went unread because the model cannot see. Deterministic
+     * on purpose: honesty about a dropped attachment must not depend on the
+     * model choosing to mention it.
+     */
+    replyNotice?: string;
+    /**
+     * Whether the turn being answered carried a photo. Gates the photo-action
+     * proposal extraction at save time — only an image-bearing turn may grow
+     * an action chip, however convincingly a block appears in other replies.
+     */
+    photoTurn?: boolean;
     state: ObjectiveLoopState;
     runStartedAt: number;
 }) {
@@ -1923,6 +1984,10 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             config,
         });
 
+        if (params.replyNotice) {
+            assistantReply += params.replyNotice;
+        }
+
         // Write response back to DB. When text was streamed the row already
         // exists, so close it rather than inserting a duplicate reply. The final
         // content is authoritative: a budget stop replaces whatever partial text
@@ -1938,6 +2003,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 providerModelId: modelConfig.providerModelId,
                 companyMemoryEvidenceJson: messageEvidence?.companyMemoryEvidenceJson,
                 companyRuntimeEvidenceJson: messageEvidence?.companyRuntimeEvidenceJson,
+                photoTurn: params.photoTurn,
             });
             stream.messageId = undefined;
         } else if (threadId !== undefined) {
@@ -1951,6 +2017,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 providerModelId: modelConfig.providerModelId,
                 companyMemoryEvidenceJson: messageEvidence?.companyMemoryEvidenceJson,
                 companyRuntimeEvidenceJson: messageEvidence?.companyRuntimeEvidenceJson,
+                photoTurn: params.photoTurn,
             });
         }
 

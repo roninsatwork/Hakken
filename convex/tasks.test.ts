@@ -304,3 +304,164 @@ describe("the machine doors", () => {
     expect(task).toMatchObject({ createdBySource: "WORKFLOW", assigneeUserId: userA });
   });
 });
+
+describe("confirming a photo action", () => {
+  const PROPOSAL = {
+    title: "Reorder printer toner",
+    detail: "The photo shows an empty toner box.",
+    reasoning: "The box in the photo is marked empty.",
+  };
+
+  /** An assistant reply carrying a proposal, in a thread of user A's. */
+  async function seedProposalMessage(
+    t: Awaited<ReturnType<typeof seedWorkspaces>>["t"],
+    args: { companyId: Awaited<ReturnType<typeof seedWorkspaces>>["companyA"]; userId: Awaited<ReturnType<typeof seedWorkspaces>>["userA"] },
+  ) {
+    return await t.run(async (ctx) => {
+      const threadId = await ctx.db.insert("threads", {
+        userId: args.userId,
+        companyId: args.companyId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const messageId = await ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "That looks like an empty toner box.",
+        photoActionProposal: PROPOSAL,
+        createdAt: Date.now(),
+      });
+      return { threadId, messageId };
+    });
+  }
+
+  test("a signed-in tap files the proposal as that person, faithfully", async () => {
+    const { t, companyA, userA } = await seedWorkspaces();
+    const { messageId } = await seedProposalMessage(t, { companyId: companyA, userId: userA });
+
+    const taskId = await t
+      .withIdentity({ subject: userA })
+      .mutation(api.tasks.confirmPhotoAction, { messageId });
+
+    const { task, message, audits } = await t.run(async (ctx) => ({
+      task: await ctx.db.get(taskId),
+      message: await ctx.db.get(messageId),
+      audits: await ctx.db.query("auditLogs").collect(),
+    }));
+
+    // Pre-fill fidelity: what was proposed is what was filed.
+    expect(task).toMatchObject({
+      title: PROPOSAL.title,
+      companyId: companyA,
+      status: "OPEN",
+      createdByUserId: userA,
+      createdBySource: "PERSON",
+      assigneeUserId: userA,
+    });
+    expect(task?.detail).toContain(PROPOSAL.detail);
+    expect(task?.detail).toContain(PROPOSAL.reasoning);
+    // The message remembers the filing, so the chip can show it and a second
+    // tap cannot duplicate.
+    expect(message?.photoActionTaskId).toBe(taskId);
+    expect(audits.some((a) => a.actionType === "CREATE_TASK" && a.actorId === userA)).toBe(true);
+
+    // Idempotent: tapping again returns the same task and files nothing new.
+    const again = await t
+      .withIdentity({ subject: userA })
+      .mutation(api.tasks.confirmPhotoAction, { messageId });
+    expect(again).toBe(taskId);
+    const tasks = await t.run(async (ctx) => await ctx.db.query("tasks").collect());
+    expect(tasks).toHaveLength(1);
+  });
+
+  test("nothing is filed without the tap, and no proposal means no filing", async () => {
+    const { t, companyA, userA } = await seedWorkspaces();
+    const { messageId } = await seedProposalMessage(t, { companyId: companyA, userId: userA });
+
+    // The proposal sat on the message; merely existing filed nothing.
+    let tasks = await t.run(async (ctx) => await ctx.db.query("tasks").collect());
+    expect(tasks).toHaveLength(0);
+
+    // A message with no proposal refuses.
+    const bareMessageId = await t.run(async (ctx) => {
+      const message = await ctx.db.get(messageId);
+      return await ctx.db.insert("messages", {
+        threadId: message!.threadId,
+        role: "assistant",
+        content: "No photo here.",
+        createdAt: Date.now(),
+      });
+    });
+    await expect(
+      t.withIdentity({ subject: userA }).mutation(api.tasks.confirmPhotoAction, { messageId: bareMessageId }),
+    ).rejects.toThrow("no proposed action");
+
+    tasks = await t.run(async (ctx) => await ctx.db.query("tasks").collect());
+    expect(tasks).toHaveLength(0);
+  });
+
+  test("another workspace's member cannot confirm somebody else's proposal", async () => {
+    const { t, companyA, userA, userB } = await seedWorkspaces();
+    const { messageId } = await seedProposalMessage(t, { companyId: companyA, userId: userA });
+
+    await expect(
+      t.withIdentity({ subject: userB }).mutation(api.tasks.confirmPhotoAction, { messageId }),
+    ).rejects.toThrow();
+  });
+
+  test("an anonymous widget tap files to the workspace's call owner, with the bell", async () => {
+    const { t, companyA, userA } = await seedWorkspaces();
+
+    // A widget thread with a real session token, the way the widget creates one.
+    const { widgetId } = await t.run(async (ctx) => {
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId: companyA,
+        name: "Website Bot",
+        allowedDomains: ["example.com"],
+        isActive: true,
+        createdBy: userA,
+        createdAt: Date.now(),
+      });
+      return { widgetId };
+    });
+    const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+      widgetId,
+      sourceUrl: "https://support.example.com/help",
+    });
+    const messageId = await t.run(async (ctx) =>
+      ctx.db.insert("messages", {
+        threadId,
+        role: "assistant",
+        content: "That looks like an empty toner box.",
+        photoActionProposal: PROPOSAL,
+        createdAt: Date.now(),
+      })
+    );
+
+    // The wrong token is refused; nothing is filed.
+    await expect(
+      t.mutation(api.tasks.confirmPhotoAction, { messageId, widgetAccessToken: "wrong-token" }),
+    ).rejects.toThrow();
+
+    const taskId = await t.mutation(api.tasks.confirmPhotoAction, {
+      messageId,
+      widgetAccessToken: accessToken,
+    });
+
+    const { task, notifications } = await t.run(async (ctx) => ({
+      task: await ctx.db.get(taskId),
+      notifications: await ctx.db.query("notifications").collect(),
+    }));
+
+    // Files to the same per-company owner the telephone's follow-ups go to —
+    // company A's admin — and rings their bell.
+    expect(task).toMatchObject({
+      companyId: companyA,
+      title: PROPOSAL.title,
+      assigneeUserId: userA,
+      createdBySource: "AGENT",
+    });
+    expect(task?.detail).toContain("website widget");
+    expect(notifications.some((n) => n.userId === userA && n.kind === "TASK_ASSIGNED")).toBe(true);
+  });
+});

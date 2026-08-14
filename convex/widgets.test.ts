@@ -383,3 +383,85 @@ describe("Widget Authorization", () => {
     expect(creatorId).toBeDefined();
   });
 });
+
+describe("a photo from the widget", () => {
+  /**
+   * The end-to-end the widget UI performs: upload → finalize → send with the
+   * photo riding on the message → the visitor sees their photo back in the
+   * thread through nothing but their session token. Endpoint-level refusals
+   * are covered above; this pins the happy path those refusals guard.
+   */
+  test("an anonymous visitor's photo is stored on the message and viewable with their token", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { widgetId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Widget Corp", createdAt: Date.now() });
+      const creatorId = await ctx.db.insert("users", {
+        email: "creator@test.com",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Widget Agent",
+        modelId: "model-test",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId,
+        agentId,
+        name: "Website Bot",
+        allowedDomains: ["example.com"],
+        isActive: true,
+        createdBy: creatorId,
+        createdAt: Date.now(),
+      });
+      return { widgetId };
+    });
+
+    const { threadId, accessToken } = await t.mutation(api.widgets.createWidgetThread, {
+      widgetId,
+      sourceUrl: "https://support.example.com/help",
+    });
+
+    // The bytes a real widget posts to the upload URL. convex-test's
+    // storage.store records no contentType, so it is written twice over: onto
+    // the _storage row that getMessages reads, and into the mockStorageMetadata
+    // seam the upload validator falls back to in tests.
+    const storageId = await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(
+        new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })
+      );
+      await ctx.db.patch(storageId as never, { contentType: "image/png" } as never);
+      await ctx.db.insert("mockStorageMetadata", {
+        storageId,
+        size: 4,
+        contentType: "image/png",
+      });
+      return storageId;
+    });
+
+    await expect(
+      t.mutation(api.widgets.finalizeWidgetUpload, { widgetId, threadId, storageId, widgetAccessToken: accessToken })
+    ).resolves.toEqual({ success: true, storageId });
+
+    await expect(
+      t.mutation(api.chat.sendMessage, {
+        threadId,
+        content: "What is this?",
+        fileIds: [storageId],
+        widgetAccessToken: accessToken,
+      })
+    ).resolves.toBe(true);
+
+    const messages = await t.query(api.chat.getMessages, { threadId, widgetAccessToken: accessToken });
+    const userMessage = messages?.find((message) => message.role === "user");
+    expect(userMessage).toMatchObject({ content: "What is this?", attachments: [storageId] });
+    // The viewable URL rides on the row, so the widget can render the thumbnail.
+    expect(userMessage && "imageAttachments" in userMessage ? userMessage.imageAttachments : undefined)
+      .toEqual([{ url: expect.stringContaining("http") }]);
+  });
+});

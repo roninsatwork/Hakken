@@ -1115,4 +1115,52 @@ describe("a photo in the message", () => {
         expect(reply?.modelUsed).toBe("openai:test-chat-model");
         expect(reply?.content).not.toContain("look at your image");
     });
+
+    test("a proposal block only becomes a chip on a turn that carried a photo", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const threadId = await t.run(async (ctx) => {
+            const userId = await ctx.db.insert("users", {
+                email: "gate@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            });
+            return await ctx.db.insert("threads", {
+                title: "Gate",
+                userId,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
+        });
+
+        const blockReply =
+            'Looks actionable.\n\n```photo-action\n{"title": "Do the thing", "detail": "From the photo.", "reasoning": "The photo shows it."}\n```';
+
+        // The same reply text, saved for a photo turn and for a plain turn.
+        const photoMessageId = await t.mutation(internal.chat.saveAssistantMessage, {
+            threadId,
+            content: blockReply,
+            photoTurn: true,
+        });
+        const plainMessageId = await t.mutation(internal.chat.saveAssistantMessage, {
+            threadId,
+            content: blockReply,
+        });
+
+        const { photoMessage, plainMessage } = await t.run(async (ctx) => ({
+            photoMessage: await ctx.db.get(photoMessageId),
+            plainMessage: await ctx.db.get(plainMessageId),
+        }));
+
+        // Photo turn: structured proposal, block stripped from the answer.
+        expect(photoMessage?.photoActionProposal).toEqual({
+            title: "Do the thing",
+            detail: "From the photo.",
+            reasoning: "The photo shows it.",
+        });
+        expect(photoMessage?.content).toBe("Looks actionable.");
+
+        // Plain turn: however convincingly a block appears — injection, or a
+        // model hallucinating the format — no chip grows from it.
+        expect(plainMessage?.photoActionProposal).toBeUndefined();
+    });
 });

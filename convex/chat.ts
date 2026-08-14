@@ -19,6 +19,7 @@ import {
   resolveTargetAgentId,
   validateChatAttachments,
 } from "./chatService";
+import { extractPhotoActionProposal } from "./photoActionService";
 
 const USER_THREAD_MESSAGE_LIMIT = 500;
 const AI_CONTEXT_MESSAGE_LIMIT = 40;
@@ -365,14 +366,21 @@ export const saveAssistantMessage = internalMutation({
     providerModelId: v.optional(v.string()),
     companyMemoryEvidenceJson: v.optional(v.string()),
     companyRuntimeEvidenceJson: v.optional(v.string()),
+    photoTurn: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const thread = await ctx.db.get(args.threadId);
 
+    // Only a turn that actually carried a photo may yield an action proposal —
+    // the gate that stops an injected block on an ordinary turn growing a chip.
+    const extracted = args.photoTurn
+      ? extractPhotoActionProposal(args.content)
+      : { content: args.content, proposal: undefined };
+
     return await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "assistant",
-      content: args.content,
+      content: extracted.content,
       createdAt: Date.now(),
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
@@ -381,6 +389,7 @@ export const saveAssistantMessage = internalMutation({
       providerModelId: args.providerModelId,
       companyMemoryEvidenceJson: args.companyMemoryEvidenceJson,
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
+      ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
       ...getThreadMessageDimensions(thread),
     });
   },
@@ -457,13 +466,21 @@ export const finishStreamingAssistantMessage = internalMutation({
     providerModelId: v.optional(v.string()),
     companyMemoryEvidenceJson: v.optional(v.string()),
     companyRuntimeEvidenceJson: v.optional(v.string()),
+    photoTurn: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const message = await ctx.db.get(args.messageId);
     if (!message) return;
 
+    // Same gate as saveAssistantMessage: the streamed reader may glimpse the
+    // raw block for a moment, but the closing write is authoritative and
+    // stores it as structured data instead.
+    const extracted = args.photoTurn
+      ? extractPhotoActionProposal(args.content)
+      : { content: args.content, proposal: undefined };
+
     await ctx.db.patch(args.messageId, {
-      content: args.content,
+      content: extracted.content,
       isStreaming: false,
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
@@ -472,6 +489,7 @@ export const finishStreamingAssistantMessage = internalMutation({
       providerModelId: args.providerModelId,
       companyMemoryEvidenceJson: args.companyMemoryEvidenceJson,
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
+      ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
     });
   },
 });

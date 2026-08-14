@@ -52,6 +52,40 @@ const toolExecutionProbe = vi.hoisted(() => ({
   afterExecute: undefined as undefined | (() => Promise<void>),
 }));
 
+/**
+ * A provider that cannot see: stands in for any non-Google adapter so the
+ * photo tests can exercise the told-not-silent fallback without speaking a
+ * real provider's wire protocol. Google keeps its usual mocked adapter.
+ */
+const blindProviderProbe = vi.hoisted(() => ({
+  requests: [] as Array<{ turns: unknown[] }>,
+}));
+
+vi.mock("./agentProviderRegistry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./agentProviderRegistry")>();
+  return {
+    ...actual,
+    getAgentProviderAdapter: (providerKey: string) => {
+      if (providerKey === "anthropic") {
+        return {
+          providerKey: "anthropic",
+          streamTurn: async (request: { turns: unknown[] }) => {
+            blindProviderProbe.requests.push({ turns: request.turns });
+            return {
+              text: "Answered without looking.",
+              toolCalls: [],
+              inputTokens: 10,
+              outputTokens: 5,
+              cachedInputTokens: 0,
+            };
+          },
+        };
+      }
+      return actual.getAgentProviderAdapter(providerKey);
+    },
+  };
+});
+
 vi.mock("./aiToolExecutionService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./aiToolExecutionService")>();
   return {
@@ -2854,5 +2888,122 @@ describe("rehearsal evals", () => {
     const gradingStep = steps[steps.length - 1];
     expect(gradingStep.status).toBe("FAILED");
     expect(gradingStep.output).toContain("notification.send");
+  });
+});
+
+describe("a photo through the agent path", () => {
+  /**
+   * The widget always routes to this runtime, and it used to eat images
+   * silently: `parseDocuments` reads PDF/Excel/Word/text and an image yielded
+   * nothing, with no error. These tests pin the two honest behaviours that
+   * replaced that — the bytes ride to a model that can see, and a model that
+   * cannot see says so in the reply.
+   */
+  const PNG_BYTES = new Uint8Array([137, 80, 78, 71]);
+
+  async function storeImage(t: TestConvex) {
+    return await t.run(async (ctx) => {
+      const storageId = await ctx.storage.store(new Blob([PNG_BYTES], { type: "image/png" }));
+      // convex-test's storage.store records no contentType (production Convex
+      // does), so the metadata row is written directly — the same shape the
+      // runtime reads via ctx.db.system.get.
+      await ctx.db.patch(storageId as never, { contentType: "image/png" } as never);
+      return storageId;
+    });
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    blindProviderProbe.requests = [];
+  });
+
+  test("a photo rides to a Google model as image bytes on the current turn", async () => {
+    const t = makeTest();
+    const { agentId, threadId } = await seedAgentRun(t);
+    const imageId = await storeImage(t);
+
+    // convex-test's storage URLs are fake, so the byte fetch is served here.
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      new Response(PNG_BYTES, { headers: { "content-type": "image/png" } })
+    ));
+
+    generateMock.mockResolvedValue(textResponse("A photo of a delivery note."));
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId,
+      agentId,
+      content: "What is this?",
+      fileIds: [imageId],
+    });
+
+    // The image reached the model as an inlineData part carrying the bytes.
+    const lastParams = JSON.stringify(generateMock.mock.calls.at(-1)?.[1]);
+    expect(lastParams).toContain("inlineData");
+    expect(lastParams).toContain(Buffer.from(PNG_BYTES).toString("base64"));
+
+    // And the reply is the model's own — no unread-photo apology.
+    const replies = await assistantMessages(t);
+    expect(replies.at(-1)?.content).toContain("delivery note");
+    expect(replies.at(-1)?.content).not.toContain("cannot look at images");
+  });
+
+  test("on a model that cannot see, the reply says the photo went unread", async () => {
+    const t = makeTest();
+    const { agentId, threadId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Blind Co", createdAt: Date.now() });
+      const userId = await ctx.db.insert("users", {
+        email: "operator@blind.test",
+        role: "ADMIN",
+        companyId,
+        createdAt: Date.now(),
+      });
+      await ctx.db.insert("aiModels", {
+        modelId: "test-blind-model",
+        providerKey: "anthropic",
+        providerModelId: "test-blind-provider-model",
+        displayName: "Blind Model",
+        isEnabled: true,
+        isDefault: true,
+        lastSyncedAt: Date.now(),
+        standardInputCostBelow200k: 1,
+        outputResponseCost: 2,
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Blind Agent",
+        avatar: "agent.png",
+        systemPrompt: "Be concise.",
+        modelId: "test-blind-model",
+        thinkingMode: false,
+        isActive: true,
+        companyId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const threadId = await ctx.db.insert("threads", {
+        userId,
+        companyId,
+        agentId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      return { agentId, threadId };
+    });
+    const imageId = await storeImage(t);
+
+    await t.action(internal.agentRuntime.runAgentObjective, {
+      threadId,
+      agentId,
+      content: "What is this?",
+      fileIds: [imageId],
+    });
+
+    // The reply carries the model's answer and the deterministic admission.
+    const replies = await assistantMessages(t);
+    expect(replies.at(-1)?.content).toContain("Answered without looking.");
+    expect(replies.at(-1)?.content).toContain("cannot look at images");
+
+    // Nothing image-shaped was sent to a provider that would refuse it.
+    expect(blindProviderProbe.requests.length).toBeGreaterThan(0);
+    expect(JSON.stringify(blindProviderProbe.requests)).not.toContain("inlineData");
   });
 });

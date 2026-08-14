@@ -2011,6 +2011,19 @@ export default defineSchema({
     // English text as the fallback for clients that do not know the key —
     // exports, older UIs, and the admin transcript views stay readable.
     systemKey: v.optional(v.string()),
+    // A follow-up the model read out of an attached photo, waiting for a human
+    // tap. Extracted from the reply at save time (photoActionService) and only
+    // ever written into a task by tasks.confirmPhotoAction — no photo acts by
+    // itself. `photoActionTaskId` records the confirmation, so the chip can
+    // show "filed" and a second tap cannot file a duplicate.
+    photoActionProposal: v.optional(
+      v.object({
+        title: v.string(),
+        detail: v.string(),
+        reasoning: v.string(),
+      })
+    ),
+    photoActionTaskId: v.optional(v.id("tasks")),
     // Set while a reply is still being written token by token. Clients show a
     // caret; readers see the answer build instead of watching a spinner.
     isStreaming: v.optional(v.boolean()),

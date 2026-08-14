@@ -12,6 +12,7 @@ import {
 } from "./vertexProviderService";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY, isSpeechToSpeechModelId, REALTIME_MODEL_USE_CASE } from "./aiModelService";
+import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import type { Id } from "./_generated/dataModel";
 import type { AiContentPart } from "./aiRuntimeTypes";
@@ -252,11 +253,15 @@ export const generateSonaeResponse = internalAction({
         // a blind model refuses in a plain sentence instead of throwing at
         // the provider.
         let visionNotice = "";
+        // Whether this turn carries a photo — also the gate for the
+        // photo-action proposal, which only an image-bearing turn may yield.
+        let photoTurn = false;
         if (args.fileIds && args.fileIds.length > 0) {
             const contentTypes = await ctx.runQuery(internal.chat.getAttachmentContentTypesInternal, {
                 fileIds: args.fileIds,
             });
             const hasImage = contentTypes.some((type) => type?.startsWith("image/"));
+            photoTurn = hasImage;
             if (hasImage && modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY) {
                 const visionConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
                     companyId: thread?.companyId,
@@ -476,6 +481,12 @@ User Prompt: ${args.content}`;
             }
         }
         
+        // A photo turn may end in a structured follow-up proposal, generated
+        // in this same reply rather than by a second model call.
+        if (photoTurn) {
+            combinedPrompt += PHOTO_ACTION_PROPOSAL_INSTRUCTION;
+        }
+
         // Push the main textual context
         payloadContents.push({ type: "text", text: combinedPrompt });
 
@@ -546,6 +557,7 @@ User Prompt: ${args.content}`;
                 providerModelId: modelConfig.providerModelId,
                 companyMemoryEvidenceJson,
                 companyRuntimeEvidenceJson,
+                photoTurn: photoTurn || undefined,
             });
             messageId = streamState.messageId;
         } else {
@@ -559,6 +571,7 @@ User Prompt: ${args.content}`;
                 providerModelId: modelConfig.providerModelId,
                 companyMemoryEvidenceJson,
                 companyRuntimeEvidenceJson,
+                photoTurn: photoTurn || undefined,
             });
         }
 

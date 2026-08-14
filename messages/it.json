@@ -2643,6 +2643,14 @@
         "skills": "Competenze attive",
         "always": "sempre attiva",
         "none": "Nulla è stato recuperato per questa risposta — deriva solo dal modello e dalle tue istruzioni."
+      },
+      "photoAction": {
+        "heading": "Follow-up suggerito",
+        "why": "Perché",
+        "confirm": "Crea un'attività",
+        "filing": "Creazione…",
+        "filed": "Attività creata — la trovi nella schermata Attività",
+        "failed": "Non è stato possibile crearla. Riprova."
       }
     },
     "costs": {

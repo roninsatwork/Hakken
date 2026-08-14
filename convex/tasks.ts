@@ -4,7 +4,9 @@ import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { publicMutation, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { getCurrentUser } from "./authz";
+import { assertCanAccessThread } from "./chatService";
 
 /**
  * Tasks: work the platform holds for a named person.
@@ -193,6 +195,58 @@ export const listAssignableMembers = tenantQuery({
   },
 });
 
+/**
+ * File a task on a person's say-so: the shared body of `createTask` and the
+ * photo-action confirmation, so both doors validate, audit, and notify
+ * identically.
+ */
+async function filePersonTask(
+  ctx: MutationCtx,
+  args: {
+    companyId: Id<"companies">;
+    userId: Id<"users"> | undefined;
+    title: string;
+    detail?: string;
+    assigneeUserId?: Id<"users">;
+    dueAt?: number;
+    sourceUrl?: string;
+  },
+) {
+  const { title, detail } = assertValidTaskFields(args);
+  await assertAssigneeInTenant(ctx, args.assigneeUserId, args.companyId);
+
+  const taskId = await ctx.db.insert("tasks", {
+    companyId: args.companyId,
+    title,
+    detail,
+    assigneeUserId: args.assigneeUserId,
+    dueAt: args.dueAt,
+    status: "OPEN",
+    createdByUserId: args.userId,
+    createdBySource: "PERSON",
+    sourceUrl: args.sourceUrl,
+    createdAt: Date.now(),
+  });
+
+  await writeTaskAudit(ctx, {
+    actorId: args.userId,
+    actionType: "CREATE_TASK",
+    taskId,
+    companyId: args.companyId,
+    metadata: { assigned: Boolean(args.assigneeUserId) },
+  });
+
+  await notifyAssignee(ctx, {
+    assigneeUserId: args.assigneeUserId,
+    actorUserId: args.userId,
+    companyId: args.companyId,
+    taskId,
+    title,
+  });
+
+  return taskId;
+}
+
 export const createTask = tenantMutation({
   args: {
     title: v.string(),
@@ -205,38 +259,79 @@ export const createTask = tenantMutation({
     const { companyId, userId } = ctx;
     if (!companyId) throw new Error("A task needs a workspace.");
 
-    const { title, detail } = assertValidTaskFields(args);
-    await assertAssigneeInTenant(ctx, args.assigneeUserId, companyId);
-
-    const taskId = await ctx.db.insert("tasks", {
+    return await filePersonTask(ctx, {
       companyId,
-      title,
-      detail,
+      userId,
+      title: args.title,
+      detail: args.detail,
       assigneeUserId: args.assigneeUserId,
       dueAt: args.dueAt,
-      status: "OPEN",
-      createdByUserId: userId,
-      createdBySource: "PERSON",
       sourceUrl: args.sourceUrl,
-      createdAt: Date.now(),
     });
+  },
+});
 
-    await writeTaskAudit(ctx, {
-      actorId: userId,
-      actionType: "CREATE_TASK",
-      taskId,
-      companyId,
-      metadata: { assigned: Boolean(args.assigneeUserId) },
-    });
+/**
+ * The one confirming tap that turns a photo's proposed follow-up into a task.
+ *
+ * The proposal was extracted server-side from the reply (photoActionService)
+ * and is read back off the message here, so what gets filed is what was
+ * proposed — a client cannot swap the text on the way through. Signed-in, it
+ * files as the confirming person, audited and notified like any task of
+ * theirs. From the anonymous widget it lands with the same per-company owner
+ * the telephone's follow-ups go to: somebody always owns what a visitor
+ * raises, or the bell rings for nobody.
+ */
+export const confirmPhotoAction = publicMutation({
+  reason:
+    "Anonymous widget visitors confirm a photo's proposed follow-up in their own thread; gated on the hashed widget session token, same as sendMessage.",
+  args: {
+    messageId: v.id("messages"),
+    widgetAccessToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message || message.role !== "assistant") {
+      throw new Error("That suggestion could not be found.");
+    }
+    const thread = await ctx.db.get(message.threadId);
+    if (!thread) throw new Error("That conversation could not be found.");
 
-    await notifyAssignee(ctx, {
-      assigneeUserId: args.assigneeUserId,
-      actorUserId: userId,
-      companyId,
-      taskId,
-      title,
-    });
+    const current = await getCurrentUser(ctx);
+    await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
 
+    const proposal = message.photoActionProposal;
+    if (!proposal) throw new Error("This message has no proposed action to confirm.");
+    // A second tap files nothing twice.
+    if (message.photoActionTaskId) return message.photoActionTaskId;
+
+    const companyId = thread.companyId;
+    if (!companyId) throw new Error("This conversation has no workspace to file a task into.");
+
+    let taskId: Id<"tasks">;
+    if (current?.user) {
+      taskId = await filePersonTask(ctx, {
+        companyId,
+        userId: current.user._id,
+        title: proposal.title,
+        detail: `${proposal.detail}\n\nWhy: ${proposal.reasoning}`,
+        assigneeUserId: current.user._id,
+        sourceUrl: `/app/assistant/${thread._id}`,
+      });
+    } else {
+      const assignee = await ctx.runQuery(internal.telephony.findCallAssignee, { companyId });
+      taskId = await ctx.runMutation(internal.tasks.createTaskInternal, {
+        companyId,
+        title: proposal.title,
+        detail:
+          `${proposal.detail}\n\nWhy: ${proposal.reasoning}\n\n` +
+          "Raised from a photo sent through the website widget.",
+        ...(assignee ? { assigneeUserId: assignee } : {}),
+        createdBySource: "AGENT" as const,
+      });
+    }
+
+    await ctx.db.patch(message._id, { photoActionTaskId: taskId });
     return taskId;
   },
 });

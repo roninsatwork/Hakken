@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id, type Doc } from "@/convex/_generated/dataModel";
-import { Bot, Send, Loader2, RefreshCcw } from "lucide-react";
+import { Bot, Send, Loader2, RefreshCcw, ImagePlus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 import { useStreamPresentation } from "@/src/hooks/useStreamPresentation";
@@ -13,6 +13,8 @@ import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
 import { widgetMessageDisplayText } from "@/src/lib/widgetSystemMessages";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import { validateUploadFile } from "@/src/lib/constants/uploads";
+import { PhotoActionChip } from "@/src/ui/components/chat/PhotoActionChip";
 
 
 /**
@@ -65,6 +67,8 @@ export default function WidgetIframePage() {
   const widget = useQuery(api.widgets.getWidgetById, { widgetId });
   const createThread = useMutation(api.widgets.createWidgetThread);
   const sendMessageQuery = useMutation(api.chat.sendMessage);
+  const generateWidgetUploadUrl = useMutation(api.widgets.generateWidgetUploadUrl);
+  const finalizeWidgetUpload = useMutation(api.widgets.finalizeWidgetUpload);
   
   // Widget State
   const [threadId, setThreadId] = useState<Id<"threads"> | null>(null);
@@ -72,6 +76,12 @@ export default function WidgetIframePage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const [isSending, setIsSending] = useState(false);
+  // A photo staged for the next send: uploaded (and server-validated) the
+  // moment it is picked, so pressing Send only has to reference it.
+  const [pendingPhoto, setPendingPhoto] = useState<{ previewUrl: string; storageId: Id<"_storage"> } | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -232,34 +242,86 @@ export default function WidgetIframePage() {
     }
   }, [widget, widgetId]);
 
+  // The thread is created lazily on the first action that needs one — a photo
+  // upload can arrive before any message, so both paths share this door.
+  const ensureThread = async (): Promise<{ threadId: Id<"threads">; accessToken: string }> => {
+    if (threadId && widgetAccessToken) return { threadId, accessToken: widgetAccessToken };
+    if (!widget) throw new Error("Widget not loaded");
+    const createdThread = await createThread({
+        widgetId: widget._id,
+        sourceUrl: document.referrer || window.location.href
+    });
+    setThreadId(createdThread.threadId);
+    setWidgetAccessToken(createdThread.accessToken);
+    localStorage.setItem(`sonae_widget_${widgetId}_thread`, createdThread.threadId);
+    localStorage.setItem(`sonae_widget_${widgetId}_token`, createdThread.accessToken);
+    return { threadId: createdThread.threadId, accessToken: createdThread.accessToken };
+  };
+
+  const handlePhotoSelected = async (file: File) => {
+    if (!widget || isUploadingPhoto) return;
+    setPhotoError(null);
+
+    // Client-side check for the visitor's sake; the server re-validates for truth.
+    const verdict = validateUploadFile(file, "widgetAttachmentImage");
+    if (!verdict.allowed) {
+        setPhotoError(verdict.reason);
+        return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+        const session = await ensureThread();
+        const postUrl = await generateWidgetUploadUrl({
+            widgetId: widget._id,
+            threadId: session.threadId,
+            widgetAccessToken: session.accessToken,
+        });
+        const result = await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": file.type },
+            body: file,
+        });
+        if (!result.ok) throw new Error("Upload failed");
+        const { storageId } = await result.json();
+        await finalizeWidgetUpload({
+            widgetId: widget._id,
+            threadId: session.threadId,
+            storageId,
+            widgetAccessToken: session.accessToken,
+        });
+        if (pendingPhoto) URL.revokeObjectURL(pendingPhoto.previewUrl);
+        setPendingPhoto({ previewUrl: URL.createObjectURL(file), storageId });
+    } catch (e) {
+        console.error("Photo upload failed", e);
+        const reason = e instanceof Error && e.message.includes("quota")
+            ? "This conversation has reached its photo limit."
+            : "The photo could not be uploaded. Please try again.";
+        setPhotoError(reason);
+    } finally {
+        setIsUploadingPhoto(false);
+        if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
+  const clearPendingPhoto = () => {
+      if (pendingPhoto) URL.revokeObjectURL(pendingPhoto.previewUrl);
+      setPendingPhoto(null);
+  };
+
   const handleSend = async (overrideContent?: string) => {
     const content = overrideContent || inputValue;
-    if (!content.trim() || isSending || !widget) return;
-    
+    // A photo with no words is still a message — the photo is the question.
+    if ((!content.trim() && !pendingPhoto) || isSending || !widget) return;
+
     setIsSending(true);
     if (!overrideContent) setInputValue("");
-    
+    const photoForThisSend = pendingPhoto;
+
     try {
-        let activeThreadId = threadId;
-        let activeAccessToken = widgetAccessToken;
-
-        // Create thread if it doesn't exist
-        if (!activeThreadId || !activeAccessToken) {
-           const createdThread = await createThread({
-               widgetId: widget._id, 
-               sourceUrl: document.referrer || window.location.href 
-           });
-           const newThreadId = createdThread.threadId;
-           setThreadId(newThreadId);
-           setWidgetAccessToken(createdThread.accessToken);
-           activeThreadId = newThreadId;
-           activeAccessToken = createdThread.accessToken;
-           localStorage.setItem(`sonae_widget_${widgetId}_thread`, newThreadId);
-           localStorage.setItem(`sonae_widget_${widgetId}_token`, createdThread.accessToken);
-        }
-
         // Apply Gateway System Mask
         const isFirstMessage = !threadId;
+        const session = await ensureThread();
         let finalContent = content;
 
         if (isFirstMessage && (visitorName || visitorEmail)) {
@@ -268,11 +330,13 @@ export default function WidgetIframePage() {
 
         // Send message
         await sendMessageQuery({
-            threadId: activeThreadId,
+            threadId: session.threadId,
             content: finalContent,
             dynamicAgentId: widget.agentId,
-            widgetAccessToken: activeAccessToken,
+            widgetAccessToken: session.accessToken,
+            fileIds: photoForThisSend ? [photoForThisSend.storageId] : undefined,
         });
+        if (photoForThisSend) clearPendingPhoto();
 
     } catch (e) {
         console.error("Message failed", e);
@@ -287,6 +351,8 @@ export default function WidgetIframePage() {
      localStorage.removeItem(`sonae_widget_${widgetId}_token`);
      setThreadId(null);
      setWidgetAccessToken(null);
+     clearPendingPhoto();
+     setPhotoError(null);
      
      // Reset gateway state if rules dictate
      if (widget?.requireName || widget?.requireEmail) {
@@ -402,6 +468,12 @@ export default function WidgetIframePage() {
                                 typeof navigator !== "undefined" ? navigator.language : undefined
                            );
 
+                           // The list query attaches viewable URLs only to rows
+                           // that carry image attachments, so the row type is a
+                           // union; narrow it here for rendering.
+                           const imageAttachments =
+                                "imageAttachments" in message ? message.imageAttachments : undefined;
+
                            return (
                               <motion.div
                                  key={message._id}
@@ -419,6 +491,39 @@ export default function WidgetIframePage() {
                                   >
                                        {isUser ? displayContent : (
                                           <WidgetAssistantContent content={displayContent} message={message} accentColor={primaryColor} />
+                                       )}
+                                       {/* A photo's proposed follow-up, phrased for a visitor:
+                                           the team gets the task, not them. */}
+                                       {!isUser && message.photoActionProposal && widgetAccessToken && (
+                                          <PhotoActionChip
+                                              message={message}
+                                              widgetAccessToken={widgetAccessToken}
+                                              accentColor={primaryColor}
+                                              labels={{
+                                                  heading: "Suggested follow-up",
+                                                  why: "Why",
+                                                  confirm: "Ask the team to follow up",
+                                                  filing: "Sending…",
+                                                  filed: "The team has been asked to follow up.",
+                                                  failed: "That didn't go through. Please try again.",
+                                              }}
+                                          />
+                                       )}
+                                       {imageAttachments && imageAttachments.length > 0 && (
+                                          <div className="mt-2 flex flex-wrap gap-2">
+                                              {imageAttachments.map((image, index) => (
+                                                  // Tap opens the full photo; the bubble keeps a bounded
+                                                  // thumbnail so one large photo cannot swallow the widget.
+                                                  <a key={index} href={image.url} target="_blank" rel="noreferrer">
+                                                      {/* eslint-disable-next-line @next/next/no-img-element -- Convex storage URLs are signed and external; next/image adds nothing here */}
+                                                      <img
+                                                          src={image.url}
+                                                          alt="Attached photo"
+                                                          className="max-h-40 max-w-[12rem] rounded-[10px] border border-white/20 object-cover"
+                                                      />
+                                                  </a>
+                                              ))}
+                                          </div>
                                        )}
                                   </div>
                               </motion.div>
@@ -461,10 +566,54 @@ export default function WidgetIframePage() {
 
        {/* Input Area */}
        <div className={`p-4 border-t border-border-dim/50 bg-background/50 shrink-0 transition-opacity ${!hasPassedGateway ? 'opacity-30 pointer-events-none' : ''}`}>
-           <form 
+           {pendingPhoto && (
+               <div className="mb-2 flex items-center gap-2">
+                   <div className="relative inline-block">
+                       {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
+                       <img
+                           src={pendingPhoto.previewUrl}
+                           alt="Photo ready to send"
+                           className="h-14 w-14 rounded-[10px] border border-border-dim object-cover"
+                       />
+                       <button
+                           type="button"
+                           onClick={clearPendingPhoto}
+                           aria-label="Remove photo"
+                           className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-foreground text-background flex items-center justify-center shadow"
+                       >
+                           <X className="w-3 h-3" />
+                       </button>
+                   </div>
+                   <span className="text-[11px] text-secondary">Photo attached — add words if you like, then send.</span>
+               </div>
+           )}
+           {photoError && (
+               <p className="mb-2 text-[11px] text-amber-500/90" role="alert">{photoError}</p>
+           )}
+           <form
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}
               className="flex items-center gap-2 relative bg-foreground/5 border border-border-dim rounded-[24px] px-2 py-2 focus-within:border-brand/40 transition-colors shadow-inner"
            >
+               <input
+                   ref={photoInputRef}
+                   type="file"
+                   accept="image/*"
+                   className="hidden"
+                   onChange={(e) => {
+                       const file = e.target.files?.[0];
+                       if (file) void handlePhotoSelected(file);
+                   }}
+               />
+               <button
+                   type="button"
+                   onClick={() => photoInputRef.current?.click()}
+                   disabled={isUploadingPhoto || isSending || !hasPassedGateway}
+                   aria-label="Attach a photo"
+                   title="Attach a photo"
+                   className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-muted hover:text-foreground hover:bg-foreground/5 transition-colors disabled:opacity-50"
+               >
+                   {isUploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+               </button>
                <input
                    type="text"
                    value={inputValue}
@@ -475,7 +624,7 @@ export default function WidgetIframePage() {
                />
                <button
                    type="submit"
-                   disabled={!inputValue.trim() || isSending || !hasPassedGateway}
+                   disabled={(!inputValue.trim() && !pendingPhoto) || isSending || isUploadingPhoto || !hasPassedGateway}
                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-opacity disabled:opacity-50"
                    style={{ backgroundColor: primaryColor }}
                >

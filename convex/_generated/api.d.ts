@@ -144,6 +144,7 @@ import type * as openrouterProviderService from "../openrouterProviderService.js
 import type * as orchestrator from "../orchestrator.js";
 import type * as personalData from "../personalData.js";
 import type * as personalDataService from "../personalDataService.js";
+import type * as photoActionService from "../photoActionService.js";
 import type * as planService from "../planService.js";
 import type * as plans from "../plans.js";
 import type * as platformAlertRecipients from "../platformAlertRecipients.js";
@@ -371,6 +372,7 @@ declare const fullApi: ApiFromModules<{
   orchestrator: typeof orchestrator;
   personalData: typeof personalData;
   personalDataService: typeof personalDataService;
+  photoActionService: typeof photoActionService;
   planService: typeof planService;
   plans: typeof plans;
   platformAlertRecipients: typeof platformAlertRecipients;

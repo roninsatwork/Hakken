@@ -2643,6 +2643,14 @@
         "skills": "Skills in force",
         "always": "always on",
         "none": "Nothing was retrieved for this answer — it came from the model and your instructions alone."
+      },
+      "photoAction": {
+        "heading": "Suggested follow-up",
+        "why": "Why",
+        "confirm": "Raise this as a task",
+        "filing": "Raising…",
+        "filed": "Task raised — it's on the Tasks screen",
+        "failed": "That could not be raised. Please try again."
       }
     },
     "costs": {

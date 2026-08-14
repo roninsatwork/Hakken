@@ -12,6 +12,7 @@ import { useSmoothStreamText } from "@/src/hooks/useSmoothStreamText";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { MessageFeedbackControls } from "./MessageFeedbackControls";
 import { AnswerEvidence } from "./AnswerEvidence";
+import { PhotoActionChip } from "./PhotoActionChip";
 
 interface ChatMessageProps {
   // The list query attaches viewable URLs for image attachments; older
@@ -112,6 +113,22 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
         )}
       </div>
+
+      {/* The follow-up the model read out of an attached photo, waiting for
+          the confirming tap. Only once the reply has finished writing. */}
+      {!isStreaming && presentation !== "stalled" && message.photoActionProposal && (
+        <PhotoActionChip
+          message={message}
+          labels={{
+            heading: t("photoAction.heading"),
+            why: t("photoAction.why"),
+            confirm: t("photoAction.confirm"),
+            filing: t("photoAction.filing"),
+            filed: t("photoAction.filed"),
+            failed: t("photoAction.failed"),
+          }}
+        />
+      )}
 
       {/* Rating only once the reply has finished writing itself, and never on
           platform notices — a quota message is not an answer. */}
