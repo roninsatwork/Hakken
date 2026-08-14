@@ -15,6 +15,11 @@ import {
   signaturesMatch,
 } from "./telephonyService";
 import { base64UrlToText, ticketIsAuthentic } from "./voiceRelay";
+import { resolveConnectorSecret } from "./connectorSecretResolver";
+import {
+  TWILIO_AUTH_TOKEN_SECRET_REF,
+  TWILIO_VOICE_CONNECTOR_KEY,
+} from "./toolConnectorDefinitions";
 
 /**
  * Sonae answering the phone.
@@ -144,8 +149,40 @@ function readCeiling(value: string | undefined, fallback: number) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * The phone line as a connector. Which workspace has claimed the dialled
+ * number, and whether its switch is on — the admin screen's toggle is the
+ * abuse cord: flicked off, every caller is refused politely before a penny
+ * of model spend, without touching Twilio or the deployment's settings.
+ */
+export const findVoiceLineForNumber = internalQuery({
+  args: { toNumber: v.string() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ companyId: Id<"companies">; acceptingCalls: boolean } | null> => {
+    const dialled = normalisePhoneNumber(args.toNumber);
+    if (!dialled) return null;
+    // Bounded: a workspace holds a number or two, installed by hand.
+    const lines = await ctx.db
+      .query("toolConnectors")
+      .withIndex("by_key", (q) => q.eq("key", TWILIO_VOICE_CONNECTOR_KEY))
+      .take(100);
+    const line = lines.find(
+      (connector) =>
+        connector.companyId !== undefined &&
+        Boolean(connector.authAccountRef) &&
+        normalisePhoneNumber(connector.authAccountRef ?? "") === dialled
+    );
+    if (!line || line.companyId === undefined) return null;
+    return {
+      companyId: line.companyId,
+      acceptingCalls: line.isActive && line.installStatus === "INSTALLED",
+    };
+  },
+});
+
 export const handleIncomingCall = httpAction(async (ctx, request) => {
-  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
   const streamUrl = process.env.TELEPHONY_STREAM_URL?.trim();
   const ownership = parseNumberOwnership(process.env.TELEPHONY_NUMBER_OWNERS);
 
@@ -157,8 +194,20 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   const params: Record<string, string> = {};
   for (const [name, value] of new URLSearchParams(raw)) params[name] = value;
 
+  // The dialled number picks the credential: a number claimed by a Twilio
+  // connector is verified with the connector's own token, and the
+  // deployment-wide token remains for numbers still routed by environment
+  // settings. Chosen before verification — like a key id, the To field only
+  // selects which credential must then prove the request.
+  const line = params.To
+    ? await ctx.runQuery(internal.telephony.findVoiceLineForNumber, { toNumber: params.To })
+    : null;
+  const connectorToken = resolveConnectorSecret(TWILIO_AUTH_TOKEN_SECRET_REF, process.env);
+  const authToken =
+    line && connectorToken.found ? connectorToken.value : process.env.TWILIO_AUTH_TOKEN?.trim();
+
   // Unsigned means it is not the provider, whatever it claims. Refused before
-  // anything is read out of the body and before a single model call.
+  // a single model call.
   if (!authToken) {
     return twimlResponse(
       buildRefusalTwiml("Sorry, this number is not taking calls right now. Goodbye."),
@@ -197,7 +246,19 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
     return twimlResponse(buildRefusalTwiml("Sorry, something went wrong. Goodbye."), 400);
   }
 
-  const companyId = findNumberOwner(ownership, toNumber);
+  // The connector's switch, honoured only after the caller is proven to be
+  // the provider: off means refused politely — never a dead line, and not a
+  // call row, a ticket, or a penny of model spend.
+  if (line && !line.acceptingCalls) {
+    return twimlResponse(
+      buildRefusalTwiml(
+        "Sorry, we are not taking calls at the moment. Please try again later. Goodbye."
+      ),
+      200
+    );
+  }
+
+  const companyId = line?.companyId ?? findNumberOwner(ownership, toNumber);
   if (!companyId) {
     // A number nobody has claimed. Said plainly rather than left ringing.
     return twimlResponse(
@@ -478,14 +539,22 @@ export const attachCallSummary = internalMutation({
  * calls, let alone trigger model spend through the summary step.
  */
 export const handleCallStatus = httpAction(async (ctx, request) => {
-  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
-  if (!authToken) return new Response(null, { status: 503 });
-
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) return new Response(null, { status: 413 });
 
   const params: Record<string, string> = {};
   for (const [name, value] of new URLSearchParams(raw)) params[name] = value;
+
+  // The same credential choice as the voice webhook. A switched-off line
+  // still gets its status callbacks honoured — a call already in progress
+  // when the switch flips must be allowed to end properly.
+  const line = params.To
+    ? await ctx.runQuery(internal.telephony.findVoiceLineForNumber, { toNumber: params.To })
+    : null;
+  const connectorToken = resolveConnectorSecret(TWILIO_AUTH_TOKEN_SECRET_REF, process.env);
+  const authToken =
+    line && connectorToken.found ? connectorToken.value : process.env.TWILIO_AUTH_TOKEN?.trim();
+  if (!authToken) return new Response(null, { status: 503 });
 
   const provided = request.headers.get("X-Twilio-Signature") ?? "";
   const signedUrl = process.env.TELEPHONY_STATUS_PUBLIC_URL?.trim() || request.url;
@@ -589,6 +658,16 @@ export const getCompanyPhoneNumber = tenantQuery({
   handler: async (ctx): Promise<string | null> => {
     const { companyId } = ctx;
     if (!companyId) return null;
+    // The connector's claim first — the same row the admin screen edits —
+    // then the environment setting for numbers not yet moved over.
+    const lines = await ctx.db
+      .query("toolConnectors")
+      .withIndex("by_key", (q) => q.eq("key", TWILIO_VOICE_CONNECTOR_KEY))
+      .take(100);
+    const line = lines.find(
+      (connector) => connector.companyId === companyId && connector.authAccountRef
+    );
+    if (line?.authAccountRef) return line.authAccountRef;
     const ownership = parseNumberOwnership(process.env.TELEPHONY_NUMBER_OWNERS);
     const entry = Object.entries(ownership).find(([, owner]) => owner === companyId);
     return entry?.[0] ?? null;

@@ -19,6 +19,7 @@ type ConnectorDraft = {
   isActive: boolean;
   tenantAvailability: "GLOBAL" | "TENANT_RESTRICTED";
   companyId: string;
+  authAccountRef: string;
 };
 
 function parseSecretRefs(value: string) {
@@ -120,7 +121,11 @@ export default function ConnectorSetupPage() {
     isActive: connector.isActive,
     tenantAvailability: connector.tenantAvailability,
     companyId: connector.companyId ?? "",
+    authAccountRef: connector.authAccountRef ?? "",
   };
+  // The bound account — a phone number, say. Only where the definition asks
+  // for one; an OAuth connector's account belongs to the consent flow.
+  const accountRefLabel = connector.authMode !== "OAUTH" ? definition?.accountRefLabel : undefined;
   const updateDraft = (patch: Partial<ConnectorDraft>) => setDraft({ ...form, ...patch });
 
   const latestCheck = testLogs[0];
@@ -143,6 +148,7 @@ export default function ConnectorSetupPage() {
         configuredSecretRefs: parseSecretRefs(form.configuredSecretRefs),
         enabledToolMappings: form.enabledToolMappings,
         isActive: form.isActive,
+        ...(accountRefLabel ? { authAccountRef: form.authAccountRef } : {}),
         ...(details.canManageTenantScope ? {
           tenantAvailability: form.tenantAvailability,
           companyId: form.companyId ? form.companyId as Id<"companies"> : undefined,
@@ -230,10 +236,14 @@ export default function ConnectorSetupPage() {
           <Card title="Settings">
             <div className="divide-y divide-border-dim/40">
               <SettingSwitch
-                label="Available to agents"
-                description={form.isActive
-                  ? "Agents can be given this tool."
-                  : "Switched off. No agent can use this, whatever it has been given."}
+                label={definition?.category === "VOICE" ? "Taking calls" : "Available to agents"}
+                description={definition?.category === "VOICE"
+                  ? (form.isActive
+                    ? "The phone line answers. Switch off and every caller hears a polite refusal instead."
+                    : "Switched off. Every caller hears a polite refusal until this is switched back on.")
+                  : (form.isActive
+                    ? "Agents can be given this tool."
+                    : "Switched off. No agent can use this, whatever it has been given.")}
                 checked={form.isActive}
                 onChange={(next) => updateDraft({ isActive: next })}
               />
@@ -265,6 +275,24 @@ export default function ConnectorSetupPage() {
                       ))}
                     </select>
                   )}
+                </div>
+              )}
+              {accountRefLabel && (
+                <div className="flex flex-col gap-2 py-4">
+                  <label htmlFor="connector-account-ref" className="text-[13px] font-medium text-foreground">
+                    {accountRefLabel}
+                  </label>
+                  <p className="text-[12px] leading-relaxed text-muted">
+                    The account this connector is bound to. Calls, messages or requests arriving for it are routed to this workspace.
+                  </p>
+                  <input
+                    id="connector-account-ref"
+                    type="text"
+                    value={form.authAccountRef}
+                    onChange={(event) => updateDraft({ authAccountRef: event.target.value })}
+                    placeholder="+44..."
+                    className="h-[46px] w-full max-w-sm rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
+                  />
                 </div>
               )}
               {/* Only shown when this tool genuinely needs one. The old screen

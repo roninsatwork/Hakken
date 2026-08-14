@@ -285,11 +285,16 @@ export const getConnectorMarketplace = adminQuery({
         installation,
         executableToolCount,
         totalToolCount: toolDefinitions.length,
-        availability: executableToolCount === 0
-          ? "UNAVAILABLE" as const
-          : executableToolCount === toolDefinitions.length
-            ? "AVAILABLE" as const
-            : "PARTIAL" as const,
+        // A connector with no tool definitions is not an unimplemented
+        // catalogue entry — it is an inbound door (the phone line): nothing
+        // for an agent to execute, so nothing the registry needs to vouch for.
+        availability: toolDefinitions.length === 0
+          ? "AVAILABLE" as const
+          : executableToolCount === 0
+            ? "UNAVAILABLE" as const
+            : executableToolCount === toolDefinitions.length
+              ? "AVAILABLE" as const
+              : "PARTIAL" as const,
       };
     });
   },
@@ -551,6 +556,8 @@ export const updateConnectorInstall = adminMutation({
     isActive: v.optional(v.boolean()),
     companyId: v.optional(v.id("companies")),
     tenantAvailability: v.optional(v.union(v.literal("GLOBAL"), v.literal("TENANT_RESTRICTED"))),
+    /** The external account this install is bound to — a phone number, say. */
+    authAccountRef: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
@@ -581,14 +588,31 @@ export const updateConnectorInstall = adminMutation({
           tenantAvailability: args.tenantAvailability ?? connector.tenantAvailability,
         })
       : connector.tenantAvailability;
+    // The bound account — a phone number, say — is editable only where the
+    // definition asks for one. An OAuth connector's account ref belongs to
+    // the consent flow, never to a form field.
+    const authAccountRef =
+      args.authAccountRef !== undefined && connector.authMode !== "OAUTH" && definition.accountRefLabel
+        ? args.authAccountRef.trim() || undefined
+        : connector.authAccountRef;
     const now = Date.now();
 
     await ctx.db.patch(connector._id, {
+      // The definition's current shape, not the copy frozen at install time —
+      // a definition change must not leave an old install demanding keys the
+      // connector no longer needs.
+      name: definition.name,
+      description: definition.description,
+      category: definition.category,
+      authMode: definition.authMode,
+      requiredScopes: definition.requiredScopes,
+      requiredSecretRefs: definition.requiredSecretRefs,
       configuredSecretRefs,
       enabledToolMappings,
       isActive,
       companyId,
       tenantAvailability,
+      authAccountRef,
       installStatus: isActive ? "INSTALLED" : "DISABLED",
       testStatus: "UNTESTED",
       lastTestMessage: "Configuration changed; retest connector.",
@@ -636,12 +660,18 @@ export const validateConnectorConfiguration = adminMutation({
     if (!connector) throw new Error("Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
 
+    // Judged against the definition's current requirements, not the copy
+    // frozen into the install row — a connector that stopped needing a key
+    // must not fail its check until someone happens to re-save it.
+    const definition = getBuiltInToolConnector(connector.key);
+    const requiredSecretRefs = definition?.requiredSecretRefs ?? connector.requiredSecretRefs ?? [];
+    const authMode = definition?.authMode ?? connector.authMode;
     const configuredRefs = new Set(connector.configuredSecretRefs ?? []);
-    const missingSecretRefs = (connector.requiredSecretRefs ?? []).filter((secretRef) => !configuredRefs.has(secretRef));
+    const missingSecretRefs = requiredSecretRefs.filter((secretRef) => !configuredRefs.has(secretRef));
     const now = Date.now();
-    const oauthMissing = connector.authMode === "OAUTH" && connector.authConnectionStatus !== "CONNECTED";
+    const oauthMissing = authMode === "OAUTH" && connector.authConnectionStatus !== "CONNECTED";
     const disabled = connector.isActive === false || connector.installStatus === "DISABLED";
-    const success = !disabled && !oauthMissing && (connector.authMode === "NONE" || connector.authMode === "OAUTH" || missingSecretRefs.length === 0);
+    const success = !disabled && !oauthMissing && (authMode === "NONE" || authMode === "OAUTH" || missingSecretRefs.length === 0);
     const diagnosticCode = disabled
       ? "CONNECTOR_DISABLED"
       : oauthMissing

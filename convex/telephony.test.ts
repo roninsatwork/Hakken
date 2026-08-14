@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { computeTwilioSignature } from "./telephonyService";
 
@@ -52,6 +53,31 @@ async function seedCompany(t: ReturnType<typeof convexTest>) {
             updatedAt: Date.now(),
         });
         return companyId;
+    });
+}
+
+/** The phone line the admin screen installs: a Twilio connector claiming the number. */
+async function seedVoiceLine(
+    t: ReturnType<typeof convexTest>,
+    companyId: Id<"companies">,
+    options: { isActive?: boolean } = {}
+) {
+    const isActive = options.isActive ?? true;
+    return await t.run(async (ctx) => {
+        return await ctx.db.insert("toolConnectors", {
+            key: "twilio-voice",
+            name: "Twilio Phone Line",
+            description: "The phone number Sonae answers.",
+            category: "VOICE",
+            authMode: "SECRET_REF",
+            tenantAvailability: "TENANT_RESTRICTED",
+            companyId,
+            installStatus: isActive ? "INSTALLED" : "DISABLED",
+            isActive,
+            authAccountRef: CALLED_NUMBER,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        });
     });
 }
 
@@ -137,6 +163,65 @@ describe("answering the phone", () => {
 
         expect(response.status).toBe(403);
         expect(await t.run(async (ctx) => ctx.db.query("phoneCalls").collect())).toHaveLength(0);
+    });
+
+    test("a number claimed by the Twilio connector is answered for its workspace", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await seedCompany(t);
+        // No TELEPHONY_NUMBER_OWNERS in the environment: the connector row —
+        // the one the admin screen edits — is the routing.
+        await seedVoiceLine(t, companyId);
+
+        const response = await dial(t, {
+            CallSid: "CA-line",
+            From: CALLER_NUMBER,
+            To: CALLED_NUMBER,
+        });
+
+        expect(response.status).toBe(200);
+        expect(await response.text()).toContain('<Stream url="wss://relay.test/call">');
+        const calls = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
+        expect(calls).toHaveLength(1);
+        expect(calls[0].companyId).toBe(companyId);
+    });
+
+    test("a switched-off phone line refuses politely, and the switch beats the environment", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await seedCompany(t);
+        // The environment still claims the number — but the connector's off
+        // switch must win, or the admin screen's toggle is a placebo.
+        vi.stubEnv("TELEPHONY_NUMBER_OWNERS", JSON.stringify({ [CALLED_NUMBER]: companyId }));
+        await seedVoiceLine(t, companyId, { isActive: false });
+
+        const response = await dial(t, {
+            CallSid: "CA-off",
+            From: CALLER_NUMBER,
+            To: CALLED_NUMBER,
+        });
+
+        expect(response.status).toBe(200);
+        const twiml = await response.text();
+        expect(twiml).toContain("not taking calls at the moment");
+        expect(twiml).not.toContain("<Stream");
+        // Refused before a row, a ticket, or a penny of model spend.
+        expect(await t.run(async (ctx) => ctx.db.query("phoneCalls").collect())).toHaveLength(0);
+    });
+
+    test("a claimed number is verified with the connector's own token", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await seedCompany(t);
+        await seedVoiceLine(t, companyId);
+        // The connector's secret reference resolves — so the deployment-wide
+        // token no longer vouches for this number's webhooks.
+        vi.stubEnv("CONNECTOR_SECRET_TWILIO_AUTH_TOKEN", "connector-token");
+
+        const fields = { CallSid: "CA-token", From: CALLER_NUMBER, To: CALLED_NUMBER };
+        const wrongToken = await dial(t, fields, { token: AUTH_TOKEN });
+        expect(wrongToken.status).toBe(403);
+
+        const rightToken = await dial(t, fields, { token: "connector-token" });
+        expect(rightToken.status).toBe(200);
+        expect(await rightToken.text()).toContain('<Stream url="wss://relay.test/call">');
     });
 
     test("a call signed with the wrong token is refused", async () => {

@@ -1,4 +1,4 @@
-type ConnectorCategory = "KNOWLEDGE" | "PROFILE" | "WORKFLOW" | "HTTP" | "EMAIL" | "CUSTOM";
+type ConnectorCategory = "KNOWLEDGE" | "PROFILE" | "WORKFLOW" | "HTTP" | "EMAIL" | "VOICE" | "CUSTOM";
 type ConnectorAuthMode = "NONE" | "SECRET_REF" | "OAUTH";
 type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 
@@ -24,8 +24,21 @@ export type ToolConnectorDefinition = {
   tenantAvailability: "GLOBAL" | "TENANT_RESTRICTED";
   requiredScopes: string[];
   requiredSecretRefs: string[];
+  /**
+   * When set, the admin screen shows a field for the external account this
+   * install is bound to (stored as authAccountRef) — the phone number a
+   * voice line answers, for example. OAuth connectors never set this: their
+   * account ref belongs to the consent flow.
+   */
+  accountRefLabel?: string;
   toolDefinitions: ConnectorToolDefinition[];
 };
+
+/** The phone line's connector key, shared with the telephony webhook. */
+export const TWILIO_VOICE_CONNECTOR_KEY = "twilio-voice";
+
+/** The secret reference holding the Twilio auth token. */
+export const TWILIO_AUTH_TOKEN_SECRET_REF = "twilio/auth-token";
 
 export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
   {
@@ -858,6 +871,29 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         }),
       },
     ],
+  },
+  {
+    key: TWILIO_VOICE_CONNECTOR_KEY,
+    name: "Twilio Phone Line",
+    description:
+      "The phone number Sonae answers. Claiming a number here routes its calls to this "
+      + "workspace's voice agent; the connector's switch is the off button — turned off, every "
+      + "caller hears a polite refusal and nothing is spent.",
+    category: "VOICE",
+    // Like Apify: the Twilio auth token already lives in the deployment
+    // environment (TWILIO_AUTH_TOKEN), so the admin has nothing to configure
+    // here beyond the number. CONNECTOR_SECRET_TWILIO_AUTH_TOKEN, when set,
+    // overrides it for connector-claimed numbers.
+    authMode: "NONE",
+    // A phone number belongs to one workspace: its calls are that company's
+    // conversations and spend its plan.
+    tenantAvailability: "TENANT_RESTRICTED",
+    requiredScopes: [],
+    requiredSecretRefs: [],
+    accountRefLabel: "Phone number",
+    // No AI-callable tools: the phone line is an inbound door, not something
+    // an agent may pick up and use.
+    toolDefinitions: [],
   },
 ];
 

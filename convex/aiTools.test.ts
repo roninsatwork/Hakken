@@ -667,8 +667,16 @@ describe("connector marketplace honesty", () => {
       const executable = connector.toolDefinitions.filter((tool) => tool.isExecutable).length;
       expect(connector.executableToolCount).toBe(executable);
       expect(connector.totalToolCount).toBe(connector.toolDefinitions.length);
+      // Zero tool definitions is an inbound door (the phone line), not an
+      // unimplemented catalogue entry — available, with nothing to execute.
       expect(connector.availability).toBe(
-        executable === 0 ? "UNAVAILABLE" : executable === connector.totalToolCount ? "AVAILABLE" : "PARTIAL",
+        connector.totalToolCount === 0
+          ? "AVAILABLE"
+          : executable === 0
+            ? "UNAVAILABLE"
+            : executable === connector.totalToolCount
+              ? "AVAILABLE"
+              : "PARTIAL",
       );
     }
   });

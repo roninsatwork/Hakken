@@ -2236,6 +2236,7 @@ export default defineSchema({
       v.literal("WORKFLOW"),
       v.literal("HTTP"),
       v.literal("EMAIL"),
+      v.literal("VOICE"),
       v.literal("CUSTOM")
     ),
     authMode: v.union(
