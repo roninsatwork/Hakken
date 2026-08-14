@@ -295,10 +295,28 @@ async function processMessage(
     .join("\n\n")
     .slice(-8000);
 
-  const knowledge = (await ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
-    query: retrievalQuery,
-    fallbackCompanyId: connector.companyId,
-  })) as { context: string };
+  // Two searches, deliberately. The whole-conversation query keeps the topic
+  // when the newest message is a bare "that didn't help"; the newest-message
+  // query keeps the point when the conversation has grown long enough to blur
+  // it. The first live pricing thread proved the need: the conversation query
+  // retrieved only general pages while the priced page sat one sharper query
+  // away, and the reply talked around the number it should have given.
+  const pointQuery = `${summary.subject}\n\n${newestBody}`.slice(0, 2000);
+  const [topicKnowledge, pointKnowledge] = (await Promise.all([
+    ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
+      query: retrievalQuery,
+      fallbackCompanyId: connector.companyId,
+    }),
+    ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
+      query: pointQuery,
+      fallbackCompanyId: connector.companyId,
+    }),
+  ])) as [{ context: string }, { context: string }];
+  const knowledge = {
+    context: [topicKnowledge.context, pointKnowledge.context]
+      .filter(Boolean)
+      .join("\n\n"),
+  };
 
   const decision = await decideReply(ctx, {
     conversation: transcript,
