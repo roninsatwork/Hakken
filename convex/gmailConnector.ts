@@ -70,21 +70,61 @@ export function buildReplyMime(args: {
     `Subject: ${subject}`,
     ...(args.inReplyTo ? [`In-Reply-To: ${args.inReplyTo}`] : []),
     ...(args.references ? [`References: ${args.references}`] : []),
-    'Content-Type: text/plain; charset="UTF-8"',
-    // Base64 on purpose: without a declared transfer encoding, the mail
-    // transport is free to hard-wrap long lines itself — which is exactly
-    // what it did, re-introducing the mid-paragraph line breaks the reply
-    // pipeline had already removed. An encoded body cannot be rewrapped,
-    // and non-ASCII (a £ sign in a price) survives intact.
-    "Content-Transfer-Encoding: base64",
+    `Content-Type: multipart/alternative; boundary="${ALTERNATIVE_BOUNDARY}"`,
     "MIME-Version: 1.0",
   ];
-  const bodyBase64 = base64EncodeBytes(new TextEncoder().encode(args.body)).replace(
-    /(.{76})/g,
-    "$1\r\n"
-  );
-  const message = `${headers.join("\r\n")}\r\n\r\n${bodyBase64}`;
+  // Base64 on purpose: without a declared transfer encoding, the mail
+  // transport is free to hard-wrap long lines itself. An encoded body cannot
+  // be rewrapped in transit, and non-ASCII (a £ sign in a price) survives.
+  const encodedPart = (mimeType: string, content: string) =>
+    [
+      `--${ALTERNATIVE_BOUNDARY}`,
+      `Content-Type: ${mimeType}; charset="UTF-8"`,
+      "Content-Transfer-Encoding: base64",
+      "",
+      base64EncodeBytes(new TextEncoder().encode(content)).replace(/(.{76})/g, "$1\r\n"),
+    ].join("\r\n");
+  // Two bodies, one message. Sealed transit alone proved not enough: a
+  // plain-text-only mail reached Outlook intact and was still shown chopped
+  // at ~70 columns, because Exchange re-wraps bare plain text as it pleases.
+  // The HTML part is the one every rich client actually displays — it wraps
+  // to the reading window. The plain part stays for text-only readers,
+  // word for word the same.
+  const message =
+    `${headers.join("\r\n")}\r\n\r\n` +
+    `${encodedPart("text/plain", args.body)}\r\n` +
+    `${encodedPart("text/html", renderBodyHtml(args.body))}\r\n` +
+    `--${ALTERNATIVE_BOUNDARY}--`;
   return base64UrlEncode(message);
+}
+
+/**
+ * The boundary between the alternative bodies. A constant is safe: both
+ * parts travel base64-encoded, and no base64 line can ever begin with the
+ * "--" that marks a boundary.
+ */
+const ALTERNATIVE_BOUNDARY = "=_sonae_alternative";
+
+/** &, <, > and " made harmless before prose is placed into HTML. */
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * The HTML twin of the plain-text body: paragraphs stay paragraphs, single
+ * newlines (the sign-off, the quoted trail) stay line breaks, and nothing
+ * else is invented — the same words, marked up just enough for a rich
+ * client to wrap them to its own window.
+ */
+export function renderBodyHtml(body: string) {
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`);
+  return `<div>${paragraphs.join("\n")}</div>`;
 }
 
 function base64EncodeBytes(bytes: Uint8Array) {

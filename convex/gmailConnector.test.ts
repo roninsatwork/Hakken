@@ -10,6 +10,7 @@ import {
   extractPlainTextBody,
   isNoReplyAddress,
   parseAddress,
+  renderBodyHtml,
 } from "./gmailConnector";
 
 /**
@@ -116,12 +117,19 @@ async function seedConnectedGmail(t: ReturnType<typeof convexTest>) {
 }
 
 
-/** Decode a sent MIME: headers as text, base64 body decoded back to text. */
+/** Decode a sent MIME: headers as text, each base64 alternative back to text. */
 function decodeSentMime(raw: string) {
   const mime = Buffer.from(raw, "base64url").toString();
-  const [headerPart, ...bodyParts] = mime.split("\r\n\r\n");
-  const body = Buffer.from(bodyParts.join("\r\n\r\n").replace(/\r\n/g, ""), "base64").toString("utf8");
-  return { mime, headers: headerPart, body };
+  const boundary = mime.match(/boundary="([^"]+)"/)?.[1] ?? "";
+  const [headerPart] = mime.split("\r\n\r\n");
+  const decodePart = (mimeType: string) => {
+    const section = mime
+      .split(`--${boundary}`)
+      .find((part) => part.includes(`Content-Type: ${mimeType}`));
+    const encoded = section?.split("\r\n\r\n")[1] ?? "";
+    return Buffer.from(encoded.replace(/\s/g, ""), "base64").toString("utf8");
+  };
+  return { mime, headers: headerPart, body: decodePart("text/plain"), html: decodePart("text/html") };
 }
 
 const CUSTOMER_MESSAGE: StubMessage = {
@@ -164,18 +172,22 @@ describe("gmail reply rails", () => {
 
     expect(result).toMatchObject({ ok: true, sent: true });
     expect(sent).not.toBeNull();
-    const { headers: mimeHeaders, body: mimeBody } = decodeSentMime(sent!.raw);
-    // To the sender, in their thread, under their message id — and encoded,
-    // so no mail transport can rewrap the paragraphs on the way through.
+    const { mime, headers: mimeHeaders, body: mimeBody, html: mimeHtml } = decodeSentMime(sent!.raw);
+    // To the sender, in their thread, under their message id — and both
+    // bodies encoded, so no mail transport can rewrap them on the way.
     expect(mimeHeaders).toContain("To: priya@customer.co.uk");
     expect(mimeHeaders).toContain("Subject: Re: Opening hours?");
     expect(mimeHeaders).toContain("In-Reply-To: <abc@customer.co.uk>");
-    expect(mimeHeaders).toContain("Content-Transfer-Encoding: base64");
+    expect(mimeHeaders).toContain("Content-Type: multipart/alternative");
+    expect(mime.match(/Content-Transfer-Encoding: base64/g)).toHaveLength(2);
     expect(sent!.threadId).toBe("thread-1");
     // The quoted trail: the reply carries what it answers, so it reads as a
     // conversation in any client, threading support or none.
     expect(mimeBody).toContain("Priya Shah <priya@customer.co.uk> wrote:");
     expect(mimeBody).toContain("> Hi — what are your opening hours?");
+    // The HTML twin says the same words, safely escaped.
+    expect(mimeHtml).toContain("We are open 9 to 5, Monday to Friday.");
+    expect(mimeHtml).toContain("&gt; Hi — what are your opening hours?");
 
     const { rows, audits } = await t.run(async (ctx) => ({
       rows: await ctx.db.query("mailboxMessages").collect(),
@@ -385,6 +397,12 @@ describe("gmail plumbing helpers", () => {
     expect(mime).toContain("Subject: Re: Opening hours?");
     expect(mime).not.toContain("Re: Re:");
     expect(mime).toContain("References: <earlier@customer.co.uk> <abc@customer.co.uk>");
+  });
+
+  test("the html twin keeps paragraphs and line breaks, and escapes markup", () => {
+    expect(renderBodyHtml("Best <deal> & price\n\nAsk Sonae\nAI assistant")).toBe(
+      "<div><p>Best &lt;deal&gt; &amp; price</p>\n<p>Ask Sonae<br>AI assistant</p></div>"
+    );
   });
 
   test("plain text is found inside a multipart payload", () => {

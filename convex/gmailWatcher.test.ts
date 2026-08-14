@@ -181,8 +181,13 @@ async function seedMailbox(t: ReturnType<typeof convexTest>) {
 /** Decode a sent MIME: headers as text, base64 body decoded back to text. */
 function decodeSentMime(raw: string) {
   const mime = Buffer.from(raw, "base64url").toString();
-  const [headerPart, ...bodyParts] = mime.split("\r\n\r\n");
-  const body = Buffer.from(bodyParts.join("\r\n\r\n").replace(/\r\n/g, ""), "base64").toString("utf8");
+  const boundary = mime.match(/boundary="([^"]+)"/)?.[1] ?? "";
+  const [headerPart] = mime.split("\r\n\r\n");
+  const section = mime
+    .split(`--${boundary}`)
+    .find((part) => part.includes("Content-Type: text/plain"));
+  const encoded = section?.split("\r\n\r\n")[1] ?? "";
+  const body = Buffer.from(encoded.replace(/\s/g, ""), "base64").toString("utf8");
   return { mime, headers: headerPart, body };
 }
 
