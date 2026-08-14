@@ -276,7 +276,9 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
  * hangs up must not grow a row without end.
  */
 const MAX_TURNS_PER_CALL = 400;
-const MAX_TURN_BODY_BYTES = 32_768;
+// The ticket rides in every post and carries the company's full instructions
+// — see the knowledge endpoint's limit for the 413 this once caused.
+const MAX_TURN_BODY_BYTES = 128 * 1024;
 /** Lookups mid-call are bounded by session length, exactly as knowledge is. */
 const MAX_CALL_SESSION_MS = 15 * 60 * 1000;
 

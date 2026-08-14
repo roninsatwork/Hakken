@@ -125,7 +125,7 @@ describe("the relay asking for company knowledge", () => {
 
         const oversized = await lookup(t, {
             ticket: mintTicket({ threadId: "x", expiresAt: Date.now() }),
-            query: "q".repeat(5000),
+            query: "q".repeat(200_000),
         });
         expect(oversized.status).toBe(413);
     });
@@ -136,6 +136,30 @@ describe("the relay asking for company knowledge", () => {
 
         const response = await lookup(t, { ticket: "anything", query: "x" });
         expect(response.status).toBe(503);
+    });
+
+    test("a real ticket's size fits through the door", async () => {
+        // The first live phone call failed here: a ticket carries the
+        // company's full spoken instructions — prompt, rules, skills,
+        // memories — and the door was sized for a bare question. Every
+        // lookup bounced 413 and the voice told the caller it could not
+        // check. This ticket is the shape the platform actually mints.
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { threadId, companyId } = await seedThread(t);
+
+        const response = await lookup(t, {
+            ticket: mintTicket({
+                threadId,
+                companyId,
+                model: "test-provider-model",
+                instructions: "You speak for the company. ".repeat(1200),
+                tools: [{ name: "search_company_knowledge", description: "d", parameters: {} }],
+                expiresAt: Date.now() + 60_000,
+            }),
+            query: "what services do you offer",
+        });
+
+        expect(response.status).toBe(200);
     });
 
     test("a thread that belongs to no workspace falls back to the ticket's company", async () => {

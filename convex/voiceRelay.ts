@@ -19,8 +19,16 @@ import type { Id } from "./_generated/dataModel";
  * involved — the relay holds no key to anything else.
  */
 
-/** Bodies are tiny; anything larger is not a spoken question. */
-const MAX_BODY_BYTES = 4096;
+/**
+ * The body carries the session's signed ticket, and a ticket carries the
+ * company's full spoken-session instructions — prompt, rules, skills,
+ * memories. For a content-rich company that is tens of kilobytes, and the
+ * first live phone call bounced off the original 4KB limit with a 413: every
+ * knowledge lookup failed, so the voice truthfully told the caller it could
+ * not check. The bound exists to stop abuse, not to measure questions — it
+ * only needs to be far below anything worth an attacker's while.
+ */
+const MAX_BODY_BYTES = 128 * 1024;
 /**
  * A ticket is minted good for a minute — long enough to open a connection.
  * A knowledge lookup happens mid-conversation, so it is bounded by how long
