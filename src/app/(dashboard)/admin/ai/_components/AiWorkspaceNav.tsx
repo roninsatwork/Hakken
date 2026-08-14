@@ -170,7 +170,7 @@ const workspaceTabs = [
     matches: (pathname: string) => pathname.startsWith("/admin/ai/skills"),
   },
   {
-    label: "Pages",
+    label: "Wiki",
     href: "/admin/ai/pages",
     icon: BookOpen,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/pages"),

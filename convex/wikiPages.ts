@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, tenantQuery } from "./tenantFunctions";
-import { getActiveCompanyId } from "./authz";
+import { adminMutation, adminQuery, tenantQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import {
   WIKI_PAGE_MAX_CHARS,
   linkKeyFor,
@@ -222,36 +222,67 @@ export const applyRewriteInternal = internalMutation({
 // machine rewrite does, and the pinned layer is theirs alone.
 // ---------------------------------------------------------------------------
 
+async function listPagesRows(ctx: QueryCtx, companyId: Id<"companies">, search?: string) {
+  const pages = await ctx.db
+    .query("wikiPages")
+    .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .order("desc")
+    .take(500);
+  const needle = search?.trim().toLowerCase();
+  return pages
+    .filter(
+      (page) =>
+        !needle ||
+        page.title.toLowerCase().includes(needle) ||
+        page.content.toLowerCase().includes(needle)
+    )
+    .map((page) => ({
+      pageId: page._id,
+      kind: page.kind,
+      title: page.title,
+      subjectKey: page.subjectKey,
+      links: page.links,
+      preview: page.content.slice(0, 160),
+      rewriteCount: page.rewriteCount,
+      pinnedCount: page.pinnedCorrections.length,
+      lastRewriteSource: page.lastRewriteSource,
+      updatedAt: page.updatedAt,
+    }));
+}
+
+async function pageDetailFor(ctx: QueryCtx, companyId: Id<"companies">, pageId: Id<"wikiPages">) {
+  const page = await ctx.db.get(pageId);
+  if (!page || page.companyId !== companyId) return null;
+  const revisions = await ctx.db
+    .query("wikiPageRevisions")
+    .withIndex("by_page", (q) => q.eq("pageId", page._id))
+    .order("desc")
+    .take(20);
+  return {
+    pageId: page._id,
+    kind: page.kind,
+    title: page.title,
+    subjectKey: page.subjectKey,
+    content: page.content,
+    pinnedCorrections: page.pinnedCorrections,
+    rewriteCount: page.rewriteCount,
+    lastRewriteSource: page.lastRewriteSource,
+    updatedAt: page.updatedAt,
+    createdAt: page.createdAt,
+    revisions: revisions.map((revision) => ({
+      content: revision.content,
+      source: revision.source,
+      createdAt: revision.createdAt,
+    })),
+  };
+}
+
 export const listCompanyPages = tenantQuery({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return [];
-    const pages = await ctx.db
-      .query("wikiPages")
-      .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
-      .order("desc")
-      .take(500);
-    const needle = args.search?.trim().toLowerCase();
-    return pages
-      .filter(
-        (page) =>
-          !needle ||
-          page.title.toLowerCase().includes(needle) ||
-          page.content.toLowerCase().includes(needle)
-      )
-      .map((page) => ({
-        pageId: page._id,
-        kind: page.kind,
-        title: page.title,
-        subjectKey: page.subjectKey,
-        links: page.links,
-        preview: page.content.slice(0, 160),
-        rewriteCount: page.rewriteCount,
-        pinnedCount: page.pinnedCorrections.length,
-        lastRewriteSource: page.lastRewriteSource,
-        updatedAt: page.updatedAt,
-      }));
+    return await listPagesRows(ctx, companyId, args.search);
   },
 });
 
@@ -259,75 +290,139 @@ export const getPageDetail = tenantQuery({
   args: { pageId: v.id("wikiPages") },
   handler: async (ctx, args) => {
     const { companyId } = ctx;
-    const page = await ctx.db.get(args.pageId);
-    if (!page || !companyId || page.companyId !== companyId) return null;
-    const revisions = await ctx.db
-      .query("wikiPageRevisions")
-      .withIndex("by_page", (q) => q.eq("pageId", page._id))
-      .order("desc")
-      .take(20);
-    return {
-      pageId: page._id,
-      kind: page.kind,
-      title: page.title,
-      subjectKey: page.subjectKey,
-      content: page.content,
-      pinnedCorrections: page.pinnedCorrections,
-      rewriteCount: page.rewriteCount,
-      lastRewriteSource: page.lastRewriteSource,
-      updatedAt: page.updatedAt,
-      createdAt: page.createdAt,
-      revisions: revisions.map((revision) => ({
-        content: revision.content,
-        source: revision.source,
-        createdAt: revision.createdAt,
-      })),
-    };
+    if (!companyId) return null;
+    return await pageDetailFor(ctx, companyId, args.pageId);
   },
 });
 
-/** An admin's own guarded page: right company, or nothing. */
-async function requireCompanyPage(
-  ctx: QueryCtx & { user: Doc<"users"> },
+// The company-level doors (Anthony's ruling, 2026-08-14): the wiki IS
+// company-scoped data, so the company detail screen reads it like Knowledge
+// and Memory do — one named company at a time, behind the same access
+// assertion every other company screen uses.
+
+export const listPagesForCompany = adminQuery({
+  args: { companyId: v.id("companies"), search: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    return await listPagesRows(ctx, args.companyId, args.search);
+  },
+});
+
+export const getPageDetailForCompany = adminQuery({
+  args: { companyId: v.id("companies"), pageId: v.id("wikiPages") },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    return await pageDetailFor(ctx, args.companyId, args.pageId);
+  },
+});
+
+/** A page proven to be the named company's, or nothing. */
+async function requirePageInCompany(
+  ctx: QueryCtx,
+  companyId: Id<"companies">,
   pageId: Id<"wikiPages">
-): Promise<{ page: Doc<"wikiPages">; companyId: Id<"companies"> }> {
-  const companyId = getActiveCompanyId(ctx.user);
-  if (!companyId) throw new Error("No workspace selected.");
+): Promise<Doc<"wikiPages">> {
   const page = await ctx.db.get(pageId);
   if (!page || page.companyId !== companyId) throw new Error("Page not found.");
-  return { page, companyId };
+  return page;
+}
+
+async function applyHumanEdit(
+  ctx: MutationCtx,
+  args: { companyId: Id<"companies">; userId: Id<"users">; pageId: Id<"wikiPages">; content: string }
+): Promise<void> {
+  const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  const content = args.content.trim().slice(0, WIKI_PAGE_MAX_CHARS);
+  if (!content) throw new Error("A page cannot be emptied — pin a correction instead.");
+  if (content === page.content) return;
+
+  const now = Date.now();
+  const source = `HUMAN:${args.userId}`;
+  await ctx.db.insert("wikiPageRevisions", {
+    pageId: page._id,
+    companyId: args.companyId,
+    content: page.content,
+    source,
+    createdAt: now,
+  });
+  await ctx.db.patch(page._id, { content, lastRewriteSource: source, updatedAt: now });
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_PAGE_HUMAN_EDIT",
+    entityId: page._id.toString(),
+    entityType: "wikiPages",
+    companyId: args.companyId,
+    timestamp: now,
+    metadata: JSON.stringify({
+      subjectKey: page.subjectKey,
+      beforeChars: page.content.length,
+      afterChars: content.length,
+    }),
+  });
+}
+
+async function applyPin(
+  ctx: MutationCtx,
+  args: { companyId: Id<"companies">; userId: Id<"users">; pageId: Id<"wikiPages">; text: string }
+): Promise<void> {
+  const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  const text = args.text.trim().slice(0, 500);
+  if (!text) throw new Error("A pinned correction needs words.");
+
+  const now = Date.now();
+  // Attribution lives in the audit row below, not on the pin: the pin is
+  // company knowledge, and a person's erasure must not have to edit it.
+  await ctx.db.patch(page._id, {
+    pinnedCorrections: [...page.pinnedCorrections, { text, pinnedAt: now }],
+    updatedAt: now,
+  });
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_PAGE_PIN",
+    entityId: page._id.toString(),
+    entityType: "wikiPages",
+    companyId: args.companyId,
+    timestamp: now,
+    metadata: JSON.stringify({ subjectKey: page.subjectKey, text }),
+  });
+}
+
+async function applyUnpin(
+  ctx: MutationCtx,
+  args: { companyId: Id<"companies">; userId: Id<"users">; pageId: Id<"wikiPages">; pinnedAt: number }
+): Promise<void> {
+  const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  const remaining = page.pinnedCorrections.filter(
+    (correction) => correction.pinnedAt !== args.pinnedAt
+  );
+  if (remaining.length === page.pinnedCorrections.length) return;
+
+  const now = Date.now();
+  await ctx.db.patch(page._id, { pinnedCorrections: remaining, updatedAt: now });
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_PAGE_UNPIN",
+    entityId: page._id.toString(),
+    entityType: "wikiPages",
+    companyId: args.companyId,
+    timestamp: now,
+    metadata: JSON.stringify({ subjectKey: page.subjectKey }),
+  });
+}
+
+function requireActiveCompany(user: Doc<"users">): Id<"companies"> {
+  const companyId = getActiveCompanyId(user);
+  if (!companyId) throw new Error("No workspace selected.");
+  return companyId;
 }
 
 export const editPageContent = adminMutation({
   args: { pageId: v.id("wikiPages"), content: v.string() },
   handler: async (ctx, args) => {
-    const { page, companyId } = await requireCompanyPage(ctx, args.pageId);
-    const content = args.content.trim().slice(0, WIKI_PAGE_MAX_CHARS);
-    if (!content) throw new Error("A page cannot be emptied — pin a correction instead.");
-    if (content === page.content) return;
-
-    const now = Date.now();
-    const source = `HUMAN:${ctx.userId}`;
-    await ctx.db.insert("wikiPageRevisions", {
-      pageId: page._id,
-      companyId,
-      content: page.content,
-      source,
-      createdAt: now,
-    });
-    await ctx.db.patch(page._id, { content, lastRewriteSource: source, updatedAt: now });
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "WIKI_PAGE_HUMAN_EDIT",
-      entityId: page._id.toString(),
-      entityType: "wikiPages",
-      companyId,
-      timestamp: now,
-      metadata: JSON.stringify({
-        subjectKey: page.subjectKey,
-        beforeChars: page.content.length,
-        afterChars: content.length,
-      }),
+    await applyHumanEdit(ctx, {
+      companyId: requireActiveCompany(ctx.user),
+      userId: ctx.userId,
+      ...args,
     });
   },
 });
@@ -335,49 +430,41 @@ export const editPageContent = adminMutation({
 export const pinCorrection = adminMutation({
   args: { pageId: v.id("wikiPages"), text: v.string() },
   handler: async (ctx, args) => {
-    const { page, companyId } = await requireCompanyPage(ctx, args.pageId);
-    const text = args.text.trim().slice(0, 500);
-    if (!text) throw new Error("A pinned correction needs words.");
-
-    const now = Date.now();
-    // Attribution lives in the audit row below, not on the pin: the pin is
-    // company knowledge, and a person's erasure must not have to edit it.
-    await ctx.db.patch(page._id, {
-      pinnedCorrections: [...page.pinnedCorrections, { text, pinnedAt: now }],
-      updatedAt: now,
-    });
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "WIKI_PAGE_PIN",
-      entityId: page._id.toString(),
-      entityType: "wikiPages",
-      companyId,
-      timestamp: now,
-      metadata: JSON.stringify({ subjectKey: page.subjectKey, text }),
-    });
+    await applyPin(ctx, { companyId: requireActiveCompany(ctx.user), userId: ctx.userId, ...args });
   },
 });
 
 export const unpinCorrection = adminMutation({
   args: { pageId: v.id("wikiPages"), pinnedAt: v.number() },
   handler: async (ctx, args) => {
-    const { page, companyId } = await requireCompanyPage(ctx, args.pageId);
-    const remaining = page.pinnedCorrections.filter(
-      (correction) => correction.pinnedAt !== args.pinnedAt
-    );
-    if (remaining.length === page.pinnedCorrections.length) return;
+    await applyUnpin(ctx, { companyId: requireActiveCompany(ctx.user), userId: ctx.userId, ...args });
+  },
+});
 
-    const now = Date.now();
-    await ctx.db.patch(page._id, { pinnedCorrections: remaining, updatedAt: now });
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "WIKI_PAGE_UNPIN",
-      entityId: page._id.toString(),
-      entityType: "wikiPages",
-      companyId,
-      timestamp: now,
-      metadata: JSON.stringify({ subjectKey: page.subjectKey }),
-    });
+// The same three doors from the company detail screen, one named company at
+// a time (Anthony's ruling, 2026-08-14).
+
+export const editPageContentForCompany = adminMutation({
+  args: { companyId: v.id("companies"), pageId: v.id("wikiPages"), content: v.string() },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    await applyHumanEdit(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+export const pinCorrectionForCompany = adminMutation({
+  args: { companyId: v.id("companies"), pageId: v.id("wikiPages"), text: v.string() },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    await applyPin(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+export const unpinCorrectionForCompany = adminMutation({
+  args: { companyId: v.id("companies"), pageId: v.id("wikiPages"), pinnedAt: v.number() },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    await applyUnpin(ctx, { userId: ctx.userId, ...args });
   },
 });
 

@@ -11,6 +11,7 @@ import {
   AppWindow,
   ArrowLeft,
   BookmarkCheck,
+  BookOpen,
   BrainCircuit,
   Building2,
   ClipboardCheck,
@@ -147,6 +148,14 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           label: "Saved Answers",
           href: `${aiHref}/saved-answers`,
           icon: BookmarkCheck,
+        },
+        {
+          // The self-improving wiki: the company's tended pages and their
+          // map, one company at a time (Anthony's ruling, 2026-08-14).
+          label: "Wiki",
+          href: `${aiHref}/pages`,
+          icon: BookOpen,
+          matches: (pathname: string) => matchesCompanyRoute(pathname, `${aiHref}/pages`),
         },
         {
           label: "Memory",

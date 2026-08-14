@@ -3270,7 +3270,7 @@
     }
   },
   "aiPages": {
-    "title": "Pagine",
+    "title": "Wiki",
     "subtitle": "Ciò che Sonae ricorda — clienti, prodotti, regole e questioni ricorrenti — scritto e tenuto aggiornato da Sonae stessa.",
     "hint": "Dopo ogni telefonata o email con un cliente conosciuto, Sonae riscrive la sua pagina — e quando una conversazione insegna qualcosa su un prodotto, una regola o una questione ricorrente, anche la pagina di quel tema impara, e le pagine si collegano. Apri una pagina per leggerla, modificarla o fissare un fatto che Sonae deve sempre rispettare.",
     "searchPlaceholder": "Cerca clienti o testo delle pagine...",
@@ -3339,7 +3339,10 @@
       "title": "La Mappa",
       "subtitle": "Ogni pagina è un punto, ogni collegamento una linea — la conoscenza dell'azienda, che cresce a ogni conversazione.",
       "back": "Tutte le pagine",
-      "empty": "Ancora nessuna pagina da disegnare. Quando Sonae parla con clienti conosciuti, la mappa cresce da sola."
+      "empty": "Ancora nessuna pagina da disegnare. Quando Sonae parla con clienti conosciuti, la mappa cresce da sola.",
+      "zoomIn": "Ingrandisci",
+      "zoomOut": "Riduci",
+      "zoomReset": "Ripristina la vista"
     }
   },
   "calls": {
