@@ -30,6 +30,7 @@ type StubMessage = {
   threadId: string;
   labelIds?: string[];
   headers: Record<string, string>;
+  body?: string;
 };
 
 function stubGmailFetch(args: {
@@ -54,7 +55,9 @@ function stubGmailFetch(args: {
           threadId: message.threadId,
           labelIds: message.labelIds ?? ["INBOX"],
           payload: {
+            mimeType: "text/plain",
             headers: Object.entries(message.headers).map(([name, value]) => ({ name, value })),
+            body: { data: Buffer.from(message.body ?? "").toString("base64url") },
           },
         });
       }
@@ -120,7 +123,9 @@ const CUSTOMER_MESSAGE: StubMessage = {
     From: "Priya Shah <priya@customer.co.uk>",
     Subject: "Opening hours?",
     "Message-ID": "<abc@customer.co.uk>",
+    Date: "Thu, 13 Aug 2026 09:00:00 +0000",
   },
+  body: "Hi — what are your opening hours?",
 };
 
 describe("gmail reply rails", () => {
@@ -156,6 +161,10 @@ describe("gmail reply rails", () => {
     expect(mime).toContain("Subject: Re: Opening hours?");
     expect(mime).toContain("In-Reply-To: <abc@customer.co.uk>");
     expect(sent!.threadId).toBe("thread-1");
+    // The quoted trail: the reply carries what it answers, so it reads as a
+    // conversation in any client, threading support or none.
+    expect(mime).toContain("Priya Shah <priya@customer.co.uk> wrote:");
+    expect(mime).toContain("> Hi — what are your opening hours?");
 
     const { rows, audits } = await t.run(async (ctx) => ({
       rows: await ctx.db.query("mailboxMessages").collect(),

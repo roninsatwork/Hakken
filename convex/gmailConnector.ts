@@ -303,11 +303,18 @@ export const replyToMessage = internalAction({
     });
     if (!token.ok) return { ok: false, error: token.error };
 
-    // The original message is the source of truth for who gets the reply.
+    // The original message is the source of truth for who gets the reply —
+    // and, quoted underneath, for what the reply is answering, so the mail
+    // reads as part of its conversation in any client.
     const original = (await gmailFetch(
       token.accessToken,
-      `/messages/${encodeURIComponent(args.messageId)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Message-ID&metadataHeaders=References&metadataHeaders=Reply-To`
-    )) as { id: string; threadId: string; labelIds?: string[]; payload?: { headers?: GmailHeader[] } };
+      `/messages/${encodeURIComponent(args.messageId)}?format=full`
+    )) as {
+      id: string;
+      threadId: string;
+      labelIds?: string[];
+      payload?: { headers?: GmailHeader[] } & Parameters<typeof extractPlainTextBody>[0];
+    };
 
     const headers = original.payload?.headers;
     const fromHeader = headerValue(headers, "From");
@@ -352,13 +359,26 @@ export const replyToMessage = internalAction({
       .filter(Boolean)
       .join(" ");
 
+    // The quoted trail: what every hand-written reply carries, and what makes
+    // the mail legible as a conversation even in a client that lists each
+    // message on its own.
+    const originalBody = extractPlainTextBody(original.payload ?? {}).slice(0, 3000);
+    const originalDate = headerValue(headers, "Date");
+    const quotedTrail = originalBody
+      ? `\n\nOn ${originalDate}, ${fromHeader} wrote:\n` +
+        originalBody
+          .split("\n")
+          .map((line) => `> ${line}`)
+          .join("\n")
+      : "";
+
     const raw = buildReplyMime({
       to: senderAddress,
       from: profile.emailAddress ?? connector.authAccountRef ?? "",
       subject,
       inReplyTo: messageIdHeader || undefined,
       references: references || undefined,
-      body: args.body,
+      body: `${args.body}${quotedTrail}`,
     });
 
     await gmailFetch(token.accessToken, "/messages/send", {
