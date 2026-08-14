@@ -95,6 +95,7 @@ export const DEFAULT_MODEL_USE_CASES = [
   "title",
   "transcription",
   "speech",
+  "vision",
   REALTIME_MODEL_USE_CASE,
   EMBEDDING_MODEL_USE_CASE,
 ] as const;
@@ -167,7 +168,10 @@ export function buildModelSearchText(model: {
  * replaces: the screen offered any model for any job, and the reader found out
  * it could not run when it did not.
  */
-const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription", "speech"]);
+// Vision is Google-only the same way transcription is: the other adapters
+// refuse non-text content at the boundary, so routing an image to them can
+// only ever throw. When a second adapter learns to see, it leaves this set.
+const GOOGLE_ONLY_USE_CASES = new Set([EMBEDDING_MODEL_USE_CASE, "transcription", "speech", "vision"]);
 /**
  * Real-time voice is one live audio connection to a speech-to-speech model.
  * Both providers publish one: OpenAI's realtime family, and Google's

@@ -27,6 +27,7 @@ export const KNOWLEDGE_DOCUMENT_CONTENT_TYPES = [
 
 export type UploadPolicyKey =
   | "chatDocument"
+  | "chatImage"
   | "knowledgeDocument"
   | "adminImage"
   | "widgetAttachmentImage";
@@ -43,6 +44,14 @@ const uploadPolicies: Record<UploadPolicyKey, UploadPolicy> = {
     allowedTypes: CHAT_DOCUMENT_CONTENT_TYPES,
     maxBytes: CHAT_DOCUMENT_MAX_BYTES,
     rejectedTypeMessage: "Please upload PDF, CSV, Excel, Word, or Text files.",
+  },
+  // A photo in chat is inline evidence for that turn, not a document: it is
+  // never ingested into knowledge, so it gets its own tighter budget rather
+  // than the 50MB a parsed document is allowed.
+  chatImage: {
+    allowImages: true,
+    maxBytes: CHAT_IMAGE_MAX_BYTES,
+    rejectedTypeMessage: "Please upload an image file.",
   },
   knowledgeDocument: {
     allowedTypes: KNOWLEDGE_DOCUMENT_CONTENT_TYPES,

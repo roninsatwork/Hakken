@@ -104,7 +104,8 @@ export default function AssistantWelcomePage() {
     const invalidFiles: string[] = [];
 
     Array.from(files).forEach((file) => {
-      const validation = validateUploadFile(file, "chatDocument");
+      const policy = file.type.startsWith("image/") ? "chatImage" : "chatDocument";
+      const validation = validateUploadFile(file, policy);
       if (validation.allowed) {
         validFiles.push(file);
       } else {
@@ -216,12 +217,16 @@ export default function AssistantWelcomePage() {
           });
           const { storageId } = await result.json();
 
-          await saveChatDocument({
-            storageId,
-            threadId,
-            title: file.name,
-            format: file.type,
-          });
+          // A document becomes knowledge; a photo does not — it rides on the
+          // message as inline evidence for this turn only.
+          if (!file.type.startsWith("image/")) {
+            await saveChatDocument({
+              storageId,
+              threadId,
+              title: file.name,
+              format: file.type,
+            });
+          }
 
           uploadedFileIds.push(storageId);
         }

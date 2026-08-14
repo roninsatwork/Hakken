@@ -131,7 +131,12 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
     const invalidFiles: string[] = [];
 
     Array.from(files).forEach(file => {
-      const validation = validateUploadFile(file, "chatDocument");
+      // A photo and a document are different attachments with different
+      // budgets: an image is inline evidence for this turn (5MB), a document
+      // is parsed and can be far larger. Routed by what the file is, so the
+      // one picker serves both.
+      const policy = file.type.startsWith("image/") ? "chatImage" : "chatDocument";
+      const validation = validateUploadFile(file, policy);
       if (validation.allowed) {
         validFiles.push(file);
       } else {
@@ -213,14 +218,18 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                body: file,
              });
              const { storageId } = await result.json();
-             
-             // Plumb through Vector AI Engine
-             await saveChatDocument({
-                 storageId,
-                 threadId,
-                 title: file.name,
-                 format: file.type
-             });
+
+             // A document becomes knowledge; a photo does not. Images ride on
+             // the message as inline evidence for this turn only — never
+             // ingested, never retrievable by later questions.
+             if (!file.type.startsWith("image/")) {
+               await saveChatDocument({
+                   storageId,
+                   threadId,
+                   title: file.name,
+                   format: file.type
+               });
+             }
 
              uploadedFileIds.push(storageId);
           }
@@ -319,7 +328,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
               ref={fileInputRef}
               className="hidden"
               multiple
-              accept=".pdf,.csv,.xlsx,.docx,.txt"
+              accept=".pdf,.csv,.xlsx,.docx,.txt,image/*"
               onChange={(e) => handleFileSelect(e.target.files)}
             />
 
@@ -339,6 +348,16 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
+                onPaste={(e) => {
+                  // A screenshot pasted straight from the clipboard is the
+                  // commonest way a photo reaches a chat box.
+                  const files = Array.from(e.clipboardData?.files ?? []);
+                  if (files.length === 0) return;
+                  e.preventDefault();
+                  const list = new DataTransfer();
+                  files.forEach((file) => list.items.add(file));
+                  handleFileSelect(list.files);
+                }}
                 placeholder={isRecording ? "Recording securely..." : isTranscribing ? "Transcribing perfectly..." : t("replyPlaceholder", { platformName: settings.platformName })}
                 className={`w-full bg-transparent border-none outline-none focus:outline-none text-[15px] focus:ring-0 p-0 resize-none min-h-[24px] max-h-[260px] overflow-y-auto scrollbar-hide leading-relaxed transition-colors ${
                   isRecording ? "text-brand placeholder:text-brand/50" : "text-foreground placeholder:text-muted/70"

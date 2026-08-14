@@ -82,11 +82,30 @@ export const getMessages = publicQuery({
 
     if (!(await canAccessThread(ctx, thread, current, args.widgetAccessToken))) return null;
 
-    return await ctx.db
+    const messages = await ctx.db
       .query("messages")
       .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
       .order("asc") // chronological order for rendering UI
       .take(USER_THREAD_MESSAGE_LIMIT);
+
+    // Image attachments become viewable here, and only images: a photo is
+    // inline evidence and the thread is where it is looked at. Documents keep
+    // their existing life as parsed knowledge, no URL exposed.
+    return await Promise.all(
+      messages.map(async (message) => {
+        if (!message.attachments?.length) return message;
+        const images = await Promise.all(
+          message.attachments.map(async (fileId) => {
+            const metadata = await ctx.db.system.get(fileId);
+            if (!metadata?.contentType?.startsWith("image/")) return null;
+            const url = await ctx.storage.getUrl(fileId);
+            return url ? { url } : null;
+          })
+        );
+        const imageAttachments = images.filter((image): image is { url: string } => image !== null);
+        return imageAttachments.length > 0 ? { ...message, imageAttachments } : message;
+      })
+    );
   },
 });
 
@@ -617,5 +636,38 @@ export const recordVoiceTurn = tenantMutation({
 
     await ctx.db.patch(args.threadId, { updatedAt: now });
     return null;
+  },
+});
+
+/**
+ * What kind of files a message carries, read from storage's own metadata.
+ * The model router asks this before spending anything: a photo must reach a
+ * model that can see, and the stored content type is the truth about that.
+ */
+export const getAttachmentContentTypesInternal = internalQuery({
+  args: { fileIds: v.array(v.id("_storage")) },
+  handler: async (ctx, args): Promise<Array<string | null>> => {
+    const metadata = await Promise.all(args.fileIds.map((fileId) => ctx.db.system.get(fileId)));
+    return metadata.map((entry) => entry?.contentType ?? null);
+  },
+});
+
+/**
+ * A plain sentence from the platform itself — used when a message cannot be
+ * processed at all (an image on a deployment with no vision-capable model)
+ * and silence would read as the assistant ignoring the user.
+ */
+export const saveAssistantNoticeInternal = internalMutation({
+  args: { threadId: v.id("threads"), content: v.string() },
+  handler: async (ctx, args): Promise<void> => {
+    const thread = await ctx.db.get(args.threadId);
+    await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      role: "assistant",
+      content: args.content,
+      createdAt: Date.now(),
+      ...getThreadMessageDimensions(thread),
+    });
+    await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
   },
 });

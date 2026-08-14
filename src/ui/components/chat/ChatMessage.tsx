@@ -14,7 +14,9 @@ import { MessageFeedbackControls } from "./MessageFeedbackControls";
 import { AnswerEvidence } from "./AnswerEvidence";
 
 interface ChatMessageProps {
-  message: Doc<"messages">;
+  // The list query attaches viewable URLs for image attachments; older
+  // callers pass plain rows and simply render no thumbnails.
+  message: Doc<"messages"> & { imageAttachments?: Array<{ url: string }> };
 }
 
 /**
@@ -59,6 +61,22 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         <p className="text-[15px] leading-snug tracking-[-0.01em] text-foreground whitespace-pre-wrap">
           {message.content}
         </p>
+        {message.imageAttachments && message.imageAttachments.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-2">
+            {message.imageAttachments.map((image, index) => (
+              // Tap opens the full photo; the thread shows a bounded
+              // thumbnail so one large photo cannot swallow the page.
+              <a key={index} href={image.url} target="_blank" rel="noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Convex storage URLs are signed and external; next/image adds nothing here */}
+                <img
+                  src={image.url}
+                  alt="Attached photo"
+                  className="max-h-48 max-w-[16rem] rounded-[10px] border border-border-dim object-cover"
+                />
+              </a>
+            ))}
+          </div>
+        )}
       </motion.div>
     );
   }

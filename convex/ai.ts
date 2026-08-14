@@ -238,11 +238,43 @@ export const generateSonaeResponse = internalAction({
 
     try {
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
-        const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+        let modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
             requestedModelId: args.modelId,
             companyId: thread?.companyId,
             useCase: "chat",
         });
+
+        // A message carrying a photo must reach a model that can see it. Only
+        // the Google adapter takes image parts today — every other adapter
+        // refuses non-text at the boundary — so an image on any other model is
+        // re-routed through the vision job, and the override is said in the
+        // reply rather than hidden. A deployment where even that resolves to
+        // a blind model refuses in a plain sentence instead of throwing at
+        // the provider.
+        let visionNotice = "";
+        if (args.fileIds && args.fileIds.length > 0) {
+            const contentTypes = await ctx.runQuery(internal.chat.getAttachmentContentTypesInternal, {
+                fileIds: args.fileIds,
+            });
+            const hasImage = contentTypes.some((type) => type?.startsWith("image/"));
+            if (hasImage && modelConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY) {
+                const visionConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+                    companyId: thread?.companyId,
+                    useCase: "vision",
+                });
+                if (visionConfig.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY) {
+                    await ctx.runMutation(internal.chat.saveAssistantNoticeInternal, {
+                        threadId: args.threadId,
+                        content:
+                            "I can't look at images on this deployment yet — no vision-capable model is enabled. Your message was not processed; remove the image and send the text again, or ask an administrator to enable a Google model.",
+                    });
+                    await setStage(undefined);
+                    return;
+                }
+                visionNotice = `\n\n*Answered with ${visionConfig.modelId} so I could look at your image.*`;
+                modelConfig = visionConfig;
+            }
+        }
 
         // --- Vector Pipeline Synchronization Guard ---
         // Sleep the action loop natively until async chunking completes
@@ -494,7 +526,7 @@ User Prompt: ${args.content}`;
             },
         });
 
-        const assistantReply = response.text || "I was unable to assemble a coherent analysis.";
+        const assistantReply = `${response.text || "I was unable to assemble a coherent analysis."}${visionNotice}`;
         const companyRuntimeEvidenceJson = buildCompanyRuntimeEvidence({
             skillIds: (companySkills?.skills ?? []).map((skill) => skill.skillId),
             sourceIds: retrievedChunkIds,

@@ -214,7 +214,9 @@ describe("Company AI readiness", () => {
     expect(routing?.state).toBe("NOT_CONFIGURED");
     // Every job in DEFAULT_MODEL_USE_CASES, not the seven the old hand-copied list checked — it omitted
     // fast-chat and transcription entirely.
-    expect(routing?.summary).toBe("All 11 jobs use the platform's model.");
+    // 12 with the vision job — added for photos in chat, Google-gated the
+    // same way transcription is.
+    expect(routing?.summary).toBe("All 12 jobs use the platform's model.");
   });
 
   test("a company model that cannot run needs attention, and one saved by its fallback does not", async () => {

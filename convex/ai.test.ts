@@ -977,3 +977,142 @@ describe("how the voice is told to speak", () => {
         expect(VOICE_KNOWLEDGE_TOOL_DESCRIPTION).toMatch(/usually English/);
     });
 });
+
+describe("a photo in the message", () => {
+    /**
+     * Only the Google adapter can look at an image — every other adapter
+     * refuses non-text at its boundary. So a message carrying a photo must be
+     * re-routed to a vision-capable Google model, and the switch said in the
+     * reply rather than hidden.
+     */
+    test("an image on a non-Google thread reroutes to the vision job and says so", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { userId, threadId } = await t.run(async (ctx) => {
+            const companyId = await ctx.db.insert("companies", {
+                name: "Vision Corp",
+                createdAt: Date.now(),
+            });
+            const userId = await ctx.db.insert("users", {
+                email: "photo@test.com",
+                role: "USER",
+                companyId,
+                createdAt: Date.now(),
+            });
+            const threadId = await ctx.db.insert("threads", {
+                title: "Photos",
+                userId,
+                companyId,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
+            // The thread's usual model cannot see; the vision default can.
+            await ctx.db.insert("aiModels", {
+                modelId: "openai:test-chat-model",
+                displayName: "Blind Chat",
+                providerKey: "openai",
+                providerModelId: "test-chat-model",
+                isEnabled: true,
+                isDefault: true,
+                lastSyncedAt: Date.now(),
+            });
+            await ctx.db.insert("aiModels", {
+                modelId: "test-vision-model",
+                displayName: "Seeing Model",
+                providerKey: "google",
+                providerModelId: "test-vision-model",
+                isEnabled: true,
+                isDefault: false,
+                lastSyncedAt: Date.now(),
+            });
+            await ctx.db.insert("aiModelDefaults", {
+                scope: "global",
+                useCase: "vision",
+                providerKey: "google",
+                modelId: "test-vision-model",
+                updatedAt: Date.now(),
+            });
+            return { userId, threadId };
+        });
+        void userId;
+
+        // convex-test's storage.store records no contentType (production
+        // Convex does), so the metadata row is written directly — the same
+        // shape the runtime reads via ctx.db.system.get.
+        const imageId = await t.run(async (ctx) => {
+            const storageId = await ctx.storage.store(
+                new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" })
+            );
+            await ctx.db.patch(storageId as never, { contentType: "image/png" } as never);
+            return storageId;
+        });
+
+        generateTextWithResolvedModelMock.mockResolvedValue({ text: "A photo of a delivery note." });
+        embedVertexContentWithRetryMock.mockResolvedValue({ embeddings: [] });
+
+        await t.action(internal.ai.generateSonaeResponse, {
+            threadId,
+            content: "What does this say?",
+            modelId: "openai:test-chat-model",
+            fileIds: [imageId],
+        });
+
+        const messages = await t.run(async (ctx) =>
+            ctx.db
+                .query("messages")
+                .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+                .collect()
+        );
+        const reply = messages.find((message) => message.role === "assistant");
+        expect(reply?.modelUsed).toBe("test-vision-model");
+        expect(reply?.content).toContain("so I could look at your image");
+
+        // And the model that generated was the vision one, not the requested one.
+        const generationCall = generateTextWithResolvedModelMock.mock.calls.at(-1)?.[0];
+        expect(generationCall?.model?.modelId).toBe("test-vision-model");
+    });
+
+    test("a text-only message on the same thread is untouched by the vision gate", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const { threadId } = await t.run(async (ctx) => {
+            const userId = await ctx.db.insert("users", {
+                email: "plain@test.com",
+                role: "USER",
+                createdAt: Date.now(),
+            });
+            const threadId = await ctx.db.insert("threads", {
+                title: "Plain",
+                userId,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            });
+            await ctx.db.insert("aiModels", {
+                modelId: "openai:test-chat-model",
+                displayName: "Blind Chat",
+                providerKey: "openai",
+                providerModelId: "test-chat-model",
+                isEnabled: true,
+                isDefault: true,
+                lastSyncedAt: Date.now(),
+            });
+            return { threadId };
+        });
+
+        generateTextWithResolvedModelMock.mockResolvedValue({ text: "Plain answer." });
+
+        await t.action(internal.ai.generateSonaeResponse, {
+            threadId,
+            content: "Just words.",
+            modelId: "openai:test-chat-model",
+        });
+
+        const messages = await t.run(async (ctx) =>
+            ctx.db
+                .query("messages")
+                .withIndex("by_thread", (q) => q.eq("threadId", threadId))
+                .collect()
+        );
+        const reply = messages.find((message) => message.role === "assistant");
+        expect(reply?.modelUsed).toBe("openai:test-chat-model");
+        expect(reply?.content).not.toContain("look at your image");
+    });
+});
