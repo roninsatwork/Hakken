@@ -98,7 +98,11 @@ export function AssistantComposer({
               ref={fileInputRef}
               className="hidden"
               multiple
-              accept=".pdf,.csv,.xlsx,.docx,.txt"
+              // Images belong here too: the upload pipeline, the validation
+              // policy and the message path all accept them — only this
+              // browse filter forgot, greying photos out of the file picker
+              // while drag-and-drop took them happily.
+              accept=".pdf,.csv,.xlsx,.docx,.txt,image/*"
               onChange={(event) => handleFileSelect(event.target.files)}
             />
 
