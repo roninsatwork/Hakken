@@ -239,7 +239,7 @@ never a person's. The key is revocable from both sides (a Sonae admin screen
 and Google's own security page). Replies go only to people who emailed first.
 The agent reading or sending a mail is audited like any other tool call.
 
-### Phase 6 — The receptionist screen
+### Phase 6 — The receptionist screen — **BUILT AND TESTED 2026-08-14; the tablet day is the remaining proof**
 
 **What the audience sees:** a tablet or monitor at a reception desk or a
 trade-show stand showing the talking character full-screen; visitors walk up

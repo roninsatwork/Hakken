@@ -65,6 +65,7 @@ export default function CompanyWidgetPage() {
   const [starterInput, setStarterInput] = useState("");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(true);
+  const [kioskEnabled, setKioskEnabled] = useState(false);
 
   useEffect(() => {
     setHostOrigin(window.location.origin);
@@ -82,6 +83,7 @@ export default function CompanyWidgetPage() {
   const widgetRequireName = widget?.requireName || false;
   const widgetRequireEmail = widget?.requireEmail || false;
   const widgetEnableGreeting = widget?.enableGreeting ?? true;
+  const widgetKioskEnabled = widget?.kioskEnabled || false;
   const widgetConversationStartersKey = widget?.conversationStarters ? widget.conversationStarters.join("\n") : "";
 
   useEffect(() => {
@@ -98,6 +100,7 @@ export default function CompanyWidgetPage() {
     setRequireName(widgetRequireName);
     setRequireEmail(widgetRequireEmail);
     setEnableGreeting(widgetEnableGreeting);
+    setKioskEnabled(widgetKioskEnabled);
     setConversationStarters(widgetConversationStartersKey ? widgetConversationStartersKey.split("\n") : []);
   }, [
     hasWidget,
@@ -112,6 +115,7 @@ export default function CompanyWidgetPage() {
     widgetRequireName,
     widgetRequireEmail,
     widgetEnableGreeting,
+    widgetKioskEnabled,
     widgetConversationStartersKey,
   ]);
 
@@ -185,6 +189,7 @@ export default function CompanyWidgetPage() {
         requireEmail,
         enableGreeting,
         conversationStarters,
+        kioskEnabled,
       });
     } catch (error) {
       console.error(error);
@@ -297,6 +302,10 @@ export default function CompanyWidgetPage() {
                 onCopy={handleCopy}
                 setAllowedDomains={setAllowedDomains}
                 widgetId={widget._id}
+                kioskEnabled={kioskEnabled}
+                setKioskEnabled={setKioskEnabled}
+                kioskLastSeenAt={widget.kioskLastSeenAt}
+                kioskSessionCount={widget.kioskSessionCount}
               />
             )}
           </div>

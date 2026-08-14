@@ -140,6 +140,8 @@ export const saveWidget = adminMutation({
     enableGreeting: v.optional(v.boolean()),
     isActive: v.boolean(),
     isGlobal: v.optional(v.boolean()),
+    // The receptionist screen opt-in: /kiosk/<id> serves nothing without it.
+    kioskEnabled: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
@@ -186,6 +188,7 @@ export const saveWidget = adminMutation({
         enableGreeting: args.enableGreeting,
         isActive: args.isActive,
         isGlobal: args.isGlobal,
+        ...(args.kioskEnabled !== undefined ? { kioskEnabled: args.kioskEnabled } : {}),
       });
 
       // Audit Log
@@ -218,6 +221,7 @@ export const saveWidget = adminMutation({
         enableGreeting: args.enableGreeting,
         isActive: args.isActive,
         isGlobal: args.isGlobal,
+        ...(args.kioskEnabled !== undefined ? { kioskEnabled: args.kioskEnabled } : {}),
         createdBy: userId,
         createdAt: now,
       });

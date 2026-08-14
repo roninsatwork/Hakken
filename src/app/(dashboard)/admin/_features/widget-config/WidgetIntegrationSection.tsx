@@ -1,4 +1,5 @@
-import { AppWindow } from "lucide-react";
+import { AppWindow, MonitorSpeaker } from "lucide-react";
+import { formatDateTime } from "@/src/lib/dates";
 import { WidgetPanel } from "./WidgetPanel";
 
 type WidgetIntegrationSectionProps = {
@@ -8,6 +9,10 @@ type WidgetIntegrationSectionProps = {
   onCopy: () => void;
   setAllowedDomains: (value: string) => void;
   widgetId: string;
+  kioskEnabled: boolean;
+  setKioskEnabled: (value: boolean) => void;
+  kioskLastSeenAt?: number;
+  kioskSessionCount?: number;
 };
 
 export function WidgetIntegrationSection({
@@ -17,6 +22,10 @@ export function WidgetIntegrationSection({
   onCopy,
   setAllowedDomains,
   widgetId,
+  kioskEnabled,
+  setKioskEnabled,
+  kioskLastSeenAt,
+  kioskSessionCount,
 }: WidgetIntegrationSectionProps) {
   return (
     <WidgetPanel
@@ -51,6 +60,56 @@ export function WidgetIntegrationSection({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* The receptionist screen: the same widget, full screen, walk up and
+          talk. Off by default — a widget must opt in to kiosk duty. */}
+      <div className="mt-4 pt-6 border-t border-border-dim border-dashed">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-[13px] font-semibold text-secondary">Receptionist screen</span>
+            <p className="text-[13px] text-secondary leading-relaxed">
+              A full-screen version for a tablet at a desk or a stand: visitors tap once and talk.
+              {kioskEnabled
+                ? " Save, then open the screen on the device."
+                : " Switch it on and save to get the screen's address."}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={kioskEnabled}
+            aria-label="Receptionist screen"
+            onClick={() => setKioskEnabled(!kioskEnabled)}
+            className="mt-0.5 shrink-0"
+          >
+            <span
+              className={`relative block h-5 w-9 rounded-full transition-colors ${kioskEnabled ? "bg-brand" : "bg-foreground/15"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${kioskEnabled ? "left-[18px]" : "left-0.5"}`}
+              />
+            </span>
+          </button>
+        </div>
+        {kioskEnabled && (
+          <div className="mt-4 flex flex-col gap-2">
+            <a
+              href={`/kiosk/${widgetId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full max-w-sm py-3 rounded-full border border-border-dim text-foreground font-bold text-[13px] hover:bg-foreground/5 transition-colors"
+            >
+              <MonitorSpeaker className="w-4 h-4" />
+              Open the receptionist screen
+            </a>
+            <p className="text-[12px] text-muted">
+              {kioskLastSeenAt
+                ? `Screen last seen ${formatDateTime(kioskLastSeenAt)} · ${kioskSessionCount ?? 0} conversations so far`
+                : "The screen has not checked in yet."}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 pt-6 border-t border-border-dim border-dashed">

@@ -2677,6 +2677,17 @@ export default defineSchema({
     enableGreeting: v.optional(v.boolean()),
     isActive: v.boolean(),
     isGlobal: v.optional(v.boolean()),
+    // The receptionist screen: a widget must opt in to being a kiosk before
+    // /kiosk/<id> will serve it (kiosk plan, phase A). The remaining fields
+    // are the kiosk's own bookkeeping — a per-widget voice-session rate
+    // window (there is no signed-in user to rate-limit by), and the health
+    // heartbeat the admin screen reads so a dead tablet in reception is
+    // noticed from a desk.
+    kioskEnabled: v.optional(v.boolean()),
+    kioskSessionWindowStart: v.optional(v.number()),
+    kioskSessionCountInWindow: v.optional(v.number()),
+    kioskLastSeenAt: v.optional(v.number()),
+    kioskSessionCount: v.optional(v.number()),
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   }).index("by_company", ["companyId"])

@@ -123,6 +123,8 @@ import type * as http from "../http.js";
 import type * as httpConnectorPolicy from "../httpConnectorPolicy.js";
 import type * as inventoryRollups from "../inventoryRollups.js";
 import type * as invites from "../invites.js";
+import type * as kiosk from "../kiosk.js";
+import type * as kioskActions from "../kioskActions.js";
 import type * as knowledge from "../knowledge.js";
 import type * as knowledgeActions from "../knowledgeActions.js";
 import type * as knowledgeEvidence from "../knowledgeEvidence.js";
@@ -357,6 +359,8 @@ declare const fullApi: ApiFromModules<{
   httpConnectorPolicy: typeof httpConnectorPolicy;
   inventoryRollups: typeof inventoryRollups;
   invites: typeof invites;
+  kiosk: typeof kiosk;
+  kioskActions: typeof kioskActions;
   knowledge: typeof knowledge;
   knowledgeActions: typeof knowledgeActions;
   knowledgeEvidence: typeof knowledgeEvidence;

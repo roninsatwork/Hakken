@@ -58,6 +58,7 @@ export default function GlobalWidgetPage() {
   const [requireName, setRequireName] = useState(false);
   const [requireEmail, setRequireEmail] = useState(false);
   const [enableGreeting, setEnableGreeting] = useState(true);
+  const [kioskEnabled, setKioskEnabled] = useState(false);
   const [conversationStarters, setConversationStarters] = useState<string[]>([]);
   const [starterInput, setStarterInput] = useState("");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -79,6 +80,7 @@ export default function GlobalWidgetPage() {
   const widgetRequireName = widget?.requireName || false;
   const widgetRequireEmail = widget?.requireEmail || false;
   const widgetEnableGreeting = widget?.enableGreeting ?? true;
+  const widgetKioskEnabled = widget?.kioskEnabled || false;
   const widgetConversationStartersKey = widget?.conversationStarters ? widget.conversationStarters.join("\n") : "";
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function GlobalWidgetPage() {
     setRequireName(widgetRequireName);
     setRequireEmail(widgetRequireEmail);
     setEnableGreeting(widgetEnableGreeting);
+    setKioskEnabled(widgetKioskEnabled);
     setConversationStarters(widgetConversationStartersKey ? widgetConversationStartersKey.split("\n") : []);
   }, [
     hasWidget,
@@ -109,6 +112,7 @@ export default function GlobalWidgetPage() {
     widgetRequireName,
     widgetRequireEmail,
     widgetEnableGreeting,
+    widgetKioskEnabled,
     widgetConversationStartersKey,
   ]);
 
@@ -180,6 +184,7 @@ export default function GlobalWidgetPage() {
         requireName,
         requireEmail,
         enableGreeting,
+        kioskEnabled,
         conversationStarters,
       });
     } catch (error) {
@@ -301,6 +306,10 @@ export default function GlobalWidgetPage() {
                 onCopy={handleCopy}
                 setAllowedDomains={setAllowedDomains}
                 widgetId={widget._id}
+                kioskEnabled={kioskEnabled}
+                setKioskEnabled={setKioskEnabled}
+                kioskLastSeenAt={widget.kioskLastSeenAt}
+                kioskSessionCount={widget.kioskSessionCount}
               />
             )}
           </div>

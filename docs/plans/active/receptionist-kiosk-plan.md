@@ -1,7 +1,19 @@
 # The Receptionist Screen
 
-Status: Drafted 2026-08-13 from verified code research. Phase 6 of the
-showcase channels roadmap (`showcase-channels-plan.md`). Not started.
+Status: **Built and tested 2026-08-14; browser-proven on dev, tablet proof
+outstanding.** `/kiosk/[widgetId]` serves any widget that opts in via the
+new Receptionist screen toggle (Integration tab): full screen, tap to
+wake, the live Vertex voice loop on an anonymous ticket gated by the
+conversation's own widget token, permanent AI disclosure and recording
+notice, silence nudge then reset, in-memory tokens so no visitor can see
+another's conversation, hourly per-widget session ceiling, overnight
+self-reload, and a heartbeat surfaced on the admin screen ("last seen",
+session count). Verified live on dev: idle screen, wake tap, thread and
+ticket minted, and — with the microphone refused — the calm "Back
+shortly." reset rather than an error (commitment 3). What remains of
+Phase D is the real tablet at the front desk for a day, which is
+Anthony's half.
+Phase 6 of the showcase channels roadmap (`showcase-channels-plan.md`).
 Depends on: `voice-session-plan.md` complete (and reads better with
 `voice-languages-plan.md` live).
 Owner: Anthony

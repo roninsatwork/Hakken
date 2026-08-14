@@ -1039,7 +1039,7 @@ export const searchKnowledgeForVoiceInternal = internalAction({
  * that quietly assembles its own would end up representing the company
  * differently depending on how you reached it.
  */
-async function buildSpokenSessionInstructions(
+export async function buildSpokenSessionInstructions(
   ctx: { runQuery: (reference: never, args: never) => Promise<unknown> },
   companyId: Id<"companies"> | undefined
 ): Promise<string> {

@@ -160,6 +160,7 @@ describe("widget configuration sections", () => {
   it("edits integration domains, copies snippets, and links to the sandbox", () => {
     const onCopy = vi.fn();
     const setAllowedDomains = vi.fn();
+    const setKioskEnabled = vi.fn();
 
     render(
       <WidgetIntegrationSection
@@ -169,6 +170,8 @@ describe("widget configuration sections", () => {
         onCopy={onCopy}
         setAllowedDomains={setAllowedDomains}
         widgetId="widget123"
+        kioskEnabled={false}
+        setKioskEnabled={setKioskEnabled}
       />
     );
 
@@ -181,6 +184,49 @@ describe("widget configuration sections", () => {
     expect(screen.getByRole("link", { name: /Test Widget Sandbox/i })).toHaveAttribute("href", "/sandbox/widget123");
     expect(setAllowedDomains).toHaveBeenCalledWith("https://app.example.com");
     expect(onCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers the receptionist screen as an opt-in, with the address and health once on", () => {
+    const setKioskEnabled = vi.fn();
+
+    const { rerender } = render(
+      <WidgetIntegrationSection
+        allowedDomains=""
+        codeSnippet=""
+        copied={false}
+        onCopy={vi.fn()}
+        setAllowedDomains={vi.fn()}
+        widgetId="widget123"
+        kioskEnabled={false}
+        setKioskEnabled={setKioskEnabled}
+      />
+    );
+
+    // Off: no kiosk link exists to wander onto.
+    expect(screen.queryByRole("link", { name: /receptionist screen/i })).toBeNull();
+    fireEvent.click(screen.getByRole("switch", { name: "Receptionist screen" }));
+    expect(setKioskEnabled).toHaveBeenCalledWith(true);
+
+    rerender(
+      <WidgetIntegrationSection
+        allowedDomains=""
+        codeSnippet=""
+        copied={false}
+        onCopy={vi.fn()}
+        setAllowedDomains={vi.fn()}
+        widgetId="widget123"
+        kioskEnabled={true}
+        setKioskEnabled={setKioskEnabled}
+        kioskLastSeenAt={1786700000000}
+        kioskSessionCount={4}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: /Open the receptionist screen/i })).toHaveAttribute(
+      "href",
+      "/kiosk/widget123"
+    );
+    expect(screen.getByText(/4 conversations so far/)).toBeInTheDocument();
   });
 
   it("edits appearance fields, toggles options, uploads and removes custom logos", () => {
