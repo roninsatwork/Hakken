@@ -7,6 +7,11 @@ completed work.
 
 ## Active Plans
 
+- [The Self-Improving Wiki](./active/self-improving-wiki-plan.md) — Karpathy's
+  LLM Wiki pattern built faithfully into Sonae: whole pages the AI rewrites
+  after every conversation, tended on a schedule, readable and correctable in
+  the company AI section. Agreed 2026-08-14; build awaits Anthony's go,
+  phase by phase.
 - [Movement Definitive Plan](./active/movement-definitive-plan.md) — the vision,
   acceptance rules, capture-screen rules, and work queue for all movement work.
 - [Platform Hardening Plan](./active/platform-hardening-plan.md) — the platform
