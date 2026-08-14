@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
-import { WIKI_PAGE_MAX_CHARS, normaliseEmail } from "./wikiRewriteService";
+import type { QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import { WIKI_PAGE_MAX_CHARS, normaliseEmail, renderPageForReading } from "./wikiRewriteService";
+import { normalisePhoneNumber } from "./telephonyService";
 
 /**
  * The wiki's doors below the surface: what the rewrite loop and the reading
@@ -115,19 +117,109 @@ export const applyRewriteInternal = internalMutation({
  * against the workspace's own customers by address. A match names the page;
  * an unknown sender never becomes a page.
  */
-export const matchEmailSenderToCustomer = internalQuery({
-  args: { companyId: v.id("companies"), email: v.string() },
-  handler: async (ctx, args): Promise<string | null> => {
-    const sender = normaliseEmail(args.email);
-    if (!sender) return null;
+/**
+ * The knowing doors' read (wiki plan, phase 2): who is this, and what does
+ * their page say — rendered whole, pinned layer appended, ready for a
+ * model's context. Null when the person is unknown or their page does not
+ * exist yet; a door that learns nothing loses nothing.
+ */
+export const getRenderedPageForPhoneNumber = internalQuery({
+  args: { companyId: v.id("companies"), phoneNumber: v.string() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ subjectKey: string; pageText: string } | null> => {
+    const caller = normalisePhoneNumber(args.phoneNumber);
+    if (!caller) return null;
     const customers = await ctx.db
       .query("salesDataCustomers")
       .withIndex("by_company_account", (q) => q.eq("companyId", args.companyId))
       .take(2000);
     const match = customers.find(
       (customer) =>
-        normaliseEmail(customer.email) === sender || normaliseEmail(customer.accountsEmail) === sender
+        (customer.phone && normalisePhoneNumber(customer.phone) === caller) ||
+        (customer.mobile && normalisePhoneNumber(customer.mobile) === caller)
     );
-    return match?.accountNameKey ?? null;
+    if (!match) return null;
+    const page = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_kind_subject", (q) =>
+        q.eq("companyId", args.companyId).eq("kind", "CUSTOMER").eq("subjectKey", match.accountNameKey)
+      )
+      .unique();
+    if (!page) return null;
+    return { subjectKey: match.accountNameKey, pageText: renderPageForReading(page) };
+  },
+});
+
+/** One matching rule for every email door: either address column, normalised. */
+async function matchEmailToCustomerKey(
+  ctx: QueryCtx,
+  companyId: Id<"companies">,
+  email: string | undefined | null
+): Promise<string | null> {
+  const sender = normaliseEmail(email);
+  if (!sender) return null;
+  const customers = await ctx.db
+    .query("salesDataCustomers")
+    .withIndex("by_company_account", (q) => q.eq("companyId", companyId))
+    .take(2000);
+  const match = customers.find(
+    (customer) =>
+      normaliseEmail(customer.email) === sender || normaliseEmail(customer.accountsEmail) === sender
+  );
+  return match?.accountNameKey ?? null;
+}
+
+/**
+ * The widget door's read (wiki plan, phase 2): a visitor who gave their
+ * email at the widget's gateway is matched like any sender. The email rides
+ * in the thread's first gateway-masked message; no gateway, no identity,
+ * no page.
+ */
+export const getRenderedPageForWidgetThread = internalQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args): Promise<string | null> => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread?.widgetId || !thread.companyId) return null;
+    const openingMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+      .take(3);
+    const gateway = openingMessages.find(
+      (message) => message.role === "user" && message.content.startsWith("[System Gateway:")
+    );
+    if (!gateway) return null;
+    const email = /<([^<>]+@[^<>]+)>/.exec(gateway.content.split("\n")[0] ?? "")?.[1];
+    const subjectKey = await matchEmailToCustomerKey(ctx, thread.companyId, email);
+    if (!subjectKey) return null;
+    const page = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_kind_subject", (q) =>
+        q.eq("companyId", thread.companyId!).eq("kind", "CUSTOMER").eq("subjectKey", subjectKey)
+      )
+      .unique();
+    return page ? renderPageForReading(page) : null;
+  },
+});
+
+/** A subject's page rendered for a reader, or null before first contact. */
+export const getRenderedCustomerPageInternal = internalQuery({
+  args: { companyId: v.id("companies"), subjectKey: v.string() },
+  handler: async (ctx, args): Promise<string | null> => {
+    const page = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_kind_subject", (q) =>
+        q.eq("companyId", args.companyId).eq("kind", "CUSTOMER").eq("subjectKey", args.subjectKey)
+      )
+      .unique();
+    return page ? renderPageForReading(page) : null;
+  },
+});
+
+export const matchEmailSenderToCustomer = internalQuery({
+  args: { companyId: v.id("companies"), email: v.string() },
+  handler: async (ctx, args): Promise<string | null> => {
+    return await matchEmailToCustomerKey(ctx, args.companyId, args.email);
   },
 });

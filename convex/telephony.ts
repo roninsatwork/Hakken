@@ -300,6 +300,20 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
     toNumber,
   });
 
+  // A known caller's wiki page joins the session's instructions (wiki plan,
+  // phase 2). Fetched fail-open: a page lookup that dies must never cost a
+  // caller their call.
+  let callerPage: string | undefined;
+  try {
+    const rendered = await ctx.runQuery(internal.wikiPages.getRenderedPageForPhoneNumber, {
+      companyId: companyId as Id<"companies">,
+      phoneNumber: fromNumber,
+    });
+    callerPage = rendered?.pageText;
+  } catch (error) {
+    console.error("Caller wiki page lookup failed; answering without it", error);
+  }
+
   // The pass the stream will present to the relay. Minted here, by the
   // platform, for the same reason a browser never mints its own: whoever
   // mints it decides which company is being spoken for.
@@ -307,6 +321,7 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   try {
     ticket = await ctx.runAction(internal.ai.createVoiceTicketForCompany, {
       companyId: companyId as Id<"companies">,
+      ...(callerPage ? { callerPage } : {}),
     });
   } catch (error) {
     console.error("Could not open a voice session for a call", error);
