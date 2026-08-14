@@ -81,10 +81,17 @@ export const createKioskVoiceSession = publicAction({
 
     const instructions = await buildSpokenSessionInstructions(ctx, access.companyId);
 
+    // The workspace's chosen voice (Voice screen in the AI admin), unless
+    // the kiosk was opened with one picked for it.
+    const companyVoice: string = await ctx.runQuery(
+      internal.voiceSettings.getSpokenVoiceForCompany,
+      { companyId: access.companyId }
+    );
+
     const payload = Buffer.from(
       JSON.stringify({
         model: modelConfig.providerModelId,
-        voice: args.voice ?? "Aoede",
+        voice: args.voice ?? companyVoice,
         instructions,
         // The knowledge door, signed into the ticket rather than sent by the
         // page — a browser that could choose its own tools could choose

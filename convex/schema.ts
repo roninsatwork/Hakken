@@ -62,6 +62,12 @@ export default defineSchema({
      * error, so removing a vertical cannot break a company record.
      */
     enabledModules: v.optional(v.array(v.string())),
+    /**
+     * The voice Sonae speaks with, everywhere it speaks — Ask Sonae's voice
+     * overlay, the phone line, the reception screen. One of the Google live
+     * voices (SPEECH_VOICE_KEYS); absent means the platform default.
+     */
+    spokenVoice: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])

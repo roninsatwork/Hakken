@@ -106,8 +106,7 @@ export function assertValidTranscriptionPayload(args: { audioBase64: string; mim
 // Prebuilt Google voice names the session may ask for. A closed set so the
 // client can never smuggle arbitrary strings into the provider call; the
 // default leads the list.
-export const SPEECH_VOICE_KEYS = ["Kore", "Puck", "Charon", "Aoede"] as const;
-export type SpeechVoiceKey = (typeof SPEECH_VOICE_KEYS)[number];
+import { SPEECH_VOICE_KEYS, type SpeechVoiceKey } from "./voiceSettings";
 
 export function assertValidSpeechPayload(args: { text: string; voiceKey?: string }) {
   const text = args.text.trim();
@@ -1145,10 +1144,17 @@ export const createVoiceTicketForCompany = internalAction({
       args.companyId
     );
 
+    // The workspace's chosen voice (Voice screen in the AI admin), unless
+    // the caller has already picked one for this session.
+    const companyVoice: string = await ctx.runQuery(
+      internal.voiceSettings.getSpokenVoiceForCompany,
+      { companyId: args.companyId }
+    );
+
     return signVoiceTicket(
       {
         model: modelConfig.providerModelId,
-        voice: args.voice ?? "Aoede",
+        voice: args.voice ?? companyVoice,
         instructions,
         tools: [VOICE_KNOWLEDGE_TOOL_DECLARATION],
         companyId: args.companyId,
@@ -1262,10 +1268,17 @@ ${REALTIME_VOICE_STYLE}`;
         );
       }
 
+      // The workspace's chosen voice (Voice screen in the AI admin), unless
+      // the caller has already picked one for this session.
+      const companyVoice: string = await ctx.runQuery(
+        internal.voiceSettings.getSpokenVoiceForCompany,
+        { companyId: companyId ?? undefined }
+      );
+
       const payload = Buffer.from(
         JSON.stringify({
           model: modelConfig.providerModelId,
-          voice: args.voice ?? "Aoede",
+          voice: args.voice ?? companyVoice,
           instructions,
           // The same door back to the company's knowledge the typed path
           // gets, declared the way Google's live models expect it. It is

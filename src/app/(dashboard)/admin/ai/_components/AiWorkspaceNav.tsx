@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
+  AudioLines,
   BarChart3,
   BrainCircuit,
   Check,
@@ -61,6 +62,12 @@ const instructionItems = [
       pathname.startsWith("/admin/ai/knowledge")
       || pathname.startsWith("/admin/ai/global-knowledge")
     ),
+  },
+  {
+    label: "Voice",
+    href: "/admin/ai/voice",
+    icon: AudioLines,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/voice"),
   },
 ];
 

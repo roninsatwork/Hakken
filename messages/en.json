@@ -3240,6 +3240,27 @@
     "open": "Notifications",
     "waiting": "{count} unread"
   },
+  "aiVoice": {
+    "title": "Voice",
+    "subtitle": "The voice Sonae speaks with — on Ask Sonae, the phone, and the reception screen.",
+    "hint": "One voice for every door. New spoken conversations use it straight away; a call already underway keeps the voice it started with.",
+    "save": "Save",
+    "loading": "Loading",
+    "success": {
+      "title": "Voice saved",
+      "message": "New spoken conversations will use this voice everywhere Sonae speaks."
+    },
+    "error": {
+      "title": "The voice was not saved",
+      "message": "Something went wrong saving the voice. Try again."
+    },
+    "voices": {
+      "Kore": "Firm and clear",
+      "Puck": "Upbeat and bright",
+      "Charon": "Deep and steady",
+      "Aoede": "Warm and easy — the default"
+    }
+  },
   "calls": {
     "title": "Calls",
     "subtitle": "Sonae answers this number",

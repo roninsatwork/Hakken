@@ -3240,6 +3240,27 @@
     "open": "Notifiche",
     "waiting": "{count} non lette"
   },
+  "aiVoice": {
+    "title": "Voce",
+    "subtitle": "La voce con cui parla Sonae — su Ask Sonae, al telefono e sullo schermo della reception.",
+    "hint": "Una sola voce per ogni porta. Le nuove conversazioni vocali la usano subito; una chiamata già in corso mantiene la voce con cui è iniziata.",
+    "save": "Salva",
+    "loading": "Caricamento",
+    "success": {
+      "title": "Voce salvata",
+      "message": "Le nuove conversazioni vocali useranno questa voce ovunque Sonae parli."
+    },
+    "error": {
+      "title": "La voce non è stata salvata",
+      "message": "Qualcosa è andato storto durante il salvataggio. Riprova."
+    },
+    "voices": {
+      "Kore": "Decisa e chiara",
+      "Puck": "Vivace e brillante",
+      "Charon": "Profonda e posata",
+      "Aoede": "Calda e naturale — la predefinita"
+    }
+  },
   "calls": {
     "title": "Chiamate",
     "subtitle": "Sonae risponde a questo numero",
