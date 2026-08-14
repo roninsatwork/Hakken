@@ -6,9 +6,9 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useToast } from "@/src/context/ToastContext";
-import { ArrowLeft, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { formatDateTime } from "@/src/lib/dates";
 import { AdminSaveAction } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
@@ -78,15 +78,24 @@ export default function ConnectorSetupPage() {
   const params = useParams();
   const id = params.id as Id<"toolConnectors">;
 
+  const searchParams = useSearchParams();
+
   const details = useQuery(api.aiTools.getConnectorInstallDetails, { connectorId: id });
   const companyOptions = useQuery(api.companies.getCompanyOptions, details?.canManageTenantScope ? {} : "skip") || [];
   const updateConnectorInstall = useMutation(api.aiTools.updateConnectorInstall);
   const validateConnectorConfiguration = useMutation(api.aiTools.validateConnectorConfiguration);
+  const beginConnectorOAuth = useMutation(api.aiTools.beginConnectorOAuth);
+  const disconnectConnectorOAuth = useMutation(api.aiTools.disconnectConnectorOAuth);
 
   const [draft, setDraft] = useState<ConnectorDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  // The callback route lands the admin back here with the outcome in the URL.
+  const oauthCallbackError = searchParams.get("oauthError");
 
   if (details === undefined) {
     return <div className="p-8 text-secondary">Loading...</div>;
@@ -160,6 +169,35 @@ export default function ConnectorSetupPage() {
       setIsChecking(false);
     }
   };
+
+  const handleConnect = async () => {
+    if (isConnecting) return;
+    setIsConnecting(true);
+    try {
+      // Begin stores the pending connection; the browser then carries only
+      // its single-use state to the consent screen and back.
+      const { authorizationUrl } = await beginConnectorOAuth({ connectorId: id });
+      window.location.href = authorizationUrl;
+    } catch (error) {
+      showErrorToast(error, { scope: "admin-connector-detail" });
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (isDisconnecting) return;
+    setIsDisconnecting(true);
+    try {
+      await disconnectConnectorOAuth({ connectorId: id });
+    } catch (error) {
+      showErrorToast(error, { scope: "admin-connector-detail" });
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
+  const isOAuthConnector = (definition?.authMode ?? connector.authMode) === "OAUTH";
+  const connectionStatus = connector.authConnectionStatus ?? "NOT_CONNECTED";
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12 animate-in fade-in slide-in-from-bottom-2">
@@ -278,6 +316,62 @@ export default function ConnectorSetupPage() {
         </div>
 
         <div className="flex flex-col gap-6">
+          {/* The consent connection: the account this tool acts as. Only for
+              OAuth connectors — everything else authenticates with keys. */}
+          {isOAuthConnector && (
+            <Card title="Connected account">
+              {connectionStatus === "CONNECTED" ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#10b981]" />
+                    <div className="min-w-0">
+                      <p className="text-[13px] leading-relaxed text-foreground">
+                        Connected as <span className="font-medium">{connector.authAccountRef}</span>
+                      </p>
+                      {connector.oauthConnectedAt ? (
+                        <p className="mt-1 text-[12px] text-muted">
+                          Since {formatDateTime(connector.oauthConnectedAt)}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDisconnect}
+                    disabled={isDisconnecting}
+                    className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+                  >
+                    {isDisconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                  <p className="text-[12px] leading-relaxed text-muted">
+                    Disconnecting revokes the key at the provider — the account itself is untouched.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-[13px] leading-relaxed text-secondary">
+                    {connectionStatus === "ERROR"
+                      ? connector.lastTestMessage ?? "The connection failed. Connect again."
+                      : "Not connected. Connecting opens the provider's own approval screen for the dedicated account — the platform holds a scoped, revocable key and never sees a password."}
+                  </p>
+                  {oauthCallbackError ? (
+                    <p className="text-[12px] leading-relaxed text-amber-400" role="alert">{oauthCallbackError}</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleConnect}
+                    disabled={isConnecting}
+                    className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                    {isConnecting ? "Opening Google..." : "Connect mailbox"}
+                  </button>
+                </div>
+              )}
+            </Card>
+          )}
+
           <Card title="Does it work">
             {latestCheck ? (
               <div className="flex items-start gap-3">

@@ -12,6 +12,7 @@ vi.mock("convex/react", () => ({
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "connector_1" }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("next/link", () => ({

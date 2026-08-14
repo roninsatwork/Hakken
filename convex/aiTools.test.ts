@@ -396,15 +396,16 @@ describe("AI Tools Authorization", () => {
   });
 
   /**
-   * OAuth is unreachable, and this asserts it stays that way.
+   * OAuth is real now, and deliberately narrow.
    *
-   * Every connector that used OAuth was one of the seventeen with no
-   * implementation behind it, so they went. Nothing in the catalogue uses OAuth
-   * now, and the flow refuses before it can start. The mutations themselves are
-   * still there; if a connector ever needs OAuth, this is the test that should
-   * fail first and force the decision to be made deliberately.
+   * The predecessor of this test asserted no connector used OAuth, existing
+   * to force the decision to be made deliberately when one finally did. That
+   * decision is the Gmail plan: exactly one OAuth connector (the Gmail
+   * mailbox), and the flow still refuses on a non-OAuth connector and on a
+   * deployment with no provider credentials configured — nobody gets sent to
+   * a consent screen that cannot complete.
    */
-  test("no connector uses OAuth, and the flow refuses to start", async () => {
+  test("exactly the Gmail connector uses OAuth, and the flow refuses everywhere it should", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const superAdminId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
@@ -415,16 +416,29 @@ describe("AI Tools Authorization", () => {
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
     const marketplace = await superAdminClient.query(api.aiTools.getConnectorMarketplace, {});
-    expect(marketplace.every((connector) => connector.authMode !== "OAUTH")).toBe(true);
+    const oauthConnectors = marketplace.filter((connector) => connector.authMode === "OAUTH");
+    expect(oauthConnectors.map((connector) => connector.key)).toEqual(["google-gmail"]);
 
+    // A non-OAuth connector still cannot start the flow.
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
       key: "http-rest",
       tenantAvailability: "GLOBAL",
     });
-
     await expect(
       superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId })
     ).rejects.toThrow("Connector does not use OAuth.");
+
+    // And with no provider credentials configured, neither can the Gmail one.
+    const companyId = await t.run(async (ctx) =>
+      ctx.db.insert("companies", { name: "Mail Co", createdAt: Date.now() })
+    );
+    const gmailConnectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
+      key: "google-gmail",
+      companyId,
+    });
+    await expect(
+      superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId: gmailConnectorId })
+    ).rejects.toThrow("OAuth connections are not available");
   });
 
   test("super admins can page and search tool inventory", async () => {

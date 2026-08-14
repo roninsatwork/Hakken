@@ -12,7 +12,8 @@ import {
   validateToolJsonSchemaString,
 } from "./aiToolExecutionService";
 import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnectorDefinitions";
-import { assertSafeReferenceValue, assertSafeSecretRefs } from "./connectorSecretPolicy";
+import { assertSafeSecretRefs } from "./connectorSecretPolicy";
+import { internal } from "./_generated/api";
 import { adminMutation, adminQuery, publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 
 const TOOL_CATALOG_LIMIT = 250;
@@ -213,31 +214,40 @@ function resolveConnectorTenantAvailability(args: {
   return args.companyId ? "TENANT_RESTRICTED" : args.tenantAvailability ?? args.definitionAvailability;
 }
 
+/**
+ * The single-use state that ties the consent round-trip together.
+ *
+ * Random, because the state is the only thing authenticating the provider's
+ * redirect back to us — the old `connector:<id>:<timestamp>` form was
+ * guessable, which would have let anyone complete somebody else's pending
+ * connection.
+ */
 function buildOAuthState(connectorId: Id<"toolConnectors">, now: number) {
-  return `connector:${connectorId}:${now}`;
-}
-
-function buildOAuthAuthorizationUrl(args: { provider: string; connectorKey: string; state: string; scopes: string[] }) {
-  const params = new URLSearchParams({
-    connector: args.connectorKey,
-    provider: args.provider,
-    state: args.state,
-    scope: args.scopes.join(" "),
-  });
-  return `/api/connectors/oauth/authorize?${params.toString()}`;
+  const random = crypto.getRandomValues(new Uint8Array(24));
+  const hex = Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `connector:${connectorId}:${now}:${hex}`;
 }
 
 /**
- * Whether this connector can be taken through an OAuth flow today.
- *
- * Two things have to be true, and only the first was ever checked: the
- * connector has to use OAuth, and the platform has to have somewhere to send
- * the administrator. It did not — the authorize route does not exist — so
- * starting a connection produced a link to a 404 and left the connector
- * displaying "PENDING" for ever.
+ * Where the Connect button sends the administrator: the deployment's own
+ * authorize route (`connectorOAuth.ts`), absolute because the admin screen
+ * runs on the app origin and the route on the Convex site origin. Only the
+ * state travels — provider, scopes and credentials are resolved server-side
+ * from the pending connection it names.
  */
-function assertConnectorOAuthAvailable() {
-  if (!isConnectorOAuthAvailable()) {
+function buildOAuthAuthorizationUrl(args: { state: string }) {
+  const siteUrl = (process.env.CONVEX_SITE_URL ?? "").replace(/\/+$/, "");
+  const params = new URLSearchParams({ state: args.state });
+  return `${siteUrl}/api/connectors/oauth/authorize?${params.toString()}`;
+}
+
+/**
+ * Whether this connector can be taken through an OAuth flow today: the
+ * provider's client credentials and the token encryption key must be
+ * configured on this deployment.
+ */
+function assertConnectorOAuthAvailable(provider: string) {
+  if (!isConnectorOAuthAvailable(provider)) {
     throw new Error(CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE);
   }
 }
@@ -444,17 +454,12 @@ export const beginConnectorOAuth = adminMutation({
     const definition = getBuiltInToolConnector(connector.key);
     if (!definition) throw new Error("Connector definition not found.");
     if (definition.authMode !== "OAUTH") throw new Error("Connector does not use OAuth.");
-    assertConnectorOAuthAvailable();
+    const provider = definition.oauthProvider ?? definition.key;
+    assertConnectorOAuthAvailable(provider);
 
     const now = Date.now();
     const state = buildOAuthState(connector._id, now);
-    const provider = definition.oauthProvider ?? definition.key;
-    const authorizationUrl = buildOAuthAuthorizationUrl({
-      provider,
-      connectorKey: connector.key,
-      state,
-      scopes: definition.requiredScopes,
-    });
+    const authorizationUrl = buildOAuthAuthorizationUrl({ state });
 
     const oauthConnectionId = await ctx.db.insert("toolConnectorOAuthConnections", {
       connectorId: connector._id,
@@ -484,65 +489,12 @@ export const beginConnectorOAuth = adminMutation({
   },
 });
 
-export const completeConnectorOAuth = adminMutation({
-  args: {
-    connectorId: v.id("toolConnectors"),
-    state: v.string(),
-    accountRef: v.string(),
-    tokenRef: v.string(),
-    scopes: v.optional(v.array(v.string())),
-  },
-  handler: async (ctx, args) => {
-    const { user } = ctx;
-    const connector = await ctx.db.get(args.connectorId);
-    if (!connector) throw new Error("Connector not found.");
-    assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
-
-    const definition = getBuiltInToolConnector(connector.key);
-    if (!definition) throw new Error("Connector definition not found.");
-    if (definition.authMode !== "OAUTH") throw new Error("Connector does not use OAuth.");
-    assertConnectorOAuthAvailable();
-    assertSafeReferenceValue(args.accountRef, "OAuth account reference");
-    assertSafeReferenceValue(args.tokenRef, "OAuth token reference");
-
-    const oauthConnection = await ctx.db
-      .query("toolConnectorOAuthConnections")
-      .withIndex("by_state", (q) => q.eq("state", args.state))
-      .first();
-    if (!oauthConnection || oauthConnection.connectorId !== connector._id || oauthConnection.status !== "PENDING") {
-      throw new Error("OAuth session is not pending.");
-    }
-
-    const grantedScopes = args.scopes ?? definition.requiredScopes;
-    const missingScopes = definition.requiredScopes.filter((scope) => !grantedScopes.includes(scope));
-    if (missingScopes.length > 0) {
-      throw new Error(`OAuth connection is missing required scopes: ${missingScopes.join(", ")}`);
-    }
-
-    const now = Date.now();
-    await ctx.db.patch(oauthConnection._id, {
-      status: "CONNECTED",
-      accountRef: args.accountRef,
-      tokenRef: args.tokenRef,
-      scopes: grantedScopes,
-      message: "OAuth connection completed.",
-      connectedAt: now,
-      updatedAt: now,
-    });
-    await ctx.db.patch(connector._id, {
-      authConnectionStatus: "CONNECTED",
-      authAccountRef: args.accountRef,
-      tokenRef: args.tokenRef,
-      oauthScopes: grantedScopes,
-      oauthConnectedAt: now,
-      testStatus: "UNTESTED",
-      lastTestMessage: "OAuth connected; retest connector.",
-      updatedAt: now,
-    });
-
-    return oauthConnection._id;
-  },
-});
+// `completeConnectorOAuth` — the mutation that accepted hand-typed account
+// and token references — is gone. Completion now has exactly one path: the
+// provider's redirect into `/api/connectors/oauth/callback`
+// (`connectorOAuth.handleConnectorOAuthCallback`), which exchanges the code
+// server-side and stores ciphertext. Nothing client-callable can mark a
+// connection CONNECTED.
 
 export const disconnectConnectorOAuth = adminMutation({
   args: { connectorId: v.id("toolConnectors") },
@@ -577,6 +529,14 @@ export const disconnectConnectorOAuth = adminMutation({
       testStatus: "UNTESTED",
       lastTestMessage: "OAuth disconnected; reconnect before testing.",
       updatedAt: now,
+    });
+
+    // Disconnect means revoked (commitment 4): the scheduled action revokes
+    // the grant at the provider, deletes the ciphertext row, and writes the
+    // audit entry. Scheduled because a mutation cannot reach the provider.
+    await ctx.scheduler.runAfter(0, internal.connectorOAuth.revokeAndDisconnect, {
+      connectorId: connector._id,
+      actorId: ctx.userId,
     });
 
     return true;

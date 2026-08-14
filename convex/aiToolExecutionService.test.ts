@@ -351,6 +351,10 @@ describe("ai tool execution service", () => {
       // Runs an Apify job the admin has configured.
       "apify.actor.run",
       "company.overview.update",
+      // The Gmail mailbox: read the connected inbox, and reply inside the
+      // rails (sender-only, no no-reply, per-thread and per-day caps).
+      "gmail.read",
+      "gmail.reply",
       "http.request",
       "knowledge.search",
       "marketDiscovery.groups.record",

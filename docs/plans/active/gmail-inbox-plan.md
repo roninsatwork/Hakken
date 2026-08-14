@@ -1,7 +1,20 @@
 # The Gmail Inbox That Answers Itself
 
-Status: Drafted 2026-08-13 from verified code research. Phase 5 of the
-showcase channels roadmap (`showcase-channels-plan.md`). Not started.
+Status: **Phases A–C built and tested 2026-08-14.** The consent plumbing is
+real: authorize and callback routes, single-use random state, server-side
+code exchange, AES-256-GCM ciphertext tokens in `connectorOAuthTokens` (no
+client-callable reader, held by test), refresh-on-expiry plus an hourly
+sweep, and disconnect that revokes at Google before deleting the
+ciphertext. The `google-gmail` connector is in the catalogue with working
+`gmail.read` and `gmail.reply` handlers — the reply rails all proven by
+test — and the once-a-minute watcher answers grounded questions in-thread,
+turns everything else into a task + bell + holding reply, and labels
+handled mail. What remains is Phase D, which needs Anthony's hands: the
+dedicated mailbox, an internal Google Workspace OAuth app, and three
+environment values (`CONNECTOR_GOOGLE_CLIENT_ID`,
+`CONNECTOR_GOOGLE_CLIENT_SECRET`, `CONNECTOR_TOKEN_ENCRYPTION_KEY`) on the
+dev deployment, then the live proof.
+Phase 5 of the showcase channels roadmap (`showcase-channels-plan.md`).
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,

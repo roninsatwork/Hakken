@@ -2328,6 +2328,59 @@ export default defineSchema({
     .index("by_state", ["state"])
     .index("by_company_updated", ["companyId", "updatedAt"]),
 
+  // A connection's OAuth tokens, as ciphertext only (connectorTokenCrypto).
+  // No client-callable function reads this table — internal functions only,
+  // held true by the function-access enumeration test. One row per
+  // connection: reconnect replaces, disconnect revokes at the provider and
+  // then deletes.
+  connectorOAuthTokens: defineTable({
+    connectionId: v.id("toolConnectorOAuthConnections"),
+    connectorId: v.id("toolConnectors"),
+    companyId: v.optional(v.id("companies")),
+    provider: v.string(),
+    accessTokenCiphertext: v.string(),
+    refreshTokenCiphertext: v.optional(v.string()),
+    // When the access token dies, from the provider's expires_in. The getter
+    // refreshes just before this; the hourly sweep catches long-idle rows.
+    expiresAt: v.optional(v.number()),
+    scopes: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_connection", ["connectionId"])
+    .index("by_connector", ["connectorId"])
+    .index("by_expiry", ["expiresAt"]),
+
+  // Every Gmail message the mailbox watcher has seen, recorded before action
+  // (commitment 7 of the Gmail plan) so double delivery or cron overlap can
+  // never answer twice. Also the reply rails' ledger: the per-thread hourly
+  // cap and per-day ceiling are counted off `repliedAt`.
+  mailboxMessages: defineTable({
+    companyId: v.optional(v.id("companies")),
+    connectorId: v.id("toolConnectors"),
+    gmailMessageId: v.string(),
+    gmailThreadId: v.string(),
+    // The counterparty and subject, never body text — the same restraint the
+    // audit trail shows.
+    sender: v.string(),
+    subject: v.string(),
+    decision: v.union(
+      v.literal("PENDING"),
+      v.literal("REPLIED"),
+      v.literal("TASK"),
+      v.literal("SKIPPED")
+    ),
+    decisionReason: v.optional(v.string()),
+    taskId: v.optional(v.id("tasks")),
+    repliedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_connector_message", ["connectorId", "gmailMessageId"])
+    .index("by_thread_replied", ["gmailThreadId", "repliedAt"])
+    .index("by_connector_replied", ["connectorId", "repliedAt"])
+    .index("by_created", ["createdAt"]),
+
   // Global Tool Library
   aiTools: defineTable({
     name: v.string(), // "search_web", "query_database"
@@ -2811,6 +2864,7 @@ export default defineSchema({
       v.literal("agentRunHistory"),
       v.literal("agentTransactions"),
       v.literal("phoneCalls"),
+      v.literal("mailboxMessages"),
       v.literal("purgeHistory")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),

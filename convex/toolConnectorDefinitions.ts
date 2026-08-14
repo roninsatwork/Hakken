@@ -784,6 +784,80 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   // template:remove:end
+  {
+    key: "google-gmail",
+    name: "Gmail Mailbox",
+    description:
+      "Connects one dedicated Gmail mailbox by consent — never a person's own. Sonae can read "
+      + "new mail in it and reply from it, so the whole exchange sits in the inbox for any "
+      + "colleague to open and inspect. The platform holds a scoped, revocable key, never a "
+      + "password; disconnecting revokes the key at Google.",
+    category: "EMAIL",
+    // The platform's first OAuth connector: the consent flow, encrypted token
+    // storage, refresh, and revocation in connectorOAuth.ts exist because of
+    // this definition, and every later connector reuses them.
+    authMode: "OAUTH",
+    oauthProvider: "google",
+    // Restricted to one tenant: the mailbox belongs to a company, and its
+    // mail must never be readable from another.
+    tenantAvailability: "TENANT_RESTRICTED",
+    // One scope covering read, send, and label changes on the connected
+    // mailbox — the minimum the reply loop needs, and exactly what the admin
+    // screen and Google's consent screen both display (commitment 3).
+    requiredScopes: ["https://www.googleapis.com/auth/gmail.modify"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Read mailbox",
+        description:
+          "Reads mail from the connected Gmail mailbox: new messages, or one message in full. "
+          + "Reads only — nothing is sent, marked, or deleted.",
+        handlerMapping: "gmail.read",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            messageId: {
+              type: "string",
+              description: "A Gmail message id, to read that message in full.",
+            },
+          },
+        }),
+      },
+      {
+        name: "Reply to a sender",
+        description:
+          "Replies from the connected mailbox, in the sender's own thread. It can only answer "
+          + "the sender of a message the mailbox received — it cannot start new mail, add "
+          + "recipients, or send twice to the same thread within an hour. The reply lands in "
+          + "the mailbox's Sent folder like any colleague's mail.",
+        handlerMapping: "gmail.reply",
+        requiredRole: "ADMIN",
+        // WRITE, with the rails in the handler beyond the model's reach:
+        // reply-to-sender-only, no no-reply addresses, per-thread hourly
+        // cap, and a per-day ceiling (commitment 6). Autonomy comes from the
+        // mailbox agent's own flag, not from this definition.
+        sideEffectLevel: "WRITE",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          properties: {
+            messageId: {
+              type: "string",
+              description: "The Gmail message id being replied to.",
+            },
+            body: {
+              type: "string",
+              description: "The reply text, plain.",
+            },
+          },
+          required: ["messageId", "body"],
+        }),
+      },
+    ],
+  },
 ];
 
 export function getBuiltInToolConnector(key: string) {

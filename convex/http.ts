@@ -12,6 +12,10 @@ import {
 } from "./publicApi";
 import { handleVoiceKnowledgeLookup } from "./voiceRelay";
 import { handleCallStatus, handleCallTurns, handleIncomingCall } from "./telephony";
+import {
+  handleConnectorOAuthAuthorize,
+  handleConnectorOAuthCallback,
+} from "./connectorOAuth";
 
 const http = httpRouter();
 
@@ -75,6 +79,22 @@ http.route({
   path: "/api/telephony/status",
   method: "POST",
   handler: handleCallStatus,
+});
+
+// The connector consent flow: an admin starting a connection is redirected
+// to the provider from here, and the provider sends them back with a code.
+// Both legs are authenticated by the connection's own single-use random
+// state; the code exchange happens server-side only.
+http.route({
+  path: "/api/connectors/oauth/authorize",
+  method: "GET",
+  handler: handleConnectorOAuthAuthorize,
+});
+
+http.route({
+  path: "/api/connectors/oauth/callback",
+  method: "GET",
+  handler: handleConnectorOAuthCallback,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

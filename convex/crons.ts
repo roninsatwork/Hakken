@@ -12,6 +12,27 @@ crons.interval(
   {}
 );
 
+// The mailbox that answers itself: poll every connected Gmail mailbox for
+// new mail, answer what company knowledge can answer, and turn the rest
+// into tasks with a holding reply. Idempotent per message id, so an
+// overlapping poll can never answer twice.
+crons.interval(
+  "gmail-mailbox-watcher",
+  { minutes: 1 },
+  internal.gmailWatcher.pollMailboxes,
+  {}
+);
+
+// Keep connector OAuth tokens alive: refresh anything dying within the next
+// two hours, so a long-idle connection works the moment it is needed and a
+// revoked one is discovered within the hour rather than at demo time.
+crons.interval(
+  "connector-oauth-token-refresh",
+  { hours: 1 },
+  internal.connectorOAuth.refreshExpiringTokens,
+  {}
+);
+
 // Revive agent runs whose action died without reaching a terminal state, and
 // fail the ones that cannot be revived. Without this a killed action leaves a
 // run marked RUNNING and a reply marked as streaming for ever.

@@ -164,6 +164,30 @@ if (hasValue("APIFY_API_TOKEN")) {
   requireValue("APIFY_WEBHOOK_SECRET", "Required when Apify callbacks are enabled.");
 }
 
+// The connector consent flow: all three or none. A deployment with half the
+// group configured would show a Connect button that fails at the far end of
+// Google's screen, which is the worst place to discover it.
+const connectorOAuthKeys = [
+  "CONNECTOR_GOOGLE_CLIENT_ID",
+  "CONNECTOR_GOOGLE_CLIENT_SECRET",
+  "CONNECTOR_TOKEN_ENCRYPTION_KEY",
+];
+const configuredConnectorKeys = connectorOAuthKeys.filter(hasValue);
+if (configuredConnectorKeys.length === 0) {
+  warnings.push(
+    "Connector OAuth: not configured. Required only to connect the Gmail mailbox " +
+    "(CONNECTOR_GOOGLE_CLIENT_ID, CONNECTOR_GOOGLE_CLIENT_SECRET, CONNECTOR_TOKEN_ENCRYPTION_KEY)."
+  );
+} else if (configuredConnectorKeys.length < connectorOAuthKeys.length) {
+  failures.push(
+    `Connector OAuth: partially configured. Missing ${connectorOAuthKeys
+      .filter((key) => !hasValue(key))
+      .join(", ")} — set all three or none.`
+  );
+} else {
+  passes.push("Connector OAuth credentials configured.");
+}
+
 const effectiveFailures = strict ? [...failures, ...warnings.map((warning) => `Strict warning: ${warning}`)] : failures;
 
 console.log(`Sonae setup validation (${profile}${strict ? ", strict" : ""})`);

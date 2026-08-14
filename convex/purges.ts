@@ -32,6 +32,7 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("agentRunHistory"),
   v.literal("agentTransactions"),
   v.literal("phoneCalls"),
+  v.literal("mailboxMessages"),
   v.literal("purgeHistory"),
 );
 
@@ -521,6 +522,18 @@ export const executePurgeRecursive = internalMutation({
         const batch = await ctx.db
           .query("phoneCalls")
           .withIndex("by_started", (q) => q.lt("startedAt", cutoffTimestamp))
+          .take(500);
+        for (const record of batch) {
+          await ctx.db.delete(record._id);
+        }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "mailboxMessages") {
+        // The watcher's ledger ages out whole: a row old enough to purge is
+        // long past every rail window that reads it.
+        const batch = await ctx.db
+          .query("mailboxMessages")
+          .withIndex("by_created", (q) => q.lt("createdAt", cutoffTimestamp))
           .take(500);
         for (const record of batch) {
           await ctx.db.delete(record._id);

@@ -13,6 +13,7 @@ export type PurgePipelineKey =
   | "agentRunHistory"
   | "agentTransactions"
   | "phoneCalls"
+  | "mailboxMessages"
   | "purgeHistory";
 
 export interface PipelineConfig {
@@ -62,6 +63,10 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // numbers. Kept shorter than most: it is the most personal data on the
   // platform and the least useful once the follow-up task has been done.
   phoneCalls: { ...DAILY_2AM, retentionDays: 90 },
+  // The mailbox watcher's ledger: sender addresses and subjects, so it gets
+  // the same short window as the phone records it mirrors. The mail itself
+  // lives in Gmail under Gmail's own retention, untouched by this.
+  mailboxMessages: { ...DAILY_2AM, retentionDays: 90 },
   // The one pipeline that ships ENABLED: it cleans only the purge system's
   // own log, which the hourly dispatcher grows even when everything else is
   // off. The newest 200 entries are always kept regardless of retention.

@@ -213,7 +213,7 @@ Builds on: inline chat images (already working), widget image attachments,
 tasks. Genuinely new: the acting — turning what the model reads in the image
 into a task, a customer note, or a structured answer, on the user's say-so.
 
-### Phase 5 — A Gmail inbox that answers itself
+### Phase 5 — A Gmail inbox that answers itself — **BUILT AND TESTED 2026-08-14; awaiting the mailbox, the Google app, and the live proof**
 
 **What the audience sees:** anyone emails ask@ronins.co.uk — a real Gmail
 address with a real inbox. Sonae reads the new message and replies from that

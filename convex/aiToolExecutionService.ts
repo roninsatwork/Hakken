@@ -9,6 +9,8 @@ import {
 } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
 import { resolveConnectorSecrets } from "./connectorSecretResolver";
+import { isConnectorOAuthProviderConfigured } from "./connectorOAuthProviders";
+import { isConnectorTokenEncryptionConfigured } from "./connectorTokenCrypto";
 import {
   HTTP_CONNECTOR_TIMEOUT_MS,
   describeHttpConnectorResponse,
@@ -417,6 +419,40 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    * context type had to admit actions: everything before this read or wrote our
    * own database.
    */
+  /**
+   * Read the connected Gmail mailbox.
+   *
+   * Tenant comes from the run context, never from model args — the same rule
+   * every handler here follows. The connector resolves through the invoked
+   * tool's own install, so a global and a tenant install cannot be confused.
+   */
+  "gmail.read": async (input) => {
+    const messageId = getOptionalStringToolArg(input.args, "messageId");
+    return await input.ctx.runAction(internal.gmailConnector.readMailbox, {
+      ...(input.toolId ? { toolId: input.toolId } : {}),
+      ...(input.companyId ? { companyId: input.companyId } : {}),
+      ...(messageId ? { messageId } : {}),
+    });
+  },
+  /**
+   * Reply from the connected Gmail mailbox, inside the rails.
+   *
+   * The model supplies a message id and a body — never an address. Who
+   * receives the reply is read off the original message server-side, and the
+   * no-reply, per-thread and per-day rails live in the handler's action
+   * (commitment 6 of the Gmail plan); a breached rail files a task instead.
+   */
+  "gmail.reply": async (input) => {
+    const messageId = getStringToolArg(input.args, "messageId");
+    const body = getStringToolArg(input.args, "body");
+    return await input.ctx.runAction(internal.gmailConnector.replyToMessage, {
+      ...(input.toolId ? { toolId: input.toolId } : {}),
+      ...(input.companyId ? { companyId: input.companyId } : {}),
+      ...(input.userId ? { userId: input.userId } : {}),
+      messageId,
+      body,
+    });
+  },
   "web.scrape": async (input) => {
     const url = getStringToolArg(input.args, "url");
     const mainContentOnly = getOptionalBooleanToolArg(input.args, "mainContentOnly");
@@ -1046,28 +1082,25 @@ export function getExecutableToolMappings() {
 /**
  * Whether the platform can actually take a connector through an OAuth flow.
  *
- * It cannot. `buildOAuthAuthorizationUrl` produced a link to
- * `/api/connectors/oauth/authorize`, a route that does not exist, so the admin
- * "Connect" button led to a 404 — and the completion step accepted a token
- * reference typed by hand, with no exchange, refresh or revocation behind it.
- *
- * Kept as a named check rather than deleting the surface, so that the day the
- * route and provider credentials exist, this returns true and everything
- * downstream re-enables itself. Until then the admin is told plainly instead of
- * being sent somewhere broken.
- *
- * Turning this on requires all of: the authorize and callback routes, per
- * provider client credentials, encrypted token storage, and refresh. Anything
- * less re-creates the flow that looked real and was not.
+ * For a long time it could not — this was hard-coded `false` because the
+ * authorize route led to a 404 and completion took a hand-typed token
+ * reference. The routes, exchange, encrypted storage, refresh and revocation
+ * now exist (`connectorOAuth.ts`), so the answer depends only on deployment
+ * configuration: the provider's client credentials and the token encryption
+ * key. An unconfigured deployment still gets told plainly instead of being
+ * sent somewhere broken.
  */
-export function isConnectorOAuthAvailable() {
-  return false;
+export function isConnectorOAuthAvailable(provider: string) {
+  return (
+    isConnectorOAuthProviderConfigured(provider) && isConnectorTokenEncryptionConfigured()
+  );
 }
 
 export const CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE =
-  "OAuth connections are not available on this deployment. No provider "
-  + "authorisation flow is configured, so a connector cannot be connected to an "
-  + "external account yet.";
+  "OAuth connections are not available on this deployment. Set the provider's "
+  + "client credentials (e.g. CONNECTOR_GOOGLE_CLIENT_ID and "
+  + "CONNECTOR_GOOGLE_CLIENT_SECRET) and CONNECTOR_TOKEN_ENCRYPTION_KEY, "
+  + "then try again.";
 
 export async function executeRegisteredTool(args: ToolHandlerExecutionInput) {
   const handler = REGISTERED_TOOL_HANDLERS[args.handlerMapping];
