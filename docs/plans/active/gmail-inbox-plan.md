@@ -134,9 +134,13 @@ direct-insert pattern with the agent metadata builders
    `autonomousToolExecution: true` (the house autonomy flag,
    `convex/schema.ts:2116`) — but the rails live in the handler, beyond
    the model's reach: reply only to the sender of an inbound message,
-   never to a no-reply address, at most one automatic reply per sender
-   thread per hour, and a per-day send ceiling. Exceeding a rail files a
-   task instead.
+   never to a no-reply address, a short anti-loop gap between automatic
+   replies in one thread, a per-thread daily cap, and a per-day send
+   ceiling. Exceeding a rail files a task instead. (Originally drafted as
+   one automatic reply per thread per hour; Anthony overruled that on the
+   first live test, 2026-08-14 — email is a conversation, and an hour of
+   per-thread silence left a customer's follow-up sitting unanswered. The
+   gap now only breaks robot ping-pong.)
 7. **Processed mail is idempotent.** Every Gmail message id is recorded
    before action; webhook-era double-delivery or cron overlap can never
    answer twice.

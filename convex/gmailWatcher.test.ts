@@ -52,6 +52,22 @@ function stubGmail(messages: StubMessage[]) {
         sends.push(JSON.parse(String(init?.body ?? "{}")));
         return Response.json({ id: `sent-${sends.length}` });
       }
+      const threadMatch = url.match(/\/threads\/([^/?]+)/);
+      if (threadMatch) {
+        const threadId = decodeURIComponent(threadMatch[1]);
+        const inThread = messages.filter((message) => message.threadId === threadId);
+        return Response.json({
+          messages: inThread.map((message) => ({
+            id: message.id,
+            labelIds: message.labelIds ?? ["INBOX"],
+            payload: {
+              mimeType: "text/plain",
+              headers: Object.entries(message.headers).map(([name, value]) => ({ name, value })),
+              body: { data: Buffer.from(message.body ?? "").toString("base64url") },
+            },
+          })),
+        });
+      }
       if (url.includes("/labels") && init?.method === "POST") {
         return Response.json({ id: "label-sonae" });
       }
@@ -190,7 +206,7 @@ describe("the mailbox that answers itself", () => {
     await seedMailbox(t);
     const { sends, labelled } = stubGmail([QUESTION]);
     generateMock.mockResolvedValue({
-      text: '{"grounded": true, "reply": "We are open 9 to 5, Monday to Friday."}',
+      text: '{"reply": "We are open 9 to 5, Monday to Friday.", "needsHuman": false}',
     });
 
     await t.action(internal.gmailWatcher.pollMailboxes, {});
@@ -208,18 +224,22 @@ describe("the mailbox that answers itself", () => {
     expect(tasks).toHaveLength(0);
   });
 
-  test("an unanswerable question becomes a task, a bell, and a holding reply", async () => {
+  test("a question needing a person still gets a written reply, plus the task and bell", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { adminId } = await seedMailbox(t);
     const { sends } = stubGmail([QUESTION]);
-    generateMock.mockResolvedValue({ text: '{"grounded": false, "reply": ""}' });
+    // The model now writes the acknowledgement itself — published facts
+    // included — rather than the sender getting a canned brush-off.
+    generateMock.mockResolvedValue({
+      text: '{"reply": "Projects like this usually land between £15,000 and £60,000 — a colleague will follow up with specifics.", "needsHuman": true}',
+    });
 
     await t.action(internal.gmailWatcher.pollMailboxes, {});
 
-    // The sender heard a person is coming...
+    // The sender heard the useful part straight away...
     expect(sends).toHaveLength(1);
     const holding = Buffer.from(sends[0].raw, "base64url").toString();
-    expect(holding).toContain("colleague will come back");
+    expect(holding).toContain("colleague will follow up");
 
     // ...and a person owns the answer, with the bell rung.
     const { rows, tasks, notifications } = await t.run(async (ctx) => ({
@@ -234,13 +254,18 @@ describe("the mailbox that answers itself", () => {
     expect(rows[0]).toMatchObject({ decision: "TASK", taskId: tasks[0]._id });
   });
 
-  test("a model answer that is not valid JSON routes to a person, fail-closed", async () => {
+  test("a model answer that is not valid JSON routes to a person, fail-closed, with the fallback note", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     await seedMailbox(t);
-    stubGmail([QUESTION]);
+    const { sends } = stubGmail([QUESTION]);
     generateMock.mockResolvedValue({ text: "Certainly! The opening hours are 9 to 5." });
 
     await t.action(internal.gmailWatcher.pollMailboxes, {});
+
+    // The sender still hears something rather than silence.
+    expect(sends).toHaveLength(1);
+    const fallback = Buffer.from(sends[0].raw, "base64url").toString();
+    expect(fallback).toContain("colleague will come back");
 
     const { rows, tasks } = await t.run(async (ctx) => ({
       rows: await ctx.db.query("mailboxMessages").collect(),
@@ -260,7 +285,7 @@ describe("the mailbox that answers itself", () => {
       { id: "s-4", threadId: "t4", labelIds: ["INBOX"], headers: { From: "no-reply@bank.com", Subject: "Statement" } },
       { id: "s-5", threadId: "t5", labelIds: ["SENT"], headers: { From: "ask@ronins.co.uk", Subject: "Re: hi" } },
     ]);
-    generateMock.mockResolvedValue({ text: '{"grounded": true, "reply": "Should never be asked."}' });
+    generateMock.mockResolvedValue({ text: '{"reply": "Should never be asked.", "needsHuman": false}' });
 
     await t.action(internal.gmailWatcher.pollMailboxes, {});
 
@@ -276,7 +301,7 @@ describe("the mailbox that answers itself", () => {
     await seedMailbox(t);
     const { sends } = stubGmail([QUESTION]);
     generateMock.mockResolvedValue({
-      text: '{"grounded": true, "reply": "We are open 9 to 5."}',
+      text: '{"reply": "We are open 9 to 5.", "needsHuman": false}',
     });
 
     await t.action(internal.gmailWatcher.pollMailboxes, {});

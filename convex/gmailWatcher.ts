@@ -1,5 +1,6 @@
-import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+"use node";
+
+import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -25,99 +26,19 @@ import { isNoReplyAddress, parseAddress } from "./gmailConnector";
 /** What a human sees in Gmail on mail the agent handled. */
 export const PROCESSED_LABEL_NAME = "Sonae";
 
-const HOLDING_REPLY =
+/**
+ * Sent only when the model call itself failed and no written reply exists —
+ * the sender must still hear something rather than silence.
+ */
+const FALLBACK_HOLDING_REPLY =
   "Thanks for your email. A colleague will come back to you on this — " +
   "we've made sure it's in front of the right person.";
-
-export const listConnectedMailboxes = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    // Bounded: one mailbox per workspace, installed by hand.
-    const connectors = await ctx.db
-      .query("toolConnectors")
-      .withIndex("by_key", (q) => q.eq("key", "google-gmail"))
-      .take(100);
-    return connectors.filter(
-      (connector) =>
-        connector.installStatus === "INSTALLED" &&
-        connector.isActive &&
-        connector.authConnectionStatus === "CONNECTED" &&
-        connector.companyId !== undefined
-    );
-  },
-});
-
-/**
- * Record a message id the moment it is seen (commitment 7). Answers with
- * what the watcher should do: process it, or leave it alone.
- */
-export const recordSeenMessage = internalMutation({
-  args: {
-    connectorId: v.id("toolConnectors"),
-    companyId: v.optional(v.id("companies")),
-    gmailMessageId: v.string(),
-    gmailThreadId: v.string(),
-    sender: v.string(),
-    subject: v.string(),
-  },
-  handler: async (ctx, args): Promise<"PROCESS" | "ALREADY_HANDLED"> => {
-    const existing = await ctx.db
-      .query("mailboxMessages")
-      .withIndex("by_connector_message", (q) =>
-        q.eq("connectorId", args.connectorId).eq("gmailMessageId", args.gmailMessageId)
-      )
-      .first();
-    if (existing) {
-      // A PENDING row is a message whose processing died mid-way — the next
-      // poll picks it up again. Anything decided stays decided.
-      return existing.decision === "PENDING" ? "PROCESS" : "ALREADY_HANDLED";
-    }
-    const now = Date.now();
-    await ctx.db.insert("mailboxMessages", {
-      companyId: args.companyId,
-      connectorId: args.connectorId,
-      gmailMessageId: args.gmailMessageId,
-      gmailThreadId: args.gmailThreadId,
-      sender: args.sender,
-      subject: args.subject,
-      decision: "PENDING",
-      createdAt: now,
-      updatedAt: now,
-    });
-    return "PROCESS";
-  },
-});
-
-export const markDecision = internalMutation({
-  args: {
-    connectorId: v.id("toolConnectors"),
-    gmailMessageId: v.string(),
-    decision: v.union(v.literal("REPLIED"), v.literal("TASK"), v.literal("SKIPPED")),
-    reason: v.optional(v.string()),
-    taskId: v.optional(v.id("tasks")),
-  },
-  handler: async (ctx, args) => {
-    const row = await ctx.db
-      .query("mailboxMessages")
-      .withIndex("by_connector_message", (q) =>
-        q.eq("connectorId", args.connectorId).eq("gmailMessageId", args.gmailMessageId)
-      )
-      .first();
-    if (!row) return;
-    await ctx.db.patch(row._id, {
-      decision: args.decision,
-      decisionReason: args.reason,
-      ...(args.taskId ? { taskId: args.taskId } : {}),
-      updatedAt: Date.now(),
-    });
-  },
-});
 
 /** The once-a-minute entry point (crons.ts). */
 export const pollMailboxes = internalAction({
   args: {},
   handler: async (ctx) => {
-    const connectors = await ctx.runQuery(internal.gmailWatcher.listConnectedMailboxes, {});
+    const connectors = await ctx.runQuery(internal.gmailWatcherStore.listConnectedMailboxes, {});
     for (const connector of connectors) {
       try {
         await processMailbox(ctx, connector);
@@ -157,7 +78,7 @@ async function processMailbox(ctx: ActionCtx, connector: Doc<"toolConnectors">) 
   if (!listing.ok || !listing.messages) return;
 
   for (const summary of listing.messages) {
-    const verdict = await ctx.runMutation(internal.gmailWatcher.recordSeenMessage, {
+    const verdict = await ctx.runMutation(internal.gmailWatcherStore.recordSeenMessage, {
       connectorId: connector._id,
       companyId: connector.companyId,
       gmailMessageId: summary.id,
@@ -183,7 +104,7 @@ async function processMessage(
 ) {
   const reasonToSkip = skipReason(summary);
   if (reasonToSkip) {
-    await ctx.runMutation(internal.gmailWatcher.markDecision, {
+    await ctx.runMutation(internal.gmailWatcherStore.markDecision, {
       connectorId: connector._id,
       gmailMessageId: summary.id,
       decision: "SKIPPED",
@@ -192,57 +113,70 @@ async function processMessage(
     return;
   }
 
-  // Read the mail in full, then ask the brain: answer, or hand to a person?
-  const fullResult = (await ctx.runAction(internal.gmailConnector.readMailbox, {
+  // Read the whole conversation, not just the newest message. A follow-up
+  // like "that wasn't helpful" says nothing about the topic — the first live
+  // test searched the knowledge with exactly those words, found nothing, and
+  // answered a pricing thread with a brush-off while the published prices
+  // sat in the knowledge base. The conversation is the question.
+  const threadResult = (await ctx.runAction(internal.gmailConnector.readMailbox, {
     connectorId: connector._id,
-    messageId: summary.id,
-  })) as { ok: boolean; message?: { body: string; from: string; subject: string } };
-  if (!fullResult.ok || !fullResult.message) throw new Error("Message could not be read.");
+    threadId: summary.threadId,
+  })) as {
+    ok: boolean;
+    messages?: Array<{ id: string; from: string; fromMailbox: boolean; body: string }>;
+  };
+  if (!threadResult.ok || !threadResult.messages?.length) {
+    throw new Error("Conversation could not be read.");
+  }
 
-  const question = `${summary.subject}\n\n${fullResult.message.body}`.slice(0, 6000);
+  const senderTexts = threadResult.messages
+    .filter((message) => !message.fromMailbox)
+    .map((message) => message.body.trim())
+    .filter(Boolean);
+  const newestBody = senderTexts.at(-1) ?? "";
+
+  // The knowledge search hears everything the sender has said in the thread,
+  // so the topic survives however the latest message is phrased.
+  const retrievalQuery = `${summary.subject}\n\n${senderTexts.join("\n\n")}`.slice(0, 6000);
+
+  const transcript = threadResult.messages
+    .map((message) => `${message.fromMailbox ? "Sonae" : "Customer"}: ${message.body.trim()}`)
+    .filter((line) => line.length > "Customer: ".length)
+    .join("\n\n")
+    .slice(-8000);
 
   const knowledge = (await ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
-    query: question,
+    query: retrievalQuery,
     fallbackCompanyId: connector.companyId,
   })) as { context: string };
 
   const decision = await decideReply(ctx, {
-    question,
+    conversation: transcript,
     knowledgeContext: knowledge.context ?? "",
     companyId: connector.companyId,
   });
 
-  if (decision.grounded && decision.reply) {
-    const sent = await ctx.runAction(internal.gmailConnector.replyToMessage, {
-      connectorId: connector._id,
-      messageId: summary.id,
-      body: decision.reply,
-    });
-    if (sent.ok) {
-      await labelProcessed(ctx, connector, summary.id);
-      // recordReply set REPLIED; nothing more to mark.
-      return;
-    }
-    // A rail refused the send and already filed the task; record that truth.
-    await ctx.runMutation(internal.gmailWatcher.markDecision, {
-      connectorId: connector._id,
-      gmailMessageId: summary.id,
-      decision: "TASK",
-      reason: sent.error,
-    });
+  // The reply always goes out (through the rails): either the written answer
+  // — which uses published facts and figures exactly as the knowledge states
+  // them — or, if the model call itself died, the plain fallback so the
+  // sender never gets silence.
+  const replyBody = decision.reply?.trim() || FALLBACK_HOLDING_REPLY;
+  const sent = await ctx.runAction(internal.gmailConnector.replyToMessage, {
+    connectorId: connector._id,
+    messageId: summary.id,
+    body: replyBody,
+  });
+
+  if (sent.ok && !decision.needsHuman) {
+    await labelProcessed(ctx, connector, summary.id);
+    // recordReply set REPLIED; nothing more to mark.
     return;
   }
 
-  // Not grounded: a person answers. Holding reply first (through the same
-  // rails), then the task and bell for the shared per-company owner.
-  await ctx.runAction(internal.gmailConnector.replyToMessage, {
-    connectorId: connector._id,
-    messageId: summary.id,
-    body: HOLDING_REPLY,
-  });
-
+  // A person is needed — because the question goes beyond the knowledge, or
+  // because a rail refused the send (that path already filed its own task).
   let taskId: Id<"tasks"> | undefined;
-  if (connector.companyId) {
+  if (sent.ok && connector.companyId) {
     const assignee = await ctx.runQuery(internal.telephony.findCallAssignee, {
       companyId: connector.companyId,
     });
@@ -250,36 +184,42 @@ async function processMessage(
       companyId: connector.companyId,
       title: `Answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 120)}"`,
       detail:
-        `Sonae could not answer this from company knowledge, told the sender a person will ` +
-        `follow up, and left the mail in the inbox.\n\nFrom: ${summary.from}\n` +
-        `Their message:\n${fullResult.message.body.slice(0, 2000)}`,
+        `Sonae replied with what the company knowledge covers and told the sender a ` +
+        `colleague will follow up with the specifics.\n\nFrom: ${summary.from}\n` +
+        `Their message:\n${newestBody.slice(0, 2000)}\n\n` +
+        `What Sonae sent:\n${replyBody.slice(0, 1500)}`,
       ...(assignee ? { assigneeUserId: assignee } : {}),
       createdBySource: "AGENT" as const,
     });
   }
 
-  await ctx.runMutation(internal.gmailWatcher.markDecision, {
+  await ctx.runMutation(internal.gmailWatcherStore.markDecision, {
     connectorId: connector._id,
     gmailMessageId: summary.id,
     decision: "TASK",
-    reason: "Not answerable from company knowledge.",
+    reason: sent.ok ? "A person follows up with the specifics." : sent.error,
     ...(taskId ? { taskId } : {}),
   });
   await labelProcessed(ctx, connector, summary.id);
 }
 
 /**
- * The answer-versus-task decision, structured. Fail-closed: anything that
- * does not parse as a grounded answer becomes a task for a person.
+ * What goes back to the sender, and whether a person follows up — one model
+ * call, structured. The reply must use the company's published facts and
+ * figures exactly as the knowledge states them: the first live quote request
+ * was answered with a canned brush-off while the published price range sat
+ * in the retrieved knowledge, which is the failure this wording exists to
+ * prevent. Fail-closed: a call that dies yields no reply text, and the
+ * caller sends the plain fallback and files the task.
  */
 async function decideReply(
   ctx: ActionCtx,
   args: {
-    question: string;
+    conversation: string;
     knowledgeContext: string;
     companyId?: Id<"companies">;
   }
-): Promise<{ grounded: boolean; reply?: string }> {
+): Promise<{ reply?: string; needsHuman: boolean }> {
   try {
     // The cheap fast tier, resolved through the same catalogue door every
     // other headless caller uses (the phone's summary does exactly this).
@@ -290,30 +230,37 @@ async function decideReply(
     const response = await generateTextWithResolvedModel({
       model: config,
       systemInstruction:
-        "You answer a customer email for a company, using ONLY the company knowledge provided. " +
-        'Reply with strict JSON, nothing else: {"grounded": boolean, "reply": string}. ' +
-        "grounded is true only when the knowledge genuinely answers the question — then reply is a " +
-        "short, complete, courteous email answer in the sender's language, plain text, no signature. " +
-        "If the knowledge does not answer it, grounded is false and reply is an empty string. " +
-        "Never invent facts, prices, or commitments.",
+        "You write the next reply in a customer email conversation for a company, using ONLY the company " +
+        'knowledge provided. Answer with strict JSON, nothing else: {"reply": string, "needsHuman": boolean}. ' +
+        "reply is a courteous, complete email answer to the customer's LATEST message, read in the light of " +
+        "the whole conversation — in the sender's own language, plain text, no signature, no markdown. " +
+        "Use the knowledge fully: published facts, price ranges, and how the company works may be stated " +
+        "exactly as the knowledge states them. Never invent a fact or figure, and never commit to a specific " +
+        "bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier Sonae " +
+        "message in the conversation already said; move the conversation forward. " +
+        "needsHuman is true when the sender needs something beyond what the knowledge settles (a bespoke " +
+        "quote, a complaint, anything account-specific); the reply must then still give whatever the knowledge " +
+        "does cover and say a colleague will follow up with the specifics. " +
+        "If the knowledge offers nothing useful at all, reply is a short, warm acknowledgement that names what " +
+        "they asked about and says a colleague will come back to them; needsHuman is true.",
       contents: [
         {
           type: "text",
-          text: `Company knowledge:\n${args.knowledgeContext || "(none found)"}\n\nCustomer email:\n${args.question}`,
+          text:
+            `Company knowledge:\n${args.knowledgeContext || "(none found)"}\n\n` +
+            `The email conversation so far (oldest first):\n${args.conversation}`,
         },
       ],
     });
     const text = response.text?.trim() ?? "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return { grounded: false };
-    const parsed = JSON.parse(jsonMatch[0]) as { grounded?: boolean; reply?: string };
-    if (parsed.grounded === true && typeof parsed.reply === "string" && parsed.reply.trim()) {
-      return { grounded: true, reply: parsed.reply.trim() };
-    }
-    return { grounded: false };
+    if (!jsonMatch) return { needsHuman: true };
+    const parsed = JSON.parse(jsonMatch[0]) as { reply?: string; needsHuman?: boolean };
+    const reply = typeof parsed.reply === "string" && parsed.reply.trim() ? parsed.reply.trim() : undefined;
+    return { reply, needsHuman: parsed.needsHuman !== false || !reply };
   } catch (error) {
     console.error("Mailbox decision failed; routing to a person", error);
-    return { grounded: false };
+    return { needsHuman: true };
   }
 }
 

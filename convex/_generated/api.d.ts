@@ -109,6 +109,7 @@ import type * as evidencePack from "../evidencePack.js";
 import type * as evidencePackService from "../evidencePackService.js";
 import type * as gmailConnector from "../gmailConnector.js";
 import type * as gmailWatcher from "../gmailWatcher.js";
+import type * as gmailWatcherStore from "../gmailWatcherStore.js";
 import type * as googleAgentProvider from "../googleAgentProvider.js";
 import type * as googleProviderAdapter from "../googleProviderAdapter.js";
 import type * as governanceActivity from "../governanceActivity.js";
@@ -342,6 +343,7 @@ declare const fullApi: ApiFromModules<{
   evidencePackService: typeof evidencePackService;
   gmailConnector: typeof gmailConnector;
   gmailWatcher: typeof gmailWatcher;
+  gmailWatcherStore: typeof gmailWatcherStore;
   googleAgentProvider: typeof googleAgentProvider;
   googleProviderAdapter: typeof googleProviderAdapter;
   governanceActivity: typeof governanceActivity;

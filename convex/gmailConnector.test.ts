@@ -214,7 +214,7 @@ describe("gmail reply rails", () => {
     expect(result.error).toContain("mailbox itself");
   });
 
-  test("a second automatic reply in the same thread within the hour becomes a task with the bell", async () => {
+  test("a burst of replies in the same thread is refused, but conversation resumes after the gap", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { companyId, superAdminId } = await seedConnectedGmail(t);
     // Give the workspace an admin so the task has an owner.
@@ -230,13 +230,15 @@ describe("gmail reply rails", () => {
     });
     expect(first.ok).toBe(true);
 
-    const second = await t.action(internal.gmailConnector.replyToMessage, {
+    // Seconds later: refused — nothing human types that fast — and a person
+    // is tasked instead.
+    const burst = await t.action(internal.gmailConnector.replyToMessage, {
       companyId,
       messageId: "msg-1",
       body: "Second answer.",
     });
-    expect(second.ok).toBe(false);
-    expect(second.error).toContain("task has been raised");
+    expect(burst.ok).toBe(false);
+    expect(burst.error).toContain("task has been raised");
 
     const { tasks, notifications } = await t.run(async (ctx) => ({
       tasks: await ctx.db.query("tasks").collect(),
@@ -246,6 +248,53 @@ describe("gmail reply rails", () => {
     expect(tasks[0].title).toContain("Opening hours?");
     expect(tasks[0].assigneeUserId).toBe(superAdminId);
     expect(notifications.some((n) => n.kind === "TASK_ASSIGNED")).toBe(true);
+
+    // Two minutes on, the conversation continues — email is a conversation,
+    // and the rail only breaks robot ping-pong, not dialogue.
+    await t.run(async (ctx) => {
+      const rows = await ctx.db.query("mailboxMessages").collect();
+      for (const row of rows) {
+        if (row.repliedAt) await ctx.db.patch(row._id, { repliedAt: row.repliedAt - 2 * 60 * 1000 });
+      }
+    });
+    const resumed = await t.action(internal.gmailConnector.replyToMessage, {
+      companyId,
+      messageId: "msg-1",
+      body: "Happy to expand on that.",
+    });
+    expect(resumed.ok).toBe(true);
+  });
+
+  test("a conversation stops at its daily automatic-reply cap", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, connectorId } = await seedConnectedGmail(t);
+    const { THREAD_DAILY_REPLY_CAP } = await import("./gmailConnector");
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      for (let index = 0; index < THREAD_DAILY_REPLY_CAP; index += 1) {
+        await ctx.db.insert("mailboxMessages", {
+          companyId,
+          connectorId,
+          gmailMessageId: `earlier-${index}`,
+          gmailThreadId: "thread-1",
+          sender: "priya@customer.co.uk",
+          subject: "Opening hours?",
+          decision: "REPLIED",
+          repliedAt: now - (index + 3) * 60 * 1000,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+    stubGmailFetch({ messages: { "msg-1": CUSTOMER_MESSAGE } });
+
+    const result = await t.action(internal.gmailConnector.replyToMessage, {
+      companyId,
+      messageId: "msg-1",
+      body: "One more?",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("automatic replies for the day");
   });
 
   test("the per-day ceiling holds even across different threads", async () => {

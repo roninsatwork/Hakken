@@ -18,8 +18,19 @@ import type { Doc, Id } from "./_generated/dataModel";
 
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
 
-/** One automatic reply per sender thread per hour. */
-const THREAD_REPLY_COOLDOWN_MS = 60 * 60 * 1000;
+/**
+ * The shortest gap between two automatic replies in one conversation.
+ *
+ * Email is a conversation, and the mailbox holds its end of one — the first
+ * live test had an hour-long per-thread silence here, which made a customer's
+ * follow-up sit unanswered and was rightly judged useless. What this gap
+ * still prevents is the pathological case: two automatic systems answering
+ * each other faster than any human types.
+ */
+const THREAD_REPLY_MIN_GAP_MS = 90 * 1000;
+
+/** No conversation gets more than this many automatic replies in a day. */
+export const THREAD_DAILY_REPLY_CAP = 10;
 
 /** The mailbox will not send more than this in any rolling day. */
 export const DAILY_REPLY_CEILING = 100;
@@ -155,7 +166,8 @@ export const resolveGmailConnector = internalQuery({
 });
 
 /**
- * Read the connected mailbox: recent inbox messages, or one message in full.
+ * Read the connected mailbox: recent inbox messages, one message in full, or
+ * a whole conversation.
  */
 export const readMailbox = internalAction({
   args: {
@@ -163,6 +175,12 @@ export const readMailbox = internalAction({
     toolId: v.optional(v.id("aiTools")),
     companyId: v.optional(v.id("companies")),
     messageId: v.optional(v.string()),
+    /**
+     * A Gmail thread id: returns every message in the conversation, oldest
+     * first, so a follow-up can be understood — and searched for — in the
+     * light of what the conversation is actually about.
+     */
+    threadId: v.optional(v.string()),
     /** A Gmail search query, for the watcher; defaults to unprocessed inbox mail. */
     query: v.optional(v.string()),
   },
@@ -178,6 +196,32 @@ export const readMailbox = internalAction({
       connectorId: connector._id,
     });
     if (!token.ok) return { ok: false, error: token.error };
+
+    if (args.threadId) {
+      const thread = (await gmailFetch(
+        token.accessToken,
+        `/threads/${encodeURIComponent(args.threadId)}?format=full`
+      )) as {
+        messages?: Array<{
+          id: string;
+          labelIds?: string[];
+          payload?: { headers?: GmailHeader[] } & Parameters<typeof extractPlainTextBody>[0];
+        }>;
+      };
+      const mailboxAddress = (connector.authAccountRef ?? "").toLowerCase();
+      const messages = (thread.messages ?? []).map((message) => {
+        const from = headerValue(message.payload?.headers, "From");
+        return {
+          id: message.id,
+          from,
+          date: headerValue(message.payload?.headers, "Date"),
+          fromMailbox:
+            message.labelIds?.includes("SENT") || parseAddress(from) === mailboxAddress,
+          body: extractPlainTextBody(message.payload ?? {}).slice(0, 8000),
+        };
+      });
+      return { ok: true, messages };
+    }
 
     if (args.messageId) {
       const message = (await gmailFetch(
@@ -387,16 +431,31 @@ export const checkReplyRails = internalQuery({
   handler: async (ctx, args): Promise<{ ok: true } | { ok: false; reason: string }> => {
     const now = Date.now();
 
-    const recentInThread = await ctx.db
+    const secondsAgo = await ctx.db
       .query("mailboxMessages")
       .withIndex("by_thread_replied", (q) =>
-        q.eq("gmailThreadId", args.gmailThreadId).gt("repliedAt", now - THREAD_REPLY_COOLDOWN_MS)
+        q.eq("gmailThreadId", args.gmailThreadId).gt("repliedAt", now - THREAD_REPLY_MIN_GAP_MS)
       )
       .first();
-    if (recentInThread) {
+    if (secondsAgo) {
       return {
         ok: false,
-        reason: "This conversation was already answered automatically within the last hour.",
+        reason: "This conversation was answered automatically only moments ago.",
+      };
+    }
+
+    const threadDayCount = (
+      await ctx.db
+        .query("mailboxMessages")
+        .withIndex("by_thread_replied", (q) =>
+          q.eq("gmailThreadId", args.gmailThreadId).gt("repliedAt", now - 24 * 60 * 60 * 1000)
+        )
+        .take(THREAD_DAILY_REPLY_CAP + 1)
+    ).length;
+    if (threadDayCount >= THREAD_DAILY_REPLY_CAP) {
+      return {
+        ok: false,
+        reason: `This conversation has had its ${THREAD_DAILY_REPLY_CAP} automatic replies for the day.`,
       };
     }
 

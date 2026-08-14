@@ -829,10 +829,11 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Reply to a sender",
         description:
-          "Replies from the connected mailbox, in the sender's own thread. It can only answer "
-          + "the sender of a message the mailbox received — it cannot start new mail, add "
-          + "recipients, or send twice to the same thread within an hour. The reply lands in "
-          + "the mailbox's Sent folder like any colleague's mail.",
+          "Replies from the connected mailbox, in the sender's own thread — and it can hold a "
+          + "conversation there, message by message. It can only answer the sender of a message "
+          + "the mailbox received: it cannot start new mail, add recipients, answer machines, or "
+          + "reply faster than a person could type. The reply lands in the mailbox's Sent folder "
+          + "like any colleague's mail.",
         handlerMapping: "gmail.reply",
         requiredRole: "ADMIN",
         // WRITE, with the rails in the handler beyond the model's reach:
