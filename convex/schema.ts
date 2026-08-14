@@ -3184,6 +3184,54 @@ export default defineSchema({
    * A row exists only once somebody has entered something. No row means nothing
    * has been filled in yet, not that the customer is unknown.
    */
+  /**
+   * The self-improving wiki: whole pages Sonae writes and tends itself, one
+   * per subject, rewritten after conversations — never chunked, never
+   * embedded (self-improving-wiki-plan.md, decisions 1-3). The machine's
+   * text lives in `content`; pinned human corrections are a separate layer
+   * the machine cannot touch, appended in code wherever the page is read —
+   * survival by construction, not by prompt obedience.
+   */
+  wikiPages: defineTable({
+    companyId: v.id("companies"),
+    // CUSTOMER pages first (phase 1); product/policy/issue kinds are phase 5.
+    kind: v.union(v.literal("CUSTOMER")),
+    // For CUSTOMER pages: the salesDataCustomers accountNameKey.
+    subjectKey: v.string(),
+    title: v.string(),
+    content: v.string(),
+    // Subject keys of pages this page mentions; the map is drawn from these.
+    links: v.array(v.string()),
+    pinnedCorrections: v.array(
+      v.object({
+        text: v.string(),
+        pinnedByUserId: v.optional(v.id("users")),
+        pinnedAt: v.number(),
+      })
+    ),
+    rewriteCount: v.number(),
+    // What last changed the page: "PHONE_CALL:<id>", "EMAIL:<gmail id>",
+    // "HUMAN:<user id>".
+    lastRewriteSource: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_company_kind_subject", ["companyId", "kind", "subjectKey"])
+    .index("by_company_updated", ["companyId", "updatedAt"]),
+
+  /**
+   * The page's walkable history (wiki plan, acceptance 4): the text as it
+   * stood BEFORE each rewrite, and what caused the rewrite. Reading the
+   * revisions in order shows which conversation taught which change.
+   */
+  wikiPageRevisions: defineTable({
+    pageId: v.id("wikiPages"),
+    companyId: v.id("companies"),
+    content: v.string(),
+    source: v.string(),
+    createdAt: v.number(),
+  }).index("by_page", ["pageId", "createdAt"]),
+
   salesDataCustomers: defineTable({
     companyId: v.id("companies"),
     accountNameKey: v.string(),

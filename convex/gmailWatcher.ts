@@ -345,6 +345,28 @@ async function processMessage(
     body: replyBody,
   });
 
+  // A known customer's wiki page learns from the exchange (wiki plan,
+  // phase 1). Scheduled, not awaited, and only for senders the workspace
+  // already knows — an unknown correspondent never becomes a page.
+  if (sent.ok && connector.companyId) {
+    const matchedKey = await ctx.runQuery(internal.wikiPages.matchEmailSenderToCustomer, {
+      companyId: connector.companyId,
+      email: parseAddress(summary.from),
+    });
+    if (matchedKey) {
+      await ctx.scheduler.runAfter(0, internal.wikiActions.rewriteCustomerPageAfterEvent, {
+        companyId: connector.companyId,
+        subjectKey: matchedKey,
+        eventLabel: "email exchange",
+        source: `EMAIL:${summary.id}`,
+        eventText:
+          `Subject: ${summary.subject || "(no subject)"}\n\n` +
+          `They wrote:\n${newestBody.slice(0, 3000)}\n\n` +
+          `Sonae replied:\n${replyBody.slice(0, 3000)}`,
+      });
+    }
+  }
+
   if (sent.ok && !decision.needsHuman) {
     await labelProcessed(ctx, connector, summary.id);
     // recordReply set REPLIED; nothing more to mark.

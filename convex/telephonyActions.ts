@@ -79,5 +79,18 @@ export const runAfterCallStep = internalAction({
       summary,
       ...(taskId ? { taskId } : {}),
     });
+
+    // A matched caller's wiki page learns from the call (wiki plan, phase 1).
+    // Scheduled, not awaited: a wiki failure never delays or breaks the
+    // after-call step — the page just stays a rewrite behind.
+    if (matchedKey && call.companyId) {
+      await ctx.scheduler.runAfter(0, internal.wikiActions.rewriteCustomerPageAfterEvent, {
+        companyId: call.companyId,
+        subjectKey: matchedKey,
+        eventLabel: "phone call",
+        source: `PHONE_CALL:${args.callId}`,
+        eventText: `Summary: ${summary}\n\nTranscript:\n${transcript}`,
+      });
+    }
   },
 });
