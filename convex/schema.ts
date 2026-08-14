@@ -3213,8 +3213,11 @@ export default defineSchema({
     ),
     rewriteCount: v.number(),
     // What last changed the page: "PHONE_CALL:<id>", "EMAIL:<gmail id>",
-    // "HUMAN:<user id>".
+    // "HUMAN:<user id>", "TENDING".
     lastRewriteSource: v.string(),
+    // When the nightly tending pass last considered this page, so a tidy
+    // page is not re-tidied for nothing (wiki plan, phase 4).
+    lastTendedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

@@ -3286,7 +3286,8 @@
     "sources": {
       "phone": "Phone call",
       "email": "Email",
-      "human": "Edited by staff"
+      "human": "Edited by staff",
+      "tending": "Tidy-up"
     },
     "detail": {
       "subtitle": "Last change: {source}, {date}. Rewritten {count} times.",
@@ -3303,7 +3304,8 @@
       "sources": {
         "phone": "Phone call",
         "email": "Email",
-        "human": "Edited by staff"
+        "human": "Edited by staff",
+        "tending": "Tidy-up"
       },
       "pinned": {
         "title": "Pinned by staff",

@@ -88,6 +88,16 @@ crons.interval(
   {}
 );
 
+// The wiki's nightly gardener (wiki plan, phase 4): mechanical link repair
+// costs nothing, and at most a few overgrown pages per company see a model.
+// A company with no wiki pages is never even visited.
+crons.interval(
+  "wiki-tending-sweep",
+  { hours: 24 },
+  internal.wikiTendingActions.tendDispatcher,
+  {}
+);
+
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
 // watermarked: rating a message stays O(1), the aggregation happens here,
 // and a quiet hour costs one indexed read. No model call is involved.

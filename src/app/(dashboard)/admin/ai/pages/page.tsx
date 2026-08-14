@@ -42,6 +42,7 @@ export default function WikiPagesListPage() {
     if (source.startsWith("PHONE_CALL:")) return t("sources.phone");
     if (source.startsWith("EMAIL:")) return t("sources.email");
     if (source.startsWith("HUMAN:")) return t("sources.human");
+    if (source === "TENDING") return t("sources.tending");
     return source;
   };
 
