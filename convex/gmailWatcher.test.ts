@@ -313,3 +313,39 @@ describe("the mailbox that answers itself", () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+describe("the dressing every reply wears", () => {
+  test("a bare answer gains a greeting by first name, the sign-off, and the AI disclosure", async () => {
+    const { dressReply, senderFirstName } = await import("./gmailWatcher");
+    const dressed = dressReply({
+      body: "Our marketing sites run £8,000 to £30,000.",
+      senderFirstName: senderFirstName("Anthony Basker <anthony@ronins.co.uk>"),
+      companyName: "Ronins",
+    });
+    expect(dressed).toMatch(/^Hi Anthony,/);
+    expect(dressed).toContain("Thank you for your email.");
+    expect(dressed).toContain("Ask Sonae");
+    expect(dressed).toContain("Ronins AI assistant");
+    // The EU AI Act's transparency duty, guaranteed in code.
+    expect(dressed).toContain("written by AI and may contain mistakes");
+  });
+
+  test("a reply the model already greeted is not greeted twice, but always signs and discloses", async () => {
+    const { dressReply } = await import("./gmailWatcher");
+    const dressed = dressReply({
+      body: "Hi Priya,\n\nYes — we build ecommerce sites.",
+      senderFirstName: "Priya",
+      companyName: "Ronins",
+    });
+    expect(dressed.match(/Hi Priya,/g)).toHaveLength(1);
+    expect(dressed).toContain("Ask Sonae");
+    expect(dressed).toContain("written by AI");
+  });
+
+  test("a bare address yields a plain Hello rather than a mangled name", async () => {
+    const { dressReply, senderFirstName } = await import("./gmailWatcher");
+    expect(senderFirstName("plain@example.com")).toBeUndefined();
+    const dressed = dressReply({ body: "An answer.", companyName: "Ronins" });
+    expect(dressed).toMatch(/^Hello,/);
+  });
+});

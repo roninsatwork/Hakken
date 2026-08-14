@@ -34,6 +34,41 @@ const FALLBACK_HOLDING_REPLY =
   "Thanks for your email. A colleague will come back to you on this — " +
   "we've made sure it's in front of the right person.";
 
+/**
+ * Every outgoing reply is dressed here, in code, so its manners and its
+ * honesty can never depend on the model's mood: a greeting by name when the
+ * model didn't write one, and always the sign-off naming Ask Sonae, the
+ * workspace, and the fact that the reply was written by AI and may contain
+ * mistakes — the EU AI Act's transparency duty, kept where it cannot be
+ * forgotten.
+ */
+export function dressReply(args: {
+  body: string;
+  senderFirstName?: string;
+  companyName?: string;
+}) {
+  const trimmed = args.body.trim();
+  const hasGreeting = /^(hi|hello|dear|hey|good (morning|afternoon|evening))\b/i.test(trimmed);
+  const greeting = args.senderFirstName ? `Hi ${args.senderFirstName},` : "Hello,";
+  const opening = hasGreeting ? trimmed : `${greeting}\n\nThank you for your email.\n\n${trimmed}`;
+  const workspace = args.companyName?.trim();
+  return (
+    `${opening}\n\n` +
+    `Ask Sonae\n` +
+    `${workspace ? `${workspace} ` : ""}AI assistant\n` +
+    `This reply was written by AI and may contain mistakes. ` +
+    `A colleague reads this inbox and will correct anything we got wrong.`
+  );
+}
+
+/** The sender's first name, from a `Priya Shah <priya@...>` style header. */
+export function senderFirstName(fromHeader: string) {
+  const display = fromHeader.split("<")[0].trim().replace(/["']/g, "");
+  const first = display.split(/\s+/)[0]?.trim();
+  if (!first || first.includes("@")) return undefined;
+  return first;
+}
+
 /** The once-a-minute entry point (crons.ts). */
 export const pollMailboxes = internalAction({
   args: {},
@@ -159,8 +194,16 @@ async function processMessage(
   // The reply always goes out (through the rails): either the written answer
   // — which uses published facts and figures exactly as the knowledge states
   // them — or, if the model call itself died, the plain fallback so the
-  // sender never gets silence.
-  const replyBody = decision.reply?.trim() || FALLBACK_HOLDING_REPLY;
+  // sender never gets silence. Either way it is dressed in code: greeting,
+  // sign-off, and the written-by-AI disclosure.
+  const company = connector.companyId
+    ? await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: connector.companyId })
+    : null;
+  const replyBody = dressReply({
+    body: decision.reply?.trim() || FALLBACK_HOLDING_REPLY,
+    senderFirstName: senderFirstName(summary.from),
+    companyName: company?.name,
+  });
   const sent = await ctx.runAction(internal.gmailConnector.replyToMessage, {
     connectorId: connector._id,
     messageId: summary.id,
@@ -233,7 +276,8 @@ async function decideReply(
         "You write the next reply in a customer email conversation for a company, using ONLY the company " +
         'knowledge provided. Answer with strict JSON, nothing else: {"reply": string, "needsHuman": boolean}. ' +
         "reply is a courteous, complete email answer to the customer's LATEST message, read in the light of " +
-        "the whole conversation — in the sender's own language, plain text, no signature, no markdown. " +
+        "the whole conversation — in the sender's own language, plain text, no markdown. Do not add a " +
+        "greeting line or a signature: both are added automatically around your text. " +
         "Use the knowledge fully: published facts, price ranges, and how the company works may be stated " +
         "exactly as the knowledge states them. Never invent a fact or figure, and never commit to a specific " +
         "bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier Sonae " +
