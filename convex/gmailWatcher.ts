@@ -42,12 +42,29 @@ const FALLBACK_HOLDING_REPLY =
  * mistakes — the EU AI Act's transparency duty, kept where it cannot be
  * forgotten.
  */
+/**
+ * Undo the model's habit of hard-wrapping prose at a fixed column. An email
+ * body should be full-width text the reading window wraps for itself —
+ * newlines are kept only where they mean something: between paragraphs, and
+ * in front of list items.
+ */
+export function unwrapParagraphs(body: string) {
+  return body
+    .split(/\n{2,}/)
+    .map((paragraph) => {
+      const lines = paragraph.split("\n").map((line) => line.trim());
+      const isList = lines.every((line) => /^([-*•>]|\d+[.)])\s/.test(line) || line === "");
+      return isList ? lines.join("\n") : lines.filter(Boolean).join(" ");
+    })
+    .join("\n\n");
+}
+
 export function dressReply(args: {
   body: string;
   senderFirstName?: string;
   companyName?: string;
 }) {
-  const trimmed = args.body.trim();
+  const trimmed = unwrapParagraphs(args.body.trim());
   const hasGreeting = /^(hi|hello|dear|hey|good (morning|afternoon|evening))\b/i.test(trimmed);
   const greeting = args.senderFirstName ? `Hi ${args.senderFirstName},` : "Hello,";
   const opening = hasGreeting ? trimmed : `${greeting}\n\nThank you for your email.\n\n${trimmed}`;
@@ -277,7 +294,9 @@ async function decideReply(
         'knowledge provided. Answer with strict JSON, nothing else: {"reply": string, "needsHuman": boolean}. ' +
         "reply is a courteous, complete email answer to the customer's LATEST message, read in the light of " +
         "the whole conversation — in the sender's own language, plain text, no markdown. Do not add a " +
-        "greeting line or a signature: both are added automatically around your text. " +
+        "greeting line or a signature: both are added automatically around your text. Write each " +
+        "paragraph as one unbroken line — never wrap prose at a fixed width; blank lines separate " +
+        "paragraphs. " +
         "Use the knowledge fully: published facts, price ranges, and how the company works may be stated " +
         "exactly as the knowledge states them. Never invent a fact or figure, and never commit to a specific " +
         "bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier Sonae " +

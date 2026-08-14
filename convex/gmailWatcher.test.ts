@@ -349,3 +349,21 @@ describe("the dressing every reply wears", () => {
     expect(dressed).toMatch(/^Hello,/);
   });
 });
+
+describe("full-width paragraphs", () => {
+  test("hard-wrapped prose is unwrapped; paragraphs and lists keep their breaks", async () => {
+    const { unwrapParagraphs } = await import("./gmailWatcher");
+    const wrapped =
+      "That certainly helps! Knowing you are a startup building a niche\n" +
+      "dating app gives us a clear starting point.\n\n" +
+      "Our next steps:\n\n" +
+      "- A discovery workshop\n- A fixed-fee build";
+    const unwrapped = unwrapParagraphs(wrapped);
+    expect(unwrapped).toContain(
+      "That certainly helps! Knowing you are a startup building a niche dating app gives us a clear starting point."
+    );
+    // Paragraph break survives; the list keeps its lines.
+    expect(unwrapped).toContain("\n\nOur next steps:");
+    expect(unwrapped).toContain("- A discovery workshop\n- A fixed-fee build");
+  });
+});
