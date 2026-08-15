@@ -89,7 +89,7 @@ function runForceLayout(
   const xs = pages.map((page) => (hashToUnit(page.pageId, 1) - 0.5) * WIDTH);
   const ys = pages.map((page) => (hashToUnit(page.pageId, 2) - 0.5) * HEIGHT);
   const count = Math.max(pages.length, 1);
-  const ideal = Math.sqrt((WIDTH * HEIGHT) / count) * 0.95;
+  const ideal = Math.sqrt((WIDTH * HEIGHT) / count) * 1.35;
 
   for (let step = 0; step < SIMULATION_STEPS; step++) {
     const heat = 0.09 * (1 - step / SIMULATION_STEPS) * Math.min(WIDTH, HEIGHT);
@@ -116,18 +116,31 @@ function runForceLayout(
       const distance = Math.max(Math.hypot(vx, vy), 0.01);
       vx /= distance;
       vy /= distance;
-      const attraction = (distance * distance) / ideal;
+      // Springs have a rest length — closer than it pushes APART, further
+      // pulls in. Pull-only springs let a big hub crush its cluster into a
+      // knot; this is how Obsidian keeps clusters inflated. Rest length
+      // grows with the busier endpoint so hubs claim more room.
+      const rest = ideal * (1 + 0.08 * Math.min(degree[a], degree[b]));
+      const attraction = (distance - rest) * 0.35;
       dx[a] -= vx * attraction;
       dy[a] -= vy * attraction;
       dx[b] += vx * attraction;
       dy[b] += vy * attraction;
     }
     for (let i = 0; i < pages.length; i++) {
-      // Gravity toward the middle, stronger for unlinked strays; hubs are
-      // heavy and drift less, which is what centres the clusters on them.
-      const weight = 1 + degree[i] * 0.15;
-      dx[i] -= xs[i] * (degree[i] === 0 ? 0.08 : 0.02);
-      dy[i] -= ys[i] * (degree[i] === 0 ? 0.08 : 0.02);
+      // Linked pages feel a gentle pull to the middle. Orphans gravitate to
+      // their own hashed anchor instead, so they scatter around the sheet
+      // the way Obsidian's unlinked files do — never a geometric ring.
+      const weight = 1 + degree[i] * 0.05;
+      if (degree[i] === 0) {
+        const anchorX = (hashToUnit(pages[i].pageId, 5) - 0.5) * WIDTH * 0.85;
+        const anchorY = (hashToUnit(pages[i].pageId, 7) - 0.5) * HEIGHT * 0.85;
+        dx[i] += (anchorX - xs[i]) * 0.05;
+        dy[i] += (anchorY - ys[i]) * 0.05;
+      } else {
+        dx[i] -= xs[i] * 0.015;
+        dy[i] -= ys[i] * 0.015;
+      }
       const shove = Math.max(Math.hypot(dx[i], dy[i]), 0.01);
       const step_ = Math.min(shove, heat) / weight;
       xs[i] += (dx[i] / shove) * step_;
@@ -197,6 +210,39 @@ export function WikiMapScreen({
   const movedRef = useRef(false);
 
   const zoomFactor = WIDTH / view.w;
+  // The Obsidian rule (Anthony's steer): zooming reveals, it never enlarges.
+  // Everything drawn is multiplied by this so dots, text and lines keep a
+  // constant SCREEN size at every zoom — closer just means fewer, clearer.
+  const unit = view.w / WIDTH;
+
+  // A source note's title is often a raw URL; the map shows the readable
+  // tail of the path, never the protocol soup.
+  const displayTitle = (node: LayoutNode): string => {
+    let title = node.title;
+    if (/^https?:\/\//.test(title)) {
+      const path = title.replace(/^https?:\/\/[^/]+\/?/, "").replace(/\/$/, "");
+      title = path.split("/").filter(Boolean).slice(-1)[0] ?? title.replace(/^https?:\/\//, "");
+      title = title || "home";
+    }
+    return title.length > 24 ? `${title.slice(0, 23)}…` : title;
+  };
+
+  // Labels are a budget, not a default: only nodes inside the current view
+  // qualify, hubs first, and never more than a readable number at once.
+  const labelBudget = new Set<string>();
+  {
+    const inView = layout.nodes.filter(
+      (node) =>
+        node.x >= view.x - 20 &&
+        node.x <= view.x + view.w + 20 &&
+        node.y >= view.y - 20 &&
+        node.y <= view.y + view.h + 20
+    );
+    const cap = zoomFactor >= 4 ? 400 : zoomFactor >= 2.2 ? 60 : zoomFactor >= 1.4 ? 30 : 12;
+    for (const node of [...inView].sort((a, b) => b.degree - a.degree).slice(0, cap)) {
+      labelBudget.add(node.pageId);
+    }
+  }
 
   const toSvgPoint = (clientX: number, clientY: number) => {
     const bounds = svgRef.current?.getBoundingClientRect();
@@ -209,7 +255,8 @@ export function WikiMapScreen({
 
   const zoomBy = (factor: number, at?: { x: number; y: number }) => {
     setView((current) => {
-      const w = Math.min(Math.max(current.w * factor, WIDTH / 10), WIDTH * 3);
+      // Deep enough that one node can fill the screen, like his vault.
+      const w = Math.min(Math.max(current.w * factor, WIDTH / 80), WIDTH * 3);
       const h = (w / WIDTH) * HEIGHT;
       const focus = at ?? { x: current.x + current.w / 2, y: current.y + current.h / 2 };
       const fx = (focus.x - current.x) / current.w;
@@ -225,9 +272,8 @@ export function WikiMapScreen({
       if (node.pageId === hoveredId || neighbours.get(hoveredId)?.has(node.pageId)) return 1;
       return 0;
     }
-    const zoomBase = Math.min(1, Math.max(0, (zoomFactor - 1.1) * 1.4));
-    const hubBase = node.degree >= 6 ? 0.9 : node.degree >= 3 ? 0.35 : 0;
-    return Math.max(zoomBase, hubBase);
+    if (!labelBudget.has(node.pageId)) return 0;
+    return node.degree >= 6 ? 0.95 : 0.75;
   };
 
   const nodeOpacity = (node: LayoutNode): number => {
@@ -357,14 +403,14 @@ export function WikiMapScreen({
                     y2={to.y}
                     stroke="currentColor"
                     className={state === "lit" ? "text-foreground/70" : "text-border-dim"}
-                    strokeOpacity={state === "dim" ? 0.12 : state === "lit" ? 0.9 : 0.5}
-                    strokeWidth={state === "lit" ? 1.6 : 1}
+                    strokeOpacity={state === "dim" ? 0.12 : state === "lit" ? 0.95 : 0.65}
+                    strokeWidth={(state === "lit" ? 1.7 : 1.1) * unit}
                   />
                 );
               })}
             </g>
             {layout.nodes.map((node) => {
-              const radius = 3.5 + Math.min(node.degree * 0.9, 8);
+              const radius = (2.2 + Math.min(node.degree * 0.35, 5)) * unit;
               const labels = labelOpacity(node);
               return (
                 <g
@@ -380,15 +426,17 @@ export function WikiMapScreen({
                 >
                   <circle cx={node.x} cy={node.y} r={radius} fill="currentColor" />
                   {labels > 0 && (
+                    // Sub-pixel SVG font sizes come out garbled in Chrome at
+                    // deep zoom; full-size glyphs under a scale transform stay
+                    // crisp at any depth.
                     <text
-                      x={node.x}
-                      y={node.y + radius + 12}
+                      transform={`translate(${node.x} ${node.y + radius + 11 * unit}) scale(${unit})`}
                       textAnchor="middle"
                       className="fill-foreground"
                       opacity={labels}
-                      style={{ fontSize: Math.max(9, 11 / Math.sqrt(zoomFactor)) }}
+                      style={{ fontSize: 10.5 }}
                     >
-                      {node.title.length > 26 ? `${node.title.slice(0, 25)}…` : node.title}
+                      {displayTitle(node)}
                     </text>
                   )}
                 </g>
