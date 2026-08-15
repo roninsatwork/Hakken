@@ -177,7 +177,11 @@ Fidelity to the pattern is the acceptance bar, tested, not asserted:
 ## What this is not
 
 - Not a replacement for the knowledge library: documents stay chunked and
-  searched as today; pages are never chunked.
+  searched as today; pages are never chunked. **Superseded 2026-08-15** —
+  Anthony's decision is that the wiki replaces knowledge import and storage
+  outright; see
+  [wiki-replaces-knowledge-plan.md](wiki-replaces-knowledge-plan.md). The
+  "pages are never chunked" half of this rule still holds.
 - Not a new storage system: rows in the existing Convex database, full stop.
 - Not autonomous belief: the machine tends, people rule.
 - Not started until Anthony says go, phase by phase.

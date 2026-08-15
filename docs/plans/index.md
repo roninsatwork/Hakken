@@ -7,6 +7,11 @@ completed work.
 
 ## Active Plans
 
+- [The Wiki Replaces Knowledge](./active/wiki-replaces-knowledge-plan.md) —
+  the agreed direction as of 2026-08-15: importing a website, file or text
+  writes wiki pages directly, answers come from whole pages, and the
+  document-and-fragment machinery retires behind an exam. Designs drawn;
+  three decisions open; build not started.
 - [The Self-Improving Wiki](./active/self-improving-wiki-plan.md) — Karpathy's
   LLM Wiki pattern built faithfully into Sonae: whole pages the AI rewrites
   after every conversation, tended on a schedule, readable and correctable in
