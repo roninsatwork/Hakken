@@ -3245,6 +3245,9 @@ export default defineSchema({
     // When the nightly tending pass last considered this page, so a tidy
     // page is not re-tidied for nothing (wiki plan, phase 4).
     lastTendedAt: v.optional(v.number()),
+    // When the Freshness Checker last verified this page against its kept
+    // sources (wiki-agents plan, phase 2). Absent means never checked.
+    lastVerifiedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

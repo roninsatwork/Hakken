@@ -41,6 +41,14 @@ export const WIKI_STAFF = [
       "You connect one wiki page to its genuinely related pages: given the page and the index of page names, name the two to five pages a reader would plausibly open next. Related means genuinely related — never force a connection, and never link a page to itself.",
   },
   {
+    systemKey: "WIKI_FRESHNESS_CHECKER",
+    name: "The Freshness Checker",
+    description:
+      "Nightly: re-checks aging pages against the kept source documents their receipts point at. Verified pages get their check recorded; claims a source no longer supports become open questions — never silent rewrites.",
+    systemPrompt:
+      "You check whether a wiki page's claims are still supported by the source documents it was written from. Quote any claim the sources no longer support, exactly as the page states it. A page the sources still support passes quietly. You never rewrite anything: people settle truth, you only raise it.",
+  },
+  {
     systemKey: "WIKI_CONTRADICTION_FINDER",
     name: "The Contradiction Finder",
     description:

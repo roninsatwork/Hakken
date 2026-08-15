@@ -120,6 +120,17 @@ crons.interval(
   {}
 );
 
+// The Freshness Checker's round (wiki-agents plan, phase 2): aging pages
+// re-checked against their kept sources, three per company per night at
+// most — pages younger than three weeks are never even considered, so a
+// fresh wiki costs nothing. Failures become open questions, not rewrites.
+crons.interval(
+  "wiki-freshness-sweep",
+  { hours: 24 },
+  internal.wikiFreshnessActions.freshnessSweep,
+  {}
+);
+
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
 // watermarked: rating a message stays O(1), the aggregation happens here,
 // and a quiet hour costs one indexed read. No model call is involved.
