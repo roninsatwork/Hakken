@@ -36,6 +36,97 @@ export const tendDispatcher = internalAction({
   },
 });
 
+/**
+ * The catch-up linker (Anthony's Obsidian steer, 2026-08-15): pages with
+ * fewer than three connections get read against the index, and the model
+ * names their genuinely related pages — metadata both ways, no text churn.
+ * Future prose weaves its own [[references]]; this pass exists so the graph
+ * is dense today rather than in a month. Chains itself until nothing is
+ * sparse, then refreshes the hub index pages.
+ */
+export const crossLinkSweep = internalAction({
+  args: { companyId: v.id("companies"), limit: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<{ linked: number }> => {
+    const sparse = await ctx.runQuery(internal.wikiPages.listSparselyLinkedTopicsInternal, {
+      companyId: args.companyId,
+      limit: args.limit ?? 20,
+    });
+    if (sparse.length === 0) {
+      await ctx.runMutation(internal.wikiPages.refreshHubPagesInternal, { companyId: args.companyId });
+      return { linked: 0 };
+    }
+    const index = await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+      companyId: args.companyId,
+      includeCustomerPages: false,
+    });
+    const names = index
+      .map((entry) => entry.key.slice(entry.key.indexOf(":") + 1))
+      .filter((name) => !name.endsWith("-index"));
+
+    const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+      useCase: "fast-chat",
+    });
+    let linked = 0;
+    for (const page of sparse) {
+      try {
+        const response = await generateTextWithResolvedModel({
+          model,
+          systemInstruction:
+            'You connect one wiki page to its genuinely related pages. Reply with strict JSON, nothing else: {"related": [string]} — two to five names exactly as they appear in the list, best first. Related means a reader of this page would plausibly open that one next.',
+          contents: [
+            {
+              type: "text",
+              text:
+                `Page "${page.subjectKey}":\n${page.excerpt}\n\n` +
+                `All page names:\n${names.join(", ")}`,
+            },
+          ],
+        });
+        const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { related?: unknown }) : {};
+        const related = (Array.isArray(parsed.related) ? parsed.related : [])
+          .filter((name): name is string => typeof name === "string" && names.includes(name))
+          .filter((name) => name !== page.subjectKey)
+          .slice(0, 5);
+        for (const name of related) {
+          const target = index.find(
+            (entry) => entry.key.slice(entry.key.indexOf(":") + 1) === name
+          );
+          if (!target) continue;
+          await ctx.runMutation(internal.wikiPages.addLinksInternal, {
+            companyId: args.companyId,
+            kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE",
+            subjectKey: page.subjectKey,
+            add: [target.key],
+          });
+          const targetKind = target.key.slice(0, target.key.indexOf(":"));
+          await ctx.runMutation(internal.wikiPages.addLinksInternal, {
+            companyId: args.companyId,
+            kind: targetKind as "PRODUCT" | "POLICY" | "ISSUE",
+            subjectKey: name,
+            add: [`${page.kind}:${page.subjectKey}`],
+          });
+          linked += 1;
+        }
+      } catch (error) {
+        console.error("Cross-linking could not read a page; moving on", error);
+      }
+    }
+    if (linked > 0) {
+      // More sparse pages may remain past the limit; keep going while the
+      // passes make progress. A pass that linked nothing stops the chain —
+      // a page the model cannot relate to anything must not loop forever.
+      await ctx.scheduler.runAfter(0, internal.wikiTendingActions.crossLinkSweep, {
+        companyId: args.companyId,
+        limit: args.limit,
+      });
+    } else {
+      await ctx.runMutation(internal.wikiPages.refreshHubPagesInternal, { companyId: args.companyId });
+    }
+    return { linked };
+  },
+});
+
 export const tendCompany = internalAction({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args): Promise<{ repairedLinks: number; tidiedPages: number }> => {

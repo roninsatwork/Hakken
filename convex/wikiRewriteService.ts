@@ -19,13 +19,14 @@ export type WikiPinnedCorrection = { text: string; pinnedAt: number };
 
 export function buildRewriteSystemInstruction(): string {
   return [
-    "You maintain one page of a company's customer wiki. The page is a short briefing note a colleague reads before a call.",
-    "You will be given the page as it stands, any pinned corrections from staff, and one new event (a phone call or email exchange).",
+    "You maintain one page of a company's wiki. The page is a short briefing note a colleague reads before a call.",
+    "You will be given the page as it stands, any pinned corrections from staff, one new event or document, and a list of the wiki's other pages.",
     "Rewrite the whole page in the light of the event:",
-    "- Fold in what is new and worth remembering about this customer.",
+    "- Fold in what is new and worth remembering about this subject.",
     "- A fact that changed is REPLACED, never listed twice. Remove what is now stale.",
     "- Never contradict a pinned correction; treat pinned corrections as ground truth. Do not repeat them in the page.",
-    "- Keep facts, drop chit-chat. Plain sentences, no headings, no markdown, no preamble.",
+    "- Where a sentence genuinely touches another page from the list, reference it inline as [[its-exact-name]] — the way a wiki cross-references. Two to four such references is typical; never force one, and never reference a page not on the list.",
+    "- Keep facts, drop chit-chat. Plain sentences, no headings, no preamble.",
     `- At most ${WIKI_PAGE_MAX_CHARS} characters. Shorter than the old page is better than longer, when nothing new matters.`,
     "Reply with the complete new page text and nothing else. If the event adds nothing worth keeping, reply with the old page unchanged.",
   ].join("\n");
@@ -37,6 +38,10 @@ export function buildRewriteUserContent(args: {
   pinnedCorrections: WikiPinnedCorrection[];
   eventLabel: string;
   eventText: string;
+  /** Names of other pages the writing may [[reference]] — topic pages only,
+   * so a customer's name is never woven into prose an anonymous surface can
+   * read. */
+  otherPages?: string[];
 }): string {
   const pinnedBlock = args.pinnedCorrections.length
     ? `Pinned corrections from staff (ground truth, do not contradict, do not repeat):\n${args.pinnedCorrections
@@ -46,12 +51,28 @@ export function buildRewriteUserContent(args: {
   const currentBlock = args.currentContent.trim()
     ? `The page as it stands:\n${args.currentContent}\n\n`
     : "This page is new; there is no text yet.\n\n";
+  const otherPagesBlock = args.otherPages?.length
+    ? `Other pages on this wiki (reference as [[name]] only where genuinely related):\n${args.otherPages
+        .slice(0, 150)
+        .join(", ")}\n\n`
+    : "";
   return (
-    `Customer: ${args.title}\n\n` +
+    `Page: ${args.title}\n\n` +
     pinnedBlock +
     currentBlock +
-    `New event — ${args.eventLabel}:\n${args.eventText.slice(0, WIKI_EVENT_TEXT_MAX_CHARS)}`
+    otherPagesBlock +
+    `New material — ${args.eventLabel}:\n${args.eventText.slice(0, WIKI_EVENT_TEXT_MAX_CHARS)}`
   );
+}
+
+/** The [[references]] a page's own text makes, as normalised slugs. */
+export function extractWikiLinkSlugs(content: string): string[] {
+  const slugs = new Set<string>();
+  for (const match of content.matchAll(/\[\[([^\[\]]{1,60})\]\]/g)) {
+    const slug = normaliseTopicSlug(match[1]);
+    if (slug) slugs.add(slug);
+  }
+  return [...slugs];
 }
 
 export type RewriteVerdict =

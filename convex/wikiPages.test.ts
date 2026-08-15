@@ -500,6 +500,95 @@ describe("the answering read", () => {
   });
 });
 
+describe("links live in the writing", () => {
+  test("a page's [[references]] become links on both ends; ghosts resolve to nothing", async () => {
+    const { extractWikiLinkSlugs } = await import("./wikiRewriteService");
+    expect(extractWikiLinkSlugs("See [[Winter Linen Contracts]] and [[invoicing]], not [[x]].")).toEqual([
+      "winter-linen-contracts",
+      "invoicing",
+    ]);
+
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "invoicing",
+      title: "invoicing",
+      content: "Invoices go to accounts offices.",
+      source: "DOCUMENT:doc-1",
+    });
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "PRODUCT",
+      subjectKey: "winter-linen-contracts",
+      title: "winter-linen-contracts",
+      content:
+        "Seasonal contracts run October to March; billing follows [[invoicing]], and [[a-page-that-never-existed]] is no page at all.",
+      source: "DOCUMENT:doc-1",
+    });
+
+    const { writer, target } = await t.run(async (ctx) => ({
+      writer: await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "PRODUCT").eq("subjectKey", "winter-linen-contracts")
+        )
+        .unique(),
+      target: await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "POLICY").eq("subjectKey", "invoicing")
+        )
+        .unique(),
+    }));
+    expect(writer?.links).toContain("POLICY:invoicing");
+    expect(writer?.links).not.toContain("ISSUE:a-page-that-never-existed");
+    expect(target?.links).toContain("PRODUCT:winter-linen-contracts");
+  });
+
+  test("hub index pages list their members, link both ways, and stay out of the model's hands", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    for (const slug of ["web-development", "mobile-apps"]) {
+      await t.mutation(internal.wikiPages.applyRewriteInternal, {
+        companyId,
+        kind: "PRODUCT",
+        subjectKey: slug,
+        title: slug,
+        content: `About ${slug}.`,
+        source: "DOCUMENT:doc-1",
+      });
+    }
+    await t.mutation(internal.wikiPages.refreshHubPagesInternal, { companyId });
+
+    const { hub, member } = await t.run(async (ctx) => ({
+      hub: await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "PRODUCT").eq("subjectKey", "products-index")
+        )
+        .unique(),
+      member: await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "PRODUCT").eq("subjectKey", "web-development")
+        )
+        .unique(),
+    }));
+    expect(hub?.content).toContain("[[web-development]]");
+    expect(hub?.links).toEqual(["PRODUCT:web-development", "PRODUCT:mobile-apps"]);
+    expect(member?.links).toContain("PRODUCT:products-index");
+
+    // The catch-up linker's list never offers a hub to the model.
+    const sparseTopics = await t.query(internal.wikiPages.listSparselyLinkedTopicsInternal, {
+      companyId,
+      limit: 10,
+    });
+    expect(sparseTopics.map((page) => page.subjectKey)).not.toContain("products-index");
+  });
+});
+
 describe("the rewrite contract", () => {
   test("an empty or wildly over-long answer is refused; barely over is clamped", () => {
     expect(validateRewrittenPage("   ")).toEqual({ ok: false, reason: "empty" });

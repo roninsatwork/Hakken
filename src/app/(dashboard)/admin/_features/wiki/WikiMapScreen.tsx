@@ -12,16 +12,15 @@ import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPa
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 /**
- * The map (wiki plan, phase 6, force-directed after Anthony's steer): the
- * shape comes from the links, not from rings anybody chose. Connected pages
- * pull together, busy pages draw bigger, clusters emerge on their own — the
- * Obsidian-style view Karpathy's pattern grew up in. Zoom with the wheel or
- * the buttons, drag to pan. Colour never carries the meaning alone: every
- * node bears its name and the legend spells each kind out in words.
+ * The map, Obsidian-grade (Anthony's steer, 2026-08-15): the shape comes
+ * from the links, hubs sit at cluster centres, labels arrive as you zoom in
+ * or hover, and pointing at a page lights it and its neighbourhood while
+ * the rest falls back. Wheel or buttons to zoom, drag to pan, click to open
+ * a page. Colour never carries the meaning alone: the legend spells each
+ * kind out in words, and every node's name is a hover away.
  *
- * The simulation is deterministic — positions are seeded from page ids, so
- * the same wiki draws the same map every time and nothing here depends on
- * randomness at render time.
+ * Deterministic throughout — positions are seeded from page ids, so the
+ * same wiki draws the same map every visit.
  */
 
 const KIND_CLASS: Record<string, string> = {
@@ -33,9 +32,9 @@ const KIND_CLASS: Record<string, string> = {
 
 const MAX_NODES = 250;
 const WIDTH = 1000;
-const HEIGHT = 640;
+const HEIGHT = 700;
 const PADDING = 70;
-const SIMULATION_STEPS = 260;
+const SIMULATION_STEPS = 320;
 
 /** Deterministic per-id jitter so layout is stable across visits. */
 function hashToUnit(value: string, salt: number): number {
@@ -89,7 +88,7 @@ function runForceLayout(
   const xs = pages.map((page) => (hashToUnit(page.pageId, 1) - 0.5) * WIDTH);
   const ys = pages.map((page) => (hashToUnit(page.pageId, 2) - 0.5) * HEIGHT);
   const count = Math.max(pages.length, 1);
-  const ideal = Math.sqrt((WIDTH * HEIGHT) / count) * 0.9;
+  const ideal = Math.sqrt((WIDTH * HEIGHT) / count) * 0.95;
 
   for (let step = 0; step < SIMULATION_STEPS; step++) {
     const heat = 0.09 * (1 - step / SIMULATION_STEPS) * Math.min(WIDTH, HEIGHT);
@@ -123,12 +122,15 @@ function runForceLayout(
       dy[b] += vy * attraction;
     }
     for (let i = 0; i < pages.length; i++) {
-      // Gravity toward the middle, stronger for unlinked strays.
+      // Gravity toward the middle, stronger for unlinked strays; hubs are
+      // heavy and drift less, which is what centres the clusters on them.
+      const weight = 1 + degree[i] * 0.15;
       dx[i] -= xs[i] * (degree[i] === 0 ? 0.08 : 0.02);
       dy[i] -= ys[i] * (degree[i] === 0 ? 0.08 : 0.02);
       const shove = Math.max(Math.hypot(dx[i], dy[i]), 0.01);
-      xs[i] += (dx[i] / shove) * Math.min(shove, heat);
-      ys[i] += (dy[i] / shove) * Math.min(shove, heat);
+      const step_ = Math.min(shove, heat) / weight;
+      xs[i] += (dx[i] / shove) * step_;
+      ys[i] += (dy[i] / shove) * step_;
     }
   }
 
@@ -174,12 +176,26 @@ export function WikiMapScreen({
   const rows = companyId ? companyRows : tenantRows;
 
   const layout = useMemo(() => runForceLayout(rows ?? []), [rows]);
+  const neighbours = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const [from, to] of layout.edges) {
+      if (!map.has(from.pageId)) map.set(from.pageId, new Set());
+      if (!map.has(to.pageId)) map.set(to.pageId, new Set());
+      map.get(from.pageId)!.add(to.pageId);
+      map.get(to.pageId)!.add(from.pageId);
+    }
+    return map;
+  }, [layout]);
+
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   // The camera: zoom centred where the wheel points, drag to pan.
   const [view, setView] = useState({ x: 0, y: 0, w: WIDTH, h: HEIGHT });
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; viewX: number; viewY: number } | null>(null);
   const movedRef = useRef(false);
+
+  const zoomFactor = WIDTH / view.w;
 
   const toSvgPoint = (clientX: number, clientY: number) => {
     const bounds = svgRef.current?.getBoundingClientRect();
@@ -192,13 +208,37 @@ export function WikiMapScreen({
 
   const zoomBy = (factor: number, at?: { x: number; y: number }) => {
     setView((current) => {
-      const w = Math.min(Math.max(current.w * factor, WIDTH / 8), WIDTH * 3);
+      const w = Math.min(Math.max(current.w * factor, WIDTH / 10), WIDTH * 3);
       const h = (w / WIDTH) * HEIGHT;
       const focus = at ?? { x: current.x + current.w / 2, y: current.y + current.h / 2 };
       const fx = (focus.x - current.x) / current.w;
       const fy = (focus.y - current.y) / current.h;
       return { x: focus.x - fx * w, y: focus.y - fy * h, w, h };
     });
+  };
+
+  // Labels arrive as the camera does: hubs first, everything when close,
+  // and the hovered neighbourhood always. Obsidian's behaviour, honestly.
+  const labelOpacity = (node: LayoutNode): number => {
+    if (hoveredId) {
+      if (node.pageId === hoveredId || neighbours.get(hoveredId)?.has(node.pageId)) return 1;
+      return 0;
+    }
+    const zoomBase = Math.min(1, Math.max(0, (zoomFactor - 1.1) * 1.4));
+    const hubBase = node.degree >= 6 ? 0.9 : node.degree >= 3 ? 0.35 : 0;
+    return Math.max(zoomBase, hubBase);
+  };
+
+  const nodeOpacity = (node: LayoutNode): number => {
+    if (!hoveredId) return 1;
+    if (node.pageId === hoveredId || neighbours.get(hoveredId)?.has(node.pageId)) return 1;
+    return 0.12;
+  };
+
+  const edgeState = (from: LayoutNode, to: LayoutNode): "lit" | "dim" | "base" => {
+    if (!hoveredId) return "base";
+    if (from.pageId === hoveredId || to.pageId === hoveredId) return "lit";
+    return "dim";
   };
 
   return (
@@ -304,49 +344,52 @@ export function WikiMapScreen({
               dragRef.current = null;
             }}
           >
-            <g className="text-border-dim" strokeLinecap="round">
-              {layout.edges.map(([from, to]) => (
-                <line
-                  key={`${from.pageId}-${to.pageId}`}
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  stroke="currentColor"
-                  strokeWidth={1.2}
-                />
-              ))}
+            <g strokeLinecap="round">
+              {layout.edges.map(([from, to]) => {
+                const state = edgeState(from, to);
+                return (
+                  <line
+                    key={`${from.pageId}-${to.pageId}`}
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke="currentColor"
+                    className={state === "lit" ? "text-foreground/70" : "text-border-dim"}
+                    strokeOpacity={state === "dim" ? 0.12 : state === "lit" ? 0.9 : 0.5}
+                    strokeWidth={state === "lit" ? 1.6 : 1}
+                  />
+                );
+              })}
             </g>
             {layout.nodes.map((node) => {
-              const radius = 6 + Math.min(node.degree * 1.6, 10);
+              const radius = 3.5 + Math.min(node.degree * 0.9, 8);
+              const labels = labelOpacity(node);
               return (
                 <g
                   key={node.pageId}
                   className={`${KIND_CLASS[node.kind] ?? "text-secondary"} cursor-pointer`}
+                  opacity={nodeOpacity(node)}
+                  onPointerEnter={() => setHoveredId(node.pageId)}
+                  onPointerLeave={() => setHoveredId((current) => (current === node.pageId ? null : current))}
                   onClick={() => {
                     // A drag that ended on a node is a pan, not a visit.
                     if (!movedRef.current) router.push(`${basePath}/${node.pageId}`);
                   }}
                 >
                   <circle cx={node.x} cy={node.y} r={radius} fill="currentColor" />
-                  <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={radius + 4}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeOpacity={0.35}
-                    strokeWidth={1.5}
-                  />
-                  <text
-                    x={node.x}
-                    y={node.y + radius + 16}
-                    textAnchor="middle"
-                    className="fill-foreground"
-                    style={{ fontSize: 12 }}
-                  >
-                    {node.title.length > 22 ? `${node.title.slice(0, 21)}…` : node.title}
-                  </text>
+                  {labels > 0 && (
+                    <text
+                      x={node.x}
+                      y={node.y + radius + 12}
+                      textAnchor="middle"
+                      className="fill-foreground"
+                      opacity={labels}
+                      style={{ fontSize: Math.max(9, 11 / Math.sqrt(zoomFactor)) }}
+                    >
+                      {node.title.length > 26 ? `${node.title.slice(0, 25)}…` : node.title}
+                    </text>
+                  )}
                 </g>
               );
             })}

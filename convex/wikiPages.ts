@@ -6,6 +6,7 @@ import { adminMutation, adminQuery, tenantQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import {
   WIKI_PAGE_MAX_CHARS,
+  extractWikiLinkSlugs,
   linkKeyFor,
   normaliseEmail,
   parseSourceKey,
@@ -313,6 +314,43 @@ export const getPagesByKeysInternal = internalQuery({
 });
 
 /**
+ * The [[references]] a page's text makes, resolved to living pages and
+ * recorded on BOTH ends (wiki interlinking, Anthony's steer 2026-08-15):
+ * the graph is drawn from what the pages actually say, Obsidian-fashion. A
+ * reference to a page that does not exist resolves to nothing — no ghost
+ * nodes.
+ */
+async function syncLinksFromContent(
+  ctx: MutationCtx,
+  page: Doc<"wikiPages">
+): Promise<void> {
+  const slugs = extractWikiLinkSlugs(page.content);
+  const additions: string[] = [];
+  for (const slug of slugs.slice(0, 8)) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE"] as const) {
+      const target = await getPage(ctx, page.companyId, kind, slug);
+      if (!target) continue;
+      const key = linkKeyFor(kind, slug);
+      if (key !== linkKeyFor(page.kind, page.subjectKey)) {
+        additions.push(key);
+        // The other end points back, so the map needs no direction.
+        const backKey = linkKeyFor(page.kind, page.subjectKey);
+        if (!target.links.includes(backKey)) {
+          await ctx.db.patch(target._id, { links: [...target.links, backKey] });
+        }
+      }
+      break;
+    }
+  }
+  if (additions.length > 0) {
+    const links = [...new Set([...page.links, ...additions])];
+    if (links.length !== page.links.length) {
+      await ctx.db.patch(page._id, { links });
+    }
+  }
+}
+
+/**
  * The machine's rewrite landing. Creates the page on first contact;
  * otherwise files the outgoing text as a revision and replaces the body.
  * Never touches the pinned layer.
@@ -400,6 +438,8 @@ export const applyRewriteInternal = internalMutation({
         source: args.source,
         ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
       });
+      const created = await ctx.db.get(pageId);
+      if (created) await syncLinksFromContent(ctx, created);
       return;
     }
 
@@ -449,6 +489,100 @@ export const applyRewriteInternal = internalMutation({
       source: args.source,
       ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
     });
+    const rewritten = await ctx.db.get(existing._id);
+    if (rewritten) await syncLinksFromContent(ctx, rewritten);
+  },
+});
+
+/** Topic pages still light on connections — the catch-up linker's list.
+ * Hub index pages are mechanical and never sent to a model. */
+export const listSparselyLinkedTopicsInternal = internalQuery({
+  args: { companyId: v.id("companies"), limit: v.number() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ kind: string; subjectKey: string; title: string; excerpt: string; links: number }>> => {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    return pages
+      .filter(
+        (page) =>
+          page.kind !== "CUSTOMER" &&
+          !page.subjectKey.endsWith("-index") &&
+          page.links.length < 3
+      )
+      .slice(0, args.limit)
+      .map((page) => ({
+        kind: page.kind,
+        subjectKey: page.subjectKey,
+        title: page.title,
+        excerpt: page.content.slice(0, 900),
+        links: page.links.length,
+      }));
+  },
+});
+
+/**
+ * The hubs (Anthony's Obsidian steer, 2026-08-15): every wiki needs a
+ * spine, and his vault's is its index pages — the directory every profile
+ * hangs off. Sonae's hubs are mechanical, not model-written: one index page
+ * per topic kind, listing its members as [[references]], linked both ways.
+ * Always accurate, never costs a model call, and gives the map its centres.
+ */
+export const refreshHubPagesInternal = internalMutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args): Promise<void> => {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    const now = Date.now();
+    const hubs = [
+      { kind: "PRODUCT" as const, subjectKey: "products-index", intro: "Everything the company offers, one page per product or service" },
+      { kind: "POLICY" as const, subjectKey: "policies-index", intro: "How the company works, one page per policy" },
+      { kind: "ISSUE" as const, subjectKey: "issues-index", intro: "What keeps coming up, one page per recurring issue" },
+    ];
+    for (const hub of hubs) {
+      const members = pages.filter(
+        (page) => page.kind === hub.kind && page.subjectKey !== hub.subjectKey
+      );
+      if (members.length === 0) continue;
+      const memberKeys = members.map((page) => linkKeyFor(page.kind, page.subjectKey));
+      const content =
+        `${hub.intro}: ` +
+        members.map((page) => `[[${page.subjectKey}]]`).join(", ") +
+        ".";
+      const existing = pages.find(
+        (page) => page.kind === hub.kind && page.subjectKey === hub.subjectKey
+      );
+      if (existing) {
+        if (existing.content !== content || existing.links.length !== memberKeys.length) {
+          await ctx.db.patch(existing._id, { content, links: memberKeys, updatedAt: now });
+        }
+      } else {
+        await ctx.db.insert("wikiPages", {
+          companyId: args.companyId,
+          kind: hub.kind,
+          subjectKey: hub.subjectKey,
+          title: hub.subjectKey,
+          content,
+          links: memberKeys,
+          pinnedCorrections: [],
+          rewriteCount: 1,
+          lastRewriteSource: "TENDING",
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      const hubKey = linkKeyFor(hub.kind, hub.subjectKey);
+      for (const member of members) {
+        if (!member.links.includes(hubKey)) {
+          await ctx.db.patch(member._id, { links: [...member.links, hubKey] });
+        }
+      }
+    }
   },
 });
 

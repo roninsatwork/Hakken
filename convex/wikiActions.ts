@@ -108,6 +108,16 @@ export const rewriteCustomerPageAfterEvent = internalAction({
     });
 
     const title = page?.title ?? args.subjectKey;
+    // The names the writing may [[reference]] — how the graph gets its
+    // Obsidian density (topic pages only; customers are never woven).
+    const linkableNames = (
+      await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+        companyId: args.companyId,
+        includeCustomerPages: false,
+      })
+    )
+      .map((entry) => entry.key.slice(entry.key.indexOf(":") + 1))
+      .filter((name) => !name.endsWith("-index"));
     let rewritten = "";
     try {
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
@@ -125,6 +135,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
               pinnedCorrections: page?.pinnedCorrections ?? [],
               eventLabel: args.eventLabel,
               eventText: args.eventText,
+              otherPages: linkableNames,
             }),
           },
         ],
@@ -183,6 +194,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
                 pinnedCorrections: topicPage?.pinnedCorrections ?? [],
                 eventLabel: args.eventLabel,
                 eventText: `${topic.learned}\n\n${args.eventText.slice(0, 4000)}`,
+                otherPages: linkableNames,
               }),
             },
           ],

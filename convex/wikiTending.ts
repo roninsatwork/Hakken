@@ -62,6 +62,8 @@ export const getTendingCandidatesInternal = internalQuery({
     const overgrown = pages
       .filter(
         (page) =>
+          // Hub index pages are mechanical; the model never tidies them.
+          !page.subjectKey.endsWith("-index") &&
           page.content.length >= WIKI_TENDING_LENGTH_THRESHOLD &&
           now - (page.lastTendedAt ?? 0) >= WIKI_TENDING_MIN_INTERVAL_MS
       )

@@ -50,6 +50,15 @@ async function distilOne(
   const sourceLabel = args.sourceUrl
     ? `Website · ${args.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
     : `Document · ${args.title.slice(0, 80)}`;
+  // The names the writing may [[reference]], for Obsidian-style density.
+  const linkableNames = (
+    await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+      companyId: args.companyId,
+      includeCustomerPages: false,
+    })
+  )
+    .map((entry) => entry.key.slice(entry.key.indexOf(":") + 1))
+    .filter((name) => !name.endsWith("-index"));
 
   const result: DistilResult = { pagesWritten: 0, pagesImproved: 0 };
   for (const topic of topics) {
@@ -70,6 +79,7 @@ async function distilOne(
             pinnedCorrections: page?.pinnedCorrections ?? [],
             eventLabel: "company document",
             eventText: `${topic.learned}\n\nFrom the document "${args.title}":\n${args.text.slice(0, 4000)}`,
+            otherPages: linkableNames,
           }),
         },
       ],
