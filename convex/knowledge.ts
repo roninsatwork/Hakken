@@ -856,6 +856,9 @@ export const saveDocument = tenantMutation({
     agentId: v.optional(v.id("agents")),
     title: v.string(),
     format: v.string(),
+    // The Reviewer's checkpoint (wiki-agents plan, phase 4): the wiki must
+    // not learn from this document until a person approves.
+    wikiReview: v.optional(v.boolean()),
     /**
      * Bulk uploads park at "pending" and let the file queue drain them a few at
      * a time. Starting one ingestion action per file would fire hundreds of
@@ -880,6 +883,9 @@ export const saveDocument = tenantMutation({
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
+    if (args.wikiReview) {
+      await ctx.db.patch(documentId, { wikiReviewRequested: true });
+    }
 
     // Trigger off the heavy-duty background action for processing & embeddings
     if (!args.deferIngestion) {
@@ -1242,6 +1248,7 @@ export const saveManualText = tenantMutation({
     agentId: v.optional(v.id("agents")),
     title: v.string(),
     textContent: v.string(),
+    wikiReview: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
@@ -1258,6 +1265,9 @@ export const saveManualText = tenantMutation({
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
+    if (args.wikiReview) {
+      await ctx.db.patch(documentId, { wikiReviewRequested: true });
+    }
 
     await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, {
       documentId,
@@ -1448,6 +1458,7 @@ export const queueWebsiteUrls = tenantMutation({
     agentId: v.optional(v.id("agents")),
     urls: v.array(v.string()),
     forceRefresh: v.optional(v.boolean()),
+    wikiReview: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
@@ -1487,6 +1498,9 @@ export const queueWebsiteUrls = tenantMutation({
           companyId: scope.companyId,
           agentId: scope.agentId,
         }));
+    if (args.wikiReview) {
+      await ctx.db.patch(documentId, { wikiReviewRequested: true });
+    }
         docIds.push(documentId);
     }
 
@@ -1661,9 +1675,19 @@ export const saveChunksInternal = internalMutation({
         // wiki by itself, no button anywhere. Thread uploads are one
         // conversation's ephemera and stay out.
         if (args.companyId && !args.threadId) {
-          await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilNewDocument, {
-            documentId: args.documentId,
-          });
+          const readyDocument = await ctx.db.get(args.documentId);
+          if (readyDocument?.wikiReviewRequested) {
+            // The Reviewer's checkpoint (wiki-agents plan, phase 4): the
+            // claims are prepared for a person; nothing is written until
+            // they approve.
+            await ctx.scheduler.runAfter(0, internal.wikiReviewActions.prepareReview, {
+              documentId: args.documentId,
+            });
+          } else {
+            await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilNewDocument, {
+              documentId: args.documentId,
+            });
+          }
         }
       }
   }

@@ -3288,7 +3288,8 @@
       "phone": "Telefonata",
       "email": "Email",
       "human": "Modificata dallo staff",
-      "tending": "Riordino"
+      "tending": "Riordino",
+      "chat": "Risposta in chat"
     },
     "detail": {
       "subtitle": "Ultima modifica: {source}, {date}. Riscritta {count} volte.",
@@ -3306,7 +3307,8 @@
         "phone": "Telefonata",
         "email": "Email",
         "human": "Modificata dallo staff",
-        "tending": "Riordino"
+        "tending": "Riordino",
+        "chat": "Risposta in chat"
       },
       "pinned": {
         "title": "Fissato dallo staff",
@@ -3372,7 +3374,8 @@
         "missingUrl": "Prima incolla l'indirizzo di un sito.",
         "missingText": "Servono sia un titolo sia del testo.",
         "missingFile": "Prima scegli un file."
-      }
+      },
+      "reviewFirst": "Rivedi prima che scriva — il wiki non impara nulla da questa importazione finché non la approvi"
     },
     "progress": {
       "title": "Sonae sta leggendo",
@@ -3385,6 +3388,12 @@
       "title": "{count, plural, =1 {1 questione aperta} other {# questioni aperte}}",
       "hint": "Lo staff del wiki ha trovato pagine in disaccordo. Risolvi ciascuna modificando o fissando la pagina giusta — oppure ignorala se non conta.",
       "dismiss": "Ignora questa questione"
+    },
+    "reviews": {
+      "title": "{count, plural, =1 {1 importazione in attesa della tua revisione} other {# importazioni in attesa della tua revisione}}",
+      "hint": "Hai chiesto di vedere questi documenti prima che il wiki li impari. Ecco cosa afferma ciascuno.",
+      "approve": "Approva — lascia che il wiki lo impari",
+      "reject": "Rifiuta — tienilo fuori dal wiki"
     }
   },
   "calls": {

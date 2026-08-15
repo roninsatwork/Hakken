@@ -33,6 +33,9 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
 
   const scopeArgs = companyId ? { companyId } : {};
   const [tab, setTab] = useState<"website" | "file" | "text">("website");
+  // The Reviewer's checkpoint (wiki-agents plan, phase 4): tick it and the
+  // wiki writes nothing from this import until you approve the claims.
+  const [reviewFirst, setReviewFirst] = useState(false);
   const [url, setUrl] = useState("");
   const [textTitle, setTextTitle] = useState("");
   const [textBody, setTextBody] = useState("");
@@ -59,7 +62,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       const cleaned = url.trim();
       if (!cleaned) throw new Error(t("errors.missingUrl"));
       const links: string[] = await mapWebsite({ url: cleaned });
-      await queueWebsiteUrls({ ...scopeArgs, urls: links });
+      await queueWebsiteUrls({ ...scopeArgs, urls: links, ...(reviewFirst ? { wikiReview: true } : {}) });
       setUrl("");
       return t("feedback.website", { count: links.length });
     });
@@ -67,7 +70,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const importText = () =>
     run(async () => {
       if (!textTitle.trim() || !textBody.trim()) throw new Error(t("errors.missingText"));
-      await saveManualText({ ...scopeArgs, title: textTitle.trim(), textContent: textBody });
+      await saveManualText({ ...scopeArgs, title: textTitle.trim(), textContent: textBody, ...(reviewFirst ? { wikiReview: true } : {}) });
       setTextTitle("");
       setTextBody("");
       return t("feedback.text");
@@ -96,6 +99,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           title: buildUploadTitle(item),
           format: contentType,
           ...(collected.length > 1 ? { deferIngestion: true } : {}),
+          ...(reviewFirst ? { wikiReview: true } : {}),
         });
       }
       if (collected.length > 1) await startKnowledgeFileQueue({});
@@ -192,6 +196,16 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           </AdminWriteButton>
         </div>
       )}
+
+      <label className="flex items-center gap-2 text-[12.5px] text-secondary cursor-pointer w-fit">
+        <input
+          type="checkbox"
+          checked={reviewFirst}
+          onChange={(event) => setReviewFirst(event.target.checked)}
+          className="accent-[var(--brand,#ff5a1f)]"
+        />
+        {t("reviewFirst")}
+      </label>
 
       {feedback && <p className="text-[12.5px] text-secondary">{feedback}</p>}
       {error && (

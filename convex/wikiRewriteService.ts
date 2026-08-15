@@ -237,13 +237,13 @@ export function companyAnswersFromWiki(
 /** The source string a rewrite carries, decomposed for the receipts list. */
 export function parseSourceKey(
   source: string
-): { kind: "DOCUMENT" | "PHONE_CALL" | "EMAIL" | "HUMAN"; ref: string } | null {
+): { kind: "DOCUMENT" | "PHONE_CALL" | "EMAIL" | "HUMAN" | "CHAT"; ref: string } | null {
   const separator = source.indexOf(":");
   if (separator <= 0) return null;
   const kind = source.slice(0, separator);
   const ref = source.slice(separator + 1);
   if (!ref) return null;
-  if (kind === "DOCUMENT" || kind === "PHONE_CALL" || kind === "EMAIL" || kind === "HUMAN") {
+  if (kind === "DOCUMENT" || kind === "PHONE_CALL" || kind === "EMAIL" || kind === "HUMAN" || kind === "CHAT") {
     return { kind, ref };
   }
   return null;

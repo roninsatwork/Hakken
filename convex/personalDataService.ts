@@ -134,6 +134,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
     ["salesDataResearchJobs", ["startedBy"]],
     ["salesOpportunityReports", ["requestedBy"]],
     ["wikiOpenQuestions", ["resolvedBy"]],
+    ["wikiReviews", ["decidedBy"]],
   ] as const).map(([table, fields]) => ({
     table,
     fields: [...fields],

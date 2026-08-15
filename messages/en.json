@@ -3288,7 +3288,8 @@
       "phone": "Phone call",
       "email": "Email",
       "human": "Edited by staff",
-      "tending": "Tidy-up"
+      "tending": "Tidy-up",
+      "chat": "Chat answer"
     },
     "detail": {
       "subtitle": "Last change: {source}, {date}. Rewritten {count} times.",
@@ -3306,7 +3307,8 @@
         "phone": "Phone call",
         "email": "Email",
         "human": "Edited by staff",
-        "tending": "Tidy-up"
+        "tending": "Tidy-up",
+        "chat": "Chat answer"
       },
       "pinned": {
         "title": "Pinned by staff",
@@ -3372,7 +3374,8 @@
         "missingUrl": "Paste a website address first.",
         "missingText": "A title and some text are both needed.",
         "missingFile": "Choose a file first."
-      }
+      },
+      "reviewFirst": "Review before it writes - the wiki learns nothing from this import until you approve it"
     },
     "progress": {
       "title": "Sonae is reading",
@@ -3385,6 +3388,12 @@
       "title": "{count, plural, =1 {1 open question} other {# open questions}}",
       "hint": "The wiki's staff found pages that disagree. Settle each one by editing or pinning the right page - or dismiss it if it doesn't matter.",
       "dismiss": "Dismiss this question"
+    },
+    "reviews": {
+      "title": "{count, plural, =1 {1 import waiting for your review} other {# imports waiting for your review}}",
+      "hint": "You asked to see these before the wiki learns from them. Here is what each document claims.",
+      "approve": "Approve - let the wiki learn it",
+      "reject": "Reject - keep it out of the wiki"
     }
   },
   "calls": {

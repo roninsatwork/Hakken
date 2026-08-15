@@ -36,7 +36,10 @@ function isDistillable(document: Doc<"knowledgeDocuments">): boolean {
     document.status === "ready" &&
     !document.threadId &&
     Boolean(document.companyId) &&
-    document.wikiDistilledAt === undefined
+    document.wikiDistilledAt === undefined &&
+    // A review-marked document waits for its person (wiki-agents plan,
+    // phase 4): the wiki learns nothing from it until approval clears it.
+    document.wikiReviewRequested !== true
   );
 }
 

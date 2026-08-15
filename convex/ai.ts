@@ -585,6 +585,20 @@ User Prompt: ${args.content}`;
             wikiPageKeys,
         });
 
+        // The Filing Clerk considers staff answers that drew on more than
+        // one wiki page (wiki-agents plan, phase 5) — the only place
+        // cross-page synthesis can exist. Widget visitors' answers never
+        // qualify, and a scheduled consideration can never delay the reply.
+        if (thread?.companyId && !thread.widgetId && wikiPageKeys.length >= 2) {
+            await ctx.scheduler.runAfter(0, internal.wikiFilingActions.considerAnswer, {
+                companyId: thread.companyId,
+                threadId: String(args.threadId),
+                question: args.content.slice(0, 500),
+                answer: assistantReply.slice(0, 4000),
+                pageKeys: wikiPageKeys,
+            });
+        }
+
         // Finalize the streamed row, or fall back to the single write when no
         // flush ever happened (short answer, or a non-streaming provider).
         let messageId: Id<"messages">;

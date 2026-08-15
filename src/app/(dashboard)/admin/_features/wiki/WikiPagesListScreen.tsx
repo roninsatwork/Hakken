@@ -75,6 +75,17 @@ export function WikiPagesListScreen({
     return row ? `${basePath}/${row.pageId}` : null;
   };
 
+  const tenantReviews = useQuery(api.wikiReviews.listPendingReviews, companyId ? "skip" : {});
+  const companyReviews = useQuery(
+    api.wikiReviews.listPendingReviewsForCompany,
+    companyId ? { companyId } : "skip"
+  );
+  const pendingReviews = (companyId ? companyReviews : tenantReviews) ?? [];
+  const decideTenant = useMutation(api.wikiReviews.decideReview);
+  const decideCompany = useMutation(api.wikiReviews.decideReviewForCompany);
+  const decideReview = (reviewId: (typeof pendingReviews)[number]["reviewId"], approve: boolean) =>
+    companyId ? decideCompany({ companyId, reviewId, approve }) : decideTenant({ reviewId, approve });
+
   const isLoading = rows === undefined;
   const totalCount = rows?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -84,6 +95,7 @@ export function WikiPagesListScreen({
     if (source.startsWith("PHONE_CALL:")) return t("sources.phone");
     if (source.startsWith("EMAIL:")) return t("sources.email");
     if (source.startsWith("HUMAN:")) return t("sources.human");
+    if (source.startsWith("CHAT:")) return t("sources.chat");
     if (source === "TENDING") return t("sources.tending");
     return source;
   };
@@ -138,6 +150,48 @@ export function WikiPagesListScreen({
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* The Reviewer's checkpoint (wiki-agents plan, phase 4): what a
+          marked document claims, held until a person decides. */}
+      {pendingReviews.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-[16px] border border-info/40 bg-card/40 p-5">
+          <h2 className="text-[14px] font-semibold text-foreground">
+            {t("reviews.title", { count: pendingReviews.length })}
+          </h2>
+          <p className="text-[12px] text-secondary">{t("reviews.hint")}</p>
+          <ul className="flex flex-col gap-2">
+            {pendingReviews.map((review) => (
+              <li
+                key={review.reviewId}
+                className="flex flex-col gap-2 rounded-[10px] border border-border-dim/60 bg-background px-4 py-3"
+              >
+                <span className="text-[13px] font-medium text-foreground">{review.title}</span>
+                {review.claims.length > 0 && (
+                  <ul className="flex flex-col gap-1 text-[12.5px] text-secondary list-disc pl-4">
+                    {review.claims.map((claim, index) => (
+                      <li key={index}>{claim}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex items-center gap-2">
+                  <AdminWriteButton
+                    onClick={() => void decideReview(review.reviewId, true)}
+                    className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium"
+                  >
+                    {t("reviews.approve")}
+                  </AdminWriteButton>
+                  <AdminWriteButton
+                    onClick={() => void decideReview(review.reviewId, false)}
+                    className="px-3 py-1.5 rounded-[8px] border border-border-dim text-secondary hover:text-foreground text-[12px] font-medium transition-colors"
+                  >
+                    {t("reviews.reject")}
+                  </AdminWriteButton>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

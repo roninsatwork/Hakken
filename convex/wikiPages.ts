@@ -493,7 +493,7 @@ async function upsertSourceReceipt(
     )
     .unique();
   if (existing) return;
-  const fallbackLabels = { DOCUMENT: "Document", PHONE_CALL: "Phone call", EMAIL: "Email" } as const;
+  const fallbackLabels = { DOCUMENT: "Document", PHONE_CALL: "Phone call", EMAIL: "Email", CHAT: "Chat answer" } as const;
   await ctx.db.insert("wikiPageSources", {
     pageId: args.pageId,
     companyId: args.companyId,

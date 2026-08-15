@@ -1900,6 +1900,10 @@ export default defineSchema({
     // knowledge plan, stage one). Absent means the wiki has not learned
     // from it yet — the catch-up sweep and the on-ready hook both key on it.
     wikiDistilledAt: v.optional(v.number()),
+    // Marked at import when a person wants the checkpoint (wiki-agents
+    // plan, phase 4): the wiki must not learn from this document until the
+    // review is approved. The Reviewer prepares the claims; a person decides.
+    wikiReviewRequested: v.optional(v.boolean()),
     lastIngestionError: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
@@ -3264,7 +3268,15 @@ export default defineSchema({
   wikiPageSources: defineTable({
     pageId: v.id("wikiPages"),
     companyId: v.id("companies"),
-    kind: v.union(v.literal("DOCUMENT"), v.literal("PHONE_CALL"), v.literal("EMAIL"), v.literal("HUMAN")),
+    kind: v.union(
+      v.literal("DOCUMENT"),
+      v.literal("PHONE_CALL"),
+      v.literal("EMAIL"),
+      v.literal("HUMAN"),
+      // A durable synthesis filed back from an answered question
+      // (wiki-agents plan, phase 5).
+      v.literal("CHAT")
+    ),
     /** Document id, call id, mailbox message id, or user id — as text. */
     ref: v.string(),
     /** What a person sees on the page's source list. */
@@ -3313,6 +3325,24 @@ export default defineSchema({
   })
     .index("by_company_status", ["companyId", "status", "raisedAt"])
     .index("by_company_dedupe", ["companyId", "dedupeKey"]),
+
+  /**
+   * A pre-ingest review (wiki-agents plan, phase 4): what a marked
+   * document claims and the pages the Reviewer proposes, held for a
+   * person's decision before the wiki learns anything from it.
+   */
+  wikiReviews: defineTable({
+    companyId: v.id("companies"),
+    documentId: v.id("knowledgeDocuments"),
+    title: v.string(),
+    claimsJson: v.string(),
+    status: v.union(v.literal("PENDING"), v.literal("APPROVED"), v.literal("REJECTED")),
+    requestedAt: v.number(),
+    decidedAt: v.optional(v.number()),
+    decidedBy: v.optional(v.id("users")),
+  })
+    .index("by_company_status", ["companyId", "status", "requestedAt"])
+    .index("by_document", ["documentId"]),
 
   /**
    * The page's walkable history (wiki plan, acceptance 4): the text as it
