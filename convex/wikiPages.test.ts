@@ -421,6 +421,85 @@ describe("topic pages and the links between them", () => {
   });
 });
 
+describe("the answering read", () => {
+  test("a question finds pages by name and words, takes one hop, and respects the customer wall", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "delivery-times",
+      title: "delivery-times",
+      content: "Deliveries go out Tuesdays and Fridays.",
+      source: "DOCUMENT:doc-1",
+    });
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "rush-orders",
+      title: "rush-orders",
+      content: "Rush work is possible but priced separately.",
+      source: "DOCUMENT:doc-1",
+    });
+    await t.mutation(internal.wikiPages.addLinksInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "delivery-times",
+      add: ["POLICY:rush-orders"],
+    });
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      subjectKey: "delivery-obsessed-customer",
+      title: "delivery-obsessed-customer",
+      content: "Asks about delivery constantly.",
+      source: "EMAIL:1",
+    });
+
+    const anonymous = await t.query(internal.wikiPages.getWikiAnswerContextInternal, {
+      companyId,
+      query: "when are your delivery days?",
+      includeCustomerPages: false,
+    });
+    // The named page, whole — and its linked neighbour came along for the hop.
+    expect(anonymous.context).toContain("Tuesdays and Fridays");
+    expect(anonymous.context).toContain("priced separately");
+    expect(anonymous.context).not.toContain("Asks about delivery constantly");
+    expect(anonymous.pageKeys).toEqual(["POLICY:delivery-times", "POLICY:rush-orders"]);
+
+    // Staff surfaces may see their own customers.
+    const staff = await t.query(internal.wikiPages.getWikiAnswerContextInternal, {
+      companyId,
+      query: "what do we know about the delivery obsessed customer?",
+      includeCustomerPages: true,
+    });
+    expect(staff.context).toContain("Asks about delivery constantly");
+
+    // A question the wiki knows nothing about reads as nothing, not filler.
+    await expect(
+      t.query(internal.wikiPages.getWikiAnswerContextInternal, {
+        companyId,
+        query: "quantum blockchain arbitrage?",
+        includeCustomerPages: false,
+      })
+    ).resolves.toEqual({ context: "", pageKeys: [] });
+  });
+
+  test("the stage-three switch defaults on, and the exam seeds once", async () => {
+    const { companyAnswersFromWiki } = await import("./wikiRewriteService");
+    expect(companyAnswersFromWiki(null)).toBe(true);
+    expect(companyAnswersFromWiki({})).toBe(true);
+    expect(companyAnswersFromWiki({ answersFromWiki: false })).toBe(false);
+
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    const first = await t.mutation(internal.wikiExam.seedWikiExamCasesInternal, { companyId });
+    const second = await t.mutation(internal.wikiExam.seedWikiExamCasesInternal, { companyId });
+    expect(first).toEqual({ created: 20, updated: 0 });
+    expect(second).toEqual({ created: 0, updated: 20 });
+  });
+});
+
 describe("the rewrite contract", () => {
   test("an empty or wildly over-long answer is refused; barely over is clamped", () => {
     expect(validateRewrittenPage("   ")).toEqual({ ok: false, reason: "empty" });

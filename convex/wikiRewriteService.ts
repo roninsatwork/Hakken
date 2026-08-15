@@ -205,6 +205,14 @@ export function parseDocumentTopicSuggestions(raw: string): TopicSuggestion[] {
   return suggestions;
 }
 
+/** The stage-three switch, read one way everywhere: absent means the wiki
+ * answers (wiki-replaces-knowledge plan); false is the escape hatch. */
+export function companyAnswersFromWiki(
+  company: { answersFromWiki?: boolean } | null | undefined
+): boolean {
+  return company?.answersFromWiki ?? true;
+}
+
 /** The source string a rewrite carries, decomposed for the receipts list. */
 export function parseSourceKey(
   source: string

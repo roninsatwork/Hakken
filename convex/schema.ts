@@ -68,6 +68,10 @@ export default defineSchema({
      * voices (SPEECH_VOICE_KEYS); absent means the platform default.
      */
     spokenVoice: v.optional(v.string()),
+    // Stage-three switch (wiki-replaces-knowledge plan): absent reads as ON —
+    // company knowledge is answered from wiki pages, not chunk retrieval.
+    // A per-company escape hatch, set false only to fall back to the old way.
+    answersFromWiki: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])

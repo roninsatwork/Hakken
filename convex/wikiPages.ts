@@ -135,6 +135,184 @@ export const findTopicPagesForQueryInternal = internalQuery({
 });
 
 /**
+ * The answering read (wiki-replaces-knowledge plan, stage two): how a
+ * question finds its pages. The index is scanned the way a person scans a
+ * wiki — names first, then the words on the pages — the best few pages are
+ * opened WHOLE, and one hop is taken along the best page's links. No
+ * embeddings anywhere. Customer pages join only for signed-in company
+ * surfaces; an anonymous caller can never pull another customer's page.
+ */
+export const getWikiAnswerContextInternal = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+    query: v.string(),
+    includeCustomerPages: v.boolean(),
+    maxChars: v.optional(v.number()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ context: string; pageKeys: string[] }> => {
+    const budget = args.maxChars ?? 14_000;
+    // Three letters admits SEO, iOS, app; the rarity weight below keeps the
+    // company's own name from lighting up every page equally.
+    const queryWords = [
+      ...new Set(
+        args.query
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter((word) => word.length >= 3)
+      ),
+    ];
+    if (queryWords.length === 0) return { context: "", pageKeys: [] };
+
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    const eligible = pages.filter(
+      (page) => args.includeCustomerPages || page.kind !== "CUSTOMER"
+    );
+
+    // A word on every page tells you nothing; a word on one page is the page.
+    const rarity = new Map<string, number>();
+    for (const word of queryWords) {
+      const holders = eligible.filter((page) =>
+        `${page.title} ${page.subjectKey} ${page.content}`.toLowerCase().includes(word)
+      ).length;
+      rarity.set(word, holders === 0 ? 0 : 1 / Math.log2(2 + holders));
+    }
+
+    const scored = eligible
+      .map((page) => {
+        const titleText = `${page.title} ${page.subjectKey}`.toLowerCase();
+        const content = page.content.toLowerCase();
+        let score = 0;
+        for (const word of queryWords) {
+          const weight = rarity.get(word) ?? 0;
+          if (weight === 0) continue;
+          if (titleText.includes(word)) score += 3 * weight;
+          else if (content.includes(word)) score += weight;
+        }
+        return { page, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) return { context: "", pageKeys: [] };
+
+    const chosen: typeof pages = [];
+    const chosenKeys = new Set<string>();
+    const admit = (page: (typeof pages)[number]) => {
+      const key = linkKeyFor(page.kind, page.subjectKey);
+      if (chosenKeys.has(key)) return;
+      chosenKeys.add(key);
+      chosen.push(page);
+    };
+    for (const entry of scored.slice(0, 4)) admit(entry.page);
+    // One hop along the best page's links, wiki-fashion.
+    for (const link of scored[0].page.links.slice(0, 2)) {
+      const separator = link.indexOf(":");
+      if (separator <= 0) continue;
+      const kind = link.slice(0, separator) as WikiKind;
+      if (kind === "CUSTOMER" && !args.includeCustomerPages) continue;
+      const neighbour = await getPage(ctx, args.companyId, kind, link.slice(separator + 1));
+      if (neighbour) admit(neighbour);
+    }
+
+    const parts: string[] = [];
+    const pageKeys: string[] = [];
+    let used = 0;
+    for (const page of chosen) {
+      const rendered = renderPageForReading(page);
+      if (used + rendered.length > budget && parts.length > 0) break;
+      parts.push(rendered);
+      pageKeys.push(linkKeyFor(page.kind, page.subjectKey));
+      used += rendered.length;
+    }
+    return {
+      context: parts.length
+        ? `Company wiki pages that apply here (tended by Sonae, corrected by staff):\n\n${parts.join("\n\n---\n\n")}`
+        : "",
+      pageKeys,
+    };
+  },
+});
+
+/**
+ * The index as a model reads it (wiki-replaces-knowledge, stage two): every
+ * page's name and first line, small enough to hand to a fast model whole —
+ * exactly how Karpathy's agent chooses pages. Customer pages appear only
+ * for surfaces allowed to see them.
+ */
+export const getWikiIndexInternal = internalQuery({
+  args: { companyId: v.id("companies"), includeCustomerPages: v.boolean() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ key: string; hint: string }>> => {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    return pages
+      .filter((page) => args.includeCustomerPages || page.kind !== "CUSTOMER")
+      .map((page) => ({
+        key: linkKeyFor(page.kind, page.subjectKey),
+        hint: page.content.slice(0, 90).replace(/\s+/g, " "),
+      }));
+  },
+});
+
+/** The chosen pages, opened whole with one hop from the first — the model's
+ * picks validated against the wall before anything is read. */
+export const getPagesByKeysInternal = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+    keys: v.array(v.string()),
+    includeCustomerPages: v.boolean(),
+    maxChars: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<{ context: string; pageKeys: string[] }> => {
+    const budget = args.maxChars ?? 14_000;
+    const chosen: Doc<"wikiPages">[] = [];
+    const chosenKeys = new Set<string>();
+    const admit = async (key: string) => {
+      if (chosenKeys.has(key)) return;
+      const separator = key.indexOf(":");
+      if (separator <= 0) return;
+      const kind = key.slice(0, separator) as WikiKind;
+      if (kind === "CUSTOMER" && !args.includeCustomerPages) return;
+      const page = await getPage(ctx, args.companyId, kind, key.slice(separator + 1));
+      if (!page) return;
+      chosenKeys.add(key);
+      chosen.push(page);
+    };
+    for (const key of args.keys.slice(0, 5)) await admit(key);
+    if (chosen.length > 0) {
+      for (const link of chosen[0].links.slice(0, 2)) await admit(link);
+    }
+
+    const parts: string[] = [];
+    const pageKeys: string[] = [];
+    let used = 0;
+    for (const page of chosen) {
+      const rendered = renderPageForReading(page);
+      if (used + rendered.length > budget && parts.length > 0) break;
+      parts.push(rendered);
+      pageKeys.push(linkKeyFor(page.kind, page.subjectKey));
+      used += rendered.length;
+    }
+    return {
+      context: parts.length
+        ? `Company wiki pages that apply here (tended by Sonae, corrected by staff):\n\n${parts.join("\n\n---\n\n")}`
+        : "",
+      pageKeys,
+    };
+  },
+});
+
+/**
  * The machine's rewrite landing. Creates the page on first contact;
  * otherwise files the outgoing text as a revision and replaces the body.
  * Never touches the pinned layer.

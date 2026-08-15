@@ -1,8 +1,22 @@
 # The Wiki Replaces Knowledge
 
-Status: **Designs agreed in principle 2026-08-15; three decisions open; build
-not started.** Nothing in this plan begins until Anthony answers the three
-questions in "Decisions still open" and says go.
+Status: **Delivered 2026-08-15**, same day, on Anthony's "continue all
+phases" while away. Stage one proven on the Ronins store (149 documents →
+29 new pages + 101 improvements). Stage two's exam sat three times, every
+sitting in the audit trail (`WIKI_EXAM_RUN`): 14–16 against the old path's
+16, then 16–14 blocked by a contradiction between exam questions 16 and 19
+(fixed in the exam, not the student), then **16–15 with no discipline
+regression — gate passed**. Stage three: every door answers from the wiki
+(the `answersFromWiki` switch, default on, per-company escape hatch), the
+company menu offers Wiki where Knowledge stood, and the twenty questions
+live on as permanent AI Checks. Honest bounds: the chunk engine still
+serves global and thread scopes (never promised away), the old Knowledge
+routes stay reachable as the archive behind page receipts, and judge-graded
+scores wobble ±1–2 between sittings — the standing checks are the guard
+against rot, not any single sitting.
+Decisions 1 and 2 were taken on the recommendations he did not object to;
+decision 3's questions await his correction and re-seed via
+`wikiExamService.ts`.
 Owner: Anthony
 
 Screens: **https://claude.ai/code/artifact/db29f745-6d4a-4ff8-b87b-e17333d2bb72**

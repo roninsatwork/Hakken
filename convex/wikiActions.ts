@@ -14,6 +14,76 @@ import {
 } from "./wikiRewriteService";
 
 /**
+ * How a question chooses its pages (wiki-replaces-knowledge, stage two):
+ * the model reads the index — every page's name and first line — and names
+ * the pages that answer, which are then opened whole with one hop. This is
+ * Karpathy's navigation, not similarity search: the chooser sees names and
+ * purposes, never fragments. The mechanical word-match is the fallback when
+ * the model call dies, so a provider outage degrades rather than silences.
+ */
+export const selectWikiContextForQuery = internalAction({
+  args: {
+    companyId: v.id("companies"),
+    query: v.string(),
+    includeCustomerPages: v.boolean(),
+    maxChars: v.optional(v.number()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ context: string; pageKeys: string[] }> => {
+    const index = await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+      companyId: args.companyId,
+      includeCustomerPages: args.includeCustomerPages,
+    });
+    if (index.length === 0) return { context: "", pageKeys: [] };
+
+    try {
+      const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+        useCase: "fast-chat",
+      });
+      const response = await generateTextWithResolvedModel({
+        model,
+        systemInstruction:
+          'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
+        contents: [
+          {
+            type: "text",
+            text:
+              `Question: ${args.query.slice(0, 400)}\n\nIndex:\n` +
+              index.map((entry) => `${entry.key} — ${entry.hint}`).join("\n"),
+          },
+        ],
+      });
+      const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { pages?: unknown }) : {};
+      const valid = new Set(index.map((entry) => entry.key));
+      const keys = (Array.isArray(parsed.pages) ? parsed.pages : [])
+        .filter((key): key is string => typeof key === "string" && valid.has(key))
+        .slice(0, 4);
+      if (keys.length > 0) {
+        return await ctx.runQuery(internal.wikiPages.getPagesByKeysInternal, {
+          companyId: args.companyId,
+          keys,
+          includeCustomerPages: args.includeCustomerPages,
+          ...(args.maxChars !== undefined ? { maxChars: args.maxChars } : {}),
+        });
+      }
+      // The model read the index and found nothing: believe it.
+      return { context: "", pageKeys: [] };
+    } catch (error) {
+      console.error("Wiki index reading failed; falling back to word match", error);
+      return await ctx.runQuery(internal.wikiPages.getWikiAnswerContextInternal, {
+        companyId: args.companyId,
+        query: args.query,
+        includeCustomerPages: args.includeCustomerPages,
+        ...(args.maxChars !== undefined ? { maxChars: args.maxChars } : {}),
+      });
+    }
+  },
+});
+
+/**
  * The heart of the self-improving wiki: one event, one page, one rewrite
  * (self-improving-wiki-plan.md, phase 1). Scheduled from the door that saw
  * the event — hang-up, or a mailbox reply — so a wiki failure can never

@@ -17,7 +17,6 @@ import {
   ClipboardCheck,
   Code2,
   Cpu,
-  Database,
   FileText,
   Gauge,
   LayoutDashboard,
@@ -134,28 +133,27 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           icon: Activity,
         },
         {
-          label: "Knowledge",
-          href: `${aiHref}/knowledge`,
-          icon: Database,
+          // The wiki replaced Knowledge as the way this company knows things
+          // (wiki-replaces-knowledge plan, stage three): importing happens on
+          // the Wiki screen and answers come from its pages. The old
+          // Knowledge route stays reachable as the archive of source
+          // documents behind each page's receipts, but it is no longer a
+          // destination the menu offers.
+          label: "Wiki",
+          href: `${aiHref}/pages`,
+          icon: BookOpen,
           matches: (pathname: string) => (
-            matchesCompanyRoute(pathname, `${aiHref}/knowledge`)
+            matchesCompanyRoute(pathname, `${aiHref}/pages`)
+            || matchesCompanyRoute(pathname, `${aiHref}/knowledge`)
             || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
           ),
         },
         {
-          // Beside Knowledge, because a saved answer is company knowledge —
+          // Beside the Wiki, because a saved answer is company knowledge —
           // just the part of it that came out of a conversation.
           label: "Saved Answers",
           href: `${aiHref}/saved-answers`,
           icon: BookmarkCheck,
-        },
-        {
-          // The self-improving wiki: the company's tended pages and their
-          // map, one company at a time (Anthony's ruling, 2026-08-14).
-          label: "Wiki",
-          href: `${aiHref}/pages`,
-          icon: BookOpen,
-          matches: (pathname: string) => matchesCompanyRoute(pathname, `${aiHref}/pages`),
         },
         {
           label: "Memory",

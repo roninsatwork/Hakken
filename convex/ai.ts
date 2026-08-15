@@ -29,6 +29,7 @@ import { shouldFlushStreamedText } from "./streamingService";
 import { adminAction, tenantAction } from "./tenantFunctions";
 import { getOpenAIApiKey } from "./openaiProviderService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
+import { companyAnswersFromWiki } from "./wikiRewriteService";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
 const TRANSCRIPTION_AUDIO_MAX_BYTES = 10 * 1024 * 1024;
@@ -371,8 +372,11 @@ export const generateSonaeResponse = internalAction({
 
             if (queryVector) {
                 // Multi-tier hybrid search (vector + keyword, fused per scope).
+                // Company knowledge is the wiki's job when the stage-three
+                // switch is on (wiki-replaces-knowledge plan); the chunk
+                // search then serves only global and thread scopes.
                 const [companyChunks, globalChunks, threadChunks] = await Promise.all([
-                    thread?.companyId
+                    thread?.companyId && !companyAnswersFromWiki(company)
                       ? searchKnowledgeScope(ctx, {
                           queryVector,
                           queryText: args.content,
@@ -434,6 +438,27 @@ export const generateSonaeResponse = internalAction({
             console.error("RAG pipeline failed to execute", e);
         }
 
+        // The wiki answers company questions when the switch is on (stage
+        // two): index scanned, best pages opened whole, one hop along links.
+        // Fail-open — a wiki failure must never cost a reply.
+        let wikiAnswerContext = "";
+        let wikiPageKeys: string[] = [];
+        if (thread?.companyId && companyAnswersFromWiki(company)) {
+            try {
+                const wikiAnswer = await ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
+                    companyId: thread.companyId,
+                    query: args.content.slice(0, 500),
+                    // Staff may ask about their own customers; an anonymous
+                    // widget visitor may not be read anybody's page this way.
+                    includeCustomerPages: !thread.widgetId,
+                });
+                wikiAnswerContext = wikiAnswer.context;
+                wikiPageKeys = wikiAnswer.pageKeys;
+            } catch (e) {
+                console.error("Wiki answering context failed; replying without it", e);
+            }
+        }
+
         // A widget visitor who gave their email at the gateway is a known
         // customer like any other (wiki plan, phase 2): their page is read
         // whole. Fail-open — a page lookup must never cost a reply.
@@ -452,7 +477,7 @@ export const generateSonaeResponse = internalAction({
         }
 
         // Clean prompt construction (isolated from logic rules)
-        let combinedPrompt = `${conversationHistory ? `${conversationHistory}\n` : ""}${companyMemoryContext ? `${companyMemoryContext}\n` : ""}${customerPageContext ? `${customerPageContext}\n` : ""}
+        let combinedPrompt = `${conversationHistory ? `${conversationHistory}\n` : ""}${companyMemoryContext ? `${companyMemoryContext}\n` : ""}${customerPageContext ? `${customerPageContext}\n` : ""}${wikiAnswerContext ? `${wikiAnswerContext}\n` : ""}
 
 User Prompt: ${args.content}`;
 
@@ -557,6 +582,7 @@ User Prompt: ${args.content}`;
         const companyRuntimeEvidenceJson = buildCompanyRuntimeEvidence({
             skillIds: (companySkills?.skills ?? []).map((skill) => skill.skillId),
             sourceIds: retrievedChunkIds,
+            wikiPageKeys,
         });
 
         // Finalize the streamed row, or fall back to the single write when no
@@ -939,6 +965,9 @@ export const searchKnowledgeForVoiceInternal = internalAction({
     threadId: v.optional(v.id("threads")),
     query: v.string(),
     fallbackCompanyId: v.optional(v.id("companies")),
+    // The exam's lever (wiki-replaces-knowledge plan, stage two): sit the
+    // same question against either path regardless of the company switch.
+    forceKnowledgeMode: v.optional(v.union(v.literal("chunks"), v.literal("wiki"))),
   },
   handler: async (ctx, args): Promise<{ context: string }> => {
     const query = args.query.trim().slice(0, 500);
@@ -948,6 +977,11 @@ export const searchKnowledgeForVoiceInternal = internalAction({
       ? await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId })
       : null;
     const companyId = thread?.companyId ?? args.fallbackCompanyId;
+    const company = companyId
+      ? await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: companyId })
+      : null;
+    const knowledgeMode =
+      args.forceKnowledgeMode ?? (companyAnswersFromWiki(company) ? "wiki" : "chunks");
 
     try {
       const queryVector = await embedRetrievalQuery(ctx, {
@@ -958,7 +992,7 @@ export const searchKnowledgeForVoiceInternal = internalAction({
       if (!queryVector) return { context: "" };
 
       const [companyChunks, globalChunks, threadChunks] = await Promise.all([
-        companyId
+        companyId && knowledgeMode === "chunks"
           ? searchKnowledgeScope(ctx, {
               queryVector,
               queryText: query,
@@ -1019,30 +1053,33 @@ export const searchKnowledgeForVoiceInternal = internalAction({
         .map((memory: { title: string; content: string }) => `- ${memory.title}: ${memory.content}`)
         .join("\n");
 
-      // The wiki's title index (wiki plan, phase 5): topic pages whose names
-      // match the question, read whole — the tended layer above the chunked
-      // library. Customer pages are excluded by the query itself: a caller
-      // must never be read another customer's page.
-      const wikiPages: string[] = companyId
-        ? await ctx.runQuery(internal.wikiPages.findTopicPagesForQueryInternal, {
-            companyId,
-            query,
-          })
-        : [];
+      // The wiki answers company questions in wiki mode (stage two): index
+      // scanned, best pages opened whole, one hop along links. Customer
+      // pages are excluded — a caller must never be read another customer's
+      // page; identity-matched pages arrive by their own doors instead.
+      const wikiAnswer =
+        companyId && knowledgeMode === "wiki"
+          ? await ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
+              companyId,
+              query,
+              includeCustomerPages: false,
+              // Spoken answers are two sentences; the reading pile is smaller
+              // than typed chat's, but big enough for a page and its hop.
+              maxChars: 9000,
+            })
+          : { context: "", pageKeys: [] };
 
       // Nothing found is reported as nothing found. Returning the wrapper
       // around an empty list reads to the model as "here is your evidence",
       // and a model handed an empty evidence block invents rather than
       // admits — which is the one thing this must never do out loud.
-      if (chunkTexts.length === 0 && !relevantMemories && wikiPages.length === 0) {
+      if (chunkTexts.length === 0 && !relevantMemories && !wikiAnswer.context) {
         return { context: "" };
       }
 
       return {
         context: `${
-          wikiPages.length > 0
-            ? `Company wiki pages that apply here (tended by Sonae, corrected by staff):\n${wikiPages.join("\n\n")}\n\n`
-            : ""
+          wikiAnswer.context ? `${wikiAnswer.context}\n\n` : ""
         }${
           chunkTexts.length > 0
             ? buildUntrustedKnowledgeContext({

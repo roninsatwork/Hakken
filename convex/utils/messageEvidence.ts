@@ -33,13 +33,20 @@ export type MessageEvidence = {
 export function buildCompanyRuntimeEvidence(args: {
   skillIds: Id<"companySkills">[];
   sourceIds: string[];
+  /** Wiki pages read whole for this answer, as "KIND:subjectKey" (stage two
+   * of wiki-replaces-knowledge): the pages an answer names as its own. */
+  wikiPageKeys?: string[];
 }) {
-  if (args.skillIds.length === 0 && args.sourceIds.length === 0) return undefined;
+  const wikiPageKeys = args.wikiPageKeys ?? [];
+  if (args.skillIds.length === 0 && args.sourceIds.length === 0 && wikiPageKeys.length === 0) {
+    return undefined;
+  }
 
   return JSON.stringify({
     version: 1,
     skillIds: args.skillIds,
     sourceIds: args.sourceIds,
+    ...(wikiPageKeys.length > 0 ? { wikiPageKeys } : {}),
   });
 }
 
