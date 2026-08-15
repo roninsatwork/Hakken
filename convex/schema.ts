@@ -3288,6 +3288,30 @@ export default defineSchema({
   }).index("by_company", ["companyId"]),
 
   /**
+   * What the staff flag but never settle (wiki-agents plan, phases 1-2):
+   * two pages that disagree, or a claim a source no longer supports. Each
+   * row is a question for a person; the machine's ceiling is raising it.
+   * Deduplicated by key so the same disagreement is not raised nightly,
+   * and auto-resolved when the pages change so the claim no longer stands.
+   */
+  wikiOpenQuestions: defineTable({
+    companyId: v.id("companies"),
+    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS")),
+    pageKeyA: v.string(),
+    claimA: v.string(),
+    pageKeyB: v.optional(v.string()),
+    claimB: v.optional(v.string()),
+    detail: v.optional(v.string()),
+    dedupeKey: v.string(),
+    status: v.union(v.literal("OPEN"), v.literal("RESOLVED"), v.literal("DISMISSED")),
+    raisedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    resolvedBy: v.optional(v.id("users")),
+  })
+    .index("by_company_status", ["companyId", "status", "raisedAt"])
+    .index("by_company_dedupe", ["companyId", "dedupeKey"]),
+
+  /**
    * The page's walkable history (wiki plan, acceptance 4): the text as it
    * stood BEFORE each rewrite, and what caused the rewrite. Reading the
    * revisions in order shows which conversation taught which change.

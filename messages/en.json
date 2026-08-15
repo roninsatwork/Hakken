@@ -3380,6 +3380,11 @@
       "written": "{count, plural, =1 {1 page written} other {# pages written}}",
       "improved": "{count, plural, =1 {1 page improved} other {# pages improved}}",
       "nowReading": "Now reading: {title}"
+    },
+    "questions": {
+      "title": "{count, plural, =1 {1 open question} other {# open questions}}",
+      "hint": "The wiki's staff found pages that disagree. Settle each one by editing or pinning the right page - or dismiss it if it doesn't matter.",
+      "dismiss": "Dismiss this question"
     }
   },
   "calls": {

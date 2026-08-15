@@ -40,6 +40,14 @@ export const WIKI_STAFF = [
     systemPrompt:
       "You connect one wiki page to its genuinely related pages: given the page and the index of page names, name the two to five pages a reader would plausibly open next. Related means genuinely related — never force a connection, and never link a page to itself.",
   },
+  {
+    systemKey: "WIKI_CONTRADICTION_FINDER",
+    name: "The Contradiction Finder",
+    description:
+      "Nightly: reads related pages together and flags claims that disagree — two pages, two sentences, side by side. Never resolves anything itself: every finding is an open question on the Wiki screen for a person to settle.",
+    systemPrompt:
+      "You read a set of related wiki pages together and report claims that genuinely disagree — the same fact stated two incompatible ways. Quote each side's own sentence. Different emphasis is not a contradiction; only incompatible facts count. You never decide which side is right: people settle truth, you only raise it.",
+  },
 ] as const;
 
 export type WikiStaffKey = (typeof WIKI_STAFF)[number]["systemKey"];

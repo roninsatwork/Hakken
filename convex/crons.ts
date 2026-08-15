@@ -109,6 +109,17 @@ crons.interval(
   {}
 );
 
+// The Contradiction Finder's round (wiki-agents plan, phase 1): related
+// pages read together nightly, disagreements raised as open questions for
+// a person — never settled by the machine. Three bounded model calls per
+// company per night at most; a stood-down finder spends nothing.
+crons.interval(
+  "wiki-contradiction-sweep",
+  { hours: 24 },
+  internal.wikiContradictionActions.contradictionSweep,
+  {}
+);
+
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
 // watermarked: rating a message stays O(1), the aggregation happens here,
 // and a quiet hour costs one indexed read. No model call is involved.

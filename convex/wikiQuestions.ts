@@ -1,0 +1,220 @@
+import { v } from "convex/values";
+import { internalMutation, internalQuery } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { adminMutation, adminQuery, tenantQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
+
+/**
+ * Open questions (wiki-agents plan, phases 1-2): the staff's findings, for
+ * people to settle. The machine's ceiling is raising a question; the doors
+ * here are how a person sees and closes them — or how the sweep closes
+ * them itself when the pages have changed and the claim no longer stands.
+ */
+
+export const raiseQuestionInternal = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS")),
+    pageKeyA: v.string(),
+    claimA: v.string(),
+    pageKeyB: v.optional(v.string()),
+    claimB: v.optional(v.string()),
+    detail: v.optional(v.string()),
+    dedupeKey: v.string(),
+  },
+  handler: async (ctx, args): Promise<boolean> => {
+    // The same disagreement is raised once, however many nights it stands.
+    const existing = await ctx.db
+      .query("wikiOpenQuestions")
+      .withIndex("by_company_dedupe", (q) =>
+        q.eq("companyId", args.companyId).eq("dedupeKey", args.dedupeKey)
+      )
+      .first();
+    if (existing) return false;
+    const questionId = await ctx.db.insert("wikiOpenQuestions", {
+      companyId: args.companyId,
+      kind: args.kind,
+      pageKeyA: args.pageKeyA,
+      claimA: args.claimA.slice(0, 300),
+      ...(args.pageKeyB ? { pageKeyB: args.pageKeyB } : {}),
+      ...(args.claimB ? { claimB: args.claimB.slice(0, 300) } : {}),
+      ...(args.detail ? { detail: args.detail.slice(0, 500) } : {}),
+      dedupeKey: args.dedupeKey,
+      status: "OPEN",
+      raisedAt: Date.now(),
+    });
+    await ctx.db.insert("auditLogs", {
+      actionType: "WIKI_QUESTION_RAISED",
+      entityId: questionId.toString(),
+      entityType: "wikiOpenQuestions",
+      companyId: args.companyId,
+      timestamp: Date.now(),
+      metadata: JSON.stringify({ kind: args.kind, pageKeyA: args.pageKeyA, pageKeyB: args.pageKeyB ?? null }),
+    });
+    return true;
+  },
+});
+
+/** The sweep closes questions the pages have already answered: a claim no
+ * longer present in its page is a disagreement someone settled by editing. */
+export const autoResolveStaleQuestionsInternal = internalMutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args): Promise<number> => {
+    const open = await ctx.db
+      .query("wikiOpenQuestions")
+      .withIndex("by_company_status", (q) =>
+        q.eq("companyId", args.companyId).eq("status", "OPEN")
+      )
+      .take(100);
+    let resolved = 0;
+    for (const question of open) {
+      const claimStands = async (pageKey: string, claim: string): Promise<boolean> => {
+        const separator = pageKey.indexOf(":");
+        if (separator <= 0) return false;
+        const page = await ctx.db
+          .query("wikiPages")
+          .withIndex("by_company_kind_subject", (q) =>
+            q
+              .eq("companyId", args.companyId)
+              .eq("kind", pageKey.slice(0, separator) as "PRODUCT" | "POLICY" | "ISSUE" | "CUSTOMER" | "SOURCE")
+              .eq("subjectKey", pageKey.slice(separator + 1))
+          )
+          .unique();
+        if (!page) return false;
+        // A loose containment check on a normalised prefix: enough to know
+        // whether the quoted sentence survived the page's later rewrites.
+        const needle = claim.toLowerCase().replace(/\s+/g, " ").slice(0, 60);
+        return page.content.toLowerCase().replace(/\s+/g, " ").includes(needle);
+      };
+      const aStands = await claimStands(question.pageKeyA, question.claimA);
+      const bStands = question.pageKeyB && question.claimB
+        ? await claimStands(question.pageKeyB, question.claimB)
+        : true;
+      if (!aStands || !bStands) {
+        await ctx.db.patch(question._id, { status: "RESOLVED", resolvedAt: Date.now() });
+        resolved += 1;
+      }
+    }
+    return resolved;
+  },
+});
+
+function questionForScreen(question: {
+  _id: Id<"wikiOpenQuestions">;
+  kind: "CONTRADICTION" | "FRESHNESS";
+  pageKeyA: string;
+  claimA: string;
+  pageKeyB?: string;
+  claimB?: string;
+  detail?: string;
+  raisedAt: number;
+}) {
+  return {
+    questionId: question._id,
+    kind: question.kind,
+    pageKeyA: question.pageKeyA,
+    claimA: question.claimA,
+    pageKeyB: question.pageKeyB ?? null,
+    claimB: question.claimB ?? null,
+    detail: question.detail ?? null,
+    raisedAt: question.raisedAt,
+  };
+}
+
+export const listOpenQuestions = tenantQuery({
+  args: {},
+  handler: async (ctx) => {
+    const { companyId } = ctx;
+    if (!companyId) return [];
+    const rows = await ctx.db
+      .query("wikiOpenQuestions")
+      .withIndex("by_company_status", (q) => q.eq("companyId", companyId).eq("status", "OPEN"))
+      .order("desc")
+      .take(50);
+    return rows.map(questionForScreen);
+  },
+});
+
+export const listOpenQuestionsForCompany = adminQuery({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    const rows = await ctx.db
+      .query("wikiOpenQuestions")
+      .withIndex("by_company_status", (q) =>
+        q.eq("companyId", args.companyId).eq("status", "OPEN")
+      )
+      .order("desc")
+      .take(50);
+    return rows.map(questionForScreen);
+  },
+});
+
+async function dismissCore(
+  ctx: import("./_generated/server").MutationCtx,
+  args: { companyId: Id<"companies">; userId: Id<"users">; questionId: Id<"wikiOpenQuestions"> }
+): Promise<void> {
+  const question = await ctx.db.get(args.questionId);
+  if (!question || question.companyId !== args.companyId) throw new Error("Question not found.");
+  if (question.status !== "OPEN") return;
+  await ctx.db.patch(question._id, {
+    status: "DISMISSED",
+    resolvedAt: Date.now(),
+    resolvedBy: args.userId,
+  });
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_QUESTION_DISMISSED",
+    entityId: question._id.toString(),
+    entityType: "wikiOpenQuestions",
+    companyId: args.companyId,
+    timestamp: Date.now(),
+    metadata: JSON.stringify({ kind: question.kind, pageKeyA: question.pageKeyA }),
+  });
+}
+
+export const dismissOpenQuestion = adminMutation({
+  args: { questionId: v.id("wikiOpenQuestions") },
+  handler: async (ctx, args) => {
+    const companyId = getActiveCompanyId(ctx.user);
+    if (!companyId) throw new Error("No workspace selected.");
+    await dismissCore(ctx, { companyId, userId: ctx.userId, ...args });
+  },
+});
+
+export const dismissOpenQuestionForCompany = adminMutation({
+  args: { companyId: v.id("companies"), questionId: v.id("wikiOpenQuestions") },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    await dismissCore(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+/** The finder's reading list: one kind's pages, bounded, hubs and source
+ * notes excluded — synthesis pages are where contradictions bite. */
+export const getContradictionClusterInternal = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+    kind: v.union(v.literal("PRODUCT"), v.literal("POLICY"), v.literal("ISSUE")),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ pageKey: string; excerpt: string }>> => {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    return pages
+      .filter(
+        (page) =>
+          page.kind === args.kind &&
+          !page.subjectKey.endsWith("-index")
+      )
+      .slice(0, 12)
+      .map((page) => ({
+        pageKey: `${page.kind}:${page.subjectKey}`,
+        excerpt: page.content.slice(0, 700),
+      }));
+  },
+});

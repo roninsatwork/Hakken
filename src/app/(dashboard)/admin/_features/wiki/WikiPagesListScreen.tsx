@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { BookOpen, Network, Pin } from "lucide-react";
+import { AlertTriangle, BookOpen, Network, Pin, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
@@ -17,6 +17,7 @@ import {
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiImportBox } from "./WikiImportBox";
 
@@ -56,6 +57,23 @@ export function WikiPagesListScreen({
     companyId ? { companyId } : "skip"
   );
   const progress = companyId ? companyProgress : tenantProgress;
+
+  const tenantQuestions = useQuery(api.wikiQuestions.listOpenQuestions, companyId ? "skip" : {});
+  const companyQuestions = useQuery(
+    api.wikiQuestions.listOpenQuestionsForCompany,
+    companyId ? { companyId } : "skip"
+  );
+  const openQuestions = (companyId ? companyQuestions : tenantQuestions) ?? [];
+  const dismissTenant = useMutation(api.wikiQuestions.dismissOpenQuestion);
+  const dismissCompany = useMutation(api.wikiQuestions.dismissOpenQuestionForCompany);
+  const dismissQuestion = (questionId: (typeof openQuestions)[number]["questionId"]) =>
+    companyId ? dismissCompany({ companyId, questionId }) : dismissTenant({ questionId });
+  const pageHrefForKey = (pageKey: string) => {
+    const row = (rows ?? []).find(
+      (candidate) => `${candidate.kind}:${candidate.subjectKey}` === pageKey
+    );
+    return row ? `${basePath}/${row.pageId}` : null;
+  };
 
   const isLoading = rows === undefined;
   const totalCount = rows?.length ?? 0;
@@ -120,6 +138,66 @@ export function WikiPagesListScreen({
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* The staff's findings, for a person to settle (wiki-agents plan,
+          phase 1): the machine's ceiling is raising the question. */}
+      {openQuestions.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-[16px] border border-warning/40 bg-card/40 p-5">
+          <h2 className="flex items-center gap-2 text-[14px] font-semibold text-foreground">
+            <AlertTriangle className="w-4 h-4 text-warning" />
+            {t("questions.title", { count: openQuestions.length })}
+          </h2>
+          <p className="text-[12px] text-secondary">{t("questions.hint")}</p>
+          <ul className="flex flex-col gap-2">
+            {openQuestions.map((question) => {
+              const hrefA = pageHrefForKey(question.pageKeyA);
+              const hrefB = question.pageKeyB ? pageHrefForKey(question.pageKeyB) : null;
+              return (
+                <li
+                  key={question.questionId}
+                  className="flex items-start justify-between gap-3 rounded-[10px] border border-border-dim/60 bg-background px-4 py-3"
+                >
+                  <div className="flex flex-col gap-1 text-[13px]">
+                    <span className="text-foreground">
+                      {hrefA ? (
+                        <Link href={hrefA} className="text-brand hover:underline">
+                          {question.pageKeyA.split(":")[1]}
+                        </Link>
+                      ) : (
+                        question.pageKeyA.split(":")[1]
+                      )}
+                      : “{question.claimA}”
+                    </span>
+                    {question.pageKeyB && question.claimB && (
+                      <span className="text-foreground">
+                        {hrefB ? (
+                          <Link href={hrefB} className="text-brand hover:underline">
+                            {question.pageKeyB.split(":")[1]}
+                          </Link>
+                        ) : (
+                          question.pageKeyB.split(":")[1]
+                        )}
+                        : “{question.claimB}”
+                      </span>
+                    )}
+                    {question.detail && (
+                      <span className="text-[12px] text-secondary">{question.detail}</span>
+                    )}
+                  </div>
+                  <AdminWriteButton
+                    onClick={() => void dismissQuestion(question.questionId)}
+                    aria-label={t("questions.dismiss")}
+                    title={t("questions.dismiss")}
+                    className="text-muted hover:text-foreground transition-colors shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </AdminWriteButton>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

@@ -3380,6 +3380,11 @@
       "written": "{count, plural, =1 {1 pagina scritta} other {# pagine scritte}}",
       "improved": "{count, plural, =1 {1 pagina migliorata} other {# pagine migliorate}}",
       "nowReading": "Ora sta leggendo: {title}"
+    },
+    "questions": {
+      "title": "{count, plural, =1 {1 questione aperta} other {# questioni aperte}}",
+      "hint": "Lo staff del wiki ha trovato pagine in disaccordo. Risolvi ciascuna modificando o fissando la pagina giusta — oppure ignorala se non conta.",
+      "dismiss": "Ignora questa questione"
     }
   },
   "calls": {
