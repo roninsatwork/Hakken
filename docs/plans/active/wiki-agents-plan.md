@@ -1,7 +1,16 @@
 # The Wiki's Staff — Agents That Tend, Check, and File
 
-Status: Drafted 2026-08-15 from Anthony's own Second-Brain playbook; roster
-proposed, order below awaiting his confirmation. **Build starts on his go.**
+Status: **Delivered 2026-08-15**, all six phases, on Anthony's "continue
+until the plan is complete." The staff of seven are live agents on the
+Agents screen — Distiller, Tidier, Linker, Contradiction Finder, Freshness
+Checker, Reviewer, Filing Clerk — each switchable, run-recorded, and
+undeletable. Full-import-first landed with the exam re-sat (16 v 15, gate
+passed; the sitting that put source notes on the chooser's menu scored 14
+and was reverted — recorded in the commit trail). The Contradiction
+Finder's first live run raised zero questions on the two-day-old wiki,
+which its own prompt calls the right answer. Honest bounds: the Reviewer's
+claims preview is a bullet list rather than full proposed-page previews,
+and the Filing Clerk considers only staff answers that drew on 2+ pages.
 Owner: Anthony
 
 The specification behind this plan is not mine: it is the prompt library
