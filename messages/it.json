@@ -3339,7 +3339,8 @@
       "CUSTOMER": "Cliente",
       "PRODUCT": "Prodotto",
       "POLICY": "Regola",
-      "ISSUE": "Questione ricorrente"
+      "ISSUE": "Questione ricorrente",
+      "SOURCE": "Documento fonte"
     },
     "map": {
       "open": "Vista mappa",

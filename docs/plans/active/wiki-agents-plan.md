@@ -141,8 +141,11 @@ leave the wiki untouched.
 
 ## Order and size
 
-Phase 0 first — the staff visible on the Agents screen — then as numbered:
-contradictions, freshness, full-import-first, reviewer, write-back.
+Reordered 2026-08-15 at Anthony's direction, for tomorrow's gain first:
+**full-import-first, then Phase 0 (the faces — so every agent hire lands
+on the Agents screen as instructed), then the Contradiction Finder**, then
+freshness, reviewer, write-back. The exam is re-sat the day
+full-import-first lands, so the expected score lift is shown, not claimed.
 **≈6.5 build-days**, each landing separately, each stoppable.
 The order puts pure tidy-up value first (his ask), the structural change
 in the middle where the layers it needs already exist, and the two

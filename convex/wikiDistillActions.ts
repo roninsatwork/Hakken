@@ -36,6 +36,20 @@ async function distilOne(
     text: string;
   }
 ): Promise<DistilResult> {
+  // FULL IMPORT FIRST (the playbook's mandatory order, wiki-agents plan
+  // phase 3): the document becomes its own wiki note, substantially
+  // intact, before any synthesis happens. Linking and synthesis follow.
+  const fullSourceLabel = args.sourceUrl
+    ? `Website · ${args.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
+    : `Document · ${args.title.slice(0, 80)}`;
+  await ctx.runMutation(internal.wikiPages.upsertSourceNoteInternal, {
+    companyId: args.companyId,
+    documentId: args.documentId,
+    title: args.title,
+    text: args.text,
+    sourceLabel: fullSourceLabel,
+  });
+
   const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
     useCase: "fast-chat",
   });
@@ -99,21 +113,67 @@ async function distilOne(
     else result.pagesWritten += 1;
   }
 
-  // Topics established by the same document are related; both ends recorded.
+  // Topics established by the same document are related; both ends
+  // recorded — and every topic links down to the source note it stands on,
+  // the note up to each topic it taught (linking second, per the order).
+  const sourceNoteKey = linkKeyFor("SOURCE", args.documentId);
+  const topicKeys: string[] = [];
   for (const topic of topics) {
     const siblings = topics
       .filter((other) => other !== topic)
       .map((other) => linkKeyFor(other.kind, other.slug));
-    if (siblings.length === 0) continue;
+    topicKeys.push(linkKeyFor(topic.kind, topic.slug));
     await ctx.runMutation(internal.wikiPages.addLinksInternal, {
       companyId: args.companyId,
       kind: topic.kind,
       subjectKey: topic.slug,
-      add: siblings,
+      add: [...siblings, sourceNoteKey],
+    });
+  }
+  if (topicKeys.length > 0) {
+    await ctx.runMutation(internal.wikiPages.addLinksInternal, {
+      companyId: args.companyId,
+      kind: "SOURCE",
+      subjectKey: args.documentId,
+      add: topicKeys,
     });
   }
   return result;
 }
+
+/**
+ * The one-time catch-up for phase 3: documents distilled before the
+ * source-note layer existed get their full notes retroactively, linked to
+ * the synthesis pages their receipts already name. Mechanical — no model
+ * calls — and idempotent, so re-running costs nothing.
+ */
+export const backfillSourceNotes = internalAction({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args): Promise<{ notes: number }> => {
+    const batch = await ctx.runQuery(internal.wikiDistill.getDistilledDocumentsInternal, {
+      companyId: args.companyId,
+    });
+    let notes = 0;
+    for (const document of batch) {
+      if (!document.text.trim()) continue;
+      await ctx.runMutation(internal.wikiPages.upsertSourceNoteInternal, {
+        companyId: args.companyId,
+        documentId: document.documentId,
+        title: document.title,
+        text: document.text,
+        sourceLabel: document.sourceUrl
+          ? `Website · ${document.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
+          : `Document · ${document.title.slice(0, 80)}`,
+      });
+      await ctx.runMutation(internal.wikiPages.linkSourceNoteToTaughtPagesInternal, {
+        companyId: args.companyId,
+        documentId: document.documentId,
+      });
+      notes += 1;
+    }
+    return { notes };
+  },
+});
 
 /** The on-ready hook: a document that just finished importing teaches the
  * wiki by itself. Scheduled from the ingestion landing in knowledge.ts. */

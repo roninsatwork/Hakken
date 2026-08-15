@@ -3339,7 +3339,8 @@
       "CUSTOMER": "Customer",
       "PRODUCT": "Product",
       "POLICY": "Policy",
-      "ISSUE": "Recurring issue"
+      "ISSUE": "Recurring issue",
+      "SOURCE": "Source document"
     },
     "map": {
       "open": "Map view",

@@ -18,10 +18,15 @@ const wikiKindValidator = v.union(
   v.literal("CUSTOMER"),
   v.literal("PRODUCT"),
   v.literal("POLICY"),
-  v.literal("ISSUE")
+  v.literal("ISSUE"),
+  v.literal("SOURCE")
 );
 
-type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE";
+type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE";
+
+/** A source note keeps a document substantially intact — far above the
+ * briefing-note cap, and never sent through a model. */
+export const WIKI_SOURCE_NOTE_MAX_CHARS = 24_000;
 
 async function getPage(
   ctx: QueryCtx,
@@ -76,6 +81,38 @@ export const getPageOfKindInternal = internalQuery({
   args: { companyId: v.id("companies"), kind: wikiKindValidator, subjectKey: v.string() },
   handler: async (ctx, args): Promise<Doc<"wikiPages"> | null> => {
     return await getPage(ctx, args.companyId, args.kind, args.subjectKey);
+  },
+});
+
+/** The backfill's road from a document to its synthesis pages: every page
+ * whose receipts name the document gets linked to its source note, both
+ * ways (wiki-agents plan, phase 3). Mechanical and idempotent. */
+export const linkSourceNoteToTaughtPagesInternal = internalMutation({
+  args: { companyId: v.id("companies"), documentId: v.string() },
+  handler: async (ctx, args): Promise<void> => {
+    const note = await getPage(ctx, args.companyId, "SOURCE", args.documentId);
+    if (!note) return;
+    const receipts = await ctx.db
+      .query("wikiPageSources")
+      .withIndex("by_company_ref", (q) =>
+        q.eq("companyId", args.companyId).eq("kind", "DOCUMENT").eq("ref", args.documentId)
+      )
+      .take(100);
+    const noteKey = linkKeyFor("SOURCE", args.documentId);
+    const taughtKeys: string[] = [];
+    for (const receipt of receipts) {
+      if (receipt.pageId === note._id) continue;
+      const taught = await ctx.db.get(receipt.pageId);
+      if (!taught) continue;
+      taughtKeys.push(linkKeyFor(taught.kind, taught.subjectKey));
+      if (!taught.links.includes(noteKey)) {
+        await ctx.db.patch(taught._id, { links: [...taught.links, noteKey] });
+      }
+    }
+    const merged = [...new Set([...note.links, ...taughtKeys])];
+    if (merged.length !== note.links.length) {
+      await ctx.db.patch(note._id, { links: merged });
+    }
   },
 });
 
@@ -244,24 +281,97 @@ export const getWikiAnswerContextInternal = internalQuery({
  * The index as a model reads it (wiki-replaces-knowledge, stage two): every
  * page's name and first line, small enough to hand to a fast model whole —
  * exactly how Karpathy's agent chooses pages. Customer pages appear only
- * for surfaces allowed to see them.
+ * for surfaces allowed to see them; source notes only for readers that
+ * want fine print (the answer chooser yes, the prose weaver no).
  */
 export const getWikiIndexInternal = internalQuery({
-  args: { companyId: v.id("companies"), includeCustomerPages: v.boolean() },
+  args: {
+    companyId: v.id("companies"),
+    includeCustomerPages: v.boolean(),
+    includeSourceNotes: v.optional(v.boolean()),
+  },
   handler: async (
     ctx,
     args
-  ): Promise<Array<{ key: string; hint: string }>> => {
+  ): Promise<Array<{ key: string; title: string; hint: string }>> => {
     const pages = await ctx.db
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
-      .take(500);
+      .take(800);
     return pages
       .filter((page) => args.includeCustomerPages || page.kind !== "CUSTOMER")
+      .filter((page) => (args.includeSourceNotes ?? false) || page.kind !== "SOURCE")
       .map((page) => ({
         key: linkKeyFor(page.kind, page.subjectKey),
+        title: page.title,
         hint: page.content.slice(0, 90).replace(/\s+/g, " "),
       }));
+  },
+});
+
+/**
+ * Full import first (wiki-agents plan, phase 3): one wiki note per
+ * document, substantially intact — mechanical, revisioned when the
+ * document changes, receipted to the document it mirrors, and never
+ * touched by a model. The synthesis pages stand on this layer.
+ */
+export const upsertSourceNoteInternal = internalMutation({
+  args: {
+    companyId: v.id("companies"),
+    documentId: v.string(),
+    title: v.string(),
+    text: v.string(),
+    sourceLabel: v.string(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    const now = Date.now();
+    const content = args.text.slice(0, WIKI_SOURCE_NOTE_MAX_CHARS);
+    const source = `DOCUMENT:${args.documentId}`;
+    const existing = await getPage(ctx, args.companyId, "SOURCE", args.documentId);
+    if (!existing) {
+      const pageId = await ctx.db.insert("wikiPages", {
+        companyId: args.companyId,
+        kind: "SOURCE",
+        subjectKey: args.documentId,
+        title: args.title,
+        content,
+        links: [],
+        pinnedCorrections: [],
+        rewriteCount: 1,
+        lastRewriteSource: source,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("auditLogs", {
+        actionType: "WIKI_PAGE_CREATED",
+        entityId: pageId.toString(),
+        entityType: "wikiPages",
+        companyId: args.companyId,
+        timestamp: now,
+        metadata: JSON.stringify({ subjectKey: args.documentId, source, kind: "SOURCE", chars: content.length }),
+      });
+      await upsertSourceReceipt(ctx, {
+        pageId,
+        companyId: args.companyId,
+        source,
+        sourceLabel: args.sourceLabel,
+      });
+      return;
+    }
+    if (existing.content !== content) {
+      await ctx.db.insert("wikiPageRevisions", {
+        pageId: existing._id,
+        companyId: args.companyId,
+        content: existing.content,
+        source,
+        createdAt: now,
+      });
+      await ctx.db.patch(existing._id, {
+        content,
+        rewriteCount: existing.rewriteCount + 1,
+        updatedAt: now,
+      });
+    }
   },
 });
 
@@ -291,14 +401,24 @@ export const getPagesByKeysInternal = internalQuery({
     };
     for (const key of args.keys.slice(0, 5)) await admit(key);
     if (chosen.length > 0) {
-      for (const link of chosen[0].links.slice(0, 2)) await admit(link);
+      // The hop, fine-print-first: the best page's own source note carries
+      // the detail the synthesis dropped, so it gets the first seat; one
+      // sibling page follows if room remains.
+      const hops = [...chosen[0].links].sort((a, b) => {
+        const aSource = a.startsWith("SOURCE:") ? 0 : 1;
+        const bSource = b.startsWith("SOURCE:") ? 0 : 1;
+        return aSource - bSource;
+      });
+      for (const link of hops.slice(0, 2)) await admit(link);
     }
 
     const parts: string[] = [];
     const pageKeys: string[] = [];
     let used = 0;
     for (const page of chosen) {
-      const rendered = renderPageForReading(page);
+      // A source note can be bigger than the whole budget; it is truncated
+      // to fit rather than blowing the reading pile open.
+      const rendered = renderPageForReading(page).slice(0, budget);
       if (used + rendered.length > budget && parts.length > 0) break;
       parts.push(rendered);
       pageKeys.push(linkKeyFor(page.kind, page.subjectKey));
@@ -510,6 +630,8 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
       .filter(
         (page) =>
           page.kind !== "CUSTOMER" &&
+          // Source notes get their links mechanically from the distiller.
+          page.kind !== "SOURCE" &&
           !page.subjectKey.endsWith("-index") &&
           page.links.length < 3
       )

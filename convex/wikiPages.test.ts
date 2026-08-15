@@ -589,6 +589,124 @@ describe("links live in the writing", () => {
   });
 });
 
+describe("full import first: the source-note layer", () => {
+  test("a document becomes its own full note — capped, revisioned, receipted, never model-shaped", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+
+    const longText = `The whole document. ${"detail ".repeat(50)}`;
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: "doc-1",
+      title: "How we work — ronins.co.uk",
+      text: longText,
+      sourceLabel: "Website · ronins.co.uk/how-we-work",
+    });
+    // The same text again is a no-op; changed text files a revision.
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: "doc-1",
+      title: "How we work — ronins.co.uk",
+      text: longText,
+      sourceLabel: "Website · ronins.co.uk/how-we-work",
+    });
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: "doc-1",
+      title: "How we work — ronins.co.uk",
+      text: "The document, re-scraped and different.",
+      sourceLabel: "Website · ronins.co.uk/how-we-work",
+    });
+
+    const { note, revisions } = await t.run(async (ctx) => {
+      const note = await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "SOURCE").eq("subjectKey", "doc-1")
+        )
+        .unique();
+      return {
+        note,
+        revisions: await ctx.db.query("wikiPageRevisions").collect(),
+      };
+    });
+    expect(note?.content).toBe("The document, re-scraped and different.");
+    expect(note?.title).toContain("How we work");
+    expect(revisions).toHaveLength(1);
+    expect(revisions[0].content).toContain("The whole document.");
+  });
+
+  test("the backfill road links a source note to every page its document taught", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey: "how-we-work",
+      title: "how-we-work",
+      content: "Paid discovery first.",
+      source: "DOCUMENT:doc-1",
+    });
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: "doc-1",
+      title: "How we work",
+      text: "The full document.",
+      sourceLabel: "Website · ronins.co.uk/how-we-work",
+    });
+    await t.mutation(internal.wikiPages.linkSourceNoteToTaughtPagesInternal, {
+      companyId,
+      documentId: "doc-1",
+    });
+
+    const { note, taught } = await t.run(async (ctx) => ({
+      note: await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "SOURCE").eq("subjectKey", "doc-1")
+        )
+        .unique(),
+      taught: await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", companyId).eq("kind", "POLICY").eq("subjectKey", "how-we-work")
+        )
+        .unique(),
+    }));
+    expect(note?.links).toContain("POLICY:how-we-work");
+    expect(taught?.links).toContain("SOURCE:doc-1");
+  });
+
+  test("source notes stay out of the prose-weaving index but are open to the answer chooser", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: "doc-1",
+      title: "How we work",
+      text: "The full document.",
+      sourceLabel: "Website · x",
+    });
+
+    const weaving = await t.query(internal.wikiPages.getWikiIndexInternal, {
+      companyId,
+      includeCustomerPages: false,
+    });
+    const choosing = await t.query(internal.wikiPages.getWikiIndexInternal, {
+      companyId,
+      includeCustomerPages: false,
+      includeSourceNotes: true,
+    });
+    expect(weaving.map((entry) => entry.key)).not.toContain("SOURCE:doc-1");
+    expect(choosing.map((entry) => entry.key)).toContain("SOURCE:doc-1");
+
+    // And the linker never offers a source note to the model either.
+    await expect(
+      t.query(internal.wikiPages.listSparselyLinkedTopicsInternal, { companyId, limit: 10 })
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("the rewrite contract", () => {
   test("an empty or wildly over-long answer is refused; barely over is clamped", () => {
     expect(validateRewrittenPage("   ")).toEqual({ ok: false, reason: "empty" });

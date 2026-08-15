@@ -3210,7 +3210,11 @@ export default defineSchema({
       v.literal("CUSTOMER"),
       v.literal("PRODUCT"),
       v.literal("POLICY"),
-      v.literal("ISSUE")
+      v.literal("ISSUE"),
+      // Full-import-first (wiki-agents plan, phase 3): one full note per
+      // ingested document, substantially intact — the layer the synthesis
+      // pages stand on, mechanical and never model-shortened.
+      v.literal("SOURCE")
     ),
     subjectKey: v.string(),
     title: v.string(),
@@ -3260,7 +3264,10 @@ export default defineSchema({
     addedAt: v.number(),
   })
     .index("by_page", ["pageId", "addedAt"])
-    .index("by_page_ref", ["pageId", "kind", "ref"]),
+    .index("by_page_ref", ["pageId", "kind", "ref"])
+    // Reverse lookup: which pages did this document teach — the source-note
+    // backfill's road from a document to its synthesis pages.
+    .index("by_company_ref", ["companyId", "kind", "ref"]),
 
   /**
    * One row per company: the distiller's progress, drawn on the Wiki

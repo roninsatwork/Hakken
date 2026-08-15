@@ -111,6 +111,36 @@ export const claimNextDistillBatchInternal = internalMutation({
   },
 });
 
+/** Already-distilled documents with their text — the source-note backfill's
+ * shopping list (wiki-agents plan, phase 3). Bounded and mechanical. */
+export const getDistilledDocumentsInternal = internalQuery({
+  args: { companyId: v.id("companies") },
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ documentId: Id<"knowledgeDocuments">; title: string; sourceUrl: string | null; text: string }>> => {
+    const documents = await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(1000);
+    const result = [];
+    for (const document of documents) {
+      if (document.status !== "ready" || document.threadId || document.wikiDistilledAt === undefined) {
+        continue;
+      }
+      const text = await distillableText(ctx, document);
+      if (!text.trim()) continue;
+      result.push({
+        documentId: document._id,
+        title: document.title,
+        sourceUrl: document.sourceUrl ?? null,
+        text,
+      });
+    }
+    return result;
+  },
+});
+
 export const recordDistillProgressInternal = internalMutation({
   args: {
     companyId: v.id("companies"),

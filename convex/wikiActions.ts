@@ -35,6 +35,12 @@ export const selectWikiContextForQuery = internalAction({
     const index = await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
       companyId: args.companyId,
       includeCustomerPages: args.includeCustomerPages,
+      // Synthesis first (the playbook's query order): the chooser picks
+      // from the tended pages. Fine print arrives through the hop — chosen
+      // pages link down to their source notes, and the reader follows.
+      // Offering all the source notes here was tried and measurably
+      // diluted the choosing (exam 16→14, 2026-08-15); do not repeat it.
+      includeSourceNotes: false,
     });
     if (index.length === 0) return { context: "", pageKeys: [] };
 

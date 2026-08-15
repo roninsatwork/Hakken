@@ -28,9 +28,10 @@ const KIND_CLASS: Record<string, string> = {
   PRODUCT: "text-info",
   POLICY: "text-warning",
   ISSUE: "text-secondary",
+  SOURCE: "text-muted",
 };
 
-const MAX_NODES = 250;
+const MAX_NODES = 400;
 const WIDTH = 1000;
 const HEIGHT = 700;
 const PADDING = 70;
