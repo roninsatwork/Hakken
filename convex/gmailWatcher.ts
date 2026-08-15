@@ -378,6 +378,7 @@ async function processMessage(
       subjectKey: matchedCustomerKey,
       eventLabel: "email exchange",
       source: `EMAIL:${summary.id}`,
+      sourceLabel: `Email · ${(summary.subject || "(no subject)").slice(0, 80)}`,
       eventText:
         `Subject: ${summary.subject || "(no subject)"}\n\n` +
         `They wrote:\n${newestBody.slice(0, 3000)}\n\n` +

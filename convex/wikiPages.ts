@@ -8,6 +8,7 @@ import {
   WIKI_PAGE_MAX_CHARS,
   linkKeyFor,
   normaliseEmail,
+  parseSourceKey,
   renderPageForReading,
 } from "./wikiRewriteService";
 import { normalisePhoneNumber } from "./telephonyService";
@@ -138,6 +139,43 @@ export const findTopicPagesForQueryInternal = internalQuery({
  * otherwise files the outgoing text as a revision and replaces the body.
  * Never touches the pinned layer.
  */
+/**
+ * The receipt behind a page (wiki-replaces-knowledge plan, screen 3): the
+ * teaching source recorded once per page-and-source pair. Tending carries
+ * no colon and HUMAN edits are the audit trail's job — both skipped here.
+ */
+async function upsertSourceReceipt(
+  ctx: MutationCtx,
+  args: { pageId: Id<"wikiPages">; companyId: Id<"companies">; source: string; sourceLabel?: string }
+): Promise<void> {
+  const parsed = parseSourceKey(args.source);
+  if (!parsed || parsed.kind === "HUMAN") return;
+  const existing = await ctx.db
+    .query("wikiPageSources")
+    .withIndex("by_page_ref", (q) =>
+      q.eq("pageId", args.pageId).eq("kind", parsed.kind).eq("ref", parsed.ref)
+    )
+    .unique();
+  if (existing) return;
+  const fallbackLabels = { DOCUMENT: "Document", PHONE_CALL: "Phone call", EMAIL: "Email" } as const;
+  await ctx.db.insert("wikiPageSources", {
+    pageId: args.pageId,
+    companyId: args.companyId,
+    kind: parsed.kind,
+    ref: parsed.ref,
+    label: args.sourceLabel?.trim() || fallbackLabels[parsed.kind],
+    addedAt: Date.now(),
+  });
+  if (parsed.kind === "DOCUMENT") {
+    const page = await ctx.db.get(args.pageId);
+    if (page) {
+      await ctx.db.patch(args.pageId, {
+        documentSourceCount: (page.documentSourceCount ?? 0) + 1,
+      });
+    }
+  }
+}
+
 export const applyRewriteInternal = internalMutation({
   args: {
     companyId: v.id("companies"),
@@ -145,6 +183,8 @@ export const applyRewriteInternal = internalMutation({
     title: v.string(),
     content: v.string(),
     source: v.string(),
+    /** What the page's source list shows for this teacher. */
+    sourceLabel: v.optional(v.string()),
     /** Absent means CUSTOMER — the phase-1 callers never say. */
     kind: v.optional(wikiKindValidator),
   },
@@ -176,13 +216,26 @@ export const applyRewriteInternal = internalMutation({
         timestamp: now,
         metadata: JSON.stringify({ subjectKey: args.subjectKey, source: args.source, chars: content.length }),
       });
+      await upsertSourceReceipt(ctx, {
+        pageId,
+        companyId: args.companyId,
+        source: args.source,
+        ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
+      });
       return;
     }
 
     // The unchanged case is a real outcome, not a failure: the model judged
-    // the event added nothing. No revision, no audit noise.
+    // the event added nothing. No revision, no audit noise — but the teacher
+    // is still a receipt: it looked, and the page already knew.
     if (existing.content === content) {
       await ctx.db.patch(existing._id, { updatedAt: now, lastRewriteSource: args.source });
+      await upsertSourceReceipt(ctx, {
+        pageId: existing._id,
+        companyId: args.companyId,
+        source: args.source,
+        ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
+      });
       return;
     }
 
@@ -211,6 +264,12 @@ export const applyRewriteInternal = internalMutation({
         beforeChars: existing.content.length,
         afterChars: content.length,
       }),
+    });
+    await upsertSourceReceipt(ctx, {
+      pageId: existing._id,
+      companyId: args.companyId,
+      source: args.source,
+      ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
     });
   },
 });
@@ -245,6 +304,9 @@ async function listPagesRows(ctx: QueryCtx, companyId: Id<"companies">, search?:
       preview: page.content.slice(0, 160),
       rewriteCount: page.rewriteCount,
       pinnedCount: page.pinnedCorrections.length,
+      // Denormalised in upsertSourceReceipt: counting per row here would be
+      // an N+1 across the whole wiki on every keystroke of the search box.
+      sourceCount: page.documentSourceCount ?? 0,
       lastRewriteSource: page.lastRewriteSource,
       updatedAt: page.updatedAt,
     }));
@@ -258,9 +320,20 @@ async function pageDetailFor(ctx: QueryCtx, companyId: Id<"companies">, pageId: 
     .withIndex("by_page", (q) => q.eq("pageId", page._id))
     .order("desc")
     .take(20);
+  const sources = await ctx.db
+    .query("wikiPageSources")
+    .withIndex("by_page", (q) => q.eq("pageId", page._id))
+    .order("desc")
+    .take(50);
   return {
     pageId: page._id,
     kind: page.kind,
+    sources: sources.map((source) => ({
+      kind: source.kind,
+      ref: source.ref,
+      label: source.label,
+      addedAt: source.addedAt,
+    })),
     title: page.title,
     subjectKey: page.subjectKey,
     content: page.content,

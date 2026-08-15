@@ -216,6 +216,40 @@ export function WikiPageDetailScreen({
         </div>
       </section>
 
+      {/* The receipts (design, screen 3): what taught this page. Originals
+          are kept underneath the wiki precisely so these can always open. */}
+      <section className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
+        <h2 className="text-[14px] font-semibold text-foreground">{t("sourcesPanel.title")}</h2>
+        <p className="text-[12px] text-secondary">{t("sourcesPanel.hint")}</p>
+        {detail.sources.length === 0 ? (
+          <p className="text-[13px] text-muted">{t("sourcesPanel.none")}</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {detail.sources.map((source) => {
+              const href =
+                source.kind === "PHONE_CALL"
+                  ? `/app/calls/${source.ref}`
+                  : source.kind === "DOCUMENT" && companyId
+                    ? `/admin/companies/${companyId}/ai/knowledge/${source.ref}`
+                    : null;
+              return (
+                <li
+                  key={`${source.kind}:${source.ref}`}
+                  className="flex items-center justify-between gap-3 rounded-[9px] border border-border-dim/60 bg-background px-4 py-2.5 text-[13px]"
+                >
+                  <span className="text-secondary truncate">{source.label}</span>
+                  {href ? (
+                    <Link href={href} className="text-[12px] text-brand hover:underline whitespace-nowrap">
+                      {t("sourcesPanel.open")}
+                    </Link>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
       {/* The walkable history: which conversation taught which change. */}
       <section className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
         <h2 className="flex items-center gap-2 text-[14px] font-semibold text-foreground">

@@ -3278,7 +3278,8 @@
       "customer": "Pagina",
       "remembers": "Cosa ricorda Sonae",
       "lastChange": "Ultima modifica",
-      "rewrites": "Riscritture"
+      "rewrites": "Riscritture",
+      "sources": "Fonti"
     },
     "empty": "Ancora nessuna pagina",
     "emptyState": "Ancora nessuna pagina. Quando Sonae parla con un cliente conosciuto al telefono o via email, la sua pagina appare qui.",
@@ -3326,6 +3327,12 @@
         "title": "Cronologia",
         "hint": "Ogni voce mostra come si leggeva la pagina prima di una modifica, e cosa ha causato la modifica.",
         "none": "Ancora nessuna modifica."
+      },
+      "sourcesPanel": {
+        "title": "Da dove viene",
+        "hint": "I documenti e le conversazioni che hanno insegnato questa pagina. Gli originali sono conservati, quindi tutto qui può essere verificato.",
+        "none": "Finora ha imparato dalle conversazioni — ancora nessun documento.",
+        "open": "Apri l'originale"
       }
     },
     "kinds": {
@@ -3343,6 +3350,35 @@
       "zoomIn": "Ingrandisci",
       "zoomOut": "Riduci",
       "zoomReset": "Ripristina la vista"
+    },
+    "import": {
+      "tabs": {
+        "website": "Sito web",
+        "file": "File",
+        "text": "Testo"
+      },
+      "websitePlaceholder": "Incolla l'indirizzo di un sito e premi Leggilo — Sonae lo leggerà e scriverà le pagine",
+      "textTitlePlaceholder": "Di cosa si tratta? (un titolo breve)",
+      "textBodyPlaceholder": "Incolla o scrivi qui la conoscenza...",
+      "readIt": "Leggilo",
+      "feedback": {
+        "website": "Trovate {count} pagine. Sonae le sta leggendo — il wiki qui sotto si riempie man mano.",
+        "text": "Sonae lo sta leggendo — il wiki qui sotto si aggiorna quando ha finito.",
+        "files": "{count, plural, =1 {File caricato. Sonae lo sta leggendo.} other {# file caricati. Sonae li sta leggendo.}}"
+      },
+      "errors": {
+        "generic": "Non è andata a buon fine. Riprova.",
+        "missingUrl": "Prima incolla l'indirizzo di un sito.",
+        "missingText": "Servono sia un titolo sia del testo.",
+        "missingFile": "Prima scegli un file."
+      }
+    },
+    "progress": {
+      "title": "Sonae sta leggendo",
+      "count": "{done} di {total} documenti",
+      "written": "{count, plural, =1 {1 pagina scritta} other {# pagine scritte}}",
+      "improved": "{count, plural, =1 {1 pagina migliorata} other {# pagine migliorate}}",
+      "nowReading": "Ora sta leggendo: {title}"
     }
   },
   "calls": {

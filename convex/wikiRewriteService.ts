@@ -159,3 +159,63 @@ export function parseTopicSuggestions(raw: string): TopicSuggestion[] {
 export function linkKeyFor(kind: string, subjectKey: string): string {
   return `${kind}:${subjectKey}`;
 }
+
+// ---------------------------------------------------------------------------
+// The distiller (wiki-replaces-knowledge plan, stage one): a document in,
+// topic pages out. Importing IS how the wiki learns — these helpers are used
+// by the on-ready hook and the one-time catch-up alike, never by a button.
+// ---------------------------------------------------------------------------
+
+/** A document may establish more than a conversation; still bounded. */
+export const WIKI_TOPICS_PER_DOCUMENT = 3;
+
+export function buildDocumentTopicInstruction(): string {
+  return [
+    "You read one company knowledge document and name the durable topics it establishes about the company.",
+    "Three kinds count: PRODUCT (something the company sells or does), POLICY (how the company works — hours, delivery, returns, invoicing, guarantees), ISSUE (a problem or question the document exists to answer).",
+    `Reply with strict JSON, nothing else: {"topics": [{"kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "learned": string}]} — at most ${WIKI_TOPICS_PER_DOCUMENT} topics, and an empty list is right for pages that establish nothing durable (navigation, legal boilerplate, news).`,
+    "slug is a short kebab-case name (e.g. \"sports-hall-flooring\"). Reuse the obvious name for the subject rather than inventing a new variant — the wiki keeps one page per subject.",
+    "learned is two or three plain sentences stating what the document establishes about the topic — the facts a colleague would keep, not a summary of the writing.",
+  ].join("\n");
+}
+
+/** The model's document-topic JSON, distrusted like every other. */
+export function parseDocumentTopicSuggestions(raw: string): TopicSuggestion[] {
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return [];
+  let parsed: { topics?: unknown };
+  try {
+    parsed = JSON.parse(jsonMatch[0]) as { topics?: unknown };
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed.topics)) return [];
+  const suggestions: TopicSuggestion[] = [];
+  for (const entry of parsed.topics) {
+    if (suggestions.length >= WIKI_TOPICS_PER_DOCUMENT) break;
+    if (!entry || typeof entry !== "object") continue;
+    const candidate = entry as { kind?: unknown; slug?: unknown; learned?: unknown };
+    if (!WIKI_TOPIC_KINDS.includes(candidate.kind as WikiTopicKind)) continue;
+    if (typeof candidate.slug !== "string" || typeof candidate.learned !== "string") continue;
+    const slug = normaliseTopicSlug(candidate.slug);
+    const learned = candidate.learned.trim();
+    if (!slug || !learned) continue;
+    suggestions.push({ kind: candidate.kind as WikiTopicKind, slug, learned });
+  }
+  return suggestions;
+}
+
+/** The source string a rewrite carries, decomposed for the receipts list. */
+export function parseSourceKey(
+  source: string
+): { kind: "DOCUMENT" | "PHONE_CALL" | "EMAIL" | "HUMAN"; ref: string } | null {
+  const separator = source.indexOf(":");
+  if (separator <= 0) return null;
+  const kind = source.slice(0, separator);
+  const ref = source.slice(separator + 1);
+  if (!ref) return null;
+  if (kind === "DOCUMENT" || kind === "PHONE_CALL" || kind === "EMAIL" || kind === "HUMAN") {
+    return { kind, ref };
+  }
+  return null;
+}

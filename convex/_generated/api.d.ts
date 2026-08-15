@@ -233,6 +233,8 @@ import type * as webhookSignatureService from "../webhookSignatureService.js";
 import type * as webhooks from "../webhooks.js";
 import type * as widgets from "../widgets.js";
 import type * as wikiActions from "../wikiActions.js";
+import type * as wikiDistill from "../wikiDistill.js";
+import type * as wikiDistillActions from "../wikiDistillActions.js";
 import type * as wikiPages from "../wikiPages.js";
 import type * as wikiRewriteEval from "../wikiRewriteEval.js";
 import type * as wikiRewriteService from "../wikiRewriteService.js";
@@ -478,6 +480,8 @@ declare const fullApi: ApiFromModules<{
   webhooks: typeof webhooks;
   widgets: typeof widgets;
   wikiActions: typeof wikiActions;
+  wikiDistill: typeof wikiDistill;
+  wikiDistillActions: typeof wikiDistillActions;
   wikiPages: typeof wikiPages;
   wikiRewriteEval: typeof wikiRewriteEval;
   wikiRewriteService: typeof wikiRewriteService;

@@ -89,6 +89,7 @@ export const runAfterCallStep = internalAction({
         subjectKey: matchedKey,
         eventLabel: "phone call",
         source: `PHONE_CALL:${args.callId}`,
+        sourceLabel: `Phone call · ${matchedKey}`,
         eventText: `Summary: ${summary}\n\nTranscript:\n${transcript}`,
       });
     }

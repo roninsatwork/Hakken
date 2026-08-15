@@ -1,0 +1,204 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { useAction, useMutation } from "convex/react";
+import { useTranslations } from "next-intl";
+import { FileUp, Globe, Loader2, Type } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { getErrorMessage } from "@/src/lib/errors";
+import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
+import {
+  buildUploadTitle,
+  collectPickedFiles,
+} from "@/src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils";
+
+/**
+ * The one import (wiki-replaces-knowledge plan, screen 1): a website, a
+ * file or some text goes in here, and what comes back is wiki pages — the
+ * distiller runs off the same ingestion this box triggers, so there is
+ * nothing to run twice and no second button anywhere. Calls the exact
+ * doors the Knowledge screen has always called; those screens retire in
+ * stage three, this box is their successor.
+ */
+export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
+  const t = useTranslations("aiPages.import");
+  const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
+  const queueWebsiteUrls = useMutation(api.knowledge.queueWebsiteUrls);
+  const saveManualText = useMutation(api.knowledge.saveManualText);
+  const generateUploadUrl = useMutation(api.knowledge.generateUploadUrl);
+  const saveDocument = useMutation(api.knowledge.saveDocument);
+  const startKnowledgeFileQueue = useMutation(api.knowledge.startKnowledgeFileQueue);
+
+  const scopeArgs = companyId ? { companyId } : {};
+  const [tab, setTab] = useState<"website" | "file" | "text">("website");
+  const [url, setUrl] = useState("");
+  const [textTitle, setTextTitle] = useState("");
+  const [textBody, setTextBody] = useState("");
+  const [isBusy, setIsBusy] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const run = async (work: () => Promise<string>) => {
+    setIsBusy(true);
+    setError("");
+    setFeedback("");
+    try {
+      setFeedback(await work());
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, t("errors.generic")));
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const importWebsite = () =>
+    run(async () => {
+      const cleaned = url.trim();
+      if (!cleaned) throw new Error(t("errors.missingUrl"));
+      const links: string[] = await mapWebsite({ url: cleaned });
+      await queueWebsiteUrls({ ...scopeArgs, urls: links });
+      setUrl("");
+      return t("feedback.website", { count: links.length });
+    });
+
+  const importText = () =>
+    run(async () => {
+      if (!textTitle.trim() || !textBody.trim()) throw new Error(t("errors.missingText"));
+      await saveManualText({ ...scopeArgs, title: textTitle.trim(), textContent: textBody });
+      setTextTitle("");
+      setTextBody("");
+      return t("feedback.text");
+    });
+
+  const importFiles = (fileList: FileList | null) =>
+    run(async () => {
+      const collected = collectPickedFiles(fileList);
+      if (collected.length === 0) throw new Error(t("errors.missingFile"));
+      for (const item of collected) {
+        const verdict = validateUploadFile(item.file, "knowledgeDocument");
+        if (!verdict.allowed) throw new Error(verdict.reason);
+      }
+      for (const item of collected) {
+        const contentType = resolveUploadContentType(item.file);
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": contentType },
+          body: item.file,
+        });
+        const { storageId } = (await result.json()) as { storageId: Id<"_storage"> };
+        await saveDocument({
+          ...scopeArgs,
+          storageId,
+          title: buildUploadTitle(item),
+          format: contentType,
+          ...(collected.length > 1 ? { deferIngestion: true } : {}),
+        });
+      }
+      if (collected.length > 1) await startKnowledgeFileQueue({});
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return t("feedback.files", { count: collected.length });
+    });
+
+  const tabs = [
+    { key: "website" as const, icon: Globe, label: t("tabs.website") },
+    { key: "file" as const, icon: FileUp, label: t("tabs.file") },
+    { key: "text" as const, icon: Type, label: t("tabs.text") },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4 rounded-[16px] border border-border-dim bg-card/40 p-5">
+      <div className="flex items-center gap-2">
+        {tabs.map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-medium border transition-colors ${
+              tab === key
+                ? "bg-brand text-white border-brand"
+                : "bg-background text-secondary border-border-dim hover:text-foreground"
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "website" && (
+        <div className="flex items-center gap-2">
+          <input
+            type="url"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder={t("websitePlaceholder")}
+            disabled={isBusy}
+            className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
+          />
+          <AdminWriteButton
+            onClick={() => void importWebsite()}
+            disabled={isBusy || !url.trim()}
+            className="flex items-center gap-2 px-4 py-3 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity whitespace-nowrap"
+          >
+            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {t("readIt")}
+          </AdminWriteButton>
+        </div>
+      )}
+
+      {tab === "file" && (
+        <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            disabled={isBusy}
+            onChange={(event) => void importFiles(event.target.files)}
+            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-white file:text-[12.5px] file:font-medium file:cursor-pointer"
+          />
+          {isBusy && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
+        </div>
+      )}
+
+      {tab === "text" && (
+        <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={textTitle}
+            onChange={(event) => setTextTitle(event.target.value)}
+            placeholder={t("textTitlePlaceholder")}
+            disabled={isBusy}
+            className="bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
+          />
+          <textarea
+            value={textBody}
+            onChange={(event) => setTextBody(event.target.value)}
+            placeholder={t("textBodyPlaceholder")}
+            rows={4}
+            disabled={isBusy}
+            className="bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors resize-y"
+          />
+          <AdminWriteButton
+            onClick={() => void importText()}
+            disabled={isBusy || !textTitle.trim() || !textBody.trim()}
+            className="flex items-center gap-2 w-fit px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
+          >
+            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {t("readIt")}
+          </AdminWriteButton>
+        </div>
+      )}
+
+      {feedback && <p className="text-[12.5px] text-secondary">{feedback}</p>}
+      {error && (
+        <p className="text-[12.5px] text-warning" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}

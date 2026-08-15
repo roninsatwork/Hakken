@@ -98,6 +98,17 @@ crons.interval(
   {}
 );
 
+// The wiki's catch-up reader (wiki-replaces-knowledge plan, stage one):
+// documents imported before the wiki existed — or whose on-ready hook died —
+// get read a few at a time until nothing is left behind. A company with
+// nothing unread is never visited, and each visit claims before it spends.
+crons.interval(
+  "wiki-distill-sweep",
+  { minutes: 15 },
+  internal.wikiDistillActions.distilSweep,
+  {}
+);
+
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
 // watermarked: rating a message stays O(1), the aggregation happens here,
 // and a quiet hour costs one indexed read. No model call is involved.

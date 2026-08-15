@@ -18,6 +18,7 @@ import {
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
+import { WikiImportBox } from "./WikiImportBox";
 
 const PAGE_SIZE = 15;
 
@@ -49,6 +50,13 @@ export function WikiPagesListScreen({
   );
   const rows = companyId ? companyRows : tenantRows;
 
+  const tenantProgress = useQuery(api.wikiDistill.getDistillProgress, companyId ? "skip" : {});
+  const companyProgress = useQuery(
+    api.wikiDistill.getDistillProgressForCompany,
+    companyId ? { companyId } : "skip"
+  );
+  const progress = companyId ? companyProgress : tenantProgress;
+
   const isLoading = rows === undefined;
   const totalCount = rows?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -74,6 +82,46 @@ export function WikiPagesListScreen({
       {showWorkspaceNav && <AiWorkspaceNav />}
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
+
+      <WikiImportBox companyId={companyId} />
+
+      {/* The distiller's honest progress (design, screen 2), only while
+          there is genuinely something left to read. */}
+      {progress?.isReading && (
+        <div className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
+          <div className="flex items-baseline justify-between gap-4 flex-wrap">
+            <span className="text-[14px] font-semibold text-foreground">{t("progress.title")}</span>
+            <span className="text-[12px] text-secondary tabular-nums">
+              {t("progress.count", {
+                done: progress.totalDocuments - progress.remainingDocuments,
+                total: progress.totalDocuments,
+              })}
+            </span>
+          </div>
+          <div className="h-[7px] rounded-full bg-foreground/5 overflow-hidden">
+            <div
+              className="h-full bg-brand rounded-full transition-all"
+              style={{
+                width: `${Math.round(
+                  ((progress.totalDocuments - progress.remainingDocuments) /
+                    Math.max(progress.totalDocuments, 1)) *
+                    100
+                )}%`,
+              }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[12.5px] text-secondary">
+            <span>{t("progress.written", { count: progress.pagesWritten })}</span>
+            <span>{t("progress.improved", { count: progress.pagesImproved })}</span>
+            {progress.lastDocumentTitle && (
+              <span className="flex items-center gap-2">
+                <i className="w-[7px] h-[7px] rounded-full bg-brand inline-block" />
+                {t("progress.nowReading", { title: progress.lastDocumentTitle })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <div className="flex-1">
@@ -114,7 +162,7 @@ export function WikiPagesListScreen({
             <AdminTableHeaderCell>{t("columns.customer")}</AdminTableHeaderCell>
             <AdminTableHeaderCell>{t("columns.remembers")}</AdminTableHeaderCell>
             <AdminTableHeaderCell>{t("columns.lastChange")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("columns.rewrites")}</AdminTableHeaderCell>
+            <AdminTableHeaderCell align="right">{t("columns.sources")}</AdminTableHeaderCell>
           </AdminTableHeaderRow>
         </thead>
         <tbody>
@@ -155,7 +203,9 @@ export function WikiPagesListScreen({
                 <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
                   {describeSource(row.lastRewriteSource)} · {new Date(row.updatedAt).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-4 text-right text-[13px] text-secondary">{row.rewriteCount}</td>
+                <td className="px-4 py-4 text-right text-[13px] text-secondary tabular-nums">
+                  {row.sourceCount > 0 ? row.sourceCount : "—"}
+                </td>
               </tr>
             ))
           )}

@@ -1656,6 +1656,15 @@ export const saveChunksInternal = internalMutation({
             lastIngestedAt: Date.now(),
             lastIngestionError: undefined,
         });
+        // Importing IS how the wiki learns (wiki-replaces-knowledge plan,
+        // stage one): every company document that becomes ready teaches the
+        // wiki by itself, no button anywhere. Thread uploads are one
+        // conversation's ephemera and stay out.
+        if (args.companyId && !args.threadId) {
+          await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilNewDocument, {
+            documentId: args.documentId,
+          });
+        }
       }
   }
 });

@@ -1892,6 +1892,10 @@ export default defineSchema({
     lastQueuedAt: v.optional(v.number()),
     lastIngestionStartedAt: v.optional(v.number()),
     lastIngestedAt: v.optional(v.number()),
+    // When the wiki distiller last read this document (wiki-replaces-
+    // knowledge plan, stage one). Absent means the wiki has not learned
+    // from it yet — the catch-up sweep and the on-ready hook both key on it.
+    wikiDistilledAt: v.optional(v.number()),
     lastIngestionError: v.optional(v.string()),
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
@@ -3219,8 +3223,11 @@ export default defineSchema({
       })
     ),
     rewriteCount: v.number(),
+    // How many DOCUMENT receipts this page holds (wikiPageSources is the
+    // truth; this is the list screen's cheap copy of it).
+    documentSourceCount: v.optional(v.number()),
     // What last changed the page: "PHONE_CALL:<id>", "EMAIL:<gmail id>",
-    // "HUMAN:<user id>", "TENDING".
+    // "HUMAN:<user id>", "DOCUMENT:<id>", "TENDING".
     lastRewriteSource: v.string(),
     // When the nightly tending pass last considered this page, so a tidy
     // page is not re-tidied for nothing (wiki plan, phase 4).
@@ -3230,6 +3237,39 @@ export default defineSchema({
   })
     .index("by_company_kind_subject", ["companyId", "kind", "subjectKey"])
     .index("by_company_updated", ["companyId", "updatedAt"]),
+
+  /**
+   * The receipts behind a page (wiki-replaces-knowledge plan, screen 3):
+   * which documents and conversations taught it. One row per page-and-source
+   * pair — a document that teaches the same page twice is still one receipt.
+   * Document rows point at `knowledgeDocuments`, which this plan keeps as
+   * stored originals precisely so these rows always have something to open.
+   */
+  wikiPageSources: defineTable({
+    pageId: v.id("wikiPages"),
+    companyId: v.id("companies"),
+    kind: v.union(v.literal("DOCUMENT"), v.literal("PHONE_CALL"), v.literal("EMAIL"), v.literal("HUMAN")),
+    /** Document id, call id, mailbox message id, or user id — as text. */
+    ref: v.string(),
+    /** What a person sees on the page's source list. */
+    label: v.string(),
+    addedAt: v.number(),
+  })
+    .index("by_page", ["pageId", "addedAt"])
+    .index("by_page_ref", ["pageId", "kind", "ref"]),
+
+  /**
+   * One row per company: the distiller's progress, drawn on the Wiki
+   * screen while an import (or the one-time catch-up) is being read.
+   */
+  wikiDistillState: defineTable({
+    companyId: v.id("companies"),
+    documentsRead: v.number(),
+    pagesWritten: v.number(),
+    pagesImproved: v.number(),
+    lastDocumentTitle: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_company", ["companyId"]),
 
   /**
    * The page's walkable history (wiki plan, acceptance 4): the text as it

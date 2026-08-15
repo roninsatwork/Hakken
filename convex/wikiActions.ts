@@ -27,6 +27,8 @@ export const rewriteCustomerPageAfterEvent = internalAction({
     eventLabel: v.string(),
     /** e.g. "PHONE_CALL:<id>" — recorded on the page and its trail. */
     source: v.string(),
+    /** What the page's source list shows for this event. */
+    sourceLabel: v.optional(v.string()),
     eventText: v.string(),
   },
   handler: async (ctx, args): Promise<void> => {
@@ -75,6 +77,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
       title,
       content: verdict.content,
       source: args.source,
+      ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
     });
 
     // What the conversation taught about the COMPANY, beyond the customer
@@ -123,6 +126,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
           title: topic.slug,
           content: topicVerdict.content,
           source: args.source,
+          ...(args.sourceLabel ? { sourceLabel: args.sourceLabel } : {}),
         });
         await ctx.runMutation(internal.wikiPages.addLinksInternal, {
           companyId: args.companyId,

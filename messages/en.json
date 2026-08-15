@@ -3278,7 +3278,8 @@
       "customer": "Page",
       "remembers": "What Sonae remembers",
       "lastChange": "Last change",
-      "rewrites": "Rewrites"
+      "rewrites": "Rewrites",
+      "sources": "Sources"
     },
     "empty": "No pages yet",
     "emptyState": "No pages yet. When Sonae speaks with a known customer on the phone or by email, their page appears here.",
@@ -3326,6 +3327,12 @@
         "title": "History",
         "hint": "Each entry shows how the page read before a change, and what caused the change.",
         "none": "No changes yet."
+      },
+      "sourcesPanel": {
+        "title": "Where this came from",
+        "hint": "The documents and conversations that taught this page. The originals are kept, so anything here can be checked.",
+        "none": "Learned from conversations so far - no documents yet.",
+        "open": "Open the original"
       }
     },
     "kinds": {
@@ -3343,6 +3350,35 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "zoomReset": "Reset the view"
+    },
+    "import": {
+      "tabs": {
+        "website": "Website",
+        "file": "File",
+        "text": "Text"
+      },
+      "websitePlaceholder": "Paste a website address and press Read it - Sonae will read it and write the pages",
+      "textTitlePlaceholder": "What is this about? (a short title)",
+      "textBodyPlaceholder": "Paste or write the knowledge here...",
+      "readIt": "Read it",
+      "feedback": {
+        "website": "Found {count} pages. Sonae is reading them - the wiki below fills in as it goes.",
+        "text": "Sonae is reading it - the wiki below updates when it has.",
+        "files": "{count, plural, =1 {File uploaded. Sonae is reading it.} other {# files uploaded. Sonae is reading them.}}"
+      },
+      "errors": {
+        "generic": "That did not go through. Try again.",
+        "missingUrl": "Paste a website address first.",
+        "missingText": "A title and some text are both needed.",
+        "missingFile": "Choose a file first."
+      }
+    },
+    "progress": {
+      "title": "Sonae is reading",
+      "count": "{done} of {total} documents",
+      "written": "{count, plural, =1 {1 page written} other {# pages written}}",
+      "improved": "{count, plural, =1 {1 page improved} other {# pages improved}}",
+      "nowReading": "Now reading: {title}"
     }
   },
   "calls": {
