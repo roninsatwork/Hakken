@@ -15,12 +15,27 @@ Sonae carries the file it rests on; verify anchors before editing.
 Anthony's words: *"we need to make some of these agents that auto run to
 tidy up etc and some can be called at ingest time."*
 
-So: the wiki gets a staff. Some agents are on a rota — they wake, inspect,
-tidy or flag, and report; a quiet company costs nothing. Some are called
-when material arrives. All of them follow the playbook's two iron rules:
-**never invent facts**, and **never silently resolve a factual
-contradiction** — machines tidy structure, people settle truth. Everything
-an agent does lands in the audit trail and shows on the Wiki screen.
+So: the wiki gets a staff, and — corrected 2026-08-15 after Anthony pulled
+up the first draft — **the staff are real Sonae agents, on the Agents
+screen**, not hidden background jobs. "Agent" in this product means a thing
+with a face: a run history in the existing observability, an on/off switch,
+and instructions you can open and read the way Anthony reads his Obsidian
+prompt files. Some run on a rota through the platform's existing agent
+scheduler; some are invoked when material arrives. A quiet company still
+costs nothing. All of them follow the playbook's two iron rules: **never
+invent facts**, and **never silently resolve a factual contradiction** —
+machines tidy structure, people settle truth. Everything an agent does
+lands in the audit trail and shows on the Wiki screen.
+
+### Phase 0 — the staff get their faces (≈1 day, first)
+
+Before any new hire: the three workers that already exist — the Distiller,
+the Tidier, the Linker — become visible agents on the Agents screen, their
+nightly and ingest-time runs recorded through the existing agent run and
+observability machinery, each switchable off per company, each showing the
+instructions it works to. Every agent built after this arrives through the
+same door on day one. The five hires below then join the same screen as
+they land.
 
 ## What is actually true today (verified 2026-08-15)
 
@@ -126,8 +141,9 @@ leave the wiki untouched.
 
 ## Order and size
 
-As numbered: contradictions, freshness, full-import-first, reviewer,
-write-back. **≈5.5 build-days**, each landing separately, each stoppable.
+Phase 0 first — the staff visible on the Agents screen — then as numbered:
+contradictions, freshness, full-import-first, reviewer, write-back.
+**≈6.5 build-days**, each landing separately, each stoppable.
 The order puts pure tidy-up value first (his ask), the structural change
 in the middle where the layers it needs already exist, and the two
 judgement-heavy agents last.
