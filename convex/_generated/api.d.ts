@@ -241,6 +241,7 @@ import type * as wikiExamService from "../wikiExamService.js";
 import type * as wikiPages from "../wikiPages.js";
 import type * as wikiRewriteEval from "../wikiRewriteEval.js";
 import type * as wikiRewriteService from "../wikiRewriteService.js";
+import type * as wikiStaff from "../wikiStaff.js";
 import type * as wikiTending from "../wikiTending.js";
 import type * as wikiTendingActions from "../wikiTendingActions.js";
 import type * as workflowEngine from "../workflowEngine.js";
@@ -491,6 +492,7 @@ declare const fullApi: ApiFromModules<{
   wikiPages: typeof wikiPages;
   wikiRewriteEval: typeof wikiRewriteEval;
   wikiRewriteService: typeof wikiRewriteService;
+  wikiStaff: typeof wikiStaff;
   wikiTending: typeof wikiTending;
   wikiTendingActions: typeof wikiTendingActions;
   workflowEngine: typeof workflowEngine;

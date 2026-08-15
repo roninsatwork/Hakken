@@ -1275,6 +1275,13 @@ export const deleteAgent = superAdminMutation({
 
     const agent = await ctx.db.get(args.id);
 
+    // The wiki's staff can be stood down (isActive off), never disappeared
+    // (wiki-agents plan, phase 0): a deleted staff agent would leave its
+    // sweeps running with no face, which is exactly what the plan forbids.
+    if (agent?.systemKey) {
+      throw new Error("This is a built-in member of the wiki's staff. Switch it off instead of deleting it.");
+    }
+
     // Cleanse tool bindings
     const toolBindings = await ctx.db
        .query("agentTools")

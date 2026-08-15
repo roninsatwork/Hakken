@@ -191,8 +191,15 @@ export default function AgentsPage() {
                               </div>
                             )}
                             <div className="flex flex-col">
-                              <span className="font-medium text-[13px] text-foreground leading-tight">
+                              <span className="font-medium text-[13px] text-foreground leading-tight flex items-center gap-2">
                                 {agent.name}
+                                {/* The wiki's staff (wiki-agents plan, phase 0):
+                                    built in, switchable, never deletable. */}
+                                {agent.systemKey && (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-brand/10 border border-brand/30 text-brand text-[10px] font-medium">
+                                    Wiki staff
+                                  </span>
+                                )}
                               </span>
                               {agent.description && (
                                 <span className="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-[300px]">

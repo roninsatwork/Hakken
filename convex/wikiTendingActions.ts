@@ -19,6 +19,12 @@ import { WIKI_PAGE_MAX_CHARS, validateRewrittenPage } from "./wikiRewriteService
 export const tendDispatcher = internalAction({
   args: {},
   handler: async (ctx): Promise<{ companies: number }> => {
+    // The staff exist before they work; a stood-down Tidier spends nothing
+    // (wiki-agents plan, phase 0).
+    await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_TIDIER" }))) {
+      return { companies: 0 };
+    }
     const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
     let visited = 0;
     for (const companyId of companies) {
@@ -47,6 +53,11 @@ export const tendDispatcher = internalAction({
 export const crossLinkSweep = internalAction({
   args: { companyId: v.id("companies"), limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<{ linked: number }> => {
+    const passStartedAt = Date.now();
+    await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_LINKER" }))) {
+      return { linked: 0 };
+    }
     const sparse = await ctx.runQuery(internal.wikiPages.listSparselyLinkedTopicsInternal, {
       companyId: args.companyId,
       limit: args.limit ?? 20,
@@ -113,6 +124,14 @@ export const crossLinkSweep = internalAction({
       }
     }
     if (linked > 0) {
+      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+        systemKey: "WIKI_LINKER",
+        companyId: args.companyId,
+        trigger: "SCHEDULE",
+        objective: "Connect sparsely linked pages to their related pages.",
+        summary: `Added ${linked} connections between related pages.`,
+        startedAt: passStartedAt,
+      });
       // More sparse pages may remain past the limit; keep going while the
       // passes make progress. A pass that linked nothing stops the chain —
       // a page the model cannot relate to anything must not loop forever.
@@ -130,6 +149,7 @@ export const crossLinkSweep = internalAction({
 export const tendCompany = internalAction({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args): Promise<{ repairedLinks: number; tidiedPages: number }> => {
+    const visitStartedAt = Date.now();
     const candidates = await ctx.runQuery(internal.wikiTending.getTendingCandidatesInternal, {
       companyId: args.companyId,
     });
@@ -192,6 +212,16 @@ export const tendCompany = internalAction({
       await ctx.runMutation(internal.wikiTending.markTendedInternal, { pageId: page.pageId });
     }
 
+    if (repairedLinks > 0 || tidiedPages > 0) {
+      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+        systemKey: "WIKI_TIDIER",
+        companyId: args.companyId,
+        trigger: "SCHEDULE",
+        objective: "Nightly tending: tidy overgrown pages and repair links.",
+        summary: `Repaired ${repairedLinks} pages' links; tidied ${tidiedPages} overgrown pages.`,
+        startedAt: visitStartedAt,
+      });
+    }
     return { repairedLinks, tidiedPages };
   },
 });

@@ -2209,6 +2209,11 @@ export default defineSchema({
     releaseGateSuitePresetId: v.optional(v.id("agentEvalSuitePresets")),
     releaseGateRequiresModelGrading: v.optional(v.boolean()),
     isActive: v.boolean(),
+    // Names a built-in member of the wiki's staff (wiki-agents plan, phase
+    // 0): "WIKI_DISTILLER", "WIKI_TIDIER", "WIKI_LINKER", and later hires.
+    // System agents are seeded, visible on the Agents screen, switchable
+    // via isActive above — and never deletable.
+    systemKey: v.optional(v.string()),
     // Inline Sandbox Configuration
     companyId: v.optional(v.id("companies")),
     isGlobal: v.optional(v.boolean()),

@@ -180,6 +180,11 @@ export const backfillSourceNotes = internalAction({
 export const distilNewDocument = internalAction({
   args: { documentId: v.id("knowledgeDocuments") },
   handler: async (ctx, args): Promise<void> => {
+    const hookStartedAt = Date.now();
+    await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_DISTILLER" }))) {
+      return;
+    }
     // Claimed before read: the sweep and this hook can never double-spend.
     const document = await ctx.runMutation(internal.wikiDistill.claimDocumentForDistillInternal, {
       documentId: args.documentId,
@@ -205,6 +210,14 @@ export const distilNewDocument = internalAction({
       pagesImproved: result.pagesImproved,
       lastDocumentTitle: document.title,
     });
+    await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+      systemKey: "WIKI_DISTILLER",
+      companyId: document.companyId,
+      trigger: "EVENT",
+      objective: `A document finished importing: ${document.title.slice(0, 120)}`,
+      summary: `Wrote ${result.pagesWritten} pages, improved ${result.pagesImproved}, plus the full source note.`,
+      startedAt: hookStartedAt,
+    });
   },
 });
 
@@ -213,6 +226,12 @@ export const distilNewDocument = internalAction({
 export const distilSweep = internalAction({
   args: {},
   handler: async (ctx): Promise<{ companies: number }> => {
+    // The staff exist before they work, and a stood-down Distiller spends
+    // nothing (wiki-agents plan, phase 0).
+    await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_DISTILLER" }))) {
+      return { companies: 0 };
+    }
     const companies = await ctx.runQuery(internal.wikiDistill.listCompaniesWithUndistilledInternal, {});
     for (const companyId of companies) {
       await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilCompanyBatch, { companyId });
@@ -224,6 +243,7 @@ export const distilSweep = internalAction({
 export const distilCompanyBatch = internalAction({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args): Promise<void> => {
+    const batchStartedAt = Date.now();
     const batch = await ctx.runMutation(internal.wikiDistill.claimNextDistillBatchInternal, {
       companyId: args.companyId,
     });
@@ -259,6 +279,16 @@ export const distilCompanyBatch = internalAction({
       pagesImproved,
       ...(lastDocumentTitle ? { lastDocumentTitle } : {}),
     });
+    if (documentsRead > 0) {
+      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+        systemKey: "WIKI_DISTILLER",
+        companyId: args.companyId,
+        trigger: "SCHEDULE",
+        objective: "Catch-up: read imported documents the wiki has not learned from yet.",
+        summary: `Read ${documentsRead} documents; wrote ${pagesWritten} pages, improved ${pagesImproved}.`,
+        startedAt: batchStartedAt,
+      });
+    }
 
     // More to do? The next batch schedules itself, so an import of any size
     // finishes without anyone watching it.
