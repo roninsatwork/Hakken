@@ -7,6 +7,11 @@ completed work.
 
 ## Active Plans
 
+- [The Wiki's Staff](./active/wiki-agents-plan.md) — agents that tend, check
+  and file, drawn from Anthony's own Second-Brain playbook: contradiction
+  finding, freshness checking, the full-import-first source-note layer, a
+  pre-ingest reviewer, and write-back of durable synthesis from questions.
+  Drafted 2026-08-15; ~5.5 build-days; awaiting Anthony's go on the order.
 - [The Wiki Replaces Knowledge](./active/wiki-replaces-knowledge-plan.md) —
   the agreed direction as of 2026-08-15: importing a website, file or text
   writes wiki pages directly, answers come from whole pages, and the
