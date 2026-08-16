@@ -23,19 +23,37 @@ const WIKI_SCHEME = "sonae-wiki:";
  * resolves to a living page becomes a live link with a hover peek. A
  * reference to nothing stays plain text — no ghost links.
  */
+/**
+ * A source note is a raw website capture, stored exactly as scraped — for
+ * display only, the reader smooths the scrape's damage: heading markers
+ * glued mid-sentence get their line back, and paragraph breaks that fall
+ * mid-sentence (no closing punctuation, lowercase continuation) are
+ * rejoined. The stored original is never touched.
+ */
+function tidyRawCapture(content: string): string {
+  return content
+    .replace(/([^\n])\s(#{1,6}\s)/g, "$1\n\n$2")
+    .replace(/([\p{Ll},;:—–-])\n{2,}([\p{Ll}])/gu, "$1 $2");
+}
+
 export function WikiProse({
   content,
   resolvedLinks,
   basePath,
+  rawCapture,
 }: {
   content: string;
   resolvedLinks: ResolvedWikiLink[];
   basePath: string;
+  /** True for SOURCE notes: scraped text that needs display smoothing. */
+  rawCapture?: boolean;
 }) {
   const bySlug = new Map(resolvedLinks.map((link) => [link.slug, link]));
 
+  const readable = rawCapture ? tidyRawCapture(content) : content;
+
   // [[slug]] → markdown link on our own scheme, resolved references only.
-  const prepared = content.replace(/\[\[([^\]]+)\]\]/g, (whole, slug: string) =>
+  const prepared = readable.replace(/\[\[([^\]]+)\]\]/g, (whole, slug: string) =>
     bySlug.has(slug.trim()) ? `[${slug.trim()}](${WIKI_SCHEME}${slug.trim()})` : slug.trim()
   );
 

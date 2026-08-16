@@ -249,7 +249,12 @@ export function WikiPageDetailScreen({
           </div>
         </section>
       ) : (
-        <WikiProse content={detail.content} resolvedLinks={detail.resolvedLinks} basePath={basePath} />
+        <WikiProse
+          content={detail.content}
+          resolvedLinks={detail.resolvedLinks}
+          basePath={basePath}
+          rawCapture={detail.kind === "SOURCE"}
+        />
       )}
 
       {/* Related pages: where a reader goes next. */}
