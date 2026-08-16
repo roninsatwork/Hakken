@@ -121,6 +121,16 @@ export function WikiPageDetailScreen({
         divider
       />
 
+      {/* The loop's marks (closing-the-loop plan, phase 2). */}
+      <p className="text-[13px] text-secondary -mt-2">
+        {detail.usageCount > 0
+          ? t("usage", {
+              count: detail.usageCount,
+              date: detail.lastUsedAt ? new Date(detail.lastUsedAt).toLocaleDateString() : "",
+            })
+          : t("usageNever")}
+      </p>
+
       <Link
         href={basePath}
         className="flex items-center gap-2 text-[13px] text-secondary hover:text-foreground transition-colors w-fit"

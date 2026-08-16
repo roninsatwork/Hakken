@@ -3279,7 +3279,9 @@
       "remembers": "Cosa ricorda Sonae",
       "lastChange": "Ultima modifica",
       "rewrites": "Riscritture",
-      "sources": "Fonti"
+      "sources": "Fonti",
+      "used": "Uso",
+      "usedSort": "Ordina per più usate"
     },
     "empty": "Ancora nessuna pagina",
     "emptyState": "Ancora nessuna pagina. Quando Sonae parla con un cliente conosciuto al telefono o via email, la sua pagina appare qui.",
@@ -3335,7 +3337,9 @@
         "hint": "I documenti e le conversazioni che hanno insegnato questa pagina. Gli originali sono conservati, quindi tutto qui può essere verificato.",
         "none": "Finora ha imparato dalle conversazioni — ancora nessun documento.",
         "open": "Apri l'originale"
-      }
+      },
+      "usage": "{count, plural, =1 {Alla base di 1 risposta} other {Alla base di # risposte}}, l'ultima il {date}.",
+      "usageNever": "Non ancora usata in una risposta."
     },
     "kinds": {
       "CUSTOMER": "Cliente",
@@ -3400,7 +3404,18 @@
     "globalHint": "Tutto ciò che viene importato qui può raggiungere le risposte di ogni azienda, quindi le importazioni attendono la tua revisione prima che venga scritta una parola. Nulla di specifico di un'azienda appartiene a questo scaffale: il wiki di ogni azienda vive con quell'azienda e nessuno al di fuori può vederlo.",
     "scopeCompany": "Questo wiki appartiene solo a questa azienda. Nessuno al di fuori dell'azienda può vederlo e nulla di ciò che contiene raggiunge mai il wiki della piattaforma.",
     "scopeGlobal": "Il wiki condiviso della piattaforma. Vuoto significa che ogni risposta proviene esclusivamente dai wiki aziendali.",
-    "globalEmptyState": "Ancora nessuna pagina. Importa un sito web, un file o un testo qui sopra e, una volta approvata la revisione, le sue pagine appariranno qui."
+    "globalEmptyState": "Ancora nessuna pagina. Importa un sito web, un file o un testo qui sopra e, una volta approvata la revisione, le sue pagine appariranno qui.",
+    "unanswered": {
+      "title": "{count, plural, =1 {1 domanda senza risposta} other {# domande senza risposta}}",
+      "hint": "Domande reali per cui il wiki non aveva pagine. Importa qualcosa che le copra, oppure ignorale se non vale la pena. Una riga si chiude da sola quando la stessa domanda riceve poi una risposta vera.",
+      "asked": "{count, plural, =1 {chiesta una volta} other {chiesta #×}}",
+      "importSomething": "Importa qualcosa",
+      "dismiss": "Ignora questa domanda"
+    },
+    "used": {
+      "count": "{count, plural, =1 {1 risposta} other {# risposte}}",
+      "never": "mai usata"
+    }
   },
   "calls": {
     "title": "Chiamate",

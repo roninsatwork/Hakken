@@ -594,6 +594,19 @@ User Prompt: ${args.content}`;
             wikiPageKeys,
         });
 
+        // The loop's bookkeeping (closing-the-loop plan, phases 1-2):
+        // pages under the answer get their marks and close matching gaps;
+        // no pages logs the gap. Scheduled, mechanical, never delays the
+        // reply. Only where the wiki is the answering brain — the
+        // escape-hatch chunk world predates the loop.
+        if (thread?.companyId && companyAnswersFromWiki(company)) {
+            await ctx.scheduler.runAfter(0, internal.wikiFeedback.recordAnswerOutcomeInternal, {
+                companyId: thread.companyId,
+                question: args.content.slice(0, 500),
+                pageKeys: wikiPageKeys,
+            });
+        }
+
         // The Filing Clerk considers staff answers that drew on more than
         // one wiki page (wiki-agents plan, phase 5) — the only place
         // cross-page synthesis can exist. Widget visitors' answers never
@@ -1099,6 +1112,16 @@ export const searchKnowledgeForVoiceInternal = internalAction({
               maxChars: 9000,
             })
           : { context: "", pageKeys: [] };
+
+      // The loop's bookkeeping for spoken answers (closing-the-loop
+      // plan, phases 1-2) — same one call, same mechanics as typed.
+      if (companyId && knowledgeMode === "wiki") {
+        await ctx.scheduler.runAfter(0, internal.wikiFeedback.recordAnswerOutcomeInternal, {
+          companyId,
+          question: query.slice(0, 500),
+          pageKeys: wikiAnswer.pageKeys,
+        });
+      }
 
       // Nothing found is reported as nothing found. Returning the wrapper
       // around an empty list reads to the model as "here is your evidence",

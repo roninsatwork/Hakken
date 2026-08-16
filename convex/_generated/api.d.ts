@@ -241,6 +241,8 @@ import type * as wikiDistillActions from "../wikiDistillActions.js";
 import type * as wikiExam from "../wikiExam.js";
 import type * as wikiExamActions from "../wikiExamActions.js";
 import type * as wikiExamService from "../wikiExamService.js";
+import type * as wikiFeedback from "../wikiFeedback.js";
+import type * as wikiFeedbackService from "../wikiFeedbackService.js";
 import type * as wikiFilingActions from "../wikiFilingActions.js";
 import type * as wikiFreshness from "../wikiFreshness.js";
 import type * as wikiFreshnessActions from "../wikiFreshnessActions.js";
@@ -501,6 +503,8 @@ declare const fullApi: ApiFromModules<{
   wikiExam: typeof wikiExam;
   wikiExamActions: typeof wikiExamActions;
   wikiExamService: typeof wikiExamService;
+  wikiFeedback: typeof wikiFeedback;
+  wikiFeedbackService: typeof wikiFeedbackService;
   wikiFilingActions: typeof wikiFilingActions;
   wikiFreshness: typeof wikiFreshness;
   wikiFreshnessActions: typeof wikiFreshnessActions;

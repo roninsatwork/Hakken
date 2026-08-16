@@ -116,7 +116,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   ];
 
   return (
-    <div className="flex flex-col gap-4 rounded-[16px] border border-border-dim bg-card/40 p-5">
+    <div id="wiki-import" className="flex flex-col gap-4 rounded-[16px] border border-border-dim bg-card/40 p-5">
       <div className="flex items-center gap-2">
         {tabs.map(({ key, icon: Icon, label }) => (
           <button

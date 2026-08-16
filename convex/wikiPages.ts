@@ -815,6 +815,10 @@ async function listPagesRows(ctx: QueryCtx, companyId: WikiScope, search?: strin
       sourceCount: page.documentSourceCount ?? 0,
       lastRewriteSource: page.lastRewriteSource,
       updatedAt: page.updatedAt,
+      // The loop's marks (closing-the-loop plan, phase 2).
+      usageCount: page.usageCount ?? 0,
+      lastUsedAt: page.lastUsedAt ?? null,
+      createdAt: page.createdAt,
     }));
 }
 
@@ -848,6 +852,8 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
     lastRewriteSource: page.lastRewriteSource,
     updatedAt: page.updatedAt,
     createdAt: page.createdAt,
+    usageCount: page.usageCount ?? 0,
+    lastUsedAt: page.lastUsedAt ?? null,
     revisions: revisions.map((revision) => ({
       content: revision.content,
       source: revision.source,

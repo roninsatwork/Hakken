@@ -3279,7 +3279,9 @@
       "remembers": "What Sonae remembers",
       "lastChange": "Last change",
       "rewrites": "Rewrites",
-      "sources": "Sources"
+      "sources": "Sources",
+      "used": "Used",
+      "usedSort": "Sort by most used"
     },
     "empty": "No pages yet",
     "emptyState": "No pages yet. When Sonae speaks with a known customer on the phone or by email, their page appears here.",
@@ -3335,7 +3337,9 @@
         "hint": "The documents and conversations that taught this page. The originals are kept, so anything here can be checked.",
         "none": "Learned from conversations so far - no documents yet.",
         "open": "Open the original"
-      }
+      },
+      "usage": "{count, plural, =1 {Stood under 1 answer} other {Stood under # answers}}, last on {date}.",
+      "usageNever": "Not yet used in an answer."
     },
     "kinds": {
       "CUSTOMER": "Customer",
@@ -3400,7 +3404,18 @@
     "globalHint": "Anything imported here can reach every company's answers, so imports wait for your review before a word is written. Nothing company-specific belongs on this shelf - each company's own wiki lives with that company, and nobody outside it can see it.",
     "scopeCompany": "This wiki belongs to this company alone. Nobody outside the company can see it, and nothing here ever reaches the platform wiki.",
     "scopeGlobal": "The platform's shared wiki. Empty means every answer comes purely from company wikis.",
-    "globalEmptyState": "No pages yet. Import a website, file or text above and, once you approve its review, its pages appear here."
+    "globalEmptyState": "No pages yet. Import a website, file or text above and, once you approve its review, its pages appear here.",
+    "unanswered": {
+      "title": "{count, plural, =1 {Couldn't answer 1 question} other {Couldn't answer # questions}}",
+      "hint": "Real questions the wiki had no pages for. Import something that covers it, or dismiss it if it isn't worth covering. A row closes itself when the same question later gets a proper answer.",
+      "asked": "{count, plural, =1 {asked once} other {asked #×}}",
+      "importSomething": "Import something",
+      "dismiss": "Dismiss this question"
+    },
+    "used": {
+      "count": "{count, plural, =1 {1 answer} other {# answers}}",
+      "never": "never used"
+    }
   },
   "calls": {
     "title": "Calls",

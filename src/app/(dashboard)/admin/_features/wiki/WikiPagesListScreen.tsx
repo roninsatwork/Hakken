@@ -42,6 +42,7 @@ export function WikiPagesListScreen({
   const t = useTranslations("aiPages");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [sortByUse, setSortByUse] = useState(false);
   const searchArg = search.trim() ? { search: search.trim() } : {};
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
@@ -82,6 +83,15 @@ export function WikiPagesListScreen({
     return row ? `${basePath}/${row.pageId}` : null;
   };
 
+  const unanswered =
+    useQuery(
+      api.wikiFeedback.listUnansweredForCompany,
+      companyId ? { companyId } : "skip"
+    ) ?? [];
+  const dismissUnansweredDoor = useMutation(api.wikiFeedback.dismissUnansweredForCompany);
+  const dismissUnanswered = (unansweredId: (typeof unanswered)[number]["unansweredId"]) =>
+    companyId ? dismissUnansweredDoor({ companyId, unansweredId }) : Promise.resolve();
+
   const globalReviews = useQuery(api.wikiReviews.listPendingReviewsForGlobal, companyId ? "skip" : {});
   const companyReviews = useQuery(
     api.wikiReviews.listPendingReviewsForCompany,
@@ -96,7 +106,11 @@ export function WikiPagesListScreen({
   const isLoading = rows === undefined;
   const totalCount = rows?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const visibleRows = (rows ?? []).slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const orderedRows = sortByUse
+    ? [...(rows ?? [])].sort((a, b) => b.usageCount - a.usageCount || b.updatedAt - a.updatedAt)
+    : (rows ?? []);
+  const visibleRows = orderedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const NEVER_USED_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
   const describeSource = (source: string) => {
     if (source.startsWith("PHONE_CALL:")) return t("sources.phone");
@@ -270,6 +284,44 @@ export function WikiPagesListScreen({
         </div>
       )}
 
+      {companyId && unanswered.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-[16px] border border-brand/30 bg-brand/5 p-5">
+          <div className="flex items-baseline justify-between gap-4 flex-wrap">
+            <span className="flex items-center gap-2 text-[14px] font-semibold text-foreground">
+              <AlertTriangle className="w-4 h-4 text-brand" />
+              {t("unanswered.title", { count: unanswered.length })}
+            </span>
+          </div>
+          <p className="text-[12px] text-secondary">{t("unanswered.hint")}</p>
+          <ul className="flex flex-col divide-y divide-border-dim/60">
+            {unanswered.map((row) => (
+              <li key={row.unansweredId} className="flex items-center justify-between gap-4 py-2.5">
+                <span className="text-[13px] text-foreground">“{row.question}”</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-medium tabular-nums">
+                    {t("unanswered.asked", { count: row.askCount })}
+                  </span>
+                  <a
+                    href="#wiki-import"
+                    className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
+                  >
+                    {t("unanswered.importSomething")}
+                  </a>
+                  <AdminWriteButton
+                    onClick={() => void dismissUnanswered(row.unansweredId)}
+                    aria-label={t("unanswered.dismiss")}
+                    title={t("unanswered.dismiss")}
+                    className="text-muted hover:text-foreground transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </AdminWriteButton>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <AdminSearchBar
@@ -309,15 +361,29 @@ export function WikiPagesListScreen({
             <AdminTableHeaderCell>{t("columns.customer")}</AdminTableHeaderCell>
             <AdminTableHeaderCell>{t("columns.remembers")}</AdminTableHeaderCell>
             <AdminTableHeaderCell>{t("columns.lastChange")}</AdminTableHeaderCell>
+            <AdminTableHeaderCell align="right">
+              <button
+                type="button"
+                onClick={() => {
+                  setSortByUse((current) => !current);
+                  setPage(1);
+                }}
+                className={`uppercase tracking-[0.1em] transition-colors ${sortByUse ? "text-brand" : "hover:text-foreground"}`}
+                title={t("columns.usedSort")}
+              >
+                {t("columns.used")}
+                {sortByUse ? " ↓" : ""}
+              </button>
+            </AdminTableHeaderCell>
             <AdminTableHeaderCell align="right">{t("columns.sources")}</AdminTableHeaderCell>
           </AdminTableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <AdminTableLoadingRow colSpan={5} />
           ) : visibleRows.length === 0 ? (
             <AdminTableEmptyRow
-              colSpan={4}
+              colSpan={5}
               icon={<BookOpen className="w-5 h-5" />}
               label={
                 search.trim()
@@ -355,6 +421,19 @@ export function WikiPagesListScreen({
                 </td>
                 <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
                   {describeSource(row.lastRewriteSource)} · {new Date(row.updatedAt).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-4 text-right text-[13px] whitespace-nowrap">
+                  {row.usageCount > 0 ? (
+                    <span className="text-foreground font-medium tabular-nums">
+                      {t("used.count", { count: row.usageCount })}
+                    </span>
+                  ) : Date.now() - row.createdAt > NEVER_USED_AGE_MS ? (
+                    <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-muted text-[11px]">
+                      {t("used.never")}
+                    </span>
+                  ) : (
+                    <span className="text-secondary">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-4 text-right text-[13px] text-secondary tabular-nums">
                   {row.sourceCount > 0 ? row.sourceCount : "—"}

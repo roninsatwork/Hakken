@@ -3261,6 +3261,11 @@ export default defineSchema({
     // When the nightly tending pass last considered this page, so a tidy
     // page is not re-tidied for nothing (wiki plan, phase 4).
     lastTendedAt: v.optional(v.number()),
+    // How many answers this page has stood under, and when it last did
+    // (closing-the-loop plan, phase 2). Denormalised at answer time the
+    // way receipts are — never a scan at read time.
+    usageCount: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
     // When the Freshness Checker last verified this page against its kept
     // sources (wiki-agents plan, phase 2). Absent means never checked.
     lastVerifiedAt: v.optional(v.number()),
@@ -3344,6 +3349,28 @@ export default defineSchema({
   })
     .index("by_company_status", ["companyId", "status", "raisedAt"])
     .index("by_company_dedupe", ["companyId", "dedupeKey"]),
+
+  /**
+   * What the wiki could not answer (closing-the-loop plan, phase 1): a
+   * real question that ended with no pages under it, normalised and
+   * counted when it repeats. Every row is demand — a customer naming
+   * what to feed the brain next. Rows resolve themselves when a later
+   * identical asking gets answered with pages; dismissal is a person's
+   * call and attribution lives in the audit trail, as with pins.
+   */
+  wikiUnansweredQuestions: defineTable({
+    companyId: v.id("companies"),
+    /** The first asking's own words, for the panel. */
+    question: v.string(),
+    normalizedKey: v.string(),
+    askCount: v.number(),
+    status: v.union(v.literal("OPEN"), v.literal("DISMISSED"), v.literal("RESOLVED")),
+    firstAskedAt: v.number(),
+    lastAskedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  })
+    .index("by_company_status_asked", ["companyId", "status", "lastAskedAt"])
+    .index("by_company_key", ["companyId", "normalizedKey"]),
 
   /**
    * A pre-ingest review (wiki-agents plan, phase 4): what a marked
