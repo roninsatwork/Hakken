@@ -1,13 +1,10 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
   getCurrentUser,
-  requireAdmin,
-  requireSuperAdmin,
-} from "./authz";
+  } from "./authz";
 import { digestWidgetAccessToken } from "./chatService";
 import { allowsAnyDomain, isHostAllowed } from "./utils/widgetOriginPolicy";
 import { verifyWidgetEmbedPass } from "./utils/widgetEmbedPass";

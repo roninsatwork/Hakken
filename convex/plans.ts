@@ -1,9 +1,9 @@
-import { mutation, query, internalMutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
-import { canAccessCompany, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import { canAccessCompany, getCurrentUser } from "./authz";
 import {
   buildPlanRecord,
   getAssignedPlanDeleteErrorMessage,
@@ -13,7 +13,6 @@ import {
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
 import { publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 
-const superAdminPlanMessage = "Unauthorized access. Super Admin role required.";
 const PLAN_CATALOG_LIMIT = 100;
 const BILLING_RESET_BATCH_SIZE = 500;
 

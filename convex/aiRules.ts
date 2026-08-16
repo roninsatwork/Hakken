@@ -1,12 +1,11 @@
-import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
   getCurrentUser,
-  requireCurrentUser,
-} from "./authz";
+  } from "./authz";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { api, internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { decryptConnectorToken, encryptConnectorToken } from "./connectorTokenCrypto";
 

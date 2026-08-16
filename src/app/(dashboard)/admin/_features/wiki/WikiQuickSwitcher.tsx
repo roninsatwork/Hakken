@@ -57,9 +57,6 @@ export function WikiQuickSwitcher({
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 0);
   }, [isOpen]);
 
-  useEffect(() => {
-    setSelected(0);
-  }, [term]);
 
   if (!isOpen) return null;
 
@@ -83,7 +80,14 @@ export function WikiQuickSwitcher({
             ref={inputRef}
             type="text"
             value={term}
-            onChange={(event) => setTerm(event.target.value)}
+            onChange={(event) => {
+              setTerm(event.target.value);
+              // The highlight returns to the first result as the words change.
+              // This belongs here rather than in an effect on `term`: typing is
+              // the event, and setting state from an effect makes React render
+              // the old highlight once before correcting it.
+              setSelected(0);
+            }}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown") {
                 event.preventDefault();

@@ -1,4 +1,4 @@
-import { query, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";

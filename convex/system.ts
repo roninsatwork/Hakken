@@ -1,6 +1,6 @@
-import { mutation, query, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { getCurrentUser, requireAdmin, requireSuperAdmin } from "./authz";
+import { getCurrentUser } from "./authz";
 import { adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
 import {
   buildAnalyticsIdAuditMetadata,

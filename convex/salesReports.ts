@@ -1,6 +1,6 @@
 import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { adminMutation, adminQuery } from "./tenantFunctions";
+import { adminQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 
 export const getLatestReport = adminQuery({

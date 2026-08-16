@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { redactPII } from "./utils/pii";
-import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
+import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { publicMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   assertCanAccessThread,

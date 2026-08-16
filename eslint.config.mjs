@@ -16,6 +16,21 @@ const eslintConfig = defineConfig([
       "react-hooks/refs": "error",
       "react-hooks/set-state-in-effect": "error",
       "react-hooks/static-components": "error",
+      // Cleaned 2026-08-16 (121 warnings, mostly imports left behind when the
+      // Convex wrappers replaced the raw query/mutation builders) and ratcheted
+      // here so they cannot drift back. An underscore prefix still means "this
+      // one is deliberately not used" — the idiom for dropping a field with a
+      // rest spread, or for a signature a caller dictates.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   {

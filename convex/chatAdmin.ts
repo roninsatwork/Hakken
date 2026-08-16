@@ -1,7 +1,5 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { query } from "./_generated/server";
-import { requireAdmin, requireSuperAdmin } from "./authz";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import {
   canReadCompanyThreads,

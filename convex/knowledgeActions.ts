@@ -1,6 +1,6 @@
 "use node";
 
-import { internalAction, action } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -9,7 +9,6 @@ import { internal } from "./_generated/api";
 import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
-import { requireActionAdmin } from "./actionAuth";
 import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "./utils/knowledgeActionsService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";

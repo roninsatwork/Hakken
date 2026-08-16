@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { GOOGLE_VERTEX_PROVIDER_KEY, GOOGLE_VERTEX_EMBEDDING_MODEL_ID, SYSTEM_FAILSAFE_MODEL_ID } from "./aiModelService";

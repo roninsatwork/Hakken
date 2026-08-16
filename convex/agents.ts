@@ -997,7 +997,7 @@ export const createAgent = superAdminMutation({
 
 export const getAgentTemplatesForCreation = superAdminQuery({
   args: {},
-  handler: async (ctx) => {
+  handler: async () => {
     return getAgentTemplates();
   },
 });

@@ -1,7 +1,6 @@
-import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin } from "./authz";
+import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { publicQuery, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 
 function getPropertyScope(user: Doc<"users">) {

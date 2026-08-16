@@ -1,8 +1,7 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 import { paginationOptsValidator } from "convex/server";
-import { getActiveCompanyId, requireCurrentUser } from "./authz";
+import { getActiveCompanyId } from "./authz";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
 
 export const getPaginatedLeaderboard = tenantQuery({

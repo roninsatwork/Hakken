@@ -1,10 +1,10 @@
-import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
+import { internalQuery, internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { getActiveCompanyId, getCurrentUser, requireCurrentUser, requireSuperAdmin, userRoleValidator } from "./authz";
+import { getActiveCompanyId, getCurrentUser, userRoleValidator } from "./authz";
 import {
   assertCanCreateManagedUser,
   assertCanDeleteManagedUser,

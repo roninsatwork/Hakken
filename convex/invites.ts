@@ -1,7 +1,7 @@
-import { mutation, query, action, internalMutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { canAccessCompany, getActiveCompanyId, getCurrentUser, requireAdmin, requireSuperAdmin, userRoleValidator } from "./authz";
+import { canAccessCompany, getActiveCompanyId, getCurrentUser, userRoleValidator } from "./authz";
 import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";

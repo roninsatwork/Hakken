@@ -1,11 +1,10 @@
 "use node";
 
-import { internalAction, action, type ActionCtx } from "./_generated/server";
+import { internalAction, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
-import { requireActionUser } from "./actionAuth";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
 import { sendResendEmail } from "./resendEmailService";

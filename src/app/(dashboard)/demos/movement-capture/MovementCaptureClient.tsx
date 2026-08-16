@@ -139,9 +139,9 @@ export default function MovementCapturePage() {
   const [showAllTrackingPoints, setShowAllTrackingPoints] = useState(true);
   const [denseCaptureAdapter, setDenseCaptureAdapter] =
     useState<MovementDenseCaptureAdapter<HTMLCanvasElement> | null>(null);
-  const [denseCaptureAdapterStatus, setDenseCaptureAdapterStatus] =
+  const [, setDenseCaptureAdapterStatus] =
     useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [denseCaptureAdapterError, setDenseCaptureAdapterError] = useState<string | null>(null);
+  const [, setDenseCaptureAdapterError] = useState<string | null>(null);
   const [forceCpuTracking, setForceCpuTracking] = useState(false);
   const [disableSegmentationTracking, setDisableSegmentationTracking] = useState(false);
   const [trackingRecoveryToken, setTrackingRecoveryToken] = useState(0);
@@ -198,7 +198,6 @@ export default function MovementCapturePage() {
     captureStartReadiness,
     captureStartWholeBody,
     denseCaptureFailure,
-    denseCaptureOperational,
     trackingFailure,
     trackingFailureDetail,
     isRecording,

@@ -1,4 +1,4 @@
-import { internalMutation, internalAction, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalAction, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { buildModelCostContext, computeCostFromMap } from "./analyticsService";
@@ -17,7 +17,7 @@ import {
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { getActiveCompanyId, requireAdmin, requireSuperAdmin } from "./authz";
+import { getActiveCompanyId } from "./authz";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { sendResendEmail } from "./resendEmailService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";

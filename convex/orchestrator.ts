@@ -1,10 +1,8 @@
 "use node";
 
-import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { requireActionUser } from "./actionAuth";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { tenantAction } from "./tenantFunctions";
 

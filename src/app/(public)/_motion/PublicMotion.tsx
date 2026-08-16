@@ -18,7 +18,7 @@ import { ensureGsap, prefersReducedMotion } from "./motion";
 export function PublicMotion() {
   useEffect(() => {
     if (prefersReducedMotion()) return;
-    const { gsap, ScrollTrigger } = ensureGsap();
+    const { gsap } = ensureGsap();
 
     const ctx = gsap.context(() => {
       gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {

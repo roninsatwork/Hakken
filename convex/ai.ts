@@ -1,11 +1,10 @@
 "use node";
 
-import { internalAction, action } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { createHmac } from "node:crypto";
-import { Modality, Type } from "@google/genai";
+import { Modality } from "@google/genai";
 import { internal } from "./_generated/api";
-import { requireActionAdmin, requireActionUser } from "./actionAuth";
 import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,

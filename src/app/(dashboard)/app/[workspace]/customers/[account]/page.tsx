@@ -135,10 +135,7 @@ export default function CustomerProfilePage() {
           </Card>
         )}
 
-        <NeedsChecking
-          accountNameKey={customer.accountNameKey}
-          rows={research?.needsCheck ?? []}
-        />
+        <NeedsChecking rows={research?.needsCheck ?? []} />
 
         <DetailsForm
           key={customer.accountNameKey}
@@ -809,10 +806,8 @@ function SourceMarker({ source, onReject }: { source: ResearchRow; onReject?: ()
  * sees is a queue nobody works.
  */
 function NeedsChecking({
-  accountNameKey,
   rows,
 }: {
-  accountNameKey: string;
   rows: ResearchRow[];
 }) {
   const t = useTranslations("salesData.customerProfile");

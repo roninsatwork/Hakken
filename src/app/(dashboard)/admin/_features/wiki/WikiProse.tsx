@@ -3,7 +3,6 @@
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { ComponentProps } from "react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LAYER } from "@/src/ui/lib/layers";
 

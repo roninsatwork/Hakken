@@ -1,4 +1,4 @@
-import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -6,9 +6,9 @@ import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { validateSafeUrl } from "./utils/security";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
-import { getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser } from "./authz";
+import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
-import { adminMutation, adminQuery, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { adminMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   assertCanAccessKnowledgeScope,
   buildKnowledgeChunkRecords,

@@ -1,8 +1,7 @@
-import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { getActiveCompanyId, requireAdmin } from "./authz";
+import { getActiveCompanyId } from "./authz";
 import { adminQuery, publicMutation } from "./tenantFunctions";
 
 const INVITE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;

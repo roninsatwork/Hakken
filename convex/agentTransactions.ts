@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
-import { adminMutation, adminQuery } from "./tenantFunctions";
+import { adminQuery } from "./tenantFunctions";
 import { requireAdmin } from "./authz";
 import { getDefaultModelId, getExecutionModelPool } from "./aiModelService";
 

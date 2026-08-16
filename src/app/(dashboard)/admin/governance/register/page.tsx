@@ -11,7 +11,6 @@ import {
   sortRegisterBy,
   type AiSystemEntry,
   type AiSystemKind,
-  type AiSystemRisk,
   type RegisterSort,
 } from "@/convex/governanceRegisterService";
 import { RegisterEntryPanel } from "./RegisterEntryPanel";

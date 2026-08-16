@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import { getCurrentUser } from "./authz";
 import { canAccessThread } from "./chatService";
 import { publicQuery } from "./tenantFunctions";

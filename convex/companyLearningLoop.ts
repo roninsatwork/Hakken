@@ -24,19 +24,6 @@ type LearningSuggestion = {
   target: SuggestionTarget;
 };
 
-const evalCategoryValidator = v.union(
-  v.literal("KNOWLEDGE_RETRIEVAL"),
-  v.literal("MEMORY_USAGE"),
-  v.literal("RULE_COMPLIANCE"),
-  v.literal("BRAND_TONE"),
-  v.literal("SKILL_ROUTING"),
-  v.literal("MODEL_ROUTING"),
-  v.literal("NO_HALLUCINATION"),
-  v.literal("TENANT_ISOLATION"),
-  v.literal("WIDGET_READINESS"),
-  v.literal("AGENT_INHERITANCE")
-);
-
 const evalSeverityValidator = v.union(
   v.literal("BLOCKER"),
   v.literal("WARNING"),
@@ -145,25 +132,6 @@ function buildSourceIdsJson(args: {
     source: "company_chat",
     threadId: args.threadId,
     ...(args.messageId ? { messageId: args.messageId } : {}),
-  });
-}
-
-function buildFixtureContextJson(args: {
-  thread: Doc<"threads">;
-  message?: Doc<"messages"> | null;
-}) {
-  return JSON.stringify({
-    source: "company_chat",
-    threadId: args.thread._id,
-    sourceUrl: args.thread.sourceUrl,
-    widgetId: args.thread.widgetId,
-    observedMessage: args.message
-      ? {
-        messageId: args.message._id,
-        role: args.message.role,
-        content: args.message.content.slice(0, 2000),
-      }
-      : undefined,
   });
 }
 
@@ -445,7 +413,9 @@ export const createEvalCaseFromChat = adminMutation({
   },
   handler: async (ctx, args) => {
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
-    const { thread, message } = await requireThreadEvidence(ctx, args);
+    // Called for the check it performs, not for what it returns: the thread
+    // and message it resolves are the proof this evidence is this company's.
+    await requireThreadEvidence(ctx, args);
     const now = Date.now();
     const evalCaseId = await ctx.db.insert("companyEvalCases", {
       companyId: args.companyId,

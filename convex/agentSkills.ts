@@ -1,9 +1,9 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, requireAdmin, requireSuperAdmin } from "./authz";
+import { assertAdminCanAccessCompany } from "./authz";
 import { adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import {
   emptyAgentSkillRollup,
