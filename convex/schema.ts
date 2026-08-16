@@ -72,6 +72,12 @@ export default defineSchema({
     // company knowledge is answered from wiki pages, not chunk retrieval.
     // A per-company escape hatch, set false only to fall back to the old way.
     answersFromWiki: v.optional(v.boolean()),
+    /**
+     * When this company's memories finished moving into the wiki and rules
+     * (one-brain-plan.md, phase 1). Present means the runtime stops reading
+     * companyMemories for it (phase 2); absent means nothing has changed.
+     */
+    memoriesMigratedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])
