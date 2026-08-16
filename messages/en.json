@@ -3571,6 +3571,38 @@
     "subtitleCompany": "Every question this company's AI had no pages for.",
     "hintCompany": "Each row is real demand from this company's own conversations. Feed the wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering."
   },
+  "aiDiary": {
+    "title": "Diary",
+    "subtitle": "What the platform's brain learned, newest first.",
+    "subtitleCompany": "What this company's brain learned, newest first.",
+    "hint": "Every entry is something that really happened to the platform wiki - a page written, improved, pinned, or a gap closed. Entries with a page open it.",
+    "hintCompany": "Every entry is something that really happened to this company's wiki - a page written, improved, pinned, or a gap closed. Entries with a page open it.",
+    "loading": "Reading the diary...",
+    "empty": "Nothing yet. As the wiki learns, its days appear here.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "byPerson": "by a person",
+    "byBrain": "by the brain",
+    "entries": {
+      "pageCreated": "Wrote a new page",
+      "pageRewrite": "Improved a page",
+      "pageHumanEdit": "A person edited a page",
+      "pagePin": "Pinned a correction",
+      "pageUnpin": "Removed a pin",
+      "linksRepaired": "Tidied the links between pages",
+      "questionRaised": "Noted an open question",
+      "questionDismissed": "Closed an open question",
+      "unansweredDismissed": "Dismissed an unanswered question",
+      "reviewApproved": "A person approved a suggested change",
+      "reviewRejected": "A person turned down a suggested change",
+      "examDrafted": "Drafted a new exam question",
+      "examApproved": "A person approved an exam question",
+      "examRejected": "A person turned down an exam question",
+      "memoryMigrated": "Moved an old memory into the wiki",
+      "sourceReread": "Re-read an original web page",
+      "answerSaved": "A person saved an answer to the wiki"
+    }
+  },
   "aiMoney": {
     "title": "Value",
     "subtitleCompany": "What this company's AI handled this month, and roughly what that's worth in a person's time.",

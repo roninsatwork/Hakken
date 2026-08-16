@@ -18,6 +18,7 @@ import {
   MessageSquareCode,
   MessageSquareText,
   Monitor,
+  NotebookPen,
   Palette,
   ShieldCheck,
   TerminalSquare,
@@ -74,6 +75,12 @@ const instructionItems = [
     href: "/admin/ai/unanswered",
     icon: MessageSquareText,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/unanswered"),
+  },
+  {
+    label: "Diary",
+    href: "/admin/ai/diary",
+    icon: NotebookPen,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/diary"),
   },
 ];
 

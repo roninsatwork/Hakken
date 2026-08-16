@@ -31,6 +31,7 @@ import {
   UserPlus,
   Users,
   MessageCircleQuestion,
+  NotebookPen,
   CircleDollarSign,
 } from "lucide-react";
 import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
@@ -161,6 +162,13 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           label: "Unanswered",
           href: `${aiHref}/unanswered`,
           icon: MessageCircleQuestion,
+        },
+        {
+          // The brain's diary (watch-it-think plan, phase 4): what this
+          // company's wiki learned, as a feed, beside the Wiki it feeds.
+          label: "Diary",
+          href: `${aiHref}/diary`,
+          icon: NotebookPen,
         },
         // Saved Answers and Memory folded into the Wiki (one-brain-plan.md,
         // phase 3): answers file through the save button with the chat as

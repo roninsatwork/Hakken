@@ -3571,6 +3571,38 @@
     "subtitleCompany": "Ogni domanda per cui l'AI di questa azienda non aveva pagine.",
     "hintCompany": "Ogni riga è domanda reale dalle conversazioni di questa azienda. Alimenta il wiki e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire."
   },
+  "aiDiary": {
+    "title": "Diario",
+    "subtitle": "Cosa ha imparato il cervello della piattaforma, dal più recente.",
+    "subtitleCompany": "Cosa ha imparato il cervello di questa azienda, dal più recente.",
+    "hint": "Ogni voce è qualcosa che è successo davvero al wiki della piattaforma - una pagina scritta, migliorata, fissata, o una lacuna chiusa. Le voci con una pagina la aprono.",
+    "hintCompany": "Ogni voce è qualcosa che è successo davvero al wiki di questa azienda - una pagina scritta, migliorata, fissata, o una lacuna chiusa. Le voci con una pagina la aprono.",
+    "loading": "Lettura del diario...",
+    "empty": "Ancora niente. Man mano che il wiki impara, i suoi giorni appaiono qui.",
+    "today": "Oggi",
+    "yesterday": "Ieri",
+    "byPerson": "da una persona",
+    "byBrain": "dal cervello",
+    "entries": {
+      "pageCreated": "Ha scritto una nuova pagina",
+      "pageRewrite": "Ha migliorato una pagina",
+      "pageHumanEdit": "Una persona ha modificato una pagina",
+      "pagePin": "Ha fissato una correzione",
+      "pageUnpin": "Ha rimosso una correzione fissata",
+      "linksRepaired": "Ha riordinato i collegamenti tra le pagine",
+      "questionRaised": "Ha annotato una domanda aperta",
+      "questionDismissed": "Ha chiuso una domanda aperta",
+      "unansweredDismissed": "Ha ignorato una domanda senza risposta",
+      "reviewApproved": "Una persona ha approvato una modifica proposta",
+      "reviewRejected": "Una persona ha rifiutato una modifica proposta",
+      "examDrafted": "Ha preparato una nuova domanda d'esame",
+      "examApproved": "Una persona ha approvato una domanda d'esame",
+      "examRejected": "Una persona ha rifiutato una domanda d'esame",
+      "memoryMigrated": "Ha spostato una vecchia memoria nel wiki",
+      "sourceReread": "Ha riletto una pagina web originale",
+      "answerSaved": "Una persona ha salvato una risposta nel wiki"
+    }
+  },
   "aiMoney": {
     "title": "Valore",
     "subtitleCompany": "Cosa ha gestito l'AI di questa azienda questo mese, e quanto vale all'incirca in tempo di una persona.",
