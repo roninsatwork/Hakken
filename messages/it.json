@@ -3585,7 +3585,12 @@
     },
     "empty": "Nessuna chiamata",
     "emptyState": "Ancora nessuna chiamata. La prima apparirà qui appena squilla.",
-    "emptyFiltered": "Nessuna chiamata corrisponde a questa ricerca."
+    "emptyFiltered": "Nessuna chiamata corrisponde a questa ricerca.",
+    "filter": {
+      "all": "Tutte",
+      "completed": "Completate",
+      "failed": "Non completate"
+    }
   },
   "connections": {
     "title": "Connessioni",
@@ -3652,7 +3657,13 @@
     },
     "empty": "Nessuna email",
     "emptyState": "Ancora niente. Quando la casella collegata riceve posta, appare qui.",
-    "emptyFiltered": "Nessuna email corrisponde a questa ricerca."
+    "emptyFiltered": "Nessuna email corrisponde a questa ricerca.",
+    "filter": {
+      "all": "Tutte",
+      "replied": "Ha risposto",
+      "task": "Ha creato un'attività",
+      "skipped": "Lasciata stare"
+    }
   },
   "aiDiary": {
     "title": "Diario",
@@ -3684,7 +3695,17 @@
       "memoryMigrated": "Ha spostato una vecchia memoria nel wiki",
       "sourceReread": "Ha riletto una pagina web originale",
       "answerSaved": "Una persona ha salvato una risposta nel wiki"
-    }
+    },
+    "columns": {
+      "what": "Cosa è successo",
+      "page": "Pagina",
+      "who": "Da",
+      "when": "Quando"
+    },
+    "filter": {
+      "all": "Tutto"
+    },
+    "emptyFiltered": "Ancora niente di questo tipo."
   },
   "aiMoney": {
     "title": "Valore",

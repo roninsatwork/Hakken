@@ -3585,7 +3585,12 @@
     },
     "empty": "No calls",
     "emptyState": "No calls yet. The first one will appear here the moment it rings.",
-    "emptyFiltered": "No calls match this search."
+    "emptyFiltered": "No calls match this search.",
+    "filter": {
+      "all": "All",
+      "completed": "Completed",
+      "failed": "Did not finish"
+    }
   },
   "connections": {
     "title": "Connections",
@@ -3652,7 +3657,13 @@
     },
     "empty": "No mail",
     "emptyState": "Nothing yet. When the connected inbox receives mail, it appears here.",
-    "emptyFiltered": "No mail matches this search."
+    "emptyFiltered": "No mail matches this search.",
+    "filter": {
+      "all": "All",
+      "replied": "Replied",
+      "task": "Made a task",
+      "skipped": "Left alone"
+    }
   },
   "aiDiary": {
     "title": "Diary",
@@ -3684,7 +3695,17 @@
       "memoryMigrated": "Moved an old memory into the wiki",
       "sourceReread": "Re-read an original web page",
       "answerSaved": "A person saved an answer to the wiki"
-    }
+    },
+    "columns": {
+      "what": "What happened",
+      "page": "Page",
+      "who": "By",
+      "when": "When"
+    },
+    "filter": {
+      "all": "Everything"
+    },
+    "emptyFiltered": "Nothing of that kind yet."
   },
   "aiMoney": {
     "title": "Value",

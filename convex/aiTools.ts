@@ -1,9 +1,9 @@
-import { query, mutation, internalQuery } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { assertAdminCanAccessCompany, getActiveCompanyId, getCurrentUser, requireAdmin, requireCurrentUser, requireSuperAdmin } from "./authz";
+import { assertAdminCanAccessCompany, getActiveCompanyId, getCurrentUser } from "./authz";
 import {
   CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE,
   isConnectorOAuthAvailable,
@@ -744,20 +744,48 @@ export const getPaginatedTools = superAdminQuery({
   args: {
     paginationOpts: paginationOptsValidator,
     searchTerm: v.optional(v.string()),
+    /** One shelf group, resolved to its connectors here rather than in the
+     * browser: the browser has no business knowing which connector supplies
+     * which ability. */
+    category: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const searchTerm = args.searchTerm?.trim();
 
-    return searchTerm
-      ? await ctx.db
+    if (searchTerm) {
+      return await ctx.db
         .query("aiTools")
         .withSearchIndex("search_name", (q) => q.search("name", searchTerm))
-        .paginate(args.paginationOpts)
-      : await ctx.db
+        .paginate(args.paginationOpts);
+    }
+
+    if (!args.category) {
+      return await ctx.db
         .query("aiTools")
         .withIndex("by_createdAt")
         .order("desc")
         .paginate(args.paginationOpts);
+    }
+
+    // The group's filter is applied inside the query, before the page is
+    // cut. Filtering the page afterwards returned short — sometimes empty —
+    // pages with a live "show more" button underneath them.
+    const keys = BUILT_IN_TOOL_CONNECTORS.filter(
+      (definition) => definition.category === args.category
+    ).map((definition) => definition.key);
+
+    return await ctx.db
+      .query("aiTools")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .filter((q) =>
+        args.category === "CUSTOM"
+          // Built here rather than connected: no connector key, or one from
+          // a connector the catalogue no longer carries.
+          ? q.eq(q.field("connectorKey"), undefined)
+          : q.or(...keys.map((key) => q.eq(q.field("connectorKey"), key)))
+      )
+      .paginate(args.paginationOpts);
   },
 });
 
@@ -909,5 +937,38 @@ export const getToolInternal = internalQuery({
   args: { id: v.id("aiTools") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+/**
+ * The tool shelf's left-hand column (Anthony's choice, 2026-08-16): one
+ * group per kind of thing, each carrying its own count, so the screen sorts
+ * itself instead of asking the reader to scroll two long flat lists.
+ *
+ * Bounded: the tool table holds one row per ability an agent may be given —
+ * dozens, not thousands — and the ceiling keeps it that way.
+ */
+const TOOL_SHELF_LIMIT = 500;
+
+export const getToolShelf = superAdminQuery({
+  args: {},
+  handler: async (ctx) => {
+    const tools = await ctx.db.query("aiTools").take(TOOL_SHELF_LIMIT);
+    const categoryByKey = new Map(
+      BUILT_IN_TOOL_CONNECTORS.map((definition) => [definition.key, definition.category])
+    );
+    const counts = new Map<string, number>();
+    for (const tool of tools) {
+      // A tool with no connector was built here rather than connected.
+      const category = tool.connectorKey
+        ? (categoryByKey.get(tool.connectorKey) ?? "CUSTOM")
+        : "CUSTOM";
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+    return {
+      counts: Object.fromEntries(counts),
+      total: tools.length,
+      isCapped: tools.length >= TOOL_SHELF_LIMIT,
+    };
   },
 });
