@@ -364,7 +364,13 @@ export function WikiMapScreen({
             aria-label={t("map.title")}
             onWheel={(event) => {
               event.preventDefault();
-              zoomBy(event.deltaY > 0 ? 1.15 : 1 / 1.15, toSvgPoint(event.clientX, event.clientY));
+              // Proportional, not stepped (Anthony: the old fixed step per
+              // tick made trackpads zoom "way too sensitive and fast"): a
+              // gentle nudge scrolls gently, a hard flick still travels,
+              // and each event is capped so nothing ever lurches.
+              const lines = event.deltaMode === 1 ? event.deltaY * 33 : event.deltaY;
+              const factor = Math.exp(Math.max(-60, Math.min(60, lines)) * 0.0012);
+              zoomBy(factor, toSvgPoint(event.clientX, event.clientY));
             }}
             onPointerDown={(event) => {
               movedRef.current = false;
