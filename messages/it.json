@@ -3318,7 +3318,8 @@
         "none": "Ancora niente di fissato.",
         "placeholder": "Scrivi un fatto che Sonae deve sempre rispettare...",
         "add": "Fissa",
-        "remove": "Rimuovi questo fatto fissato"
+        "remove": "Rimuovi questo fatto fissato",
+        "hintShort": "Fatto fissato — Sonae lo rispetta sempre e non può mai riscriverlo"
       },
       "body": {
         "title": "La pagina",
@@ -3339,7 +3340,19 @@
         "open": "Apri l'originale"
       },
       "usage": "{count, plural, =1 {Alla base di 1 risposta} other {Alla base di # risposte}}, l'ultima il {date}.",
-      "usageNever": "Non ancora usata in una risposta."
+      "usageNever": "Non ancora usata in una risposta.",
+      "breadcrumbWiki": "Wiki",
+      "read": {
+        "edit": "Modifica pagina",
+        "reading": "Torna alla lettura",
+        "history": "Cronologia",
+        "meta": "Appresa da {documents, plural, =1 {1 documento} other {# documenti}} e {conversations, plural, =1 {1 conversazione} other {# conversazioni}} · ultimo insegnamento da {source}, {date}",
+        "related": "Pagine correlate",
+        "backlinks": "{count, plural, =1 {Cosa punta qui — 1 pagina} other {Cosa punta qui — # pagine}}",
+        "foldSources": "{count, plural, =1 {Da dove viene · 1 fonte} other {Da dove viene · # fonti}}",
+        "foldHistory": "{count, plural, =1 {Cronologia · 1 modifica} other {Cronologia · # modifiche}}",
+        "foldPin": "Fissa un fatto"
+      }
     },
     "kinds": {
       "CUSTOMER": "Cliente",

@@ -3318,7 +3318,8 @@
         "none": "Nothing pinned yet.",
         "placeholder": "Write a fact Sonae must always respect...",
         "add": "Pin it",
-        "remove": "Remove this pinned fact"
+        "remove": "Remove this pinned fact",
+        "hintShort": "Pinned fact — Sonae always respects this and can never rewrite it"
       },
       "body": {
         "title": "The page",
@@ -3339,7 +3340,19 @@
         "open": "Open the original"
       },
       "usage": "{count, plural, =1 {Stood under 1 answer} other {Stood under # answers}}, last on {date}.",
-      "usageNever": "Not yet used in an answer."
+      "usageNever": "Not yet used in an answer.",
+      "breadcrumbWiki": "Wiki",
+      "read": {
+        "edit": "Edit page",
+        "reading": "Back to reading",
+        "history": "History",
+        "meta": "Learned from {documents, plural, =1 {1 document} other {# documents}} and {conversations, plural, =1 {1 conversation} other {# conversations}} · last taught by {source}, {date}",
+        "related": "Related pages",
+        "backlinks": "{count, plural, =1 {What links here — 1 page} other {What links here — # pages}}",
+        "foldSources": "{count, plural, =1 {Where this came from · 1 source} other {Where this came from · # sources}}",
+        "foldHistory": "{count, plural, =1 {History · 1 change} other {History · # changes}}",
+        "foldPin": "Pin a fact"
+      }
     },
     "kinds": {
       "CUSTOMER": "Customer",

@@ -835,7 +835,65 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
     .withIndex("by_page", (q) => q.eq("pageId", page._id))
     .order("desc")
     .take(50);
+
+  // The reading wiki's plumbing (reading-wiki designs, screen 1): every
+  // [[reference]] and recorded link resolved to a living page — id, title
+  // and an excerpt for the hover peek — and the reverse direction: every
+  // page that links HERE, with the sentence that does. One bounded scan
+  // serves both; the wall is the index the scan starts from.
+  const neighbourhood = await ctx.db
+    .query("wikiPages")
+    .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .take(500);
+  const myKey = linkKeyFor(page.kind, page.subjectKey);
+  const bySubject = new Map<string, (typeof neighbourhood)[number]>();
+  for (const candidate of neighbourhood) {
+    bySubject.set(linkKeyFor(candidate.kind, candidate.subjectKey), candidate);
+  }
+  const wantedKeys = new Set<string>(page.links);
+  for (const slug of extractWikiLinkSlugs(page.content)) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "CUSTOMER", "SOURCE"] as const) {
+      const key = linkKeyFor(kind, slug);
+      if (bySubject.has(key)) {
+        wantedKeys.add(key);
+        break;
+      }
+    }
+  }
+  const resolvedLinks = [...wantedKeys]
+    .map((key) => {
+      const target = bySubject.get(key);
+      if (!target || target._id === page._id) return null;
+      return {
+        key,
+        slug: target.subjectKey,
+        pageId: target._id,
+        title: target.title,
+        excerpt: target.content.slice(0, 160).replace(/\s+/g, " "),
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+  const quoteFor = (content: string): string => {
+    const mention = content.indexOf(`[[${page.subjectKey}]]`);
+    if (mention === -1) return content.slice(0, 110).replace(/\s+/g, " ");
+    const start = Math.max(0, mention - 60);
+    return `…${content.slice(start, mention + page.subjectKey.length + 64).replace(/\s+/g, " ")}…`;
+  };
+  const backlinks = neighbourhood
+    .filter((candidate) => candidate._id !== page._id && candidate.links.includes(myKey))
+    .slice(0, 30)
+    .map((candidate) => ({
+      pageId: candidate._id,
+      title: candidate.title,
+      subjectKey: candidate.subjectKey,
+      kind: candidate.kind,
+      quote: quoteFor(candidate.content),
+    }));
+
   return {
+    resolvedLinks,
+    backlinks,
     pageId: page._id,
     kind: page.kind,
     sources: sources.map((source) => ({
