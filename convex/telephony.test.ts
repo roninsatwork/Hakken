@@ -547,6 +547,21 @@ describe("the hang-up-and-watch finale", () => {
             text: "The caller asked about Sunday delivery. Confirm their order is scheduled.",
         });
 
+        // The scheduled chain dynamically imports its function modules the
+        // first time it runs, and convex-test's drain loop only affords a
+        // fixed number of timer pumps for that to happen. On a loaded
+        // machine a cold import of the action graph can outlast the budget
+        // — the 1-in-3 full-suite flake this test used to be. Warming the
+        // imports before time freezes takes the race out entirely.
+        await Promise.all([
+            import("./telephonyActions"),
+            import("./wikiActions"),
+            import("./wikiPages"),
+            import("./tasks"),
+            import("./notifications"),
+            import("./aiModels"),
+        ]);
+
         vi.useFakeTimers();
         try {
             await endCall(t, "CA-finale");
