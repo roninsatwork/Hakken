@@ -10,7 +10,6 @@ import {
   Activity,
   AppWindow,
   ArrowLeft,
-  BookmarkCheck,
   BookOpen,
   BrainCircuit,
   Building2,
@@ -148,18 +147,10 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
             || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
           ),
         },
-        {
-          // Beside the Wiki, because a saved answer is company knowledge —
-          // just the part of it that came out of a conversation.
-          label: "Saved Answers",
-          href: `${aiHref}/saved-answers`,
-          icon: BookmarkCheck,
-        },
-        {
-          label: "Memory",
-          href: `${aiHref}/memory`,
-          icon: BrainCircuit,
-        },
+        // Saved Answers and Memory folded into the Wiki (one-brain-plan.md,
+        // phase 3): answers file through the save button with the chat as
+        // their receipt, facts live as pinned corrections, and instructions
+        // as AI Rules. Their addresses redirect.
         {
           label: "Skills",
           href: `${aiHref}/skills`,

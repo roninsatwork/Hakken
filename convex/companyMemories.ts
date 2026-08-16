@@ -745,6 +745,42 @@ export const proposeCorrectionCandidate = internalMutation({
       return null;
     }
 
+    // A migrated company's corrections go where its facts now live: the
+    // wiki's open questions (one-brain-plan.md, phase 3). A person settles
+    // each by pinning or editing the right page — the same judgement the
+    // memory queue used to hold, on the screen that survived the fold.
+    const company = await ctx.db.get(args.companyId);
+    if (company?.memoriesMigratedAt) {
+      const dedupeKey = `correction:${content.toLowerCase().slice(0, 120)}`;
+      const existing = await ctx.db
+        .query("wikiOpenQuestions")
+        .withIndex("by_company_dedupe", (q) =>
+          q.eq("companyId", args.companyId).eq("dedupeKey", dedupeKey)
+        )
+        .first();
+      if (!existing) {
+        const questionId = await ctx.db.insert("wikiOpenQuestions", {
+          companyId: args.companyId,
+          kind: "CORRECTION",
+          pageKeyA: "POLICY:about-this-company",
+          claimA: content.slice(0, 300),
+          detail: "Typed by the person who was given the answer, when they marked it not right.",
+          dedupeKey,
+          status: "OPEN",
+          raisedAt: Date.now(),
+        });
+        await ctx.db.insert("auditLogs", {
+          actionType: "WIKI_QUESTION_RAISED",
+          entityId: questionId.toString(),
+          entityType: "wikiOpenQuestions",
+          companyId: args.companyId,
+          timestamp: Date.now(),
+          metadata: JSON.stringify({ kind: "CORRECTION" }),
+        });
+      }
+      return null;
+    }
+
     const rejectedFingerprint = getRejectedFingerprint(content);
     const alreadyRejected = await ctx.db
       .query("companyMemoryCandidates")

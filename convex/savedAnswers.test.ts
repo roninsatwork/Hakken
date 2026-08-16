@@ -1,13 +1,15 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
-import { api, internal } from "./_generated/api";
+import { api } from "./_generated/api";
 import schema from "./schema";
 
 /**
- * A good answer used to be unkeepable, so the same question got asked again
- * next month. Saving files it as an ordinary company document, which is what
- * makes retrieval pick it up for free — and which is why it inherits the
- * admin gate every other company-knowledge write has.
+ * "Save to wiki" (one-brain-plan.md, phase 3): a person vouching for an
+ * answer files it into the wiki through the Filing Clerk's road, with the
+ * conversation as the receipt. The mutation's own duties are tested here —
+ * the stamp, the walls, the audit row, the scheduled filing; the prose
+ * weaving is the model's half and lives behind the same validation as
+ * every other rewrite.
  */
 async function seedAnswer() {
   const t = convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -48,127 +50,67 @@ async function seedAnswer() {
   return { t, ...ids };
 }
 
-describe("saving an answer", () => {
-  test("files it as a company document titled by the question it answers", async () => {
-    const { t, adminId, companyId, answerId } = await seedAnswer();
+describe("saving an answer to the wiki", () => {
+  test("stamps the message and leaves an audit row naming the conversation", async () => {
+    const { t, adminId, companyId, answerId, threadId } = await seedAnswer();
 
-    const documentId = await t
-      .withIdentity({ subject: adminId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
+    await t.withIdentity({ subject: adminId }).mutation(api.knowledge.saveAnswerToWiki, { messageId: answerId });
 
-    const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    expect(doc).toMatchObject({
-      companyId,
-      // Titled by what somebody will search for later, not by the answer.
-      title: "What are the depot hours on a Friday?",
-      textContent: "The depot closes at 4pm on Fridays.",
-      format: "text/plain",
-    });
+    const message = await t.run(async (ctx) => ctx.db.get(answerId));
+    expect(message?.savedToWikiAt).toEqual(expect.any(Number));
+
+    const audit = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
+    const row = audit.find((entry) => entry.actionType === "SAVE_ANSWER_TO_WIKI");
+    expect(row).toBeTruthy();
+    expect(row?.companyId).toBe(companyId);
+    expect(JSON.parse(row!.metadata ?? "{}").threadId).toBe(threadId);
   });
 
-  test("records where it came from, so it is not a rumour", async () => {
-    const { t, adminId, answerId, threadId } = await seedAnswer();
-
-    const documentId = await t
-      .withIdentity({ subject: adminId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
-    const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    expect(doc?.sourceUrl).toBe(`/app/assistant/${threadId}#${answerId}`);
-  });
-
-  test("saving the same answer twice keeps one copy", async () => {
+  test("saving the same answer twice files nothing twice", async () => {
     const { t, adminId, answerId } = await seedAnswer();
     const asAdmin = t.withIdentity({ subject: adminId });
 
-    const first = await asAdmin.mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-    const second = await asAdmin.mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
+    await asAdmin.mutation(api.knowledge.saveAnswerToWiki, { messageId: answerId });
+    await asAdmin.mutation(api.knowledge.saveAnswerToWiki, { messageId: answerId });
 
-    expect(second).toBe(first);
-    const docs = await t.run(async (ctx) => ctx.db.query("knowledgeDocuments").collect());
-    expect(docs).toHaveLength(1);
+    const audit = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
+    expect(audit.filter((entry) => entry.actionType === "SAVE_ANSWER_TO_WIKI")).toHaveLength(1);
   });
 
   test("an admin from another workspace cannot save into this one", async () => {
     const { t, otherAdminId, answerId } = await seedAnswer();
 
     await expect(
-      t.withIdentity({ subject: otherAdminId }).mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId }),
+      t.withIdentity({ subject: otherAdminId }).mutation(api.knowledge.saveAnswerToWiki, { messageId: answerId }),
     ).rejects.toThrow();
+    const message = await t.run(async (ctx) => ctx.db.get(answerId));
+    expect(message?.savedToWikiAt).toBeUndefined();
   });
 
-  test("a team member may save, and it goes live immediately", async () => {
-    const { t, memberId, answerId } = await seedAnswer();
+  test("a team member may save, and the admins are told", async () => {
+    const { t, memberId, adminId, answerId } = await seedAnswer();
 
-    const documentId = await t
-      .withIdentity({ subject: memberId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
+    await t.withIdentity({ subject: memberId }).mutation(api.knowledge.saveAnswerToWiki, { messageId: answerId });
 
-    const doc = await t.run(async (ctx) => ctx.db.get(documentId));
-    // Trusted by default: queued for ingestion there and then, and it still
-    // records who put it there.
-    expect(doc).toMatchObject({ reviewStatus: "APPROVED", submittedBy: memberId, status: "processing" });
-    expect(doc?.lastQueuedAt).toEqual(expect.any(Number));
+    const notifications = await t.run(async (ctx) => ctx.db.query("notifications").collect());
+    const told = notifications.find((row) => row.userId === adminId);
+    expect(told?.title).toBe("An answer was saved to the wiki");
   });
 
-  test("an admin sees every saved answer and who saved it", async () => {
-    const { t, memberId, adminId, companyId, answerId } = await seedAnswer();
-
-    await t.withIdentity({ subject: memberId }).mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
-    const saved = await t
-      .withIdentity({ subject: adminId })
-      .query(api.knowledge.listSavedAnswers, {
+  test("only an assistant's answer can be saved", async () => {
+    const { t, adminId, threadId, companyId } = await seedAnswer();
+    const questionId = await t.run(async (ctx) =>
+      ctx.db.insert("messages", {
+        threadId,
+        role: "user",
+        content: "And Saturdays?",
         companyId,
-        paginationOpts: { numItems: 10, cursor: null },
-      });
-
-    expect(saved.page).toHaveLength(1);
-    expect(saved.page[0]).toMatchObject({
-      title: "What are the depot hours on a Friday?",
-      savedByName: "member@test.com",
-    });
-  });
-
-  test("a super admin can take one out, and its chunks go with it", async () => {
-    const { t, memberId, answerId } = await seedAnswer();
-    const superAdminId = await t.run(async (ctx) =>
-      ctx.db.insert("users", { email: "root@test.com", role: "SUPER_ADMIN", createdAt: Date.now() }),
+        userId: adminId,
+        createdAt: Date.now(),
+      })
     );
-
-    const documentId = await t
-      .withIdentity({ subject: memberId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
-    // A chunk it would have been given by ingestion.
-    await t.run(async (ctx) =>
-      ctx.db.insert("knowledgeChunks", {
-        documentId,
-        isGlobal: false,
-        text: "The depot closes at 4pm on Fridays.",
-        embedding: [],
-      }),
-    );
-
-    await t.withIdentity({ subject: superAdminId }).mutation(api.knowledge.deleteDocument, { documentId });
-    expect(await t.run(async (ctx) => ctx.db.get(documentId))).toBeNull();
-
-    // Chunks are purged in their own transaction, scheduled by the delete.
-    // Run it here so the claim "removal removes it from retrieval" is proven
-    // rather than assumed.
-    await t.mutation(internal.knowledge.purgeDocumentChunksInternal, { documentId });
-    expect(await t.run(async (ctx) => ctx.db.query("knowledgeChunks").collect())).toHaveLength(0);
-  });
-
-  test("an admin from another workspace cannot take one out", async () => {
-    const { t, memberId, otherAdminId, answerId } = await seedAnswer();
-
-    const documentId = await t
-      .withIdentity({ subject: memberId })
-      .mutation(api.knowledge.saveAnswerToKnowledge, { messageId: answerId });
-
     await expect(
-      t.withIdentity({ subject: otherAdminId }).mutation(api.knowledge.deleteDocument, { documentId }),
-    ).rejects.toThrow();
+      t.withIdentity({ subject: adminId }).mutation(api.knowledge.saveAnswerToWiki, { messageId: questionId }),
+    ).rejects.toThrow("Only an answer can be saved.");
   });
 });

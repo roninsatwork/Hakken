@@ -1287,26 +1287,13 @@ export const saveManualText = tenantMutation({
 });
 
 /**
- * Keep a good answer where the team will find it.
- *
- * A good reply used to be unkeepable: the same question got asked again next
- * month and answered from scratch. Saving files it as an ordinary
- * company-scoped document, so retrieval picks it up with no extra work, and
- * it records where it came from — an answer with no provenance is a rumour.
- *
- * Anyone in the workspace may save, and a save goes live immediately.
- *
- * This started as propose-then-approve, mirroring memories. Anthony's call,
- * 2026-08-13: a queue nobody empties is worse than no queue, and an answer
- * the assistant itself produced is a weaker risk than a document somebody
- * uploads. So saving is trusted by default and removal is the control —
- * `deleteDocument` already lets a super admin (or the workspace's own admin)
- * take one out, and purges its chunks with it, so removal genuinely removes
- * it from retrieval rather than hiding it.
- *
- * `submittedBy` is kept so every saved answer still says who put it there.
+ * "Save to wiki" (one-brain-plan.md, phase 3). A person vouching for an
+ * answer is a stronger signal than the Filing Clerk's own judgement, so
+ * the worthiness question is skipped and the wiki files it through the
+ * same audited door, with the conversation as the receipt. Idempotent:
+ * the message is stamped, and a second press files nothing twice.
  */
-export const saveAnswerToKnowledge = tenantMutation({
+export const saveAnswerToWiki = tenantMutation({
   args: { messageId: v.id("messages") },
   handler: async (ctx, args) => {
     const { userId, user, companyId: actingCompanyId } = ctx;
@@ -1324,16 +1311,7 @@ export const saveAnswerToKnowledge = tenantMutation({
       throw new Error("Unauthorized");
     }
 
-    // Saving the same answer twice keeps one copy rather than teaching
-    // retrieval the same thing twice over.
-    const sourceUrl = `/app/assistant/${message.threadId}#${args.messageId}`;
-    const existing = await ctx.db
-      .query("knowledgeDocuments")
-      .withIndex("by_company", (q) => q.eq("companyId", companyId))
-      .order("desc")
-      .take(200);
-    const alreadySaved = existing.find((doc) => doc.sourceUrl === sourceUrl);
-    if (alreadySaved) return alreadySaved._id;
+    if (message.savedToWikiAt) return null;
 
     // Titled by the question it answers, because that is what somebody will
     // search for later.
@@ -1345,26 +1323,18 @@ export const saveAnswerToKnowledge = tenantMutation({
     const question = [...priorMessages]
       .filter((row) => row.role === "user" && row.createdAt <= message.createdAt)
       .pop();
-    const title = (question?.content ?? message.content).slice(0, 120).trim() || "Saved answer";
+    const questionText = (question?.content ?? "").slice(0, 500);
 
     const now = Date.now();
-    const documentId = await ctx.db.insert("knowledgeDocuments", {
-      ...buildKnowledgeDocumentRecord({
-        title,
-        textContent: message.content,
-        sourceUrl,
-        status: "processing",
-        format: "text/plain",
-        createdBy: userId,
-        createdAt: now,
-        lastQueuedAt: now,
-        companyId,
-      }),
-      reviewStatus: "APPROVED",
-      submittedBy: userId,
+    await ctx.db.patch(message._id, { savedToWikiAt: now });
+    await ctx.scheduler.runAfter(0, internal.wikiFilingActions.considerAnswer, {
+      companyId,
+      threadId: String(message.threadId),
+      question: questionText || message.content.slice(0, 500),
+      answer: message.content.slice(0, 4000),
+      pageKeys: [],
+      vouchedByHuman: true,
     });
-
-    await ctx.scheduler.runAfter(0, internal.knowledgeActions.ingestDocument, { documentId });
 
     // Told, not asked. Nothing waits on an admin now, but somebody adding to
     // what the assistant answers from is worth their knowing about.
@@ -1378,77 +1348,24 @@ export const saveAnswerToKnowledge = tenantMutation({
           userId: admin._id,
           companyId,
           kind: "ANSWER_SAVED_TO_KNOWLEDGE",
-          title: "An answer was added to knowledge",
-          body: title,
-          href: "/app/settings/saved-answers",
+          title: "An answer was saved to the wiki",
+          body: (questionText || message.content).slice(0, 120),
+          href: `/app/assistant/${message.threadId}`,
         });
       }
     }
 
     await ctx.db.insert("auditLogs", {
-      actionType: "SAVE_ANSWER_TO_KNOWLEDGE",
+      actionType: "SAVE_ANSWER_TO_WIKI",
       actorId: userId,
-      entityType: "knowledgeDocuments",
-      entityId: documentId,
+      entityType: "messages",
+      entityId: args.messageId,
       companyId,
       timestamp: now,
-      metadata: JSON.stringify({ messageId: args.messageId, threadId: message.threadId }),
+      metadata: JSON.stringify({ threadId: message.threadId }),
     });
 
-    return documentId;
-  },
-});
-
-/**
- * Every answer the team has saved, newest first.
- *
- * Saving is trusted, so this is a record to check rather than a queue to
- * clear — the control it offers is removal, not approval.
- */
-export const listSavedAnswers = adminQuery({
-  args: {
-    companyId: v.id("companies"),
-    searchTerm: v.optional(v.string()),
-    paginationOpts: paginationOptsValidator,
-  },
-  handler: async (ctx, args) => {
-    assertCanAccessKnowledgeScope(ctx.user, args.companyId);
-
-    // Narrowed in the database rather than the browser, so a company with a
-    // long list can still find an answer on page nine.
-    const searchTerm = args.searchTerm?.trim();
-    const page = searchTerm
-      ? await ctx.db
-          .query("knowledgeDocuments")
-          .withSearchIndex("search_title", (q) => q.search("title", searchTerm).eq("companyId", args.companyId))
-          // Saved answers are the ones somebody submitted from a conversation;
-          // uploads and website pages have their own screens.
-          .filter((q) => q.neq(q.field("submittedBy"), undefined))
-          .paginate(args.paginationOpts)
-      : await ctx.db
-          .query("knowledgeDocuments")
-          .withIndex("by_company_submitted", (q) => q.eq("companyId", args.companyId))
-          .filter((q) => q.neq(q.field("submittedBy"), undefined))
-          .order("desc")
-          .paginate(args.paginationOpts);
-
-    return {
-      ...page,
-      page: await Promise.all(
-        page.page.map(async (doc) => {
-          const submitter = doc.submittedBy ? await ctx.db.get(doc.submittedBy) : null;
-          return {
-            _id: doc._id,
-            title: doc.title,
-            textContent: doc.textContent,
-            sourceUrl: doc.sourceUrl,
-            status: doc.status,
-            createdAt: doc.createdAt,
-            savedByName: submitter?.name ?? submitter?.email ?? null,
-          };
-        }),
-      ),
-    };
+    return null;
   },
 });
 

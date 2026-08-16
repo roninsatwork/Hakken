@@ -28,7 +28,7 @@ export function MessageFeedbackControls({ message }: { message: Doc<"messages"> 
   const tAnswer = useTranslations("ai.assistant.answer");
   const feedback = useQuery(api.messageFeedback.getMineForThread, { threadId: message.threadId });
   const upsert = useMutation(api.messageFeedback.upsertForMessage);
-  const saveAnswer = useMutation(api.knowledge.saveAnswerToKnowledge);
+  const saveAnswer = useMutation(api.knowledge.saveAnswerToWiki);
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [correction, setCorrection] = useState("");
@@ -76,11 +76,10 @@ export function MessageFeedbackControls({ message }: { message: Doc<"messages"> 
    * Skipping the field leaves the old behaviour exactly as it was.
    */
   /**
-   * Keep a good answer where the team will find it.
-   *
-   * Saving is trusted and takes effect immediately; a super admin can remove
-   * one afterwards from Saved answers. So the button says "Saved" and means
-   * it, rather than implying a review that no longer happens.
+   * Keep a good answer where the team will find it: the wiki
+   * (one-brain-plan.md, phase 3). A person's save outranks the Filing
+   * Clerk's judgement, so it files without the worthiness question, with
+   * this conversation as the receipt on the page it teaches.
    */
   const save = async () => {
     if (saveState === "saving" || saveState === "saved") return;

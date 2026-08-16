@@ -2631,8 +2631,8 @@
       "you": "Hai chiesto",
       "copy": "Copia",
       "answer": {
-        "save": "Salva",
-        "saved": "Salvato",
+        "save": "Salva nel wiki",
+        "saved": "Salvato nel wiki",
         "saveFailed": "Impossibile salvare"
       },
       "evidence": {

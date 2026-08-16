@@ -2013,6 +2013,9 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     createdAt: v.number(),
+    /** Stamped when a person saved this answer into the wiki, so the same
+     * answer is filed once however many times the button is pressed. */
+    savedToWikiAt: v.optional(v.number()),
     // Sonae AI Logistics
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
@@ -3320,7 +3323,14 @@ export default defineSchema({
    */
   wikiOpenQuestions: defineTable({
     companyId: v.optional(v.id("companies")),
-    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS")),
+    kind: v.union(
+      v.literal("CONTRADICTION"),
+      v.literal("FRESHNESS"),
+      // A person's typed correction from chat, routed here once their
+      // company's memories migrated (one-brain-plan.md, phase 3) — the
+      // queue that used to live on the Memory screen.
+      v.literal("CORRECTION")
+    ),
     pageKeyA: v.string(),
     claimA: v.string(),
     pageKeyB: v.optional(v.string()),

@@ -72,9 +72,8 @@ describe("CompanyDashboardLayout navigation", () => {
       // The wiki replaced Knowledge in this menu (wiki-replaces-knowledge
       // plan, stage three): importing and reading both live on the Wiki.
       ["Wiki", "/admin/companies/company123/ai/pages"],
-      // A saved answer is company knowledge, so it sits beside it.
-      ["Saved Answers", "/admin/companies/company123/ai/saved-answers"],
-      ["Memory", "/admin/companies/company123/ai/memory"],
+      // Saved Answers and Memory folded into the Wiki (one-brain-plan.md,
+      // phase 3); their addresses redirect there.
       ["Skills", "/admin/companies/company123/ai/skills"],
       ["Prompt", "/admin/companies/company123/ai/prompt"],
       ["AI Rules", "/admin/companies/company123/ai/rules"],
@@ -86,6 +85,8 @@ describe("CompanyDashboardLayout navigation", () => {
     for (const [label, href] of expectedItems) {
       expect(within(menu).getByRole("menuitem", { name: new RegExp(label) })).toHaveAttribute("href", href);
     }
+    expect(within(menu).queryByRole("menuitem", { name: /Saved Answers/ })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: /Memory/ })).not.toBeInTheDocument();
 
     expect(within(menu).getByRole("menuitem", { name: /AI Models/ })).toHaveClass("bg-brand");
     expect(within(menu).getByLabelText("AI Models selected")).toBeInTheDocument();

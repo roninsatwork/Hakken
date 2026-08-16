@@ -30,11 +30,19 @@ export const considerAnswer = internalAction({
     question: v.string(),
     answer: v.string(),
     pageKeys: v.array(v.string()),
+    /** A person pressed "Save to wiki" (one-brain-plan.md, phase 3): the
+     * worthiness question is already answered, so the Clerk's filter and
+     * its switch are both bypassed — the model only chooses the page and
+     * writes the prose, through the same audited door. */
+    vouchedByHuman: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<void> => {
     const startedAt = Date.now();
     await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
-    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_FILING_CLERK" }))) {
+    if (
+      !args.vouchedByHuman &&
+      !(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_FILING_CLERK" }))
+    ) {
       return;
     }
 
@@ -44,10 +52,12 @@ export const considerAnswer = internalAction({
       });
       const decisionResponse = await generateTextWithResolvedModel({
         model,
-        systemInstruction:
-          "You decide whether an answered question produced durable NEW knowledge worth filing into a company wiki: a cross-page synthesis, a resolved comparison, or a durable relationship not already on the pages it used. " +
-          "NEVER file routine answers, restatements of what the pages already say, transient status, speculation, or personal/customer-specific detail. For most answers the correct decision is no. " +
-          'Reply with strict JSON, nothing else: {"file": boolean, "kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "note": string} — when file is true, slug names the page (kebab-case) and note states the durable insight in two or three plain sentences.',
+        systemInstruction: args.vouchedByHuman
+          ? "A person decided this answer must be kept in their company wiki — your job is only WHERE and WHAT, never whether. " +
+            'Reply with strict JSON, nothing else: {"file": true, "kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "note": string} — slug names the page it belongs to (kebab-case, an existing page name where one fits), and note states what the answer establishes in two or three plain sentences, personal detail left out.'
+          : "You decide whether an answered question produced durable NEW knowledge worth filing into a company wiki: a cross-page synthesis, a resolved comparison, or a durable relationship not already on the pages it used. " +
+            "NEVER file routine answers, restatements of what the pages already say, transient status, speculation, or personal/customer-specific detail. For most answers the correct decision is no. " +
+            'Reply with strict JSON, nothing else: {"file": boolean, "kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "note": string} — when file is true, slug names the page (kebab-case) and note states the durable insight in two or three plain sentences.',
         contents: [
           {
             type: "text",
@@ -62,7 +72,7 @@ export const considerAnswer = internalAction({
       const parsed = jsonMatch
         ? (JSON.parse(jsonMatch[0]) as { file?: unknown; kind?: unknown; slug?: unknown; note?: unknown })
         : {};
-      if (parsed.file !== true) return;
+      if (parsed.file !== true && !args.vouchedByHuman) return;
       if (!WIKI_TOPIC_KINDS.includes(parsed.kind as WikiTopicKind)) return;
       if (typeof parsed.slug !== "string" || typeof parsed.note !== "string") return;
       const slug = normaliseTopicSlug(parsed.slug);
@@ -114,7 +124,9 @@ export const considerAnswer = internalAction({
         systemKey: "WIKI_FILING_CLERK",
         companyId: args.companyId,
         trigger: "EVENT",
-        objective: `An answered question produced durable synthesis: ${args.question.slice(0, 100)}`,
+        objective: args.vouchedByHuman
+          ? `A person saved an answer into the wiki: ${args.question.slice(0, 100)}`
+          : `An answered question produced durable synthesis: ${args.question.slice(0, 100)}`,
         summary: `Filed into ${parsed.kind}:${slug} — ${note.slice(0, 140)}`,
         startedAt,
       });

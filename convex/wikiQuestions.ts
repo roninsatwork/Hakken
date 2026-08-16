@@ -14,7 +14,7 @@ import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 export const raiseQuestionInternal = internalMutation({
   args: {
     companyId: v.optional(v.id("companies")),
-    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS")),
+    kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS"), v.literal("CORRECTION")),
     pageKeyA: v.string(),
     claimA: v.string(),
     pageKeyB: v.optional(v.string()),
@@ -101,7 +101,7 @@ export const autoResolveStaleQuestionsInternal = internalMutation({
 
 function questionForScreen(question: {
   _id: Id<"wikiOpenQuestions">;
-  kind: "CONTRADICTION" | "FRESHNESS";
+  kind: "CONTRADICTION" | "FRESHNESS" | "CORRECTION";
   pageKeyA: string;
   claimA: string;
   pageKeyB?: string;
