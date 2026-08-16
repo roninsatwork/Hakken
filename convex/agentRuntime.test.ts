@@ -210,6 +210,21 @@ type TestConvex = ReturnType<typeof makeTest>;
  */
 beforeAll(async () => {
   await makeTest().run(async () => {});
+  // The terminal-status write schedules the reflection and memory-candidate
+  // chain, and those tests pump it under fake timers. convex-test loads each
+  // function's module on first call — a dynamic import that races the pump's
+  // iteration cap when the whole suite has vitest's transformer under load,
+  // which showed up as a one-in-several "did not complete after 10000 timer
+  // pumps". Importing the chain here, in real time, leaves the pump waiting
+  // only on the work itself. Same fix as telephony.test.ts.
+  await Promise.all([
+    import("./agentRunReflections"),
+    import("./agentRunReflectionService"),
+    import("./agentMemoryCandidates"),
+    import("./agentImprovementSuggestions"),
+    import("./aiModels"),
+    import("./chat"),
+  ]);
 }, 60_000);
 
 /**
