@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -54,6 +55,9 @@ export default function KioskPage() {
   const [assistantCaption, setAssistantCaption] = useState("");
   const [stillThere, setStillThere] = useState(false);
   const [restingReason, setRestingReason] = useState<string | null>(null);
+  // A logo that will not load must leave no gap and no broken-image icon on a
+  // screen nobody is standing at to fix it.
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const phaseRef = useRef<KioskPhase>("idle");
   useEffect(() => {
@@ -378,7 +382,22 @@ export default function KioskPage() {
       onClick={phase === "idle" || phase === "resting" ? () => void wake() : undefined}
     >
       {/* The permanent disclosure (commitment 2): never leaves the screen. */}
-      <header className="pt-8 px-8 text-center">
+      <header className="pt-8 px-8 text-center flex flex-col items-center gap-3">
+        {/* The company's own mark, above its own words. The config carried
+            this from the first day of the kiosk and the screen dropped it,
+            so every reception desk wore the platform's face instead of the
+            company's. Quiet on purpose: a lobby screen, not a billboard. */}
+        {config.themeLogoUrl && !logoFailed && (
+          <Image
+            src={config.themeLogoUrl}
+            alt={config.companyName}
+            width={160}
+            height={48}
+            unoptimized
+            onError={() => setLogoFailed(true)}
+            className="h-12 w-auto max-w-[220px] object-contain"
+          />
+        )}
         <h1 className="text-[17px] font-semibold text-foreground">
           You&apos;re talking to {config.companyName}&apos;s AI assistant
         </h1>
