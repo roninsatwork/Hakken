@@ -17,7 +17,8 @@ describe("AiWorkspaceNav", () => {
 
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
-    expect(screen.getByRole("link", { name: "Unanswered" })).toHaveAttribute("href", "/admin/ai/unanswered");
+    // Unanswered lives in the Instructions dropdown (Anthony, 2026-08-17).
+    expect(screen.queryByRole("link", { name: "Unanswered" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
     // A company's wiki is never visible from the global menu (Anthony's
     // ruling, 2026-08-16): the only Wiki here is the platform's own, and it
@@ -42,6 +43,7 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("menuitem", { name: "Rules" })).toHaveAttribute("href", "/admin/ai/rules");
     expect(screen.getByRole("menuitem", { name: "System Prompt" })).toHaveAttribute("href", "/admin/ai/system-prompt");
     expect(screen.getByRole("menuitem", { name: "Wiki" })).toHaveAttribute("href", "/admin/ai/knowledge");
+    expect(screen.getByRole("menuitem", { name: "Unanswered" })).toHaveAttribute("href", "/admin/ai/unanswered");
 
     fireEvent.click(screen.getByRole("button", { name: "Widget" }));
 

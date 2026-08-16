@@ -69,6 +69,12 @@ const instructionItems = [
     icon: AudioLines,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/voice"),
   },
+  {
+    label: "Unanswered",
+    href: "/admin/ai/unanswered",
+    icon: MessageSquareText,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/unanswered"),
+  },
 ];
 
 function isModelDetailRoute(pathname: string) {
@@ -161,12 +167,6 @@ const workspaceTabs = [
       pathname.startsWith("/admin/ai/usage/chat-logs")
       || pathname.startsWith("/admin/ai/chat-logs")
     ),
-  },
-  {
-    label: "Unanswered",
-    href: "/admin/ai/unanswered",
-    icon: MessageSquareText,
-    matches: (pathname: string) => pathname.startsWith("/admin/ai/unanswered"),
   },
   {
     label: "Skill Center",
