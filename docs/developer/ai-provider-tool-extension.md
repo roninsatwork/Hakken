@@ -50,7 +50,7 @@ The model resolution flow is:
 Current runtime caveats:
 
 - Assistant chat response generation and thread-title generation use `generateTextWithResolvedModel`.
-- Assistant RAG search, knowledge ingestion, embeddings, voice transcription, workflow node-config generation, agent runtime, workflow agent nodes, swarm actions, report generation, router/orchestrator selection, and model-graded eval actions still use Google Vertex helpers directly or require `getGoogleVertexProviderModelId`.
+- Assistant RAG search, knowledge ingestion, embeddings, voice transcription, workflow node-config generation, agent runtime, workflow agent nodes, swarm actions, report generation, router/orchestrator selection, and model-graded eval actions still use Google Vertex helpers directly or require `getGoogleVertexProviderModelId`. The Gmail mailbox watcher's answer decision uses `generateTextWithResolvedModel` with the `fast-chat` use case.
 - Embedding paths intentionally require Google Vertex-compatible 768-dimensional embeddings until the vector schema and existing data expectations change.
 
 When documenting provider support, distinguish "catalog/provider can be configured" from "this runtime path can execute through that provider today."
@@ -145,9 +145,9 @@ Built-in connector definitions live in `convex/toolConnectorDefinitions.ts`. A d
 - `requiredSecretRefs`
 - one or more model-callable tool definitions
 
-The implemented categories are knowledge, profile, workflow, HTTP, email, and custom. Built-in connector definitions currently use no auth or secret references. OAuth schema and functions exist, but OAuth connections are disabled until the platform has provider authorization routes, callbacks, encrypted token storage, and refresh. Built-in connector definitions include Sonae-native capabilities and external integration scaffolds such as HTTP REST, email/notification, Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, and Zendesk.
+The implemented categories are knowledge, profile, workflow, HTTP, email, and custom. Built-in connector definitions use no auth, secret references, and OAuth. The first implemented OAuth connector is `google-gmail`, which uses provider authorization routes, callbacks, encrypted token storage, refresh, and revocation. Built-in connector definitions also include Sonae-native capabilities and external integration scaffolds such as HTTP REST, email/notification, Slack, Google Drive, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, and Zendesk.
 
-Most external connector definitions are scaffolds. They can be installed, tested for configuration shape, exposed in the tool catalog, and bound to agents, but most real downstream API execution is intentionally not implemented yet. The handler should return a clear not-implemented result instead of pretending an external action was completed.
+Most external connector definitions are scaffolds. They can be installed, tested for configuration shape, exposed in the tool catalog, and bound to agents, but most real downstream API execution is intentionally not implemented yet. The Gmail mailbox is the implemented exception and is documented in [Gmail Mailbox](./gmail-mailbox.md). Scaffold handlers should return a clear not-implemented result instead of pretending an external action was completed.
 
 ## Connector Installs
 
@@ -165,13 +165,27 @@ Secret reference fields are reference keys, not raw secrets. `assertSafeSecretRe
 
 ## OAuth Connector State
 
-OAuth-backed connectors are not currently available. `beginConnectorOAuth`, `completeConnectorOAuth`, and `disconnectConnectorOAuth` exist to preserve the future surface, but `beginConnectorOAuth` and `completeConnectorOAuth` call the shared availability guard first.
+OAuth-backed connectors are currently implemented for Google Gmail.
+`beginConnectorOAuth` creates a pending connection with a single-use state and
+an authorize URL. The Convex HTTP routes `/api/connectors/oauth/authorize` and
+`/api/connectors/oauth/callback` validate that state, redirect to the provider,
+exchange the code server-side, store token ciphertext, and mark the connector
+connected.
 
-`isConnectorOAuthAvailable()` currently returns false, so an operator cannot start or complete OAuth. This is intentional: there is no configured provider authorization flow, callback route, encrypted token storage, or refresh behavior on this deployment.
+`isConnectorOAuthAvailable()` now depends on the connector provider and
+deployment configuration. For Google, the deployment must provide
+`CONNECTOR_GOOGLE_CLIENT_ID`, `CONNECTOR_GOOGLE_CLIENT_SECRET`, and
+`CONNECTOR_TOKEN_ENCRYPTION_KEY`; otherwise an operator sees an explicit
+configuration error instead of a broken consent flow.
 
-If OAuth is implemented later, `completeConnectorOAuth` must validate pending state, connector id, required scopes, account references, and token references without storing raw tokens. `disconnectConnectorOAuth` should mark pending or connected OAuth rows disconnected and reset connector test state.
+`getConnectorAccessToken` refreshes expiring access tokens from the encrypted
+refresh token, and the `connector-oauth-token-refresh` cron catches long-idle
+connections. `disconnectConnectorOAuth` schedules provider revocation before
+token rows are deleted and connector state is reset.
 
-Do not store OAuth access tokens directly in connector rows. Use reference keys that point to an external vault or token store.
+Do not store OAuth access tokens directly in connector rows. Token material
+belongs in `connectorOAuthTokens` as ciphertext, and no client-callable function
+should read that table.
 
 ## Tool Metadata
 

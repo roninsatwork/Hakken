@@ -542,7 +542,7 @@
     "chatLogs": "Log delle Chat",
     "rules": "Regole",
     "systemPrompt": "Prompt di Sistema",
-    "globalKnowledge": "Conoscenza Globale",
+    "globalKnowledge": "Wiki della piattaforma",
     "models": "Modelli",
     "agents": "Agenti",
     "agentApprovals": "Approvazioni Agenti",
@@ -3394,7 +3394,13 @@
       "hint": "Hai chiesto di vedere questi documenti prima che il wiki li impari. Ecco cosa afferma ciascuno.",
       "approve": "Approva — lascia che il wiki lo impari",
       "reject": "Rifiuta — tienilo fuori dal wiki"
-    }
+    },
+    "globalTitle": "Wiki della piattaforma",
+    "globalSubtitle": "Conoscenza a disposizione di ogni azienda. In caso di disaccordo vince sempre il wiki aziendale.",
+    "globalHint": "Tutto ciò che viene importato qui può raggiungere le risposte di ogni azienda, quindi le importazioni attendono la tua revisione prima che venga scritta una parola. Nulla di specifico di un'azienda appartiene a questo scaffale: il wiki di ogni azienda vive con quell'azienda e nessuno al di fuori può vederlo.",
+    "scopeCompany": "Questo wiki appartiene solo a questa azienda. Nessuno al di fuori dell'azienda può vederlo e nulla di ciò che contiene raggiunge mai il wiki della piattaforma.",
+    "scopeGlobal": "Il wiki condiviso della piattaforma. Vuoto significa che ogni risposta proviene esclusivamente dai wiki aziendali.",
+    "globalEmptyState": "Ancora nessuna pagina. Importa un sito web, un file o un testo qui sopra e, una volta approvata la revisione, le sue pagine appariranno qui."
   },
   "calls": {
     "title": "Chiamate",

@@ -1,23 +1,30 @@
 # Sonae Answers The Phone
 
 Status: **COMPLETE — proven live 2026-08-14.** Anthony dialled the real
-number, held a conversation answered from company knowledge (including a
-mid-call correction the model recovered from), hung up, and the finale
-landed: transcript, summary, follow-up task, bell, all on the Calls screen.
-His verdict, verbatim: "that worked".
-Originally:
-Everything below exists and is tested — Phase 0 (relay answers knowledge),
-the audio translation, the call record with its 90-day purge, the answering
-webhook with signature checks and admission ceilings, the media-stream
-bridge with barge-in and live transcript filing, the hang-up finale
-(summary, CRM match, task, bell), the Calls screen, and the quota spend.
-4,700+ tests green. What remains needs Anthony: a Twilio account, a number,
-and its three settings on the deployment — then the live proof call.
+number, held a conversation answered from company knowledge, including a
+mid-call correction the model recovered from, hung up, and the finale landed:
+transcript, summary, follow-up task, bell, all on the Calls screen. His verdict,
+verbatim: "that worked".
+
+Everything below exists and is tested: relay knowledge answering, audio
+translation, call records, answering webhook signature checks and admission
+ceilings, media-stream bridge, barge-in, live transcript filing, the hang-up
+finale, CRM match, task/bell, Calls screen, and quota spend.
 Phase 3 of the showcase channels roadmap (`showcase-channels-plan.md`).
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
+
+## Current implementation state (verified 2026-08-16)
+
+Inbound telephone answering is implemented through the Twilio-style public
+voice and status webhooks, call admission checks, the live relay media stream,
+turn filing, terminal status handling, and an after-call step that summarizes,
+matches the caller, creates a follow-up task, notifies the assignee, and can
+handoff matched-customer learning to the Wiki. The maintained user and developer
+docs are `docs/end-user/spoken-channels.md` and
+`docs/developer/spoken-channels.md`.
 
 ## The decision
 
@@ -64,7 +71,11 @@ Recorded decisions:
    See "The one architectural change" below. This is the only structural
    change this phase makes to existing code.
 
-## What is actually true today (verified 2026-08-13)
+## Pre-build baseline (verified 2026-08-13)
+
+The following notes record the state before telephone answering was built. Keep
+them as historical context for the implementation choices; do not treat them as
+the current product state.
 
 **No telephony exists.** No number, no provider SDK, no audio route.
 Confirmed absent.

@@ -1,6 +1,6 @@
 # Route Reference
 
-Last reviewed: 2026-08-08 12:10 BST +0100
+Last reviewed: 2026-08-16
 Status: current route inventory
 Audience: engineers and agents changing Sonae routing, navigation, page ownership, or documentation coverage.
 
@@ -24,9 +24,12 @@ in the same documentation pass.
 | `/verify` | `src/app/verify/page.tsx` | Magic-link consent confirmation page. | [Login, Access, And Authentication](../end-user/login-access-and-authentication.md), [Route Protection And Authentication](./route-protection-and-authentication.md) |
 | `/local-test-auth` | `src/app/local-test-auth/page.tsx` | Local deterministic auth helper. | [Local Test Auth Runbook](../operator/local-test-auth-runbook.md) |
 | `/w/[widgetId]` | `src/app/w/[widgetId]/page.tsx` | Public embedded widget runtime. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
+| `/kiosk/[widgetId]` | `src/app/kiosk/[widgetId]/page.tsx` | Full-screen receptionist voice surface for a kiosk-enabled widget. | [Receptionist Screen](../end-user/receptionist-screen.md), [Receptionist Screen Developer Guide](./receptionist-screen.md) |
 | `/sandbox/[widgetId]` | `src/app/sandbox/[widgetId]/page.tsx` | Widget sandbox host page. | [Widget Handoff And Troubleshooting](../end-user/widget-handoff-and-troubleshooting.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
 | `/api/health` | `src/app/api/health/route.ts` | HTTP health route. | [System Health And Platform Alerts](./system-health-and-platform-alerts.md) |
 | `/api/email-preview` | `src/app/api/email-preview/route.ts` | Dev-only email template preview and raw source route. | [Email System](./email-system.md) |
+| Convex HTTP `/api/connectors/oauth/authorize` | `convex/http.ts`, `convex/connectorOAuth.ts` | Connector OAuth authorize redirect leg. | [Gmail Mailbox](./gmail-mailbox.md), [AI Provider Tool Extension](./ai-provider-tool-extension.md) |
+| Convex HTTP `/api/connectors/oauth/callback` | `convex/http.ts`, `convex/connectorOAuth.ts` | Connector OAuth callback and token-exchange leg. | [Gmail Mailbox](./gmail-mailbox.md), [AI Provider Tool Extension](./ai-provider-tool-extension.md) |
 | `/api/e2e-auth` | `src/app/api/e2e-auth/route.ts` | Deterministic E2E auth route. | Test-only route; see auth docs before changing. |
 | `/api/e2e-fixture/face-proof` | `src/app/api/e2e-fixture/face-proof/route.ts` | Test fixture route for movement proof. | Movement docs and E2E tests. |
 | `/api/e2e-fixture/hand-proof` | `src/app/api/e2e-fixture/hand-proof/route.ts` | Test fixture route for movement proof. | Movement docs and E2E tests. |
@@ -38,6 +41,10 @@ in the same documentation pass.
 | `/app` | Authenticated app landing/dashboard handoff. | [Sonae Product Overview](../end-user/platform-overview.md), [Frontend Development](./frontend.md) |
 | `/app/assistant` | Assistant landing/new conversation surface. | [Assistant Chat User Guide](../end-user/assistant-chat.md), [Assistant Chat Developer Guide](./assistant-chat.md) |
 | `/app/assistant/[threadId]` | Existing assistant thread view. | [Assistant Chat User Guide](../end-user/assistant-chat.md), [Assistant Chat Developer Guide](./assistant-chat.md) |
+| `/app/calls` | Workspace calls display, dialable number, live state, and masked recent call list. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
+| `/app/calls/[id]` | Call detail with full caller number, transcript, summary, matched customer, and task link. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
+| `/app/reception` | Workspace receptionist screen list and open-screen links. | [Receptionist Screen](../end-user/receptionist-screen.md), [Receptionist Screen Developer Guide](./receptionist-screen.md) |
+| `/app/tasks` | Workspace task list, mine/everyone switch, manual task creation, state changes, and source links. | [Tasks And Notifications](../end-user/tasks-and-notifications.md), [Tasks And Notifications Developer Guide](./tasks-and-notifications.md) |
 | `/app/profile` | User profile settings. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Company And User Management](./company-user-management.md) |
 | `/app/settings` | Tenant admin organization dashboard. | [Organization And Company Workspaces](../end-user/organization-and-company-workspaces.md), [Organization And Company Workspaces Developer Guide](./organization-and-company-workspaces.md) |
 | `/app/settings/team` | Tenant team management. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
@@ -78,13 +85,13 @@ in the same documentation pass.
 | `/admin/companies/[id]/directory/users` | Directory user list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/directory/invites` | Directory invitation list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/chat-logs` | Company chat-log review. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
-| `/admin/companies/[id]/knowledge` | Company knowledge management. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md) |
+| `/admin/companies/[id]/knowledge` | Company knowledge source archive. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
 | `/admin/companies/[id]/models` | Company model defaults. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
 | `/admin/companies/[id]/system-prompt` | Company prompt editor. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/rules` and children | Company AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/rules/new` | New company AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/rules/[ruleId]` | Company AI rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/widget` | Company widget configuration. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
+| `/admin/companies/[id]/widget` | Company widget configuration, including Receptionist screen opt-in. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md), [Receptionist Screen](../end-user/receptionist-screen.md) |
 
 ## Company AI Routes
 
@@ -94,7 +101,10 @@ in the same documentation pass.
 | `/admin/companies/[id]/ai/prompt` | Company instructions. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/ai/models` | Company model routing/defaults. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
 | `/admin/companies/[id]/ai/rules` and children | Company AI rules. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/companies/[id]/ai/knowledge` and document detail | Company knowledge. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md) |
+| `/admin/companies/[id]/ai/knowledge` and document detail | Company knowledge source archive behind Wiki receipts. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
+| `/admin/companies/[id]/ai/pages` | Company Wiki page list, import, reviews, open questions, and progress. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/companies/[id]/ai/pages/[pageId]` | Company Wiki page detail, editing, pins, receipts, and history. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/companies/[id]/ai/pages/map` | Company Wiki map. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
 | `/admin/companies/[id]/ai/chat-logs` | Company chat logs. | [AI Administration](../end-user/ai-administration.md), [AI Administration Developer Guide](./ai-administration.md) |
 | `/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new` | Create a company check from a chat thread. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/companies/[id]/ai/chat-logs/[threadId]/memory-candidate/new` | Create a memory candidate from a chat thread. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
@@ -105,7 +115,7 @@ in the same documentation pass.
 | `/admin/companies/[id]/ai/memory` | Company memories and memory suggestions. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/companies/[id]/ai/skills` and children | Company skills. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
 | `/admin/companies/[id]/ai/skills/new` | New company skill. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [Company AI Readiness And Checks Developer Guide](./company-ai-readiness-and-checks.md) |
-| `/admin/companies/[id]/ai/knowledge/[documentId]` | Company knowledge document detail. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md) |
+| `/admin/companies/[id]/ai/knowledge/[documentId]` | Company knowledge source document detail. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md), [Company Wiki](./company-wiki.md) |
 | `/admin/companies/[id]/ai/rules/new` | New company AI rule in Company AI area. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/ai/rules/[ruleId]` | Company AI rule detail/edit in Company AI area. | [Company AI Readiness And Checks](../end-user/company-ai-readiness-and-checks.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/companies/[id]/ai/usage` | Company AI usage. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Administration Developer Guide](./ai-administration.md) |
@@ -121,8 +131,12 @@ in the same documentation pass.
 | `/admin/ai/rules` | Global AI rules. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/rules/new` | New global AI rule. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
 | `/admin/ai/rules/[id]` | Global AI rule detail/edit. | [AI Rules And Prompts](../end-user/ai-rules-and-prompts.md), [AI Rules And Prompts Developer Guide](./ai-rules-and-prompts.md) |
-| `/admin/ai/global-knowledge`, `/admin/ai/knowledge` | Global knowledge. | [Knowledge Management](../end-user/knowledge-management.md), [Knowledge Management Developer Guide](./knowledge-management.md) |
-| `/admin/ai/widget` | Global widget configuration. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md) |
+| `/admin/ai/global-knowledge` | Old Global Knowledge address; redirects to `/admin/ai/knowledge`. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/knowledge` | Platform Wiki page list, import, reviews, open questions, and progress. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/knowledge/[pageId]` | Platform Wiki page detail, editing, pins, receipts, and history. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/knowledge/map` | Platform Wiki map. | [Company Wiki](../end-user/company-wiki.md), [Company Wiki Developer Guide](./company-wiki.md) |
+| `/admin/ai/voice` | Workspace spoken voice choice and preview. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
+| `/admin/ai/widget` | Global widget configuration, including Receptionist screen opt-in. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md), [Receptionist Screen](../end-user/receptionist-screen.md) |
 | `/admin/ai/models` and children | Model catalogue, providers, defaults, detail. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
 | `/admin/ai/models/catalogue` | Model catalogue. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |
 | `/admin/ai/models/providers` | Provider settings. | [AI Models, Providers, And Costs](../end-user/ai-models-providers-and-costs.md), [AI Models, Providers, And Costs Developer Guide](./ai-models-providers-and-costs.md) |

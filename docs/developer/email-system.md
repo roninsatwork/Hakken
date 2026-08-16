@@ -7,6 +7,9 @@ Governed by [Email Design System Plan](../plans/active/email-design-system-plan.
 Sender identity and branding resolution are covered separately in
 [Email Branding](./email-branding.md). Magic-link URL construction is covered by
 `convex/magicLinkUrlService.ts` and [Route Protection And Authentication](./route-protection-and-authentication.md).
+The connected inbound Gmail mailbox is a separate channel covered by
+[Gmail Mailbox](./gmail-mailbox.md); it replies through Gmail itself rather than
+through the shared Resend email shell.
 
 ## The one rule
 

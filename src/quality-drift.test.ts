@@ -627,8 +627,13 @@ describe('Quality Drift Guardrails', () => {
   });
 
   test('knowledge document deletes remain confirmation-gated', () => {
+    // The old global knowledge screen was folded into the platform wiki
+    // (global-wiki-plan.md, phase 3); its address must stay a redirect
+    // rather than growing a second document manager.
+    const globalRedirect = readRepoFile('src/app/(dashboard)/admin/ai/global-knowledge/page.tsx');
+    expect(globalRedirect).toContain('redirect("/admin/ai/knowledge")');
+
     const pages = [
-      'src/app/(dashboard)/admin/ai/global-knowledge/page.tsx',
       'src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx',
     ];
 

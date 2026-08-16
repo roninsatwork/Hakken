@@ -116,10 +116,37 @@ export const listPendingReviewsForCompany = adminQuery({
   },
 });
 
+export const listPendingReviewsForGlobal = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
+      throw new Error("Unauthorized access to the platform wiki");
+    }
+    const rows = await ctx.db
+      .query("wikiReviews")
+      .withIndex("by_company_status", (q) =>
+        q.eq("companyId", undefined).eq("status", "PENDING")
+      )
+      .order("desc")
+      .take(25);
+    return rows.map(reviewForScreen);
+  },
+});
+
+export const decideReviewForGlobal = adminMutation({
+  args: { reviewId: v.id("wikiReviews"), approve: v.boolean() },
+  handler: async (ctx, args) => {
+    if (ctx.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized access to the platform wiki");
+    }
+    await decideCore(ctx, { companyId: undefined, userId: ctx.userId, ...args });
+  },
+});
+
 async function decideCore(
   ctx: import("./_generated/server").MutationCtx & { scheduler: import("./_generated/server").MutationCtx["scheduler"] },
   args: {
-    companyId: Id<"companies">;
+    companyId: Id<"companies"> | undefined;
     userId: Id<"users">;
     reviewId: Id<"wikiReviews">;
     approve: boolean;

@@ -2,11 +2,13 @@
 
 Knowledge management is implemented by `convex/knowledge.ts`, `convex/knowledgeActions.ts`, `convex/knowledgeService.ts`, `convex/knowledgeRetrieval.ts`, shared upload policy helpers, the reusable `KnowledgeManager` admin feature, and assistant thread upload flows. It supports global, company, agent, and thread-scoped documents.
 
+Company knowledge now has a separate page-based layer documented in [Company Wiki](./company-wiki.md). Treat this guide as the source archive, ingestion, chunking, repair, and retrieval guide; treat the Wiki guide as the current company-facing pages, map, receipts, review, staff-agent, and whole-page answer-context guide.
+
 ## Route Map
 
 - `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` renders global knowledge for super admins.
-- `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx` renders company knowledge.
-- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` re-exports the company knowledge page for the company AI submenu.
+- `src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx` renders company knowledge source documents.
+- `src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx` re-exports the company knowledge page for archived source access behind Wiki receipts.
 - `src/app/(dashboard)/admin/agents/[id]/knowledge/page.tsx` renders agent knowledge.
 - `src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx` is the shared admin knowledge UI.
 - `src/app/(dashboard)/admin/_features/knowledge/knowledgeUploadUtils.ts` walks dropped folders, preserves relative paths, caps batches, skips reserved OKF bundle files, and limits browser upload concurrency.
@@ -60,6 +62,8 @@ Standard users cannot upload admin knowledge documents. Thread knowledge is narr
 File and manual text ingestion schedules `internal.knowledgeActions.ingestDocument`. The action reads stored file content or manual text, extracts PDFs with `pdf-extraction`, extracts Word `.docx` files with `mammoth`, and otherwise falls back to UTF-8 text decoding before chunking. CSV, Markdown, and plain text work through that text fallback. Markdown is then prepared by `prepareKnowledgeMarkdown`: YAML frontmatter is removed from searchable text and its `title` can replace the uploaded filename. Although the shared upload policy currently accepts Excel MIME types, admin and thread knowledge ingestion does not yet use the richer Excel parser from `convex/utils/fileParser.ts`; do not promise reliable spreadsheet extraction for persisted knowledge until that implementation is added. After text extraction, `convex/utils/knowledgeActionsService.ts` normalizes whitespace and chunks content with the current 1,000-character target and 200-character overlap, adjusting overlap safely when a caller supplies smaller chunk sizes. Ingestion then resolves the active embedding model through stored AI model defaults, embeds chunks with Vertex, and saves chunk batches through `internal.knowledge.saveChunksInternal`.
 
 Bulk uploads accept at most 500 files per gesture. `knowledgeUploadUtils.ts` walks nested folder entries, retains relative paths after dropping the common top-level folder, skips `index.md` and `log.md` only when they are part of a folder bundle, and uploads at concurrency four. `saveDocument` can defer ingestion so the browser can finish creating pending records first. `startPendingFileIngestion` then starts the fixed-width backend queue; `processKnowledgeFileQueue` claims one pending non-URL document transactionally, ingests it, records failure on that document without blocking later files, and reschedules until the queue is empty. Keep the file queue distinct from `processWebsiteQueue`; URL documents must never be claimed as uploaded files or vice versa.
+
+The Company Wiki distiller can consume ready company knowledge documents after ingestion. Documents marked with `wikiReviewRequested` wait for the Wiki review flow before they can be distilled, and `wikiDistilledAt` records that the wiki has already claimed a source. Keep these fields coordinated with [Company Wiki](./company-wiki.md) when changing ingestion completion hooks.
 
 Website ingestion uses Firecrawl and the shared URL safety helper in `convex/utils/security.ts`:
 

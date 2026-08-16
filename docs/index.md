@@ -29,8 +29,12 @@ This is the front door for Sonae documentation. Use the audience sections below 
 ## Coverage Note
 
 The latest implementation audit refreshed every active-plan link and aligned
-the knowledge, workflow, agent, assistant, widget, settings, deployment, and
-coverage guides with the implementation through 2026-08-11. Future upkeep
+the knowledge, workflow, task, notification, agent, assistant, widget, reception, settings,
+deployment, connector, and coverage guides with the implementation through
+2026-08-16. It also added dedicated Company Wiki, spoken-channel, Gmail mailbox,
+photo-action, receptionist-screen, and task/notification guide pairs for the newly routed page/map/import/review
+experience, live voice/phone surfaces, connected inbound mailbox backend, and
+image-to-task/walk-up kiosk/task-routing behavior. Future upkeep
 should still treat broad guides and newly changed implementation areas as
 active audit targets because routes, Convex modules, workflows, scripts, and
 operator procedures continue to change.
@@ -87,6 +91,10 @@ operator procedures continue to change.
 - [Convex API And Schema Reference](./developer/convex-api-and-schema-reference.md)
 - [Operational Scripts Reference](./developer/operational-scripts-reference.md)
 - [Assistant Chat](./developer/assistant-chat.md)
+- [Spoken Channels](./developer/spoken-channels.md)
+- [Photo Actions](./developer/photo-actions.md)
+- [Receptionist Screen](./developer/receptionist-screen.md)
+- [Tasks And Notifications](./developer/tasks-and-notifications.md)
 - [Public Website](./developer/public-website.md)
 - [Governance And Trust](./developer/governance-and-trust.md)
 - [Sales Data Workspace](./developer/sales-data-workspace.md)
@@ -96,6 +104,7 @@ operator procedures continue to change.
 - [Data Retention And Purges](./developer/data-retention-and-purges.md)
 - [Email Branding](./developer/email-branding.md)
 - [Email System](./developer/email-system.md)
+- [Gmail Mailbox](./developer/gmail-mailbox.md)
 - [Route Protection And Authentication](./developer/route-protection-and-authentication.md)
 - [Tenancy Enforcement](./developer/tenancy-enforcement.md)
 - [Shared Admin UI](./developer/shared-admin-ui.md)
@@ -113,6 +122,7 @@ operator procedures continue to change.
 - [Auxiliary App Experiences](./developer/auxiliary-app-experiences.md)
 - [Embedded Widgets](./developer/embedded-widgets.md)
 - [Knowledge Management](./developer/knowledge-management.md)
+- [Company Wiki](./developer/company-wiki.md)
 - [Maintenance Scripts](./developer/maintenance-scripts.md)
 - [Organization And Company Workspaces](./developer/organization-and-company-workspaces.md)
 - [Platform Operations Settings](./developer/platform-operations-settings.md)
@@ -172,6 +182,10 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Sales Data Workspace](./end-user/sales-data-workspace.md)
 - [Login, Access, And Authentication](./end-user/login-access-and-authentication.md)
 - [Assistant Chat](./end-user/assistant-chat.md)
+- [Spoken Channels](./end-user/spoken-channels.md)
+- [Photo Actions](./end-user/photo-actions.md)
+- [Receptionist Screen](./end-user/receptionist-screen.md)
+- [Tasks And Notifications](./end-user/tasks-and-notifications.md)
 - [Administration](./end-user/administration.md)
 - [AI Administration](./end-user/ai-administration.md)
 - [AI Rules And Prompts](./end-user/ai-rules-and-prompts.md)
@@ -183,7 +197,9 @@ Before changing movement capture, Replay Studio, or Game Studio behaviour, read 
 - [Auxiliary App Experiences](./end-user/auxiliary-app-experiences.md)
 - [Embedded Widgets](./end-user/embedded-widgets.md)
 - [Emails From Sonae](./end-user/emails.md)
+- [Gmail Mailbox](./end-user/gmail-mailbox.md)
 - [Knowledge Management](./end-user/knowledge-management.md)
+- [Company Wiki](./end-user/company-wiki.md)
 - [Health](./end-user/health.md)
 - [Organization And Company Workspaces](./end-user/organization-and-company-workspaces.md)
 - [Company Workspace Administration](./end-user/company-workspace-administration.md)

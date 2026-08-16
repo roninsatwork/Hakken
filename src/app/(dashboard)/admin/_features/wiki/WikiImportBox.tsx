@@ -35,7 +35,9 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const [tab, setTab] = useState<"website" | "file" | "text">("website");
   // The Reviewer's checkpoint (wiki-agents plan, phase 4): tick it and the
   // wiki writes nothing from this import until you approve the claims.
-  const [reviewFirst, setReviewFirst] = useState(false);
+  // On the platform shelf the checkpoint starts ticked: anything imported
+  // there can reach every company's answers (global-wiki-plan.md, rule 2).
+  const [reviewFirst, setReviewFirst] = useState(!companyId);
   const [url, setUrl] = useState("");
   const [textTitle, setTextTitle] = useState("");
   const [textBody, setTextBody] = useState("");
@@ -62,7 +64,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       const cleaned = url.trim();
       if (!cleaned) throw new Error(t("errors.missingUrl"));
       const links: string[] = await mapWebsite({ url: cleaned });
-      await queueWebsiteUrls({ ...scopeArgs, urls: links, ...(reviewFirst ? { wikiReview: true } : {}) });
+      await queueWebsiteUrls({ ...scopeArgs, urls: links, wikiReview: reviewFirst });
       setUrl("");
       return t("feedback.website", { count: links.length });
     });
@@ -70,7 +72,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const importText = () =>
     run(async () => {
       if (!textTitle.trim() || !textBody.trim()) throw new Error(t("errors.missingText"));
-      await saveManualText({ ...scopeArgs, title: textTitle.trim(), textContent: textBody, ...(reviewFirst ? { wikiReview: true } : {}) });
+      await saveManualText({ ...scopeArgs, title: textTitle.trim(), textContent: textBody, wikiReview: reviewFirst });
       setTextTitle("");
       setTextBody("");
       return t("feedback.text");
@@ -99,7 +101,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           title: buildUploadTitle(item),
           format: contentType,
           ...(collected.length > 1 ? { deferIngestion: true } : {}),
-          ...(reviewFirst ? { wikiReview: true } : {}),
+          wikiReview: reviewFirst,
         });
       }
       if (collected.length > 1) await startKnowledgeFileQueue({});

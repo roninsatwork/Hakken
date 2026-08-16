@@ -18,7 +18,10 @@ describe("AiWorkspaceNav", () => {
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
     expect(screen.getByRole("link", { name: "Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
-    expect(screen.getByRole("link", { name: "Wiki" })).toHaveAttribute("href", "/admin/ai/pages");
+    // A company's wiki is never visible from the global menu (Anthony's
+    // ruling, 2026-08-16): the only Wiki here is the platform's own, and it
+    // lives in the Instructions dropdown, not the tab row.
+    expect(screen.queryByRole("link", { name: "Wiki" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Instructions" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Widget" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Models" })).toBeInTheDocument();
@@ -26,6 +29,7 @@ describe("AiWorkspaceNav", () => {
     expect(screen.queryByRole("link", { name: "Rules" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "System Prompt" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Global Knowledge" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Wiki" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Appearance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Integration" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Providers" })).not.toBeInTheDocument();
@@ -36,7 +40,7 @@ describe("AiWorkspaceNav", () => {
 
     expect(screen.getByRole("menuitem", { name: "Rules" })).toHaveAttribute("href", "/admin/ai/rules");
     expect(screen.getByRole("menuitem", { name: "System Prompt" })).toHaveAttribute("href", "/admin/ai/system-prompt");
-    expect(screen.getByRole("menuitem", { name: "Global Knowledge" })).toHaveAttribute("href", "/admin/ai/knowledge");
+    expect(screen.getByRole("menuitem", { name: "Wiki" })).toHaveAttribute("href", "/admin/ai/knowledge");
 
     fireEvent.click(screen.getByRole("button", { name: "Widget" }));
 

@@ -182,12 +182,12 @@ export function WikiMapScreen({
   const router = useRouter();
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
-  const tenantRows = useQuery(api.wikiPages.listCompanyPages, companyId ? "skip" : {});
+  const globalRows = useQuery(api.wikiPages.listPagesForGlobal, companyId ? "skip" : {});
   const companyRows = useQuery(
     api.wikiPages.listPagesForCompany,
     companyId ? { companyId } : "skip"
   );
-  const rows = companyId ? companyRows : tenantRows;
+  const rows = companyId ? companyRows : globalRows;
 
   const layout = useMemo(() => runForceLayout(rows ?? []), [rows]);
   const neighbours = useMemo(() => {

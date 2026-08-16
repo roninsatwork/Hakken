@@ -17,6 +17,26 @@ Owner: Anthony
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 
+## Current implementation state (verified 2026-08-16)
+
+Photo actions are implemented in Assistant chat and embedded widgets. Signed-in
+users can attach image files to assistant turns, widget visitors can upload
+images through the widget upload endpoints, and chat messages render thumbnails
+for stored image attachments. Image-bearing turns route to the `vision` model
+default when a Google vision-capable model is configured; otherwise the user is
+told that the current model path cannot inspect the image instead of silently
+dropping it.
+
+The runtime sends image evidence through the Google-capable chat and agent paths,
+asks the model for a fenced `photo-action` proposal, parses and caps the
+proposal in `convex/photoActionService.ts`, stores it on the assistant message,
+and renders `PhotoActionChip` for human confirmation. Confirming calls
+`tasks.confirmPhotoAction`, verifies thread/message access, prevents duplicate
+tasks, and creates either a signed-in task for the confirmer or a widget follow-up
+assigned through the call-assignee lookup. The remaining demo item is operational
+proof from a real phone against an embedded widget domain that is authorized for
+that device.
+
 ## The decision
 
 A photo of a delivery note, a broken part, or a price ticket goes into
@@ -37,7 +57,11 @@ Recorded decisions:
 3. **The widget gets photos too** — the dormant, already-guarded upload
    endpoints are wired up, not reinvented.
 
-## What is actually true today (verified 2026-08-13)
+## Pre-build baseline (verified 2026-08-13)
+
+The following notes record the state before Phases A-D were implemented. Keep
+them as historical context for the defects the plan fixed; do not treat them as
+the current product state.
 
 The research verdict in one line: **the pipes exist, the taps are off, and
 one pipe is quietly cross-threaded.**

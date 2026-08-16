@@ -113,6 +113,79 @@ Readable production stack traces additionally need the build-time `SENTRY_ORG`, 
 
 These public runtime variables must be available while building the browser bundle, not added only after the image is built. The current deploy workflow does not pass Sentry variables into the Docker build or Cloud Run service, so a production operator must extend the deployment environment deliberately before treating monitoring as active. Verify one controlled non-sensitive error in the Sentry project after rollout and confirm its environment and release tags.
 
+## Spoken Channels Configuration
+
+Live voice and inbound phone calls need runtime configuration beyond normal
+text chat. The app can still run without these variables, but spoken surfaces
+will refuse sessions or show configuration errors until the required provider
+and relay values are present.
+
+Google live voice relay sessions require:
+
+- `VOICE_RELAY_URL` for the relay endpoint.
+- `VOICE_RELAY_SECRET` for signing relay tickets.
+- `TELEPHONY_STREAM_URL` when the same relay is used for phone-call media
+  streaming.
+
+Inbound Twilio-style calls require:
+
+- `TWILIO_AUTH_TOKEN`, or `CONNECTOR_SECRET_TWILIO_AUTH_TOKEN` when the secret is
+  managed through the connector-secret path.
+- `TELEPHONY_PUBLIC_URL` for the inbound voice webhook URL.
+- `TELEPHONY_STATUS_PUBLIC_URL` for the call-status callback URL.
+- `TELEPHONY_NUMBER_OWNERS` to map phone numbers to company ownership.
+
+Optional admission controls are `TELEPHONY_MAX_CONCURRENT_CALLS`, which defaults
+to 4, and `TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR`, which defaults to 6.
+
+Real-time spoken sessions also require a configured `realtime` model default.
+Google live-audio sessions use the relay path. OpenAI realtime sessions need an
+`OPENAI_API_KEY` and a compatible realtime model. See
+[Spoken Channels](./spoken-channels.md) for the product and implementation
+contract.
+
+Receptionist screens use the same live relay and `realtime` model default as
+spoken channels, but the current kiosk action only opens Google Vertex
+speech-to-speech relay sessions. Missing relay values or an incompatible model
+produce visitor-safe unavailable copy on `/kiosk/[widgetId]`.
+
+## Widget Embedding Configuration
+
+Public embedded widget sessions require a shared signing secret:
+
+- `WIDGET_EMBED_SIGNING_SECRET`
+
+The Next.js runtime that serves `/w/[widgetId]` uses this value to mint a signed
+embed pass over the widget id, request referrer host, and issue time. Convex
+uses the same value inside `createWidgetThread` to verify that pass before
+opening an anonymous widget conversation. If the value is missing in either
+runtime, the widget page may render but conversation creation fails closed.
+
+Per-widget `frame-ancestors` enforcement also requires
+`NEXT_PUBLIC_CONVEX_URL` at request time so `src/proxy.ts` can read the widget's
+allowed domains before serving `/w/[widgetId]`.
+
+## Connector OAuth And Gmail
+
+The Gmail mailbox connector needs connector OAuth configuration in addition to
+normal outbound email settings. The app can install the connector without these
+values, but the Connect mailbox flow will refuse to start until the provider is
+fully configured.
+
+Required for the Google Gmail connector:
+
+- `CONNECTOR_GOOGLE_CLIENT_ID`
+- `CONNECTOR_GOOGLE_CLIENT_SECRET`
+- `CONNECTOR_TOKEN_ENCRYPTION_KEY`
+
+The connector OAuth validator treats partial configuration as a setup problem:
+all three values must be present or all three must be absent. A connected
+mailbox also needs the `google-gmail` connector installed for the tenant, the
+Convex site origin reachable for `/api/connectors/oauth/authorize` and
+`/api/connectors/oauth/callback`, and a dedicated Gmail account approved through
+Google's consent screen. See [Gmail Mailbox](./gmail-mailbox.md) for the runtime
+contract.
+
 ## Rolling Back
 
 Find the SHA you want (the deploy job's summary prints the deployed SHA, and

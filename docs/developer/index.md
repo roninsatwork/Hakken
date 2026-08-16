@@ -2,7 +2,7 @@
 
 Developer docs are for coding agents and engineers working on Sonae. They cover setup, architecture, implementation boundaries, quality gates, and future-agent handoff context.
 
-The current cross-cutting implementation notes cover provider-neutral assistant streaming, hybrid knowledge retrieval and bulk ingestion, workflow retry safety, rehearsal evals, self-improvement switches, widget quota privacy, Sentry integration, theme-token enforcement, and retention/purge ownership.
+The current cross-cutting implementation notes cover provider-neutral assistant streaming, real-time spoken channels, inbound phone calls, the receptionist screen, the connected Gmail mailbox, photo actions, tasks and in-app notifications, hybrid knowledge retrieval and bulk ingestion, the company Wiki page layer and staff agents, workflow retry safety, rehearsal evals, self-improvement switches, widget quota privacy, widget embed-pass enforcement, Sentry integration, theme-token enforcement, and retention/purge ownership.
 
 ## Core Guides
 
@@ -24,11 +24,16 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Governance And Trust](./governance-and-trust.md)
 - [Sales Data Workspace](./sales-data-workspace.md)
 - [Administration](./administration.md)
+- [Spoken Channels](./spoken-channels.md)
+- [Photo Actions](./photo-actions.md)
+- [Receptionist Screen](./receptionist-screen.md)
+- [Tasks And Notifications](./tasks-and-notifications.md)
 - [Company And User Management](./company-user-management.md)
 - [Company AI Readiness And Checks](./company-ai-readiness-and-checks.md)
 - [Data Retention And Purges](./data-retention-and-purges.md)
 - [Email Branding](./email-branding.md)
 - [Email System](./email-system.md)
+- [Gmail Mailbox](./gmail-mailbox.md)
 - [Route Protection And Authentication](./route-protection-and-authentication.md)
 - [Tenancy Enforcement](./tenancy-enforcement.md)
 - [Shared Admin UI](./shared-admin-ui.md)
@@ -46,6 +51,7 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Auxiliary App Experiences](./auxiliary-app-experiences.md)
 - [Embedded Widgets](./embedded-widgets.md)
 - [Knowledge Management](./knowledge-management.md)
+- [Company Wiki](./company-wiki.md)
 - [Maintenance Scripts](./maintenance-scripts.md)
 - [Organization And Company Workspaces](./organization-and-company-workspaces.md)
 - [Platform Operations Settings](./platform-operations-settings.md)

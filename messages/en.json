@@ -542,7 +542,7 @@
     "chatLogs": "Chat Logs",
     "rules": "Rules",
     "systemPrompt": "System Prompt",
-    "globalKnowledge": "Global Knowledge",
+    "globalKnowledge": "Platform Wiki",
     "models": "Models",
     "agents": "Agents",
     "agentApprovals": "Agent Approvals",
@@ -3394,7 +3394,13 @@
       "hint": "You asked to see these before the wiki learns from them. Here is what each document claims.",
       "approve": "Approve - let the wiki learn it",
       "reject": "Reject - keep it out of the wiki"
-    }
+    },
+    "globalTitle": "Platform Wiki",
+    "globalSubtitle": "Knowledge every company can draw on. Company wikis always win where they disagree.",
+    "globalHint": "Anything imported here can reach every company's answers, so imports wait for your review before a word is written. Nothing company-specific belongs on this shelf - each company's own wiki lives with that company, and nobody outside it can see it.",
+    "scopeCompany": "This wiki belongs to this company alone. Nobody outside the company can see it, and nothing here ever reaches the platform wiki.",
+    "scopeGlobal": "The platform's shared wiki. Empty means every answer comes purely from company wikis.",
+    "globalEmptyState": "No pages yet. Import a website, file or text above and, once you approve its review, its pages appear here."
   },
   "calls": {
     "title": "Calls",

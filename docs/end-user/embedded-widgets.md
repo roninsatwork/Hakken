@@ -23,6 +23,7 @@ Widget setup is split into appearance, welcome, conversation starter, greeting, 
 - popup preview
 - name and email gates
 - conversation starters
+- receptionist screen opt-in
 - active status
 
 Company widgets can also be associated with a company agent. When an agent is linked, widget conversations send messages through that agent. If no agent is linked, the widget still opens a chat thread but does not force a dynamic agent id.
@@ -33,7 +34,7 @@ Allowed domains decide where the widget may create a conversation. To allow broa
 
 An empty allowlist is not a production-ready allow-all setting for conversation creation. The iframe may still load enough public configuration to render, but the backend thread creation guard requires `*` or a matching configured domain before a visitor can start chatting.
 
-The browser iframe also checks the host page referrer before sending popup configuration back to the parent page. The backend repeats the origin check when creating the anonymous widget thread. Blocked backend attempts are recorded in audit logs with `BLOCKED_WIDGET_ACCESS`.
+The browser iframe also checks the host page referrer before sending popup configuration back to the parent page. When Sonae serves `/w/[widgetId]`, the server mints a signed embed pass from the observed referrer host. The backend requires that pass before creating the anonymous widget thread, then checks the host against the widget allowlist. Blocked backend attempts are recorded in audit logs with `BLOCKED_WIDGET_ACCESS`.
 
 Use restricted domains before handing a widget to a customer. A broad allowlist is useful for internal testing but is not the preferred production posture.
 
@@ -47,6 +48,10 @@ The integration tab shows the script tag to place on the external site:
 
 The company widget integration section also links to `/sandbox/[widgetId]`. The sandbox loads the public embed script into a simulated host page so admins can inspect branding, greeting behavior, and iframe loading before installing the widget on a real customer site.
 
+The Integration section also contains the Receptionist screen switch. That
+turns the same configured widget into a full-screen voice surface at
+`/kiosk/[widgetId]`; see [Receptionist Screen](./receptionist-screen.md).
+
 ## Visitor Experience
 
 Visitors see a floating chat button. If popup preview and greeting are enabled, the host page can show a greeting bubble before the visitor opens the chat.
@@ -58,6 +63,8 @@ Inside the widget iframe:
 - name and email gates appear before the first message when required
 - the first visitor message includes gateway metadata when name or email was collected
 - conversation starters can send the first message
+- visitors can attach a photo, send a photo-only message, and confirm a
+  suggested follow-up task when Sonae sees something actionable
 - the browser keeps a widget-specific session so returning visitors can continue the same browser conversation
 - if the saved browser session is incomplete or invalid, the widget clears the local session and creates a fresh conversation
 - visitors can reset the local widget thread from the iframe
@@ -68,7 +75,11 @@ Anonymous visitors do not see the customer's plan or billing state. If the compa
 
 ## Uploads
 
-The backend includes upload support for anonymous widget threads. Uploads are only accepted for an active widget, a thread that belongs to that widget, and a matching widget session credential. The current quota is ten attachment-bearing messages per widget thread, and uploaded files are validated against the widget attachment policy before being finalized.
+The widget includes upload support for anonymous widget threads. Visitors can attach one image to the next message, preview it, remove it before sending, or send the photo without extra words. Uploads are only accepted for an active widget, a thread that belongs to that widget, and a matching widget session credential. The current quota is ten attachment-bearing messages per widget thread, and uploaded files are validated against the widget attachment policy before being finalized.
+
+Widget photo replies can show a suggested follow-up card. The visitor must press
+the confirmation button before Sonae files a task for the team. The broader
+image-to-task behavior is covered in [Photo Actions](./photo-actions.md).
 
 ## Operational Notes
 

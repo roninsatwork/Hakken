@@ -12,7 +12,6 @@ import {
   ChevronDown,
   Code2,
   Cpu,
-  Database,
   FileText,
   List,
   ListPlus,
@@ -56,9 +55,9 @@ const instructionItems = [
     ),
   },
   {
-    label: "Global Knowledge",
+    label: "Wiki",
     href: "/admin/ai/knowledge",
-    icon: Database,
+    icon: BookOpen,
     matches: (pathname: string) => (
       pathname.startsWith("/admin/ai/knowledge")
       || pathname.startsWith("/admin/ai/global-knowledge")
@@ -168,12 +167,6 @@ const workspaceTabs = [
     href: "/admin/ai/skills",
     icon: FileText,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/skills"),
-  },
-  {
-    label: "Wiki",
-    href: "/admin/ai/pages",
-    icon: BookOpen,
-    matches: (pathname: string) => pathname.startsWith("/admin/ai/pages"),
   },
   {
     label: "Widget",

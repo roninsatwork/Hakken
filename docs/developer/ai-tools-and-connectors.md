@@ -21,7 +21,7 @@ Agent tool binding UI is part of agent administration and consumes the same `aiT
 
 - `getConnectorMarketplace` merges built-in connector definitions with visible install records.
 - `installConnector` installs or syncs a built-in connector and its generated tools.
-- `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions exist behind an availability guard, but OAuth connections are currently disabled.
+- `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions now back the Gmail mailbox connector and are guarded by provider credential availability.
 - `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Sonae action tools.
 - `getAgentTools` supports agent tool binding reads.
 
@@ -48,6 +48,8 @@ Relevant schema areas include:
 - `toolConnectorSecretRefs`: required/configured secret-reference status per connector.
 - `toolConnectorTestLogs`: recent connector diagnostics.
 - `toolConnectorOAuthConnections`: OAuth connection metadata.
+- `connectorOAuthTokens`: OAuth token ciphertext, expiry, scopes, and connector ownership.
+- `mailboxMessages`: Gmail watcher ledger and reply-rail counters.
 - `aiTools`: tool name, description, handler mapping, connector linkage, secret ref keys, required role, input/output schemas, side-effect level, confirmation requirement, active state, version, and audit metadata.
 - `agentTools`: agent-to-tool bindings.
 - `agentToolCalls`: run-time tool call evidence for agent executions.
@@ -56,7 +58,7 @@ Connector installs can be global or tenant-restricted. Tenant-restricted connect
 
 There is no implemented dedicated MCP tool creation route in the current app. Custom or connector-style behavior must go through the implemented tool creation route, connector detail pages, and the registered runtime handler system. Do not document MCP proxy creation as live behavior unless a concrete route and runtime handler are added.
 
-The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Sonae-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
+The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Sonae-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Gmail is the live exception: `google-gmail` has registered `gmail.read` and `gmail.reply` handlers and dedicated behavior in [Gmail Mailbox](./gmail-mailbox.md). Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
 
 ## Tool Contract Validation
 
@@ -86,13 +88,15 @@ Current registered handler mappings include:
 
 - `knowledge.search`: queries scoped knowledge through `internal.aiToolReadTools.searchKnowledge`.
 - `company.overview.update`: updates company overview state through `internal.aiToolWriteTools.updateCompanyOverview`.
+- `gmail.read`: reads the connected tenant Gmail mailbox through `internal.gmailConnector.readMailbox`.
+- `gmail.reply`: replies in the original Gmail thread through `internal.gmailConnector.replyToMessage`, with recipient and reply rails enforced server-side.
 - `workflow.task.create`: connector stub.
 - `http.request`: connector stub.
 - `notification.send`: connector stub.
 - `slack.message.send`: connector stub.
 - `google_drive.search`: connector stub.
 
-Stub handlers return a normalized not-implemented result. Other generated built-in connector mappings, including Gmail, Calendar, Outlook, Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify mappings, currently have connector definitions but no registered runtime handler. Those mappings fail through `Unknown or unimplemented tool handler mapping.` if an agent run reaches execution. Do not document a catalog scaffold as a live external integration. When implementing a connector for real, add a concrete handler, register it in `REGISTERED_TOOL_HANDLERS`, preserve tenant checks, validate arguments, and add tests.
+Stub handlers return a normalized not-implemented result. Other generated built-in connector mappings, including Calendar, Outlook, Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify mappings, currently have connector definitions but no registered runtime handler. Those mappings fail through `Unknown or unimplemented tool handler mapping.` if an agent run reaches execution. Do not document a catalog scaffold as a live external integration. When implementing a connector for real, add a concrete handler, register it in `REGISTERED_TOOL_HANDLERS`, preserve tenant checks, validate arguments, and add tests.
 
 ## Connector Secret References
 
@@ -117,7 +121,7 @@ Generated connector tools inherit required role, side-effect level, confirmation
 
 `updateConnectorInstall` can change configured secret refs, enabled mappings, active state, and, for super admins, tenant assignment and tenant availability. It resets connector test status to `UNTESTED` and resyncs generated tool activity after changes.
 
-OAuth connector state exists in the schema and functions, but it is not available on this deployment. `isConnectorOAuthAvailable()` currently returns false because there is no provider authorization flow, callback, encrypted token storage, or refresh path. `beginConnectorOAuth` and `completeConnectorOAuth` refuse with an explicit unavailable message before creating or completing an OAuth connection. Built-in connector definitions currently use `NONE` or `SECRET_REF`, not OAuth.
+OAuth connector state is implemented for Google Gmail. `beginConnectorOAuth` creates a pending connection and authorize URL, the Convex HTTP authorize/callback routes exchange the provider code server-side, token ciphertext is stored in `connectorOAuthTokens`, `getConnectorAccessToken` refreshes near expiry, and disconnect revokes at the provider before deleting token rows. Availability still depends on deployment configuration: `CONNECTOR_GOOGLE_CLIENT_ID`, `CONNECTOR_GOOGLE_CLIENT_SECRET`, and `CONNECTOR_TOKEN_ENCRYPTION_KEY` must all be present.
 
 ## Audit And Diagnostics
 
@@ -133,6 +137,8 @@ Focused tests include:
 - `convex/aiToolExecutionService.test.ts`
 - `convex/aiToolReadTools.test.ts`
 - `convex/aiToolWriteTools.test.ts`
+- `convex/gmailConnector.test.ts`
+- `convex/gmailWatcher.test.ts`
 - agent runtime and run tests that exercise tool calls
 - `src/app/(dashboard)/admin/ai/tools/page.test.tsx`
 

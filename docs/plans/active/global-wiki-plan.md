@@ -1,6 +1,9 @@
 # The Global Brain — the Platform's Own Wiki
 
-Status: **Planned 2026-08-16**, designs shared for approval before any build.
+Status: **Partially built 2026-08-16.** The platform Wiki shelf, global Wiki
+routes, review-first import default, and global page/review/question/progress
+doors exist in the current worktree. Answer integration and global staff rounds
+remain follow-up work unless their implementation is added later.
 Owner: Anthony
 
 Anthony's words, looking at the Global Knowledge Base screen: *"so really
@@ -14,25 +17,46 @@ stay empty forever and nothing changes; the moment it holds a page, that
 page can help any company's answers. The model becomes: one platform,
 many company brains, one optional shared brain above them.
 
-## What is actually true today (verified 2026-08-16)
+## Current implementation state (verified 2026-08-16)
 
-- Global knowledge documents already exist as their own shelf:
-  `knowledgeDocuments` rows with no company, agent, or thread on them,
-  reachable only by super admins (`convex/knowledge.ts`, the `by_global`
-  index and its role checks).
-- Answering still reaches that shelf through the old chunk engine: the
-  typed path searches company, global, and thread chunks together, with
-  the company arm already gated off by the wiki cutover
-  (`convex/ai.ts`). Global and thread chunks are the last users of the
-  chunk engine.
-- The wiki is company-only by construction: every wiki table carries a
-  required `companyId` (`convex/schema.ts`), every door checks the
-  company wall, and the Distiller refuses documents without a company
-  (`isDistillable` in `convex/wikiDistill.ts`).
+- Platform Wiki rows use the same wiki tables as company rows, with absent
+  `companyId` meaning the platform scope rather than "all companies."
+- `/admin/ai/knowledge`, `/admin/ai/knowledge/[pageId]`, and
+  `/admin/ai/knowledge/map` mount the shared Wiki list, detail, and map screens
+  in platform mode. `/admin/ai/global-knowledge` redirects to the platform Wiki.
+- The AI workspace navigation labels `/admin/ai/knowledge` as Wiki and removes
+  the old `/admin/ai/pages` workspace Wiki tab.
+- The shared Wiki UI now shows explicit company/platform scope text so users do
+  not have to infer whose brain they are editing.
+- Platform imports default to review-first. Company imports keep their existing
+  default.
+- Global read/write doors exist for page list/detail/edit/pin/unpin, distill
+  progress, open questions, and pending review decisions in `convex/wiki*.ts`.
+  Reads allow `SUPER_ADMIN` and `READ_ONLY`; writes and decisions require
+  `SUPER_ADMIN`.
+- Company Wikis still live only under `/admin/companies/[id]/ai/pages`.
+  Company admins must not see platform rows, and platform functions must not be
+  a path into company rows.
+
+## Pre-build baseline (verified 2026-08-16)
+
+This was the state before the first platform Wiki implementation landed. Keep
+it as history when checking later work.
+
+- Global knowledge documents already existed as their own shelf:
+  `knowledgeDocuments` rows with no company, agent, or thread on them, reachable
+  only by super admins (`convex/knowledge.ts`, the `by_global` index and its
+  role checks).
+- Answering reached that shelf through the old chunk engine: the typed path
+  searched company, global, and thread chunks together, with the company arm
+  already gated off by the wiki cutover (`convex/ai.ts`). Global and
+  thread-scoped chunks were the last users of the chunk engine.
+- The Wiki had been company-only by construction: every wiki table carried a
+  required `companyId`, every door checked the company wall, and the Distiller
+  refused documents without a company.
 - The Global Knowledge Base screen
-  (`src/app/(dashboard)/admin/ai/global-knowledge/`) is the last
-  knowledge screen still showing chunk counts and a retrieval test — the
-  old world's anatomy, already retired from the company side.
+  (`src/app/(dashboard)/admin/ai/global-knowledge/`) still showed chunk counts
+  and a retrieval test.
 
 ## The rules this brain lives by
 
@@ -51,7 +75,7 @@ many company brains, one optional shared brain above them.
 
 ## The phases
 
-### Phase 1 — the global shelf (≈1 day)
+### Phase 1 — the global shelf (mostly built 2026-08-16)
 
 The wiki tables learn to hold pages with no company on them, the same
 way `knowledgeDocuments` already does: `companyId` becomes optional
@@ -63,9 +87,9 @@ are today. The Distiller accepts global documents; the Reviewer's
 checkpoint defaults ON for them (rule 2). The CUSTOMER kind is refused
 at this level (rule 1).
 
-Acceptance: importing a document as super admin with no company yields
-its review, then (approved) its source note, topic pages, and links, all
-scoped global; a company import behaves exactly as before; the
+Acceptance still needed before closing: importing a document as super admin
+with no company yields its review, then (approved) its source note, topic pages,
+and links, all scoped global; a company import behaves exactly as before; the
 personal-data manifest test stays green with no new user-linked fields.
 
 ### Phase 2 — answers: company first, global fills gaps (≈0.5 day)
@@ -84,7 +108,7 @@ with the global page in its evidence; a question both brains cover cites
 the company page; with an empty global shelf, answers are byte-for-byte
 what they are today; the standing AI Checks pass unchanged.
 
-### Phase 3 — the screen fold (≈1 day)
+### Phase 3 — the screen fold (built 2026-08-16; browser proof still needed)
 
 The Global Knowledge Base tab becomes **Wiki**, with the same anatomy
 the company side already has: one import box (Review first ticked),
@@ -94,9 +118,10 @@ the existing wiki screens taught a "global" mode rather than new
 screens. Chunk counters and the retrieval test go the way they went on
 the company side. English and Italian together, parity-enforced.
 
-Acceptance: the old screen's route shows the wiki; nothing on it speaks
-of chunks; every action a super admin takes lands in the audit trail;
-the company screens are pixel-identical to before.
+Acceptance still needed before closing: browser proof that the old screen's
+route shows the wiki, nothing on it speaks of chunks, every action a super admin
+takes lands in the audit trail, and the company screens are pixel-identical to
+before.
 
 ### Phase 4 — the staff's global round (≈0.5 day)
 

@@ -229,6 +229,16 @@ export const getDistillProgress = tenantQuery({
   },
 });
 
+export const getDistillProgressForGlobal = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
+      throw new Error("Unauthorized access to the platform wiki");
+    }
+    return await distillProgressFor(ctx, undefined);
+  },
+});
+
 export const getDistillProgressForCompany = adminQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {

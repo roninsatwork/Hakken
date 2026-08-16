@@ -21,6 +21,22 @@ Owner: Anthony
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 
+## Current implementation state (verified 2026-08-16)
+
+The receptionist screen implementation now exists in the app. `/app/reception`
+lists active kiosk-enabled widgets for the current workspace, and
+`/kiosk/[widgetId]` serves a full-screen visitor surface only when the backing
+widget is active and has opted in through the widget Integration section.
+
+The kiosk page mints a fresh anonymous widget-style thread and in-memory access
+token per wake tap, creates a Google Vertex relay voice session through
+`convex/kioskActions.ts`, records completed spoken turns back to the kiosk
+thread, sends idle heartbeats, shows a permanent AI/recording disclosure, nudges
+after silence, resets for the next visitor, and reloads while idle overnight.
+Convex now holds per-widget kiosk session, thread-minting, heartbeat, and
+message caps. What remains is operational Phase D proof on a real tablet at the
+front desk for a sustained run.
+
 ## The decision
 
 A tablet or monitor at a reception desk or trade-show stand, showing the
@@ -48,7 +64,11 @@ Recorded decisions:
    still kept server-side like any widget conversation, under the same
    retention rules.
 
-## What is actually true today (verified 2026-08-13)
+## Pre-build baseline (verified 2026-08-13)
+
+The following notes record the state before the receptionist screen was built.
+Keep them as historical context for the implementation choices; do not treat
+them as the current product state.
 
 **The anonymous full-screen precedent exists and is exactly the right
 shape.** `/w/[widgetId]` (`src/app/w/[widgetId]/page.tsx`, 492 lines) is

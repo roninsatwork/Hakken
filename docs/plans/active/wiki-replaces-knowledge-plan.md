@@ -89,9 +89,9 @@ before the old path can retire.
 **The wiki exists and works.** `wikiPages` and `wikiPageRevisions`
 (`convex/schema.ts`), the rewrite loop (`convex/wikiActions.ts`), the tending
 sweep (`convex/wikiTendingActions.ts`), the reading doors
-(`convex/wikiPages.ts`) and the screens at `/admin/ai/pages` and
-`/admin/companies/[id]/ai/pages`. What it has never done is learn from a
-document.
+(`convex/wikiPages.ts`) and the screens at `/admin/ai/knowledge` for the
+platform Wiki and `/admin/companies/[id]/ai/pages` for company Wikis. What it
+has never done is learn from a document.
 
 **The exam machinery exists.** `companyEvalCases` and `companyEvalRuns`
 (`convex/schema.ts`) already run real questions against a company's AI and

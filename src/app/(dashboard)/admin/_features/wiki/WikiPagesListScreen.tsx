@@ -24,10 +24,11 @@ import { WikiImportBox } from "./WikiImportBox";
 const PAGE_SIZE = 15;
 
 /**
- * The wiki's front room, mounted at two heights (Anthony's ruling,
- * 2026-08-14): inside the workspace, and on the company detail screen —
- * always one company's pages, never a cross-company view. `companyId`
- * chooses the door; the furniture is identical.
+ * The wiki's front room, mounted at two heights (Anthony's rulings,
+ * 2026-08-14 and 2026-08-16): on the company detail screen — always one
+ * company's pages, never a cross-company view — and, without a
+ * `companyId`, the PLATFORM shelf, whose doors are the super admin's
+ * alone. A company's wiki is never shown outside its own section.
  */
 export function WikiPagesListScreen({
   companyId,
@@ -44,30 +45,36 @@ export function WikiPagesListScreen({
   const searchArg = search.trim() ? { search: search.trim() } : {};
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
-  const tenantRows = useQuery(api.wikiPages.listCompanyPages, companyId ? "skip" : searchArg);
+  const globalRows = useQuery(api.wikiPages.listPagesForGlobal, companyId ? "skip" : searchArg);
   const companyRows = useQuery(
     api.wikiPages.listPagesForCompany,
     companyId ? { companyId, ...searchArg } : "skip"
   );
-  const rows = companyId ? companyRows : tenantRows;
+  const rows = companyId ? companyRows : globalRows;
 
-  const tenantProgress = useQuery(api.wikiDistill.getDistillProgress, companyId ? "skip" : {});
+  const globalProgress = useQuery(
+    api.wikiDistill.getDistillProgressForGlobal,
+    companyId ? "skip" : {}
+  );
   const companyProgress = useQuery(
     api.wikiDistill.getDistillProgressForCompany,
     companyId ? { companyId } : "skip"
   );
-  const progress = companyId ? companyProgress : tenantProgress;
+  const progress = companyId ? companyProgress : globalProgress;
 
-  const tenantQuestions = useQuery(api.wikiQuestions.listOpenQuestions, companyId ? "skip" : {});
+  const globalQuestions = useQuery(
+    api.wikiQuestions.listOpenQuestionsForGlobal,
+    companyId ? "skip" : {}
+  );
   const companyQuestions = useQuery(
     api.wikiQuestions.listOpenQuestionsForCompany,
     companyId ? { companyId } : "skip"
   );
-  const openQuestions = (companyId ? companyQuestions : tenantQuestions) ?? [];
-  const dismissTenant = useMutation(api.wikiQuestions.dismissOpenQuestion);
+  const openQuestions = (companyId ? companyQuestions : globalQuestions) ?? [];
+  const dismissGlobal = useMutation(api.wikiQuestions.dismissOpenQuestionForGlobal);
   const dismissCompany = useMutation(api.wikiQuestions.dismissOpenQuestionForCompany);
   const dismissQuestion = (questionId: (typeof openQuestions)[number]["questionId"]) =>
-    companyId ? dismissCompany({ companyId, questionId }) : dismissTenant({ questionId });
+    companyId ? dismissCompany({ companyId, questionId }) : dismissGlobal({ questionId });
   const pageHrefForKey = (pageKey: string) => {
     const row = (rows ?? []).find(
       (candidate) => `${candidate.kind}:${candidate.subjectKey}` === pageKey
@@ -75,16 +82,16 @@ export function WikiPagesListScreen({
     return row ? `${basePath}/${row.pageId}` : null;
   };
 
-  const tenantReviews = useQuery(api.wikiReviews.listPendingReviews, companyId ? "skip" : {});
+  const globalReviews = useQuery(api.wikiReviews.listPendingReviewsForGlobal, companyId ? "skip" : {});
   const companyReviews = useQuery(
     api.wikiReviews.listPendingReviewsForCompany,
     companyId ? { companyId } : "skip"
   );
-  const pendingReviews = (companyId ? companyReviews : tenantReviews) ?? [];
-  const decideTenant = useMutation(api.wikiReviews.decideReview);
+  const pendingReviews = (companyId ? companyReviews : globalReviews) ?? [];
+  const decideGlobal = useMutation(api.wikiReviews.decideReviewForGlobal);
   const decideCompany = useMutation(api.wikiReviews.decideReviewForCompany);
   const decideReview = (reviewId: (typeof pendingReviews)[number]["reviewId"], approve: boolean) =>
-    companyId ? decideCompany({ companyId, reviewId, approve }) : decideTenant({ reviewId, approve });
+    companyId ? decideCompany({ companyId, reviewId, approve }) : decideGlobal({ reviewId, approve });
 
   const isLoading = rows === undefined;
   const totalCount = rows?.length ?? 0;
@@ -104,14 +111,22 @@ export function WikiPagesListScreen({
     <div className="flex flex-col gap-6 pb-12 w-full">
       <AdminPageHeader
         icon={<BookOpen className="w-6 h-6 text-brand" />}
-        title={t("title")}
-        description={t("subtitle")}
+        title={companyId ? t("title") : t("globalTitle")}
+        description={companyId ? t("subtitle") : t("globalSubtitle")}
         divider
       />
 
       {showWorkspaceNav && <AiWorkspaceNav />}
 
-      <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
+      {/* Whose brain this is, said loudly (Anthony's ruling, 2026-08-16):
+          a wiki screen must never leave its scope to be guessed. */}
+      <p className="text-[13px] font-medium rounded-[12px] border border-border-dim bg-card/40 px-4 py-3 text-foreground/90 max-w-2xl">
+        {companyId ? t("scopeCompany") : t("scopeGlobal")}
+      </p>
+
+      <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">
+        {companyId ? t("hint") : t("globalHint")}
+      </p>
 
       <WikiImportBox companyId={companyId} />
 
@@ -304,7 +319,13 @@ export function WikiPagesListScreen({
             <AdminTableEmptyRow
               colSpan={4}
               icon={<BookOpen className="w-5 h-5" />}
-              label={search.trim() ? t("emptySearch") : t("emptyState")}
+              label={
+                search.trim()
+                  ? t("emptySearch")
+                  : companyId
+                    ? t("emptyState")
+                    : t("globalEmptyState")
+              }
             />
           ) : (
             visibleRows.map((row) => (

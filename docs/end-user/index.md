@@ -2,7 +2,7 @@
 
 End-user docs are customer-friendly explanations of the Sonae platform, its features, and how people use it. Keep these docs plain-English, product-focused, and free of implementation details unless a customer genuinely needs them.
 
-Current implementation alignment includes multi-provider assistant streaming and answer feedback, Markdown/OKF folder knowledge upload, safe workflow retries, rehearsal evals, autonomous-memory controls, company-plan widget quota privacy, and the rebuilt settings/retention surfaces.
+Current implementation alignment includes multi-provider assistant streaming and answer feedback, Markdown/OKF folder knowledge upload, the company Wiki pages/map/import/review experience, real-time voice, inbound phone calls, the receptionist screen, the connected Gmail mailbox, photo actions, tasks and in-app notifications, safe workflow retries, rehearsal evals, autonomous-memory controls, company-plan widget quota privacy, and the rebuilt settings/retention surfaces.
 
 ## Platform
 
@@ -15,6 +15,10 @@ Current implementation alignment includes multi-provider assistant streaming and
 - [Governance And Trust](./governance-and-trust.md)
 - [Sales Data Workspace](./sales-data-workspace.md)
 - [Assistant Chat](./assistant-chat.md)
+- [Spoken Channels](./spoken-channels.md)
+- [Photo Actions](./photo-actions.md)
+- [Receptionist Screen](./receptionist-screen.md)
+- [Tasks And Notifications](./tasks-and-notifications.md)
 - [Administration](./administration.md)
 - [AI Administration](./ai-administration.md)
 - [AI Rules And Prompts](./ai-rules-and-prompts.md)
@@ -26,7 +30,9 @@ Current implementation alignment includes multi-provider assistant streaming and
 - [Auxiliary App Experiences](./auxiliary-app-experiences.md)
 - [Embedded Widgets](./embedded-widgets.md)
 - [Emails From Sonae](./emails.md)
+- [Gmail Mailbox](./gmail-mailbox.md)
 - [Knowledge Management](./knowledge-management.md)
+- [Company Wiki](./company-wiki.md)
 - [Health](./health.md)
 - [Organization And Company Workspaces](./organization-and-company-workspaces.md)
 - [Company Workspace Administration](./company-workspace-administration.md)

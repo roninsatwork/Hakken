@@ -1,6 +1,6 @@
 # Documentation Coverage Audit
 
-Last reviewed: 2026-08-11
+Last reviewed: 2026-08-16
 Status: active documentation-control note
 Audience: agents keeping Sonae documentation aligned with the implementation.
 
@@ -17,10 +17,15 @@ map now lives in
 
 The implementation remains the source of truth. This audit checked the current
 route tree, sidebar navigation, Convex schema tables, Convex module inventory,
-package scripts, and the existing Markdown indexes. It found broad guide
-coverage for the routed product families, but it also found active planning
-material that was not linked from the plan indexes and a public-site route drift
-that should be handled by the public website work rather than hidden in docs.
+recent commits since the previous documentation run, package scripts, and the
+existing Markdown indexes. The 2026-08-16 pass found real durable-doc gaps for
+the newly implemented Company Wiki pages/map/import/review surface and the
+spoken-channel surfaces that combine Ask Sonae live voice, inbound phone calls,
+and voice administration, the implemented Gmail mailbox connector/watch loop,
+and the photo-action flow that turns image-bearing chat/widget turns into
+human-confirmed tasks, plus the receptionist/kiosk screen and widget embed-pass
+security changes. Those gaps were repaired with dedicated end-user and
+developer pairs or targeted refreshes.
 
 ## Implementation Areas Reviewed
 
@@ -43,6 +48,31 @@ that should be handled by the public website work rather than hidden in docs.
   knowledge, widgets, public API/webhooks, analytics, arcade, properties,
   movement, local demo seed, local test auth, and maintenance scripts.
 - Existing docs indexes and audience directories under `docs/`.
+- The newly routed Wiki pages under `/admin/ai/knowledge` and
+  `/admin/companies/[id]/ai/pages`, their shared UI in
+  `src/app/(dashboard)/admin/_features/wiki/`, and the `convex/wiki*.ts`
+  backend modules.
+- Spoken-channel routes and services, including `/app/calls`,
+  `/app/calls/[id]`, `/admin/ai/voice`, Ask Sonae's real-time voice overlay,
+  `convex/ai.ts` live voice helpers, `convex/voice*.ts`, `convex/telephony*.ts`,
+  and the browser voice-session helpers under `src/lib/`.
+- Gmail mailbox connector and watcher implementation, including the
+  `google-gmail` connector definition, OAuth authorize/callback routes,
+  encrypted token storage, refresh/revoke flow, `gmail.read` and `gmail.reply`
+  handlers, `mailboxMessages`, the watcher cron, follow-up tasks, and Wiki
+  handoff.
+- Photo-action implementation, including Assistant chat image attachments,
+  widget photo uploads, `convex/ai.ts` vision routing, `convex/agentRuntime.ts`
+  image handling, `convex/photoActionService.ts`, `PhotoActionChip`,
+  `tasks.confirmPhotoAction`, and upload-policy limits.
+- Receptionist screen implementation, including `/app/reception`,
+  `/kiosk/[widgetId]`, widget Integration opt-in, `convex/kiosk.ts`,
+  `convex/kioskActions.ts`, kiosk schema fields, live relay behavior,
+  heartbeat, rate limits, in-memory visitor tokens, and silence reset.
+- Widget embed-pass implementation, including `src/proxy.ts`,
+  `src/app/w/[widgetId]/page.tsx`, `WidgetIframeClient`, `convex/widgets.ts`,
+  `convex/utils/widgetEmbedPass.ts`, `convex/utils/widgetOriginPolicy.ts`, and
+  `src/lib/widgetEmbedPolicy.ts`.
 
 ## Coverage Result
 
@@ -142,12 +172,82 @@ as the durable documentation work queue.
 - Refresh the central, end-user, developer, and plans indexes, then update the
   Convex/schema coverage references for all implementation files discovered in
   this pass.
+- Add the Company Wiki documentation pair:
+  `docs/end-user/company-wiki.md` and `docs/developer/company-wiki.md`.
+- Refresh the knowledge guides so the source archive, ingestion, and repair
+  layer is clearly separated from the new page-based Wiki layer.
+- Refresh the route, Convex, schema, and coverage maps with Wiki routes,
+  `convex/wiki*.ts` modules, wiki schema tables, review-before-write behavior,
+  open questions, staff agents, page receipts, and map ownership.
+- Add the spoken channels documentation pair:
+  `docs/end-user/spoken-channels.md` and
+  `docs/developer/spoken-channels.md`.
+- Refresh assistant chat, AI administration, and deployment documentation so
+  they distinguish dictation, live voice, phone calls, voice preview, model
+  defaults, relay configuration, and phone-call runtime variables.
+- Refresh the route, Convex, schema, and coverage maps with spoken routes,
+  `convex/telephony*.ts`, `convex/voice*.ts`, real-time voice helpers,
+  `phoneCalls`, `companies.spokenVoice`, relay tickets, call admission limits,
+  and post-call summary/customer/task handoff behavior.
+- Add the Gmail mailbox documentation pair:
+  `docs/end-user/gmail-mailbox.md` and
+  `docs/developer/gmail-mailbox.md`.
+- Refresh AI tools/connectors, provider extension, outbound email, deployment,
+  route, Convex, schema, and coverage docs so they no longer describe Gmail or
+  OAuth as unavailable scaffolding and instead record the current OAuth-backed
+  mailbox implementation plus its live-proof boundary.
+- Add the photo-actions documentation pair:
+  `docs/end-user/photo-actions.md` and
+  `docs/developer/photo-actions.md`.
+- Refresh assistant chat, embedded widget, model-default, upload-policy, Convex,
+  schema, and coverage docs for image attachments, widget photo upload,
+  `vision` defaults, non-vision fallback behavior, proposal extraction, and
+  one-tap task confirmation.
+- Refresh the active Gmail mailbox and photo-action plans so their historical
+  2026-08-13 implementation baselines are no longer labelled as current product
+  state, and so each plan records the 2026-08-16 implementation state plus its
+  remaining live-proof boundary.
+- Add the Receptionist screen documentation pair:
+  `docs/end-user/receptionist-screen.md` and
+  `docs/developer/receptionist-screen.md`.
+- Refresh embedded widget, spoken-channel, deployment, route, Convex, schema,
+  and coverage docs for widget embed-pass enforcement, per-widget
+  `frame-ancestors`, `WIDGET_EMBED_SIGNING_SECRET`, receptionist opt-in,
+  `/app/reception`, `/kiosk/[widgetId]`, kiosk heartbeats, anonymous kiosk
+  tokens, and voice-session limits.
+- Refresh the active receptionist-kiosk plan so its historical 2026-08-13
+  implementation baseline is no longer labelled as current product state, and
+  so it records the 2026-08-16 implementation state plus tablet-proof boundary.
+- Refresh the active voice-session, voice-languages, telephone-agent, and
+  showcase-channels plans so their shipped-channel status and historical
+  2026-08-13 baselines no longer contradict the maintained spoken-channel,
+  Gmail mailbox, photo-action, and receptionist-screen guides.
+- Refresh the Company Wiki developer guide and coverage maps for current
+  platform-scope UI routes and backend doors, including global page
+  reads/writes, distill progress, open questions, and review decisions with
+  super-admin and read-only access boundaries.
+- Add the Tasks and Notifications documentation pair:
+  `docs/end-user/tasks-and-notifications.md` and
+  `docs/developer/tasks-and-notifications.md`.
+- Refresh the route, Convex, schema, coverage, and active-plan maps for
+  `/app/tasks`, task/notification tables, tenant task mutations, agent/workflow
+  task creation, photo/Gmail/phone follow-up tasks, in-app notification read
+  state, and the current delivered status of the platform-improvement and
+  tasks/notifications plans.
 
 ### Remaining Follow-Up
 
-No incomplete, stale, inaccurate, missing, or questionable documentation item
-was found after the final re-audit. The next run should rebuild the queue from
-the then-current implementation rather than treating this result as permanent.
+The 2026-08-16 run completed the highest-priority Wiki, spoken-channel, Gmail
+mailbox, photo-action, receptionist-screen, and widget embed-pass documentation
+gaps. The next queue should re-audit the then-current implementation and
+indexes for any newly changed routes, Convex modules, scripts, operational
+procedures, or active plans rather than assuming this result is permanent.
+
+This pass also refreshed `docs/plans/active/global-wiki-plan.md` after the
+current worktree showed the platform Wiki screen fold and global Wiki doors had
+landed. The plan now records the platform Wiki as partially built, with answer
+integration, global staff rounds, and browser/audit proof still tracked as
+implementation follow-up rather than missing documentation.
 
 The public website still contains links to routes owned by
 `docs/plans/active/public-website-plan.md` that have not shipped. That is a

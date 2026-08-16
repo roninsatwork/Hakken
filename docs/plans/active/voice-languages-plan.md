@@ -82,7 +82,11 @@ Interpreter mode follows as its own phase with its own screen — it is a
 different conversation shape (two humans, no assistant answering) and
 should not be bolted onto the assistant session.
 
-## What is actually true today (verified 2026-08-13)
+## Pre-live-voice baseline (verified 2026-08-13)
+
+The following notes record the older turn-based transcription baseline. The
+reply-language feature is now implemented as realtime voice instruction and
+knowledge-tool behavior, as described at the top of this plan.
 
 **Transcription has no language handling at all.**
 `api.ai.transcribeAudio` (`convex/ai.ts:537-582`) prompts "Transcribe the

@@ -74,9 +74,9 @@ Provider sync and test actions should keep provider-specific API details in prov
 
 ## Model Defaults And Resolution
 
-Defaults are use-case based. Supported default slots come from `DEFAULT_MODEL_USE_CASES` in `convex/aiModelService.ts`: `chat`, `fast-chat`, `reasoning`, `agent`, `workflow`, `report`, `router`, `title`, `transcription`, and `embedding`.
+Defaults are use-case based. Supported default slots come from `DEFAULT_MODEL_USE_CASES` in `convex/aiModelService.ts`: `chat`, `fast-chat`, `reasoning`, `agent`, `workflow`, `report`, `router`, `title`, `transcription`, `embedding`, and `vision`.
 
-Do not confuse default slots with catalog capabilities or catalog use-case filters. The model catalog UI can filter models by capabilities such as `vision` and `tool-calling`, and provider sync can store those capability tags on model rows. The current default-management mutations reject unsupported default use cases, so `vision` and `tool-calling` should not be documented as standalone default slots unless `DEFAULT_MODEL_USE_CASES` changes.
+Do not confuse default slots with catalog capabilities or catalog use-case filters. The model catalog UI can filter models by capabilities such as `vision` and `tool-calling`, and provider sync can store those capability tags on model rows. `vision` is a default slot because image-bearing assistant turns use it; `tool-calling` is still a capability/use-case tag rather than a standalone default slot.
 
 Default mutations validate that:
 

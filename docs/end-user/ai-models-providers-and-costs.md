@@ -45,7 +45,7 @@ Enabling a model makes it available to compatible selectors and defaults, as lon
 
 ## Defaults
 
-The defaults tab maps AI use cases to default models. The implemented default slots are chat, fast chat, reasoning, agent, workflow, report, router, title, transcription, and embedding. Catalog filters can still show capabilities such as vision and tool calling, but those are model capabilities or catalog use-case tags rather than separate default slots in the current defaults UI.
+The defaults tab maps AI use cases to default models. The implemented default slots are chat, fast chat, reasoning, agent, workflow, report, router, title, transcription, embedding, and vision. Catalog filters can still show capabilities such as tool calling, but tool calling is a model capability or catalog use-case tag rather than a separate default slot in the current defaults UI. The vision default is used when a message carries a photo.
 
 Global defaults apply platform-wide. Company defaults override global defaults for a tenant. Clearing a company default falls back to the global default for that use case.
 

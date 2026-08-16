@@ -1,10 +1,32 @@
 # Sonae Can Be Spoken To, Phoned, Emailed, And Shown A Photo
 
-Status: Agreed with Anthony 2026-08-13. Not started.
+Status: **Mostly built by 2026-08-16.** The voice session, reply-language
+behavior, telephone answering, photo actions, Gmail mailbox implementation, and
+receptionist screen have all landed in code and have maintained documentation.
+Some operational proof remains channel-specific: Gmail still needs the dedicated
+mailbox/OAuth deployment proof, photo actions still need the real-phone widget
+demo, and the receptionist screen still needs sustained tablet proof.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
+
+## Current implementation state (verified 2026-08-16)
+
+The current shipped channel set is documented in these maintained guides:
+
+- `docs/end-user/spoken-channels.md` and
+  `docs/developer/spoken-channels.md` for Ask Sonae live voice, phone calls,
+  shared spoken voice, and reception's shared voice setting.
+- `docs/end-user/gmail-mailbox.md` and `docs/developer/gmail-mailbox.md` for
+  the connected Gmail mailbox implementation and live-proof boundary.
+- `docs/end-user/photo-actions.md` and `docs/developer/photo-actions.md` for
+  image-bearing chat/widget turns and human-confirmed task creation.
+- `docs/end-user/receptionist-screen.md` and
+  `docs/developer/receptionist-screen.md` for the walk-up kiosk screen.
+
+Keep the roadmap below as the decision record and phase story. Treat the guides
+above as the current implementation reference.
 
 ## The decision
 
@@ -48,7 +70,11 @@ Anthony's calls, recorded 2026-08-13:
    wants Gmail under a shared public registration, and per-client
    registration is the default answer.
 
-## What is actually true today (verified 2026-08-13)
+## Pre-build baseline (verified 2026-08-13)
+
+The following notes record the state before the showcase channels were built.
+Keep them as historical context for the roadmap; do not treat them as the
+current product state.
 
 **Sonae can hear but cannot speak.** `src/hooks/useVoiceToText.ts` gives Ask
 Sonae speech-to-text input. There is no text-to-speech anywhere; no reply has

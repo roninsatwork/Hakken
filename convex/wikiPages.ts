@@ -840,6 +840,38 @@ export const getPageDetail = tenantQuery({
   },
 });
 
+/** The platform wiki is the super admin's alone to write; the read-only
+ * console role may look. Company admins never see it from here — and a
+ * company's wiki is never visible outside its own section (Anthony's
+ * ruling, 2026-08-16). */
+function assertPlatformWikiRead(user: Doc<"users">) {
+  if (user.role !== "SUPER_ADMIN" && user.role !== "READ_ONLY") {
+    throw new Error("Unauthorized access to the platform wiki");
+  }
+}
+
+function assertPlatformWikiWrite(user: Doc<"users">) {
+  if (user.role !== "SUPER_ADMIN") {
+    throw new Error("Unauthorized access to the platform wiki");
+  }
+}
+
+export const listPagesForGlobal = adminQuery({
+  args: { search: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    assertPlatformWikiRead(ctx.user);
+    return await listPagesRows(ctx, undefined, args.search);
+  },
+});
+
+export const getPageDetailForGlobal = adminQuery({
+  args: { pageId: v.id("wikiPages") },
+  handler: async (ctx, args) => {
+    assertPlatformWikiRead(ctx.user);
+    return await pageDetailFor(ctx, undefined, args.pageId);
+  },
+});
+
 // The company-level doors (Anthony's ruling, 2026-08-14): the wiki IS
 // company-scoped data, so the company detail screen reads it like Knowledge
 // and Memory do — one named company at a time, behind the same access
@@ -864,7 +896,7 @@ export const getPageDetailForCompany = adminQuery({
 /** A page proven to be the named company's, or nothing. */
 async function requirePageInCompany(
   ctx: QueryCtx,
-  companyId: Id<"companies">,
+  companyId: WikiScope,
   pageId: Id<"wikiPages">
 ): Promise<Doc<"wikiPages">> {
   const page = await ctx.db.get(pageId);
@@ -874,7 +906,7 @@ async function requirePageInCompany(
 
 async function applyHumanEdit(
   ctx: MutationCtx,
-  args: { companyId: Id<"companies">; userId: Id<"users">; pageId: Id<"wikiPages">; content: string }
+  args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages">; content: string }
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
   const content = args.content.trim().slice(0, WIKI_PAGE_MAX_CHARS);
@@ -908,7 +940,7 @@ async function applyHumanEdit(
 
 async function applyPin(
   ctx: MutationCtx,
-  args: { companyId: Id<"companies">; userId: Id<"users">; pageId: Id<"wikiPages">; text: string }
+  args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages">; text: string }
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
   const text = args.text.trim().slice(0, 500);
@@ -934,7 +966,7 @@ async function applyPin(
 
 async function applyUnpin(
   ctx: MutationCtx,
-  args: { companyId: Id<"companies">; userId: Id<"users">; pageId: Id<"wikiPages">; pinnedAt: number }
+  args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages">; pinnedAt: number }
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
   const remaining = page.pinnedCorrections.filter(
@@ -1002,6 +1034,30 @@ export const pinCorrectionForCompany = adminMutation({
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await applyPin(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+export const editPageContentForGlobal = adminMutation({
+  args: { pageId: v.id("wikiPages"), content: v.string() },
+  handler: async (ctx, args) => {
+    assertPlatformWikiWrite(ctx.user);
+    await applyHumanEdit(ctx, { companyId: undefined, userId: ctx.userId, ...args });
+  },
+});
+
+export const pinCorrectionForGlobal = adminMutation({
+  args: { pageId: v.id("wikiPages"), text: v.string() },
+  handler: async (ctx, args) => {
+    assertPlatformWikiWrite(ctx.user);
+    await applyPin(ctx, { companyId: undefined, userId: ctx.userId, ...args });
+  },
+});
+
+export const unpinCorrectionForGlobal = adminMutation({
+  args: { pageId: v.id("wikiPages"), pinnedAt: v.number() },
+  handler: async (ctx, args) => {
+    assertPlatformWikiWrite(ctx.user);
+    await applyUnpin(ctx, { companyId: undefined, userId: ctx.userId, ...args });
   },
 });
 

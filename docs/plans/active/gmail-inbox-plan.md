@@ -20,6 +20,24 @@ Owner: Anthony
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
 
+## Current implementation state (verified 2026-08-16)
+
+The Gmail mailbox implementation now exists in the app. The connector catalogue
+contains `google-gmail` with OAuth, the `gmail.read` and `gmail.reply` tools are
+registered, and the admin connector screen can start and disconnect the Google
+consent flow. Convex HTTP routes handle provider authorize and callback, tokens
+are stored encrypted in `connectorOAuthTokens`, the token getter refreshes on
+expiry, and the scheduled refresh sweep keeps idle connections warm.
+
+The once-a-minute Gmail watcher polls connected mailboxes, records inbound
+messages in `mailboxMessages` before acting, skips unsafe or already handled
+mail, reads whole Gmail threads for context, answers grounded customer questions
+through Gmail, labels handled messages, and falls back to a task, notification,
+and holding reply when the answer needs a human. The live-proof boundary remains
+Phase D: the dedicated mailbox, internal Google Workspace app, deployment
+environment values, and real mailbox run still need to be performed outside this
+documentation automation.
+
 ## The decision
 
 A dedicated Gmail address — ask@ronins.co.uk — with a real, human-openable
@@ -54,7 +72,11 @@ research:
    (`convex/aiToolNotificationService.ts:60-92`, whose header explains
    why an agent that can email arbitrary addresses is a phishing tool).
 
-## What is actually true today (verified 2026-08-13)
+## Pre-build baseline (verified 2026-08-13)
+
+The following notes record the state before Phases A-C were implemented. Keep
+them as historical context for why the consent and mailbox work was built; do
+not treat them as the current product state.
 
 **The connector catalogue is smaller than folklore says.** 11 connector
 definitions containing 23 tool definitions

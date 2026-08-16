@@ -1,6 +1,10 @@
 # Platform Improvement Plan
 
-Status: Agreed with Anthony 2026-08-09. Not started.
+Status: **Delivered across August 2026.** The phases below record completed
+work for shared hybrid retrieval, safe workflow retries, app streaming,
+rehearsal/eval improvement, Sentry-backed monitoring, and related operational
+hardening. Keep this plan as the decision record; the maintained current docs
+are the relevant feature guides linked from `docs/index.md`.
 Owner: Anthony
 
 The four remaining improvements from the 2026-08-09 deep review, in the order

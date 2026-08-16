@@ -10,6 +10,8 @@ For the widget feature overview, see [Embedded Widgets](./embedded-widgets.md). 
 - `/admin/companies/[id]/widget`: company widget setup.
 - `/sandbox/[widgetId]`: sandbox page for testing the public embed script.
 - `/w/[widgetId]`: public iframe route loaded by the embed script.
+- `/kiosk/[widgetId]`: full-screen receptionist screen when the widget has
+  opted in.
 - `/admin/companies/[id]/chat-logs`: company chat logs, including widget-originated conversations.
 
 The global widget is platform-wide. Company widgets belong to a specific tenant. Use the company widget for customer handoffs whenever the widget should be tenant-scoped.
@@ -43,6 +45,9 @@ Current behavior:
 - an empty allowlist can still let the iframe render public configuration, but it does not authorize backend conversation creation
 - invalid or unauthorized source URLs are rejected by the backend
 - blocked backend attempts are recorded as `BLOCKED_WIDGET_ACCESS` audit events
+- widget thread creation also requires the server-minted embed pass generated
+  when `/w/[widgetId]` is served, so a direct mutation call with an invented
+  source URL is refused
 
 Use restricted domains for production. Broad settings are useful for internal testing but should not be the default customer handoff posture.
 
@@ -103,6 +108,11 @@ Check in this order:
 8. Check company chat logs for created widget threads.
 
 If the iframe shows a disabled or missing state, the widget is inactive, deleted, or not visible through the public config query.
+
+If the iframe loads but no conversation can start, confirm
+`WIDGET_EMBED_SIGNING_SECRET` is configured in both the Next.js runtime that
+serves `/w/[widgetId]` and the Convex runtime that verifies
+`createWidgetThread`.
 
 ## Troubleshooting Unexpected Behavior
 

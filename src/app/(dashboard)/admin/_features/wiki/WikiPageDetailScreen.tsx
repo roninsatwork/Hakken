@@ -31,25 +31,28 @@ export function WikiPageDetailScreen({
   const t = useTranslations("aiPages.detail");
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
-  const tenantDetail = useQuery(api.wikiPages.getPageDetail, companyId ? "skip" : { pageId });
+  const globalDetail = useQuery(
+    api.wikiPages.getPageDetailForGlobal,
+    companyId ? "skip" : { pageId }
+  );
   const companyDetail = useQuery(
     api.wikiPages.getPageDetailForCompany,
     companyId ? { companyId, pageId } : "skip"
   );
-  const detail = companyId ? companyDetail : tenantDetail;
-  const editTenant = useMutation(api.wikiPages.editPageContent);
+  const detail = companyId ? companyDetail : globalDetail;
+  const editGlobal = useMutation(api.wikiPages.editPageContentForGlobal);
   const editCompany = useMutation(api.wikiPages.editPageContentForCompany);
-  const pinTenant = useMutation(api.wikiPages.pinCorrection);
+  const pinGlobal = useMutation(api.wikiPages.pinCorrectionForGlobal);
   const pinCompany = useMutation(api.wikiPages.pinCorrectionForCompany);
-  const unpinTenant = useMutation(api.wikiPages.unpinCorrection);
+  const unpinGlobal = useMutation(api.wikiPages.unpinCorrectionForGlobal);
   const unpinCompany = useMutation(api.wikiPages.unpinCorrectionForCompany);
 
   const editContent = (content: string) =>
-    companyId ? editCompany({ companyId, pageId, content }) : editTenant({ pageId, content });
+    companyId ? editCompany({ companyId, pageId, content }) : editGlobal({ pageId, content });
   const pin = (text: string) =>
-    companyId ? pinCompany({ companyId, pageId, text }) : pinTenant({ pageId, text });
+    companyId ? pinCompany({ companyId, pageId, text }) : pinGlobal({ pageId, text });
   const unpin = (pinnedAt: number) =>
-    companyId ? unpinCompany({ companyId, pageId, pinnedAt }) : unpinTenant({ pageId, pinnedAt });
+    companyId ? unpinCompany({ companyId, pageId, pinnedAt }) : unpinGlobal({ pageId, pinnedAt });
 
   const [draft, setDraft] = useState<string | null>(null);
   const [newPin, setNewPin] = useState("");

@@ -19,6 +19,7 @@ Global AI administration is under `/admin/ai`:
 - `/admin/ai/models/[id]` edits model display and pricing configuration.
 - `/admin/ai/tools` manages the connector marketplace and Sonae action tools.
 - `/admin/ai/tools/new`, `/admin/ai/tools/[id]`, and `/admin/ai/tools/connectors/[id]` create or manage tool and connector records.
+- `/admin/ai/voice` manages the spoken voice used by live voice sessions, inbound phone calls, and reception.
 
 Company-level AI administration appears inside company detail routes:
 
@@ -44,15 +45,19 @@ When troubleshooting AI behavior, review the layers in this order: user or compa
 
 The model screen manages available AI models. It includes provider controls for Google Vertex AI, OpenAI, and Anthropic. Operators can sync supported model catalogs from those providers, test provider connectivity, enable or disable a provider, search and filter models, and enable or disable individual models.
 
-Models can be filtered by active or inactive status, provider, capability, and supported use case. Capabilities include text, reasoning, vision, audio, tool calling, JSON mode, streaming, embeddings, and transcription. Use cases include chat, agent, workflow, report, router, title, embedding, transcription, vision, and tool calling.
+Models can be filtered by active or inactive status, provider, capability, and supported use case. Capabilities include text, reasoning, vision, audio, tool calling, JSON mode, streaming, embeddings, and transcription. Use cases include chat, agent, workflow, report, router, title, embedding, transcription, real-time voice, vision, and tool calling.
 
 The defaults tab sets platform defaults by use case. For example, chat, agents, workflows, embeddings, and transcription can each resolve to different default models. Company model defaults can override platform defaults for a tenant. If a company default is cleared, that company falls back to the global default for the same use case.
 
-Some provider-backed helper actions also use these configured defaults. Voice transcription uses the global transcription path, and workflow node configuration uses the global workflow model setting. These helper actions validate input and throttle rapid repeated requests before calling a provider, so a user who repeatedly records audio or asks the workflow builder to generate node mappings may see a temporary "too many requests" style error.
+Some provider-backed helper actions also use these configured defaults. Voice transcription uses the global transcription path, live voice and phone calls use the real-time voice default, and workflow node configuration uses the global workflow model setting. These helper actions validate input and throttle rapid repeated requests before calling a provider, so a user who repeatedly records audio, opens voice sessions, previews voices, or asks the workflow builder to generate node mappings may see a temporary "too many requests" style error.
 
 Opening a model detail page lets an operator set a friendly name and pricing values. Friendly names are shown in user-facing selectors. Pricing values feed analytics and estimated cost displays. Treat pricing as operational reporting data, not invoice-grade billing unless the surrounding billing process explicitly validates it.
 
-Changing model defaults can affect live assistant, agent, workflow, title generation, embedding, and transcription behavior. Current agent and workflow-agent execution paths still require Google Vertex-compatible resolved models, even though the model catalog can list other providers for supported surfaces. After changing defaults or provider state, test a normal assistant prompt and any affected agent or workflow path.
+Changing model defaults can affect live assistant, agent, workflow, title generation, embedding, transcription, live voice, and phone-call behavior. Current agent and workflow-agent execution paths still require Google Vertex-compatible resolved models, even though the model catalog can list other providers for supported surfaces. Real-time voice additionally needs a compatible live-audio model and the voice relay/provider credentials described in [Spoken Channels](./spoken-channels.md). After changing defaults or provider state, test a normal assistant prompt and any affected agent, workflow, voice, or phone path.
+
+## Spoken Voice
+
+The Voice screen lets an admin pick the spoken voice for the active workspace and preview each option. The selected voice is shared by Ask Sonae live voice, inbound phone calls, and reception. Previewing a voice uses the same live voice relay and real-time model path as production, so failures usually mean the real spoken channel is not fully configured.
 
 ## Prompts And Rules
 

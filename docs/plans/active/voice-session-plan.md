@@ -1,11 +1,30 @@
 # Sonae Speaks — The Voice Session And The Talking Character
 
-Status: Drafted 2026-08-13 from verified code research. Phase 1 of the
-showcase channels roadmap (`showcase-channels-plan.md`). Not started.
+Status: **Built and documented by 2026-08-16.** Phase 1 of the
+showcase channels roadmap (`showcase-channels-plan.md`). Current live voice
+uses realtime sessions, the shared spoken voice setting, relay tickets, and
+voice knowledge lookup; the older turn-based speech/synthesis plan below is
+historical.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
 because line numbers drift. Follow the repo's working rules in `AGENTS.md`.
+
+## Current implementation state (verified 2026-08-16)
+
+Ask Sonae live voice is implemented as a realtime spoken session, not the
+original turn-based transcription plus text-to-speech path. The browser opens a
+live session from an assistant thread, streams microphone audio, receives
+streamed speech back, shows listening/thinking/speaking state and captions, can
+interrupt replies, persists completed turns back to the normal thread, and can
+call the voice knowledge search tool during the conversation.
+
+The shared implementation uses `convex/ai.ts` realtime session/ticket helpers,
+`convex/voiceRelay.ts` for signed relay knowledge lookup,
+`convex/voiceSettings.ts` and `convex/voicePreview.ts` for the workspace spoken
+voice, `src/ui/components/chat/RealtimeVoiceOverlay.tsx`, and the browser voice
+helpers under `src/lib/`. See `docs/end-user/spoken-channels.md` and
+`docs/developer/spoken-channels.md` for the maintained current guide.
 
 ## The decision
 
@@ -115,7 +134,11 @@ from the company's own documents is not a demonstration of this platform.
 It also unblocks the telephone agent, which needs exactly the same tool
 for a caller asking about a product or an order.
 
-## What is actually true today (verified 2026-08-13)
+## Pre-build baseline (verified 2026-08-13)
+
+The following notes record the state before live voice was built. Keep them as
+historical context for the implementation choices; do not treat them as the
+current product state.
 
 **Hearing exists and is turn-based.** `src/hooks/useVoiceToText.ts` (90
 lines): MediaRecorder buffers the whole clip, base64s it, and calls

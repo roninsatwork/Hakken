@@ -1,7 +1,13 @@
 # Emails From Sonae
 
-Sonae sends four kinds of email. All of them go to people who already have an
-account — Sonae never emails anyone who has not been added to a workspace.
+Sonae sends four kinds of platform email. All of them go to people who already
+have an account — Sonae never sends these platform messages to someone who has
+not been added to a workspace.
+
+This page is about outbound platform messages. The connected Gmail mailbox is
+different: it watches a dedicated inbound mailbox, replies in the sender's
+thread, and creates follow-up tasks when a person is needed. See
+[Gmail Mailbox](./gmail-mailbox.md).
 
 Every message is designed to be read on a phone, and every one of them tells you
 what happened in its first line. If you only read the subject and the first

@@ -150,9 +150,40 @@ export const listOpenQuestionsForCompany = adminQuery({
   },
 });
 
+export const listOpenQuestionsForGlobal = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
+      throw new Error("Unauthorized access to the platform wiki");
+    }
+    const rows = await ctx.db
+      .query("wikiOpenQuestions")
+      .withIndex("by_company_status", (q) =>
+        q.eq("companyId", undefined).eq("status", "OPEN")
+      )
+      .order("desc")
+      .take(50);
+    return rows.map(questionForScreen);
+  },
+});
+
+export const dismissOpenQuestionForGlobal = adminMutation({
+  args: { questionId: v.id("wikiOpenQuestions") },
+  handler: async (ctx, args) => {
+    if (ctx.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized access to the platform wiki");
+    }
+    await dismissCore(ctx, { companyId: undefined, userId: ctx.userId, ...args });
+  },
+});
+
 async function dismissCore(
   ctx: import("./_generated/server").MutationCtx,
-  args: { companyId: Id<"companies">; userId: Id<"users">; questionId: Id<"wikiOpenQuestions"> }
+  args: {
+    companyId: Id<"companies"> | undefined;
+    userId: Id<"users">;
+    questionId: Id<"wikiOpenQuestions">;
+  }
 ): Promise<void> {
   const question = await ctx.db.get(args.questionId);
   if (!question || question.companyId !== args.companyId) throw new Error("Question not found.");

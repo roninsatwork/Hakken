@@ -1,6 +1,11 @@
 # Sonae Can Hand Someone A Job, And Tell Them About It
 
-Status: Agreed with Anthony 2026-08-12. Not started.
+Status: **Built by 2026-08-16.** Tasks, in-app notifications, the `/app/tasks`
+screen, the notification bell, agent/workflow task creation, phone/Gmail/photo
+follow-up task paths, tenant assignment checks, audit rows, and tests are
+implemented. Keep this plan as the decision record; use
+`docs/end-user/tasks-and-notifications.md` and
+`docs/developer/tasks-and-notifications.md` as the maintained current guides.
 Owner: Anthony
 
 Every claim below carries the file it rests on; verify anchors before editing,
@@ -21,7 +26,25 @@ about is a task nobody does, which is why this is one plan and not two.
 Anthony's call, 2026-08-12, choosing these two ahead of payments and ahead of
 finishing the connectors.
 
-## What is actually true today (verified 2026-08-12)
+## Current implementation state (verified 2026-08-16)
+
+`tasks` and `notifications` now exist in `convex/schema.ts`.
+`src/app/(dashboard)/app/tasks/page.tsx` lists workspace tasks, supports
+mine/everyone views, manual creation, assignment, due dates, completion,
+reopening, cancellation, and source links. `NotificationBell` lists per-user
+notifications in the header, unread counts are capped, and read state belongs to
+one user.
+
+Machine task creation is wired through internal functions for agents and
+workflows, and follow-up tasks are now used by phone calls, Gmail mailbox
+fallbacks, and photo-action confirmation. Assignment notifications are written
+through `notifyUserInternal`; browsers do not write notifications directly.
+
+## Pre-build baseline (verified 2026-08-12)
+
+The following notes record the state before tasks and notifications were built.
+Keep them as historical context for the implementation choices; do not treat
+them as the current product state.
 
 **Neither table exists.** `convex/schema.ts` has no `tasks` and no
 `notifications`. Searched; zero matches.

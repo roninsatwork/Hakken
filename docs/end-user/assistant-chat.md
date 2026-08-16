@@ -2,7 +2,7 @@
 
 ## What Assistant Chat Is
 
-Assistant chat is the main place where users ask Sonae for help, analysis, writing, research over uploaded documents, and other AI-supported work inside the dashboard. It is reached from the sidebar item labelled `Ask Sonae` or `Ask {platform name}`, depending on how the workspace has been branded. The first screen is a clean prompt workspace where you can type a request, attach documents, choose an available AI engine, pick how much reasoning effort the assistant should use, or dictate a prompt with your microphone. Once you send the first message, Sonae opens a conversation thread at `/app/assistant/{thread}` so you can continue the same discussion.
+Assistant chat is the main place where users ask Sonae for help, analysis, writing, research over uploaded documents, inspecting photos, and other AI-supported work inside the dashboard. It is reached from the sidebar item labelled `Ask Sonae` or `Ask {platform name}`, depending on how the workspace has been branded. The first screen is a clean prompt workspace where you can type a request, attach documents or photos, choose an available AI engine, pick how much reasoning effort the assistant should use, dictate a prompt with your microphone, or start a live spoken conversation. Once you send the first message, Sonae opens a conversation thread at `/app/assistant/{thread}` so you can continue the same discussion.
 
 This guide describes the features that are currently implemented. It does not describe future agent tools, upcoming automation features, or any planned redesigns unless those features already appear in the product.
 
@@ -50,13 +50,13 @@ The thinking selector lets you choose the assistant’s reasoning effort for the
 
 Reasoning effort is applied per message. You can use a faster setting for a simple follow-up, then switch to a deeper setting for a complex request in the same conversation. If your workspace has strict cost or usage controls, ask an administrator which default is preferred.
 
-## Uploading Documents
+## Uploading Documents And Photos
 
-Assistant chat supports document upload from both the welcome screen and active thread composer. Use the plus button or drag files onto the composer. Supported document types are PDF, CSV, plain text, Excel files, and Word documents. The product validates file type and size before adding files to the pending tray. If a file is unsupported or too large, Sonae shows an in-app error message explaining the reason.
+Assistant chat supports document and photo upload from both the welcome screen and active thread composer. Use the plus button or drag files onto the composer. Supported document types are PDF, CSV, plain text, Excel files, and Word documents. Image files can also be attached as photos. The product validates file type and size before adding files to the pending tray. If a file is unsupported or too large, Sonae shows an in-app error message explaining the reason.
 
 Uploaded documents are used in two ways. First, the assistant can send small enough file content directly to the selected model as part of the request. Second, Sonae stores the document in a thread-specific knowledge area, extracts text, breaks it into chunks, and creates vector embeddings so future questions in that thread can retrieve relevant passages. The visible status panel tells you when the system is still processing documents. If processing takes too long or fails, the assistant may answer without fully using that document, and you may need to try a smaller or cleaner file.
 
-For best results, use documents with extractable text rather than scanned images. Standard PDFs, text files, CSVs, and DOCX files usually work better than image-only files. If the assistant gives an incomplete answer after an upload, ask it what information it used, retry with a clearer version of the file, or use the workspace default model if a manually selected model appears not to support attachment context.
+For best results with documents, use files with extractable text rather than scanned images. Standard PDFs, text files, CSVs, and DOCX files usually work better than image-only files. A photo is different: it rides with the current message so a vision-capable model can inspect it for that turn. Photos are not added to thread knowledge. If Sonae sees something actionable in a photo, it can show a suggested follow-up task for you to confirm. See [Photo Actions](./photo-actions.md).
 
 ## Voice Dictation
 
@@ -65,6 +65,12 @@ The microphone button starts voice dictation through your browser. When recordin
 Voice dictation is useful for rough drafting and longer natural-language prompts, but you should review the transcribed text before sending sensitive or high-impact requests. The transcription result is added to the prompt field and can be edited like normal text.
 
 Voice transcription is also guarded by backend limits. Sonae accepts supported audio formats, rejects malformed or oversized audio before sending it to the AI provider, and rate-limits repeated transcription attempts by user. Transcription currently uses the platform's global transcription model setting rather than a company-specific override. If dictation repeatedly fails, wait briefly, check browser microphone permissions, and try again with a shorter recording.
+
+## Live Voice Mode
+
+Assistant chat also has a live voice mode. Unlike dictation, live voice opens a spoken session inside the assistant thread: you talk, Sonae answers in speech, captions show both sides, and the completed spoken turns are written back to the same conversation history. Live voice can search company knowledge while the conversation is already running.
+
+Live voice uses the workspace spoken voice chosen by an administrator. It depends on the real-time voice model and relay being configured, so a workspace can have text chat and dictation working before live voice is available. For the broader spoken experience, including inbound phone calls and voice settings, see [Spoken Channels](./spoken-channels.md).
 
 ## Permissions, Company Boundaries, and Limits
 

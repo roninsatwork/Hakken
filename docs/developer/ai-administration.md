@@ -2,7 +2,7 @@
 
 AI administration is the implementation surface for Sonae's model catalog, provider controls, AI defaults, global and company prompts, rules, knowledge, widgets, tools/connectors, chat logs, and cost reporting. It is split across global admin routes under `src/app/(dashboard)/admin/ai/`, company-scoped routes under `src/app/(dashboard)/admin/companies/[id]/`, public widget routes under `src/app/w/[widgetId]/` and `src/app/sandbox/[widgetId]/`, and Convex modules that enforce authorization and runtime resolution.
 
-This guide describes current behavior only. It should be read with `docs/developer/assistant-chat.md`, `docs/developer/upload-and-knowledge-policy.md`, `docs/developer/ai-provider-tool-extension.md`, and `docs/developer/agents.md` before changing AI runtime or administration behavior.
+This guide describes current behavior only. It should be read with `docs/developer/assistant-chat.md`, `docs/developer/spoken-channels.md`, `docs/developer/upload-and-knowledge-policy.md`, `docs/developer/ai-provider-tool-extension.md`, and `docs/developer/agents.md` before changing AI runtime or administration behavior.
 
 ## Product Surface
 
@@ -17,6 +17,7 @@ Global AI routes:
 - `src/app/(dashboard)/admin/ai/models/page.tsx` manages providers, model catalog rows, global defaults, sync, test, filtering, and enabled status.
 - `src/app/(dashboard)/admin/ai/models/[id]/page.tsx` edits a model friendly name and pricing configuration.
 - `src/app/(dashboard)/admin/ai/tools/page.tsx`, `tools/new/page.tsx`, `tools/[id]/page.tsx`, and `tools/connectors/[id]/page.tsx` manage tools and connectors. There is no implemented MCP tool creation route in the current app.
+- `src/app/(dashboard)/admin/ai/voice/page.tsx` manages the workspace spoken voice and previews voices through the production live relay/model path.
 
 Company AI routes use the same backend tables but pass a company id and apply company-scoped authorization:
 
@@ -45,7 +46,8 @@ AI administration touches these schema areas in `convex/schema.ts`:
 - `aiTools` and `agentTools` store global tool definitions and agent bindings.
 - `widgets` stores global and company embeddable widget configuration.
 - `threads` and `messages` store chat, widget, and agent conversation messages with company/user/agent/widget analytics dimensions.
-- `aiActionRequests` stores lightweight reservations for provider-backed helper actions such as voice transcription and workflow node configuration generation. These rows support per-actor rate limits before provider calls are made.
+- `companies.spokenVoice` stores the voice used by Ask Sonae live voice, phone calls, and reception.
+- `aiActionRequests` stores lightweight reservations for provider-backed helper actions such as voice transcription, real-time voice session creation, voice preview, and workflow node configuration generation. These rows support per-actor rate limits before provider calls are made.
 - `analyticsDailySnapshots` and message metadata support cost and usage reporting.
 
 Keep sparse scope fields meaningful. A global knowledge document has no company id, agent id, or thread id. A company knowledge document has a company id. Agent knowledge can have an agent id and, for admin-scoped writes, may also carry company scope. Thread knowledge has a thread id.
@@ -56,7 +58,7 @@ Keep sparse scope fields meaningful. A global knowledge document has no company 
 
 `convex/aiModelsActions.ts` contains provider sync and test actions for Google, OpenAI, Anthropic, and Vertex aliases. Provider sync updates catalog metadata; provider testing records health status and messages. Keep provider-specific API details in provider services and actions, not scattered through runtime callers.
 
-Defaults are use-case based. Global defaults are keyed by use case and scope. Company defaults override global defaults for the same use case. Runtime resolution should go through `convex/aiModelService.ts` and related internal query paths rather than reading model rows directly in feature code. This is a repo guardrail: runtime paths should not hardcode model literals.
+Defaults are use-case based. Global defaults are keyed by use case and scope. Company defaults override global defaults for the same use case. Runtime resolution should go through `convex/aiModelService.ts` and related internal query paths rather than reading model rows directly in feature code. This is a repo guardrail: runtime paths should not hardcode model literals. The `realtime` use case is the live spoken-channel default used by Ask Sonae voice, the phone line, and voice previews; it needs a compatible speech-to-speech model and the relay/provider configuration documented in [Spoken Channels](./spoken-channels.md).
 
 The model admin page filters by status, provider, capability, use case, and search term. It uses `ADMIN_PAGE_SIZE`. The model detail page updates friendly name and pricing fields through `updatePricingConfig`; pricing powers cost estimates and analytics, not provider billing.
 
@@ -94,6 +96,12 @@ The public route `src/app/w/[widgetId]/page.tsx` reads active widget configurati
 
 Client-side domain checks are helpful for the iframe experience, but sensitive widget behavior must remain backend-scoped by widget id, company id, and active state. Avoid adding public widget mutations that trust host page data without backend validation.
 
+## Spoken Voice
+
+`src/app/(dashboard)/admin/ai/voice/page.tsx` calls `api.voiceSettings.getSpokenVoice`, `api.voiceSettings.setSpokenVoice`, and `api.voicePreview.mintVoicePreviewTicket`. Voice choices are validated against the closed set in `convex/voiceSettings.ts`; writes are admin-only and audited with `UPDATE_SPOKEN_VOICE`.
+
+Voice preview is intentionally not a separate text-to-speech shortcut. It mints a signed ticket for the same relay and configured real-time model used by production spoken channels. Keep this screen aligned with [Spoken Channels](./spoken-channels.md) when changing relay URLs, voice names, preview rate limits, model requirements, or company voice storage.
+
 ## Costs And Chat Logs
 
 Global AI costs use `api.analytics.getGlobalAnalytics`, which requires super-admin access. The cost screen displays timeline, aggregates, provider/model distribution, and leaderboards. Company metrics use company-scoped analytics access in `convex/analytics.ts`. Historical analytics snapshots store model metrics but not provider totals, so provider distribution is currently live-overlay attribution rather than a complete historical provider rollup.
@@ -104,11 +112,11 @@ Chat transcript copy is built in the browser through `src/lib/chatTranscript.ts`
 
 ## Provider-Backed Helper Actions
 
-Some AI actions are helper utilities rather than normal chat turns. Voice transcription calls `api.ai.transcribeAudio`; workflow node mapping calls `api.ai.generateNodeConfig`. Both actions validate payload shape and size before reaching a provider, reserve an `aiActionRequests` row for the actor, and reject rapid repeated calls with a 429-style error.
+Some AI actions are helper utilities rather than normal chat turns. Voice transcription calls `api.ai.transcribeAudio`; real-time voice calls `api.ai.createRealtimeVoiceSession`; voice preview calls `api.voicePreview.mintVoicePreviewTicket`; workflow node mapping calls `api.ai.generateNodeConfig`. These actions validate payload shape and size where applicable, reserve an `aiActionRequests` row for the actor, and reject rapid repeated calls with a 429-style error.
 
 `convex/aiActionRequests.ts` owns the reservation mutation. It queries the most recent rows by actor and action name, delegates the window check to `convex/aiActionRequestService.ts`, and inserts a new reservation only after the caller is still inside the allowed window. The current implementation does not prune old request rows during reservation, so cleanup or retention should be handled deliberately if request volume grows. The helper service is intentionally small and pure so rate-limit behavior can be tested without invoking provider actions.
 
-Transcription is authenticated-user accessible, accepts only supported audio MIME types, rejects malformed base64, and caps decoded audio at 10MB. Node configuration generation requires an administrator, trims and bounds prompt, node type, and graph context, then resolves its model through the global workflow model configuration. Both helper paths currently require Google Vertex-compatible resolved models before provider calls. Keep new provider-backed helper actions behind the same pattern: authenticate first, validate bounded input, reserve the action request, then call the provider through configured model services.
+Transcription is authenticated-user accessible, accepts only supported audio MIME types, rejects malformed base64, and caps decoded audio at 10MB. Real-time voice requires a compatible `realtime` model default and either the live relay configuration for Google Vertex or the OpenAI realtime configuration for supported OpenAI models. Node configuration generation requires an administrator, trims and bounds prompt, node type, and graph context, then resolves its model through the global workflow model configuration. Keep new provider-backed helper actions behind the same pattern: authenticate first, validate bounded input, reserve the action request, then call the provider through configured model services.
 
 ## Authorization And Audit Expectations
 
@@ -127,6 +135,7 @@ Focused tests include:
 - `convex/widgets.test.ts`, `src/app/(dashboard)/admin/companies/[id]/widget/page.test.tsx`, and widget config component tests.
 - `convex/analytics.test.ts`, cost component tests under `src/app/(dashboard)/admin/ai/costs/_components/`, and chat admin tests where present.
 - `convex/ai.test.ts` for provider-backed helper action input guardrails and `convex/aiActionRequestService.ts` rate-limit behavior.
+- `convex/voiceSettings.test.ts`, `convex/voiceRelay.test.ts`, `convex/telephony.test.ts`, and `convex/telephonyService.test.ts` for spoken channels.
 - UI tests under `src/app/(dashboard)/admin/ai/**`.
 
 For documentation-only changes, run `git diff --check`. Before merging code changes in this area, follow the full repo gate:
