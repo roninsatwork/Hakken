@@ -30,6 +30,7 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
 
@@ -146,6 +147,13 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
             || matchesCompanyRoute(pathname, `${aiHref}/knowledge`)
             || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
           ),
+        },
+        {
+          // Every brain's gaps get a dedicated screen (Anthony's ruling,
+          // 2026-08-17) — this company's own, beside its Wiki.
+          label: "Unanswered",
+          href: `${aiHref}/unanswered`,
+          icon: MessageCircleQuestion,
         },
         // Saved Answers and Memory folded into the Wiki (one-brain-plan.md,
         // phase 3): answers file through the save button with the chat as

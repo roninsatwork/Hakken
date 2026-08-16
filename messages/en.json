@@ -3507,6 +3507,8 @@
     "dismiss": "Dismiss",
     "empty": "No open questions",
     "emptyState": "Nothing here - every question so far found its pages. When one doesn't, it appears here.",
-    "emptyFiltered": "Nothing matches this filter."
+    "emptyFiltered": "Nothing matches this filter.",
+    "subtitleCompany": "Every question this company's AI had no pages for.",
+    "hintCompany": "Each row is real demand from this company's own conversations. Feed the wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering."
   }
 }

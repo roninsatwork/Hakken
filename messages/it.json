@@ -3507,6 +3507,8 @@
     "dismiss": "Ignora",
     "empty": "Nessuna domanda aperta",
     "emptyState": "Niente qui - finora ogni domanda ha trovato le sue pagine. Quando una non le trova, appare qui.",
-    "emptyFiltered": "Nulla corrisponde a questo filtro."
+    "emptyFiltered": "Nulla corrisponde a questo filtro.",
+    "subtitleCompany": "Ogni domanda per cui l'AI di questa azienda non aveva pagine.",
+    "hintCompany": "Ogni riga è domanda reale dalle conversazioni di questa azienda. Alimenta il wiki e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire."
   }
 }

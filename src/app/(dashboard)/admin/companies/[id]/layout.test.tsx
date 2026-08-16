@@ -72,6 +72,7 @@ describe("CompanyDashboardLayout navigation", () => {
       // The wiki replaced Knowledge in this menu (wiki-replaces-knowledge
       // plan, stage three): importing and reading both live on the Wiki.
       ["Wiki", "/admin/companies/company123/ai/pages"],
+      ["Unanswered", "/admin/companies/company123/ai/unanswered"],
       // Saved Answers and Memory folded into the Wiki (one-brain-plan.md,
       // phase 3); their addresses redirect there.
       ["Skills", "/admin/companies/company123/ai/skills"],
