@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Network, Pin, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -90,14 +90,29 @@ export function WikiPagesListScreen({
   const globalWeek = useQuery(api.wikiReport.getWeeklyReportForGlobal, companyId ? "skip" : {});
   const weekReport = companyId ? companyWeek : globalWeek;
 
-  const unanswered =
-    useQuery(
-      api.wikiFeedback.listUnansweredForCompany,
-      companyId ? { companyId } : "skip"
-    ) ?? [];
-  const dismissUnansweredDoor = useMutation(api.wikiFeedback.dismissUnansweredForCompany);
+  const companyUnanswered = useQuery(
+    api.wikiFeedback.listUnansweredForCompany,
+    companyId ? { companyId } : "skip"
+  );
+  const globalUnanswered = useQuery(
+    api.wikiFeedback.listUnansweredForGlobal,
+    companyId ? "skip" : {}
+  );
+  const unanswered = (companyId ? companyUnanswered : globalUnanswered) ?? [];
+  const dismissUnansweredCompany = useMutation(api.wikiFeedback.dismissUnansweredForCompany);
+  const dismissUnansweredGlobal = useMutation(api.wikiFeedback.dismissUnansweredForGlobal);
   const dismissUnanswered = (unansweredId: (typeof unanswered)[number]["unansweredId"]) =>
-    companyId ? dismissUnansweredDoor({ companyId, unansweredId }) : Promise.resolve();
+    companyId
+      ? dismissUnansweredCompany({ companyId, unansweredId })
+      : dismissUnansweredGlobal({ unansweredId });
+
+  const platformDrafts =
+    useQuery(api.wikiExamGrowth.listProposedCasesForGlobal, companyId ? "skip" : {}) ?? [];
+  const platformChecks =
+    useQuery(api.wikiExamGrowth.listPlatformChecks, companyId ? "skip" : {}) ?? [];
+  const decidePlatformDraft = useMutation(api.wikiExamGrowth.decideProposedCaseForGlobal);
+  const runPlatformCheck = useAction(api.companyEvalRuns.runCheck);
+  const [runningCheckId, setRunningCheckId] = useState<string | null>(null);
 
   const globalReviews = useQuery(api.wikiReviews.listPendingReviewsForGlobal, companyId ? "skip" : {});
   const companyReviews = useQuery(
@@ -326,7 +341,7 @@ export function WikiPagesListScreen({
         </div>
       )}
 
-      {companyId && unanswered.length > 0 && (
+      {unanswered.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[16px] border border-brand/30 bg-brand/5 p-5">
           <div className="flex items-baseline justify-between gap-4 flex-wrap">
             <span className="flex items-center gap-2 text-[14px] font-semibold text-foreground">
@@ -342,6 +357,9 @@ export function WikiPagesListScreen({
                 <span className="flex items-center gap-2 shrink-0">
                   <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-medium tabular-nums">
                     {t("unanswered.asked", { count: row.askCount })}
+                    {"companyCount" in row && typeof row.companyCount === "number" && row.companyCount > 0 && (
+                      <> · {t("unanswered.acrossCompanies", { count: row.companyCount })}</>
+                    )}
                   </span>
                   <a
                     href="#wiki-import"
@@ -361,6 +379,72 @@ export function WikiPagesListScreen({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {!companyId && (platformDrafts.length > 0 || platformChecks.length > 0) && (
+        <div className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
+          <span className="text-[14px] font-semibold text-foreground">{t("platformChecks.title")}</span>
+          <p className="text-[12px] text-secondary">{t("platformChecks.hint")}</p>
+          {platformDrafts.length > 0 && (
+            <ul className="flex flex-col divide-y divide-border-dim/60">
+              {platformDrafts.map((draft) => (
+                <li key={draft.caseId} className="flex items-start justify-between gap-4 py-2.5">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-[13px] font-medium text-foreground">“{draft.prompt}”</span>
+                    <span className="text-[12px] text-secondary line-clamp-2">{draft.expectedBehavior}</span>
+                  </div>
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[10px] font-bold tracking-widest uppercase">
+                      {t("platformChecks.draft")}
+                    </span>
+                    <AdminWriteButton
+                      onClick={() => void decidePlatformDraft({ caseId: draft.caseId, approve: true })}
+                      className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
+                    >
+                      {t("platformChecks.approve")}
+                    </AdminWriteButton>
+                    <AdminWriteButton
+                      onClick={() => void decidePlatformDraft({ caseId: draft.caseId, approve: false })}
+                      className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
+                    >
+                      {t("platformChecks.reject")}
+                    </AdminWriteButton>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {platformChecks.length > 0 && (
+            <ul className="flex flex-col divide-y divide-border-dim/60">
+              {platformChecks.map((check) => (
+                <li key={check.caseId} className="flex items-center justify-between gap-4 py-2.5">
+                  <span className="text-[13px] text-foreground min-w-0 truncate">“{check.prompt}”</span>
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="text-[12px] text-secondary">
+                      {check.lastRunStatus
+                        ? t(`platformChecks.status.${check.lastRunStatus}`)
+                        : t("platformChecks.neverRun")}
+                    </span>
+                    <AdminWriteButton
+                      onClick={() => {
+                        setRunningCheckId(check.caseId);
+                        void runPlatformCheck({ evalCaseId: check.caseId }).finally(() =>
+                          setRunningCheckId(null)
+                        );
+                      }}
+                      className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors disabled:opacity-40"
+                      disabled={runningCheckId === check.caseId}
+                    >
+                      {runningCheckId === check.caseId
+                        ? t("platformChecks.running")
+                        : t("platformChecks.run")}
+                    </AdminWriteButton>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

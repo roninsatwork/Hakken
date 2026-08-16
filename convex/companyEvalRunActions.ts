@@ -92,7 +92,9 @@ export type CompanyCheckRunResult = {
 export const runCompanyCheck = internalAction({
   args: {
     evalCaseId: v.id("companyEvalCases"),
-    companyId: v.id("companies"),
+    /** Absent for a platform check: the thread has no company, and the
+     * answer comes from the global brain alone. */
+    companyId: v.optional(v.id("companies")),
     userId: v.id("users"),
   },
   handler: async (ctx, args): Promise<CompanyCheckRunResult> => {
@@ -117,7 +119,7 @@ export const runCompanyCheck = internalAction({
 
       for (let sample = 0; sample < sampleCount; sample += 1) {
         const threadId = await ctx.runMutation(internal.companyEvals.createEvalThreadInternal, {
-          companyId: args.companyId,
+          ...(args.companyId ? { companyId: args.companyId } : {}),
           evalCaseId: args.evalCaseId,
           userId: args.userId,
         });

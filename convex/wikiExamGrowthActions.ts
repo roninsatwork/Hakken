@@ -14,7 +14,7 @@ import { generateTextWithResolvedModel } from "./aiProviderRegistry";
  */
 
 export const growExamForCompany = internalAction({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<{ drafted: number }> => {
     const startedAt = Date.now();
     await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
@@ -22,7 +22,7 @@ export const growExamForCompany = internalAction({
       return { drafted: 0 };
     }
     const growth = await ctx.runQuery(internal.wikiExamGrowth.listGrowthCandidatesInternal, {
-      companyId: args.companyId,
+      ...(args.companyId ? { companyId: args.companyId } : {}),
     });
     if (growth.candidates.length === 0) return { drafted: 0 };
 
@@ -61,7 +61,7 @@ export const growExamForCompany = internalAction({
         .slice(0, 3);
       for (const draft of drafts) {
         const inserted = await ctx.runMutation(internal.wikiExamGrowth.proposeExamCaseInternal, {
-          companyId: args.companyId,
+          ...(args.companyId ? { companyId: args.companyId } : {}),
           prompt: draft.prompt,
           expectedBehavior: draft.expected,
           grewFrom: draft.grewFrom,
@@ -75,7 +75,7 @@ export const growExamForCompany = internalAction({
     if (drafted > 0) {
       await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
         systemKey: "WIKI_EXAMINER",
-        companyId: args.companyId,
+        ...(args.companyId ? { companyId: args.companyId } : {}),
         trigger: "SCHEDULE",
         objective: "Draft exam questions from the questions real people asked.",
         summary: `Drafted ${drafted} exam questions for a person's decision. Nothing was activated.`,
@@ -97,9 +97,10 @@ export const examGrowthSweep = internalAction({
     const scopes = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
     let dispatched = 0;
     for (const scope of scopes) {
-      if (!scope) continue;
+      // The platform's own round rides as null (Anthony's SaaS ruling):
+      // its drafts grow from the platform's resolved gaps.
       await ctx.scheduler.runAfter(0, internal.wikiExamGrowthActions.growExamForCompany, {
-        companyId: scope,
+        ...(scope ? { companyId: scope } : {}),
       });
       dispatched += 1;
     }

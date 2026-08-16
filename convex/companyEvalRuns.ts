@@ -33,11 +33,17 @@ export const runCheck = adminAction({
       evalCaseId: args.evalCaseId,
     });
     if (!evalCase) throw new Error("Eval case not found");
-    assertAdminCanAccessCompany(ctx.user, evalCase.companyId);
+    // A platform check belongs to no company and is the super admin's
+    // alone (Anthony's SaaS ruling, 2026-08-17).
+    if (evalCase.companyId) {
+      assertAdminCanAccessCompany(ctx.user, evalCase.companyId);
+    } else if (ctx.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized access to platform checks");
+    }
 
     const result = await ctx.runAction(internal.companyEvalRunActions.runCompanyCheck, {
       evalCaseId: args.evalCaseId,
-      companyId: evalCase.companyId,
+      ...(evalCase.companyId ? { companyId: evalCase.companyId } : {}),
       userId: ctx.userId,
     });
 

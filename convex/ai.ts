@@ -378,7 +378,13 @@ export const generateSonaeResponse = internalAction({
                 // global arm retires too once the global brain holds pages
                 // (global-wiki-plan, phase 2), the same cutover carried by
                 // content instead of a button.
-                const wikiAnswers = Boolean(thread?.companyId && companyAnswersFromWiki(company));
+                // A thread with no company is the global AI's own
+                // conversation (the platform widget, a platform check) and
+                // answers from the global brain alone (Anthony's SaaS
+                // ruling, 2026-08-17).
+                const wikiAnswers = Boolean(
+                    thread?.companyId ? companyAnswersFromWiki(company) : true
+                );
                 const globalWikiServes =
                     wikiAnswers &&
                     (await ctx.runQuery(internal.wikiPages.hasGlobalWikiPagesInternal, {}));
@@ -452,14 +458,18 @@ export const generateSonaeResponse = internalAction({
         // Fail-open — a wiki failure must never cost a reply.
         let wikiAnswerContext = "";
         let wikiPageKeys: string[] = [];
-        if (thread?.companyId && companyAnswersFromWiki(company)) {
+        if (thread?.companyId ? companyAnswersFromWiki(company) : true) {
             try {
                 const wikiAnswer = await ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
-                    companyId: thread.companyId,
+                    // No company on the thread means the global AI's own
+                    // conversation: the chooser reads the platform shelf
+                    // alone (Anthony's SaaS ruling, 2026-08-17).
+                    ...(thread?.companyId ? { companyId: thread.companyId } : {}),
                     query: args.content.slice(0, 500),
                     // Staff may ask about their own customers; an anonymous
-                    // widget visitor may not be read anybody's page this way.
-                    includeCustomerPages: !thread.widgetId,
+                    // widget visitor may not be read anybody's page this way,
+                    // and the platform shelf holds no customer pages at all.
+                    includeCustomerPages: Boolean(thread?.companyId && !thread.widgetId),
                 });
                 wikiAnswerContext = wikiAnswer.context;
                 wikiPageKeys = wikiAnswer.pageKeys;
@@ -599,9 +609,9 @@ User Prompt: ${args.content}`;
         // no pages logs the gap. Scheduled, mechanical, never delays the
         // reply. Only where the wiki is the answering brain — the
         // escape-hatch chunk world predates the loop.
-        if (thread?.companyId && companyAnswersFromWiki(company)) {
+        if (thread?.companyId ? companyAnswersFromWiki(company) : true) {
             await ctx.scheduler.runAfter(0, internal.wikiFeedback.recordAnswerOutcomeInternal, {
-                companyId: thread.companyId,
+                ...(thread?.companyId ? { companyId: thread.companyId } : {}),
                 question: args.content.slice(0, 500),
                 pageKeys: wikiPageKeys,
             });

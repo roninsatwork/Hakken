@@ -1762,7 +1762,9 @@ export default defineSchema({
     .index("by_company_resolved_created", ["companyId", "resolvedAt", "createdAt"]),
 
   companyEvalCases: defineTable({
-    companyId: v.id("companies"),
+    // Absent means a platform check (Anthony's SaaS ruling, 2026-08-17):
+    // the global brain examined the way company brains are.
+    companyId: v.optional(v.id("companies")),
     name: v.string(),
     severity: v.union(
       v.literal("BLOCKER"),
@@ -1828,7 +1830,7 @@ export default defineSchema({
     .index("by_company_fingerprint", ["companyId", "proposalFingerprint"]),
 
   companyEvalRuns: defineTable({
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     evalCaseId: v.id("companyEvalCases"),
     status: v.union(
       v.literal("PASSED"),
@@ -3367,11 +3369,18 @@ export default defineSchema({
    * call and attribution lives in the audit trail, as with pins.
    */
   wikiUnansweredQuestions: defineTable({
-    companyId: v.id("companies"),
+    // Absent means the platform's own gap list (Anthony's SaaS ruling,
+    // 2026-08-17): when the global brain was in play and still had no
+    // answer, the miss also lands here — visible to super admins alone,
+    // who can already read every company's chat logs. Company rows name
+    // their company; platform rows count companies, never name them.
+    companyId: v.optional(v.id("companies")),
     /** The first asking's own words, for the panel. */
     question: v.string(),
     normalizedKey: v.string(),
     askCount: v.number(),
+    /** Platform rows only: distinct company ids that asked, capped. */
+    companiesJson: v.optional(v.string()),
     status: v.union(v.literal("OPEN"), v.literal("DISMISSED"), v.literal("RESOLVED")),
     firstAskedAt: v.number(),
     lastAskedAt: v.number(),

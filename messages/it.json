@@ -3410,7 +3410,8 @@
       "hint": "Domande reali per cui il wiki non aveva pagine. Importa qualcosa che le copra, oppure ignorale se non vale la pena. Una riga si chiude da sola quando la stessa domanda riceve poi una risposta vera.",
       "asked": "{count, plural, =1 {chiesta una volta} other {chiesta #×}}",
       "importSomething": "Importa qualcosa",
-      "dismiss": "Ignora questa domanda"
+      "dismiss": "Ignora questa domanda",
+      "acrossCompanies": "{count, plural, =1 {in 1 azienda} other {in # aziende}}"
     },
     "used": {
       "count": "{count, plural, =1 {1 risposta} other {# risposte}}",
@@ -3423,6 +3424,21 @@
       "unanswered": "senza risposta",
       "staffRuns": "turni dello staff",
       "waiting": "{count, plural, =1 {1 elemento in attesa di te} other {# elementi in attesa di te}}"
+    },
+    "platformChecks": {
+      "title": "Controlli della piattaforma",
+      "hint": "Il cervello globale viene esaminato come quelli aziendali. Le bozze nascono da domande reali; nulla viene eseguito o vincolato finché non le approvi.",
+      "draft": "Bozza",
+      "approve": "Approva",
+      "reject": "Rifiuta",
+      "run": "Esegui",
+      "running": "In esecuzione…",
+      "neverRun": "mai eseguito",
+      "status": {
+        "PASSED": "superato",
+        "FAILED": "fallito",
+        "NEEDS_REVIEW": "da rivedere"
+      }
     }
   },
   "calls": {

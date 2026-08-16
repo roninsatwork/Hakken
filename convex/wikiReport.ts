@@ -42,9 +42,9 @@ async function buildReport(
     (row) => row.actionType === "WIKI_PAGE_REWRITE" || row.actionType === "WIKI_PAGE_HUMAN_EDIT"
   ).length;
 
-  // Answers and their gaps always belong to a company — the platform
-  // shelf has neither table (Anthony's wall: company questions never
-  // pool under a global heading).
+  // Day tallies are company-kept; the platform's gap list is its own
+  // (Anthony's routing rule, 2026-08-17): misses that belong to the
+  // global brain land there directly and are counted here.
   const sinceDay = new Date(since).toISOString().slice(0, 10);
   const tallies = companyId
     ? await ctx.db
@@ -53,16 +53,15 @@ async function buildReport(
         .take(14)
     : [];
   const answered = tallies.reduce((sum, row) => sum + row.answered, 0);
-  const unanswered = tallies.reduce((sum, row) => sum + row.unanswered, 0);
-
-  const openUnansweredRows = companyId
-    ? await ctx.db
-        .query("wikiUnansweredQuestions")
-        .withIndex("by_company_status_asked", (q) =>
-          q.eq("companyId", companyId).eq("status", "OPEN")
-        )
-        .take(100)
-    : [];
+  const openUnansweredRows = await ctx.db
+    .query("wikiUnansweredQuestions")
+    .withIndex("by_company_status_asked", (q) =>
+      q.eq("companyId", companyId).eq("status", "OPEN")
+    )
+    .take(100);
+  const unanswered = companyId
+    ? tallies.reduce((sum, row) => sum + row.unanswered, 0)
+    : openUnansweredRows.filter((row) => row.lastAskedAt >= since).length;
 
   // The staff's rounds this week: runs in the window whose agent is one
   // of the wiki staff (systemKey is the badge).
@@ -112,7 +111,7 @@ async function buildReport(
 }
 
 export const buildWeeklyReportInternal = internalQuery({
-  args: { companyId: v.id("companies"), since: v.number() },
+  args: { companyId: v.optional(v.id("companies")), since: v.number() },
   handler: async (ctx, args): Promise<WeeklyReport> => {
     return await buildReport(ctx, args.companyId, args.since);
   },
@@ -177,8 +176,29 @@ export const notifyCompanyAdminsInternal = internalMutation({
   },
 });
 
-/** The weekly rota: every company brain reports its week. The global
- * shelf sends nothing — it has no company admins to tell. */
+/** The platform's week goes to the platform's people: every super
+ * admin, one bell (Anthony's SaaS ruling, 2026-08-17). */
+export const notifySuperAdminsInternal = internalMutation({
+  args: { title: v.string(), body: v.string() },
+  handler: async (ctx, args): Promise<number> => {
+    // Bounded scan: the user table is people, not data — small by nature.
+    const users = await ctx.db.query("users").take(2000);
+    let told = 0;
+    for (const admin of users.filter((row) => row.role === "SUPER_ADMIN")) {
+      await ctx.runMutation(internal.notifications.notifyUserInternal, {
+        userId: admin._id,
+        kind: "WIKI_WEEKLY_REPORT",
+        title: args.title,
+        body: args.body,
+      });
+      told += 1;
+    }
+    return told;
+  },
+});
+
+/** The weekly rota: every company brain reports its week, and the
+ * platform brain reports to the super admins. */
 export const sendWeeklyReports = internalAction({
   args: {},
   handler: async (ctx): Promise<{ companies: number }> => {
@@ -204,6 +224,28 @@ export const sendWeeklyReports = internalAction({
         body,
       });
       if (told > 0) sent += 1;
+    }
+
+    // The platform brain's own week (Anthony's SaaS ruling): the parts
+    // that exist at its level, sent to the super admins, silent when
+    // quiet like every other report.
+    const platformReport = await ctx.runQuery(internal.wikiReport.buildWeeklyReportInternal, {
+      since,
+    });
+    if (!platformReport.quiet) {
+      const waiting =
+        platformReport.waitingReviews +
+        platformReport.waitingQuestions +
+        platformReport.openUnanswered;
+      await ctx.runMutation(internal.wikiReport.notifySuperAdminsInternal, {
+        title: "The platform wiki's week",
+        body:
+          `${platformReport.pagesNew} new pages, ${platformReport.pagesImproved} improved. ` +
+          `${platformReport.unanswered > 0 ? `${platformReport.unanswered} questions the global brain couldn't answer. ` : ""}` +
+          `${platformReport.staffRuns} staff rounds ran. ` +
+          (waiting > 0 ? `${waiting} items waiting on you.` : `Nothing waiting.`),
+      });
+      sent += 1;
     }
     return { companies: sent };
   },

@@ -3410,7 +3410,8 @@
       "hint": "Real questions the wiki had no pages for. Import something that covers it, or dismiss it if it isn't worth covering. A row closes itself when the same question later gets a proper answer.",
       "asked": "{count, plural, =1 {asked once} other {asked #×}}",
       "importSomething": "Import something",
-      "dismiss": "Dismiss this question"
+      "dismiss": "Dismiss this question",
+      "acrossCompanies": "{count, plural, =1 {across 1 company} other {across # companies}}"
     },
     "used": {
       "count": "{count, plural, =1 {1 answer} other {# answers}}",
@@ -3423,6 +3424,21 @@
       "unanswered": "couldn't answer",
       "staffRuns": "staff rounds",
       "waiting": "{count, plural, =1 {1 item waiting on you} other {# items waiting on you}}"
+    },
+    "platformChecks": {
+      "title": "Platform checks",
+      "hint": "The global brain examined the way company brains are. Drafts grow from real questions; nothing runs or gates until you approve it.",
+      "draft": "Draft",
+      "approve": "Approve",
+      "reject": "Reject",
+      "run": "Run",
+      "running": "Running…",
+      "neverRun": "never run",
+      "status": {
+        "PASSED": "passed",
+        "FAILED": "failed",
+        "NEEDS_REVIEW": "needs review"
+      }
     }
   },
   "calls": {

@@ -190,6 +190,80 @@ describe("the weekly report", () => {
   });
 });
 
+describe("the routing rule — whose gap is it", () => {
+  test("a company with pages owns its miss; an empty-wiki company's miss strengthens the platform", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const withPages = await seedCompany(t);
+    await seedPage(t, withPages);
+    const emptyCo = await t.run(async (ctx) =>
+      ctx.db.insert("companies", { name: "SaaS Customer", createdAt: Date.now() })
+    );
+
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      companyId: withPages,
+      question: "Do you build apps for the NHS?",
+      pageKeys: [],
+    });
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      companyId: emptyCo,
+      question: "How do I reset my password?",
+      pageKeys: [],
+    });
+
+    const rows = await t.run(async (ctx) => ctx.db.query("wikiUnansweredQuestions").collect());
+    const companyRow = rows.find((row) => row.companyId === withPages);
+    const platformRow = rows.find((row) => row.companyId === undefined);
+    expect(companyRow?.question).toContain("NHS");
+    expect(platformRow?.question).toContain("reset my password");
+    expect(JSON.parse(platformRow!.companiesJson ?? "[]")).toEqual([emptyCo.toString()]);
+  });
+
+  test("two empty-wiki companies asking the same thing share one platform row", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const a = await t.run(async (ctx) => ctx.db.insert("companies", { name: "A", createdAt: Date.now() }));
+    const b = await t.run(async (ctx) => ctx.db.insert("companies", { name: "B", createdAt: Date.now() }));
+    for (const companyId of [a, b]) {
+      await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+        companyId,
+        question: "How do I reset my password?",
+        pageKeys: [],
+      });
+    }
+    const rows = await t.run(async (ctx) => ctx.db.query("wikiUnansweredQuestions").collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].companyId).toBeUndefined();
+    expect(rows[0].askCount).toBe(2);
+    expect(JSON.parse(rows[0].companiesJson ?? "[]")).toHaveLength(2);
+  });
+
+  test("the global AI's own conversation logs straight to the platform, and a platform-page answer closes it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      question: "How do I reset my password?",
+      pageKeys: [],
+    });
+    let rows = await t.run(async (ctx) => ctx.db.query("wikiUnansweredQuestions").collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].companyId).toBeUndefined();
+
+    // The platform learns the page; a later companyless asking answers
+    // from it and the row closes itself.
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      subjectKey: "password-reset",
+      title: "password-reset",
+      content: "Reset from the sign-in screen.",
+      source: "DOCUMENT:doc-1",
+      kind: "POLICY",
+    });
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      question: "How do I reset my password?",
+      pageKeys: ["global/POLICY:password-reset"],
+    });
+    rows = await t.run(async (ctx) => ctx.db.query("wikiUnansweredQuestions").collect());
+    expect(rows[0].status).toBe("RESOLVED");
+  });
+});
+
 describe("the Examiner's drafts", () => {
   test("a draft grows once per question, waits inert, and rejection is remembered", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));

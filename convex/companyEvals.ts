@@ -327,7 +327,9 @@ async function insertCompanyEvalRun(ctx: MutationCtx, args: {
   // waits until every must-pass check has a passing result. One check going
   // green used to wipe the entire backlog, which is how a company could read as
   // fully checked on the strength of a single answer.
-  const resolvedDriftCount = status === "PASSED" && await hasCompleteBlockerEvidence(ctx, args.evalCase.companyId)
+  const resolvedDriftCount = status === "PASSED" &&
+    args.evalCase.companyId &&
+    await hasCompleteBlockerEvidence(ctx, args.evalCase.companyId)
     ? await resolveCompanyAiDriftEvents(ctx, {
       companyId: args.evalCase.companyId,
       resolvedBy: args.userId,
@@ -356,8 +358,17 @@ async function hasCompleteBlockerEvidence(ctx: MutationCtx, companyId: Id<"compa
   return mustPassCases.every((evalCase) => evalCase.lastRunStatus === "PASSED");
 }
 
-async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
+async function requireCompanyAccess(
+  ctx: QueryCtx | MutationCtx,
+  companyId: Id<"companies"> | undefined
+) {
   const { user, userId } = await requireAdmin(ctx);
+  // A platform check belongs to no company (Anthony's SaaS ruling,
+  // 2026-08-17): it is the super admin's alone.
+  if (!companyId) {
+    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to platform checks");
+    return { userId, company: null };
+  }
   const company = await ctx.db.get(companyId);
   if (!company) throw new Error("Company not found");
   assertAdminCanAccessCompany(user, companyId);
@@ -597,7 +608,7 @@ export const updateCase = adminMutation({
       timestamp: now,
       metadata: JSON.stringify({ severity: args.severity ?? evalCase.severity }),
     });
-    await recordCompanyAiDriftEvent(ctx, {
+    if (evalCase.companyId) await recordCompanyAiDriftEvent(ctx, {
       companyId: evalCase.companyId,
       sourceType: "EVAL",
       sourceId: args.evalCaseId,
@@ -754,7 +765,7 @@ export const deleteCase = adminMutation({
  */
 export const createEvalThreadInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     evalCaseId: v.id("companyEvalCases"),
     userId: v.id("users"),
   },
