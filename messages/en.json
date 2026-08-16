@@ -3491,6 +3491,17 @@
     },
     "localGraph": {
       "title": "Where you're standing"
+    },
+    "ask": {
+      "title": "Ask this brain",
+      "hint": "Type a question and see the real answer this wiki gives, with the pages it stood on. Each ask is a live AI call.",
+      "placeholder": "Ask what a customer would ask...",
+      "askButton": "Ask",
+      "asking": "Thinking…",
+      "stoodOn": "Stood on these pages",
+      "noPages": "The wiki had no pages for this - it will appear on the Unanswered screen.",
+      "platform": "(platform)",
+      "error": "The ask could not be completed. Try again."
     }
   },
   "calls": {

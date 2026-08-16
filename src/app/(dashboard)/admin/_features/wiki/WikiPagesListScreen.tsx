@@ -22,6 +22,7 @@ import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminA
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiImportBox } from "./WikiImportBox";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
+import { WikiAskBox } from "./WikiAskBox";
 
 const PAGE_SIZE = 15;
 
@@ -239,6 +240,8 @@ export function WikiPagesListScreen({
       )}
 
       <WikiImportBox companyId={companyId} />
+
+      <WikiAskBox companyId={companyId} basePath={basePath} />
 
       {/* The distiller's honest progress (design, screen 2), only while
           there is genuinely something left to read. */}

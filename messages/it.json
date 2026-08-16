@@ -3491,6 +3491,17 @@
     },
     "localGraph": {
       "title": "Dove ti trovi"
+    },
+    "ask": {
+      "title": "Chiedi a questo cervello",
+      "hint": "Scrivi una domanda e vedi la risposta reale di questo wiki, con le pagine su cui si basa. Ogni domanda è una chiamata AI reale.",
+      "placeholder": "Chiedi ciò che chiederebbe un cliente...",
+      "askButton": "Chiedi",
+      "asking": "Sto pensando…",
+      "stoodOn": "Basata su queste pagine",
+      "noPages": "Il wiki non aveva pagine per questa domanda - apparirà nella schermata Senza risposta.",
+      "platform": "(piattaforma)",
+      "error": "La domanda non è andata a buon fine. Riprova."
     }
   },
   "calls": {
