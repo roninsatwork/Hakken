@@ -237,7 +237,13 @@ export const distilSweep = internalAction({
     for (const companyId of companies) {
       await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilCompanyBatch, { companyId });
     }
-    return { companies: companies.length };
+    // The global shelf's round (global-wiki-plan.md, phase 4): same batch
+    // worker, no company on it. An empty shelf schedules nothing.
+    const globalRound = await ctx.runQuery(internal.wikiDistill.hasGlobalUndistilledInternal, {});
+    if (globalRound) {
+      await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilCompanyBatch, {});
+    }
+    return { companies: companies.length + (globalRound ? 1 : 0) };
   },
 });
 

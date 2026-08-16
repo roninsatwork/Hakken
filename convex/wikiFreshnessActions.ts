@@ -26,9 +26,10 @@ export const freshnessSweep = internalAction({
       return { companies: 0 };
     }
     const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
-    for (const companyId of companies) {
+    for (const scope of companies) {
+      // `null` is the global shelf's round (global-wiki-plan.md, phase 4).
       await ctx.scheduler.runAfter(0, internal.wikiFreshnessActions.checkCompanyFreshness, {
-        companyId,
+        companyId: scope ?? undefined,
       });
     }
     return { companies: companies.length };
@@ -36,7 +37,7 @@ export const freshnessSweep = internalAction({
 });
 
 export const checkCompanyFreshness = internalAction({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<{ verified: number; raised: number }> => {
     const startedAt = Date.now();
     const candidates = await ctx.runQuery(internal.wikiFreshness.getFreshnessCandidatesInternal, {

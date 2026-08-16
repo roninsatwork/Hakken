@@ -27,10 +27,12 @@ export const tendDispatcher = internalAction({
     }
     const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
     let visited = 0;
-    for (const companyId of companies) {
-      // Only gardens with weeds get a visit: a company whose pages are all
+    for (const scope of companies) {
+      // Only gardens with weeds get a visit: a brain whose pages are all
       // tidy and correctly linked costs nothing tonight — and a scheduler
-      // asked to drain (as the tests do) genuinely drains.
+      // asked to drain (as the tests do) genuinely drains. `null` is the
+      // global shelf's round (global-wiki-plan.md, phase 4).
+      const companyId = scope ?? undefined;
       const candidates = await ctx.runQuery(internal.wikiTending.getTendingCandidatesInternal, {
         companyId,
       });
@@ -51,7 +53,7 @@ export const tendDispatcher = internalAction({
  * sparse, then refreshes the hub index pages.
  */
 export const crossLinkSweep = internalAction({
-  args: { companyId: v.id("companies"), limit: v.optional(v.number()) },
+  args: { companyId: v.optional(v.id("companies")), limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<{ linked: number }> => {
     const passStartedAt = Date.now();
     await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
@@ -147,7 +149,7 @@ export const crossLinkSweep = internalAction({
 });
 
 export const tendCompany = internalAction({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<{ repairedLinks: number; tidiedPages: number }> => {
     const visitStartedAt = Date.now();
     const candidates = await ctx.runQuery(internal.wikiTending.getTendingCandidatesInternal, {

@@ -176,6 +176,49 @@ describe("the global shelf", () => {
     expect(opened.pageKeys).toEqual(["POLICY:billing"]);
   });
 
+  test("the staff's rotas include the global shelf as one more round", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      subjectKey: "delivery",
+      title: "delivery",
+      content: "We deliver on Fridays.",
+      source: "DOCUMENT:doc-1",
+      kind: "POLICY",
+    });
+    // No global pages: the rota is companies only.
+    await expect(
+      t.query(internal.wikiTending.listCompaniesWithPagesInternal, {})
+    ).resolves.toEqual([companyId]);
+
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      subjectKey: "billing",
+      title: "billing",
+      content: "Billing runs monthly.",
+      source: "DOCUMENT:doc-2",
+      kind: "POLICY",
+    });
+    const scopes = await t.query(internal.wikiTending.listCompaniesWithPagesInternal, {});
+    expect(scopes).toContain(companyId);
+    expect(scopes).toContain(null);
+
+    // The round's reading is walled: the global round sees only the shelf.
+    const candidates = await t.query(internal.wikiTending.getTendingCandidatesInternal, {});
+    expect(candidates.overgrown.every((page) => page.subjectKey !== "delivery")).toBe(true);
+  });
+
+  test("the catch-up sweep knows when the global shelf has unread documents", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await expect(t.query(internal.wikiDistill.hasGlobalUndistilledInternal, {})).resolves.toBe(
+      false
+    );
+    await seedGlobalDocument(t);
+    await expect(t.query(internal.wikiDistill.hasGlobalUndistilledInternal, {})).resolves.toBe(
+      true
+    );
+  });
+
   test("a review-marked global document is readable by the Reviewer", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const documentId = await seedGlobalDocument(t, { wikiReviewRequested: true });

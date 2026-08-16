@@ -13,7 +13,7 @@ import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 
 export const raiseQuestionInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS")),
     pageKeyA: v.string(),
     claimA: v.string(),
@@ -58,7 +58,7 @@ export const raiseQuestionInternal = internalMutation({
 /** The sweep closes questions the pages have already answered: a claim no
  * longer present in its page is a disagreement someone settled by editing. */
 export const autoResolveStaleQuestionsInternal = internalMutation({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<number> => {
     const open = await ctx.db
       .query("wikiOpenQuestions")
@@ -225,7 +225,7 @@ export const dismissOpenQuestionForCompany = adminMutation({
  * notes excluded — synthesis pages are where contradictions bite. */
 export const getContradictionClusterInternal = internalQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     kind: v.union(v.literal("PRODUCT"), v.literal("POLICY"), v.literal("ISSUE")),
   },
   handler: async (

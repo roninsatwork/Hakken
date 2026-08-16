@@ -26,9 +26,10 @@ export const contradictionSweep = internalAction({
       return { companies: 0 };
     }
     const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
-    for (const companyId of companies) {
+    for (const scope of companies) {
+      // `null` is the global shelf's round (global-wiki-plan.md, phase 4).
       await ctx.scheduler.runAfter(0, internal.wikiContradictionActions.findContradictionsForCompany, {
-        companyId,
+        companyId: scope ?? undefined,
       });
     }
     return { companies: companies.length };
@@ -36,7 +37,7 @@ export const contradictionSweep = internalAction({
 });
 
 export const findContradictionsForCompany = internalAction({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<{ raised: number; autoResolved: number }> => {
     const startedAt = Date.now();
     // Questions the pages have already answered close first, so the list a

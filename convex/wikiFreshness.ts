@@ -16,7 +16,7 @@ export const WIKI_FRESHNESS_AGE_MS = 21 * 24 * 60 * 60 * 1000;
 export const WIKI_FRESHNESS_BATCH = 3;
 
 export const getFreshnessCandidatesInternal = internalQuery({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (
     ctx,
     args

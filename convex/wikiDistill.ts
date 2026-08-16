@@ -88,6 +88,19 @@ export const listCompaniesWithUndistilledInternal = internalQuery({
   },
 });
 
+/** Whether the global shelf still holds unread documents — the catch-up
+ * sweep's cue to run the global round (global-wiki-plan.md, phase 4). */
+export const hasGlobalUndistilledInternal = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<boolean> => {
+    const documents = await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_company", (q) => q.eq("companyId", undefined))
+      .take(200);
+    return documents.some((document) => isDistillable(document));
+  },
+});
+
 /** The sweep's claim: up to a batch of unread documents, stamped before any
  * model sees them. Two concurrent chains split the work instead of doubling it. */
 export const claimNextDistillBatchInternal = internalMutation({

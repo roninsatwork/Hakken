@@ -1,9 +1,14 @@
 # The Global Brain — the Platform's Own Wiki
 
-Status: **Partially built 2026-08-16.** The platform Wiki shelf, global Wiki
-routes, review-first import default, and global page/review/question/progress
-doors exist in the current worktree. Answer integration and global staff rounds
-remain follow-up work unless their implementation is added later.
+Status: **Delivered 2026-08-16**, all four phases, plus a fifth ruling
+made mid-build and honoured the same hour: after Anthony saw a company's
+wiki rendered under the Manage Global AI menu (while impersonating that
+company's workspace) and read it as a leak, the workspace Wiki tab was
+removed outright — a company's wiki is now visible ONLY inside its own
+company's section, every wiki screen names its brain in a banner, and
+the old Global Knowledge address redirects to the platform wiki. No data
+had leaked (the shelf held zero pages, verified against the live
+database); the screen's ambiguity was the defect, and it is gone.
 Owner: Anthony
 
 Anthony's words, looking at the Global Knowledge Base screen: *"so really
@@ -75,7 +80,7 @@ it as history when checking later work.
 
 ## The phases
 
-### Phase 1 — the global shelf (mostly built 2026-08-16)
+### Phase 1 — the global shelf (built 2026-08-16)
 
 The wiki tables learn to hold pages with no company on them, the same
 way `knowledgeDocuments` already does: `companyId` becomes optional
@@ -92,7 +97,7 @@ with no company yields its review, then (approved) its source note, topic pages,
 and links, all scoped global; a company import behaves exactly as before; the
 personal-data manifest test stays green with no new user-linked fields.
 
-### Phase 2 — answers: company first, global fills gaps (≈0.5 day)
+### Phase 2 — answers: company first, global fills gaps (built 2026-08-16)
 
 The chooser's index grows a second, marked section: the global pages.
 The model reads one index and picks from both shelves; where both cover
@@ -108,7 +113,7 @@ with the global page in its evidence; a question both brains cover cites
 the company page; with an empty global shelf, answers are byte-for-byte
 what they are today; the standing AI Checks pass unchanged.
 
-### Phase 3 — the screen fold (built 2026-08-16; browser proof still needed)
+### Phase 3 — the screen fold (built and browser-verified 2026-08-16)
 
 The Global Knowledge Base tab becomes **Wiki**, with the same anatomy
 the company side already has: one import box (Review first ticked),
@@ -123,7 +128,7 @@ route shows the wiki, nothing on it speaks of chunks, every action a super admin
 takes lands in the audit trail, and the company screens are pixel-identical to
 before.
 
-### Phase 4 — the staff's global round (≈0.5 day)
+### Phase 4 — the staff's global round (built 2026-08-16)
 
 The seven agents add one round for the global shelf on their existing
 rotas — distil, tidy, link, find contradictions, check freshness,

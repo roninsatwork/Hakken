@@ -20,22 +20,20 @@ export const WIKI_TENDING_MIN_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const listCompaniesWithPagesInternal = internalQuery({
   args: {},
-  handler: async (ctx): Promise<Array<Id<"companies">>> => {
+  handler: async (ctx): Promise<Array<Id<"companies"> | null>> => {
     // Bounded: pages are created one conversation at a time; a scan of the
-    // newest few hundred names every company with a living wiki.
+    // newest few hundred names every brain with living pages. The global
+    // shelf rides the same rotas as one more round, as `null`
+    // (global-wiki-plan.md, phase 4) — an empty shelf costs nothing.
     const pages = await ctx.db.query("wikiPages").order("desc").take(1000);
-    // The global shelf (absent companyId) gets its own round in the staff's
-    // rotas rather than a slot in the company list.
-    return [
-      ...new Set(
-        pages.map((page) => page.companyId).filter((id): id is Id<"companies"> => Boolean(id))
-      ),
-    ];
+    const scopes = new Set<Id<"companies"> | null>();
+    for (const page of pages) scopes.add(page.companyId ?? null);
+    return [...scopes];
   },
 });
 
 export const getTendingCandidatesInternal = internalQuery({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (
     ctx,
     args
@@ -91,7 +89,7 @@ export const getTendingCandidatesInternal = internalQuery({
 /** The free half of tending: links to pages that no longer exist come off. */
 export const repairLinksInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     repairs: v.array(v.object({ pageId: v.id("wikiPages"), links: v.array(v.string()) })),
   },
   handler: async (ctx, args): Promise<number> => {
