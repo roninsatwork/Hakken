@@ -66,7 +66,7 @@ export default function SystemPromptPage() {
   return (
     <div className="flex flex-col gap-6 pb-12 w-full h-full">
       {/* Admin Headers */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border-dim pb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <TerminalSquare className="w-6 h-6 text-brand" />

@@ -9,6 +9,7 @@ import {
   BookOpen,
   BrainCircuit,
   Check,
+  ClipboardCheck,
   ChevronDown,
   Code2,
   Cpu,
@@ -81,6 +82,14 @@ const instructionItems = [
     href: "/admin/ai/diary",
     icon: NotebookPen,
     matches: (pathname: string) => pathname.startsWith("/admin/ai/diary"),
+  },
+  {
+    // The global AI's own evals (Anthony's ruling, 2026-08-16): the same
+    // screen every company has, kept by hand rather than written for it.
+    label: "Evals",
+    href: "/admin/ai/evals",
+    icon: ClipboardCheck,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/evals"),
   },
 ];
 

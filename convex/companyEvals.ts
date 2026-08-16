@@ -377,7 +377,10 @@ async function requireCompanyAccess(
 
 export const getSummary = adminQuery({
   args: {
-    companyId: v.id("companies"),
+    // Absent means the global AI's own evals (Anthony's ruling, 2026-08-16):
+    // the platform brain gets the same screen every company has, with the
+    // list added to and edited by hand rather than written for it.
+    companyId: v.optional(v.id("companies")),
   },
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
@@ -422,26 +425,46 @@ export const getSummary = adminQuery({
 
 export const getCasesForCompany = adminQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     status: v.optional(evalStatusValidator),
     paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+    // The last result, as a reader thinks of it: passing, failing, or never
+    // run. Applied to the page rather than the index, because a result is a
+    // rollup on the case and changes with every run.
+    result: v.optional(
+      v.union(v.literal("PASSED"), v.literal("FAILED"), v.literal("NOT_RUN"))
+    ),
   },
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
+    const status = (args.status ?? "ACTIVE") as Doc<"companyEvalCases">["status"];
+    const searchTerm = args.searchTerm?.trim();
 
-    if (args.status) {
-      return await ctx.db
+    const page = searchTerm
+      ? await ctx.db
         .query("companyEvalCases")
-        .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", args.status as Doc<"companyEvalCases">["status"]))
+        .withSearchIndex("search_name", (q) =>
+          q.search("name", searchTerm).eq("companyId", args.companyId).eq("status", status)
+        )
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("companyEvalCases")
+        .withIndex("by_company_status_updated", (q) =>
+          q.eq("companyId", args.companyId).eq("status", status)
+        )
         .order("desc")
         .paginate(args.paginationOpts);
-    }
 
-    return await ctx.db
-      .query("companyEvalCases")
-      .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
-      .order("desc")
-      .paginate(args.paginationOpts);
+    if (!args.result) return page;
+    return {
+      ...page,
+      page: page.page.filter((evalCase) =>
+        args.result === "NOT_RUN"
+          ? evalCase.lastRunStatus === undefined
+          : evalCase.lastRunStatus === args.result
+      ),
+    };
   },
 });
 
@@ -481,7 +504,7 @@ export const getRunsForCase = adminQuery({
 
 export const createCase = adminMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     name: v.string(),
     severity: evalSeverityValidator,
     targetSurface: evalTargetSurfaceValidator,
@@ -532,14 +555,19 @@ export const createCase = adminMutation({
       timestamp: now,
       metadata: JSON.stringify({ severity: args.severity, targetSurface: args.targetSurface }),
     });
-    await recordCompanyAiDriftEvent(ctx, {
-      companyId: args.companyId,
-      sourceType: "EVAL",
-      sourceId: evalCaseId,
-      reason: "Company eval case was created and needs evidence.",
-      createdBy: userId,
-      createdAt: now,
-    });
+    // Drift is a company's story about its own AI drifting from its evidence.
+    // The global AI's evals belong to no company, so there is no drift row to
+    // write — and inventing one would file the platform's work under a tenant.
+    if (args.companyId) {
+      await recordCompanyAiDriftEvent(ctx, {
+        companyId: args.companyId,
+        sourceType: "EVAL",
+        sourceId: evalCaseId,
+        reason: "Company eval case was created and needs evidence.",
+        createdBy: userId,
+        createdAt: now,
+      });
+    }
 
     return evalCaseId;
   },
@@ -826,7 +854,7 @@ export const getEvalThreadOutcomeInternal = internalQuery({
  */
 export const getBatchEstimate = adminQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
   },
   handler: async (ctx, args) => {
@@ -857,7 +885,7 @@ export const getBatchEstimate = adminQuery({
 
 export const getBatchCaseIdsInternal = internalQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
   },
   handler: async (ctx, args) => {

@@ -123,52 +123,6 @@ export const listProposedCasesForCompany = adminQuery({
   },
 });
 
-export const listProposedCasesForGlobal = adminQuery({
-  args: {},
-  handler: async (ctx) => {
-    if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to platform checks");
-    }
-    const rows = await ctx.db
-      .query("companyEvalCases")
-      .withIndex("by_company_status_updated", (q) =>
-        q.eq("companyId", undefined).eq("status", "PROPOSED")
-      )
-      .order("desc")
-      .take(50);
-    return rows.map((row) => ({
-      caseId: row._id,
-      name: row.name,
-      prompt: row.prompt,
-      expectedBehavior: row.expectedBehavior,
-      createdAt: row.createdAt,
-    }));
-  },
-});
-
-/** The platform's active checks, for the panel: prompt and last result. */
-export const listPlatformChecks = adminQuery({
-  args: {},
-  handler: async (ctx) => {
-    if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to platform checks");
-    }
-    const rows = await ctx.db
-      .query("companyEvalCases")
-      .withIndex("by_company_status_updated", (q) =>
-        q.eq("companyId", undefined).eq("status", "ACTIVE")
-      )
-      .order("desc")
-      .take(50);
-    return rows.map((row) => ({
-      caseId: row._id,
-      prompt: row.prompt,
-      lastRunStatus: row.lastRunStatus ?? null,
-      lastRunAt: row.lastRunAt ?? null,
-    }));
-  },
-});
-
 async function decideDraft(
   ctx: import("./_generated/server").MutationCtx,
   args: {
@@ -204,16 +158,6 @@ async function decideDraft(
     metadata: JSON.stringify({ prompt: row.prompt.slice(0, 120) }),
   });
 }
-
-export const decideProposedCaseForGlobal = adminMutation({
-  args: { caseId: v.id("companyEvalCases"), approve: v.boolean() },
-  handler: async (ctx, args) => {
-    if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to platform checks");
-    }
-    await decideDraft(ctx, { companyId: undefined, userId: ctx.userId, ...args });
-  },
-});
 
 export const decideProposedCaseForCompany = adminMutation({
   args: { companyId: v.id("companies"), caseId: v.id("companyEvalCases"), approve: v.boolean() },

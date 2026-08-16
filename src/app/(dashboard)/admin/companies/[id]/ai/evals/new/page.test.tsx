@@ -78,7 +78,7 @@ describe("NewCompanyEvalPage", () => {
   // Five questions in plain English, and a phrase list instead of a JSON array. The
   // form previously had fifteen fields, three of them raw JSON, and a ten-option
   // dropdown of machine constants feeding a field nothing ever read.
-  it("creates a check from plain-English answers and a typed phrase list", async () => {
+  it("creates an eval from plain-English answers and a typed phrase list", async () => {
     createCase.mockResolvedValue({ evalCaseId: "eval_1" });
 
     render(<NewCompanyEvalPage />);
@@ -98,7 +98,7 @@ describe("NewCompanyEvalPage", () => {
     fireEvent.change(phraseInput, { target: { value: "enterprise is free" } });
     fireEvent.keyDown(phraseInput, { key: "Enter" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Create check" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create eval" }));
 
     await waitFor(() => {
       expect(createCase).toHaveBeenCalledWith({
@@ -145,7 +145,7 @@ describe("NewCompanyEvalPage", () => {
       screen.getByPlaceholderText(/Should say pricing isn't published/),
       { target: { value: "Uses the research briefing skill." } },
     );
-    fireEvent.click(screen.getByRole("button", { name: "Create check" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create eval" }));
 
     await waitFor(() => {
       expect(createCase).toHaveBeenCalledWith(expect.objectContaining({

@@ -15,6 +15,20 @@ export function getSafeCompanyAiReturnTo(
   return returnTo.startsWith(companyPrefix) ? returnTo : fallbackHref;
 }
 
+/**
+ * The same guard for the platform's own AI screens, which have no company in
+ * their address. A returnTo is a value from the address bar, so it may only
+ * ever send the reader back inside /admin/ai.
+ */
+export function getSafeGlobalAiReturnTo(
+  returnTo: string | null | undefined,
+  fallbackHref: string
+) {
+  if (!returnTo) return fallbackHref;
+  if (returnTo.includes("://") || returnTo.startsWith("//")) return fallbackHref;
+  return returnTo.startsWith("/admin/ai") ? returnTo : fallbackHref;
+}
+
 type CompanyAiFormPageHeaderProps = {
   backHref: string;
   title: string;

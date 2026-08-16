@@ -62,21 +62,26 @@ export const runCheck = adminAction({
  */
 export const runBatch = adminAction({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     mode: v.union(v.literal("ALL"), v.literal("FAILED_OR_NOT_RUN")),
   },
   handler: async (ctx, args): Promise<{ scheduled: number }> => {
-    assertAdminCanAccessCompany(ctx.user, args.companyId);
+    // No company means the global AI's own evals, which are the super
+    // admin's alone — the same wall the single-check door keeps.
+    if (args.companyId) assertAdminCanAccessCompany(ctx.user, args.companyId);
+    else if (ctx.user.role !== "SUPER_ADMIN") {
+      throw new Error("Unauthorized access to the global AI's checks");
+    }
 
     const evalCaseIds = await ctx.runQuery(internal.companyEvals.getBatchCaseIdsInternal, {
-      companyId: args.companyId,
+      ...(args.companyId ? { companyId: args.companyId } : {}),
       mode: args.mode,
     });
 
     for (const evalCaseId of evalCaseIds) {
       await ctx.scheduler.runAfter(0, internal.companyEvalRunActions.runCompanyCheck, {
         evalCaseId,
-        companyId: args.companyId,
+        ...(args.companyId ? { companyId: args.companyId } : {}),
         userId: ctx.userId,
       });
     }

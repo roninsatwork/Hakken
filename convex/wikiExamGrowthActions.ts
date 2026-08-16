@@ -97,10 +97,13 @@ export const examGrowthSweep = internalAction({
     const scopes = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
     let dispatched = 0;
     for (const scope of scopes) {
-      // The platform's own round rides as null (Anthony's SaaS ruling):
-      // its drafts grow from the platform's resolved gaps.
+      // Companies only (Anthony's ruling, 2026-08-16). The platform's own
+      // round used to ride along as null, but the global brain has no Evals
+      // screen — so those drafts were written for a reviewer who does not
+      // exist. Evals stay where they can be read and approved.
+      if (!scope) continue;
       await ctx.scheduler.runAfter(0, internal.wikiExamGrowthActions.growExamForCompany, {
-        ...(scope ? { companyId: scope } : {}),
+        companyId: scope,
       });
       dispatched += 1;
     }

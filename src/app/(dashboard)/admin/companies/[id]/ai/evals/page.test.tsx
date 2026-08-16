@@ -1,5 +1,5 @@
 import React from "react";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePaginatedQuery, useQuery } from "convex/react";
@@ -93,14 +93,14 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
   it("leads with one sentence rather than a row of counters", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Checks" })).toBeInTheDocument();
-    expect(screen.getByText("1 of 3 checks passing. 1 failing, 1 not tested yet.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Evals" })).toBeInTheDocument();
+    expect(screen.getByText("1 of 3 evals passing. 1 failing, 1 not tested yet.")).toBeInTheDocument();
     // The five counters the page used to lead with, all reading 0 on a new company.
     expect(screen.queryByText("Pass rate")).not.toBeInTheDocument();
     expect(screen.queryByText("Blockers")).not.toBeInTheDocument();
   });
 
-  it("says no checks yet rather than showing a zero", () => {
+  it("says no evals yet rather than showing a zero", () => {
     mockQueries({ summary: { totalCases: 0, passedRuns: 0, failedRuns: 0, needsReviewRuns: 0, notRunCases: 0 } });
     (usePaginatedQuery as unknown as HookMock).mockReturnValue({
       results: [],
@@ -112,13 +112,13 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
 
     // One empty state, with the way forward in it. The headline, the table's empty row
     // and the pager footer all used to say "nothing here" at once.
-    expect(screen.getByText("No checks yet")).toBeInTheDocument();
+    expect(screen.getByText("No evals yet")).toBeInTheDocument();
     expect(screen.queryByText("No entries found")).not.toBeInTheDocument();
     expect(screen.getByText(/catches your AI saying something wrong before a customer sees it/i)).toBeInTheDocument();
     // Nothing to run, so the coloured button is the one that gets you started —
-    // and "add one" alone leaves the reader inventing a check from nothing.
-    expect(screen.queryByRole("button", { name: /Run checks/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Add 3 starter checks/ })).toBeInTheDocument();
+    // and "add one" alone leaves the reader inventing an eval from nothing.
+    expect(screen.queryByRole("button", { name: /Run evals/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add 3 starter evals/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Write my own/ })).toBeInTheDocument();
   });
 
@@ -145,7 +145,7 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
   it("uses the standard admin table, with a row that links to its own page", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    expect(screen.getByRole("columnheader", { name: "Check" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Eval" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Must pass" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Last run" })).toBeInTheDocument();
@@ -154,16 +154,19 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
     expect(nameLink).toHaveAttribute("href", expect.stringContaining("/ai/evals/case_1"));
 
     // Plain words for the result, and must-pass as a yes rather than a severity.
-    expect(screen.getByText("Failing")).toBeInTheDocument();
-    expect(screen.getByText("Yes")).toBeInTheDocument();
+    // Scoped to the row: the filter bar above it offers the same words as
+    // buttons, which is the point of a filter.
+    const row = nameLink.closest("tr") as HTMLElement;
+    expect(within(row).getByText("Failing")).toBeInTheDocument();
+    expect(within(row).getByText("Yes")).toBeInTheDocument();
   });
 
-  it("names how many checks the batch will run, and what running does", () => {
+  it("names how many evals the batch will run, and what running does", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
     expect(screen.queryByRole("button", { name: "Run all" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Run checks/ })).toBeInTheDocument();
-    expect(screen.getByText(/asks your company AI the question, then has a second AI mark the answer/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Run evals/ })).toBeInTheDocument();
+    expect(screen.getByText(/asks this company's AI the question, then has a second AI mark the answer/i)).toBeInTheDocument();
   });
 
   // A button says what it does. "Everything passing" was a status wearing a
@@ -172,7 +175,7 @@ describe("CompanyAiEvalsPage layout guardrails", () => {
   it("keeps the batch button labelled as an action, never as a status", () => {
     renderWithProviders(<CompanyAiEvalsPage />);
 
-    expect(screen.getByRole("button", { name: /Run checks/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Run evals/ })).toBeEnabled();
     expect(screen.queryByRole("button", { name: /Everything passing/ })).not.toBeInTheDocument();
   });
 });
