@@ -350,14 +350,23 @@ export default function CompanyAiUsagePage() {
                     <div key={a.id} className="flex justify-between items-center px-6 py-4 border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.03] transition-colors">
                       <div className="flex items-center gap-4 w-[70%] overflow-hidden pr-2">
                         <span className="text-[14px] font-mono font-bold text-muted/40 w-5 shrink-0">#{i + 1}</span>
-                        <Image
-                          src={a.avatar}
-                          alt={a.name}
-                          width={32}
-                          height={32}
-                          unoptimized
-                          className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0"
-                        />
+                        {a.avatar ? (
+                          <Image
+                            src={a.avatar}
+                            alt={a.name}
+                            width={32}
+                            height={32}
+                            unoptimized
+                            className="w-8 h-8 rounded-[8px] object-cover bg-foreground/10 border border-border-dim/50 shrink-0"
+                          />
+                        ) : (
+                          // Agents with no picture (the wiki's staff, for one)
+                          // get their initial; an empty src makes the browser
+                          // re-fetch the whole page.
+                          <span className="w-8 h-8 rounded-[8px] bg-foreground/10 border border-border-dim/50 shrink-0 flex items-center justify-center text-[13px] font-bold text-secondary">
+                            {a.name?.charAt(0)?.toUpperCase() || "?"}
+                          </span>
+                        )}
                         <div className="flex flex-col min-w-0">
                           <span className="text-[13px] font-semibold tracking-wide text-foreground leading-tight truncate">{a.name}</span>
                           <span className="text-[10px] text-secondary/70 tracking-wide truncate">Autonomous Workflow Agent</span>

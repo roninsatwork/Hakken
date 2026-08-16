@@ -147,7 +147,10 @@ export default function SonaeModal({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="absolute top-6 right-6 text-muted hover:text-foreground transition-all p-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:scale-110 active:scale-95"
+              // z-20, or the z-10 header strip sits over this corner and
+              // swallows every click meant for the X (Anthony, 2026-08-17:
+              // "none of the modals close on the X").
+              className="absolute top-6 right-6 z-20 text-muted hover:text-foreground transition-all p-2 rounded-full border border-white/5 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:scale-110 active:scale-95"
             >
               <X className="w-5 h-5" />
             </button>
