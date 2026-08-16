@@ -31,9 +31,53 @@ const WIKI_SCHEME = "sonae-wiki:";
  * rejoined. The stored original is never touched.
  */
 function tidyRawCapture(content: string): string {
-  return content
+  const brokenLinesRepaired = content
+    // Navigation junk the scraper swallowed whole.
+    .replace(/\b(BACK TO TOP|Skip to content|Email Us\s*[—–-]*)\b/gi, " ")
     .replace(/([^\n])\s(#{1,6}\s)/g, "$1\n\n$2")
     .replace(/([\p{Ll},;:—–-])\n{2,}([\p{Ll}])/gu, "$1 $2");
+  // A glued heading drags its whole paragraph into giant bold text. A
+  // real heading is short; when the "heading" runs long, the marks come
+  // off and the line reads as body — better plain than shouting.
+  const demoted = brokenLinesRepaired
+    .split("\n")
+    .map((line) => {
+      const match = line.match(/^(#{1,6})\s+(.*)$/);
+      if (!match) return line;
+      const text = match[2];
+      if (text.length <= 70) return line;
+      const sentenceEnd = text.search(/[.!?]\s/);
+      // Heading glued to its first paragraph: split where the first
+      // sentence ends if that still looks like a title, else demote.
+      const head = sentenceEnd > 0 ? text.slice(0, sentenceEnd + 1) : "";
+      if (head && head.length <= 70) {
+        return `${match[1]} ${head.replace(/[.]$/, "")}\n\n${text.slice(sentenceEnd + 1).trim()}`;
+      }
+      return text;
+    })
+    .join("\n");
+
+  // Real paragraphs end with closing punctuation. A fragment that stops
+  // mid-thought rejoins whatever follows, so the scrape's chopped lines
+  // read as the prose they were.
+  const paragraphs = demoted.split(/\n{2,}/);
+  const merged: string[] = [];
+  for (const paragraph of paragraphs) {
+    const trimmed = paragraph.trim();
+    if (!trimmed) continue;
+    const previous = merged[merged.length - 1];
+    const previousOpen =
+      previous !== undefined &&
+      !previous.startsWith("#") &&
+      !trimmed.startsWith("#") &&
+      !/[.!?:"”)\]]$/.test(previous);
+    if (previousOpen) {
+      merged[merged.length - 1] = `${previous} ${trimmed}`;
+    } else {
+      merged.push(trimmed);
+    }
+  }
+  return merged.join("\n\n");
 }
 
 export function WikiProse({
@@ -64,7 +108,7 @@ export function WikiProse({
   };
 
   return (
-    <div className="max-w-[68ch] text-[15px] leading-[1.75] text-foreground/90">
+    <div className="w-full text-[15px] leading-[1.75] text-foreground/90">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
