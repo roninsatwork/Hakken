@@ -2,7 +2,7 @@
 
 import { getErrorMessage } from "@/src/lib/errors";
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
@@ -57,7 +57,7 @@ export default function CompanyModelDefaultsPage() {
   // Enabled models, narrowed in the database. This used to read the whole
   // catalogue and filter here, which held up at twenty models and would not at
   // four hundred.
-  const modelsData = useQuery(api.aiModels.getActiveModels, {}) as Doc<"aiModels">[] | undefined;
+  const modelsData = useQuery(api.aiModels.getModelPickerOptions, {});
   const providersData = useQuery(api.aiModels.getProviders);
   const setCompanyDefault = useMutation(api.aiModels.setCompanyModelDefault);
   const clearCompanyDefault = useMutation(api.aiModels.clearCompanyModelDefault);

@@ -1,10 +1,9 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
-import { requireCurrentUser, requireSuperAdmin } from "./authz";
+import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
+import { normalizeSearchTerm } from "./adminQueryService";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import {
   ANTHROPIC_PROVIDER_KEY,
@@ -39,7 +38,6 @@ import {
  * count as a total.
  */
 const MODEL_CATALOG_LIMIT = 2000;
-const MODEL_SEARCH_LIMIT = 250;
 const DEFAULT_MODEL_LIMIT = 10;
 /** Providers are a handful, not a catalogue. One read covers every one of them. */
 const PROVIDER_LIMIT = 50;
@@ -76,6 +74,45 @@ export const getModels = tenantQuery({
   args: {},
   handler: async (ctx) => {
     return withInferredProviders(await ctx.db.query("aiModels").order("asc").take(MODEL_CATALOG_LIMIT));
+  },
+});
+
+/**
+ * What a model picker actually needs: a name, its provider, and the jobs it
+ * can serve. `getActiveModels` hands back whole model rows — descriptions,
+ * search text, pricing, the lot — which is hundreds of kilobytes of prose
+ * shipped to a browser to fill a dropdown.
+ */
+export const getModelPickerOptions = tenantQuery({
+  args: {},
+  handler: async (ctx) => {
+    const [models, disabledProviders] = await Promise.all([
+      ctx.db
+        .query("aiModels")
+        .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+        .take(MODEL_CATALOG_LIMIT),
+      ctx.db
+        .query("aiProviders")
+        .withIndex("by_enabled", (q) => q.eq("isEnabled", false))
+        .take(PROVIDER_LIMIT),
+    ]);
+    const disabledKeys = new Set(disabledProviders.map((provider) => provider.providerKey));
+    return models
+      .filter((model) => !model.providerKey || !disabledKeys.has(model.providerKey))
+      .map((model) => ({
+        _id: model._id,
+        modelId: model.modelId,
+        displayName: model.displayName,
+        providerKey: model.providerKey ?? "",
+        supportedUseCases: model.supportedUseCases ?? [],
+        capabilities: model.capabilities ?? [],
+        isEnabled: model.isEnabled,
+        // The two numbers the pickers print beside a name. Everything else a
+        // model row carries — its description, its search text, its whole
+        // pricing table — stays on the server.
+        standardInputCostBelow200k: model.standardInputCostBelow200k,
+        outputResponseCost: model.outputResponseCost,
+      }));
   },
 });
 

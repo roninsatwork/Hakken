@@ -1,19 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+
 import { useTranslations } from "next-intl";
-import { BookOpenCheck, NotebookPen } from "lucide-react";
+import { NotebookPen } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import {
+  AdminPaginationFooter,
+  AdminTableEmptyRow,
+  AdminTableHeaderCell,
+  AdminTableHeaderRow,
+  AdminTableLoadingRow,
+  AdminTableShell,
+} from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+import { formatDateTime } from "@/src/lib/dates";
 
 /**
- * The brain's diary (watch-it-think plan, phase 4): the learning as a
- * browsable feed, newest first, in plain words — company mode shows that
- * company's brain, platform mode the global brain's. Built purely from
- * audit rows that already exist; every entry with a living page opens it.
+ * The brain's diary (watch-it-think plan, phase 4): what the wiki learned,
+ * newest first, in plain words — built purely from audit rows that already
+ * exist. No new writes anywhere.
+ *
+ * The house table, paged and filtered in the query: this ledger only grows,
+ * so neither the reader's browser nor the reader's patience should have to
+ * carry it.
  */
 
 const ACTION_KEY: Record<string, string> = {
@@ -36,20 +51,6 @@ const ACTION_KEY: Record<string, string> = {
   SAVE_ANSWER_TO_WIKI: "answerSaved",
 };
 
-function dayLabel(at: number, todayLabel: string, yesterdayLabel: string) {
-  const day = new Date(at);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (day.toDateString() === today.toDateString()) return todayLabel;
-  if (day.toDateString() === yesterday.toDateString()) return yesterdayLabel;
-  return day.toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-}
-
 export function WikiDiaryScreen({
   companyId,
   pageBasePath,
@@ -61,22 +62,18 @@ export function WikiDiaryScreen({
   showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiDiary");
+  const [action, setAction] = useState<string>("ALL");
 
-  const companyEntries = useQuery(
+  const filterArgs = action === "ALL" ? {} : { action };
+  const companyEntries = useServerPagedTable(
     api.wikiDiary.listDiaryForCompany,
-    companyId ? { companyId } : "skip"
+    companyId ? { companyId, ...filterArgs } : "skip"
   );
-  const globalEntries = useQuery(api.wikiDiary.listDiaryForGlobal, companyId ? "skip" : {});
+  const globalEntries = useServerPagedTable(
+    api.wikiDiary.listDiaryForGlobal,
+    companyId ? "skip" : filterArgs
+  );
   const entries = companyId ? companyEntries : globalEntries;
-  const isLoading = entries === undefined;
-
-  const groups: Array<{ label: string; items: NonNullable<typeof entries> }> = [];
-  for (const entry of entries ?? []) {
-    const label = dayLabel(entry.at, t("today"), t("yesterday"));
-    const group = groups.at(-1);
-    if (group && group.label === label) group.items.push(entry);
-    else groups.push({ label, items: [entry] });
-  }
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
@@ -93,73 +90,87 @@ export function WikiDiaryScreen({
         {companyId ? t("hintCompany") : t("hint")}
       </p>
 
-      {isLoading ? (
-        <div className="rounded-[16px] border border-border-dim bg-card/40 px-5 py-8 text-center text-[13px] text-muted">
-          {t("loading")}
-        </div>
-      ) : groups.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-[16px] border border-border-dim bg-card/40 px-5 py-10 text-center">
-          <BookOpenCheck className="w-5 h-5 text-muted" />
-          <p className="text-[13px] text-muted">{t("empty")}</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {groups.map((group) => (
-            <div key={group.label} className="flex flex-col gap-2">
-              <p className="text-[11px] uppercase tracking-[0.1em] text-muted font-medium">
-                {group.label}
-              </p>
-              <div className="rounded-[16px] border border-border-dim bg-card/40 divide-y divide-border-dim/40">
-                {group.items.map((entry, index) => {
-                  const sentenceKey = ACTION_KEY[entry.action];
-                  return (
-                    <div
-                      key={`${entry.at}-${index}`}
-                      className="flex items-start gap-3 px-5 py-3.5"
-                    >
-                      <span
-                        className={`mt-[7px] w-1.5 h-1.5 rounded-full shrink-0 ${
-                          entry.byPerson ? "bg-info" : "bg-brand"
-                        }`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13.5px] text-foreground leading-relaxed">
-                          {sentenceKey ? t(`entries.${sentenceKey}`) : entry.action}
-                          {entry.pageId && entry.pageTitle && (
-                            <>
-                              {" — "}
-                              <Link
-                                href={`${pageBasePath}/${entry.pageId}`}
-                                className="text-brand hover:underline"
-                              >
-                                {entry.pageTitle.replace(/^https?:\/\/(www\.)?/, "")}
-                              </Link>
-                            </>
-                          )}
-                        </p>
-                        {entry.detail && !entry.pageTitle && (
-                          <p className="text-[12px] text-muted truncate mt-0.5">{entry.detail}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[11px] text-muted">
-                          {entry.byPerson ? t("byPerson") : t("byBrain")}
-                        </span>
-                        <span className="text-[12px] text-secondary tabular-nums whitespace-nowrap">
-                          {new Date(entry.at).toLocaleTimeString(undefined, {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      <div className="max-w-xs">
+        <select
+          value={action}
+          onChange={(event) => setAction(event.target.value)}
+          className="w-full bg-background border border-border-dim rounded-[10px] px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand/50 transition-colors"
+        >
+          <option value="ALL">{t("filter.all")}</option>
+          {Object.entries(ACTION_KEY).map(([actionType, key]) => (
+            <option key={actionType} value={actionType}>
+              {t(`entries.${key}`)}
+            </option>
           ))}
-        </div>
-      )}
+        </select>
+      </div>
+
+      <AdminTableShell
+        minWidthClassName="min-w-[760px]"
+        footer={
+          <AdminPaginationFooter
+            page={entries.page}
+            totalPages={entries.totalPages}
+            totalCount={entries.loadedCount}
+            pageSize={ADMIN_PAGE_SIZE}
+            isLoading={entries.isLoadingMore}
+            onPageChange={entries.goToPage}
+            labels={{ empty: t("empty") }}
+          />
+        }
+      >
+        <thead>
+          <AdminTableHeaderRow>
+            <AdminTableHeaderCell>{t("columns.what")}</AdminTableHeaderCell>
+            <AdminTableHeaderCell>{t("columns.page")}</AdminTableHeaderCell>
+            <AdminTableHeaderCell>{t("columns.who")}</AdminTableHeaderCell>
+            <AdminTableHeaderCell>{t("columns.when")}</AdminTableHeaderCell>
+          </AdminTableHeaderRow>
+        </thead>
+        <tbody>
+          {entries.isLoading ? (
+            <AdminTableLoadingRow colSpan={4} />
+          ) : entries.rows.length === 0 ? (
+            <AdminTableEmptyRow
+              colSpan={4}
+              icon={<NotebookPen className="w-5 h-5" />}
+              label={action === "ALL" ? t("empty") : t("emptyFiltered")}
+            />
+          ) : (
+            entries.rows.map((entry, index) => {
+              const sentenceKey = ACTION_KEY[entry.action];
+              return (
+                <tr
+                  key={`${entry.at}-${index}`}
+                  className="border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                >
+                  <td className="px-4 py-4 text-[13.5px] text-foreground">
+                    {sentenceKey ? t(`entries.${sentenceKey}`) : entry.action}
+                  </td>
+                  <td className="px-4 py-4 text-[13px] max-w-[360px]">
+                    {entry.pageId && entry.pageTitle ? (
+                      <Link
+                        href={`${pageBasePath}/${entry.pageId}`}
+                        className="text-brand hover:underline"
+                      >
+                        {entry.pageTitle.replace(/^https?:\/\/(www\.)?/, "")}
+                      </Link>
+                    ) : (
+                      <span className="text-muted truncate block">{entry.detail ?? "—"}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 text-[12px] text-secondary whitespace-nowrap">
+                    {entry.byPerson ? t("byPerson") : t("byBrain")}
+                  </td>
+                  <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap tabular-nums">
+                    {formatDateTime(entry.at)}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </AdminTableShell>
     </div>
   );
 }

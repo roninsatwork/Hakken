@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+
 import { useTranslations } from "next-intl";
 import { Phone } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -17,23 +17,40 @@ import {
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+import { formatDateTime } from "@/src/lib/dates";
 
-const PAGE_SIZE = 15;
+type CallStatus = "RINGING" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+
+const STATUS_FILTERS: Array<{ value: CallStatus | "ALL"; labelKey: string }> = [
+  { value: "ALL", labelKey: "filter.all" },
+  { value: "COMPLETED", labelKey: "filter.completed" },
+  { value: "FAILED", labelKey: "filter.failed" },
+];
 
 /**
  * A company's calls, from the admin's seat (seven-gaps plan, phase 1).
  * The work was always recorded and only workspace staff could see it.
  * Numbers stay masked here exactly as on the tenant list — the full
  * number lives only on the call's own page.
+ *
+ * Searching, filtering and paging all happen in the query. A company with
+ * a year of calls costs the same to open as one with five, and the browser
+ * never holds more than a page.
  */
 export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }) {
   const t = useTranslations("aiCalls");
   const tCalls = useTranslations("calls");
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState<CallStatus | "ALL">("ALL");
 
-  const calls = useQuery(api.telephony.listCallsForCompany, { companyId });
-  const isLoading = calls === undefined;
+  const searchTerm = search.trim();
+  const calls = useServerPagedTable(api.telephony.listCallsForCompany, {
+    companyId,
+    ...(searchTerm ? { searchTerm } : {}),
+    ...(status === "ALL" ? {} : { status }),
+  });
 
   // Blue/amber tokens with written labels, never green-vs-red.
   const statusClass: Record<string, string> = {
@@ -42,17 +59,6 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
     COMPLETED: "bg-foreground/10 text-secondary",
     FAILED: "bg-foreground/5 text-muted",
   };
-
-  const needle = search.trim().toLowerCase();
-  const filtered = (calls ?? []).filter((call) =>
-    needle
-      ? (call.summary ?? "").toLowerCase().includes(needle) ||
-        call.fromMasked.toLowerCase().includes(needle)
-      : true
-  );
-  const totalCount = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const visibleRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
@@ -63,27 +69,42 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
         divider
       />
 
-      <div className="max-w-md">
-        <AdminSearchBar
-          value={search}
-          onChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
-          placeholder={t("searchPlaceholder")}
-        />
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-[240px]">
+          <AdminSearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder={t("searchPlaceholder")}
+          />
+        </div>
+        <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
+          {STATUS_FILTERS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setStatus(option.value)}
+              className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
+                status === option.value
+                  ? "bg-brand text-white"
+                  : "text-secondary hover:text-foreground"
+              }`}
+            >
+              {t(option.labelKey)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <AdminTableShell
         minWidthClassName="min-w-[760px]"
         footer={
           <AdminPaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={PAGE_SIZE}
-            isLoading={isLoading}
-            onPageChange={setPage}
+            page={calls.page}
+            totalPages={calls.totalPages}
+            totalCount={calls.loadedCount}
+            pageSize={ADMIN_PAGE_SIZE}
+            isLoading={calls.isLoadingMore}
+            onPageChange={calls.goToPage}
             labels={{ empty: t("empty") }}
           />
         }
@@ -98,16 +119,16 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
           </AdminTableHeaderRow>
         </thead>
         <tbody>
-          {isLoading ? (
+          {calls.isLoading ? (
             <AdminTableLoadingRow colSpan={5} />
-          ) : visibleRows.length === 0 ? (
+          ) : calls.rows.length === 0 ? (
             <AdminTableEmptyRow
               colSpan={5}
               icon={<Phone className="w-5 h-5" />}
-              label={search.trim() ? t("emptyFiltered") : t("emptyState")}
+              label={searchTerm || status !== "ALL" ? t("emptyFiltered") : t("emptyState")}
             />
           ) : (
-            visibleRows.map((call) => (
+            calls.rows.map((call) => (
               <tr
                 key={call._id}
                 className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
@@ -131,12 +152,7 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
                   </span>
                 </td>
                 <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
-                  {new Date(call.startedAt).toLocaleString([], {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(call.startedAt)}
                 </td>
                 <td className="px-4 py-4 text-right text-[13px] text-foreground tabular-nums">
                   {call.turnCount}

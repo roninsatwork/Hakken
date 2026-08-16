@@ -71,7 +71,7 @@ describe("AIModelDefaultsPage", () => {
       const path = getConvexPath(queryFn);
       // The screen now asks for models that can actually be chosen, rather than
       // reading the whole catalogue and filtering in the browser.
-      if (path.includes("getActiveModels")) return models as unknown as ReturnType<typeof useQuery>;
+      if (path.includes("getModelPickerOptions")) return models as unknown as ReturnType<typeof useQuery>;
       if (path.includes("getProviders")) return providers as unknown as ReturnType<typeof useQuery>;
       return defaults as unknown as ReturnType<typeof useQuery>;
     });

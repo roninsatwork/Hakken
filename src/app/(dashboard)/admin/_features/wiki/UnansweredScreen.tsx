@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MessageCircleQuestion } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -18,9 +18,9 @@ import {
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
-
-const PAGE_SIZE = 15;
 
 type ScopeFilter = "ALL" | "PLATFORM" | "COMPANIES";
 
@@ -54,35 +54,25 @@ export function UnansweredScreen({
   const t = useTranslations("aiUnanswered");
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState<ScopeFilter>("ALL");
-  const [page, setPage] = useState(1);
 
-  const allRows = useQuery(
+  // Searching, filtering and paging all happen in the query: this list is
+  // real demand and only grows.
+  const searchTerm = search.trim();
+  const allRows = useServerPagedTable(
     api.wikiFeedback.listAllUnanswered,
-    companyId ? "skip" : search.trim() ? { search: search.trim() } : {}
+    companyId ? "skip" : { ...(searchTerm ? { search: searchTerm } : {}), scope }
   );
-  const companyRows = useQuery(
+  const companyRows = useServerPagedTable(
     api.wikiFeedback.listUnansweredForCompany,
-    companyId ? { companyId } : "skip"
+    companyId ? { companyId, ...(searchTerm ? { search: searchTerm } : {}) } : "skip"
   );
-  const rows: Row[] | undefined = companyId ? companyRows : allRows;
+  const rows = companyId ? companyRows : allRows;
+  const visibleRows: Row[] = rows.rows;
 
   const dismissCompany = useMutation(api.wikiFeedback.dismissUnansweredForCompany);
   const dismissGlobal = useMutation(api.wikiFeedback.dismissUnansweredForGlobal);
 
-  const needle = search.trim().toLowerCase();
-  const filtered = (rows ?? [])
-    .filter((row) => (companyId && needle ? row.question.toLowerCase().includes(needle) : true))
-    .filter((row) =>
-      companyId || scope === "ALL"
-        ? true
-        : scope === "PLATFORM"
-          ? !row.companyId
-          : Boolean(row.companyId)
-    );
-  const isLoading = rows === undefined;
-  const totalCount = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const visibleRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const isLoading = rows.isLoading;
 
   const scopeOptions: Array<{ value: ScopeFilter; label: string }> = [
     { value: "ALL", label: t("filter.all") },
@@ -118,10 +108,7 @@ export function UnansweredScreen({
         <div className="flex-1 min-w-[240px]">
           <AdminSearchBar
             value={search}
-            onChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
+            onChange={setSearch}
             placeholder={t("searchPlaceholder")}
           />
         </div>
@@ -131,10 +118,7 @@ export function UnansweredScreen({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => {
-                  setScope(option.value);
-                  setPage(1);
-                }}
+                onClick={() => setScope(option.value)}
                 className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
                   scope === option.value
                     ? "bg-brand text-white"
@@ -152,12 +136,12 @@ export function UnansweredScreen({
         minWidthClassName="min-w-[760px]"
         footer={
           <AdminPaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={PAGE_SIZE}
-            isLoading={isLoading}
-            onPageChange={setPage}
+            page={rows.page}
+            totalPages={rows.totalPages}
+            totalCount={rows.loadedCount}
+            pageSize={ADMIN_PAGE_SIZE}
+            isLoading={rows.isLoadingMore}
+            onPageChange={rows.goToPage}
             labels={{ empty: t("empty") }}
           />
         }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
+
 import { useTranslations } from "next-intl";
 import { Inbox } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -16,22 +16,38 @@ import {
   AdminTableLoadingRow,
   AdminTableShell,
 } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+import { formatDateTime } from "@/src/lib/dates";
 
-const PAGE_SIZE = 15;
+type Decision = "PENDING" | "REPLIED" | "TASK" | "SKIPPED";
+
+const DECISION_FILTERS: Array<{ value: Decision | "ALL"; labelKey: string }> = [
+  { value: "ALL", labelKey: "filter.all" },
+  { value: "REPLIED", labelKey: "filter.replied" },
+  { value: "TASK", labelKey: "filter.task" },
+  { value: "SKIPPED", labelKey: "filter.skipped" },
+];
 
 /**
  * A company's handled mail (seven-gaps plan, phase 1). The Gmail watcher
  * recorded every message it saw from day one — sender, subject and what
- * the AI decided, never the body — and no screen ever showed it. This
- * one does.
+ * the AI decided, never the body — and no screen ever showed it.
+ *
+ * Searching, filtering and paging happen in the query, so an inbox with
+ * ten thousand messages opens as fast as an empty one.
  */
 export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies"> }) {
   const t = useTranslations("aiMailbox");
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const [decision, setDecision] = useState<Decision | "ALL">("ALL");
 
-  const rows = useQuery(api.mailbox.listMailboxForCompany, { companyId });
-  const isLoading = rows === undefined;
+  const searchTerm = search.trim();
+  const mail = useServerPagedTable(api.mailbox.listMailboxForCompany, {
+    companyId,
+    ...(searchTerm ? { searchTerm } : {}),
+    ...(decision === "ALL" ? {} : { decision }),
+  });
 
   // Blue/amber tokens with written labels, never green-vs-red.
   const decisionClass: Record<string, string> = {
@@ -40,16 +56,6 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
     PENDING: "bg-foreground/10 text-secondary",
     SKIPPED: "bg-foreground/5 text-muted",
   };
-
-  const needle = search.trim().toLowerCase();
-  const filtered = (rows ?? []).filter((row) =>
-    needle
-      ? row.sender.toLowerCase().includes(needle) || row.subject.toLowerCase().includes(needle)
-      : true
-  );
-  const totalCount = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const visibleRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
@@ -62,27 +68,42 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
 
-      <div className="max-w-md">
-        <AdminSearchBar
-          value={search}
-          onChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
-          placeholder={t("searchPlaceholder")}
-        />
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-[240px]">
+          <AdminSearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder={t("searchPlaceholder")}
+          />
+        </div>
+        <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
+          {DECISION_FILTERS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDecision(option.value)}
+              className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
+                decision === option.value
+                  ? "bg-brand text-white"
+                  : "text-secondary hover:text-foreground"
+              }`}
+            >
+              {t(option.labelKey)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <AdminTableShell
         minWidthClassName="min-w-[760px]"
         footer={
           <AdminPaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={PAGE_SIZE}
-            isLoading={isLoading}
-            onPageChange={setPage}
+            page={mail.page}
+            totalPages={mail.totalPages}
+            totalCount={mail.loadedCount}
+            pageSize={ADMIN_PAGE_SIZE}
+            isLoading={mail.isLoadingMore}
+            onPageChange={mail.goToPage}
             labels={{ empty: t("empty") }}
           />
         }
@@ -96,16 +117,16 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
           </AdminTableHeaderRow>
         </thead>
         <tbody>
-          {isLoading ? (
+          {mail.isLoading ? (
             <AdminTableLoadingRow colSpan={4} />
-          ) : visibleRows.length === 0 ? (
+          ) : mail.rows.length === 0 ? (
             <AdminTableEmptyRow
               colSpan={4}
               icon={<Inbox className="w-5 h-5" />}
-              label={search.trim() ? t("emptyFiltered") : t("emptyState")}
+              label={searchTerm || decision !== "ALL" ? t("emptyFiltered") : t("emptyState")}
             />
           ) : (
-            visibleRows.map((row) => (
+            mail.rows.map((row) => (
               <tr
                 key={row._id}
                 className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
@@ -129,12 +150,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
                   </span>
                 </td>
                 <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
-                  {new Date(row.createdAt).toLocaleString([], {
-                    day: "2-digit",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(row.createdAt)}
                 </td>
               </tr>
             ))

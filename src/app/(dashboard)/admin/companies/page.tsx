@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -16,6 +16,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
 import {
   AdminPageHeader,
   AdminPagePrimaryAction,
@@ -28,7 +29,7 @@ import {
   adminModalTextareaClassName,
 } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
 import {
-  AdminLoadMoreFooter,
+  AdminPaginationFooter,
   AdminRowActions,
   AdminRowIconButton,
   AdminSearchBar,
@@ -72,18 +73,15 @@ export default function CompaniesPage() {
   const [submitError, setSubmitError] = useState("");
 
   const itemsPerPage = ADMIN_PAGE_SIZE;
-  const {
-    results: paginatedCompanies,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
+  // The house footer — Previous, Page X of Y, Next — over a query that still
+  // pages on the server.
+  const companiesTable = useServerPagedTable(
     api.companies.getPaginatedCompanies,
     { searchTerm },
-    { initialNumItems: itemsPerPage }
+    itemsPerPage
   );
-  const isLoading = status === "LoadingFirstPage";
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
+  const paginatedCompanies = companiesTable.rows;
+  const isLoading = companiesTable.isLoading;
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -178,17 +176,14 @@ export default function CompaniesPage() {
       {/* Table */}
       <AdminTableShell
         footer={
-          <AdminLoadMoreFooter
-            visibleCount={paginatedCompanies.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(itemsPerPage)}
-            labels={{
-              empty: t('emptyState'),
-              showing: (count) => `${t('showingLoaded', { count })}`,
-              loadMore: t('loadMore'),
-              loading: t('loadingMore'),
-            }}
+          <AdminPaginationFooter
+            page={companiesTable.page}
+            totalPages={companiesTable.totalPages}
+            totalCount={companiesTable.loadedCount}
+            pageSize={itemsPerPage}
+            isLoading={companiesTable.isLoadingMore}
+            onPageChange={companiesTable.goToPage}
+            labels={{ empty: t('emptyState') }}
           />
         }
         minWidthClassName="min-w-[800px]"

@@ -183,9 +183,9 @@ export function WikiMapScreen({
   const router = useRouter();
   // Two doors, one mounted: hooks must both be called, so the unused door
   // is skipped rather than conditionally omitted.
-  const globalRows = useQuery(api.wikiPages.listPagesForGlobal, companyId ? "skip" : {});
+  const globalRows = useQuery(api.wikiPages.listPagesForMapForGlobal, companyId ? "skip" : {});
   const companyRows = useQuery(
-    api.wikiPages.listPagesForCompany,
+    api.wikiPages.listPagesForMapForCompany,
     companyId ? { companyId } : "skip"
   );
   const rows = companyId ? companyRows : globalRows;

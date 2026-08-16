@@ -977,7 +977,12 @@ describe('Quality Drift Guardrails', () => {
   test('admin companies page uses the paginated inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/companies/page.tsx');
 
-    expect(contents).toContain('usePaginatedQuery');
+    // Either the hook itself or the shared wrapper around it: the wrapper
+    // exists so the house footer (Previous / Page X of Y / Next) can sit over
+    // a query that still pages on the server, and it calls usePaginatedQuery.
+    expect(
+      contents.includes('usePaginatedQuery') || contents.includes('useServerPagedTable')
+    ).toBe(true);
     expect(contents).toContain('api.companies.getPaginatedCompanies');
     expect(contents).not.toContain('api.companies.getCompanies');
   });

@@ -2,6 +2,7 @@ import { httpAction, internalMutation, internalQuery } from "./_generated/server
 import { adminQuery, tenantQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -672,25 +673,57 @@ export const getCall = tenantQuery({
  * number appears only on the call's own page, at either height.
  */
 export const listCallsForCompany = adminQuery({
-  args: { companyId: v.id("companies") },
+  args: {
+    companyId: v.id("companies"),
+    paginationOpts: paginationOptsValidator,
+    searchTerm: v.optional(v.string()),
+    status: v.optional(
+      v.union(
+        v.literal("RINGING"),
+        v.literal("IN_PROGRESS"),
+        v.literal("COMPLETED"),
+        v.literal("FAILED")
+      )
+    ),
+  },
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
-    const calls = await ctx.db
-      .query("phoneCalls")
-      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .take(200);
-    return calls.map((call) => ({
-      _id: call._id,
-      fromMasked: maskPhoneNumber(call.fromNumber),
-      status: call.status,
-      startedAt: call.startedAt,
-      endedAt: call.endedAt,
-      summary: call.summary,
-      matchedCustomerKey: call.matchedCustomerKey,
-      taskId: call.taskId,
-      turnCount: call.turns.length,
-    }));
+    const searchTerm = args.searchTerm?.trim();
+    // Searching, filtering and paging all happen here rather than in the
+    // browser: a company with a year of calls must cost the same to open as
+    // one with five.
+    const page = searchTerm
+      ? await ctx.db
+        .query("phoneCalls")
+        .withSearchIndex("search_summary", (q) => {
+          const search = q.search("summary", searchTerm).eq("companyId", args.companyId);
+          return search;
+        })
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("phoneCalls")
+        .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
+        .order("desc")
+        .paginate(args.paginationOpts);
+
+    const filtered = args.status
+      ? page.page.filter((call) => call.status === args.status)
+      : page.page;
+
+    return {
+      ...page,
+      page: filtered.map((call) => ({
+        _id: call._id,
+        fromMasked: maskPhoneNumber(call.fromNumber),
+        status: call.status,
+        startedAt: call.startedAt,
+        endedAt: call.endedAt,
+        summary: call.summary,
+        matchedCustomerKey: call.matchedCustomerKey,
+        taskId: call.taskId,
+        turnCount: call.turns.length,
+      })),
+    };
   },
 });
 

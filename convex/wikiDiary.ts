@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { adminQuery } from "./tenantFunctions";
@@ -42,23 +43,32 @@ export type DiaryEntry = {
   byPerson: boolean;
 };
 
-async function diaryRows(ctx: QueryCtx, companyId: Id<"companies"> | undefined) {
-  const rows = await ctx.db
+async function diaryPage(
+  ctx: QueryCtx,
+  companyId: Id<"companies"> | undefined,
+  paginationOpts: { numItems: number; cursor: string | null },
+  action: string | undefined
+) {
+  // Paged where the rows are. The screen used to take four hundred audit
+  // rows and cut them down in the browser, which is a bill that grows with
+  // the ledger and a list that silently stopped at a hundred.
+  const page = await ctx.db
     .query("auditLogs")
     .withIndex("by_company", (q) => q.eq("companyId", companyId))
     .order("desc")
-    .take(400);
+    .paginate(paginationOpts);
 
   const entries: DiaryEntry[] = [];
-  for (const row of rows) {
+  for (const row of page.page) {
     if (!DIARY_ACTIONS.has(row.actionType)) continue;
+    if (action && row.actionType !== action) continue;
     let pageId: string | null = null;
     let pageTitle: string | null = null;
     if (row.entityType === "wikiPages" && row.entityId) {
-      const page = await ctx.db.get(row.entityId as Id<"wikiPages">).catch(() => null);
-      if (page && "title" in page) {
+      const wikiPage = await ctx.db.get(row.entityId as Id<"wikiPages">).catch(() => null);
+      if (wikiPage && "title" in wikiPage) {
         pageId = row.entityId;
-        pageTitle = String(page.title);
+        pageTitle = String(wikiPage.title);
       }
     }
     let detail: string | null = null;
@@ -83,25 +93,35 @@ async function diaryRows(ctx: QueryCtx, companyId: Id<"companies"> | undefined) 
       detail: detail ? detail.slice(0, 140) : null,
       byPerson: Boolean(row.actorId),
     });
-    if (entries.length >= 100) break;
   }
-  return entries;
+
+  return { ...page, page: entries };
 }
 
+/** The kinds of entry a reader can filter to, for the screen's dropdown. */
+export const DIARY_ACTION_LIST = Array.from(DIARY_ACTIONS);
+
 export const listDiaryForCompany = adminQuery({
-  args: { companyId: v.id("companies") },
-  handler: async (ctx, args): Promise<DiaryEntry[]> => {
+  args: {
+    companyId: v.id("companies"),
+    paginationOpts: paginationOptsValidator,
+    action: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
-    return await diaryRows(ctx, args.companyId);
+    return await diaryPage(ctx, args.companyId, args.paginationOpts, args.action);
   },
 });
 
 export const listDiaryForGlobal = adminQuery({
-  args: {},
-  handler: async (ctx): Promise<DiaryEntry[]> => {
+  args: {
+    paginationOpts: paginationOptsValidator,
+    action: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
       throw new Error("Unauthorized access to the platform wiki");
     }
-    return await diaryRows(ctx, undefined);
+    return await diaryPage(ctx, undefined, args.paginationOpts, args.action);
   },
 });

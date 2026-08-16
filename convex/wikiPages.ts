@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -342,6 +343,11 @@ export const upsertSourceNoteInternal = internalMutation({
         subjectKey: args.documentId,
         title: args.title,
         content,
+        searchText: buildWikiSearchText({
+          title: args.title,
+          subjectKey: args.documentId,
+          content,
+        }),
         links: [],
         pinnedCorrections: [],
         rewriteCount: 1,
@@ -375,12 +381,31 @@ export const upsertSourceNoteInternal = internalMutation({
       });
       await ctx.db.patch(existing._id, {
         content,
+        searchText: buildWikiSearchText({
+          title: existing.title,
+          subjectKey: existing.subjectKey,
+          content,
+        }),
         rewriteCount: existing.rewriteCount + 1,
         updatedAt: now,
       });
     }
   },
 });
+
+/**
+ * What the list's search box looks through: a page's name, its subject key
+ * and its text, in one field. Kept in step on every write so the search
+ * index is never a stale copy of the page.
+ */
+export function buildWikiSearchText(args: {
+  title: string;
+  subjectKey: string;
+  content: string;
+}) {
+  return `${args.title}\n${args.subjectKey}\n${args.content}`.slice(0, 20000);
+}
+
 
 /** The chosen pages, opened whole with one hop from the first — the model's
  * picks validated against the wall before anything is read. */
@@ -575,6 +600,11 @@ export const applyRewriteInternal = internalMutation({
         subjectKey: args.subjectKey,
         title: args.title,
         content,
+        searchText: buildWikiSearchText({
+          title: args.title,
+          subjectKey: args.subjectKey,
+          content,
+        }),
         links: [],
         pinnedCorrections: [],
         rewriteCount: 1,
@@ -753,7 +783,16 @@ export const refreshHubPagesInternal = internalMutation({
       );
       if (existing) {
         if (existing.content !== content || existing.links.length !== memberKeys.length) {
-          await ctx.db.patch(existing._id, { content, links: memberKeys, updatedAt: now });
+          await ctx.db.patch(existing._id, {
+            content,
+            searchText: buildWikiSearchText({
+              title: existing.title,
+              subjectKey: existing.subjectKey,
+              content,
+            }),
+            links: memberKeys,
+            updatedAt: now,
+          });
         }
       } else {
         await ctx.db.insert("wikiPages", {
@@ -762,6 +801,11 @@ export const refreshHubPagesInternal = internalMutation({
           subjectKey: hub.subjectKey,
           title: hub.subjectKey,
           content,
+          searchText: buildWikiSearchText({
+            title: hub.subjectKey,
+            subjectKey: hub.subjectKey,
+            content,
+          }),
           links: memberKeys,
           pinnedCorrections: [],
           rewriteCount: 1,
@@ -787,21 +831,36 @@ export const refreshHubPagesInternal = internalMutation({
 // machine rewrite does, and the pinned layer is theirs alone.
 // ---------------------------------------------------------------------------
 
-async function listPagesRows(ctx: QueryCtx, companyId: WikiScope, search?: string) {
-  const pages = await ctx.db
-    .query("wikiPages")
-    .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
-    .order("desc")
-    .take(500);
-  const needle = search?.trim().toLowerCase();
-  return pages
-    .filter(
-      (page) =>
-        !needle ||
-        page.title.toLowerCase().includes(needle) ||
-        page.content.toLowerCase().includes(needle)
-    )
-    .map((page) => ({
+async function listPagesRows(
+  ctx: QueryCtx,
+  companyId: WikiScope,
+  paginationOpts: { numItems: number; cursor: string | null },
+  search?: string,
+  kind?: "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE"
+) {
+  const needle = search?.trim();
+  // Searched, filtered and paged where the pages are. This used to take five
+  // hundred rows and sift them in the browser: a growing bill on every
+  // keystroke, and page five hundred and one simply did not exist.
+  const page = needle
+    ? await ctx.db
+      .query("wikiPages")
+      .withSearchIndex("search_text", (q) => {
+        const base = q.search("searchText", needle).eq("companyId", companyId);
+        return kind ? base.eq("kind", kind) : base;
+      })
+      .paginate(paginationOpts)
+    : await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+      .order("desc")
+      .paginate(paginationOpts);
+
+  const rows = kind && !needle ? page.page.filter((row) => row.kind === kind) : page.page;
+
+  return {
+    ...page,
+    page: rows.map((page) => ({
       pageId: page._id,
       kind: page.kind,
       title: page.title,
@@ -819,7 +878,8 @@ async function listPagesRows(ctx: QueryCtx, companyId: WikiScope, search?: strin
       usageCount: page.usageCount ?? 0,
       lastUsedAt: page.lastUsedAt ?? null,
       createdAt: page.createdAt,
-    }));
+    })),
+  };
 }
 
 async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wikiPages">) {
@@ -938,7 +998,15 @@ export const listCompanyPages = tenantQuery({
   handler: async (ctx, args) => {
     const { companyId } = ctx;
     if (!companyId) return [];
-    return await listPagesRows(ctx, companyId, args.search);
+    const needle = args.search?.trim().toLowerCase();
+    const rows = await listPagesForMap(ctx, companyId);
+    return needle
+      ? rows.filter(
+        (row) =>
+          row.title.toLowerCase().includes(needle) ||
+          row.subjectKey.toLowerCase().includes(needle)
+      )
+      : rows;
   },
 });
 
@@ -1073,10 +1141,14 @@ function assertPlatformWikiWrite(user: Doc<"users">) {
 }
 
 export const listPagesForGlobal = adminQuery({
-  args: { search: v.optional(v.string()) },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+    kind: v.optional(wikiKindValidator),
+  },
   handler: async (ctx, args) => {
     assertPlatformWikiRead(ctx.user);
-    return await listPagesRows(ctx, undefined, args.search);
+    return await listPagesRows(ctx, undefined, args.paginationOpts, args.search, args.kind);
   },
 });
 
@@ -1093,11 +1165,55 @@ export const getPageDetailForGlobal = adminQuery({
 // and Memory do — one named company at a time, behind the same access
 // assertion every other company screen uses.
 
-export const listPagesForCompany = adminQuery({
-  args: { companyId: v.id("companies"), search: v.optional(v.string()) },
+
+/** The map's read: the whole shape of a wiki, bounded and light. A picture
+ * of everything cannot be paged — but it can be capped, and it carries only
+ * the handful of fields the drawing needs. */
+const WIKI_MAP_LIMIT = 1000;
+
+async function listPagesForMap(ctx: QueryCtx, companyId: WikiScope) {
+  const pages = await ctx.db
+    .query("wikiPages")
+    .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .order("desc")
+    .take(WIKI_MAP_LIMIT);
+  return pages.map((page) => ({
+    pageId: page._id,
+    kind: page.kind,
+    title: page.title,
+    subjectKey: page.subjectKey,
+    links: page.links,
+    usageCount: page.usageCount ?? 0,
+    updatedAt: page.updatedAt,
+  }));
+}
+
+export const listPagesForMapForCompany = adminQuery({
+  args: { companyId: v.id("companies") },
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
-    return await listPagesRows(ctx, args.companyId, args.search);
+    return await listPagesForMap(ctx, args.companyId);
+  },
+});
+
+export const listPagesForMapForGlobal = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    assertPlatformWikiRead(ctx.user);
+    return await listPagesForMap(ctx, undefined);
+  },
+});
+
+export const listPagesForCompany = adminQuery({
+  args: {
+    companyId: v.id("companies"),
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+    kind: v.optional(wikiKindValidator),
+  },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    return await listPagesRows(ctx, args.companyId, args.paginationOpts, args.search, args.kind);
   },
 });
 
@@ -1138,7 +1254,16 @@ async function applyHumanEdit(
     source,
     createdAt: now,
   });
-  await ctx.db.patch(page._id, { content, lastRewriteSource: source, updatedAt: now });
+  await ctx.db.patch(page._id, {
+    content,
+    searchText: buildWikiSearchText({
+      title: page.title,
+      subjectKey: page.subjectKey,
+      content,
+    }),
+    lastRewriteSource: source,
+    updatedAt: now,
+  });
   await ctx.db.insert("auditLogs", {
     actorId: args.userId,
     actionType: "WIKI_PAGE_HUMAN_EDIT",
@@ -1379,5 +1504,31 @@ export const matchEmailSenderToCustomer = internalQuery({
   args: { companyId: v.id("companies"), email: v.string() },
   handler: async (ctx, args): Promise<string | null> => {
     return await matchEmailToCustomerKey(ctx, args.companyId, args.email);
+  },
+});
+
+/**
+ * One-off: give pages written before the search field existed their
+ * searchable text. Bounded per run and idempotent — pages already carrying
+ * the field are skipped, so it can be run again safely.
+ */
+export const backfillSearchTextInternal = internalMutation({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<{ filled: number; remaining: boolean }> => {
+    const batch = Math.min(Math.max(args.limit ?? 200, 1), 500);
+    const pages = await ctx.db.query("wikiPages").take(batch + 1);
+    let filled = 0;
+    for (const page of pages.slice(0, batch)) {
+      if (page.searchText) continue;
+      await ctx.db.patch(page._id, {
+        searchText: buildWikiSearchText({
+          title: page.title,
+          subjectKey: page.subjectKey,
+          content: page.content,
+        }),
+      });
+      filled += 1;
+    }
+    return { filled, remaining: pages.length > batch };
   },
 });

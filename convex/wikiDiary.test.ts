@@ -113,7 +113,11 @@ describe("the brain's diary", () => {
     );
 
     const asAdmin = t.withIdentity({ subject: adminId });
-    const entries = await asAdmin.query(api.wikiDiary.listDiaryForCompany, { companyId });
+    const paging = { numItems: 25, cursor: null };
+    const { page: entries } = await asAdmin.query(api.wikiDiary.listDiaryForCompany, {
+      companyId,
+      paginationOpts: paging,
+    });
 
     // Newest first, wiki rows only, no other company's and no platform rows.
     expect(entries.map((entry) => entry.action)).toEqual([
@@ -133,15 +137,22 @@ describe("the brain's diary", () => {
 
     // The platform feed sees only the global brain's row.
     const asSuper = t.withIdentity({ subject: superAdminId });
-    const platformEntries = await asSuper.query(api.wikiDiary.listDiaryForGlobal, {});
+    const { page: platformEntries } = await asSuper.query(api.wikiDiary.listDiaryForGlobal, {
+      paginationOpts: paging,
+    });
     expect(platformEntries).toHaveLength(1);
     expect(platformEntries[0].action).toBe("WIKI_PAGE_CREATED");
 
     // The walls: a company admin can read neither another company's diary
     // nor the platform's.
     await expect(
-      asAdmin.query(api.wikiDiary.listDiaryForCompany, { companyId: otherCompanyId })
+      asAdmin.query(api.wikiDiary.listDiaryForCompany, {
+        companyId: otherCompanyId,
+        paginationOpts: paging,
+      })
     ).rejects.toThrow();
-    await expect(asAdmin.query(api.wikiDiary.listDiaryForGlobal, {})).rejects.toThrow();
+    await expect(
+      asAdmin.query(api.wikiDiary.listDiaryForGlobal, { paginationOpts: paging })
+    ).rejects.toThrow();
   });
 });

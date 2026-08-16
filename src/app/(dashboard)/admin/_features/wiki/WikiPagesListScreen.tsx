@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAction, useConvex, useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
+import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Download, Network, Pin, X } from "lucide-react";
 import { strToU8, zipSync } from "fflate";
@@ -44,13 +45,17 @@ export function WikiPagesListScreen({
 }) {
   const t = useTranslations("aiPages");
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [sortByUse, setSortByUse] = useState(false);
   const searchArg = search.trim() ? { search: search.trim() } : {};
   // Two doors, one mounted: hooks must both be called, so the unused door
-  // is skipped rather than conditionally omitted.
-  const globalRows = useQuery(api.wikiPages.listPagesForGlobal, companyId ? "skip" : searchArg);
-  const companyRows = useQuery(
+  // is skipped rather than conditionally omitted. Searching and paging both
+  // happen in the query — this list is the busiest table in the product and
+  // used to arrive five hundred rows at a time.
+  const globalRows = useServerPagedTable(
+    api.wikiPages.listPagesForGlobal,
+    companyId ? "skip" : searchArg
+  );
+  const companyRows = useServerPagedTable(
     api.wikiPages.listPagesForCompany,
     companyId ? { companyId, ...searchArg } : "skip"
   );
@@ -80,7 +85,9 @@ export function WikiPagesListScreen({
   const dismissQuestion = (questionId: (typeof openQuestions)[number]["questionId"]) =>
     companyId ? dismissCompany({ companyId, questionId }) : dismissGlobal({ questionId });
   const pageHrefForKey = (pageKey: string) => {
-    const row = (rows ?? []).find(
+    // Only the page in hand can be linked from here; a key from an older
+    // page is left as plain words rather than pointing at nothing.
+    const row = rows.rows.find(
       (candidate) => `${candidate.kind}:${candidate.subjectKey}` === pageKey
     );
     return row ? `${basePath}/${row.pageId}` : null;
@@ -93,14 +100,6 @@ export function WikiPagesListScreen({
   const globalWeek = useQuery(api.wikiReport.getWeeklyReportForGlobal, companyId ? "skip" : {});
   const weekReport = companyId ? companyWeek : globalWeek;
 
-  const platformDrafts =
-    useQuery(api.wikiExamGrowth.listProposedCasesForGlobal, companyId ? "skip" : {}) ?? [];
-  const platformChecks =
-    useQuery(api.wikiExamGrowth.listPlatformChecks, companyId ? "skip" : {}) ?? [];
-  const decidePlatformDraft = useMutation(api.wikiExamGrowth.decideProposedCaseForGlobal);
-  const runPlatformCheck = useAction(api.companyEvalRuns.runCheck);
-  const [runningCheckId, setRunningCheckId] = useState<string | null>(null);
-
   const globalReviews = useQuery(api.wikiReviews.listPendingReviewsForGlobal, companyId ? "skip" : {});
   const companyReviews = useQuery(
     api.wikiReviews.listPendingReviewsForCompany,
@@ -112,13 +111,12 @@ export function WikiPagesListScreen({
   const decideReview = (reviewId: (typeof pendingReviews)[number]["reviewId"], approve: boolean) =>
     companyId ? decideCompany({ companyId, reviewId, approve }) : decideGlobal({ reviewId, approve });
 
-  const isLoading = rows === undefined;
-  const totalCount = rows?.length ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const orderedRows = sortByUse
-    ? [...(rows ?? [])].sort((a, b) => b.usageCount - a.usageCount || b.updatedAt - a.updatedAt)
-    : (rows ?? []);
-  const visibleRows = orderedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const isLoading = rows.isLoading;
+  // Sorting by use orders the page in hand; the list itself arrives newest
+  // first from the query, a page at a time.
+  const visibleRows = sortByUse
+    ? [...rows.rows].sort((a, b) => b.usageCount - a.usageCount || b.updatedAt - a.updatedAt)
+    : rows.rows;
   const NEVER_USED_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
   // "Your brain is yours": the vault is assembled right here in the
@@ -389,7 +387,7 @@ export function WikiPagesListScreen({
             value={search}
             onChange={(value) => {
               setSearch(value);
-              setPage(1);
+              rows.goToPage(1);
             }}
             placeholder={t("searchPlaceholder")}
           />
@@ -416,12 +414,12 @@ export function WikiPagesListScreen({
         minWidthClassName="min-w-[760px]"
         footer={
           <AdminPaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
+            page={rows.page}
+            totalPages={rows.totalPages}
+            totalCount={rows.loadedCount}
             pageSize={PAGE_SIZE}
-            isLoading={isLoading}
-            onPageChange={setPage}
+            isLoading={rows.isLoadingMore}
+            onPageChange={rows.goToPage}
             labels={{ empty: t("empty") }}
           />
         }
@@ -436,7 +434,7 @@ export function WikiPagesListScreen({
                 type="button"
                 onClick={() => {
                   setSortByUse((current) => !current);
-                  setPage(1);
+                  rows.goToPage(1);
                 }}
                 className={`uppercase tracking-[0.1em] transition-colors ${sortByUse ? "text-brand" : "hover:text-foreground"}`}
                 title={t("columns.usedSort")}

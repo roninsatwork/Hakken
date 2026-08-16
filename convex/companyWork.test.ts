@@ -14,7 +14,7 @@ describe("the admin's view of a company's work", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const now = Date.now();
 
-    const { companyId, otherCompanyId, adminId, otherAdminId, callId, connectorId } = await t.run(
+    const { companyId, otherCompanyId, adminId, otherAdminId, callId } = await t.run(
       async (ctx) => {
         const companyId = await ctx.db.insert("companies", { name: "Work Corp", createdAt: now });
         const otherCompanyId = await ctx.db.insert("companies", {
@@ -70,17 +70,31 @@ describe("the admin's view of a company's work", () => {
           createdAt: now - 20_000,
           updatedAt: now - 10_000,
         });
-        return { companyId, otherCompanyId, adminId, otherAdminId, callId, connectorId };
+        return { companyId, otherCompanyId, adminId, otherAdminId, callId };
       }
     );
 
     const asAdmin = t.withIdentity({ subject: adminId });
 
-    // The list wears the mask; the detail carries the whole number.
-    const calls = await asAdmin.query(api.telephony.listCallsForCompany, { companyId });
-    expect(calls).toHaveLength(1);
-    expect(calls[0].fromMasked).not.toContain("900123");
-    expect(calls[0].summary).toBe("Asked about Saturday opening.");
+    // The list wears the mask; the detail carries the whole number. Paging,
+    // searching and filtering all happen in the query, so the browser never
+    // holds more than one page.
+    const paging = { numItems: 10, cursor: null };
+    const calls = await asAdmin.query(api.telephony.listCallsForCompany, {
+      companyId,
+      paginationOpts: paging,
+    });
+    expect(calls.page).toHaveLength(1);
+    expect(calls.page[0].fromMasked).not.toContain("900123");
+    expect(calls.page[0].summary).toBe("Asked about Saturday opening.");
+
+    // The status filter is applied where the rows are, not in the browser.
+    const failedOnly = await asAdmin.query(api.telephony.listCallsForCompany, {
+      companyId,
+      paginationOpts: paging,
+      status: "FAILED",
+    });
+    expect(failedOnly.page).toHaveLength(0);
     const call = await asAdmin.query(api.telephony.getCallForCompany, {
       companyId,
       callId: callId,
@@ -94,9 +108,12 @@ describe("the admin's view of a company's work", () => {
     ).resolves.toBeNull();
 
     // The mailbox lists sender, subject and decision — nothing more.
-    const mail = await asAdmin.query(api.mailbox.listMailboxForCompany, { companyId });
-    expect(mail).toHaveLength(1);
-    expect(mail[0]).toMatchObject({
+    const mail = await asAdmin.query(api.mailbox.listMailboxForCompany, {
+      companyId,
+      paginationOpts: paging,
+    });
+    expect(mail.page).toHaveLength(1);
+    expect(mail.page[0]).toMatchObject({
       sender: "customer@example.com",
       subject: "Quote for a garden wall",
       decision: "REPLIED",
@@ -104,11 +121,15 @@ describe("the admin's view of a company's work", () => {
 
     // The walls: another company's admin can read none of it.
     const asOther = t.withIdentity({ subject: otherAdminId });
-    await expect(asOther.query(api.telephony.listCallsForCompany, { companyId })).rejects.toThrow();
+    await expect(
+      asOther.query(api.telephony.listCallsForCompany, { companyId, paginationOpts: paging })
+    ).rejects.toThrow();
     await expect(
       asOther.query(api.telephony.getCallForCompany, { companyId, callId })
     ).rejects.toThrow();
-    await expect(asOther.query(api.mailbox.listMailboxForCompany, { companyId })).rejects.toThrow();
+    await expect(
+      asOther.query(api.mailbox.listMailboxForCompany, { companyId, paginationOpts: paging })
+    ).rejects.toThrow();
 
     // And a call from one company never answers to another's door.
     await expect(

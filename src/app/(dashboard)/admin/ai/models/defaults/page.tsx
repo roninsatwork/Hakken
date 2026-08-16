@@ -33,7 +33,9 @@ export default function AIModelDefaultsPage() {
   // Only models that can actually be chosen — enabled, and on a provider that is
   // switched on. The unfiltered catalogue read that used to be here is what made
   // this screen a four-hundred-item dropdown once a large provider synced.
-  const allModelsResult = useQuery(api.aiModels.getActiveModels, {});
+  // The compact picker read: names, providers, jobs and the two prices —
+  // not every model's prose.
+  const allModelsResult = useQuery(api.aiModels.getModelPickerOptions, {});
   const providersResult = useQuery(api.aiModels.getProviders);
   const globalDefaultsResult = useQuery(api.aiModels.getGlobalModelDefaults);
   const setGlobalModelDefault = useMutation(api.aiModels.setGlobalModelDefault);

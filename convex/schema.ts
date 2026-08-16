@@ -635,7 +635,14 @@ export default defineSchema({
   })
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_provider_call", ["providerCallId"])
-    .index("by_started", ["startedAt"]),
+    .index("by_started", ["startedAt"])
+    // The admin Calls screen searches what a call was about, never the
+    // caller's number: the list masks numbers, and a search box that matched
+    // them would hand back what the mask exists to withhold.
+    .searchIndex("search_summary", {
+      searchField: "summary",
+      filterFields: ["companyId"],
+    }),
 
   /**
    * One row per scheduled job, rewritten each time it finishes (seven-gaps
@@ -1853,7 +1860,13 @@ export default defineSchema({
     // rather than by filtering every active case in memory.
     .index("by_company_status_severity", ["companyId", "status", "severity"])
     .index("by_company_status_surface_severity", ["companyId", "status", "targetSurface", "severity"])
-    .index("by_company_fingerprint", ["companyId", "proposalFingerprint"]),
+    .index("by_company_fingerprint", ["companyId", "proposalFingerprint"])
+    // The Evals screen searches by name at both heights, filtered to one
+    // brain's list — searched where the rows are, like every other table.
+    .searchIndex("search_name", {
+      searchField: "name",
+      filterFields: ["companyId", "status"],
+    }),
 
   companyEvalRuns: defineTable({
     companyId: v.optional(v.id("companies")),
@@ -2464,7 +2477,11 @@ export default defineSchema({
     .index("by_created", ["createdAt"])
     // The admin Mailbox screen (seven-gaps plan, phase 1): the handled
     // mail was recorded from day one but had no screen; this is its door.
-    .index("by_company_created", ["companyId", "createdAt"]),
+    .index("by_company_created", ["companyId", "createdAt"])
+    .searchIndex("search_subject", {
+      searchField: "subject",
+      filterFields: ["companyId"],
+    }),
 
   // Global Tool Library
   aiTools: defineTable({
@@ -3322,9 +3339,17 @@ export default defineSchema({
     lastVerifiedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    // Title, subject key and body in one field, kept in step on every write.
+    // The list's search used to read five hundred pages into the browser and
+    // sift them there, which silently hid page five hundred and one.
+    searchText: v.optional(v.string()),
   })
     .index("by_company_kind_subject", ["companyId", "kind", "subjectKey"])
-    .index("by_company_updated", ["companyId", "updatedAt"]),
+    .index("by_company_updated", ["companyId", "updatedAt"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["companyId", "kind"],
+    }),
 
   /**
    * The receipts behind a page (wiki-replaces-knowledge plan, screen 3):
@@ -3428,7 +3453,12 @@ export default defineSchema({
     resolvedAt: v.optional(v.number()),
   })
     .index("by_company_status_asked", ["companyId", "status", "lastAskedAt"])
-    .index("by_company_key", ["companyId", "normalizedKey"]),
+    .index("by_company_key", ["companyId", "normalizedKey"])
+    .index("by_status_asked", ["status", "lastAskedAt"])
+    .searchIndex("search_question", {
+      searchField: "question",
+      filterFields: ["status", "companyId"],
+    }),
 
   /**
    * One row per company per UTC day (closing-the-loop plan, phase 3):

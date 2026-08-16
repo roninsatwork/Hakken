@@ -113,7 +113,7 @@ describe("CompanyModelDefaultsPage", () => {
     vi.clearAllMocks();
     vi.mocked(useQuery).mockImplementation((...args: Parameters<typeof useQuery>) => {
       const path = getConvexPath(args[0]);
-      if (path.includes("getActiveModels")) return models as unknown as ReturnType<typeof useQuery>;
+      if (path.includes("getModelPickerOptions")) return models as unknown as ReturnType<typeof useQuery>;
       if (path.includes("getProviders")) return providers as unknown as ReturnType<typeof useQuery>;
       return defaults as unknown as ReturnType<typeof useQuery>;
     });

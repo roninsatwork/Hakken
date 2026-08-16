@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery, superAdminQuery } from "./tenantFunctions";
@@ -176,24 +177,43 @@ export const recordAnswerOutcomeInternal = internalMutation({
 
 /** The panel's read: open gaps, most recently asked first. */
 export const listUnansweredForCompany = adminQuery({
-  args: { companyId: v.id("companies") },
+  args: {
+    companyId: v.id("companies"),
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
-    const rows = await ctx.db
-      .query("wikiUnansweredQuestions")
-      .withIndex("by_company_status_asked", (q) =>
-        q.eq("companyId", args.companyId).eq("status", "OPEN")
-      )
-      .order("desc")
-      .take(50);
-    return rows
-      .sort((a, b) => b.askCount - a.askCount || b.lastAskedAt - a.lastAskedAt)
-      .map((row) => ({
+    const needle = args.search?.trim();
+    // Searched and paged in the query. This list is real demand and only
+    // grows, so the browser must never be handed the whole of it.
+    const page = needle
+      ? await ctx.db
+        .query("wikiUnansweredQuestions")
+        .withSearchIndex("search_question", (q) =>
+          q.search("question", needle).eq("status", "OPEN").eq("companyId", args.companyId)
+        )
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("wikiUnansweredQuestions")
+        .withIndex("by_company_status_asked", (q) =>
+          q.eq("companyId", args.companyId).eq("status", "OPEN")
+        )
+        .order("desc")
+        .paginate(args.paginationOpts);
+
+    return {
+      ...page,
+      page: page.page.map((row) => ({
         unansweredId: row._id,
         question: row.question,
         askCount: row.askCount,
         lastAskedAt: row.lastAskedAt,
-      }));
+        companyId: row.companyId ?? null,
+        companyName: null as string | null,
+        companyCount: 0,
+      })),
+    };
   },
 });
 
@@ -205,15 +225,35 @@ export const listUnansweredForCompany = adminQuery({
  * console only, where every company is already visible.
  */
 export const listAllUnanswered = superAdminQuery({
-  args: { search: v.optional(v.string()) },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+    scope: v.optional(v.union(v.literal("ALL"), v.literal("PLATFORM"), v.literal("COMPANIES"))),
+  },
   handler: async (ctx, args) => {
-    const rows = await ctx.db.query("wikiUnansweredQuestions").order("desc").take(500);
-    const needle = args.search?.trim().toLowerCase();
+    const needle = args.search?.trim();
+    // Searched and paged where the rows live. This used to take five hundred
+    // rows and sift them in the browser, which quietly capped the screen and
+    // grew more expensive with every gap the platform recorded.
+    const page = needle
+      ? await ctx.db
+        .query("wikiUnansweredQuestions")
+        .withSearchIndex("search_question", (q) =>
+          q.search("question", needle).eq("status", "OPEN")
+        )
+        .paginate(args.paginationOpts)
+      : await ctx.db
+        .query("wikiUnansweredQuestions")
+        .withIndex("by_status_asked", (q) => q.eq("status", "OPEN"))
+        .order("desc")
+        .paginate(args.paginationOpts);
+
+    const scope = args.scope ?? "ALL";
     const companyNames = new Map<string, string>();
-    const result = [];
-    for (const row of rows) {
-      if (row.status !== "OPEN") continue;
-      if (needle && !row.question.toLowerCase().includes(needle)) continue;
+    const rows = [];
+    for (const row of page.page) {
+      if (scope === "PLATFORM" && row.companyId) continue;
+      if (scope === "COMPANIES" && !row.companyId) continue;
       let companyName: string | null = null;
       if (row.companyId) {
         const key = row.companyId.toString();
@@ -223,7 +263,7 @@ export const listAllUnanswered = superAdminQuery({
         }
         companyName = companyNames.get(key) ?? null;
       }
-      result.push({
+      rows.push({
         unansweredId: row._id,
         question: row.question,
         askCount: row.askCount,
@@ -235,7 +275,7 @@ export const listAllUnanswered = superAdminQuery({
           : 0,
       });
     }
-    return result.sort((a, b) => b.askCount - a.askCount || b.lastAskedAt - a.lastAskedAt);
+    return { ...page, page: rows };
   },
 });
 
