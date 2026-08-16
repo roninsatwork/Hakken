@@ -1,5 +1,5 @@
 "use node";
-import { action, type ActionCtx } from "./_generated/server";
+import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { requireActionSuperAdmin } from "./actionAuth";
@@ -398,11 +398,17 @@ export const syncVertexModels = superAdminAction({
   },
 });
 
-export const testProviderConnection = superAdminAction({
+/**
+ * The live provider check, without the person (seven-gaps plan, phase 2).
+ * The button and the hourly probe must mean exactly the same thing, so
+ * both run this one body: it contacts the provider and records what it
+ * found. `testProviderConnection` is this function plus the super-admin door.
+ */
+export const probeProviderInternal = internalAction({
   args: {
     providerKey: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ ok: boolean; providerKey: string; message: string }> => {
     const displayName = getProviderDisplayName(args.providerKey);
 
     try {
@@ -461,4 +467,14 @@ export const testProviderConnection = superAdminAction({
       return { ok: false, providerKey: args.providerKey, message };
     }
   },
+});
+
+export const testProviderConnection = superAdminAction({
+  args: {
+    providerKey: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean; providerKey: string; message: string }> =>
+    await ctx.runAction(internal.aiModelsActions.probeProviderInternal, {
+      providerKey: args.providerKey,
+    }),
 });

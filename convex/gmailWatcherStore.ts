@@ -96,3 +96,24 @@ export const markDecision = internalMutation({
     });
   },
 });
+
+/**
+ * What the last poll actually did (seven-gaps plan, phase 2). The watcher
+ * runs sixty times an hour, so this is the truest witness the Connections
+ * screen has for whether a mailbox is answering.
+ */
+export const recordPollOutcomeInternal = internalMutation({
+  args: {
+    connectorId: v.id("toolConnectors"),
+    ok: v.boolean(),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectorId, {
+      lastPolledAt: Date.now(),
+      // Cleared on success: a row must never wear yesterday's failure beside
+      // today's good poll.
+      lastPollError: args.ok ? undefined : (args.error ?? "The poll failed.").slice(0, 300),
+    });
+  },
+});

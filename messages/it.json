@@ -576,6 +576,7 @@
     "exitWorkspace": "Esci da Workspace",
     "tools": "Strumenti",
     "health": "Salute",
+    "connections": "Connessioni",
     "salesData": "Dati di vendita",
     "salesDataImport": "Importa dati",
     "salesDataTables": "Importazioni da fogli di calcolo",
@@ -3585,6 +3586,52 @@
     "empty": "Nessuna chiamata",
     "emptyState": "Ancora nessuna chiamata. La prima apparirà qui appena squilla.",
     "emptyFiltered": "Nessuna chiamata corrisponde a questa ricerca."
+  },
+  "connections": {
+    "title": "Connessioni",
+    "subtitle": "Tutto ciò da cui Sonae dipende, e se sta rispondendo in questo momento.",
+    "hint": "Sono verifiche dal vivo, non controlli di configurazione: alla casella viene chiesta la posta, a ogni fornitore AI l'elenco dei modelli, alla linea telefonica il suo account. Una connessione che smette di rispondere appare qui entro un'ora.",
+    "loading": "Verifica in corso...",
+    "allWell": "Tutto risponde.",
+    "someBroken": "{count, plural, =1 {1 connessione richiede attenzione} other {# connessioni richiedono attenzione}}",
+    "checkNow": "Verifica ora",
+    "checking": "Verifica in corso...",
+    "never": "Mai",
+    "noConnections": "Nessuna connessione ancora.",
+    "lastHeard": "Ultimo segnale {when}",
+    "columns": {
+      "connection": "Connessione",
+      "state": "Stato",
+      "detail": "Cosa abbiamo trovato",
+      "checked": "Ultima verifica"
+    },
+    "state": {
+      "working": "Funziona",
+      "attention": "Richiede attenzione",
+      "unknown": "Non ancora verificata"
+    },
+    "kind": {
+      "MAILBOX": "Casella email",
+      "PHONE": "Linea telefonica",
+      "PROVIDER": "Fornitore AI",
+      "WIDGET": "Widget di chat"
+    },
+    "jobs": {
+      "title": "Lavori pianificati",
+      "hint": "I lavori che mandano avanti la piattaforma da soli. Un lavoro che smette di girare, o che inizia a fallire, appare qui invece di sparire in silenzio.",
+      "columns": {
+        "job": "Lavoro",
+        "state": "Stato",
+        "lastRan": "Ultima esecuzione",
+        "lastWorked": "Ultimo successo"
+      },
+      "state": {
+        "ran": "In funzione",
+        "overdue": "In ritardo",
+        "neverRan": "Mai eseguito",
+        "failed": "{count, plural, =1 {Fallito una volta} other {Fallito # volte di seguito}}"
+      }
+    }
   },
   "aiMailbox": {
     "title": "Casella di posta",

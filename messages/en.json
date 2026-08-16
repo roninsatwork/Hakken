@@ -576,6 +576,7 @@
     "exitWorkspace": "Exit Workspace",
     "tools": "Tools",
     "health": "Health",
+    "connections": "Connections",
     "salesData": "Sales Data",
     "salesDataImport": "Import Data",
     "salesDataTables": "Spreadsheet Imports",
@@ -3585,6 +3586,52 @@
     "empty": "No calls",
     "emptyState": "No calls yet. The first one will appear here the moment it rings.",
     "emptyFiltered": "No calls match this search."
+  },
+  "connections": {
+    "title": "Connections",
+    "subtitle": "Everything Sonae depends on, and whether it is answering right now.",
+    "hint": "These are live checks, not settings checks: the inbox is asked for its inbox, each AI provider for its model list, the phone line about its account. A connection that stops answering shows here within the hour.",
+    "loading": "Checking...",
+    "allWell": "Everything is answering.",
+    "someBroken": "{count, plural, =1 {1 connection needs attention} other {# connections need attention}}",
+    "checkNow": "Check now",
+    "checking": "Checking...",
+    "never": "Never",
+    "noConnections": "Nothing is connected yet.",
+    "lastHeard": "Last heard from {when}",
+    "columns": {
+      "connection": "Connection",
+      "state": "State",
+      "detail": "What we found",
+      "checked": "Last checked"
+    },
+    "state": {
+      "working": "Working",
+      "attention": "Needs attention",
+      "unknown": "Not checked yet"
+    },
+    "kind": {
+      "MAILBOX": "Email inbox",
+      "PHONE": "Phone line",
+      "PROVIDER": "AI provider",
+      "WIDGET": "Chat widget"
+    },
+    "jobs": {
+      "title": "Scheduled work",
+      "hint": "The jobs that keep the platform running on their own. A job that stops running, or starts failing, shows here instead of disappearing quietly.",
+      "columns": {
+        "job": "Job",
+        "state": "State",
+        "lastRan": "Last ran",
+        "lastWorked": "Last worked"
+      },
+      "state": {
+        "ran": "Running",
+        "overdue": "Late",
+        "neverRan": "Not run yet",
+        "failed": "{count, plural, =1 {Failed once} other {Failed # times in a row}}"
+      }
+    }
   },
   "aiMailbox": {
     "title": "Mailbox",

@@ -137,8 +137,34 @@ const RUN_RESULT_LABELS: Record<string, string> = {
 export default function HealthPage() {
   const health = useQuery(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 }) as SystemHealth | undefined;
   const runs = useQuery(api.agentRuns.getRunObservatory, { lookbackDays: 7 }) as RunObservatory | undefined;
+  // The outside world, and the platform's own scheduled work (seven-gaps
+  // plan, phase 2). This page reads internal tables only; without these two
+  // a dead mailbox or a sweep that stopped running left it saying "nothing
+  // needs attention".
+  const connections = useQuery(api.connectionProbes.listConnections, {});
+  const jobs = useQuery(api.jobLedger.listJobRuns, {});
 
   const attention = health ? buildAttention(health) : [];
+  const brokenConnections = (connections ?? []).filter((row) => row.working === false).length;
+  const troubledJobs = (jobs ?? []).filter((row) => row.lastOk === false || row.isOverdue).length;
+  if (brokenConnections > 0) {
+    attention.unshift({
+      key: "connections",
+      label: "Connections that stopped answering",
+      count: brokenConnections,
+      action: "Open connections",
+      href: "/admin/connections",
+    });
+  }
+  if (troubledJobs > 0) {
+    attention.unshift({
+      key: "scheduledJobs",
+      label: "Scheduled jobs failing or late",
+      count: troubledJobs,
+      action: "Open connections",
+      href: "/admin/connections",
+    });
+  }
   const isHealthy = health !== undefined && attention.length === 0;
   // Same rule as the attention list: a missing section is not a reason to take
   // the whole screen down.

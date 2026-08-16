@@ -8,8 +8,8 @@ const crons = cronJobs();
 crons.interval(
   "workflow-schedule-dispatcher",
   { minutes: 1 },
-  internal.workflowEngine.scheduleDispatcher,
-  {}
+  internal.jobLedger.runJob,
+  { job: "workflow-schedule-dispatcher" }
 );
 
 // The mailbox that answers itself: poll every connected Gmail mailbox for
@@ -19,8 +19,8 @@ crons.interval(
 crons.interval(
   "gmail-mailbox-watcher",
   { minutes: 1 },
-  internal.gmailWatcher.pollMailboxes,
-  {}
+  internal.jobLedger.runJob,
+  { job: "gmail-mailbox-watcher" }
 );
 
 // Keep connector OAuth tokens alive: refresh anything dying within the next
@@ -29,8 +29,21 @@ crons.interval(
 crons.interval(
   "connector-oauth-token-refresh",
   { hours: 1 },
-  internal.connectorOAuth.refreshExpiringTokens,
-  {}
+  internal.jobLedger.runJob,
+  { job: "connector-oauth-token-refresh" }
+);
+
+// Ask each connection whether it actually works (seven-gaps plan, phase 2):
+// the inbox is asked for its inbox, the model providers for their model
+// lists, the phone line about its account. Configuration checks contact
+// nothing by design; this one contacts everything, once an hour, so a
+// mailbox that stopped answering is discovered here rather than by a
+// customer whose email went unanswered.
+crons.interval(
+  "connection-probes",
+  { hours: 1 },
+  internal.jobLedger.runJob,
+  { job: "connection-probes" }
 );
 
 // Revive agent runs whose action died without reaching a terminal state, and
@@ -39,8 +52,8 @@ crons.interval(
 crons.interval(
   "agent-run-stall-recovery",
   { minutes: 2 },
-  internal.agentRunCheckpoints.recoverStalledRuns,
-  {}
+  internal.jobLedger.runJob,
+  { job: "agent-run-stall-recovery" }
 );
 
 // Give up on approvals nobody answered, so a parked run does not hold its
@@ -49,8 +62,8 @@ crons.interval(
 crons.interval(
   "agent-approval-expiry",
   { minutes: 15 },
-  internal.agentRuns.expireStalePendingApprovals,
-  {}
+  internal.jobLedger.runJob,
+  { job: "agent-approval-expiry" }
 );
 
 // The same window, for the other approval mechanism. A workflow halted on a
@@ -60,8 +73,8 @@ crons.interval(
 crons.interval(
   "workflow-approval-expiry",
   { minutes: 15 },
-  internal.workflowEngine.expireStaleWorkflowApprovals,
-  {}
+  internal.jobLedger.runJob,
+  { job: "workflow-approval-expiry" }
 );
 
 // Recompute the Skill Center counts. They used to be totalled on every page
@@ -72,8 +85,8 @@ crons.interval(
 crons.interval(
   "agent-skill-rollup-rebuild",
   { minutes: 10 },
-  internal.agentSkills.rebuildSkillCatalogRollupInternal,
-  {}
+  internal.jobLedger.runJob,
+  { job: "agent-skill-rollup-rebuild" }
 );
 
 // Read what customers actually asked and propose durable notes for review.
@@ -84,8 +97,8 @@ crons.interval(
 crons.interval(
   "company-memory-suggestion-sweep",
   { hours: 6 },
-  internal.companyMemorySuggestionActions.sweepDispatcher,
-  {}
+  internal.jobLedger.runJob,
+  { job: "company-memory-suggestion-sweep" }
 );
 
 // The wiki's nightly gardener (wiki plan, phase 4): mechanical link repair
@@ -94,8 +107,8 @@ crons.interval(
 crons.interval(
   "wiki-tending-sweep",
   { hours: 24 },
-  internal.wikiTendingActions.tendDispatcher,
-  {}
+  internal.jobLedger.runJob,
+  { job: "wiki-tending-sweep" }
 );
 
 // The wiki's catch-up reader (wiki-replaces-knowledge plan, stage one):
@@ -105,8 +118,8 @@ crons.interval(
 crons.interval(
   "wiki-distill-sweep",
   { minutes: 15 },
-  internal.wikiDistillActions.distilSweep,
-  {}
+  internal.jobLedger.runJob,
+  { job: "wiki-distill-sweep" }
 );
 
 // The Contradiction Finder's round (wiki-agents plan, phase 1): related
@@ -116,8 +129,8 @@ crons.interval(
 crons.interval(
   "wiki-contradiction-sweep",
   { hours: 24 },
-  internal.wikiContradictionActions.contradictionSweep,
-  {}
+  internal.jobLedger.runJob,
+  { job: "wiki-contradiction-sweep" }
 );
 
 // The Freshness Checker's round (wiki-agents plan, phase 2): aging pages
@@ -127,8 +140,8 @@ crons.interval(
 crons.interval(
   "wiki-freshness-sweep",
   { hours: 24 },
-  internal.wikiFreshnessActions.freshnessSweep,
-  {}
+  internal.jobLedger.runJob,
+  { job: "wiki-freshness-sweep" }
 );
 
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
@@ -137,16 +150,16 @@ crons.interval(
 crons.interval(
   "knowledge-evidence-sweep",
   { hours: 1 },
-  internal.knowledgeEvidence.sweepEvidenceInternal,
-  {}
+  internal.jobLedger.runJob,
+  { job: "knowledge-evidence-sweep" }
 );
 
 // Run hourly dispatcher to evaluate unified scheduled data purges
 crons.hourly(
   "unified-data-purge-dispatcher",
   { minuteUTC: 15 },
-  internal.purges.dispatcher,
-  {}
+  internal.jobLedger.runJob,
+  { job: "unified-data-purge-dispatcher" }
 );
 
 // A purge batch that dies at commit time cannot mark itself FAILED — the
@@ -156,8 +169,8 @@ crons.hourly(
 crons.interval(
   "purge-stall-reaper",
   { minutes: 10 },
-  internal.purges.reapStalePurges,
-  {}
+  internal.jobLedger.runJob,
+  { job: "purge-stall-reaper" }
 );
 
 // Drop tool idempotency records past their window, so the table that makes
@@ -165,32 +178,32 @@ crons.interval(
 crons.hourly(
   "tool-idempotency-purge",
   { minuteUTC: 45 },
-  internal.aiToolWriteTools.purgeExpiredToolIdempotency,
-  {}
+  internal.jobLedger.runJob,
+  { job: "tool-idempotency-purge" }
 );
 
 // Wipe expired ephemeral Vector docs attached to Threads
 crons.hourly(
   "vector-garbage-collection",
   { minuteUTC: 30 },
-  internal.knowledge.garbageCollectThreadVectors,
-  {}
+  internal.jobLedger.runJob,
+  { job: "vector-garbage-collection" }
 );
 
 // Monthly Subscription Quota Reset
 crons.monthly(
   "reset-billing-cycles",
   { day: 1, hourUTC: 0, minuteUTC: 0 },
-  internal.plans.resetBillingCycle,
-  {}
+  internal.jobLedger.runJob,
+  { job: "reset-billing-cycles" }
 );
 
 // Daily Analytics Snapshot Generator
 crons.daily(
   "generate-daily-analytics-snapshots",
   { hourUTC: 0, minuteUTC: 5 },
-  internal.analyticsCron.generateDailySnapshots,
-  {}
+  internal.jobLedger.runJob,
+  { job: "generate-daily-analytics-snapshots" }
 );
 
 // Recompute the rolling 30-day login count behind the admin user directory.
@@ -200,16 +213,16 @@ crons.daily(
 crons.daily(
   "user-login-count-rollup",
   { hourUTC: 0, minuteUTC: 10 },
-  internal.users.recomputeLoginCounts,
-  {}
+  internal.jobLedger.runJob,
+  { job: "user-login-count-rollup" }
 );
 
 // Daily Platform Alerts
 crons.daily(
   "dispatch-platform-alerts",
   { hourUTC: 0, minuteUTC: 25 },
-  internal.analyticsCron.dispatchPlatformAlerts,
-  { daysBack: 7 }
+  internal.jobLedger.runJob,
+  { job: "dispatch-platform-alerts" }
 );
 
 // One plain digest per company per week (closing-the-loop plan, phase 3):
@@ -218,8 +231,8 @@ crons.daily(
 crons.weekly(
   "wiki-weekly-report",
   { dayOfWeek: "monday", hourUTC: 7, minuteUTC: 0 },
-  internal.wikiReport.sendWeeklyReports,
-  {}
+  internal.jobLedger.runJob,
+  { job: "wiki-weekly-report" }
 );
 
 // The Examiner's month (closing-the-loop plan, phase 4): real questions
@@ -227,8 +240,8 @@ crons.weekly(
 crons.monthly(
   "wiki-exam-growth",
   { day: 1, hourUTC: 8, minuteUTC: 0 },
-  internal.wikiExamGrowthActions.examGrowthSweep,
-  {}
+  internal.jobLedger.runJob,
+  { job: "wiki-exam-growth" }
 );
 
 export default crons;

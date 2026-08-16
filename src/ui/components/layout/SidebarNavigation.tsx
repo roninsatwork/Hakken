@@ -662,6 +662,7 @@ export default function SidebarNavigation() {
                             activeItem === 'Scripts' ||
                             activeItem === 'Auth Diagnostics' ||
                             pathname.startsWith('/admin/health') ||
+                            pathname.startsWith('/admin/connections') ||
                             pathname.startsWith('/admin/settings/scripts') ||
                             pathname.startsWith('/admin/auth-diagnostics')}
                           onClick={() => setActiveItem('Maintenance')}
@@ -675,6 +676,10 @@ export default function SidebarNavigation() {
                               different words, both leading with counters that read
                               zero on a healthy platform. */}
                           <SubNavItem label={t('health')} href="/admin/health" isActive={pathname.startsWith('/admin/health')} onClick={() => setActiveItem('Health')} />
+                          {/* Health reads the platform's own tables; this one
+                              asks the outside world whether it is still there
+                              (seven-gaps plan, phase 2). */}
+                          <SubNavItem label={t('connections')} href="/admin/connections" isActive={pathname.startsWith('/admin/connections')} onClick={() => setActiveItem('Connections')} />
                           <SubNavItem label={t('scripts')} href="/admin/settings/scripts" isActive={activeItem === 'Scripts' || pathname.startsWith('/admin/settings/scripts')} onClick={() => setActiveItem('Scripts')} />
                           <SubNavItem label={t('authDiagnostics')} href="/admin/auth-diagnostics" isActive={activeItem === 'Auth Diagnostics' || pathname.startsWith('/admin/auth-diagnostics')} onClick={() => setActiveItem('Auth Diagnostics')} />
                         </NavItem>

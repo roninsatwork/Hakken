@@ -192,10 +192,23 @@ export const pollMailboxes = internalAction({
     for (const connector of connectors) {
       try {
         await processMailbox(ctx, connector);
+        // The poll's own verdict, on the record (seven-gaps plan, phase 2).
+        // Until now a mailbox that had silently stopped answering left its
+        // only trace in console.error, so the Connections screen could not
+        // tell a working inbox from a dead one.
+        await ctx.runMutation(internal.gmailWatcherStore.recordPollOutcomeInternal, {
+          connectorId: connector._id,
+          ok: true,
+        });
       } catch (error) {
         // One broken mailbox must not stop the others; the connection's own
         // error state (connectorOAuth) reports the cause honestly.
         console.error("Mailbox poll failed", connector._id, error);
+        await ctx.runMutation(internal.gmailWatcherStore.recordPollOutcomeInternal, {
+          connectorId: connector._id,
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
   },

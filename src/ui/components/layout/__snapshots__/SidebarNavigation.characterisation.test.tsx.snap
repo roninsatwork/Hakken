@@ -101,6 +101,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "apiKeys -> /admin/settings/api-keys",
     "auditTrail -> /admin/governance/audit-trail",
     "authDiagnostics -> /admin/auth-diagnostics",
+    "connections -> /admin/connections",
     "dashboard -> /admin",
     "governanceApprovals -> /admin/governance/approvals",
     "governanceOverview -> /admin/governance",

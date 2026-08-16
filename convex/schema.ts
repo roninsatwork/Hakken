@@ -637,6 +637,27 @@ export default defineSchema({
     .index("by_provider_call", ["providerCallId"])
     .index("by_started", ["startedAt"]),
 
+  /**
+   * One row per scheduled job, rewritten each time it finishes (seven-gaps
+   * plan, phase 2). Twenty-three jobs ran the platform and none of them left
+   * a trace an admin could read: a sweep that died stayed dead silently.
+   *
+   * Written once per run rather than twice (start and finish) on purpose —
+   * the per-minute jobs would otherwise double the platform's write rate for
+   * bookkeeping. A job that hangs never reaches the write, so a stale
+   * lastRanAt is exactly the signal that something is stuck.
+   */
+  jobRuns: defineTable({
+    job: v.string(),
+    lastRanAt: v.number(),
+    lastOk: v.boolean(),
+    lastDurationMs: v.number(),
+    lastError: v.optional(v.string()),
+    /** When it last finished without throwing — the honest "it works" mark. */
+    lastSucceededAt: v.optional(v.number()),
+    consecutiveFailures: v.number(),
+  }).index("by_job", ["job"]),
+
   webhookDeliveries: defineTable({
     companyId: v.id("companies"),
     eventType: v.string(),
@@ -2308,6 +2329,18 @@ export default defineSchema({
       v.literal("CONNECTED"),
       v.literal("ERROR")
     )),
+    // What the hourly probe found when it last actually contacted the other
+    // side (seven-gaps plan, phase 2). Distinct from testStatus, which is a
+    // configuration check that deliberately contacts nothing: these three
+    // fields only ever move when a real request was made and answered.
+    lastProbeAt: v.optional(v.number()),
+    lastProbeOk: v.optional(v.boolean()),
+    lastProbeMessage: v.optional(v.string()),
+    // What the Gmail watcher's own once-a-minute poll last did. Before this,
+    // a mailbox that silently stopped answering was discovered by a customer:
+    // poll failures went to console.error and nowhere else.
+    lastPolledAt: v.optional(v.number()),
+    lastPollError: v.optional(v.string()),
     authAccountRef: v.optional(v.string()),
     tokenRef: v.optional(v.string()),
     oauthScopes: v.optional(v.array(v.string())),
