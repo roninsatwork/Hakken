@@ -3406,12 +3406,15 @@
     "scopeGlobal": "The platform's shared wiki. Empty means every answer comes purely from company wikis.",
     "globalEmptyState": "No pages yet. Import a website, file or text above and, once you approve its review, its pages appear here.",
     "unanswered": {
-      "title": "{count, plural, =1 {Couldn't answer 1 question} other {Couldn't answer # questions}}",
+      "title": "{count, plural, =0 {Couldn't answer} =1 {Couldn't answer 1 question} other {Couldn't answer # questions}}",
       "hint": "Real questions the wiki had no pages for. Import something that covers it, or dismiss it if it isn't worth covering. A row closes itself when the same question later gets a proper answer.",
       "asked": "{count, plural, =1 {asked once} other {asked #×}}",
       "importSomething": "Import something",
       "dismiss": "Dismiss this question",
-      "acrossCompanies": "{count, plural, =1 {across 1 company} other {across # companies}}"
+      "acrossCompanies": "{count, plural, =1 {across 1 company} other {across # companies}}",
+      "hintGlobal": "Questions the global brain had no pages for - from the platform's own conversations, and from companies whose wikis are empty and answer purely from here. Feed the wiki once and the row closes for everyone.",
+      "empty": "Nothing here - every question so far found its pages. When one doesn't, it appears here.",
+      "emptyGlobal": "Nothing here - when the global brain can't answer a question, it appears here with a count of how widely it was asked."
     },
     "used": {
       "count": "{count, plural, =1 {1 answer} other {# answers}}",
@@ -3480,5 +3483,30 @@
     "neverSeen": "The screen has not been opened yet.",
     "empty": "No reception screen is switched on yet.",
     "emptyHint": "An administrator switches one on from the widget's settings. Once it's on, it appears here ready to open."
+  },
+  "aiUnanswered": {
+    "title": "Unanswered Questions",
+    "subtitle": "Every question the wikis had no pages for, across every company and the platform itself.",
+    "hint": "Each row is real demand: somebody asked, and the brain that was answering had nothing. Feed the right wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering.",
+    "searchPlaceholder": "Search questions...",
+    "filter": {
+      "all": "All",
+      "platform": "Platform",
+      "companies": "Companies"
+    },
+    "columns": {
+      "question": "Question",
+      "where": "Whose gap",
+      "asked": "Asked",
+      "lastAsked": "Last asked",
+      "actions": "Actions"
+    },
+    "platform": "Platform",
+    "acrossCompanies": "{count, plural, =1 {across 1 company} other {across # companies}}",
+    "feedWiki": "Feed the wiki",
+    "dismiss": "Dismiss",
+    "empty": "No open questions",
+    "emptyState": "Nothing here - every question so far found its pages. When one doesn't, it appears here.",
+    "emptyFiltered": "Nothing matches this filter."
   }
 }

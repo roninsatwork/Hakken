@@ -3406,12 +3406,15 @@
     "scopeGlobal": "Il wiki condiviso della piattaforma. Vuoto significa che ogni risposta proviene esclusivamente dai wiki aziendali.",
     "globalEmptyState": "Ancora nessuna pagina. Importa un sito web, un file o un testo qui sopra e, una volta approvata la revisione, le sue pagine appariranno qui.",
     "unanswered": {
-      "title": "{count, plural, =1 {1 domanda senza risposta} other {# domande senza risposta}}",
+      "title": "{count, plural, =0 {Senza risposta} =1 {1 domanda senza risposta} other {# domande senza risposta}}",
       "hint": "Domande reali per cui il wiki non aveva pagine. Importa qualcosa che le copra, oppure ignorale se non vale la pena. Una riga si chiude da sola quando la stessa domanda riceve poi una risposta vera.",
       "asked": "{count, plural, =1 {chiesta una volta} other {chiesta #×}}",
       "importSomething": "Importa qualcosa",
       "dismiss": "Ignora questa domanda",
-      "acrossCompanies": "{count, plural, =1 {in 1 azienda} other {in # aziende}}"
+      "acrossCompanies": "{count, plural, =1 {in 1 azienda} other {in # aziende}}",
+      "hintGlobal": "Domande per cui il cervello globale non aveva pagine - dalle conversazioni della piattaforma stessa e dalle aziende con wiki vuoto che rispondono solo da qui. Alimenta il wiki una volta e la riga si chiude per tutti.",
+      "empty": "Niente qui - finora ogni domanda ha trovato le sue pagine. Quando una non le trova, appare qui.",
+      "emptyGlobal": "Niente qui - quando il cervello globale non sa rispondere a una domanda, appare qui con il conteggio di quanto è stata chiesta."
     },
     "used": {
       "count": "{count, plural, =1 {1 risposta} other {# risposte}}",
@@ -3480,5 +3483,30 @@
     "neverSeen": "Lo schermo non è ancora stato aperto.",
     "empty": "Nessuno schermo reception è ancora attivo.",
     "emptyHint": "Un amministratore lo attiva dalle impostazioni del widget. Una volta attivo, appare qui pronto da aprire."
+  },
+  "aiUnanswered": {
+    "title": "Domande senza risposta",
+    "subtitle": "Ogni domanda per cui i wiki non avevano pagine, in tutte le aziende e nella piattaforma stessa.",
+    "hint": "Ogni riga è domanda reale: qualcuno ha chiesto e il cervello che rispondeva non aveva nulla. Alimenta il wiki giusto e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire.",
+    "searchPlaceholder": "Cerca domande...",
+    "filter": {
+      "all": "Tutte",
+      "platform": "Piattaforma",
+      "companies": "Aziende"
+    },
+    "columns": {
+      "question": "Domanda",
+      "where": "Di chi è il gap",
+      "asked": "Chiesta",
+      "lastAsked": "Ultima volta",
+      "actions": "Azioni"
+    },
+    "platform": "Piattaforma",
+    "acrossCompanies": "{count, plural, =1 {in 1 azienda} other {in # aziende}}",
+    "feedWiki": "Alimenta il wiki",
+    "dismiss": "Ignora",
+    "empty": "Nessuna domanda aperta",
+    "emptyState": "Niente qui - finora ogni domanda ha trovato le sue pagine. Quando una non le trova, appare qui.",
+    "emptyFiltered": "Nulla corrisponde a questo filtro."
   }
 }

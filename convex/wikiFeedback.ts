@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, superAdminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import {
   displayQuestion,
@@ -194,6 +194,48 @@ export const listUnansweredForCompany = adminQuery({
         askCount: row.askCount,
         lastAskedAt: row.lastAskedAt,
       }));
+  },
+});
+
+/**
+ * The dedicated screen's read (Anthony's ruling, 2026-08-17: "a
+ * dedicated screen, with unanswered questions across company and
+ * global"): every open gap on the platform, each row naming where it
+ * lives — a company by name, or the platform itself. Super-admin
+ * console only, where every company is already visible.
+ */
+export const listAllUnanswered = superAdminQuery({
+  args: { search: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db.query("wikiUnansweredQuestions").order("desc").take(500);
+    const needle = args.search?.trim().toLowerCase();
+    const companyNames = new Map<string, string>();
+    const result = [];
+    for (const row of rows) {
+      if (row.status !== "OPEN") continue;
+      if (needle && !row.question.toLowerCase().includes(needle)) continue;
+      let companyName: string | null = null;
+      if (row.companyId) {
+        const key = row.companyId.toString();
+        if (!companyNames.has(key)) {
+          const company = await ctx.db.get(row.companyId);
+          companyNames.set(key, company?.name ?? "Unknown company");
+        }
+        companyName = companyNames.get(key) ?? null;
+      }
+      result.push({
+        unansweredId: row._id,
+        question: row.question,
+        askCount: row.askCount,
+        lastAskedAt: row.lastAskedAt,
+        companyId: row.companyId ?? null,
+        companyName,
+        companyCount: row.companiesJson
+          ? (JSON.parse(row.companiesJson) as string[]).length
+          : 0,
+      });
+    }
+    return result.sort((a, b) => b.askCount - a.askCount || b.lastAskedAt - a.lastAskedAt);
   },
 });
 

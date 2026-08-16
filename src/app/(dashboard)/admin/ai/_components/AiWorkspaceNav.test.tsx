@@ -17,6 +17,7 @@ describe("AiWorkspaceNav", () => {
 
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
+    expect(screen.getByRole("link", { name: "Unanswered" })).toHaveAttribute("href", "/admin/ai/unanswered");
     expect(screen.getByRole("link", { name: "Skill Center" })).toHaveAttribute("href", "/admin/ai/skills");
     // A company's wiki is never visible from the global menu (Anthony's
     // ruling, 2026-08-16): the only Wiki here is the platform's own, and it

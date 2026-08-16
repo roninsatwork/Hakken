@@ -341,7 +341,7 @@ export function WikiPagesListScreen({
         </div>
       )}
 
-      {unanswered.length > 0 && (
+      {companyId && unanswered.length > 0 && (
         <div className="flex flex-col gap-3 rounded-[16px] border border-brand/30 bg-brand/5 p-5">
           <div className="flex items-baseline justify-between gap-4 flex-wrap">
             <span className="flex items-center gap-2 text-[14px] font-semibold text-foreground">

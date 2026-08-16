@@ -163,6 +163,12 @@ const workspaceTabs = [
     ),
   },
   {
+    label: "Unanswered",
+    href: "/admin/ai/unanswered",
+    icon: MessageSquareText,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/unanswered"),
+  },
+  {
     label: "Skill Center",
     href: "/admin/ai/skills",
     icon: FileText,
