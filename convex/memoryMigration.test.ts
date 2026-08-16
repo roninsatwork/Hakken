@@ -166,6 +166,29 @@ describe("the migration road", () => {
     expect(company?.memoriesMigratedAt).toBeTruthy();
   });
 
+  test("a stamped company reads one brain; an unstamped one is untouched", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedMemory(t, companyId, { applyMode: "ALWAYS" });
+
+    const before = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "studio collective",
+    });
+    expect(before.always.length).toBe(1);
+
+    await t.run(async (ctx) => ctx.db.patch(companyId, { memoriesMigratedAt: Date.now() }));
+
+    const after = await t.query(internal.companyMemories.getRuntimeMemoriesInternal, {
+      companyId,
+      queryText: "studio collective",
+    });
+    expect(after).toEqual({ always: [], relevant: [] });
+    await expect(
+      t.query(internal.companyMemories.getAlwaysMemoriesInternal, { companyId })
+    ).resolves.toEqual([]);
+  });
+
   test("the about page is created once, mechanically, and only when needed", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const companyId = await seedCompany(t);

@@ -291,6 +291,12 @@ export const getRuntimeMemoriesInternal = internalQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // A migrated company reads one brain (one-brain-plan.md, phase 2): its
+    // facts arrive pinned to wiki pages and its instructions through the
+    // rules. Empty here, not gated at the call sites, so every arm —
+    // typed, voice, and any future one — honours the stamp at once.
+    const migratedCompany = await ctx.db.get(args.companyId);
+    if (migratedCompany?.memoriesMigratedAt) return { always: [], relevant: [] };
     const limit = getRuntimeMemoryLimit(args.limit);
     const alwaysMemories = await readAlwaysMemories(ctx, args.companyId);
 
@@ -366,6 +372,9 @@ export const getAlwaysMemoriesInternal = internalQuery({
     companyId: v.id("companies"),
   },
   handler: async (ctx, args) => {
+    // Same stamp, same silence (one-brain-plan.md, phase 2).
+    const migratedCompany = await ctx.db.get(args.companyId);
+    if (migratedCompany?.memoriesMigratedAt) return [];
     const memories = await readAlwaysMemories(ctx, args.companyId);
     return memories.map((memory, index) => toRuntimeMemory(memory, rankScore(index, memories.length)));
   },
