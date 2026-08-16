@@ -1,5 +1,6 @@
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { adminQuery, tenantQuery } from "./tenantFunctions";
+import { assertAdminCanAccessCompany } from "./authz";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -660,6 +661,49 @@ export const getCall = tenantQuery({
     const call = await ctx.db.get(callId);
     // The tenant boundary, asserted on the row itself.
     if (!call || call.companyId !== companyId) return null;
+    return call;
+  },
+});
+
+/**
+ * The admin's view of a company's calls (seven-gaps plan, phase 1): the
+ * work was always recorded, but an admin looking at a company could not
+ * see it. Same shape and same masking as the tenant list — the full
+ * number appears only on the call's own page, at either height.
+ */
+export const listCallsForCompany = adminQuery({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    const calls = await ctx.db
+      .query("phoneCalls")
+      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
+      .take(200);
+    return calls.map((call) => ({
+      _id: call._id,
+      fromMasked: maskPhoneNumber(call.fromNumber),
+      status: call.status,
+      startedAt: call.startedAt,
+      endedAt: call.endedAt,
+      summary: call.summary,
+      matchedCustomerKey: call.matchedCustomerKey,
+      taskId: call.taskId,
+      turnCount: call.turns.length,
+    }));
+  },
+});
+
+export const getCallForCompany = adminQuery({
+  // A string, not an id: the value arrives from the address bar and a
+  // mistyped link must read as "not found", exactly as the tenant door does.
+  args: { companyId: v.id("companies"), callId: v.string() },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    const callId = ctx.db.normalizeId("phoneCalls", args.callId);
+    if (!callId) return null;
+    const call = await ctx.db.get(callId);
+    if (!call || call.companyId !== args.companyId) return null;
     return call;
   },
 });

@@ -2428,7 +2428,10 @@ export default defineSchema({
     .index("by_connector_message", ["connectorId", "gmailMessageId"])
     .index("by_thread_replied", ["gmailThreadId", "repliedAt"])
     .index("by_connector_replied", ["connectorId", "repliedAt"])
-    .index("by_created", ["createdAt"]),
+    .index("by_created", ["createdAt"])
+    // The admin Mailbox screen (seven-gaps plan, phase 1): the handled
+    // mail was recorded from day one but had no screen; this is its door.
+    .index("by_company_created", ["companyId", "createdAt"]),
 
   // Global Tool Library
   aiTools: defineTable({

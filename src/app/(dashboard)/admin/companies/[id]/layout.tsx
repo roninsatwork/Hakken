@@ -30,8 +30,10 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  Inbox,
   MessageCircleQuestion,
   NotebookPen,
+  PhoneCall,
   CircleDollarSign,
 } from "lucide-react";
 import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
@@ -219,6 +221,19 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
             matchesCompanyRoute(pathname, `${aiHref}/chat-logs`)
             || matchesCompanyRoute(pathname, `${companyHref}/chat-logs`)
           ),
+        },
+        {
+          // Seeing the work (seven-gaps plan, phase 1): the calls the AI
+          // took, beside the chats it had.
+          label: "Calls",
+          href: `${companyHref}/calls`,
+          icon: PhoneCall,
+        },
+        {
+          // The mail it handled — recorded from day one, on a screen at last.
+          label: "Mailbox",
+          href: `${companyHref}/mailbox`,
+          icon: Inbox,
         },
       ],
     },

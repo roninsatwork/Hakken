@@ -3571,6 +3571,42 @@
     "subtitleCompany": "Every question this company's AI had no pages for.",
     "hintCompany": "Each row is real demand from this company's own conversations. Feed the wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering."
   },
+  "aiCalls": {
+    "title": "Calls",
+    "subtitle": "Every phone call this company's AI has taken.",
+    "searchPlaceholder": "Search calls...",
+    "columns": {
+      "caller": "Caller",
+      "about": "What it was about",
+      "status": "Status",
+      "when": "When",
+      "exchanges": "Exchanges"
+    },
+    "empty": "No calls",
+    "emptyState": "No calls yet. The first one will appear here the moment it rings.",
+    "emptyFiltered": "No calls match this search."
+  },
+  "aiMailbox": {
+    "title": "Mailbox",
+    "subtitle": "Every email this company's AI has seen, and what it did with each.",
+    "hint": "Sonae keeps the sender, the subject and its decision - never the body of the mail. To read a full conversation, open it in the connected inbox itself.",
+    "searchPlaceholder": "Search by sender or subject...",
+    "columns": {
+      "from": "From",
+      "subject": "Subject",
+      "decision": "What Sonae did",
+      "when": "When"
+    },
+    "decision": {
+      "PENDING": "Waiting",
+      "REPLIED": "Replied",
+      "TASK": "Made a task",
+      "SKIPPED": "Left alone"
+    },
+    "empty": "No mail",
+    "emptyState": "Nothing yet. When the connected inbox receives mail, it appears here.",
+    "emptyFiltered": "No mail matches this search."
+  },
   "aiDiary": {
     "title": "Diary",
     "subtitle": "What the platform's brain learned, newest first.",

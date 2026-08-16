@@ -3571,6 +3571,42 @@
     "subtitleCompany": "Ogni domanda per cui l'AI di questa azienda non aveva pagine.",
     "hintCompany": "Ogni riga è domanda reale dalle conversazioni di questa azienda. Alimenta il wiki e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire."
   },
+  "aiCalls": {
+    "title": "Chiamate",
+    "subtitle": "Ogni telefonata gestita dall'AI di questa azienda.",
+    "searchPlaceholder": "Cerca chiamate...",
+    "columns": {
+      "caller": "Chiamante",
+      "about": "Di cosa si trattava",
+      "status": "Stato",
+      "when": "Quando",
+      "exchanges": "Scambi"
+    },
+    "empty": "Nessuna chiamata",
+    "emptyState": "Ancora nessuna chiamata. La prima apparirà qui appena squilla.",
+    "emptyFiltered": "Nessuna chiamata corrisponde a questa ricerca."
+  },
+  "aiMailbox": {
+    "title": "Casella di posta",
+    "subtitle": "Ogni email vista dall'AI di questa azienda, e cosa ne ha fatto.",
+    "hint": "Sonae conserva mittente, oggetto e la sua decisione - mai il corpo del messaggio. Per leggere una conversazione completa, aprila nella casella collegata.",
+    "searchPlaceholder": "Cerca per mittente o oggetto...",
+    "columns": {
+      "from": "Da",
+      "subject": "Oggetto",
+      "decision": "Cosa ha fatto Sonae",
+      "when": "Quando"
+    },
+    "decision": {
+      "PENDING": "In attesa",
+      "REPLIED": "Ha risposto",
+      "TASK": "Ha creato un'attività",
+      "SKIPPED": "Lasciata stare"
+    },
+    "empty": "Nessuna email",
+    "emptyState": "Ancora niente. Quando la casella collegata riceve posta, appare qui.",
+    "emptyFiltered": "Nessuna email corrisponde a questa ricerca."
+  },
   "aiDiary": {
     "title": "Diario",
     "subtitle": "Cosa ha imparato il cervello della piattaforma, dal più recente.",
