@@ -64,7 +64,16 @@ export const crossLinkSweep = internalAction({
       companyId: args.companyId,
       limit: args.limit ?? 20,
     });
-    if (sparse.length === 0) {
+    // Orphan source documents join the round (Anthony's steer, 2026-08-16:
+    // "we should not have any orphans"): a page that taught no topics still
+    // gets read against the index and connected where a genuine relative
+    // exists. One that relates to nothing stays honestly alone — and rests
+    // a week before being asked again.
+    const orphans = await ctx.runQuery(internal.wikiPages.listOrphanSourceNotesInternal, {
+      companyId: args.companyId,
+      limit: 10,
+    });
+    if (sparse.length === 0 && orphans.length === 0) {
       await ctx.runMutation(internal.wikiPages.refreshHubPagesInternal, { companyId: args.companyId });
       return { linked: 0 };
     }
@@ -80,12 +89,12 @@ export const crossLinkSweep = internalAction({
       useCase: "fast-chat",
     });
     let linked = 0;
-    for (const page of sparse) {
+    for (const page of [...sparse, ...orphans]) {
       try {
         const response = await generateTextWithResolvedModel({
           model,
           systemInstruction:
-            'You connect one wiki page to its genuinely related pages. Reply with strict JSON, nothing else: {"related": [string]} — two to five names exactly as they appear in the list, best first. Related means a reader of this page would plausibly open that one next.',
+            'You connect one wiki page to its genuinely related pages. Reply with strict JSON, nothing else: {"related": [string]} — up to five names exactly as they appear in the list, best first. Related means a reader of this page would plausibly open that one next. Never force a connection: if nothing in the list is genuinely related, reply {"related": []}.',
           contents: [
             {
               type: "text",
@@ -108,7 +117,7 @@ export const crossLinkSweep = internalAction({
           if (!target) continue;
           await ctx.runMutation(internal.wikiPages.addLinksInternal, {
             companyId: args.companyId,
-            kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE",
+            kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE",
             subjectKey: page.subjectKey,
             add: [target.key],
           });
@@ -120,6 +129,20 @@ export const crossLinkSweep = internalAction({
             add: [`${page.kind}:${page.subjectKey}`],
           });
           linked += 1;
+        }
+        if (page.kind === "SOURCE") {
+          // Visited, whatever the outcome: an unrelatable page rests a week
+          // instead of costing a model call every night for ever.
+          const orphanPage = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
+            companyId: args.companyId,
+            kind: "SOURCE",
+            subjectKey: page.subjectKey,
+          });
+          if (orphanPage) {
+            await ctx.runMutation(internal.wikiTending.markTendedInternal, {
+              pageId: orphanPage._id,
+            });
+          }
         }
       } catch (error) {
         console.error("Cross-linking could not read a page; moving on", error);

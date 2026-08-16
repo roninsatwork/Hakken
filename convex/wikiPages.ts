@@ -684,6 +684,40 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
   },
 });
 
+/** Source documents with no connections at all — the Linker's orphan list
+ * (Anthony's steer, 2026-08-16: "we should not have any orphans"). A
+ * document that taught no topics floats alone on the map until the Linker
+ * reads it against the index. Visited notes rest a week (`lastTendedAt`),
+ * so a genuinely unrelatable page is not re-asked nightly forever. */
+export const listOrphanSourceNotesInternal = internalQuery({
+  args: { companyId: v.optional(v.id("companies")), limit: v.number() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<{ kind: string; subjectKey: string; title: string; excerpt: string }>> => {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(500);
+    const now = Date.now();
+    const restMs = 7 * 24 * 60 * 60 * 1000;
+    return pages
+      .filter(
+        (page) =>
+          page.kind === "SOURCE" &&
+          page.links.length === 0 &&
+          now - (page.lastTendedAt ?? 0) >= restMs
+      )
+      .slice(0, args.limit)
+      .map((page) => ({
+        kind: page.kind,
+        subjectKey: page.subjectKey,
+        title: page.title,
+        excerpt: page.content.slice(0, 900),
+      }));
+  },
+});
+
 /**
  * The hubs (Anthony's Obsidian steer, 2026-08-15): every wiki needs a
  * spine, and his vault's is its index pages — the directory every profile

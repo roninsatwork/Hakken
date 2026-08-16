@@ -219,6 +219,32 @@ describe("the global shelf", () => {
     );
   });
 
+  test("the Linker's orphan list: unlinked source documents, rested ones excluded", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      const base = {
+        companyId,
+        kind: "SOURCE" as const,
+        content: "A page.",
+        pinnedCorrections: [],
+        rewriteCount: 1,
+        lastRewriteSource: "DOCUMENT:x",
+        createdAt: now,
+        updatedAt: now,
+      };
+      await ctx.db.insert("wikiPages", { ...base, subjectKey: "doc-orphan", title: "orphan", links: [] });
+      await ctx.db.insert("wikiPages", { ...base, subjectKey: "doc-linked", title: "linked", links: ["POLICY:billing"] });
+      await ctx.db.insert("wikiPages", { ...base, subjectKey: "doc-rested", title: "rested", links: [], lastTendedAt: now });
+    });
+    const orphans = await t.query(internal.wikiPages.listOrphanSourceNotesInternal, {
+      companyId,
+      limit: 10,
+    });
+    expect(orphans.map((page) => page.subjectKey)).toEqual(["doc-orphan"]);
+  });
+
   test("a review-marked global document is readable by the Reviewer", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const documentId = await seedGlobalDocument(t, { wikiReviewRequested: true });

@@ -36,9 +36,9 @@ export const WIKI_STAFF = [
     systemKey: "WIKI_LINKER",
     name: "The Linker",
     description:
-      "Nightly and on catch-up: connects sparsely linked pages to their genuinely related pages, repairs dead links, and maintains the hub index pages every topic hangs off.",
+      "Nightly and on catch-up: connects sparsely linked pages to their genuinely related pages, reads orphan source documents against the index so nothing floats alone without reason, repairs dead links, and maintains the hub index pages every topic hangs off.",
     systemPrompt:
-      "You connect one wiki page to its genuinely related pages: given the page and the index of page names, name the two to five pages a reader would plausibly open next. Related means genuinely related — never force a connection, and never link a page to itself.",
+      "You connect one wiki page to its genuinely related pages: given the page and the index of page names, name up to five pages a reader would plausibly open next. Related means genuinely related — never force a connection, never link a page to itself, and if nothing is genuinely related say so with an empty list.",
   },
   {
     systemKey: "WIKI_REVIEWER",
