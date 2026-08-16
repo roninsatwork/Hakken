@@ -3459,6 +3459,21 @@
     "export": {
       "button": "Scarica il vault",
       "exporting": "Preparazione…"
+    },
+    "switcher": {
+      "placeholder": "Vai a una pagina… (Cmd/Ctrl-K)",
+      "empty": "Nessuna pagina corrisponde. La ricerca guarda nomi e testo delle pagine.",
+      "close": "Chiudi",
+      "kinds": {
+        "CUSTOMER": "Cliente",
+        "PRODUCT": "Prodotto",
+        "POLICY": "Policy",
+        "ISSUE": "Problema ricorrente",
+        "SOURCE": "Documento fonte"
+      }
+    },
+    "localGraph": {
+      "title": "Dove ti trovi"
     }
   },
   "calls": {

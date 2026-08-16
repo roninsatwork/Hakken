@@ -21,6 +21,7 @@ import {
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiImportBox } from "./WikiImportBox";
+import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 
 const PAGE_SIZE = 15;
 
@@ -182,6 +183,7 @@ export function WikiPagesListScreen({
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
+      <WikiQuickSwitcher companyId={companyId} basePath={basePath} />
       <AdminPageHeader
         icon={<BookOpen className="w-6 h-6 text-brand" />}
         title={companyId ? t("title") : t("globalTitle")}

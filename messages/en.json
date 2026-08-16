@@ -3459,6 +3459,21 @@
     "export": {
       "button": "Download vault",
       "exporting": "Packing…"
+    },
+    "switcher": {
+      "placeholder": "Jump to a page… (Cmd/Ctrl-K)",
+      "empty": "No pages match. The search looks at names and page text.",
+      "close": "Close",
+      "kinds": {
+        "CUSTOMER": "Customer",
+        "PRODUCT": "Product",
+        "POLICY": "Policy",
+        "ISSUE": "Recurring issue",
+        "SOURCE": "Source document"
+      }
+    },
+    "localGraph": {
+      "title": "Where you're standing"
     }
   },
   "calls": {

@@ -11,6 +11,8 @@ import { AdminSaveError, AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { WikiProse } from "./WikiProse";
+import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
+import { WikiLocalGraph } from "./WikiLocalGraph";
 
 /**
  * One page of the wiki, READ FIRST (Anthony's ruling, 2026-08-17: "an
@@ -117,6 +119,7 @@ export function WikiPageDetailScreen({
 
   return (
     <div className="flex flex-col gap-5 pb-12 w-full">
+      <WikiQuickSwitcher companyId={companyId} basePath={basePath} />
       {/* Breadcrumb road back. */}
       <div className="flex items-center gap-2 text-[12px] text-muted">
         <Link href={basePath} className="hover:text-foreground transition-colors flex items-center gap-1.5">
@@ -304,6 +307,18 @@ export function WikiPageDetailScreen({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Where you're standing: the page's own neighbourhood
+          (living-wiki plan, phase 2). */}
+      {!isEditing && (detail.resolvedLinks.length > 0 || detail.backlinks.length > 0) && (
+        <WikiLocalGraph
+          title={detail.title}
+          kind={detail.kind}
+          resolvedLinks={detail.resolvedLinks}
+          backlinks={detail.backlinks}
+          basePath={basePath}
+        />
       )}
 
       {/* The quiet strip: receipts, history, pinning — there when

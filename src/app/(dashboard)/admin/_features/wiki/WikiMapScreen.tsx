@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
+import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 
 /**
  * The map, Obsidian-grade (Anthony's steer, 2026-08-15): the shape comes
@@ -290,6 +291,7 @@ export function WikiMapScreen({
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
+      <WikiQuickSwitcher companyId={companyId} basePath={basePath} />
       <AdminPageHeader
         icon={<Network className="w-6 h-6 text-brand" />}
         title={t("map.title")}

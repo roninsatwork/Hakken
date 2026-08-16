@@ -939,6 +939,65 @@ export const getPageDetail = tenantQuery({
 });
 
 /**
+ * The quick switcher's read (living-wiki plan, phase 1): a few letters
+ * find any page, and each hit shows the sentence that matched so the
+ * reader knows why. Bounded scan of the scope's newest 500 — the same
+ * bound as every wiki screen — behind the same walls.
+ */
+async function searchRows(ctx: QueryCtx, companyId: WikiScope, term: string) {
+  const needle = term.trim().toLowerCase();
+  if (needle.length < 2) return [];
+  const pages = await ctx.db
+    .query("wikiPages")
+    .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .take(500);
+  const hits = [];
+  for (const page of pages) {
+    const inTitle =
+      page.title.toLowerCase().includes(needle) || page.subjectKey.toLowerCase().includes(needle);
+    const contentIndex = page.content.toLowerCase().indexOf(needle);
+    if (!inTitle && contentIndex === -1) continue;
+    let snippet = "";
+    if (contentIndex !== -1) {
+      const start = Math.max(0, contentIndex - 60);
+      snippet = `…${page.content
+        .slice(start, contentIndex + needle.length + 80)
+        .replace(/\s+/g, " ")
+        .trim()}…`;
+    }
+    hits.push({
+      pageId: page._id,
+      title: page.title,
+      kind: page.kind,
+      subjectKey: page.subjectKey,
+      snippet,
+      // Titles beat body hits; busier pages beat quiet ones.
+      rank: (inTitle ? 2 : 0) + Math.min((page.usageCount ?? 0) / 50, 1),
+    });
+  }
+  return hits
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, 12)
+    .map(({ rank: _rank, ...hit }) => hit);
+}
+
+export const searchPagesForCompany = adminQuery({
+  args: { companyId: v.id("companies"), term: v.string() },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    return await searchRows(ctx, args.companyId, args.term);
+  },
+});
+
+export const searchPagesForGlobal = adminQuery({
+  args: { term: v.string() },
+  handler: async (ctx, args) => {
+    assertPlatformWikiRead(ctx.user);
+    return await searchRows(ctx, undefined, args.term);
+  },
+});
+
+/**
  * "Your brain is yours" (Anthony's pick, 2026-08-17): everything needed
  * to write this scope's wiki out as an Obsidian vault — every page with
  * its receipts, links intact in the prose. The same walls as the list
