@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useConvex, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, BookOpen, Network, Pin, X } from "lucide-react";
+import { AlertTriangle, BookOpen, Download, Network, Pin, X } from "lucide-react";
+import { strToU8, zipSync } from "fflate";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
@@ -117,6 +118,58 @@ export function WikiPagesListScreen({
     : (rows ?? []);
   const visibleRows = orderedRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const NEVER_USED_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+  // "Your brain is yours": the vault is assembled right here in the
+  // browser — filenames are the subjectKeys, so every [[reference]]
+  // resolves the moment Obsidian opens the folder.
+  const convex = useConvex();
+  const [isExporting, setIsExporting] = useState(false);
+  const downloadVault = async () => {
+    setIsExporting(true);
+    try {
+      const pages = companyId
+        ? await convex.query(api.wikiPages.getExportForCompany, { companyId })
+        : await convex.query(api.wikiPages.getExportForGlobal, {});
+      const folders: Record<string, string> = {
+        CUSTOMER: "customers",
+        PRODUCT: "products",
+        POLICY: "policies",
+        ISSUE: "issues",
+        SOURCE: "sources",
+      };
+      const files: Record<string, Uint8Array> = {};
+      for (const page of pages) {
+        const safeName = page.subjectKey.replace(/[^\p{L}\p{N}._-]+/gu, "-").slice(0, 120);
+        const frontmatter = [
+          "---",
+          `title: ${JSON.stringify(page.title)}`,
+          `kind: ${page.kind}`,
+          `updated: ${new Date(page.updatedAt).toISOString().slice(0, 10)}`,
+          ...(page.sources.length
+            ? ["sources:", ...page.sources.map((label: string) => `  - ${JSON.stringify(label)}`)]
+            : []),
+          ...(page.pinnedCorrections.length
+            ? ["pinned:", ...page.pinnedCorrections.map((pin: string) => `  - ${JSON.stringify(pin)}`)]
+            : []),
+          "---",
+          "",
+        ].join("\n");
+        files[`${folders[page.kind] ?? "pages"}/${safeName}.md`] = strToU8(
+          frontmatter + page.content + "\n"
+        );
+      }
+      const zipped = zipSync(files);
+      const blob = new Blob([zipped.buffer as ArrayBuffer], { type: "application/zip" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = companyId ? "company-wiki-vault.zip" : "platform-wiki-vault.zip";
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const describeSource = (source: string) => {
     if (source.startsWith("PHONE_CALL:")) return t("sources.phone");
@@ -336,6 +389,15 @@ export function WikiPagesListScreen({
             placeholder={t("searchPlaceholder")}
           />
         </div>
+        <button
+          type="button"
+          onClick={() => void downloadVault()}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap disabled:opacity-50"
+        >
+          <Download className="w-4 h-4" />
+          {isExporting ? t("export.exporting") : t("export.button")}
+        </button>
         <Link
           href={`${basePath}/map`}
           className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap"

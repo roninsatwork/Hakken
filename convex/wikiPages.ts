@@ -938,6 +938,52 @@ export const getPageDetail = tenantQuery({
   },
 });
 
+/**
+ * "Your brain is yours" (Anthony's pick, 2026-08-17): everything needed
+ * to write this scope's wiki out as an Obsidian vault — every page with
+ * its receipts, links intact in the prose. The same walls as the list
+ * doors; the zip is assembled in the browser.
+ */
+async function exportRows(ctx: QueryCtx, companyId: WikiScope) {
+  const pages = await ctx.db
+    .query("wikiPages")
+    .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
+    .take(1000);
+  const result = [];
+  for (const page of pages) {
+    const sources = await ctx.db
+      .query("wikiPageSources")
+      .withIndex("by_page", (q) => q.eq("pageId", page._id))
+      .take(20);
+    result.push({
+      kind: page.kind,
+      subjectKey: page.subjectKey,
+      title: page.title,
+      content: page.content,
+      pinnedCorrections: page.pinnedCorrections.map((pin) => pin.text),
+      sources: sources.map((source) => source.label),
+      updatedAt: page.updatedAt,
+    });
+  }
+  return result;
+}
+
+export const getExportForCompany = adminQuery({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    return await exportRows(ctx, args.companyId);
+  },
+});
+
+export const getExportForGlobal = adminQuery({
+  args: {},
+  handler: async (ctx) => {
+    assertPlatformWikiRead(ctx.user);
+    return await exportRows(ctx, undefined);
+  },
+});
+
 /** The platform wiki is the super admin's alone to write; the read-only
  * console role may look. Company admins never see it from here — and a
  * company's wiki is never visible outside its own section (Anthony's

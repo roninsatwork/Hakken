@@ -3455,6 +3455,10 @@
         "FAILED": "failed",
         "NEEDS_REVIEW": "needs review"
       }
+    },
+    "export": {
+      "button": "Download vault",
+      "exporting": "Packing…"
     }
   },
   "calls": {

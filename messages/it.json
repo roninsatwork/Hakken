@@ -3455,6 +3455,10 @@
         "FAILED": "fallito",
         "NEEDS_REVIEW": "da rivedere"
       }
+    },
+    "export": {
+      "button": "Scarica il vault",
+      "exporting": "Preparazione…"
     }
   },
   "calls": {
