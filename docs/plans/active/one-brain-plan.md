@@ -1,6 +1,11 @@
 # One Brain — Saved Answers and Memory Fold Into the Wiki
 
-Status: **Planned 2026-08-17**, designs shared for approval before any build.
+Status: **Delivered 2026-08-17**, all three phases, and the road proven
+the same day: the Ronins demo workspace migrated (one searched memory →
+a pinned correction on the About this company page, cleaned of a
+title/content stutter the first pass exposed), the company stamped, its
+answers now reading one brain. Other companies remain unmigrated and
+untouched until their own runs.
 Owner: Anthony
 
 Anthony's question, looking at the company AI menu: *"is saved answers

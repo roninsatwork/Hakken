@@ -145,7 +145,13 @@ export const applyMigrationMoveInternal = internalMutation({
         )
         .unique();
       if (!page) return { moved: false, landedOn: "page not found" };
-      const text = `${memory.title}: ${memory.content}`.slice(0, 500);
+      // A memory whose title merely repeats its content pins once, not
+      // twice — "X: X" read like a stutter on the page.
+      const text = (
+        memory.content.trim().startsWith(memory.title.trim().replace(/[.:]$/, ""))
+          ? memory.content.trim()
+          : `${memory.title}: ${memory.content}`
+      ).slice(0, 500);
       // The same pin a person would make from the page screen: no user id
       // on the pin itself, attribution in the audit trail.
       if (!page.pinnedCorrections.some((pin) => pin.text === text)) {
