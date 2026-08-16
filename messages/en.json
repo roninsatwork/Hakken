@@ -3352,6 +3352,14 @@
         "foldSources": "{count, plural, =1 {Where this came from · 1 source} other {Where this came from · # sources}}",
         "foldHistory": "{count, plural, =1 {History · 1 change} other {History · # changes}}",
         "foldPin": "Pin a fact"
+      },
+      "health": {
+        "verified": "Verified {date}",
+        "neverVerified": "Not yet verified",
+        "openQuestions": "{count, plural, =1 {1 open question} other {# open questions}}",
+        "sources": "{count, plural, =1 {1 source} other {# sources}}",
+        "used": "{count, plural, =1 {Used in 1 answer} other {Used in # answers}}",
+        "neverUsed": "Not yet used"
       }
     },
     "kinds": {
@@ -3375,7 +3383,8 @@
       "tabs": {
         "website": "Website",
         "file": "File",
-        "text": "Text"
+        "text": "Text",
+        "vault": "Vault"
       },
       "websitePlaceholder": "Paste a website address and press Read it - Sonae will read it and write the pages",
       "textTitlePlaceholder": "What is this about? (a short title)",
@@ -3384,15 +3393,19 @@
       "feedback": {
         "website": "Found {count} pages. Sonae is reading them - the wiki below fills in as it goes.",
         "text": "Sonae is reading it - the wiki below updates when it has.",
-        "files": "{count, plural, =1 {File uploaded. Sonae is reading it.} other {# files uploaded. Sonae is reading them.}}"
+        "files": "{count, plural, =1 {File uploaded. Sonae is reading it.} other {# files uploaded. Sonae is reading them.}}",
+        "vault": "{count, plural, =1 {1 page} other {# pages}} from the vault are being read.",
+        "vaultSkipped": "{count, plural, =1 {1 page} other {# pages}} from the vault are being read; {skipped} non-markdown files skipped."
       },
       "errors": {
         "generic": "That did not go through. Try again.",
         "missingUrl": "Paste a website address first.",
         "missingText": "A title and some text are both needed.",
-        "missingFile": "Choose a file first."
+        "missingFile": "Choose a file first.",
+        "noMarkdown": "No markdown files found in what you picked."
       },
-      "reviewFirst": "Review before it writes - the wiki learns nothing from this import until you approve it"
+      "reviewFirst": "Review before it writes - the wiki learns nothing from this import until you approve it",
+      "vaultHint": "Drop an Obsidian vault here - a zip of the folder, or a handful of .md files. Every markdown page goes through the normal import: the wiki reads it, links and all. Anything that isn't markdown is skipped and counted."
     },
     "progress": {
       "title": "Sonae is reading",

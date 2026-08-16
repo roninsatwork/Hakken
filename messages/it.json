@@ -3352,6 +3352,14 @@
         "foldSources": "{count, plural, =1 {Da dove viene · 1 fonte} other {Da dove viene · # fonti}}",
         "foldHistory": "{count, plural, =1 {Cronologia · 1 modifica} other {Cronologia · # modifiche}}",
         "foldPin": "Fissa un fatto"
+      },
+      "health": {
+        "verified": "Verificata il {date}",
+        "neverVerified": "Non ancora verificata",
+        "openQuestions": "{count, plural, =1 {1 domanda aperta} other {# domande aperte}}",
+        "sources": "{count, plural, =1 {1 fonte} other {# fonti}}",
+        "used": "{count, plural, =1 {Usata in 1 risposta} other {Usata in # risposte}}",
+        "neverUsed": "Non ancora usata"
       }
     },
     "kinds": {
@@ -3375,7 +3383,8 @@
       "tabs": {
         "website": "Sito web",
         "file": "File",
-        "text": "Testo"
+        "text": "Testo",
+        "vault": "Vault"
       },
       "websitePlaceholder": "Incolla l'indirizzo di un sito e premi Leggilo — Sonae lo leggerà e scriverà le pagine",
       "textTitlePlaceholder": "Di cosa si tratta? (un titolo breve)",
@@ -3384,15 +3393,19 @@
       "feedback": {
         "website": "Trovate {count} pagine. Sonae le sta leggendo — il wiki qui sotto si riempie man mano.",
         "text": "Sonae lo sta leggendo — il wiki qui sotto si aggiorna quando ha finito.",
-        "files": "{count, plural, =1 {File caricato. Sonae lo sta leggendo.} other {# file caricati. Sonae li sta leggendo.}}"
+        "files": "{count, plural, =1 {File caricato. Sonae lo sta leggendo.} other {# file caricati. Sonae li sta leggendo.}}",
+        "vault": "{count, plural, =1 {1 pagina} other {# pagine}} del vault sono in lettura.",
+        "vaultSkipped": "{count, plural, =1 {1 pagina} other {# pagine}} del vault sono in lettura; {skipped} file non markdown saltati."
       },
       "errors": {
         "generic": "Non è andata a buon fine. Riprova.",
         "missingUrl": "Prima incolla l'indirizzo di un sito.",
         "missingText": "Servono sia un titolo sia del testo.",
-        "missingFile": "Prima scegli un file."
+        "missingFile": "Prima scegli un file.",
+        "noMarkdown": "Nessun file markdown trovato in ciò che hai scelto."
       },
-      "reviewFirst": "Rivedi prima che scriva — il wiki non impara nulla da questa importazione finché non la approvi"
+      "reviewFirst": "Rivedi prima che scriva — il wiki non impara nulla da questa importazione finché non la approvi",
+      "vaultHint": "Trascina qui un vault di Obsidian - uno zip della cartella o alcuni file .md. Ogni pagina markdown passa dall'importazione normale: il wiki la legge, link compresi. Ciò che non è markdown viene saltato e conteggiato."
     },
     "progress": {
       "title": "Sonae sta leggendo",

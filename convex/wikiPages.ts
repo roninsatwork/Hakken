@@ -891,9 +891,22 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
       quote: quoteFor(candidate.content),
     }));
 
+  // Health on the page (living-wiki plan, phase 3): the Freshness
+  // Checker's last verification rides on the row already; the open
+  // questions naming this page come from their own indexed shelf.
+  const openQuestions = await ctx.db
+    .query("wikiOpenQuestions")
+    .withIndex("by_company_status", (q) => q.eq("companyId", companyId).eq("status", "OPEN"))
+    .take(100);
+  const openQuestionCount = openQuestions.filter(
+    (question) => question.pageKeyA === myKey || question.pageKeyB === myKey
+  ).length;
+
   return {
     resolvedLinks,
     backlinks,
+    lastVerifiedAt: page.lastVerifiedAt ?? null,
+    openQuestionCount,
     pageId: page._id,
     kind: page.kind,
     sources: sources.map((source) => ({

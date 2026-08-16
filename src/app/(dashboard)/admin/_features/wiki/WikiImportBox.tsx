@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useAction, useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
-import { FileUp, Globe, Loader2, Type } from "lucide-react";
+import { FileUp, Globe, Loader2, Type, FolderOpen } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
@@ -32,7 +32,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const startKnowledgeFileQueue = useMutation(api.knowledge.startKnowledgeFileQueue);
 
   const scopeArgs = companyId ? { companyId } : {};
-  const [tab, setTab] = useState<"website" | "file" | "text">("website");
+  const [tab, setTab] = useState<"website" | "file" | "text" | "vault">("website");
   // The Reviewer's checkpoint (wiki-agents plan, phase 4): tick it and the
   // wiki writes nothing from this import until you approve the claims.
   // On the platform shelf the checkpoint starts ticked: anything imported
@@ -45,6 +45,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const vaultInputRef = useRef<HTMLInputElement>(null);
 
   const run = async (work: () => Promise<string>) => {
     setIsBusy(true);
@@ -109,10 +110,62 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       return t("feedback.files", { count: collected.length });
     });
 
+  // The Obsidian round trip (living-wiki plan, phase 4): a vault's
+  // markdown files, each through the SAME import road as everything
+  // else — the Distiller learns them, review-first honoured, [[links]]
+  // riding along in the text. Bounded; junk skipped and said so.
+  const VAULT_MAX_FILES = 300;
+  const importVault = (fileList: FileList | null) =>
+    run(async () => {
+      const picked = Array.from(fileList ?? []);
+      if (picked.length === 0) throw new Error(t("errors.missingFile"));
+      const markdownFiles: Array<{ name: string; text: string }> = [];
+      let skipped = 0;
+      for (const file of picked) {
+        if (file.name.toLowerCase().endsWith(".zip")) {
+          const { unzipSync, strFromU8 } = await import("fflate");
+          const entries = unzipSync(new Uint8Array(await file.arrayBuffer()));
+          for (const [path, bytes] of Object.entries(entries)) {
+            if (path.endsWith("/")) continue;
+            if (!path.toLowerCase().endsWith(".md")) {
+              skipped += 1;
+              continue;
+            }
+            markdownFiles.push({ name: path, text: strFromU8(bytes) });
+          }
+        } else if (file.name.toLowerCase().endsWith(".md")) {
+          markdownFiles.push({ name: file.name, text: await file.text() });
+        } else {
+          skipped += 1;
+        }
+      }
+      if (markdownFiles.length === 0) throw new Error(t("errors.noMarkdown"));
+      const bounded = markdownFiles.slice(0, VAULT_MAX_FILES);
+      for (const note of bounded) {
+        const title = note.name.replace(/\.md$/i, "").split("/").pop() ?? note.name;
+        const text = note.text.trim();
+        if (!text) {
+          skipped += 1;
+          continue;
+        }
+        await saveManualText({
+          ...scopeArgs,
+          title,
+          textContent: text.slice(0, 200_000),
+          wikiReview: reviewFirst,
+        });
+      }
+      if (vaultInputRef.current) vaultInputRef.current.value = "";
+      return skipped > 0
+        ? t("feedback.vaultSkipped", { count: bounded.length, skipped })
+        : t("feedback.vault", { count: bounded.length });
+    });
+
   const tabs = [
     { key: "website" as const, icon: Globe, label: t("tabs.website") },
     { key: "file" as const, icon: FileUp, label: t("tabs.file") },
     { key: "text" as const, icon: Type, label: t("tabs.text") },
+    { key: "vault" as const, icon: FolderOpen, label: t("tabs.vault") },
   ];
 
   return (
@@ -196,6 +249,22 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {t("readIt")}
           </AdminWriteButton>
+        </div>
+      )}
+
+      {tab === "vault" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-[12.5px] text-secondary">{t("vaultHint")}</p>
+          <input
+            ref={vaultInputRef}
+            type="file"
+            multiple
+            accept=".md,.zip"
+            disabled={isBusy}
+            onChange={(event) => void importVault(event.target.files)}
+            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-white file:text-[13px] file:font-medium file:cursor-pointer"
+          />
+          {isBusy && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
         </div>
       )}
 

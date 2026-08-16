@@ -1,8 +1,7 @@
 # The Living Wiki — Search, Bearings, Health, and the Round Trip
 
-Status: **Planned 2026-08-17**, building immediately on Anthony's "make
-a plan and do this". Four pieces from the calibrated brainstorm; the
-fifth idea raised there (a read-only handbook view for company staff)
+Status: **Delivered 2026-08-17**, all four phases, same day. The fifth
+idea from the brainstorm (a read-only handbook view for company staff)
 was a question about one of Anthony's standing rulings and stays
 unbuilt until he rules.
 Owner: Anthony

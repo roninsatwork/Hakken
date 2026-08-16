@@ -166,6 +166,38 @@ export function WikiPageDetailScreen({
         </span>
       </div>
 
+      {/* Health at a glance (living-wiki plan, phase 3): real fields
+          only — verification, open questions, receipts, use. */}
+      <div className="flex flex-wrap gap-2 -mt-1">
+        <span
+          className={`px-2.5 py-1 rounded-full border text-[11.5px] font-medium ${
+            detail.lastVerifiedAt
+              ? "border-info/40 bg-info/10 text-info"
+              : "border-border-dim text-muted"
+          }`}
+        >
+          {detail.lastVerifiedAt
+            ? t("health.verified", { date: new Date(detail.lastVerifiedAt).toLocaleDateString() })
+            : t("health.neverVerified")}
+        </span>
+        {detail.openQuestionCount > 0 && (
+          <Link
+            href={basePath}
+            className="px-2.5 py-1 rounded-full border border-warning/40 bg-warning/10 text-warning text-[11.5px] font-medium hover:opacity-80 transition-opacity"
+          >
+            {t("health.openQuestions", { count: detail.openQuestionCount })}
+          </Link>
+        )}
+        <span className="px-2.5 py-1 rounded-full border border-border-dim text-muted text-[11.5px] font-medium">
+          {t("health.sources", { count: detail.sources.length })}
+        </span>
+        <span className="px-2.5 py-1 rounded-full border border-border-dim text-muted text-[11.5px] font-medium">
+          {detail.usageCount > 0
+            ? t("health.used", { count: detail.usageCount })
+            : t("health.neverUsed")}
+        </span>
+      </div>
+
       <p className="text-[12.5px] text-muted -mt-2">
         {t("read.meta", {
           documents: documentSources,
