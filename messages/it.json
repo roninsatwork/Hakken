@@ -3523,5 +3523,31 @@
     "emptyFiltered": "Nulla corrisponde a questo filtro.",
     "subtitleCompany": "Ogni domanda per cui l'AI di questa azienda non aveva pagine.",
     "hintCompany": "Ogni riga è domanda reale dalle conversazioni di questa azienda. Alimenta il wiki e la riga si chiude da sola alla prossima domanda; ignora ciò che non vale la pena coprire."
+  },
+  "aiMoney": {
+    "title": "Valore",
+    "subtitleCompany": "Cosa ha gestito l'AI di questa azienda questo mese, e quanto vale all'incirca in tempo di una persona.",
+    "subtitleGlobal": "Cosa ha gestito ogni cervello della piattaforma questo mese, sommato.",
+    "tiles": {
+      "answered": "Conversazioni risposte",
+      "answeredDetail": "questo mese, dal wiki",
+      "calls": "Chiamate completate",
+      "callsDetail": "con riepiloghi e follow-up archiviati",
+      "widget": "Visitatori del widget serviti",
+      "widgetDetail": "conversazioni tramite il widget incorporato",
+      "unanswered": "Senza risposta",
+      "unansweredDetail": "in attesa nella schermata Senza risposta"
+    },
+    "worth": "≈ {hours, plural, =1 {1 ora} other {# ore}} di tempo di una persona questo mese",
+    "worthDetail": "{answered} conversazioni + {calls} chiamate, con l'ipotesi a destra",
+    "assumptions": {
+      "summary": "Ipotizza {perConversation} min per conversazione, {perCall} min per chiamata - clicca per cambiare",
+      "perConversation": "min / conversazione",
+      "perCall": "min / chiamata",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "cancel": "Annulla"
+    },
+    "honesty": "Ogni numero è un conteggio di eventi reali registrati. La riga delle ore è una stima costruita sull'ipotesi visibile sopra - modificala perché rispecchi quanto tempo servirebbe davvero al tuo team."
   }
 }

@@ -213,9 +213,13 @@ export const sendWeeklyReports = internalAction({
       });
       if (report.quiet) continue;
       const waiting = report.waitingReviews + report.waitingQuestions + report.openUnanswered;
+      // The money view's assumption, at its default: the weekly line is a
+      // taster; the Value screen carries the adjustable version.
+      const weeklyHours = Math.round((report.answered * 7) / 60);
       const body =
         `${report.pagesNew} new pages, ${report.pagesImproved} improved. ` +
-        `${report.answered} questions answered from the wiki, ${report.unanswered} it couldn't answer. ` +
+        `${report.answered} questions answered from the wiki, ${report.unanswered} it couldn't answer` +
+        (weeklyHours > 0 ? ` — roughly ${weeklyHours} hours of a person's time. ` : `. `) +
         `${report.staffRuns} staff rounds ran. ` +
         (waiting > 0 ? `${waiting} items waiting on a person.` : `Nothing waiting on anyone.`);
       const told = await ctx.runMutation(internal.wikiReport.notifyCompanyAdminsInternal, {

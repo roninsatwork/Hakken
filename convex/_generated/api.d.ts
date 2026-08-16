@@ -142,6 +142,7 @@ import type * as memoryMigration from "../memoryMigration.js";
 import type * as memoryMigrationActions from "../memoryMigrationActions.js";
 import type * as messageEvidence from "../messageEvidence.js";
 import type * as messageFeedback from "../messageFeedback.js";
+import type * as moneyView from "../moneyView.js";
 import type * as movements from "../movements.js";
 import type * as notifications from "../notifications.js";
 import type * as oneTimeCodeService from "../oneTimeCodeService.js";
@@ -407,6 +408,7 @@ declare const fullApi: ApiFromModules<{
   memoryMigrationActions: typeof memoryMigrationActions;
   messageEvidence: typeof messageEvidence;
   messageFeedback: typeof messageFeedback;
+  moneyView: typeof moneyView;
   movements: typeof movements;
   notifications: typeof notifications;
   oneTimeCodeService: typeof oneTimeCodeService;

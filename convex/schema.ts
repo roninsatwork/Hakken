@@ -78,6 +78,11 @@ export default defineSchema({
      * companyMemories for it (phase 2); absent means nothing has changed.
      */
     memoriesMigratedAt: v.optional(v.number()),
+    /** The money view's visible assumptions (money-view, 2026-08-17):
+     * minutes of a person's time per conversation and per call. Absent
+     * means the platform defaults. Never hidden maths. */
+    moneyMinutesPerConversation: v.optional(v.number()),
+    moneyMinutesPerCall: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_name", ["name"])

@@ -160,6 +160,12 @@ const workspaceTabs = [
     ),
   },
   {
+    label: "Value",
+    href: "/admin/ai/money",
+    icon: BarChart3,
+    matches: (pathname: string) => pathname.startsWith("/admin/ai/money"),
+  },
+  {
     label: "Chat Logs",
     href: "/admin/ai/usage/chat-logs",
     icon: MessageSquareText,

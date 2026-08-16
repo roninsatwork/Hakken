@@ -3523,5 +3523,31 @@
     "emptyFiltered": "Nothing matches this filter.",
     "subtitleCompany": "Every question this company's AI had no pages for.",
     "hintCompany": "Each row is real demand from this company's own conversations. Feed the wiki and the row closes itself the next time the question is asked; dismiss what isn't worth covering."
+  },
+  "aiMoney": {
+    "title": "Value",
+    "subtitleCompany": "What this company's AI handled this month, and roughly what that's worth in a person's time.",
+    "subtitleGlobal": "What every brain on the platform handled this month, added up.",
+    "tiles": {
+      "answered": "Conversations answered",
+      "answeredDetail": "this month, from the wiki",
+      "calls": "Calls completed",
+      "callsDetail": "with summaries and follow-ups filed",
+      "widget": "Widget visitors served",
+      "widgetDetail": "conversations through the embedded widget",
+      "unanswered": "Couldn't answer",
+      "unansweredDetail": "waiting on the Unanswered screen"
+    },
+    "worth": "≈ {hours, plural, =1 {1 hour} other {# hours}} of a person's time this month",
+    "worthDetail": "{answered} conversations + {calls} calls, at the assumption on the right",
+    "assumptions": {
+      "summary": "Assumes {perConversation} min per conversation, {perCall} min per call — click to change",
+      "perConversation": "min / conversation",
+      "perCall": "min / call",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel"
+    },
+    "honesty": "Every number is a count of real recorded events. The hours line is an estimate built from the visible assumption above - change it to match how long these would really take your team."
   }
 }

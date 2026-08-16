@@ -16,6 +16,7 @@ describe("AiWorkspaceNav", () => {
     render(<AiWorkspaceNav />);
 
     expect(screen.getByRole("link", { name: "Running Costs" })).toHaveAttribute("href", "/admin/ai/usage/costs");
+    expect(screen.getByRole("link", { name: "Value" })).toHaveAttribute("href", "/admin/ai/money");
     expect(screen.getByRole("link", { name: "Chat Logs" })).toHaveAttribute("href", "/admin/ai/usage/chat-logs");
     // Unanswered lives in the Instructions dropdown (Anthony, 2026-08-17).
     expect(screen.queryByRole("link", { name: "Unanswered" })).not.toBeInTheDocument();

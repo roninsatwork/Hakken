@@ -69,6 +69,7 @@ describe("CompanyDashboardLayout navigation", () => {
       // The company's Dashboard tab was an AI usage report under a name nobody
       // looking for AI usage would open. It lives here now.
       ["AI Usage", "/admin/companies/company123/ai/usage"],
+      ["Value", "/admin/companies/company123/ai/money"],
       // The wiki replaced Knowledge in this menu (wiki-replaces-knowledge
       // plan, stage three): importing and reading both live on the Wiki.
       ["Wiki", "/admin/companies/company123/ai/pages"],

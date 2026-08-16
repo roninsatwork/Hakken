@@ -31,6 +31,7 @@ import {
   UserPlus,
   Users,
   MessageCircleQuestion,
+  CircleDollarSign,
 } from "lucide-react";
 import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
 
@@ -131,6 +132,12 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           label: "AI Usage",
           href: `${aiHref}/usage`,
           icon: Activity,
+        },
+        {
+          // What the AI handled, in a person's hours (money view).
+          label: "Value",
+          href: `${aiHref}/money`,
+          icon: CircleDollarSign,
         },
         {
           // The wiki replaced Knowledge as the way this company knows things
