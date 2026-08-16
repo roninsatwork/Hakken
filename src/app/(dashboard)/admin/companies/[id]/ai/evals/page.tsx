@@ -78,6 +78,8 @@ export default function CompanyAiEvalsPage() {
   const companyId = params.id as Id<"companies">;
   const aiHref = `/admin/companies/${companyId}/ai`;
   const summary = useQuery(api.companyEvals.getSummary, { companyId });
+  const proposedCases = useQuery(api.wikiExamGrowth.listProposedCasesForCompany, { companyId }) ?? [];
+  const decideProposed = useMutation(api.wikiExamGrowth.decideProposedCaseForCompany);
   const deleteCase = useMutation(api.companyEvals.deleteCase);
   const createStarterCases = useMutation(api.companyEvals.createStarterCases);
   const runCheck = useAction(api.companyEvalRuns.runCheck);
@@ -212,6 +214,44 @@ export default function CompanyAiEvalsPage() {
 
       {/* The same table the Skill Center uses. This screen previously had a bespoke
           stack of rows carrying five uppercase machine constants each. */}
+      {proposedCases.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-[16px] border border-brand/30 bg-brand/5 p-5">
+          <span className="text-[14px] font-semibold text-foreground">
+            {proposedCases.length === 1
+              ? "1 drafted check from a real question"
+              : `${proposedCases.length} drafted checks from real questions`}
+          </span>
+          <p className="text-[12px] text-secondary">
+            The Examiner drafted these from questions people actually asked. A draft runs nothing
+            and gates nothing until you approve it; a rejected one never returns.
+          </p>
+          <ul className="flex flex-col divide-y divide-border-dim/60">
+            {proposedCases.map((draft) => (
+              <li key={draft.caseId} className="flex items-start justify-between gap-4 py-3">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <span className="text-[13px] font-medium text-foreground">“{draft.prompt}”</span>
+                  <span className="text-[12px] text-secondary line-clamp-2">{draft.expectedBehavior}</span>
+                </div>
+                <span className="flex items-center gap-2 shrink-0">
+                  <AdminWriteButton
+                    onClick={() => void decideProposed({ companyId, caseId: draft.caseId, approve: true })}
+                    className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Approve
+                  </AdminWriteButton>
+                  <AdminWriteButton
+                    onClick={() => void decideProposed({ companyId, caseId: draft.caseId, approve: false })}
+                    className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
+                  >
+                    Reject
+                  </AdminWriteButton>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <AdminTableShell
         minWidthClassName="min-w-[760px]"
         footer={cases.results.length > 0 ? (

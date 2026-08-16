@@ -1,6 +1,13 @@
 # Closing the Loop — the Wiki Learns From What People Ask
 
-Status: **Planned 2026-08-17**, designs shared for approval before any build.
+Status: **Delivered 2026-08-17**, all four phases, plus Anthony's
+mid-build ruling honoured: the loop runs at both levels where that is
+honest — usage marks and the This Week strip serve the platform shelf
+too — while the couldn't-answer list and the exam stay company-level,
+because questions are company data (his wall) and the platform shelf
+has no exam yet (the recorded bound). The Examiner joined the staff as
+its eighth member, per the standing rule that an auto-running AI worker
+is a real agent on the Agents screen.
 Owner: Anthony
 
 Anthony, after the one-brain fold: *"how can we make it stronger?"* The

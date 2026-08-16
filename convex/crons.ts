@@ -222,4 +222,13 @@ crons.weekly(
   {}
 );
 
+// The Examiner's month (closing-the-loop plan, phase 4): real questions
+// become drafted exam cases, waiting for a person on the Evals screen.
+crons.monthly(
+  "wiki-exam-growth",
+  { day: 1, hourUTC: 8, minuteUTC: 0 },
+  internal.wikiExamGrowthActions.examGrowthSweep,
+  {}
+);
+
 export default crons;

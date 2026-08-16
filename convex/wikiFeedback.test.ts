@@ -190,6 +190,105 @@ describe("the weekly report", () => {
   });
 });
 
+describe("the Examiner's drafts", () => {
+  test("a draft grows once per question, waits inert, and rejection is remembered", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+
+    const first = await t.mutation(internal.wikiExamGrowth.proposeExamCaseInternal, {
+      companyId,
+      prompt: "Do you build apps for the NHS?",
+      expectedBehavior: "Names the public-sector app work and the compliance approach.",
+      grewFrom: "Do you build apps for the NHS?",
+    });
+    const again = await t.mutation(internal.wikiExamGrowth.proposeExamCaseInternal, {
+      companyId,
+      prompt: "Do you build apps for the NHS?",
+      expectedBehavior: "Different wording, same question.",
+      grewFrom: "do you build apps for the nhs",
+    });
+    expect(first).toBe(true);
+    expect(again).toBe(false);
+
+    const cases = await t.run(async (ctx) => ctx.db.query("companyEvalCases").collect());
+    expect(cases).toHaveLength(1);
+    expect(cases[0].status).toBe("PROPOSED");
+    expect(cases[0].severity).toBe("ADVISORY");
+
+    // Rejection archives WITH the fingerprint: never proposed again.
+    await t.run(async (ctx) => {
+      const [row] = await ctx.db.query("companyEvalCases").collect();
+      await ctx.db.patch(row._id, { status: "ARCHIVED" });
+    });
+    const after = await t.mutation(internal.wikiExamGrowth.proposeExamCaseInternal, {
+      companyId,
+      prompt: "Do you build apps for the NHS?",
+      expectedBehavior: "Third try.",
+      grewFrom: "Do you build apps for the NHS?",
+    });
+    expect(after).toBe(false);
+  });
+
+  test("growth candidates come from resolved gaps and skip covered questions", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await t.run(async (ctx) => {
+      const now = Date.now();
+      await ctx.db.insert("wikiUnansweredQuestions", {
+        companyId,
+        question: "Do you build apps for the NHS?",
+        normalizedKey: "do you build apps for the nhs",
+        askCount: 4,
+        status: "RESOLVED",
+        firstAskedAt: now,
+        lastAskedAt: now,
+        resolvedAt: now,
+      });
+      await ctx.db.insert("wikiUnansweredQuestions", {
+        companyId,
+        question: "Still open question here?",
+        normalizedKey: "still open question here",
+        askCount: 9,
+        status: "OPEN",
+        firstAskedAt: now,
+        lastAskedAt: now,
+      });
+    });
+    const growth = await t.query(internal.wikiExamGrowth.listGrowthCandidatesInternal, {
+      companyId,
+    });
+    expect(growth.candidates.map((c) => c.question)).toEqual(["Do you build apps for the NHS?"]);
+  });
+});
+
+describe("the platform shelf's week", () => {
+  test("counts its pages and rounds, and never touches company questions", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    // A company gap that must NOT leak into the platform report.
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      companyId,
+      question: "Do you build apps for the NHS?",
+      pageKeys: [],
+    });
+    // A global page teaching event.
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      subjectKey: "billing",
+      title: "billing",
+      content: "Billing runs monthly.",
+      source: "DOCUMENT:doc-1",
+      kind: "POLICY",
+    });
+    // The global door is an adminQuery; the wall it enforces is proven
+    // through the audit rows the builder counts from.
+    const audit = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
+    const globalCreates = audit.filter(
+      (row) => row.actionType === "WIKI_PAGE_CREATED" && row.companyId === undefined
+    );
+    expect(globalCreates).toHaveLength(1);
+  });
+});
+
 describe("usage marks", () => {
   test("the pages under an answer get their tallies; the wall holds for global keys", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));

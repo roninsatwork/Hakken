@@ -83,10 +83,12 @@ export function WikiPagesListScreen({
     return row ? `${basePath}/${row.pageId}` : null;
   };
 
-  const weekReport = useQuery(
+  const companyWeek = useQuery(
     api.wikiReport.getWeeklyReportForCompany,
     companyId ? { companyId } : "skip"
   );
+  const globalWeek = useQuery(api.wikiReport.getWeeklyReportForGlobal, companyId ? "skip" : {});
+  const weekReport = companyId ? companyWeek : globalWeek;
 
   const unanswered =
     useQuery(
@@ -147,13 +149,14 @@ export function WikiPagesListScreen({
         {companyId ? t("hint") : t("globalHint")}
       </p>
 
-      {companyId && weekReport && !weekReport.quiet && (
+      {weekReport && !weekReport.quiet && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[16px] border border-border-dim bg-card/40 px-5 py-4">
           <span className="text-[12px] uppercase tracking-[0.1em] text-muted">{t("week.title")}</span>
           <span className="text-[13px] text-secondary">
             <span className="text-foreground font-medium tabular-nums">{weekReport.pagesNew + weekReport.pagesImproved}</span>{" "}
             {t("week.pages")}
           </span>
+          {companyId && (
           <span className="text-[13px] text-secondary">
             <span className="text-foreground font-medium tabular-nums">{weekReport.answered}</span>{" "}
             {t("week.answered")}
@@ -165,6 +168,7 @@ export function WikiPagesListScreen({
               </>
             )}
           </span>
+          )}
           <span className="text-[13px] text-secondary">
             <span className="text-foreground font-medium tabular-nums">{weekReport.staffRuns}</span>{" "}
             {t("week.staffRuns")}

@@ -1782,7 +1782,14 @@ export default defineSchema({
     requiredMemoriesJson: v.optional(v.string()),
     requiredSkillsJson: v.optional(v.string()),
     forbiddenClaimsJson: v.optional(v.string()),
-    status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED")),
+    // PROPOSED is the Examiner's shelf (closing-the-loop plan, phase 4):
+    // a drafted check that runs nothing and gates nothing until a person
+    // approves it. Every runner and gate selects ACTIVE by index, so a
+    // draft is inert by construction.
+    status: v.union(v.literal("ACTIVE"), v.literal("ARCHIVED"), v.literal("PROPOSED")),
+    /** Set on Examiner drafts: the normalised question it grew from, kept
+     * on rejection so the same question is never proposed twice. */
+    proposalFingerprint: v.optional(v.string()),
     lastRunId: v.optional(v.id("companyEvalRuns")),
     // Rolled up from the latest run so readiness and the summary never scan the
     // run table. Reading "the latest run per case" by taking 1000 runs and
@@ -1817,7 +1824,8 @@ export default defineSchema({
     // Must-pass cases drive the readiness gates, so they are selected by index
     // rather than by filtering every active case in memory.
     .index("by_company_status_severity", ["companyId", "status", "severity"])
-    .index("by_company_status_surface_severity", ["companyId", "status", "targetSurface", "severity"]),
+    .index("by_company_status_surface_severity", ["companyId", "status", "targetSurface", "severity"])
+    .index("by_company_fingerprint", ["companyId", "proposalFingerprint"]),
 
   companyEvalRuns: defineTable({
     companyId: v.id("companies"),

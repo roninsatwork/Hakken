@@ -30,7 +30,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function buildReport(
   ctx: { db: import("./_generated/server").QueryCtx["db"] },
-  companyId: Id<"companies">,
+  companyId: Id<"companies"> | undefined,
   since: number
 ): Promise<WeeklyReport> {
   const audit = await ctx.db
@@ -42,19 +42,27 @@ async function buildReport(
     (row) => row.actionType === "WIKI_PAGE_REWRITE" || row.actionType === "WIKI_PAGE_HUMAN_EDIT"
   ).length;
 
-  // The last seven day-rows; the key is lexicographic, so a range works.
+  // Answers and their gaps always belong to a company — the platform
+  // shelf has neither table (Anthony's wall: company questions never
+  // pool under a global heading).
   const sinceDay = new Date(since).toISOString().slice(0, 10);
-  const tallies = await ctx.db
-    .query("wikiAnswerTallies")
-    .withIndex("by_company_day", (q) => q.eq("companyId", companyId).gte("dayKey", sinceDay))
-    .take(14);
+  const tallies = companyId
+    ? await ctx.db
+        .query("wikiAnswerTallies")
+        .withIndex("by_company_day", (q) => q.eq("companyId", companyId).gte("dayKey", sinceDay))
+        .take(14)
+    : [];
   const answered = tallies.reduce((sum, row) => sum + row.answered, 0);
   const unanswered = tallies.reduce((sum, row) => sum + row.unanswered, 0);
 
-  const openUnansweredRows = await ctx.db
-    .query("wikiUnansweredQuestions")
-    .withIndex("by_company_status_asked", (q) => q.eq("companyId", companyId).eq("status", "OPEN"))
-    .take(100);
+  const openUnansweredRows = companyId
+    ? await ctx.db
+        .query("wikiUnansweredQuestions")
+        .withIndex("by_company_status_asked", (q) =>
+          q.eq("companyId", companyId).eq("status", "OPEN")
+        )
+        .take(100)
+    : [];
 
   // The staff's rounds this week: runs in the window whose agent is one
   // of the wiki staff (systemKey is the badge).
@@ -116,6 +124,18 @@ export const getWeeklyReportForCompany = adminQuery({
   handler: async (ctx, args): Promise<WeeklyReport> => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     return await buildReport(ctx, args.companyId, Date.now() - WEEK_MS);
+  },
+});
+
+/** The platform wiki's This Week strip: the parts of the week that exist
+ * at the shelf's level — pages, staff rounds, and what waits. */
+export const getWeeklyReportForGlobal = adminQuery({
+  args: {},
+  handler: async (ctx): Promise<WeeklyReport> => {
+    if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
+      throw new Error("Unauthorized access to the platform wiki");
+    }
+    return await buildReport(ctx, undefined, Date.now() - WEEK_MS);
   },
 });
 
