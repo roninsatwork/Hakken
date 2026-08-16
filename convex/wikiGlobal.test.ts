@@ -245,6 +245,50 @@ describe("the global shelf", () => {
     expect(orphans.map((page) => page.subjectKey)).toEqual(["doc-orphan"]);
   });
 
+  test("a refreshed original follows into its source page as a revision", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const documentId = await t.run(async (ctx) =>
+      ctx.db.insert("knowledgeDocuments", {
+        companyId,
+        title: "https://example.test/messy-page",
+        sourceUrl: "https://example.test/messy-page",
+        status: "ready",
+        format: "url",
+        textContent: "The clean second reading of the page.",
+        wikiDistilledAt: 123,
+        createdAt: Date.now(),
+      })
+    );
+    // The source note as the first messy reading left it.
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: documentId.toString(),
+      title: "https://example.test/messy-page",
+      text: "The messy first reading.",
+      sourceLabel: "Website · example.test/messy-page",
+    });
+
+    const fresh = await t.query(internal.wikiDistill.getRefreshableDocumentInternal, {
+      documentId,
+    });
+    expect(fresh?.text).toContain("clean second reading");
+
+    await t.mutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId,
+      documentId: documentId.toString(),
+      title: "https://example.test/messy-page",
+      text: fresh!.text,
+      sourceLabel: "Website · example.test/messy-page",
+    });
+    const [page] = await t.run(async (ctx) =>
+      (await ctx.db.query("wikiPages").collect()).filter((row) => row.kind === "SOURCE")
+    );
+    expect(page.content).toContain("clean second reading");
+    const revisions = await t.run(async (ctx) => ctx.db.query("wikiPageRevisions").collect());
+    expect(revisions.some((rev) => rev.content.includes("messy first"))).toBe(true);
+  });
+
   test("a review-marked global document is readable by the Reviewer", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const documentId = await seedGlobalDocument(t, { wikiReviewRequested: true });

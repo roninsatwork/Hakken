@@ -15,7 +15,7 @@ import { tenantQuery } from "./tenantFunctions";
  * answer rather than an empty frame implying the question was not asked.
  */
 
-type RuntimeEvidence = { skillIds?: string[]; sourceIds?: string[] };
+type RuntimeEvidence = { skillIds?: string[]; sourceIds?: string[]; wikiPageKeys?: string[] };
 type MemoryEvidence = {
   memories?: Array<{ memoryId?: string; title?: string; applyMode?: string; score?: number }>;
 };
@@ -69,6 +69,32 @@ export const getForMessage = tenantQuery({
       }
     }
 
+    // The wiki pages the answer stood on (watch-it-think plan, phase 1):
+    // recorded on every answer since the loop, shown at last. Company
+    // pages resolve behind the thread's own wall; global/-prefixed keys
+    // are the platform shelf's and say so. A page gone since the answer
+    // is skipped, as documents already are.
+    const wikiPages: Array<{ title: string; isPlatform: boolean }> = [];
+    for (const rawKey of runtime?.wikiPageKeys ?? []) {
+      const isPlatform = rawKey.startsWith("global/");
+      const key = isPlatform ? rawKey.slice("global/".length) : rawKey;
+      const separator = key.indexOf(":");
+      if (separator <= 0) continue;
+      const kind = key.slice(0, separator);
+      if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE"].includes(kind)) continue;
+      const page = await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q
+            .eq("companyId", isPlatform ? undefined : thread.companyId)
+            .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE")
+            .eq("subjectKey", key.slice(separator + 1))
+        )
+        .unique()
+        .catch(() => null);
+      if (page) wikiPages.push({ title: page.title, isPlatform });
+    }
+
     const memories = (memoryEvidence?.memories ?? [])
       .filter((memory) => Boolean(memory.title))
       .map((memory) => ({
@@ -83,9 +109,14 @@ export const getForMessage = tenantQuery({
       documents,
       memories,
       skills,
+      wikiPages,
       // The panel needs to distinguish "used nothing" from "we did not
       // record it", and only the first is worth stating plainly.
-      hasAny: documents.length > 0 || memories.length > 0 || skills.length > 0,
+      hasAny:
+        documents.length > 0 ||
+        memories.length > 0 ||
+        skills.length > 0 ||
+        wikiPages.length > 0,
     };
   },
 });

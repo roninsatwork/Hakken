@@ -2642,7 +2642,9 @@
         "memories": "Memorie applicate",
         "skills": "Competenze attive",
         "always": "sempre attiva",
-        "none": "Nulla è stato recuperato per questa risposta — deriva solo dal modello e dalle tue istruzioni."
+        "none": "Nulla è stato recuperato per questa risposta — deriva solo dal modello e dalle tue istruzioni.",
+        "wikiPages": "Pagine wiki alla base di questa risposta",
+        "wikiPlatform": "(piattaforma)"
       },
       "photoAction": {
         "heading": "Follow-up suggerito",
@@ -3351,7 +3353,9 @@
         "backlinks": "{count, plural, =1 {Cosa punta qui — 1 pagina} other {Cosa punta qui — # pagine}}",
         "foldSources": "{count, plural, =1 {Da dove viene · 1 fonte} other {Da dove viene · # fonti}}",
         "foldHistory": "{count, plural, =1 {Cronologia · 1 modifica} other {Cronologia · # modifiche}}",
-        "foldPin": "Fissa un fatto"
+        "foldPin": "Fissa un fatto",
+        "reread": "Rileggi l'originale",
+        "rereadQueued": "Rilettura in corso — la pagina si aggiornerà da sola"
       },
       "health": {
         "verified": "Verificata il {date}",

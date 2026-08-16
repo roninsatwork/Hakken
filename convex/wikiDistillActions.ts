@@ -176,6 +176,36 @@ export const backfillSourceNotes = internalAction({
   },
 });
 
+/**
+ * A re-ingested document the wiki has already read refreshes its SOURCE
+ * page (watch-it-think plan, phase 2): new text filed as a revision
+ * through the existing mechanical door, links re-synced, no model
+ * anywhere. The Distiller's read-once claim stays untouched — synthesis
+ * ran once; the full-import layer simply follows its original.
+ */
+export const refreshSourceNote = internalAction({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (ctx, args): Promise<void> => {
+    const document = await ctx.runQuery(internal.wikiDistill.getRefreshableDocumentInternal, {
+      documentId: args.documentId,
+    });
+    if (!document) return;
+    await ctx.runMutation(internal.wikiPages.upsertSourceNoteInternal, {
+      companyId: document.companyId ?? undefined,
+      documentId: args.documentId,
+      title: document.title,
+      text: document.text,
+      sourceLabel: document.sourceUrl
+        ? `Website · ${document.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
+        : `Document · ${document.title.slice(0, 80)}`,
+    });
+    await ctx.runMutation(internal.wikiPages.linkSourceNoteToTaughtPagesInternal, {
+      companyId: document.companyId ?? undefined,
+      documentId: args.documentId,
+    });
+  },
+});
+
 /** The on-ready hook: a document that just finished importing teaches the
  * wiki by itself. Scheduled from the ingestion landing in knowledge.ts. */
 export const distilNewDocument = internalAction({

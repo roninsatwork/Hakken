@@ -131,6 +131,35 @@ export const claimNextDistillBatchInternal = internalMutation({
   },
 });
 
+/** A document the wiki has already read, with its FRESH text — the
+ * source-note refresher's read (watch-it-think plan, phase 2). */
+export const getRefreshableDocumentInternal = internalQuery({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ companyId: Id<"companies"> | null; title: string; sourceUrl: string | null; text: string } | null> => {
+    const document = await ctx.db.get(args.documentId);
+    if (
+      !document ||
+      document.status !== "ready" ||
+      document.threadId ||
+      (!document.companyId && document.agentId) ||
+      document.wikiDistilledAt === undefined
+    ) {
+      return null;
+    }
+    const text = await distillableText(ctx, document);
+    if (!text.trim()) return null;
+    return {
+      companyId: document.companyId ?? null,
+      title: document.title,
+      sourceUrl: document.sourceUrl ?? null,
+      text,
+    };
+  },
+});
+
 /** Already-distilled documents with their text — the source-note backfill's
  * shopping list (wiki-agents plan, phase 3). Bounded and mechanical. */
 export const getDistilledDocumentsInternal = internalQuery({

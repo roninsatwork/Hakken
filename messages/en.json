@@ -2642,7 +2642,9 @@
         "memories": "Memories applied",
         "skills": "Skills in force",
         "always": "always on",
-        "none": "Nothing was retrieved for this answer — it came from the model and your instructions alone."
+        "none": "Nothing was retrieved for this answer — it came from the model and your instructions alone.",
+        "wikiPages": "Wiki pages this answer stood on",
+        "wikiPlatform": "(platform)"
       },
       "photoAction": {
         "heading": "Suggested follow-up",
@@ -3351,7 +3353,9 @@
         "backlinks": "{count, plural, =1 {What links here — 1 page} other {What links here — # pages}}",
         "foldSources": "{count, plural, =1 {Where this came from · 1 source} other {Where this came from · # sources}}",
         "foldHistory": "{count, plural, =1 {History · 1 change} other {History · # changes}}",
-        "foldPin": "Pin a fact"
+        "foldPin": "Pin a fact",
+        "reread": "Re-read the original",
+        "rereadQueued": "Re-reading — this page will update itself"
       },
       "health": {
         "verified": "Verified {date}",

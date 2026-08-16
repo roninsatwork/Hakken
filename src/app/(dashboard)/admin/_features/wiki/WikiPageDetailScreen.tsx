@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, History, Loader2, Pencil, Pin, X } from "lucide-react";
+import { ArrowLeft, History, Loader2, Pencil, Pin, RefreshCw, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AdminSaveError, AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
@@ -50,6 +50,9 @@ export function WikiPageDetailScreen({
   const pinCompany = useMutation(api.wikiPages.pinCorrectionForCompany);
   const unpinGlobal = useMutation(api.wikiPages.unpinCorrectionForGlobal);
   const unpinCompany = useMutation(api.wikiPages.unpinCorrectionForCompany);
+  const rereadCompany = useMutation(api.knowledge.rereadSourceForCompany);
+  const rereadGlobal = useMutation(api.knowledge.rereadSourceForGlobal);
+  const [rereadState, setRereadState] = useState<"idle" | "queued">("idle");
 
   const editContent = (content: string) =>
     companyId ? editCompany({ companyId, pageId, content }) : editGlobal({ pageId, content });
@@ -163,6 +166,22 @@ export function WikiPageDetailScreen({
             <History className="w-3.5 h-3.5" />
             {t("read.history")}
           </button>
+          {detail.kind === "SOURCE" && (
+            <AdminWriteButton
+              onClick={() =>
+                void run(async () => {
+                  if (companyId) await rereadCompany({ companyId, pageId });
+                  else await rereadGlobal({ pageId });
+                  setRereadState("queued");
+                })
+              }
+              disabled={isSaving || rereadState === "queued"}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] border border-border-dim text-secondary hover:text-foreground text-[13px] font-medium transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              {rereadState === "queued" ? t("read.rereadQueued") : t("read.reread")}
+            </AdminWriteButton>
+          )}
         </span>
       </div>
 

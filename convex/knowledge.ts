@@ -1369,6 +1369,58 @@ export const saveAnswerToWiki = tenantMutation({
   },
 });
 
+/**
+ * Re-read the original (watch-it-think plan, phase 2): one SOURCE
+ * page's web original re-scraped through the existing refresh road; the
+ * clean text then follows into the wiki via the ready-hook. Audited.
+ */
+async function requeueSourceCore(
+  ctx: import("./_generated/server").MutationCtx,
+  args: { companyId: Id<"companies"> | undefined; userId: Id<"users">; pageId: Id<"wikiPages"> }
+): Promise<void> {
+  const page = await ctx.db.get(args.pageId);
+  if (!page || page.companyId !== args.companyId || page.kind !== "SOURCE") {
+    throw new Error("Page not found.");
+  }
+  const document = await ctx.db.get(page.subjectKey as Id<"knowledgeDocuments">).catch(() => null);
+  if (!document || document.companyId !== args.companyId) throw new Error("The original document could not be found.");
+  if (!document.sourceUrl) throw new Error("This page has no web original to re-read.");
+  const now = Date.now();
+  await ctx.db.patch(document._id, {
+    status: "pending",
+    lastQueuedAt: now,
+    lastIngestionError: undefined,
+  });
+  await ctx.scheduler.runAfter(0, internal.knowledgeActions.processWebsiteQueue);
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_SOURCE_REREAD",
+    entityId: page._id.toString(),
+    entityType: "wikiPages",
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    timestamp: now,
+    metadata: JSON.stringify({ sourceUrl: document.sourceUrl.slice(0, 200) }),
+  });
+}
+
+export const rereadSourceForCompany = tenantMutation({
+  args: { companyId: v.id("companies"), pageId: v.id("wikiPages") },
+  handler: async (ctx, args) => {
+    const { user, userId } = ctx;
+    assertCanAccessKnowledgeScope(user, args.companyId);
+    await requeueSourceCore(ctx, { companyId: args.companyId, userId, pageId: args.pageId });
+  },
+});
+
+export const rereadSourceForGlobal = tenantMutation({
+  args: { pageId: v.id("wikiPages") },
+  handler: async (ctx, args) => {
+    const { user, userId } = ctx;
+    assertCanAccessKnowledgeScope(user, undefined);
+    await requeueSourceCore(ctx, { companyId: undefined, userId, pageId: args.pageId });
+  },
+});
+
 export const queueWebsiteUrls = tenantMutation({
   args: {
     companyId: v.optional(v.id("companies")),
@@ -1599,7 +1651,13 @@ export const saveChunksInternal = internalMutation({
           !readyDocument.threadId &&
           (readyDocument.companyId || !readyDocument.agentId)
         ) {
-          if (readyDocument.wikiReviewRequested) {
+          if (readyDocument.wikiDistilledAt !== undefined) {
+            // Already taught once: a refresh follows its original into the
+            // source-note layer, mechanically (watch-it-think, phase 2).
+            await ctx.scheduler.runAfter(0, internal.wikiDistillActions.refreshSourceNote, {
+              documentId: args.documentId,
+            });
+          } else if (readyDocument.wikiReviewRequested) {
             // The Reviewer's checkpoint (wiki-agents plan, phase 4): the
             // claims are prepared for a person; nothing is written until
             // they approve.

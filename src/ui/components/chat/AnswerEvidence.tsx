@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { ChevronDown, FileText, Lightbulb, Wrench } from "lucide-react";
+import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -39,6 +39,19 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
       {isOpen && evidence && (
         <div className="flex flex-col gap-3 border-l border-border-dim pl-3 text-[12px]">
           {!evidence.hasAny && <p className="text-muted leading-relaxed max-w-[34rem]">{t("none")}</p>}
+
+          {evidence.wikiPages.length > 0 && (
+            <EvidenceGroup icon={<BookOpen className="h-3 w-3" />} label={t("wikiPages")}>
+              {evidence.wikiPages.map((page) => (
+                <li key={`${page.isPlatform}-${page.title}`} className="text-secondary">
+                  {page.title.replace(/^https?:\/\//, "")}
+                  {page.isPlatform && (
+                    <span className="ml-1.5 text-muted">{t("wikiPlatform")}</span>
+                  )}
+                </li>
+              ))}
+            </EvidenceGroup>
+          )}
 
           {evidence.documents.length > 0 && (
             <EvidenceGroup icon={<FileText className="h-3 w-3" />} label={t("documents")}>
