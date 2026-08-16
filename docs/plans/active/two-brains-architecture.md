@@ -62,6 +62,11 @@ so it exposes nothing new.
   the platform brain's week goes to the super admins as one bell; and
   the Examiner works a platform round, drafting platform checks from
   the platform's resolved gaps.
+- **Gaps live on a dedicated Unanswered screen, at two heights**
+  (Anthony's rulings, 2026-08-17): each company's AI menu carries its
+  own, and the platform console reaches the cross-everything view
+  through the Instructions menu — every gap in one table, each row
+  naming whose it is. No panels.
 - **Platform checks are first-class.** `companyEvalCases` rows with no
   company are the platform's exam: super-admin only, run through a
   companyless thread against the global brain alone, PROPOSED drafts
