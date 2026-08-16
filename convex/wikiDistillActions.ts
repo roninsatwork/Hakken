@@ -29,7 +29,8 @@ type DistilResult = { pagesWritten: number; pagesImproved: number };
 async function distilOne(
   ctx: ActionCtx,
   args: {
-    companyId: Id<"companies">;
+    /** A company's brain, or (undefined) the global shelf. */
+    companyId: Id<"companies"> | undefined;
     documentId: string;
     title: string;
     sourceUrl: string | null;
@@ -148,7 +149,7 @@ async function distilOne(
  * calls — and idempotent, so re-running costs nothing.
  */
 export const backfillSourceNotes = internalAction({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<{ notes: number }> => {
     const batch = await ctx.runQuery(internal.wikiDistill.getDistilledDocumentsInternal, {
       companyId: args.companyId,
@@ -193,7 +194,7 @@ export const distilNewDocument = internalAction({
     let result: DistilResult = { pagesWritten: 0, pagesImproved: 0 };
     try {
       result = await distilOne(ctx, {
-        companyId: document.companyId,
+        companyId: document.companyId ?? undefined,
         documentId: args.documentId,
         title: document.title,
         sourceUrl: document.sourceUrl,
@@ -204,7 +205,7 @@ export const distilNewDocument = internalAction({
       return;
     }
     await ctx.runMutation(internal.wikiDistill.recordDistillProgressInternal, {
-      companyId: document.companyId,
+      companyId: document.companyId ?? undefined,
       documentsRead: 1,
       pagesWritten: result.pagesWritten,
       pagesImproved: result.pagesImproved,
@@ -212,7 +213,7 @@ export const distilNewDocument = internalAction({
     });
     await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
       systemKey: "WIKI_DISTILLER",
-      companyId: document.companyId,
+      companyId: document.companyId ?? undefined,
       trigger: "EVENT",
       objective: `A document finished importing: ${document.title.slice(0, 120)}`,
       summary: `Wrote ${result.pagesWritten} pages, improved ${result.pagesImproved}, plus the full source note.`,
@@ -241,7 +242,7 @@ export const distilSweep = internalAction({
 });
 
 export const distilCompanyBatch = internalAction({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<void> => {
     const batchStartedAt = Date.now();
     const batch = await ctx.runMutation(internal.wikiDistill.claimNextDistillBatchInternal, {

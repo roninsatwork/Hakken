@@ -18,11 +18,14 @@ export const getReviewableDocumentInternal = internalQuery({
   handler: async (
     ctx,
     args
-  ): Promise<{ companyId: Id<"companies">; title: string; text: string } | null> => {
+  ): Promise<{ companyId: Id<"companies"> | null; title: string; text: string } | null> => {
     const document = await ctx.db.get(args.documentId);
-    if (!document?.companyId || document.status !== "ready" || !document.wikiReviewRequested) {
+    if (!document || document.status !== "ready" || !document.wikiReviewRequested) {
       return null;
     }
+    // A company's document or the global shelf's; agent- and thread-scoped
+    // documents belong to neither brain and are never reviewed for one.
+    if (!document.companyId && (document.agentId || document.threadId)) return null;
     let text = document.textContent?.trim() ?? "";
     if (!text) {
       const chunks = await ctx.db
@@ -32,7 +35,7 @@ export const getReviewableDocumentInternal = internalQuery({
       text = chunks.map((chunk) => chunk.text).join("\n\n");
     }
     if (!text.trim()) return null;
-    return { companyId: document.companyId, title: document.title, text: text.slice(0, 8000) };
+    return { companyId: document.companyId ?? null, title: document.title, text: text.slice(0, 8000) };
   },
 });
 
@@ -46,7 +49,7 @@ export const clearReviewFlagInternal = internalMutation({
 
 export const fileReviewInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     documentId: v.id("knowledgeDocuments"),
     title: v.string(),
     claimsJson: v.string(),

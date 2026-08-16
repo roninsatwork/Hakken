@@ -24,13 +24,16 @@ const wikiKindValidator = v.union(
 
 type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE";
 
+/** A brain to read or write: a company's, or (absent) the global shelf. */
+type WikiScope = Id<"companies"> | undefined;
+
 /** A source note keeps a document substantially intact — far above the
  * briefing-note cap, and never sent through a model. */
 export const WIKI_SOURCE_NOTE_MAX_CHARS = 24_000;
 
 async function getPage(
   ctx: QueryCtx,
-  companyId: Id<"companies">,
+  companyId: WikiScope,
   kind: WikiKind,
   subjectKey: string
 ): Promise<Doc<"wikiPages"> | null> {
@@ -78,7 +81,7 @@ export const getCustomerPageInternal = internalQuery({
 });
 
 export const getPageOfKindInternal = internalQuery({
-  args: { companyId: v.id("companies"), kind: wikiKindValidator, subjectKey: v.string() },
+  args: { companyId: v.optional(v.id("companies")), kind: wikiKindValidator, subjectKey: v.string() },
   handler: async (ctx, args): Promise<Doc<"wikiPages"> | null> => {
     return await getPage(ctx, args.companyId, args.kind, args.subjectKey);
   },
@@ -88,7 +91,7 @@ export const getPageOfKindInternal = internalQuery({
  * whose receipts name the document gets linked to its source note, both
  * ways (wiki-agents plan, phase 3). Mechanical and idempotent. */
 export const linkSourceNoteToTaughtPagesInternal = internalMutation({
-  args: { companyId: v.id("companies"), documentId: v.string() },
+  args: { companyId: v.optional(v.id("companies")), documentId: v.string() },
   handler: async (ctx, args): Promise<void> => {
     const note = await getPage(ctx, args.companyId, "SOURCE", args.documentId);
     if (!note) return;
@@ -120,7 +123,7 @@ export const linkSourceNoteToTaughtPagesInternal = internalMutation({
  * the link recorded, as a set. The map is drawn from exactly this. */
 export const addLinksInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     kind: wikiKindValidator,
     subjectKey: v.string(),
     add: v.array(v.string()),
@@ -142,7 +145,7 @@ export const addLinksInternal = internalMutation({
  * anonymous caller must never be read another customer's page.
  */
 export const findTopicPagesForQueryInternal = internalQuery({
-  args: { companyId: v.id("companies"), query: v.string() },
+  args: { companyId: v.optional(v.id("companies")), query: v.string() },
   handler: async (ctx, args): Promise<string[]> => {
     const queryWords = new Set(
       args.query
@@ -182,7 +185,7 @@ export const findTopicPagesForQueryInternal = internalQuery({
  */
 export const getWikiAnswerContextInternal = internalQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     query: v.string(),
     includeCustomerPages: v.boolean(),
     maxChars: v.optional(v.number()),
@@ -286,7 +289,7 @@ export const getWikiAnswerContextInternal = internalQuery({
  */
 export const getWikiIndexInternal = internalQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     includeCustomerPages: v.boolean(),
     includeSourceNotes: v.optional(v.boolean()),
   },
@@ -317,7 +320,7 @@ export const getWikiIndexInternal = internalQuery({
  */
 export const upsertSourceNoteInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     documentId: v.string(),
     title: v.string(),
     text: v.string(),
@@ -379,7 +382,7 @@ export const upsertSourceNoteInternal = internalMutation({
  * picks validated against the wall before anything is read. */
 export const getPagesByKeysInternal = internalQuery({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     keys: v.array(v.string()),
     includeCustomerPages: v.boolean(),
     maxChars: v.optional(v.number()),
@@ -482,7 +485,7 @@ async function syncLinksFromContent(
  */
 async function upsertSourceReceipt(
   ctx: MutationCtx,
-  args: { pageId: Id<"wikiPages">; companyId: Id<"companies">; source: string; sourceLabel?: string }
+  args: { pageId: Id<"wikiPages">; companyId: WikiScope; source: string; sourceLabel?: string }
 ): Promise<void> {
   const parsed = parseSourceKey(args.source);
   if (!parsed || parsed.kind === "HUMAN") return;
@@ -514,7 +517,7 @@ async function upsertSourceReceipt(
 
 export const applyRewriteInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     subjectKey: v.string(),
     title: v.string(),
     content: v.string(),
@@ -527,6 +530,19 @@ export const applyRewriteInternal = internalMutation({
   handler: async (ctx, args): Promise<void> => {
     const kind = args.kind ?? "CUSTOMER";
     const now = Date.now();
+    if (!args.companyId && kind === "CUSTOMER") {
+      // The global shelf holds nothing company-specific, and customers are
+      // the most company-specific thing there is. Refused with a trace, not
+      // thrown — a thrown mutation would roll its own audit row back.
+      await ctx.db.insert("auditLogs", {
+        actionType: "WIKI_PAGE_REFUSED",
+        entityId: args.subjectKey,
+        entityType: "wikiPages",
+        timestamp: now,
+        metadata: JSON.stringify({ reason: "CUSTOMER pages cannot exist on the global shelf" }),
+      });
+      return;
+    }
     const content = args.content.slice(0, WIKI_PAGE_MAX_CHARS);
     const existing = await getPage(ctx, args.companyId, kind, args.subjectKey);
 
@@ -617,7 +633,7 @@ export const applyRewriteInternal = internalMutation({
 /** Topic pages still light on connections — the catch-up linker's list.
  * Hub index pages are mechanical and never sent to a model. */
 export const listSparselyLinkedTopicsInternal = internalQuery({
-  args: { companyId: v.id("companies"), limit: v.number() },
+  args: { companyId: v.optional(v.id("companies")), limit: v.number() },
   handler: async (
     ctx,
     args
@@ -654,7 +670,7 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
  * Always accurate, never costs a model call, and gives the map its centres.
  */
 export const refreshHubPagesInternal = internalMutation({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<void> => {
     const pages = await ctx.db
       .query("wikiPages")
@@ -715,7 +731,7 @@ export const refreshHubPagesInternal = internalMutation({
 // machine rewrite does, and the pinned layer is theirs alone.
 // ---------------------------------------------------------------------------
 
-async function listPagesRows(ctx: QueryCtx, companyId: Id<"companies">, search?: string) {
+async function listPagesRows(ctx: QueryCtx, companyId: WikiScope, search?: string) {
   const pages = await ctx.db
     .query("wikiPages")
     .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
@@ -746,7 +762,7 @@ async function listPagesRows(ctx: QueryCtx, companyId: Id<"companies">, search?:
     }));
 }
 
-async function pageDetailFor(ctx: QueryCtx, companyId: Id<"companies">, pageId: Id<"wikiPages">) {
+async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wikiPages">) {
   const page = await ctx.db.get(pageId);
   if (!page || page.companyId !== companyId) return null;
   const revisions = await ctx.db

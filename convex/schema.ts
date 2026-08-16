@@ -3210,7 +3210,10 @@ export default defineSchema({
    * survival by construction, not by prompt obedience.
    */
   wikiPages: defineTable({
-    companyId: v.id("companies"),
+    // Absent means the global brain (global-wiki-plan.md): the platform's
+    // own shelf, readable by every company's answers, holding nothing
+    // company-specific — the same convention knowledgeDocuments uses.
+    companyId: v.optional(v.id("companies")),
     // CUSTOMER pages are keyed by the salesDataCustomers accountNameKey and
     // born from matched calls and emails. The topic kinds (phase 5) are
     // named by the model as conversations touch them: what the company
@@ -3267,7 +3270,7 @@ export default defineSchema({
    */
   wikiPageSources: defineTable({
     pageId: v.id("wikiPages"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     kind: v.union(
       v.literal("DOCUMENT"),
       v.literal("PHONE_CALL"),
@@ -3294,7 +3297,7 @@ export default defineSchema({
    * screen while an import (or the one-time catch-up) is being read.
    */
   wikiDistillState: defineTable({
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     documentsRead: v.number(),
     pagesWritten: v.number(),
     pagesImproved: v.number(),
@@ -3310,7 +3313,7 @@ export default defineSchema({
    * and auto-resolved when the pages change so the claim no longer stands.
    */
   wikiOpenQuestions: defineTable({
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     kind: v.union(v.literal("CONTRADICTION"), v.literal("FRESHNESS")),
     pageKeyA: v.string(),
     claimA: v.string(),
@@ -3332,7 +3335,7 @@ export default defineSchema({
    * person's decision before the wiki learns anything from it.
    */
   wikiReviews: defineTable({
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     documentId: v.id("knowledgeDocuments"),
     title: v.string(),
     claimsJson: v.string(),
@@ -3351,7 +3354,7 @@ export default defineSchema({
    */
   wikiPageRevisions: defineTable({
     pageId: v.id("wikiPages"),
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     content: v.string(),
     source: v.string(),
     createdAt: v.number(),

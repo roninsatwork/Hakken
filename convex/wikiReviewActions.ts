@@ -54,14 +54,14 @@ export const prepareReview = internalAction({
     }
 
     await ctx.runMutation(internal.wikiReviews.fileReviewInternal, {
-      companyId: document.companyId,
+      companyId: document.companyId ?? undefined,
       documentId: args.documentId,
       title: document.title,
       claimsJson: JSON.stringify(claims),
     });
     await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
       systemKey: "WIKI_REVIEWER",
-      companyId: document.companyId,
+      companyId: document.companyId ?? undefined,
       trigger: "EVENT",
       objective: `A review-marked document arrived: ${document.title.slice(0, 120)}`,
       summary: `Prepared ${claims.length} claims for a person's decision. Nothing was written to the wiki.`,

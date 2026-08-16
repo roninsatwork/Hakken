@@ -24,7 +24,13 @@ export const listCompaniesWithPagesInternal = internalQuery({
     // Bounded: pages are created one conversation at a time; a scan of the
     // newest few hundred names every company with a living wiki.
     const pages = await ctx.db.query("wikiPages").order("desc").take(1000);
-    return [...new Set(pages.map((page) => page.companyId))];
+    // The global shelf (absent companyId) gets its own round in the staff's
+    // rotas rather than a slot in the company list.
+    return [
+      ...new Set(
+        pages.map((page) => page.companyId).filter((id): id is Id<"companies"> => Boolean(id))
+      ),
+    ];
   },
 });
 

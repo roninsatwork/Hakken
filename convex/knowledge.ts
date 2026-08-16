@@ -883,7 +883,7 @@ export const saveDocument = tenantMutation({
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
-    if (args.wikiReview) {
+    if (args.wikiReview ?? (!scope.companyId && !scope.agentId)) {
       await ctx.db.patch(documentId, { wikiReviewRequested: true });
     }
 
@@ -1265,7 +1265,7 @@ export const saveManualText = tenantMutation({
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
-    if (args.wikiReview) {
+    if (args.wikiReview ?? (!scope.companyId && !scope.agentId)) {
       await ctx.db.patch(documentId, { wikiReviewRequested: true });
     }
 
@@ -1498,7 +1498,7 @@ export const queueWebsiteUrls = tenantMutation({
           companyId: scope.companyId,
           agentId: scope.agentId,
         }));
-    if (args.wikiReview) {
+    if (args.wikiReview ?? (!scope.companyId && !scope.agentId)) {
       await ctx.db.patch(documentId, { wikiReviewRequested: true });
     }
         docIds.push(documentId);
@@ -1672,11 +1672,17 @@ export const saveChunksInternal = internalMutation({
         });
         // Importing IS how the wiki learns (wiki-replaces-knowledge plan,
         // stage one): every company document that becomes ready teaches the
-        // wiki by itself, no button anywhere. Thread uploads are one
-        // conversation's ephemera and stay out.
-        if (args.companyId && !args.threadId) {
-          const readyDocument = await ctx.db.get(args.documentId);
-          if (readyDocument?.wikiReviewRequested) {
+        // wiki by itself, no button anywhere — and the global shelf's
+        // documents teach the global brain the same way (global-wiki-plan).
+        // Thread uploads are one conversation's ephemera and agent-scoped
+        // documents belong to neither brain; both stay out.
+        const readyDocument = await ctx.db.get(args.documentId);
+        if (
+          readyDocument &&
+          !readyDocument.threadId &&
+          (readyDocument.companyId || !readyDocument.agentId)
+        ) {
+          if (readyDocument.wikiReviewRequested) {
             // The Reviewer's checkpoint (wiki-agents plan, phase 4): the
             // claims are prepared for a person; nothing is written until
             // they approve.

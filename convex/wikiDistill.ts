@@ -35,7 +35,9 @@ function isDistillable(document: Doc<"knowledgeDocuments">): boolean {
   return (
     document.status === "ready" &&
     !document.threadId &&
-    Boolean(document.companyId) &&
+    // A company's shelf, or the global one (global-wiki-plan.md, phase 1).
+    // Agent-scoped documents belong to neither brain and are never taught.
+    (Boolean(document.companyId) || !document.agentId) &&
     document.wikiDistilledAt === undefined &&
     // A review-marked document waits for its person (wiki-agents plan,
     // phase 4): the wiki learns nothing from it until approval clears it.
@@ -55,14 +57,14 @@ export const claimDocumentForDistillInternal = internalMutation({
   handler: async (
     ctx,
     args
-  ): Promise<{ companyId: Id<"companies">; title: string; sourceUrl: string | null; text: string } | null> => {
+  ): Promise<{ companyId: Id<"companies"> | null; title: string; sourceUrl: string | null; text: string } | null> => {
     const document = await ctx.db.get(args.documentId);
     if (!document || !isDistillable(document)) return null;
     await ctx.db.patch(document._id, { wikiDistilledAt: Date.now() });
     const text = await distillableText(ctx, document);
     if (!text.trim()) return null;
     return {
-      companyId: document.companyId!,
+      companyId: document.companyId ?? null,
       title: document.title,
       sourceUrl: document.sourceUrl ?? null,
       text,
@@ -78,7 +80,9 @@ export const listCompaniesWithUndistilledInternal = internalQuery({
     const documents = await ctx.db.query("knowledgeDocuments").order("desc").take(2000);
     const companies = new Set<Id<"companies">>();
     for (const document of documents) {
-      if (isDistillable(document)) companies.add(document.companyId!);
+      // The global shelf's backlog is the staff's global round, not a slot
+      // in the company list (global-wiki-plan.md, phase 4).
+      if (isDistillable(document) && document.companyId) companies.add(document.companyId);
     }
     return [...companies];
   },
@@ -87,7 +91,7 @@ export const listCompaniesWithUndistilledInternal = internalQuery({
 /** The sweep's claim: up to a batch of unread documents, stamped before any
  * model sees them. Two concurrent chains split the work instead of doubling it. */
 export const claimNextDistillBatchInternal = internalMutation({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (
     ctx,
     args
@@ -117,7 +121,7 @@ export const claimNextDistillBatchInternal = internalMutation({
 /** Already-distilled documents with their text — the source-note backfill's
  * shopping list (wiki-agents plan, phase 3). Bounded and mechanical. */
 export const getDistilledDocumentsInternal = internalQuery({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.optional(v.id("companies")) },
   handler: async (
     ctx,
     args
@@ -131,6 +135,9 @@ export const getDistilledDocumentsInternal = internalQuery({
       if (document.status !== "ready" || document.threadId || document.wikiDistilledAt === undefined) {
         continue;
       }
+      // Under the global scope the bare index also surfaces agent-scoped
+      // documents; they belong to neither brain.
+      if (!document.companyId && document.agentId) continue;
       const text = await distillableText(ctx, document);
       if (!text.trim()) continue;
       result.push({
@@ -146,7 +153,7 @@ export const getDistilledDocumentsInternal = internalQuery({
 
 export const recordDistillProgressInternal = internalMutation({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     documentsRead: v.number(),
     pagesWritten: v.number(),
     pagesImproved: v.number(),
@@ -185,14 +192,17 @@ export const recordDistillProgressInternal = internalMutation({
  */
 async function distillProgressFor(
   ctx: { db: import("./_generated/server").QueryCtx["db"] },
-  companyId: Id<"companies">
+  companyId: Id<"companies"> | undefined
 ) {
   const documents = await ctx.db
     .query("knowledgeDocuments")
     .withIndex("by_company", (q) => q.eq("companyId", companyId))
     .take(1000);
   const eligible = documents.filter(
-    (document) => document.status === "ready" && !document.threadId
+    (document) =>
+      document.status === "ready" &&
+      !document.threadId &&
+      (Boolean(document.companyId) || !document.agentId)
   );
   const remaining = eligible.filter((document) => document.wikiDistilledAt === undefined).length;
   const state = await ctx.db
