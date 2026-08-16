@@ -3415,6 +3415,14 @@
     "used": {
       "count": "{count, plural, =1 {1 answer} other {# answers}}",
       "never": "never used"
+    },
+    "week": {
+      "title": "This week",
+      "pages": "pages learned or improved",
+      "answered": "answered from the wiki",
+      "unanswered": "couldn't answer",
+      "staffRuns": "staff rounds",
+      "waiting": "{count, plural, =1 {1 item waiting on you} other {# items waiting on you}}"
     }
   },
   "calls": {

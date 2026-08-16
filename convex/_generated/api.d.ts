@@ -248,6 +248,7 @@ import type * as wikiFreshness from "../wikiFreshness.js";
 import type * as wikiFreshnessActions from "../wikiFreshnessActions.js";
 import type * as wikiPages from "../wikiPages.js";
 import type * as wikiQuestions from "../wikiQuestions.js";
+import type * as wikiReport from "../wikiReport.js";
 import type * as wikiReviewActions from "../wikiReviewActions.js";
 import type * as wikiReviews from "../wikiReviews.js";
 import type * as wikiRewriteEval from "../wikiRewriteEval.js";
@@ -510,6 +511,7 @@ declare const fullApi: ApiFromModules<{
   wikiFreshnessActions: typeof wikiFreshnessActions;
   wikiPages: typeof wikiPages;
   wikiQuestions: typeof wikiQuestions;
+  wikiReport: typeof wikiReport;
   wikiReviewActions: typeof wikiReviewActions;
   wikiReviews: typeof wikiReviews;
   wikiRewriteEval: typeof wikiRewriteEval;

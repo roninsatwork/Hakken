@@ -131,6 +131,65 @@ describe("the couldn't-answer list", () => {
   });
 });
 
+describe("the weekly report", () => {
+  test("counts real events and knows a quiet week from a busy one", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+
+    const quiet = await t.query(internal.wikiReport.buildWeeklyReportInternal, {
+      companyId,
+      since: Date.now() - 7 * 24 * 60 * 60 * 1000,
+    });
+    expect(quiet.quiet).toBe(true);
+
+    await seedPage(t, companyId);
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      companyId,
+      question: "Do you deliver on Sundays?",
+      pageKeys: ["POLICY:delivery"],
+    });
+    await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
+      companyId,
+      question: "Do you build apps for the NHS?",
+      pageKeys: [],
+    });
+
+    const busy = await t.query(internal.wikiReport.buildWeeklyReportInternal, {
+      companyId,
+      since: Date.now() - 7 * 24 * 60 * 60 * 1000,
+    });
+    expect(busy.quiet).toBe(false);
+    expect(busy.answered).toBe(1);
+    expect(busy.unanswered).toBe(1);
+    expect(busy.openUnanswered).toBe(1);
+  });
+
+  test("the rota tells each admin once and audits the send", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "admin@test.com", role: "ADMIN", companyId, createdAt: Date.now() })
+    );
+    await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "member@test.com", role: "USER", companyId, createdAt: Date.now() })
+    );
+
+    const told = await t.mutation(internal.wikiReport.notifyCompanyAdminsInternal, {
+      companyId,
+      title: "Your wiki's week",
+      body: "2 new pages.",
+    });
+    expect(told).toBe(1);
+
+    const notifications = await t.run(async (ctx) => ctx.db.query("notifications").collect());
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].userId).toBe(adminId);
+
+    const audit = await t.run(async (ctx) => ctx.db.query("auditLogs").collect());
+    expect(audit.some((row) => row.actionType === "WIKI_WEEKLY_REPORT_SENT")).toBe(true);
+  });
+});
+
 describe("usage marks", () => {
   test("the pages under an answer get their tallies; the wall holds for global keys", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));

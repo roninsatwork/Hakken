@@ -83,6 +83,11 @@ export function WikiPagesListScreen({
     return row ? `${basePath}/${row.pageId}` : null;
   };
 
+  const weekReport = useQuery(
+    api.wikiReport.getWeeklyReportForCompany,
+    companyId ? { companyId } : "skip"
+  );
+
   const unanswered =
     useQuery(
       api.wikiFeedback.listUnansweredForCompany,
@@ -141,6 +146,39 @@ export function WikiPagesListScreen({
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">
         {companyId ? t("hint") : t("globalHint")}
       </p>
+
+      {companyId && weekReport && !weekReport.quiet && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[16px] border border-border-dim bg-card/40 px-5 py-4">
+          <span className="text-[12px] uppercase tracking-[0.1em] text-muted">{t("week.title")}</span>
+          <span className="text-[13px] text-secondary">
+            <span className="text-foreground font-medium tabular-nums">{weekReport.pagesNew + weekReport.pagesImproved}</span>{" "}
+            {t("week.pages")}
+          </span>
+          <span className="text-[13px] text-secondary">
+            <span className="text-foreground font-medium tabular-nums">{weekReport.answered}</span>{" "}
+            {t("week.answered")}
+            {weekReport.unanswered > 0 && (
+              <>
+                {" · "}
+                <span className="text-foreground font-medium tabular-nums">{weekReport.unanswered}</span>{" "}
+                {t("week.unanswered")}
+              </>
+            )}
+          </span>
+          <span className="text-[13px] text-secondary">
+            <span className="text-foreground font-medium tabular-nums">{weekReport.staffRuns}</span>{" "}
+            {t("week.staffRuns")}
+          </span>
+          {weekReport.waitingReviews + weekReport.waitingQuestions + weekReport.openUnanswered > 0 && (
+            <span className="text-[13px] text-brand font-medium">
+              {t("week.waiting", {
+                count:
+                  weekReport.waitingReviews + weekReport.waitingQuestions + weekReport.openUnanswered,
+              })}
+            </span>
+          )}
+        </div>
+      )}
 
       <WikiImportBox companyId={companyId} />
 

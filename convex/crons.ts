@@ -212,4 +212,14 @@ crons.daily(
   { daysBack: 7 }
 );
 
+// One plain digest per company per week (closing-the-loop plan, phase 3):
+// what the wiki learned, what it couldn't answer, what the staff did, and
+// what waits on a person. Mechanical, and silent when there's nothing to say.
+crons.weekly(
+  "wiki-weekly-report",
+  { dayOfWeek: "monday", hourUTC: 7, minuteUTC: 0 },
+  internal.wikiReport.sendWeeklyReports,
+  {}
+);
+
 export default crons;

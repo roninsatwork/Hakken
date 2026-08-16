@@ -3373,6 +3373,20 @@ export default defineSchema({
     .index("by_company_key", ["companyId", "normalizedKey"]),
 
   /**
+   * One row per company per UTC day (closing-the-loop plan, phase 3):
+   * how many questions the wiki answered and how many it could not.
+   * Written by the same after-answer mutation that keeps the usage
+   * marks, so the weekly report counts real events, not estimates.
+   */
+  wikiAnswerTallies: defineTable({
+    companyId: v.id("companies"),
+    /** UTC day, "YYYY-MM-DD". */
+    dayKey: v.string(),
+    answered: v.number(),
+    unanswered: v.number(),
+  }).index("by_company_day", ["companyId", "dayKey"]),
+
+  /**
    * A pre-ingest review (wiki-agents plan, phase 4): what a marked
    * document claims and the pages the Reviewer proposes, held for a
    * person's decision before the wiki learns anything from it.

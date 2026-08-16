@@ -16,6 +16,28 @@ import {
  * mechanical: nothing here costs a model call.
  */
 
+async function bumpDayTally(
+  ctx: { db: import("./_generated/server").MutationCtx["db"] },
+  companyId: import("./_generated/dataModel").Id<"companies">,
+  outcome: "answered" | "unanswered"
+): Promise<void> {
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const row = await ctx.db
+    .query("wikiAnswerTallies")
+    .withIndex("by_company_day", (q) => q.eq("companyId", companyId).eq("dayKey", dayKey))
+    .unique();
+  if (row) {
+    await ctx.db.patch(row._id, { [outcome]: row[outcome] + 1 });
+  } else {
+    await ctx.db.insert("wikiAnswerTallies", {
+      companyId,
+      dayKey,
+      answered: outcome === "answered" ? 1 : 0,
+      unanswered: outcome === "unanswered" ? 1 : 0,
+    });
+  }
+}
+
 export const recordAnswerOutcomeInternal = internalMutation({
   args: {
     companyId: v.id("companies"),
@@ -26,6 +48,7 @@ export const recordAnswerOutcomeInternal = internalMutation({
   },
   handler: async (ctx, args): Promise<void> => {
     const now = Date.now();
+    await bumpDayTally(ctx, args.companyId, args.pageKeys.length > 0 ? "answered" : "unanswered");
 
     if (args.pageKeys.length > 0) {
       // The pages that carried the answer get their marks (phase 2).
