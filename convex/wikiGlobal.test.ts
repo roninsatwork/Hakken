@@ -128,6 +128,54 @@ describe("the global shelf", () => {
     expect(companyIndex.map((entry) => entry.key)).toEqual(["POLICY:delivery"]);
   });
 
+  test("the content-carried cutover: the probe flips when the first global page lands", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      subjectKey: "delivery",
+      title: "delivery",
+      content: "We deliver on Fridays.",
+      source: "DOCUMENT:doc-1",
+      kind: "POLICY",
+    });
+    // A company page alone does not flip it: the probe asks about the
+    // global shelf, not the wiki at large.
+    await expect(t.query(internal.wikiPages.hasGlobalWikiPagesInternal, {})).resolves.toBe(false);
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      subjectKey: "billing",
+      title: "billing",
+      content: "Billing runs monthly.",
+      source: "DOCUMENT:doc-2",
+      kind: "POLICY",
+    });
+    await expect(t.query(internal.wikiPages.hasGlobalWikiPagesInternal, {})).resolves.toBe(true);
+  });
+
+  test("the global shelf answers with its own name on the door", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      subjectKey: "billing",
+      title: "billing",
+      content: "Billing runs monthly on the first.",
+      source: "DOCUMENT:doc-1",
+      kind: "POLICY",
+    });
+    const read = await t.query(internal.wikiPages.getWikiAnswerContextInternal, {
+      query: "when does billing run",
+      includeCustomerPages: false,
+    });
+    expect(read.context).toContain("Platform wiki pages that apply to every company");
+    expect(read.context).toContain("Billing runs monthly");
+    expect(read.pageKeys).toEqual(["POLICY:billing"]);
+
+    const opened = await t.query(internal.wikiPages.getPagesByKeysInternal, {
+      keys: ["POLICY:billing"],
+      includeCustomerPages: false,
+    });
+    expect(opened.pageKeys).toEqual(["POLICY:billing"]);
+  });
+
   test("a review-marked global document is readable by the Reviewer", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const documentId = await seedGlobalDocument(t, { wikiReviewRequested: true });

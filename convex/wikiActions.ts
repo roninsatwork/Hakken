@@ -21,9 +21,13 @@ import {
  * purposes, never fragments. The mechanical word-match is the fallback when
  * the model call dies, so a provider outage degrades rather than silences.
  */
+/** Global page keys wear this in the combined index and the evidence, so
+ * the reader and the answer both show which brain a page came from. */
+const GLOBAL_KEY_PREFIX = "global/";
+
 export const selectWikiContextForQuery = internalAction({
   args: {
-    companyId: v.id("companies"),
+    companyId: v.optional(v.id("companies")),
     query: v.string(),
     includeCustomerPages: v.boolean(),
     maxChars: v.optional(v.number()),
@@ -32,17 +36,68 @@ export const selectWikiContextForQuery = internalAction({
     ctx,
     args
   ): Promise<{ context: string; pageKeys: string[] }> => {
-    const index = await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
-      companyId: args.companyId,
-      includeCustomerPages: args.includeCustomerPages,
-      // Synthesis first (the playbook's query order): the chooser picks
-      // from the tended pages. Fine print arrives through the hop — chosen
-      // pages link down to their source notes, and the reader follows.
-      // Offering all the source notes here was tried and measurably
-      // diluted the choosing (exam 16→14, 2026-08-15); do not repeat it.
-      includeSourceNotes: false,
-    });
+    const companyIndex = args.companyId
+      ? await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+          companyId: args.companyId,
+          includeCustomerPages: args.includeCustomerPages,
+          // Synthesis first (the playbook's query order): the chooser picks
+          // from the tended pages. Fine print arrives through the hop — chosen
+          // pages link down to their source notes, and the reader follows.
+          // Offering all the source notes here was tried and measurably
+          // diluted the choosing (exam 16→14, 2026-08-15); do not repeat it.
+          includeSourceNotes: false,
+        })
+      : [];
+    // The global brain fills gaps and never overrules (global-wiki-plan.md,
+    // rule 3): a global page on a subject the company's own wiki covers is
+    // dropped before the chooser ever sees it.
+    const companyKeys = new Set(companyIndex.map((entry) => entry.key));
+    const globalIndex = (
+      await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+        includeCustomerPages: false,
+        includeSourceNotes: false,
+      })
+    ).filter((entry) => !companyKeys.has(entry.key));
+    const index = [
+      ...companyIndex,
+      ...globalIndex.map((entry) => ({ ...entry, key: `${GLOBAL_KEY_PREFIX}${entry.key}` })),
+    ];
     if (index.length === 0) return { context: "", pageKeys: [] };
+
+    const budget = args.maxChars ?? 14_000;
+    // Both shelves opened, the company's first and with first claim on the
+    // budget; the global picks take what remains.
+    const openBothShelves = async (keys: string[]): Promise<{ context: string; pageKeys: string[] }> => {
+      const ownKeys = keys.filter((key) => !key.startsWith(GLOBAL_KEY_PREFIX));
+      const globalKeys = keys
+        .filter((key) => key.startsWith(GLOBAL_KEY_PREFIX))
+        .map((key) => key.slice(GLOBAL_KEY_PREFIX.length));
+      const own =
+        ownKeys.length > 0 && args.companyId
+          ? await ctx.runQuery(internal.wikiPages.getPagesByKeysInternal, {
+              companyId: args.companyId,
+              keys: ownKeys,
+              includeCustomerPages: args.includeCustomerPages,
+              maxChars: budget,
+            })
+          : { context: "", pageKeys: [] };
+      const remaining = budget - own.context.length;
+      const globalPart =
+        globalKeys.length > 0 && remaining > 400
+          ? await ctx.runQuery(internal.wikiPages.getPagesByKeysInternal, {
+              keys: globalKeys,
+              includeCustomerPages: false,
+              maxChars: remaining,
+            })
+          : { context: "", pageKeys: [] };
+      return {
+        context: [own.context, globalPart.context].filter(Boolean).join("\n\n"),
+        pageKeys: [
+          ...own.pageKeys,
+          ...globalPart.pageKeys.map((key) => `${GLOBAL_KEY_PREFIX}${key}`),
+        ],
+      };
+    };
 
     try {
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
@@ -51,7 +106,7 @@ export const selectWikiContextForQuery = internalAction({
       const response = await generateTextWithResolvedModel({
         model,
         systemInstruction:
-          'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
+          'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Keys starting "global/" are the platform\'s shared pages — real answers, used when the company\'s own pages do not cover the question. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
         contents: [
           {
             type: "text",
@@ -67,24 +122,35 @@ export const selectWikiContextForQuery = internalAction({
       const keys = (Array.isArray(parsed.pages) ? parsed.pages : [])
         .filter((key): key is string => typeof key === "string" && valid.has(key))
         .slice(0, 4);
-      if (keys.length > 0) {
-        return await ctx.runQuery(internal.wikiPages.getPagesByKeysInternal, {
-          companyId: args.companyId,
-          keys,
-          includeCustomerPages: args.includeCustomerPages,
-          ...(args.maxChars !== undefined ? { maxChars: args.maxChars } : {}),
-        });
-      }
+      if (keys.length > 0) return await openBothShelves(keys);
       // The model read the index and found nothing: believe it.
       return { context: "", pageKeys: [] };
     } catch (error) {
       console.error("Wiki index reading failed; falling back to word match", error);
-      return await ctx.runQuery(internal.wikiPages.getWikiAnswerContextInternal, {
-        companyId: args.companyId,
-        query: args.query,
-        includeCustomerPages: args.includeCustomerPages,
-        ...(args.maxChars !== undefined ? { maxChars: args.maxChars } : {}),
-      });
+      const own = args.companyId
+        ? await ctx.runQuery(internal.wikiPages.getWikiAnswerContextInternal, {
+            companyId: args.companyId,
+            query: args.query,
+            includeCustomerPages: args.includeCustomerPages,
+            maxChars: budget,
+          })
+        : { context: "", pageKeys: [] };
+      const remaining = budget - own.context.length;
+      const globalPart =
+        globalIndex.length > 0 && remaining > 400
+          ? await ctx.runQuery(internal.wikiPages.getWikiAnswerContextInternal, {
+              query: args.query,
+              includeCustomerPages: false,
+              maxChars: remaining,
+            })
+          : { context: "", pageKeys: [] };
+      return {
+        context: [own.context, globalPart.context].filter(Boolean).join("\n\n"),
+        pageKeys: [
+          ...own.pageKeys,
+          ...globalPart.pageKeys.map((key) => `${GLOBAL_KEY_PREFIX}${key}`),
+        ],
+      };
     }
   },
 });

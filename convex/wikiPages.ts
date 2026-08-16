@@ -273,7 +273,11 @@ export const getWikiAnswerContextInternal = internalQuery({
     }
     return {
       context: parts.length
-        ? `Company wiki pages that apply here (tended by Sonae, corrected by staff):\n\n${parts.join("\n\n---\n\n")}`
+        ? `${
+            args.companyId
+              ? "Company wiki pages that apply here (tended by Sonae, corrected by staff)"
+              : "Platform wiki pages that apply to every company (tended by Sonae)"
+          }:\n\n${parts.join("\n\n---\n\n")}`
         : "",
       pageKeys,
     };
@@ -429,10 +433,28 @@ export const getPagesByKeysInternal = internalQuery({
     }
     return {
       context: parts.length
-        ? `Company wiki pages that apply here (tended by Sonae, corrected by staff):\n\n${parts.join("\n\n---\n\n")}`
+        ? `${
+            args.companyId
+              ? "Company wiki pages that apply here (tended by Sonae, corrected by staff)"
+              : "Platform wiki pages that apply to every company (tended by Sonae)"
+          }:\n\n${parts.join("\n\n---\n\n")}`
         : "",
       pageKeys,
     };
+  },
+});
+
+/** Whether the global brain holds anything yet — the content-carried
+ * cutover switch (global-wiki-plan.md, phase 2): while this is false, the
+ * old global chunk search still serves; the first global page retires it. */
+export const hasGlobalWikiPagesInternal = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<boolean> => {
+    const first = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", undefined))
+      .first();
+    return first !== null;
   },
 });
 

@@ -374,7 +374,14 @@ export const generateSonaeResponse = internalAction({
                 // Multi-tier hybrid search (vector + keyword, fused per scope).
                 // Company knowledge is the wiki's job when the stage-three
                 // switch is on (wiki-replaces-knowledge plan); the chunk
-                // search then serves only global and thread scopes.
+                // search then serves only global and thread scopes — and the
+                // global arm retires too once the global brain holds pages
+                // (global-wiki-plan, phase 2), the same cutover carried by
+                // content instead of a button.
+                const wikiAnswers = Boolean(thread?.companyId && companyAnswersFromWiki(company));
+                const globalWikiServes =
+                    wikiAnswers &&
+                    (await ctx.runQuery(internal.wikiPages.hasGlobalWikiPagesInternal, {}));
                 const [companyChunks, globalChunks, threadChunks] = await Promise.all([
                     thread?.companyId && !companyAnswersFromWiki(company)
                       ? searchKnowledgeScope(ctx, {
@@ -385,7 +392,9 @@ export const generateSonaeResponse = internalAction({
                           priorCompanyId: thread.companyId,
                         })
                       : Promise.resolve([]),
-                    searchKnowledgeScope(ctx, {
+                    globalWikiServes
+                      ? Promise.resolve([])
+                      : searchKnowledgeScope(ctx, {
                         queryVector,
                         queryText: args.content,
                         scope: { kind: "global" },
@@ -1005,6 +1014,12 @@ export const searchKnowledgeForVoiceInternal = internalAction({
       });
       if (!queryVector) return { context: "" };
 
+      // Spoken answers retire the global chunk arm on the same content-
+      // carried cutover as typed ones (global-wiki-plan, phase 2).
+      const voiceGlobalWikiServes =
+        Boolean(companyId) &&
+        knowledgeMode === "wiki" &&
+        (await ctx.runQuery(internal.wikiPages.hasGlobalWikiPagesInternal, {}));
       const [companyChunks, globalChunks, threadChunks] = await Promise.all([
         companyId && knowledgeMode === "chunks"
           ? searchKnowledgeScope(ctx, {
@@ -1015,7 +1030,9 @@ export const searchKnowledgeForVoiceInternal = internalAction({
               priorCompanyId: companyId,
             })
           : Promise.resolve([]),
-        searchKnowledgeScope(ctx, {
+        voiceGlobalWikiServes
+          ? Promise.resolve([])
+          : searchKnowledgeScope(ctx, {
           queryVector,
           queryText: query,
           scope: { kind: "global" },
