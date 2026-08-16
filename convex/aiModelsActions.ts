@@ -1,8 +1,7 @@
 "use node";
-import { action, internalAction, type ActionCtx } from "./_generated/server";
+import { internalAction, type ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { requireActionSuperAdmin } from "./actionAuth";
 import {
   ANTHROPIC_PROVIDER_KEY,
   EMBEDDING_MODEL_USE_CASE,
