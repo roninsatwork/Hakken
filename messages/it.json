@@ -1366,7 +1366,8 @@
             "noTransactions": "Nessuna Transazione",
             "noTransactionsDesc": "Inizia a eseguire task con questo agent per vedere la telemetria live.",
             "seedButton": "Genera Dati di Esempio",
-            "loadMore": "Carica Altri"
+            "loadMore": "Carica Altri",
+            "searchPlaceholder": "Cerca per attività o modello"
           }
         },
         "settings": {
@@ -3775,7 +3776,8 @@
     "filter": {
       "all": "Tutto"
     },
-    "emptyFiltered": "Ancora niente di questo tipo."
+    "emptyFiltered": "Ancora niente di questo tipo.",
+    "searchPlaceholder": "Cerca nel diario per pagina o dettaglio"
   },
   "aiMoney": {
     "title": "Valore",

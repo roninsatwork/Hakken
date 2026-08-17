@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { useState } from "react";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatTime } from "@/src/lib/dates";
@@ -35,9 +36,23 @@ export default function AgentDashboard() {
     { initialNumItems: TABLE_PAGE_SIZE }
   );
 
-  const pagedRuns = usePagedRows(results, {
+  const [runSearch, setRunSearch] = useState("");
+
+  /*
+    Narrows the runs already fetched rather than asking the server, because the
+    transactions query takes no search argument. Enough to find a run you can
+    see; it will not reach back through pages you have not loaded.
+  */
+  const runNeedle = runSearch.trim().toLowerCase();
+  const matchedRuns = runNeedle
+    ? results.filter((tx) =>
+        `${tx.actionContext ?? ""} ${tx.modelUsed ?? ""}`.toLowerCase().includes(runNeedle))
+    : results;
+
+  const pagedRuns = usePagedRows(matchedRuns, {
     canLoadMore: status === "CanLoadMore",
     loadMore,
+    resetKey: runSearch,
   });
 
 
@@ -105,6 +120,11 @@ export default function AgentDashboard() {
         className="mt-2"
         minWidthClassName="min-w-[800px]"
         headerVariant="strip"
+        search={{
+          value: runSearch,
+          onChange: setRunSearch,
+          placeholder: t("table.searchPlaceholder"),
+        }}
         empty={{
           icon: <Activity className="w-8 h-8 text-muted/30" />,
           label: t("table.noTransactions"),

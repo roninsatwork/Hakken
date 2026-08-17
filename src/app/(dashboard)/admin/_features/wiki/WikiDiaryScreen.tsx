@@ -56,6 +56,7 @@ export function WikiDiaryScreen({
 }) {
   const t = useTranslations("aiDiary");
   const [action, setAction] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
 
   const filterArgs = action === "ALL" ? {} : { action };
   const companyEntries = useServerPagedTable(
@@ -67,6 +68,18 @@ export function WikiDiaryScreen({
     companyId ? "skip" : filterArgs
   );
   const entries = companyId ? companyEntries : globalEntries;
+
+  /*
+    Searched here rather than in the query, and that is a real limit worth
+    stating: the diary query filters by action only, so this narrows the page
+    already fetched. Good enough to find a page you remember touching; it will
+    not reach back through pages you have not loaded.
+  */
+  const needle = search.trim().toLowerCase();
+  const visibleEntries = needle
+    ? entries.rows.filter((entry) =>
+        `${entry.pageTitle ?? ""} ${entry.detail ?? ""}`.toLowerCase().includes(needle))
+    : entries.rows;
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
@@ -84,9 +97,10 @@ export function WikiDiaryScreen({
       </p>
 
       <DataTable
-        rows={entries.isLoading ? undefined : entries.rows}
+        rows={entries.isLoading ? undefined : visibleEntries}
         rowKey={(entry, ) => `${entry.at}-${entry.action}-${entry.pageId ?? ""}`}
         minWidthClassName="min-w-[760px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <div className="max-w-xs w-full">
             <select

@@ -1366,7 +1366,8 @@
             "noTransactions": "No Transactions",
             "noTransactionsDesc": "Start running tasks with this agent to see live telemetry.",
             "seedButton": "Generate Sample Data",
-            "loadMore": "Load More"
+            "loadMore": "Load More",
+            "searchPlaceholder": "Search by what it did or which model"
           }
         },
         "settings": {
@@ -3775,7 +3776,8 @@
     "filter": {
       "all": "Everything"
     },
-    "emptyFiltered": "Nothing of that kind yet."
+    "emptyFiltered": "Nothing of that kind yet.",
+    "searchPlaceholder": "Search the diary by page or detail"
   },
   "aiMoney": {
     "title": "Value",

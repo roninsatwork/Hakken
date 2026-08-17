@@ -73,7 +73,19 @@ export default function RoninArcadePage() {
   const totalItems = Math.max(results.length, scoreCount);
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
-  const paginatedItems = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const [scoreSearch, setScoreSearch] = useState("");
+
+  /*
+    Narrows the scores already fetched rather than asking the server, because
+    the leaderboard query takes no search argument. Enough to find your own
+    name on the page you are looking at; it will not reach back through pages
+    you have not loaded.
+  */
+  const scoreNeedle = scoreSearch.trim().toLowerCase();
+  const matchedScores = scoreNeedle
+    ? results.filter((entry) => (entry.userName ?? "").toLowerCase().includes(scoreNeedle))
+    : results;
+  const paginatedItems = matchedScores.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   /**
    * One handler for both directions, because the shared footer asks for a page
@@ -406,6 +418,11 @@ export default function RoninArcadePage() {
              rowKey={(entry) => entry._id}
              variant="bare"
              headerVariant="strip"
+             search={{
+               value: scoreSearch,
+               onChange: setScoreSearch,
+               placeholder: "Search the board by player",
+             }}
              empty={{
                icon: <Trophy className="w-8 h-8 text-muted/30" />,
                label: "No scores recorded. Be the first to enter the matrix.",
