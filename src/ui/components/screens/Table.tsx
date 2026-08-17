@@ -349,8 +349,15 @@ export function PaginationFooter({
 
   return (
     <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
+      {/*
+        Nothing at all while the query is still out. A count of zero before an
+        answer is not the same as an answer of zero, and this slot used to say
+        "No entries found" on every list screen for the moment before the rows
+        arrived — under a table that was showing a spinner at the time. Saying
+        nothing is honest; the spinner is already doing the talking.
+      */}
       <div className="text-[12px] font-medium text-secondary">
-        {totalCount > 0 ? (
+        {isLoading ? null : totalCount > 0 ? (
           <span>{labels?.showing?.(start, end, totalCount) ?? `Showing ${start}-${end} of ${totalCount}`}</span>
         ) : (
           <span>{labels?.empty ?? "No entries found"}</span>

@@ -77,14 +77,17 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
     const { container } = config.renderScreen();
 
     expect(container.querySelector(".animate-spin")).toBeInTheDocument();
-    expect(screen.queryByText(config.emptyText)).not.toBeInTheDocument();
+    expect(screen.queryAllByText(config.emptyText)).toEqual([]);
   });
 
   it("shows the empty state once the query answers with nothing", () => {
     config.withRows([]);
     config.renderScreen();
 
-    expect(screen.getByText(config.emptyText)).toBeInTheDocument();
+    // `getAllBy` rather than `getBy`: a screen with a numbered footer says this
+    // twice on purpose, once in the table and once in the footer's count slot,
+    // and a screen without one says it once. Both are the empty state working.
+    expect(screen.getAllByText(config.emptyText).length).toBeGreaterThan(0);
   });
 
   it("renders one table, never a table inside a table", () => {

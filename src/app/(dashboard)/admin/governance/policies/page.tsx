@@ -178,7 +178,7 @@ export default function GovernancePoliciesPage() {
                 key={rule._id}
                 className="border-b border-border-dim/50 last:border-0 transition-colors hover:bg-foreground/[0.02]"
               >
-                <td className="px-4 py-2.5 max-w-[240px]">
+                <td className="px-4 py-3 max-w-[240px]">
                   {isUnnamed(rule) ? (
                     /* An unnamed rule is not a display problem to paper over —
                        a critical rule governing everything that nobody has
@@ -191,12 +191,12 @@ export default function GovernancePoliciesPage() {
                   )}
                   <span className="mt-0.5 block truncate text-[12px] text-muted">{rule.trigger}</span>
                 </td>
-                <td className="px-4 py-2.5 text-[12px] text-secondary">
+                <td className="px-4 py-3 text-[12px] text-secondary">
                   {/* Said in words rather than as a scope code, because the
                       reader here is not the person who set it up. */}
                   {t(`scope.${scopeOf(rule)}`)}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-3">
                   <span
                     className={`flex w-fit items-center rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest ${
                       rule.priority === "CRITICAL"
@@ -207,7 +207,7 @@ export default function GovernancePoliciesPage() {
                     {t(`priority.${rule.priority}`)}
                   </span>
                 </td>
-                <td className="max-w-[380px] px-4 py-2.5 text-[12px] text-secondary">
+                <td className="max-w-[380px] px-4 py-3 text-[12px] text-secondary">
                   <span className="line-clamp-2">{rule.instruction}</span>
                 </td>
               </tr>

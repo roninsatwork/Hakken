@@ -284,7 +284,7 @@ export default function AiRegisterPage() {
                 onClick={() => setOpened(entry)}
                 className="group cursor-pointer border-b border-border-dim/50 last:border-0 transition-colors hover:bg-foreground/[0.02]"
               >
-                <td className="px-4 py-2.5 max-w-[340px]">
+                <td className="px-4 py-3 max-w-[340px]">
                   <span className="block text-[13px] font-medium leading-tight text-foreground">
                     {entry.name}
                   </span>
@@ -296,7 +296,7 @@ export default function AiRegisterPage() {
                     {entry.purpose || t("noPurpose")}
                   </span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-3">
                   <span className="flex items-center gap-1.5 text-[12px] text-secondary">
                     {entry.facesPublic ? <Globe className="h-3.5 w-3.5" aria-hidden="true" /> : null}
                     {t(`kind.${entry.kind}`)}
@@ -305,7 +305,7 @@ export default function AiRegisterPage() {
                     <span className="mt-0.5 block truncate text-[11px] text-muted">{entry.model}</span>
                   ) : null}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-3">
                   {/*
                     The platform's chip, with the amber kept for the ratings that
                     actually ask for something. A text label always — colour on
@@ -321,14 +321,14 @@ export default function AiRegisterPage() {
                     {t(`risk.${entry.risk}`)}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-[12px]">
+                <td className="px-4 py-3 text-[12px]">
                   {entry.ownerName ? (
                     <span className="text-secondary">{entry.ownerName}</span>
                   ) : (
                     <span className="text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-3">
                   <span className="flex items-center gap-1.5 text-[12px] text-secondary">
                     {entry.humanApproves ? (
                       <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
@@ -338,7 +338,7 @@ export default function AiRegisterPage() {
                     {entry.humanApproves ? t("oversight.human") : t("oversight.unattended")}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-[12px]">
+                <td className="px-4 py-3 text-[12px]">
                   {typeof entry.activity === "number" ? (
                     <span className={entry.activity > 0 ? "text-foreground" : "text-muted"}>
                       {t("table.runs", { count: entry.activity })}
@@ -350,7 +350,7 @@ export default function AiRegisterPage() {
                     <span className="text-muted">—</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-[12px] text-secondary">
+                <td className="px-4 py-3 text-[12px] text-secondary">
                   {entry.lastActiveAt ? formatDate(entry.lastActiveAt) : "—"}
                 </td>
               </tr>
