@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { ChangeEvent } from "react";
 import { Building2, ImageIcon, Loader2, X } from "lucide-react";
 import { SettingBlock } from "./SettingBlock";
+import { Field } from "@/src/ui/components/screens/Field";
 import type { SystemSettingsFormData } from "./types";
 
 type IdentitySettingsSectionProps = {
@@ -30,12 +31,15 @@ export function IdentitySettingsSection({
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <SettingBlock title={t("identity.platformName")} sub={t("identity.platformNameSub")}>
-          <input
-            type="text"
+          {/* The card's own title names this box, so the label is kept for
+              anyone listening rather than printed twice. */}
+          <Field
+            label={t("identity.platformName")}
+            labelHidden
             value={formData.platformName || ""}
             onChange={(event) => setFormData({ ...formData, platformName: event.target.value })}
-            className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[15px] font-bold text-foreground outline-none focus:border-brand transition-colors"
             placeholder={t("identity.placeholder")}
+            className="text-[15px] font-bold"
           />
         </SettingBlock>
 
@@ -106,26 +110,19 @@ export function IdentitySettingsSection({
 
       <SettingBlock title={t("identity.emailSender")} sub={t("identity.emailSenderSub")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="flex flex-col gap-2">
-            <span className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("identity.emailSenderName")}</span>
-            <input
-              type="text"
-              value={formData.emailSenderName || ""}
-              onChange={(event) => setFormData({ ...formData, emailSenderName: event.target.value })}
-              className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
-              placeholder={t("identity.emailSenderNamePlaceholder")}
-            />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("identity.emailSenderAddress")}</span>
-            <input
-              type="email"
-              value={formData.emailSenderAddress || ""}
-              onChange={(event) => setFormData({ ...formData, emailSenderAddress: event.target.value })}
-              className="w-full bg-background/50 border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
-              placeholder={t("identity.emailSenderAddressPlaceholder")}
-            />
-          </label>
+          <Field
+            label={t("identity.emailSenderName")}
+            value={formData.emailSenderName || ""}
+            onChange={(event) => setFormData({ ...formData, emailSenderName: event.target.value })}
+            placeholder={t("identity.emailSenderNamePlaceholder")}
+          />
+          <Field
+            label={t("identity.emailSenderAddress")}
+            type="email"
+            value={formData.emailSenderAddress || ""}
+            onChange={(event) => setFormData({ ...formData, emailSenderAddress: event.target.value })}
+            placeholder={t("identity.emailSenderAddressPlaceholder")}
+          />
         </div>
       </SettingBlock>
     </section>

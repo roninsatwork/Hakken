@@ -11,6 +11,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field } from "@/src/ui/components/screens/Field";
 import {
   buildDefaultJobsByModelId,
   formatModelTag,
@@ -48,18 +49,17 @@ function PriceField({
 }) {
   return (
     <div>
-      <label className="block text-[12px] font-medium text-secondary mb-1.5">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted">$</span>
-        <input
-          type="number"
-          step="0.01"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="w-full h-10 rounded-[8px] border border-border-dim bg-card pl-7 pr-3 text-[13px] text-foreground outline-none focus:border-brand/50"
-        />
-      </div>
-      {hint && <p className="text-[11px] text-muted mt-1.5">{hint}</p>}
+      {/* The dollar sign that used to sit inside the box has gone: the section
+          above already says the prices are in dollars, and a glyph floating
+          inside a field is one more thing that has to be positioned by hand. */}
+      <Field
+        label={label}
+        hint={hint}
+        type="number"
+        step="0.01"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </div>
   );
 }
@@ -229,12 +229,14 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         <p className="text-[12px] text-secondary mt-1 mb-4">
           The short name people see in chat and in model pickers.
         </p>
-        <input
-          type="text"
+        {/* The heading above already names this box. */}
+        <Field
+          label="What it is called"
+          labelHidden
           value={friendlyName}
           onChange={(e) => setFriendlyName(e.target.value)}
           placeholder={model.displayName}
-          className="w-full max-w-md h-10 rounded-[8px] border border-border-dim bg-background/50 px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+          className="max-w-md"
         />
       </section>
 

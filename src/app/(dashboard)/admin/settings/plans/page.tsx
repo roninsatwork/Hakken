@@ -18,6 +18,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import {
   LoadMoreFooter,
   SearchBar,
@@ -278,53 +279,43 @@ export default function SubscriptionPlansPage() {
           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('nameLabel')}</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder={t('namePlaceholder')}
-            />
-          </div>
+          <Field
+            label={t('nameLabel')}
+            required
+            value={formData.name}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
+            placeholder={t('namePlaceholder')}
+          />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('descLabel')}</label>
-            <textarea
-              value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm min-h-[80px] resize-y custom-scrollbar leading-relaxed"
-              placeholder={t('descPlaceholder')}
-            />
-          </div>
+          <TextAreaField
+            label={t('descLabel')}
+            value={formData.description}
+            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            placeholder={t('descPlaceholder')}
+            className="min-h-[80px] resize-y"
+          />
 
           <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-medium text-secondary tracking-wide">{t('limitLabel')}</label>
-                <input
-                  type="number"
-                  required
-                  value={formData.messageLimit}
-                  onChange={e => setFormData({ ...formData, messageLimit: Number(e.target.value) })}
-                  className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm font-mono"
-                  placeholder={t('limitPlaceholder')}
-                />
-              </div>
+              <Field
+                label={t('limitLabel')}
+                type="number"
+                required
+                value={formData.messageLimit}
+                onChange={e => setFormData({ ...formData, messageLimit: Number(e.target.value) })}
+                placeholder={t('limitPlaceholder')}
+                className="font-mono"
+              />
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-medium text-secondary tracking-wide">{t('priceLabel')}</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.priceGBP}
-                  onChange={e => setFormData({ ...formData, priceGBP: Number(e.target.value) })}
-                  className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm font-mono"
-                  placeholder={t('pricePlaceholder')}
-                />
-              </div>
+              <Field
+                label={t('priceLabel')}
+                type="number"
+                step="0.01"
+                required
+                value={formData.priceGBP}
+                onChange={e => setFormData({ ...formData, priceGBP: Number(e.target.value) })}
+                placeholder={t('pricePlaceholder')}
+                className="font-mono"
+              />
           </div>
 
           <div className="flex items-center gap-3 pt-2">
