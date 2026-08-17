@@ -19,7 +19,6 @@
     "src/app/(dashboard)/admin/_features/wiki/WikiImportBox.tsx",
     "src/app/(dashboard)/admin/_features/wiki/WikiPageDetailScreen.tsx",
     "src/app/(dashboard)/admin/_features/wiki/WikiQuickSwitcher.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/evals/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/settings/page.tsx",

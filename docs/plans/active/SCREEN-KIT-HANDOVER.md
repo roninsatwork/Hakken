@@ -2,17 +2,17 @@
 
 **Written 2026-08-16, at the end of Phase 3 and the start of Phase 3.5.**
 
-> **Picking up on 2026-08-17.** Anthony stopped here for the day. The next job is
-> the first item of Phase 3.5: build `DataTable`. Read the Phase 3.5 section of
-> the plan first — the goal changed during this session and the reason matters.
+> **Picking up after 2026-08-17.** Phase 3.5 is over half done. Read the Phase
+> 3.5 and 3.6 sections of the plan first — the goal changed twice during that
+> day, on Anthony's instruction, and the reasons matter more than the diff.
 
-**State: green.** Typecheck silent, lint 0 errors, 4,917 tests passing across
-542 files, build compiles, `npm audit --omit=dev` 0 vulnerabilities, layering
-and screen-kit guards pass, `git diff --check` clean.
+**State: green.** Typecheck silent, lint 0 errors, 4,958 tests passing across
+544 files, all four source guards pass, `git diff --check` clean.
 
-**Nothing is committed.** The working tree holds all of Phases 1, 2 and 3.
-Anthony has not asked for a commit, and a dirty tree here means unfinished on
-purpose — ask before committing, and never push unless told.
+**Committed locally, never pushed.** Anthony asked for the work to be saved on
+2026-08-17. Three commits on `dev`: the kit and one shared table, the search-box
+sweep, and the first form fields. Nothing has been pushed — every push runs a
+metered check and he has not asked for one.
 
 ---
 
@@ -69,71 +69,81 @@ Phases 4 and 5 need 3.5 done — that is what makes them cheap — but not each
 other. Phases 6 and 7 are independent of 1–5 and can be brought forward if
 selling in packages becomes the priority.
 
-## Phase 3.5, where it stands — start here tomorrow
+## Phase 3.5, where it stands
 
-**The goal changed mid-session, on Anthony's instruction, and the reason is the
-important part.** Moving a screen onto the kit's *parts* does not make it match
-the other screens: the parts are assembled by hand each time, and every screen
-assembles them differently. The workspace directory used the shared table, the
-shared search box and the shared footer and still did not look like the evals
-screen — its footer only appeared when there was more to load, and its search box
-sat inside a second bordered box. Both were faithful ports of what was there
-before, which is exactly the problem. Anthony spotted it from a screenshot.
+**The goal changed twice on 2026-08-17, both times because Anthony pushed, both
+times correctly.** First from "use the shared parts" to "there is one table" —
+because moving a screen onto the *parts* does not make it match, since the parts
+get assembled by hand and everyone assembles them differently. Then again on the
+footer: a lone "Load more" button is not a variant of the house footer, it is the
+drift. He had to say that three times before it was done, because "preserve all
+functionality" had been read as "keep each screen's paging control". The control
+is format. What a screen *fetches* is functionality, and that is untouched.
 
-**His words, which are the brief:** align the styles, shrink the volume of code,
-make it more maintainable, preserve all functionality — this is a UI change only.
+**Built, each proved by breaking its tests:**
 
-**Four screens are converted and checked in the browser.** `admin/users`,
-`admin/super-admins`, `admin/companies/[id]/users`, `admin/users/[id]` (three
-tables on that one). Frozen lists are down from 17+73 to 13+69.
+- `DataTable` — the whole arrangement: search box, card, header, loading row,
+  empty row, footer. A screen supplies columns, rows and its empty message.
+- `CompactList` — a short list inside somebody else's panel. No card, no search,
+  no footer, no minimum width, and no heading row unless a column asks for one.
+  Those five absences are exactly why four screens could not use `DataTable`.
+- `ModalField` — one input in a modal with its label tied to it.
+- `usePagedRows` — page numbers over a list a screen has already assembled, for
+  tables that stitch two queries together. Matches `useServerPagedTable`.
+- `src/test/standardTableScreen.tsx` — the floor every table screen must clear,
+  callable from any screen's test.
 
-**The kit gained, each proved by breaking its test:**
+**Done: 14 of 17 hand-written tables, and 19 of 73 hand-written fields.**
+Every search box in the app is now the shared one — there were sixteen
+variations. The entity generator emits a `DataTable` screen.
 
-- `TableShell` `variant` — `default`, `panel` (detail pages), `bare` (no card,
-  for a table already inside somebody's panel). `bare` is the option whose absence
-  stranded five screens in Phase 2.
-- `TableHeaderRow` `variant` — `default` and `strip` (filled band). The cells take
-  the variant from their row through context, so a header cannot half-change.
-- `ModalField` — one input in a modal with its label tied to it, styled from
-  `modalInputClassName` so nothing shifts. `ModalFormField` gained an optional
-  `htmlFor` for the select/group cases.
-- `common.clearSearch` in both locales; `admin.users.table` and
-  `companyUsers.table` gained `showingLoaded` / `loadingMore` / `empty`.
+**The 3 tables left are all parked on Anthony's decision:**
 
-**Next, in order:** build `DataTable` (2 days) → build the shared table-screen
-test helper (0.5) → write regression tests for the 35 table screens that have
-none, *before* converting them (4) → convert the 64 table screens in batches (6)
-→ update the 15 tests that assert the old furniture, inside the batch that
-changes their screen (1) → point the entity generator at `DataTable` (0.5) →
-tighten the check and lock both lists at zero (1) → the 73 fields (2.5).
+- The two widget greeting panels. Four column headings above a single hardcoded
+  row, because it is a settings form drawn as a table. Explaining this in words
+  failed three times; a sketch of the before and after finally landed. He has
+  not answered yet.
+- The opportunity report. He said "leave the opportunity report for now."
 
-**The anti-drift guards are the last thing and the point of the whole phase.**
-Anthony asked for them explicitly. The Phase 3 check would not have caught a
-single fault found on 2026-08-16 — the workspace directory used every shared part
-and still looked wrong, because what drifted was the *assembly*. So: the entity
-generator emits a `DataTable` screen (new screens start standard); a screen
-importing `TableShell` / `TableHeaderRow` / `SearchBar` / `LoadMoreFooter` /
-`PaginationFooter` directly fails the check (you cannot assemble it differently
-if you cannot reach the pieces); both allowlists lock at `maxEntries: 0` copying
-`convex/authz-migration-allowlist.json`; and the shared test helper asserts the
-standard shape at render time, which a source scan can never do.
+**The 54 fields left are 54 separate small jobs.** Measured: 62 distinct input
+stylings among them. **An earlier claim in this document that they would convert
+invisibly was wrong** — it came from checking one screen and generalising. Most
+will look at least slightly different, so they need Anthony's eye in batches.
 
-**Testing is in the plan now, at Anthony's instruction, and it is half the work.**
-Of the 64 table screens, 29 have a test and 15 of those assert the exact table
-furniture being changed — three broke within the hour on the first four screens.
-The other 35 have no test at all, and those get regression tests written
-**before** their screen is converted, so they pin what the screen does today
-rather than agreeing with tomorrow's code. Every one is then proved by breaking
-the code it covers.
-
-**The reference screens to match:** `/admin/ai/evals` (paged) and `/admin/agents`
-(load-more). Any converted screen should be indistinguishable from these apart
-from its data.
-
-**Give Anthony clickable URLs** for every screen touched, every batch. He asked
-for this explicitly — describing a change instead of linking it leaves him blind.
+**Next, in order:** the 54 fields in small batches with links each time →
+regression tests for the 35 table screens with none → tighten the check so a
+hand-written `<thead>` and a direct import of the table's parts both fail, and
+lock both lists at `maxEntries: 0`.
 
 ---
+
+## Hard-won, on 2026-08-17
+
+- **I could not see Anthony's screen and did not realise for hours.** He works in
+  Safari at about 1300px; the Chrome extension connects to a different window
+  pinned at 877px. Three "verified" layout claims were made against a width where
+  the fault could not appear, and he found each one. **Check
+  `window.innerWidth` before believing any layout check**, and say so when it is
+  not the design width. See [[admin-screens-target-macbook-pro-13]].
+- **Do not revert his changes to escape a bug.** He asked for a side-by-side
+  preview; one width value was mismatched; I reverted the whole thing and called
+  it "putting it back safely". It was undoing his instruction. Fix the one value.
+- **A screenshot taken seconds after an edit may predate the rebuild.** That is
+  what made the revert look justified.
+- **Fragile layouts: prefer fixed grid tracks to negotiated flex.** The widget
+  preview could overrun the form and squash it to one word per line. Two grid
+  tracks cannot do that.
+- **Never tidy an unused import with a loose pattern.** `s/Search, //` turned
+  `debouncedSearch, statusFilter` into `debouncedstatusFilter`, which would have
+  sent the wrong filter to the database. Replace the exact line.
+- **A test may be guarding something other than what its name suggests.** The
+  widget page's "keeps content full-width" test was really protecting a removed
+  navigation rail; the column layout was incidental. Read before overriding.
+- **The allowlist helper must ask the guard, not the filename.** Removing a
+  screen from both lists because its table was converted silently un-froze its
+  hand-written field. The guard caught it in a minute.
+
+
 
 ## Agenda for the morning of 2026-08-17 — "we need more rules than this"
 

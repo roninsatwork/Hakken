@@ -24,6 +24,7 @@ import {
 } from "@/src/ui/components/screens/Table";
 import {
   ModalFormError,
+  ModalField,
   ModalFormField,
   modalInputClassName,
   modalTextareaClassName,
@@ -460,17 +461,13 @@ export default function AgentEvalsPage() {
                   <option value="5">5 times — all must pass</option>
                 </select>
               </ModalFormField>
-              <ModalFormField
+              <ModalField
                 label="Tools it should use"
                 hint="Optional, comma separated. Leave empty unless you are testing that a particular tool gets used."
-              >
-                <input
-                  className={modalInputClassName}
-                  value={form.tools}
-                  onChange={(event) => setForm((current) => ({ ...current, tools: event.target.value }))}
-                  placeholder="knowledge.search, crm.lookup"
-                />
-              </ModalFormField>
+                value={form.tools}
+                onChange={(event) => setForm((current) => ({ ...current, tools: event.target.value }))}
+                placeholder="knowledge.search, crm.lookup"
+              />
             </div>
           </details>
 
