@@ -1,5 +1,5 @@
 {
-  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow \u2014 move the screen onto the kit instead of adding to it. Some entries are settled decisions rather than unfinished work, and are named in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17), and the two WidgetPreviewPanel files draw a mock-up of the customer's own chat widget rather than a form, so the house field would restyle a preview of somebody else's site.",
+  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow \u2014 move the screen onto the kit instead of adding to it. Some entries are settled decisions rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17); the two WidgetPreviewPanel files draw a mock-up of the customer's own chat widget rather than a form; WikiQuickSwitcher is a command palette, where a bordered field would put a box inside a box; and MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them.",
   "tables": [
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
@@ -10,9 +10,6 @@
     "src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx",
     "src/app/(dashboard)/admin/_features/wiki/MoneyViewScreen.tsx",
-    "src/app/(dashboard)/admin/_features/wiki/WikiAskBox.tsx",
-    "src/app/(dashboard)/admin/_features/wiki/WikiImportBox.tsx",
-    "src/app/(dashboard)/admin/_features/wiki/WikiPageDetailScreen.tsx",
     "src/app/(dashboard)/admin/_features/wiki/WikiQuickSwitcher.tsx",
     "src/app/(dashboard)/admin/agents/[id]/settings/page.tsx",
     "src/app/(dashboard)/admin/agents/new/page.tsx",

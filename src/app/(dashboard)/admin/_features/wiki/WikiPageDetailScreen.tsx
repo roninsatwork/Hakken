@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
 import { WikiProse } from "./WikiProse";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
@@ -271,11 +272,15 @@ export function WikiPageDetailScreen({
       {isEditing ? (
         <section className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
           <p className="text-[12px] text-secondary">{t("body.hint")}</p>
-          <textarea
+          {/* The sentence above already says what this box is, so the label is
+              kept for anyone listening rather than said twice. */}
+          <TextAreaField
+            label={t("body.hint")}
+            labelHidden
             value={draft ?? ""}
             onChange={(event) => setDraft(event.target.value)}
             rows={14}
-            className="w-full bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] leading-relaxed text-foreground focus:outline-none focus:border-brand/50 transition-colors resize-y"
+            className="min-h-[320px] resize-y leading-relaxed"
           />
           <div className="flex items-center gap-3">
             <WriteButton
@@ -473,13 +478,15 @@ export function WikiPageDetailScreen({
           </h2>
           <p className="text-[12px] text-secondary">{t("pinned.hint")}</p>
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newPin}
-              onChange={(event) => setNewPin(event.target.value)}
-              placeholder={t("pinned.placeholder")}
-              className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
-            />
+            <div className="flex-1">
+              <Field
+                label={t("pinned.title")}
+                labelHidden
+                value={newPin}
+                onChange={(event) => setNewPin(event.target.value)}
+                placeholder={t("pinned.placeholder")}
+              />
+            </div>
             <WriteButton
               onClick={() =>
                 void run(async () => {

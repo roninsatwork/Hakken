@@ -7,6 +7,7 @@ import { FileUp, Globe, Loader2, Type, FolderOpen } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
 import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
 import {
@@ -190,14 +191,18 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
 
       {tab === "website" && (
         <div className="flex items-center gap-2">
-          <input
-            type="url"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            placeholder={t("websitePlaceholder")}
-            disabled={isBusy}
-            className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
-          />
+          {/* The chosen tab already says what this box is for. */}
+          <div className="flex-1">
+            <Field
+              label={t("websitePlaceholder")}
+              labelHidden
+              type="url"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder={t("websitePlaceholder")}
+              disabled={isBusy}
+            />
+          </div>
           <WriteButton
             onClick={() => void importWebsite()}
             disabled={isBusy || !url.trim()}
@@ -225,21 +230,23 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
 
       {tab === "text" && (
         <div className="flex flex-col gap-2">
-          <input
-            type="text"
+          <Field
+            label={t("textTitlePlaceholder")}
+            labelHidden
             value={textTitle}
             onChange={(event) => setTextTitle(event.target.value)}
             placeholder={t("textTitlePlaceholder")}
             disabled={isBusy}
-            className="bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
           />
-          <textarea
+          <TextAreaField
+            label={t("textBodyPlaceholder")}
+            labelHidden
             value={textBody}
             onChange={(event) => setTextBody(event.target.value)}
             placeholder={t("textBodyPlaceholder")}
             rows={4}
             disabled={isBusy}
-            className="bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors resize-y"
+            className="min-h-[120px] resize-y"
           />
           <WriteButton
             onClick={() => void importText()}

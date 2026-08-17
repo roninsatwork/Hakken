@@ -75,6 +75,19 @@ describe("Field", () => {
     expect(screen.getByText("Task title")).toHaveClass("sr-only");
   });
 
+  /**
+   * The text area gained this after four wiki boxes turned out to be the same
+   * shape the plain field already had an answer for: a box under a heading that
+   * has just named it. Without it the only ways forward were a visible label
+   * repeating the heading, or leaving the box hand-written and unnamed.
+   */
+  it("still labels the text area when the label is hidden from view", () => {
+    renderWithProviders(<TextAreaField label="What the page says" labelHidden placeholder="Type here" />);
+
+    expect(screen.getByLabelText("What the page says")).toBeInTheDocument();
+    expect(screen.getByText("What the page says")).toHaveClass("sr-only");
+  });
+
   it("passes the rest of its props through to the input", () => {
     const onChange = vi.fn();
     renderWithProviders(

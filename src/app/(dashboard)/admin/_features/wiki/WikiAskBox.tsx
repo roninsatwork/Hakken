@@ -8,6 +8,7 @@ import { Loader2, MessageCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field } from "@/src/ui/components/screens/Field";
 import { getErrorMessage } from "@/src/lib/errors";
 
 /**
@@ -61,17 +62,21 @@ export function WikiAskBox({
       </h2>
       <p className="text-[12px] text-secondary">{t("hint")}</p>
       <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") void ask();
-          }}
-          placeholder={t("placeholder")}
-          disabled={isAsking}
-          className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
-        />
+        {/* The panel's heading and the sentence under it already name this box,
+            so the label is kept for anyone listening rather than said twice. */}
+        <div className="flex-1">
+          <Field
+            label={t("title")}
+            labelHidden
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void ask();
+            }}
+            placeholder={t("placeholder")}
+            disabled={isAsking}
+          />
+        </div>
         <WriteButton
           onClick={() => void ask()}
           disabled={isAsking || !question.trim()}

@@ -75,17 +75,23 @@ type TextAreaFieldProps = {
   label: string;
   hint?: ReactNode;
   error?: ReactNode;
+  /** As on `Field`: keep the label for whoever is listening, not for whoever is looking. */
+  labelHidden?: boolean;
   className?: string;
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className">;
 
-export function TextAreaField({ label, hint, error, className, id, ...textAreaProps }: TextAreaFieldProps) {
+export function TextAreaField({ label, hint, error, labelHidden, className, id, ...textAreaProps }: TextAreaFieldProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const describedById = hint || error ? `${fieldId}-description` : undefined;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
+      {labelHidden ? (
+        <label htmlFor={fieldId} className="sr-only">{label}</label>
+      ) : (
+        <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
+      )}
       <textarea
         {...textAreaProps}
         id={fieldId}

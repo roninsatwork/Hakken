@@ -76,8 +76,13 @@ export function WikiQuickSwitcher({
       <div className="relative w-full max-w-xl rounded-[16px] border border-border-dim bg-sidebar shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border-dim">
           <Search className="w-4 h-4 text-muted shrink-0" />
+          {/* Left hand-written on purpose, and frozen with that reason: this is
+              a command palette, not a form. The house field draws its own
+              bordered box, which inside a palette would put a box in a box. The
+              one real fault — a box with no name — is fixed here instead. */}
           <input
             ref={inputRef}
+            aria-label={t("placeholder")}
             type="text"
             value={term}
             onChange={(event) => {

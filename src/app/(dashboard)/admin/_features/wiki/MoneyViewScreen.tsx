@@ -117,6 +117,11 @@ export function MoneyViewScreen({
         </div>
         {isEditingAssumptions ? (
           <span className="flex items-center gap-2 text-[12.5px] text-secondary flex-wrap">
+            {/* Left hand-written on purpose, and frozen with that reason: these
+                two sit inside a sentence, and each is already labelled by the
+                words around it through its wrapping label. The house field
+                stacks a label above a full-width box, which would break the
+                sentence into three lines to say the same thing. */}
             <label className="flex items-center gap-1.5">
               {t("assumptions.perConversation")}
               <input
