@@ -6,13 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 
 /**
  * The customer's own view of policies.
@@ -39,47 +33,51 @@ export default function GovernancePoliciesPage() {
         description={t("description")}
       />
 
-      {/* TableShell draws the table element itself, so what goes in is the
-          head and body. Passing another table nested one inside the other and
-          left the outer one empty. */}
-      <TableShell minWidthClassName="min-w-[820px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>{t("table.name")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.applies")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.priority")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.instruction")}</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {active === undefined ? (
-              <TableLoadingRow colSpan={4} />
-            ) : active.length === 0 ? (
-              <TableEmptyRow colSpan={4} icon={<ScrollText className="w-5 h-5" />} label={t("empty")} />
-            ) : (
-              active.map((rule) => (
-                <tr key={rule._id} className="border-b border-border-dim/50 last:border-0">
-                  <td className="px-4 py-3 text-[13px] font-medium text-foreground">
-                    {rule.name || t("table.unnamed")}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    {/* Said in words rather than as a scope code, because the
-                        reader here is not the person who set it up. */}
-                    {rule.agentId
-                      ? t("scope.agent")
-                      : rule.companyId
-                        ? t("scope.workspace")
-                        : t("scope.everywhere")}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">{rule.priority}</td>
-                  <td className="px-4 py-3 text-[13px] text-secondary max-w-[380px]">
-                    <span className="line-clamp-2">{rule.instruction}</span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-      </TableShell>
+      <DataTable
+        rows={active}
+        rowKey={(rule) => rule._id}
+        minWidthClassName="min-w-[820px]"
+        empty={{ icon: <ScrollText className="w-5 h-5" />, label: t("empty") }}
+        columns={[
+          {
+            key: "name",
+            header: t("table.name"),
+            cell: (rule) => (
+              <span className="text-[13px] font-medium text-foreground">
+                {rule.name || t("table.unnamed")}
+              </span>
+            ),
+          },
+          {
+            key: "applies",
+            header: t("table.applies"),
+            // Said in words rather than as a scope code, because the reader
+            // here is not the person who set it up.
+            cell: (rule) => (
+              <span className="text-[13px] text-secondary">
+                {rule.agentId
+                  ? t("scope.agent")
+                  : rule.companyId
+                    ? t("scope.workspace")
+                    : t("scope.everywhere")}
+              </span>
+            ),
+          },
+          {
+            key: "priority",
+            header: t("table.priority"),
+            cell: (rule) => <span className="text-[13px] text-secondary">{rule.priority}</span>,
+          },
+          {
+            key: "instruction",
+            header: t("table.instruction"),
+            className: "max-w-[380px]",
+            cell: (rule) => (
+              <span className="line-clamp-2 text-[13px] text-secondary">{rule.instruction}</span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

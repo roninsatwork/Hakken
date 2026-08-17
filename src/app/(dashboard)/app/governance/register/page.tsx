@@ -6,13 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDate } from "@/src/lib/dates";
 
 /**
@@ -67,97 +61,107 @@ export default function AiRegisterPage() {
         ))}
       </div>
 
-      {/* TableShell draws the table element itself — see the policies screen. */}
-      <TableShell minWidthClassName="min-w-[900px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>{t("table.system")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.kind")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.risk")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.owner")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.oversight")}</TableHeaderCell>
-              <TableHeaderCell>{t("table.lastActive")}</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {entries === undefined ? (
-              <TableLoadingRow colSpan={6} />
-            ) : entries.length === 0 ? (
-              <TableEmptyRow
-                colSpan={6}
-                icon={<ClipboardList className="w-5 h-5" />}
-                label={t("empty")}
-              />
-            ) : (
-              entries.map((entry) => (
-                <tr
-                  key={entry.id}
-                  className={`border-b border-border-dim/50 last:border-0 ${
-                    entry.missing.length > 0 ? "bg-[#fef3c7]/40 dark:bg-[#78350f]/20" : ""
-                  }`}
-                >
-                  <td className="px-4 py-3 max-w-[320px]">
-                    <p className="text-[14px] font-medium text-foreground">{entry.name}</p>
-                    {entry.missing.length > 0 ? (
-                      <p className="mt-1 flex items-start gap-1.5 text-[12px] text-[#b45309] dark:text-[#fbbf24]">
-                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                        <span>{entry.missing.join(" ")}</span>
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-[12px] text-secondary line-clamp-2">{entry.purpose}</p>
-                    )}
-                    {entry.model ? (
-                      <p className="mt-1 text-[11px] text-muted">{entry.model}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    <span className="flex items-center gap-1.5">
-                      {entry.facesPublic ? <Globe className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                      {t(`kind.${entry.kind}`)}
-                    </span>
-                    {entry.facesPublic ? (
-                      <span className="mt-0.5 block text-[11px] text-muted">{t("facesPublic")}</span>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    {/*
-                      A text label always, with the amber reserved for the
-                      rating that actually restrains something. Colour on its
-                      own would be carrying meaning nobody can rely on.
-                    */}
-                    <span
-                      className={`inline-block rounded-[6px] px-2 py-1 text-[11px] ${
-                        entry.risk === "HIGH"
-                          ? "bg-[#fef3c7] text-[#78350f] dark:bg-[#78350f] dark:text-[#fef3c7]"
-                          : entry.risk === "UNRATED"
-                            ? "text-[#b45309] dark:text-[#fbbf24]"
-                            : "bg-sidebar/60 text-secondary"
-                      }`}
-                    >
-                      {t(`risk.${entry.risk}`)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    {entry.ownerName || <span className="text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    <span className="flex items-center gap-1.5">
-                      {entry.humanApproves ? (
-                        <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                      ) : (
-                        <Bolt className="h-3.5 w-3.5" aria-hidden="true" />
-                      )}
-                      {entry.humanApproves ? t("oversight.human") : t("oversight.unattended")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    {entry.lastActiveAt ? formatDate(entry.lastActiveAt) : "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-      </TableShell>
+      <DataTable
+        rows={entries}
+        rowKey={(entry) => entry.id}
+        minWidthClassName="min-w-[900px]"
+        empty={{ icon: <ClipboardList className="w-5 h-5" />, label: t("empty") }}
+        rowClassName={(entry) =>
+          entry.missing.length > 0 ? "bg-[#fef3c7]/40 dark:bg-[#78350f]/20" : ""
+        }
+        columns={[
+          {
+            key: "system",
+            header: t("table.system"),
+            className: "max-w-[320px]",
+            cell: (entry) => (
+              <>
+                <p className="text-[14px] font-medium text-foreground">{entry.name}</p>
+                {entry.missing.length > 0 ? (
+                  <p className="mt-1 flex items-start gap-1.5 text-[12px] text-[#b45309] dark:text-[#fbbf24]">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>{entry.missing.join(" ")}</span>
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-[12px] text-secondary line-clamp-2">{entry.purpose}</p>
+                )}
+                {entry.model ? <p className="mt-1 text-[11px] text-muted">{entry.model}</p> : null}
+              </>
+            ),
+          },
+          {
+            key: "kind",
+            header: t("table.kind"),
+            cell: (entry) => (
+              <div className="text-[13px] text-secondary">
+                <span className="flex items-center gap-1.5">
+                  {entry.facesPublic ? <Globe className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                  {t(`kind.${entry.kind}`)}
+                </span>
+                {entry.facesPublic ? (
+                  <span className="mt-0.5 block text-[11px] text-muted">{t("facesPublic")}</span>
+                ) : null}
+              </div>
+            ),
+          },
+          {
+            key: "risk",
+            header: t("table.risk"),
+            /*
+              A text label always, with the amber reserved for the rating that
+              actually restrains something. Colour on its own would be carrying
+              meaning nobody can rely on.
+            */
+            cell: (entry) => (
+              <span
+                className={`inline-block rounded-[6px] px-2 py-1 text-[11px] ${
+                  entry.risk === "HIGH"
+                    ? "bg-[#fef3c7] text-[#78350f] dark:bg-[#78350f] dark:text-[#fef3c7]"
+                    : entry.risk === "UNRATED"
+                      ? "text-[#b45309] dark:text-[#fbbf24]"
+                      : "bg-sidebar/60 text-secondary"
+                }`}
+              >
+                {t(`risk.${entry.risk}`)}
+              </span>
+            ),
+          },
+          {
+            key: "owner",
+            header: t("table.owner"),
+            cell: (entry) => (
+              <span className="text-[13px] text-secondary">
+                {entry.ownerName || (
+                  <span className="text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>
+                )}
+              </span>
+            ),
+          },
+          {
+            key: "oversight",
+            header: t("table.oversight"),
+            cell: (entry) => (
+              <span className="flex items-center gap-1.5 text-[13px] text-secondary">
+                {entry.humanApproves ? (
+                  <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Bolt className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {entry.humanApproves ? t("oversight.human") : t("oversight.unattended")}
+              </span>
+            ),
+          },
+          {
+            key: "lastActive",
+            header: t("table.lastActive"),
+            cell: (entry) => (
+              <span className="text-[13px] text-secondary">
+                {entry.lastActiveAt ? formatDate(entry.lastActiveAt) : "—"}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

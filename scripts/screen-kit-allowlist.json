@@ -64,8 +64,6 @@
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx",
     "src/app/(dashboard)/app/[workspace]/spreadsheet-import/page.tsx",
     "src/app/(dashboard)/app/arcade/ronins-run/page.tsx",
-    "src/app/(dashboard)/app/governance/policies/page.tsx",
-    "src/app/(dashboard)/app/governance/register/page.tsx",
     "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
     "src/app/(dashboard)/app/properties/scraped-data/page.tsx",
     "src/app/(dashboard)/app/settings/team/page.tsx",
