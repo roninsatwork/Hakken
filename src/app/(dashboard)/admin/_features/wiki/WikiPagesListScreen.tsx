@@ -465,9 +465,9 @@ export function WikiPagesListScreen({
             visibleRows.map((row) => (
               <tr
                 key={row.pageId}
-                className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
               >
-                <td className="px-4 py-4">
+                <td className="px-4 py-3">
                   <Link
                     href={`${basePath}/${row.pageId}`}
                     className="flex items-center gap-2 text-[14px] font-medium text-foreground hover:text-brand transition-colors"
@@ -484,13 +484,13 @@ export function WikiPagesListScreen({
                     )}
                   </Link>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary max-w-[380px]">
+                <td className="px-4 py-3 text-[13px] text-secondary max-w-[380px]">
                   <span className="line-clamp-2">{row.preview}</span>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                   {describeSource(row.lastRewriteSource)} · {new Date(row.updatedAt).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-4 text-right text-[13px] whitespace-nowrap">
+                <td className="px-4 py-3 text-right text-[13px] whitespace-nowrap">
                   {row.usageCount > 0 ? (
                     <span className="text-foreground font-medium tabular-nums">
                       {t("used.count", { count: row.usageCount })}
@@ -503,7 +503,7 @@ export function WikiPagesListScreen({
                     <span className="text-secondary">—</span>
                   )}
                 </td>
-                <td className="px-4 py-4 text-right text-[13px] text-secondary tabular-nums">
+                <td className="px-4 py-3 text-right text-[13px] text-secondary tabular-nums">
                   {row.sourceCount > 0 ? row.sourceCount : "—"}
                 </td>
               </tr>

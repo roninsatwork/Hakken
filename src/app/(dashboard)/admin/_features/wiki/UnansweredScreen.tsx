@@ -168,13 +168,13 @@ export function UnansweredScreen({
             visibleRows.map((row) => (
               <tr
                 key={row.unansweredId}
-                className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
               >
-                <td className="px-4 py-4 text-[14px] text-foreground max-w-[420px]">
+                <td className="px-4 py-3 text-[14px] text-foreground max-w-[420px]">
                   <span className="line-clamp-2">“{row.question}”</span>
                 </td>
                 {!companyId && (
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {row.companyId ? (
                       <Link
                         href={`/admin/companies/${row.companyId}/ai/unanswered`}
@@ -192,13 +192,13 @@ export function UnansweredScreen({
                     )}
                   </td>
                 )}
-                <td className="px-4 py-4 text-right text-[13px] text-foreground font-medium tabular-nums">
+                <td className="px-4 py-3 text-right text-[13px] text-foreground font-medium tabular-nums">
                   {row.askCount}×
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                   {new Date(row.lastAskedAt).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-4 text-right whitespace-nowrap">
+                <td className="px-4 py-3 text-right whitespace-nowrap">
                   <Link
                     href={
                       companyId
