@@ -593,6 +593,33 @@ assembles its own table fails the build, a newly generated screen is standard
 without anyone remembering to make it so, and any two list screens put side by
 side are indistinguishable apart from their data.
 
+### Two decisions taken 2026-08-17
+
+**The opportunity report stays hand-written.** Anthony: *"opp report - leave as
+is."* Asked twice now and answered the same way, so this is settled rather than
+deferred. **The table list therefore locks at 1, not 0** — step 7 of the order
+above should say so, and the entry needs the reason written beside it rather
+than reading as an unfinished job.
+
+**Plain English is part of converting a screen, not a separate pass.** The
+original instruction was to leave the wording, and it was reversed within the
+hour once the rule screen was actually looked at: *"this is supposed to be
+client friendly wording, this is not friendly or easy to understand… any screen
+you see needs friendly wording that's easy to understand."*
+
+That is a standing rule for the rest of this phase: **a screen being converted
+gets its words fixed at the same time.** Do not convert a screen and leave
+"Compile New Logic Branch" on it, and do not ask again — it has been answered.
+
+The rule forms were the worst of it and now read: "Add a rule", "When to use
+it", "Words or phrases that set it off", "How important it is", "What the
+assistant should do", "Save changes". Where a screen keeps its words in the
+language files, English and Italian change together.
+
+**The vocabulary is much wider than the six phrases named in the handover.**
+Those six were what a quick scan found; the rule screens alone carried eight
+more. Assume any screen not yet visited has some.
+
 ### The reference
 
 `/admin/ai/evals` is the screen this converges on: search box on its own row,

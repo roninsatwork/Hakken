@@ -6,13 +6,11 @@
 > 3.5 and 3.6 sections of the plan first — the goal changed twice during that
 > day, on Anthony's instruction, and the reasons matter more than the diff.
 
-**State: green.** Typecheck silent, lint 0 errors, 4,958 tests passing across
-544 files, all four source guards pass, `git diff --check` clean.
+**State: green.** Typecheck silent, lint 0 errors, 4,994 tests passing across
+550 files, all four source guards pass, `git diff --check` clean.
 
-**Committed locally, never pushed.** Anthony asked for the work to be saved on
-2026-08-17. Three commits on `dev`: the kit and one shared table, the search-box
-sweep, and the first form fields. Nothing has been pushed — every push runs a
-metered check and he has not asked for one.
+**Committed locally, never pushed.** Twelve commits on `dev`. Nothing has been
+pushed — every push runs a metered check and he has not asked for one.
 
 ---
 
@@ -56,14 +54,14 @@ not done. Phases 3 to 7 are still to do.
 | 1 — the kit moves into reach | **Done** |
 | 2 — the client-facing screens get on it | **Done** |
 | 3 — the wrong thing fails the build | **Done** |
-| 3.5 — one table, everywhere | **In progress**, 17.5 days, ~7.5 done |
+| 3.5 — one table, everywhere | **In progress**, 17.5 days, ~9 done |
 | 3.6 — one page header, everywhere | **Deferred** 2026-08-17, 2.5 days, measured |
 | 4 — accessibility, in the kit | 1 day |
 | 5 — small screens, in the kit | 1 day |
 | 6 — a capability can be withheld | 2 days |
 | 7 — a plan grants capabilities | 1.5 days |
 
-**Overall: 13.5 of 32.5 days (41%).**
+**Overall: 15 of 32.5 days (46%).**
 
 Phases 4 and 5 need 3.5 done — that is what makes them cheap — but not each
 other. Phases 6 and 7 are independent of 1–5 and can be brought forward if
@@ -93,27 +91,31 @@ is format. What a screen *fetches* is functionality, and that is untouched.
 - `src/test/standardTableScreen.tsx` — the floor every table screen must clear,
   callable from any screen's test.
 
-**Done: 14 of 17 hand-written tables, and 19 of 73 hand-written fields.**
+**Done: 16 of 17 hand-written tables, and 27 of 73 hand-written fields.**
 Every search box in the app is now the shared one — there were sixteen
 variations. The entity generator emits a `DataTable` screen.
 
-**The 3 tables left are all parked on Anthony's decision:**
+**The one table left is settled, not parked.** The opportunity report stays
+hand-written — Anthony, asked twice, on 2026-08-17: *"opp report - leave as
+is."* So the table list locks at **1**, not 0, and that entry wants its reason
+written beside it rather than reading as an unfinished job.
 
-- The two widget greeting panels. Four column headings above a single hardcoded
-  row, because it is a settings form drawn as a table. Explaining this in words
-  failed three times; a sketch of the before and after finally landed. He has
-  not answered yet.
-- The opportunity report. He said "leave the opportunity report for now."
-
-**The 54 fields left are 54 separate small jobs.** Measured: 62 distinct input
+**The 46 fields left are 46 separate small jobs.** Measured: 62 distinct input
 stylings among them. **An earlier claim in this document that they would convert
 invisibly was wrong** — it came from checking one screen and generalising. Most
 will look at least slightly different, so they need Anthony's eye in batches.
 
-**Next, in order:** the 54 fields in small batches with links each time →
+**Converting a screen now includes fixing its words.** Standing instruction from
+2026-08-17, given after he looked at a converted rule screen: *"any screen you
+see needs friendly wording that's easy to understand."* Do not convert a screen
+and leave jargon on it, and do not ask again — it has been answered. The
+vocabulary problem is much wider than the six phrases named further down this
+document; the six rule screens alone carried eight more.
+
+**Next, in order:** the 46 fields in small batches with links each time →
 regression tests for the 35 table screens with none → tighten the check so a
 hand-written `<thead>` and a direct import of the table's parts both fail, and
-lock both lists at `maxEntries: 0`.
+lock the field list at `maxEntries: 0` and the table list at 1.
 
 ---
 
@@ -263,6 +265,19 @@ that list is how you find them.
 - **Checking the Comax workspace screens** means impersonating that workspace
   from `/admin/companies`. Put it back to **Ronins Website — Knowledge**
   afterwards; that is how it was found.
+- **A page that unwraps its route params suspends on first render**, so a test
+  rendering it directly hangs on an empty page and the error names the query,
+  not the cause. `src/test/routeParams.ts` hands it params it can read straight
+  away. Reach for that before reaching for a suspense boundary.
+- **Some routes are one-line aliases to another route's page.** The customer
+  rule screens live at `companies/[id]/rules/*` and are also served from
+  `companies/[id]/ai/rules/*` by a one-line re-export — so the URL in the
+  browser will not match the file you edited, and a screen can look
+  unconverted when it is the same file. Check for a re-export before concluding
+  there are two copies.
+- **A screen can carry stray tab characters mid-attribute.** Four of the rule
+  screens did, between `<input` and its `value=`. An edit matched on the
+  untabbed text silently fails to find its target; match the exact bytes.
 
 ---
 
@@ -275,9 +290,12 @@ that list is how you find them.
   too. They were left exactly as they read, because the `admin.users` strings
   say "Access & Identity Control", which is the platform screen's wording and
   not this one's.
-- **The vocabulary is heavy in places** — "Protocol Identity", "Clearance
-  Level", "Invite Intelligence", "Purge Identity". `admin-ux-plan.md` owns the
-  wording pass; this plan does not.
+- ~~**The vocabulary is heavy in places.**~~ **No longer raised — being fixed.**
+  Anthony's instruction on 2026-08-17 is that a screen being converted gets its
+  words fixed at the same time, so this plan now owns the wording on every
+  screen it touches. `admin-ux-plan.md` still owns a wider design pass. The six
+  rule screens are done; "Protocol Identity", "Clearance Level", "Invite
+  Intelligence", "Purge Identity" and "Neural Frame" are still out there.
 - **The kit's own `SearchBar` fires a query on every keystroke**, while the
   promoted `TableSearchInput` debounces. Worth converging, and not done here
   because it changes behaviour on 49 admin screens.
