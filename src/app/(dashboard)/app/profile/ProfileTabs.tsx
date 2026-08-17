@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
+import { describeDevice } from "@/src/lib/devices";
 
 export default function ProfileTabs() {
   const t = useTranslations('user.logins');
@@ -67,14 +68,6 @@ export default function ProfileTabs() {
     document.cookie = `locale=${newLocale}; path=/; max-age=31536000`;
     setLocale(newLocale);
     window.location.reload();
-  };
-
-  const parseUserAgent = (ua: string) => {
-    if (ua.includes("Mac OS")) return t('devices.macos');
-    if (ua.includes("Windows")) return t('devices.windows');
-    if (ua.includes("iPhone")) return t('devices.iphone');
-    if (ua.includes("Android")) return t('devices.android');
-    return t('devices.unknown');
   };
 
   return (
@@ -355,10 +348,16 @@ export default function ProfileTabs() {
                           <div className="w-8 h-8 rounded-full bg-foreground/5 border border-white/5 flex items-center justify-center">
                             <MonitorSmartphone className="w-4 h-4 text-foreground/70" />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-medium text-foreground tracking-wide">{parseUserAgent(login.device)}</span>
-                            <span className="text-[11px] text-muted truncate max-w-[200px]" title={login.device}>{login.device}</span>
-                          </div>
+                          {/* One line, not two. The second was the raw browser
+                              string wrapped over three lines of machine text;
+                              it stays in the tooltip, where it is evidence
+                              rather than noise. Location has its own column. */}
+                          <span
+                            className="text-[13px] font-medium text-foreground tracking-wide"
+                            title={login.device}
+                          >
+                            {describeDevice(login.device)}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">

@@ -13,6 +13,7 @@ import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
+import { describeDevice } from "@/src/lib/devices";
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -230,7 +231,11 @@ export default function UserProfilePage() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-[13px] font-medium text-foreground tracking-wide">{parseUserAgent(login.device)}</span>
-                            <span className="text-[11px] text-muted truncate max-w-[200px]" title={login.device}>{login.device}</span>
+                            {/* The raw browser string stays in the tooltip as evidence; the row
+                                shows what a person can read. */}
+                            <span className="text-[11px] text-muted truncate max-w-[200px]" title={login.device}>
+                              {describeDevice(login.device)}
+                            </span>
                           </div>
                         </div>
                       </td>
