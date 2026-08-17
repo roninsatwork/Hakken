@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, ChevronDown, Clock3, Repeat2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Field } from "@/src/ui/components/screens/Field";
 import {
   addTargetedTime,
   formatUtcPreview,
@@ -217,18 +218,19 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
             </SelectShell>
           )}
 
+          {/* The UTC reading used to sit on the right of the label row; it is
+              the hint under the box now, which is where the shared field puts
+              anything that explains the value. */}
           <div className="flex min-w-[220px] flex-col gap-2">
-            <label className="flex items-center justify-between gap-4 text-[10px] font-mono tracking-[0.28em] text-muted uppercase">
-              <span>{draft.cadence === "hourly" ? t("fields.interval.initialStartTime") : t("fields.interval.timeLabel")}</span>
-              <span className="text-brand">{selectedUtcTime} UTC</span>
-            </label>
-            <input
+            <Field
+              label={draft.cadence === "hourly" ? t("fields.interval.initialStartTime") : t("fields.interval.timeLabel")}
+              hint={`${selectedUtcTime} UTC`}
               type="time"
               value={draft.cadence === "hourly" ? draft.startTimeLocal : draft.timeLocal}
               onChange={(event) => draft.cadence === "hourly"
                 ? update({ startTimeLocal: event.target.value })
                 : update({ timeLocal: event.target.value })}
-              className="h-12 rounded-[10px] border border-border-dim bg-transparent px-4 font-mono text-[15px] text-foreground outline-none transition-colors focus:border-brand/40"
+              className="font-mono"
             />
           </div>
         </div>
@@ -236,15 +238,13 @@ export default function ScheduleBuilder({ draft, onChange, targetKind }: Schedul
         <div className="grid gap-6 xl:grid-cols-[minmax(280px,540px)_minmax(320px,680px)]">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex min-w-[220px] flex-col gap-2">
-              <label className="flex items-center justify-between gap-4 text-[10px] font-mono tracking-[0.28em] text-muted uppercase">
-                <span>{t("fields.interval.timeLabel")}</span>
-                <span className="text-brand">{formatUtcPreview(pendingTime)} UTC</span>
-              </label>
-              <input
+              <Field
+                label={t("fields.interval.timeLabel")}
+                hint={`${formatUtcPreview(pendingTime)} UTC`}
                 type="time"
                 value={pendingTime}
                 onChange={(event) => setPendingTime(event.target.value)}
-                className="h-12 rounded-[10px] border border-border-dim bg-transparent px-4 font-mono text-[15px] text-foreground outline-none transition-colors focus:border-brand/40"
+                className="font-mono"
               />
             </div>
             <button

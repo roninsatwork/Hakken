@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { useParams } from "next/navigation";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import {
   FeedbackPill,
   SaveAction,
@@ -120,27 +121,24 @@ export default function InviteUsersPage() {
              </h2>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="flex flex-col gap-2">
-                 <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Target Email</label>
-                 <input 
-                   type="email" 
-                   required
-                   value={inviteEmail}
-                   onChange={e => {
-                     setInviteEmail(e.target.value);
-                     if (sendError) setSendError(null);
-                   }}
-                   placeholder="colleague@company.com"
-                   className={`w-full px-4 py-3 bg-black/20 border rounded-[12px] text-[14px] text-foreground outline-none transition-all placeholder:text-muted ${
-                     sendError 
-                       ? 'border-red-500/50 focus:border-red-500' 
-                       : 'border-border-dim focus:border-[#10b981]/50'
-                   }`}
-                 />
-               </div>
+               {/* The failure message has its own place at the foot of the
+                   form, so the box carries the red border and not the sentence
+                   twice. */}
+               <Field
+                 label="Their email address"
+                 type="email"
+                 required
+                 value={inviteEmail}
+                 onChange={e => {
+                   setInviteEmail(e.target.value);
+                   if (sendError) setSendError(null);
+                 }}
+                 placeholder="colleague@company.com"
+                 className={sendError ? 'border-red-500/50 focus:border-red-500' : undefined}
+               />
 
                <div className="flex flex-col gap-2">
-                 <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Platform Role</label>
+                 <span className="mt-1 text-[12px] font-medium text-secondary">What they will be</span>
                  <div className="grid grid-cols-2 gap-3 h-[46px]">
                     <button 
                       type="button"
@@ -185,42 +183,28 @@ export default function InviteUsersPage() {
                
                {/* Left: Input Config */}
                <div className="flex flex-col gap-6 pt-2">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Subject Line</label>
-                    <input 
-                      type="text" 
-                      value={formData.subject}
-                      onChange={e => setFormData(p => ({...p, subject: e.target.value}))}
-                      className="w-full px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-foreground/30 outline-none transition-all placeholder:text-muted"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Headline Box</label>
-                    <input 
-                      type="text" 
-                      value={formData.headline}
-                      onChange={e => setFormData(p => ({...p, headline: e.target.value}))}
-                      className="w-full px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-foreground/30 outline-none transition-all"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Body Paragraph</label>
-                    <textarea 
-                      rows={5}
-                      value={formData.body}
-                      onChange={e => setFormData(p => ({...p, body: e.target.value}))}
-                      className="w-full px-4 py-3 bg-background rounded-[12px] border border-border-dim text-[13px] text-foreground focus:border-foreground/30 outline-none transition-all resize-none leading-relaxed"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-mono tracking-widest text-muted uppercase">Action Button</label>
-                    <input 
-                      type="text" 
-                      value={formData.ctaText}
-                      onChange={e => setFormData(p => ({...p, ctaText: e.target.value}))}
-                      className="w-full px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-foreground/30 outline-none transition-all"
-                    />
-                  </div>
+                  <Field
+                    label="Subject line"
+                    value={formData.subject}
+                    onChange={e => setFormData(p => ({...p, subject: e.target.value}))}
+                  />
+                  <Field
+                    label="Heading inside the email"
+                    value={formData.headline}
+                    onChange={e => setFormData(p => ({...p, headline: e.target.value}))}
+                  />
+                  <TextAreaField
+                    label="What the email says"
+                    rows={5}
+                    value={formData.body}
+                    onChange={e => setFormData(p => ({...p, body: e.target.value}))}
+                    className="min-h-[140px] resize-y"
+                  />
+                  <Field
+                    label="Wording on the button"
+                    value={formData.ctaText}
+                    onChange={e => setFormData(p => ({...p, ctaText: e.target.value}))}
+                  />
                </div>
 
                {/* Right: Premium Preview */}
