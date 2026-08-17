@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { ArrowLeft, Building2, ChevronRight, Sparkles } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { api } from "@/convex/_generated/api";
@@ -326,56 +327,56 @@ function DetailsForm({
           accent={customer.record === "PROSPECT"}
         />
         <div className="hidden sm:block" />
-        <Field
+        <AccountField
           label={t("addressLine1")}
           value={fields.addressLine1}
           onChange={set("addressLine1")}
           source={sourceFor("addressLine1")}
           onReject={rejectSource("addressLine1")}
         />
-        <Field
+        <AccountField
           label={t("addressLine2")}
           value={fields.addressLine2}
           onChange={set("addressLine2")}
           source={sourceFor("addressLine2")}
           onReject={rejectSource("addressLine2")}
         />
-        <Field
+        <AccountField
           label={t("town")}
           value={fields.town}
           onChange={set("town")}
           source={sourceFor("town")}
           onReject={rejectSource("town")}
         />
-        <Field
+        <AccountField
           label={t("postcode")}
           value={fields.postcode}
           onChange={set("postcode")}
           source={sourceFor("postcode")}
           onReject={rejectSource("postcode")}
         />
-        <Field
+        <AccountField
           label={t("country")}
           value={fields.country}
           onChange={set("country")}
           source={sourceFor("country")}
           onReject={rejectSource("country")}
         />
-        <Field
+        <AccountField
           label={t("phone")}
           value={fields.phone}
           onChange={set("phone")}
           source={sourceFor("phone")}
           onReject={rejectSource("phone")}
         />
-        <Field
+        <AccountField
           label={t("mobile")}
           value={fields.mobile}
           onChange={set("mobile")}
           source={sourceFor("mobile")}
           onReject={rejectSource("mobile")}
         />
-        <Field
+        <AccountField
           label={t("email")}
           value={fields.email}
           onChange={set("email")}
@@ -383,7 +384,7 @@ function DetailsForm({
           source={sourceFor("email")}
           onReject={rejectSource("email")}
         />
-        <Field
+        <AccountField
           label={t("accountsEmail")}
           value={fields.accountsEmail}
           onChange={set("accountsEmail")}
@@ -391,7 +392,7 @@ function DetailsForm({
           source={sourceFor("accountsEmail")}
           onReject={rejectSource("accountsEmail")}
         />
-        <Field
+        <AccountField
           label={t("website")}
           value={fields.website}
           onChange={set("website")}
@@ -399,14 +400,14 @@ function DetailsForm({
           source={sourceFor("website")}
           onReject={rejectSource("website")}
         />
-        <Field
+        <AccountField
           label={t("contactName")}
           value={fields.contactName}
           onChange={set("contactName")}
           source={sourceFor("contactName")}
           onReject={rejectSource("contactName")}
         />
-        <Field
+        <AccountField
           label={t("contactRole")}
           value={fields.contactRole}
           onChange={set("contactRole")}
@@ -414,7 +415,7 @@ function DetailsForm({
           onReject={rejectSource("contactRole")}
         />
         {extraLabel && (
-          <Field
+          <AccountField
             label={extraLabel}
             value={fields.extra}
             onChange={set("extra")}
@@ -426,12 +427,12 @@ function DetailsForm({
       </div>
 
       <div className="mt-4">
-        <label className="block text-[12px] text-secondary mb-1.5">{t("notes")}</label>
-        <textarea
+        <TextAreaField
+          label={t("notes")}
           value={fields.notes}
           onChange={set("notes")}
           rows={3}
-          className="w-full bg-background border border-border-dim rounded-[10px] px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand transition-colors"
+          className="min-h-[96px] resize-y"
         />
       </div>
 
@@ -613,7 +614,13 @@ function ReadOnlyField({
   );
 }
 
-function Field({
+/**
+ * This screen had its own component called `Field`, which shadowed the kit's
+ * part of the same name — so the one screen that most looked like it was using
+ * the shared field was the one screen that could not. It is the kit's now, with
+ * the "found rather than typed" marker riding in the hint slot underneath.
+ */
+function AccountField({
   label,
   value,
   onChange,
@@ -630,16 +637,13 @@ function Field({
   onReject?: () => void;
 }) {
   return (
-    <div>
-      <label className="block text-[12px] text-secondary mb-1.5">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        className="w-full bg-background border border-border-dim rounded-[10px] px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand transition-colors"
-      />
-      {source && <SourceMarker source={source} onReject={onReject} />}
-    </div>
+    <Field
+      label={label}
+      type={type}
+      value={value}
+      onChange={onChange}
+      hint={source ? <SourceMarker source={source} onReject={onReject} /> : undefined}
+    />
   );
 }
 

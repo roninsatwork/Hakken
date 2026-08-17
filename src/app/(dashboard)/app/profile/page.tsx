@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
+import { Field } from "@/src/ui/components/screens/Field";
 
 type ProfileFormData = {
   name: string;
@@ -146,46 +147,38 @@ export default function MyProfilePage() {
           <form id="profile-form" onSubmit={handleSubmit} className="relative z-10 flex flex-col gap-6">
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-4xl">
-              <div className="flex flex-col gap-1.5 w-full">
-                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">{t('fields.name.label')}</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-[13px] w-full"
-                  placeholder={t('fields.name.placeholder')}
-                />
-              </div>
+              <Field
+                label={t('fields.name.label')}
+                required
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder={t('fields.name.placeholder')}
+              />
+
+              {/* The badge that used to sit at the right-hand end of the label
+                  row said the same thing as the sentence underneath, so the
+                  sentence keeps the job and the box being visibly switched off
+                  says the rest. */}
+              <Field
+                label={t('fields.email.label')}
+                hint={t('fields.email.description')}
+                type="email"
+                disabled
+                value={formData.email}
+                placeholder="you@example.com"
+                className="cursor-not-allowed opacity-70"
+              />
+
+              <Field
+                label={t('fields.phone.label')}
+                type="tel"
+                value={formData.phone}
+                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                placeholder={t('fields.phone.placeholder')}
+              />
 
               <div className="flex flex-col gap-1.5 w-full">
-                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest flex items-center justify-between">
-                  <span>{t('fields.email.label')}</span>
-                  <span className="text-[9px] bg-white/10 px-2 py-0.5 rounded-sm text-secondary tracking-normal">{t('fields.email.fixed')}</span>
-                </label>
-                <input
-                  type="email"
-                  disabled
-                  value={formData.email}
-                  className="px-4 py-2.5 bg-background/50 border border-border-dim/50 rounded-[10px] text-muted outline-none transition-all text-[13px] w-full cursor-not-allowed opacity-70"
-                  placeholder="aman@example.com"
-                />
-                <p className="text-[11px] text-secondary mt-0.5">{t('fields.email.description')}</p>
-              </div>
-
-              <div className="flex flex-col gap-1.5 w-full">
-                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">{t('fields.phone.label')}</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className="px-4 py-2.5 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-[13px] w-full"
-                  placeholder={t('fields.phone.placeholder')}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5 w-full">
-                <label className="text-[12px] font-medium text-secondary uppercase tracking-widest">{t('fields.photo.label')}</label>
+                <span className="mt-1 text-[12px] font-medium text-secondary">{t('fields.photo.label')}</span>
                 <div className="flex items-center gap-4 w-full h-full pb-1">
                   {formData.image ? (
                     <Image
