@@ -56,14 +56,14 @@ not done. Phases 3 to 7 are still to do.
 | 1 — the kit moves into reach | **Done** |
 | 2 — the client-facing screens get on it | **Done** |
 | 3 — the wrong thing fails the build | **Done** |
-| 3.5 — one table, everywhere | **In progress**, 17.5 days, ~1 done |
+| 3.5 — one table, everywhere | **In progress**, 17.5 days, ~7.5 done |
 | 3.6 — one page header, everywhere | **Deferred** 2026-08-17, 2.5 days, measured |
 | 4 — accessibility, in the kit | 1 day |
 | 5 — small screens, in the kit | 1 day |
 | 6 — a capability can be withheld | 2 days |
 | 7 — a plan grants capabilities | 1.5 days |
 
-**Overall: 7 of 32.5 days.**
+**Overall: 13.5 of 32.5 days (41%).**
 
 Phases 4 and 5 need 3.5 done — that is what makes them cheap — but not each
 other. Phases 6 and 7 are independent of 1–5 and can be brought forward if
