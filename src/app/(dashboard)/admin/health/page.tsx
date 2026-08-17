@@ -6,13 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { AlertTriangle, ArrowRight, CircleCheck, HeartPulse } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { cn } from "@/src/ui/lib/utils";
 
@@ -245,63 +239,71 @@ export default function HealthPage() {
           </p>
         </div>
 
-        <TableShell minWidthClassName="min-w-[820px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>What ran</TableHeaderCell>
-              <TableHeaderCell>Agent</TableHeaderCell>
-              <TableHeaderCell>Result</TableHeaderCell>
-              <TableHeaderCell>Took</TableHeaderCell>
-              <TableHeaderCell>Cost</TableHeaderCell>
-              <TableHeaderCell>When</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {runs === undefined ? (
-              <TableLoadingRow colSpan={6} />
-            ) : recentRuns.length === 0 ? (
-              <TableEmptyRow
-                colSpan={6}
-                icon={<HeartPulse className="h-8 w-8 text-muted/30" />}
-                label="Nothing has run yet"
-              />
-            ) : (
-              recentRuns.map((run) => (
-                <tr key={run.runId} className="border-b border-border-dim/50">
-                  <td className="px-4 py-3 align-top">
-                    <Link
-                      href={`/admin/agents/${run.agentId}/runs/${run.runId}`}
-                      className="text-[13px] text-foreground transition-colors hover:text-brand"
-                    >
-                      {run.objective}
-                    </Link>
-                    {run.error ? (
-                      <div className="mt-0.5 line-clamp-1 text-[12px] text-rose-300">{run.error}</div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{run.agentName}</td>
-                  <td
-                    className={cn(
-                      "px-4 py-3 align-top text-[13px]",
-                      run.status === "FAILED" ? "text-rose-300" : "text-secondary",
-                    )}
+        <DataTable
+          rows={runs === undefined ? undefined : recentRuns}
+          rowKey={(run) => run.runId}
+          minWidthClassName="min-w-[820px]"
+          empty={{ icon: <HeartPulse className="h-8 w-8 text-muted/30" />, label: "Nothing has run yet" }}
+          columns={[
+            {
+              key: "what",
+              header: "What ran",
+              cell: (run) => (
+                <>
+                  <Link
+                    href={`/admin/agents/${run.agentId}/runs/${run.runId}`}
+                    className="text-[13px] text-foreground transition-colors hover:text-brand"
                   >
-                    {RUN_RESULT_LABELS[run.status] ?? run.status}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">
-                    {formatDuration(run.latencyMs ?? 0)}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">
-                    {formatSpend(run.costGBP ?? 0)}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">
-                    {formatDateTime(run.startedAt)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </TableShell>
+                    {run.objective}
+                  </Link>
+                  {run.error ? (
+                    <div className="mt-0.5 line-clamp-1 text-[12px] text-rose-300">{run.error}</div>
+                  ) : null}
+                </>
+              ),
+            },
+            {
+              key: "agent",
+              header: "Agent",
+              cell: (run) => <span className="text-[13px] text-secondary">{run.agentName}</span>,
+            },
+            {
+              key: "result",
+              header: "Result",
+              cell: (run) => (
+                <span
+                  className={cn(
+                    "text-[13px]",
+                    run.status === "FAILED" ? "text-rose-300" : "text-secondary",
+                  )}
+                >
+                  {RUN_RESULT_LABELS[run.status] ?? run.status}
+                </span>
+              ),
+            },
+            {
+              key: "took",
+              header: "Took",
+              cell: (run) => (
+                <span className="text-[13px] text-secondary">{formatDuration(run.latencyMs ?? 0)}</span>
+              ),
+            },
+            {
+              key: "cost",
+              header: "Cost",
+              cell: (run) => (
+                <span className="text-[13px] text-secondary">{formatSpend(run.costGBP ?? 0)}</span>
+              ),
+            },
+            {
+              key: "when",
+              header: "When",
+              cell: (run) => (
+                <span className="text-[13px] text-secondary">{formatDateTime(run.startedAt)}</span>
+              ),
+            },
+          ]}
+        />
       </section>
     </div>
   );

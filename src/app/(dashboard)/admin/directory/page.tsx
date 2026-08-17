@@ -20,14 +20,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 
@@ -35,7 +29,6 @@ type RoleFilter = "any" | "USER" | "ADMIN";
 type ActivityFilter = "any" | "active7" | "active30" | "dormant" | "never";
 type SortBy = "lastLogin" | "loginCount";
 
-const COLUMN_COUNT = 6;
 
 /** Relative recency reads faster than a date when scanning for dormancy. */
 function relativeDays(timestamp: number | null) {
@@ -177,108 +170,107 @@ export default function UserDirectoryPage() {
         )}
       </div>
 
-      <TableShell
-        footer={
-          status === "CanLoadMore" ? (
-            <div className="p-3 border-t border-border-dim flex justify-center">
-              <button
-                type="button"
-                onClick={() => loadMore(TABLE_PAGE_SIZE)}
-                className="text-[13px] text-secondary hover:text-foreground transition-colors px-4 py-2"
-              >
-                {t("loadMore")}
-              </button>
-            </div>
-          ) : undefined
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("table.person")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.company")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.role")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.lastLogin")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("table.logins30d")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.joined")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {loading && <TableLoadingRow colSpan={COLUMN_COUNT} />}
-
-          {!loading && results.length === 0 && (
-            <TableEmptyRow
-              colSpan={COLUMN_COUNT}
-              icon={<UserRound className="w-6 h-6 text-muted" />}
-              label={t("empty")}
-            />
-          )}
-
-          {!loading && results.map((person) => (
-            <tr
-              key={person._id}
-              className="group border-b border-border-dim/50 last:border-0 hover:bg-foreground/[0.02] transition-colors"
-            >
-              <td className="px-4 py-3">
-                <Link href={`/admin/users/${person._id}`} className="flex items-center gap-3">
-                  {person.image ? (
-                    /*
-                     * `unoptimized` because an avatar URL can be any host — a
-                     * Google photo, a dicebear placeholder, an upload. Routing
-                     * those through Next's optimiser means allowlisting every
-                     * host a user might arrive with, which is unwinnable. The
-                     * existing /admin/users table does the same.
-                     */
-                    <Image
-                      src={person.image}
-                      alt=""
-                      width={32}
-                      height={32}
-                      unoptimized
-                      className="rounded-full w-8 h-8 object-cover"
-                    />
-                  ) : (
-                    <span className="w-8 h-8 rounded-full bg-foreground/5 grid place-items-center text-[12px] text-muted">
-                      {(person.name ?? person.email ?? "?").slice(0, 1).toUpperCase()}
-                    </span>
-                  )}
-                  <span className="flex flex-col min-w-0">
-                    <span className="text-[13px] text-foreground truncate">
-                      {person.name ?? t("table.unnamed")}
-                    </span>
-                    <span className="text-[12px] text-muted truncate">{person.email}</span>
-                  </span>
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-[13px] text-secondary">
-                {person.companyName ?? t("table.noCompany")}
-              </td>
-              <td className="px-4 py-3 text-[13px] text-secondary">{person.role}</td>
-              <td className="px-4 py-3 text-[13px]">
-                {person.lastLoginAt === null ? (
+      <DataTable
+        rows={loading ? undefined : results}
+        rowKey={(person) => person._id}
+        empty={{ icon: <UserRound className="w-6 h-6 text-muted" />, label: t("empty") }}
+        /* Was a bare "load more" link centred in its own bar. The house footer
+           says how many are showing as well as offering the next page. */
+        footer={{
+          mode: "loadMore",
+          visibleCount: results.length,
+          canLoadMore: status === "CanLoadMore",
+          isLoading: status === "LoadingMore",
+          onLoadMore: () => loadMore(TABLE_PAGE_SIZE),
+          labels: { empty: t("empty"), loadMore: t("loadMore") },
+        }}
+        columns={[
+          {
+            key: "person",
+            header: t("table.person"),
+            cell: (person) => (
+              <Link href={`/admin/users/${person._id}`} className="flex items-center gap-3">
+                {person.image ? (
                   /*
-                   * "Never" is its own state, not a very old date. Sorting nulls
-                   * as ancient timestamps would read as "logged in long ago",
-                   * which is a different and more reassuring claim.
+                   * `unoptimized` because an avatar URL can be any host — a
+                   * Google photo, a dicebear placeholder, an upload. Routing
+                   * those through Next's optimiser means allowlisting every host
+                   * a user might arrive with, which is unwinnable.
                    */
-                  <span className="text-[11px] uppercase tracking-[0.08em] px-2 py-1 rounded-full bg-foreground/5 text-muted">
-                    {t("table.never")}
-                  </span>
+                  <Image
+                    src={person.image}
+                    alt=""
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="rounded-full w-8 h-8 object-cover"
+                  />
                 ) : (
-                  <span className="text-secondary" title={formatDate(person.lastLoginAt)}>
-                    {relativeDays(person.lastLoginAt)}
+                  <span className="w-8 h-8 rounded-full bg-foreground/5 grid place-items-center text-[12px] text-muted">
+                    {(person.name ?? person.email ?? "?").slice(0, 1).toUpperCase()}
                   </span>
                 )}
-              </td>
-              <td className="px-4 py-3 text-[13px] text-secondary text-right tabular-nums">
-                {person.loginCount30d}
-              </td>
-              <td className="px-4 py-3 text-[13px] text-secondary">
+                <span className="flex flex-col min-w-0">
+                  <span className="text-[13px] text-foreground truncate">
+                    {person.name ?? t("table.unnamed")}
+                  </span>
+                  <span className="text-[12px] text-muted truncate">{person.email}</span>
+                </span>
+              </Link>
+            ),
+          },
+          {
+            key: "company",
+            header: t("table.company"),
+            cell: (person) => (
+              <span className="text-[13px] text-secondary">
+                {person.companyName ?? t("table.noCompany")}
+              </span>
+            ),
+          },
+          {
+            key: "role",
+            header: t("table.role"),
+            cell: (person) => <span className="text-[13px] text-secondary">{person.role}</span>,
+          },
+          {
+            key: "lastLogin",
+            header: t("table.lastLogin"),
+            cell: (person) =>
+              person.lastLoginAt === null ? (
+                /*
+                 * "Never" is its own state, not a very old date. Sorting nulls as
+                 * ancient timestamps would read as "logged in long ago", which is
+                 * a different and more reassuring claim.
+                 */
+                <span className="text-[11px] uppercase tracking-[0.08em] px-2 py-1 rounded-full bg-foreground/5 text-muted">
+                  {t("table.never")}
+                </span>
+              ) : (
+                <span className="text-[13px] text-secondary" title={formatDate(person.lastLoginAt)}>
+                  {relativeDays(person.lastLoginAt)}
+                </span>
+              ),
+          },
+          {
+            key: "logins30d",
+            header: t("table.logins30d"),
+            align: "right",
+            cell: (person) => (
+              <span className="text-[13px] text-secondary tabular-nums">{person.loginCount30d}</span>
+            ),
+          },
+          {
+            key: "joined",
+            header: t("table.joined"),
+            cell: (person) => (
+              <span className="text-[13px] text-secondary">
                 {person.createdAt ? formatDate(person.createdAt) : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -10,13 +10,7 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import JsonSchemaBuilder from "@/src/ui/components/settings/JsonSchemaBuilder";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
   SaveAction,
   SaveError,
@@ -106,86 +100,88 @@ export default function AgentInterfacesPage() {
         </div>
         <SaveError>{toolError}</SaveError>
 
-        <TableShell minWidthClassName="min-w-[720px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>{t("tools.columns.name")}</TableHeaderCell>
-              <TableHeaderCell>{t("tools.columns.description")}</TableHeaderCell>
-              <TableHeaderCell>{t("tools.columns.access")}</TableHeaderCell>
-              <TableHeaderCell align="right">{t("tools.columns.state")}</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {globalTools === undefined ? (
-              <TableLoadingRow colSpan={4} />
-            ) : globalTools.length === 0 ? (
-              /* The old message read "No tools or integrations mapped to this
-                 unit", which says this agent has none. The truth is that none
-                 exist anywhere yet, and the reader was given nowhere to go. */
-              <TableEmptyRow
-                colSpan={4}
-                icon={<Wrench className="h-8 w-8 text-muted/30" />}
-                label={t("tools.empty")}
-                action={
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-[13px] normal-case tracking-normal text-secondary">
-                      {t("tools.emptyHint")}
-                    </span>
-                    <Link
-                      href="/admin/ai/tools/new"
-                      className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
-                    >
-                      {t("tools.emptyAction")}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                }
-              />
-            ) : (
-              globalTools.map((tool) => {
+        <DataTable
+          rows={globalTools}
+          rowKey={(tool) => tool._id}
+          minWidthClassName="min-w-[720px]"
+          /* The old message read "No tools or integrations mapped to this unit",
+             which says this agent has none. The truth is that none exist
+             anywhere yet, and the reader was given nowhere to go. */
+          empty={{
+            icon: <Wrench className="h-8 w-8 text-muted/30" />,
+            label: t("tools.empty"),
+            action: (
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[13px] normal-case tracking-normal text-secondary">
+                  {t("tools.emptyHint")}
+                </span>
+                <Link
+                  href="/admin/ai/tools/new"
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
+                >
+                  {t("tools.emptyAction")}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ),
+          }}
+          columns={[
+            {
+              key: "name",
+              header: t("tools.columns.name"),
+              cell: (tool) => (
+                <span className="text-[13px] font-medium text-foreground">{tool.name}</span>
+              ),
+            },
+            {
+              key: "description",
+              header: t("tools.columns.description"),
+              cell: (tool) => (
+                <span className="text-[13px] leading-relaxed text-secondary">{tool.description}</span>
+              ),
+            },
+            {
+              key: "access",
+              header: t("tools.columns.access"),
+              cell: (tool) => (
+                <span className="text-[13px] text-secondary">{t(`tools.roles.${tool.requiredRole}`)}</span>
+              ),
+            },
+            {
+              key: "state",
+              header: t("tools.columns.state"),
+              align: "right",
+              cell: (tool) => {
                 const isBound = agentTools.some((bound) => bound._id === tool._id);
                 return (
-                  <tr key={tool._id} className="border-b border-border-dim/50">
-                    <td className="px-4 py-3 align-top text-[13px] font-medium text-foreground">
-                      {tool.name}
-                    </td>
-                    <td className="px-4 py-3 align-top text-[13px] leading-relaxed text-secondary">
-                      {tool.description}
-                    </td>
-                    <td className="px-4 py-3 align-top text-[13px] text-secondary">
-                      {t(`tools.roles.${tool.requiredRole}`)}
-                    </td>
-                    <td className="px-4 py-3 align-top text-right">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={isBound}
-                        aria-label={tool.name}
-                        disabled={processingId !== null}
-                        onClick={() => handleToggleTool(tool._id, isBound)}
-                        className="disabled:opacity-50"
-                      >
-                        <span
-                          className={cn(
-                            "relative block h-5 w-9 rounded-full transition-colors",
-                            isBound ? "bg-brand" : "bg-foreground/15",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all",
-                              isBound ? "left-[18px]" : "left-0.5",
-                            )}
-                          />
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isBound}
+                    aria-label={tool.name}
+                    disabled={processingId !== null}
+                    onClick={() => handleToggleTool(tool._id, isBound)}
+                    className="disabled:opacity-50"
+                  >
+                    <span
+                      className={cn(
+                        "relative block h-5 w-9 rounded-full transition-colors",
+                        isBound ? "bg-brand" : "bg-foreground/15",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all",
+                          isBound ? "left-[18px]" : "left-0.5",
+                        )}
+                      />
+                    </span>
+                  </button>
                 );
-              })
-            )}
-          </tbody>
-        </TableShell>
+              },
+            },
+          ]}
+        />
       </section>
 
       <section className="flex flex-col gap-3">
