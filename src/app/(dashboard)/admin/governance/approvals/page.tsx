@@ -1,13 +1,14 @@
 "use client";
 
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   RowActions,
   RowIconButton,
   SearchBar,
@@ -61,23 +62,18 @@ export default function AgentApprovalsPage() {
     toolName: string;
   } | null>(null);
 
-  const {
-    results: approvals,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
+  const paged = useServerPagedTable(
     api.agentRuns.getPendingApprovals,
     { searchTerm: searchTerm.trim() || undefined },
-    { initialNumItems: TABLE_PAGE_SIZE },
+    TABLE_PAGE_SIZE,
   );
+  const approvals = paged.rows;
   // The total, not the loaded count. The header used to read `approvals.length`,
   // which silently under-reported as soon as there were more than one page.
   const pendingCount = useQuery(api.agentRuns.getPendingApprovalCount, {});
   const action = useAdminAction({ scope: "admin-agent-approvals" });
 
-  const isLoading = status === "LoadingFirstPage";
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
+  const isLoading = paged.isLoading;
 
   const submitDecision = async (approvalId: Id<"agentRunApprovals">, decision: Decision) => {
     await action.run(
@@ -120,17 +116,14 @@ export default function AgentApprovalsPage() {
       <TableShell
         minWidthClassName="min-w-[900px]"
         footer={(
-          <LoadMoreFooter
-            visibleCount={approvals.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
-            labels={{
-              empty: t("footer.empty"),
-              showing: (count) => t("footer.showing", { count }),
-              loadMore: t("footer.loadMore"),
-              loading: t("footer.loading"),
-            }}
+          <PaginationFooter
+            page={paged.page}
+            totalPages={paged.totalPages}
+            totalCount={paged.loadedCount}
+            pageSize={TABLE_PAGE_SIZE}
+            isLoading={paged.isLoadingMore}
+            onPageChange={paged.goToPage}
+            labels={{ empty: t("footer.empty") }}
           />
         )}
       >

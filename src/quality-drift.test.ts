@@ -476,7 +476,11 @@ describe('Quality Drift Guardrails', () => {
       .filter((filePath) => {
         const contents = readRepoFile(filePath);
         return !/<TableShell[\s>]/.test(contents)
-          || !/<LoadMoreFooter[\s>]/.test(contents)
+          // Either house footer satisfies this — the rule is that the screen
+          // wears one of them rather than drawing its own. It moved from the
+          // load-more footer to the numbered one on 2026-08-17, when the load-more
+          // footer was settled as drift rather than a variant.
+          || !/<(LoadMoreFooter|PaginationFooter)[\s>]/.test(contents)
           || contents.includes('ChevronLeft')
           || contents.includes('ChevronRight');
       });
@@ -987,10 +991,15 @@ describe('Quality Drift Guardrails', () => {
     expect(contents).not.toContain('api.companies.getCompanies');
   });
 
+  /**
+   * As with the workflows page: what this guards is that the screen fetches a
+   * page at a time from the server, not the literal spelling of the hook.
+   * `useServerPagedTable` is the house wrapper around `usePaginatedQuery`.
+   */
   test('admin agents page uses the paginated inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/agents/page.tsx');
 
-    expect(contents).toContain('usePaginatedQuery');
+    expect(contents).toMatch(/usePaginatedQuery|useServerPagedTable/);
     expect(contents).toContain('api.agents.getPaginatedAgents');
     expect(contents).not.toContain('api.agents.list');
   });

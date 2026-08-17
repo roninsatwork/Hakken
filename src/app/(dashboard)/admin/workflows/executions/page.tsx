@@ -1,11 +1,11 @@
 "use client";
 
-import { usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   TableEmptyRow,
   TableHeaderCell,
   TableHeaderRow,
@@ -36,13 +36,9 @@ function statusToneClass(status: string) {
 export default function WorkflowExecutionsPage() {
   const t = useTranslations("admin.workflows.executions");
 
-  const { results: executions, status, loadMore } = usePaginatedQuery(
-    api.scheduler.getWorkflowExecutions,
-    {},
-    { initialNumItems: TABLE_PAGE_SIZE },
-  );
-
-  const isLoading = status === "LoadingFirstPage";
+  const runs = useServerPagedTable(api.scheduler.getWorkflowExecutions, {}, TABLE_PAGE_SIZE);
+  const executions = runs.rows;
+  const isLoading = runs.isLoading;
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
@@ -55,17 +51,14 @@ export default function WorkflowExecutionsPage() {
       <TableShell
         minWidthClassName="min-w-[900px]"
         footer={(
-          <LoadMoreFooter
-            visibleCount={executions.length}
-            canLoadMore={status === "CanLoadMore"}
-            isLoading={status === "LoadingMore"}
-            onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
-            labels={{
-              empty: t("empty"),
-              showing: (count) => t("footer.showing", { count }),
-              loadMore: t("footer.loadMore"),
-              loading: t("footer.loading"),
-            }}
+          <PaginationFooter
+            page={runs.page}
+            totalPages={runs.totalPages}
+            totalCount={runs.loadedCount}
+            pageSize={TABLE_PAGE_SIZE}
+            isLoading={runs.isLoadingMore}
+            onPageChange={runs.goToPage}
+            labels={{ empty: t("empty") }}
           />
         )}
       >

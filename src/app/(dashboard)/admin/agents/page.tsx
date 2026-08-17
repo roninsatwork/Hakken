@@ -1,7 +1,8 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
-import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import Image from "next/image";
@@ -22,7 +23,7 @@ import {
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   RowActions,
   RowIconButton,
   SearchBar,
@@ -77,18 +78,9 @@ export default function AgentsPage() {
   const [submitError, setSubmitError] = useState("");
 
   const itemsPerPage = TABLE_PAGE_SIZE;
-  const {
-    results: paginatedAgents,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.agents.getPaginatedAgents,
-    { searchTerm },
-    { initialNumItems: itemsPerPage }
-  );
-  const isLoading = status === "LoadingFirstPage" || activeModelsData === undefined;
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
+  const agents = useServerPagedTable(api.agents.getPaginatedAgents, { searchTerm }, itemsPerPage);
+  const paginatedAgents = agents.rows;
+  const isLoading = agents.isLoading || activeModelsData === undefined;
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -130,17 +122,14 @@ export default function AgentsPage() {
       {/* Table */}
       <TableShell
         footer={
-          <LoadMoreFooter
-            visibleCount={paginatedAgents.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(itemsPerPage)}
-            labels={{
-              empty: t('table.empty'),
-              showing: (count) => t('table.showingLoaded', { count }),
-              loadMore: t('table.loadMore'),
-              loading: t('table.loadingMore'),
-            }}
+          <PaginationFooter
+            page={agents.page}
+            totalPages={agents.totalPages}
+            totalCount={agents.loadedCount}
+            pageSize={itemsPerPage}
+            isLoading={agents.isLoadingMore}
+            onPageChange={agents.goToPage}
+            labels={{ empty: t('table.empty') }}
           />
         }
         minWidthClassName="min-w-[800px]"

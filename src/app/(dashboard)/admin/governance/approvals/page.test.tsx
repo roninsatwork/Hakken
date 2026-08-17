@@ -102,7 +102,11 @@ describe("AgentApprovalsPage", () => {
     renderPage();
 
     expect(screen.getByText("42 waiting")).toBeInTheDocument();
-    expect(screen.getByText("Showing 1")).toBeInTheDocument();
+    // The footer counts what has been fetched, and says so; the header counts
+    // them all. The two disagreeing is the point of this test, so the footer's
+    // wording is asserted rather than ignored — it now reads as a page range,
+    // since the screen moved onto the numbered footer.
+    expect(screen.getByText("Showing 1-1 of 1")).toBeInTheDocument();
   });
 
   it("marks the count as approximate when counting stopped at the limit", () => {
