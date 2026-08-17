@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
@@ -200,7 +200,7 @@ describe("AgentLogsDashboard", () => {
     expect(screen.getByText("Nothing has gone wrong")).toBeInTheDocument();
   });
 
-  it("distinguishes an empty search from an agent that has never spoken", () => {
+  it("distinguishes an empty search from an agent that has never spoken", async () => {
     dataFixture = payload({ groups: [], totalGroups: 0 });
     renderPage();
 
@@ -210,7 +210,12 @@ describe("AgentLogsDashboard", () => {
       target: { value: "needle" },
     });
 
-    expect(screen.getByText("Nothing matched that search")).toBeInTheDocument();
+    // The house search box reports the term once typing stops rather than on
+    // every keystroke, so the same search happens a moment later. The box itself
+    // is immediate; it is the query that waits.
+    await waitFor(() =>
+      expect(screen.getByText("Nothing matched that search")).toBeInTheDocument()
+    );
   });
 
   it("says outright when the history is longer than the screen can hold", () => {

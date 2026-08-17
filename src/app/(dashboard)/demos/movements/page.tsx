@@ -4,7 +4,7 @@ import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useState } from "react";
-import { Activity, Bug, Plus, Search } from "lucide-react";
+import { Activity, Bug, Plus } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import type { MovementSpineGoal } from "./_lib/movementTypes";
 import {
   MOVEMENT_SALMON,
 } from "./_lib/movementPalette";
+import { SearchBar } from "@/src/ui/components/screens/Table";
 
 export default function MovementsLibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -93,17 +94,8 @@ export default function MovementsLibraryPage() {
 
 
       {/* Control Bar */}
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input
-            type="text"
-            placeholder="Search routines..."
-            value={searchTerm}
-            onChange={e => handleSearch(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
-        </div>
+      <div className="flex items-center gap-4">
+        <SearchBar value={searchTerm} onChange={handleSearch} placeholder="Search routines..." />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

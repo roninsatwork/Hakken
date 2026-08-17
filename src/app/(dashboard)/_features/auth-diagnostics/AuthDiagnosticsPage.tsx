@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { Filter, Inbox, Loader2, MailCheck, Search, ShieldCheck } from "lucide-react";
+import { Filter, Inbox, Loader2, MailCheck, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -16,6 +16,7 @@ import {
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE, matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 
 type AuthDiagnosticsEvent = {
   _id: Id<"authEvents">;
@@ -129,17 +130,15 @@ export function AuthDiagnosticsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 rounded-[16px] border border-border-dim bg-sidebar/40 p-3 backdrop-blur-xl lg:grid-cols-[minmax(240px,1fr)_180px_180px_180px]">
-        <div className="flex items-center gap-3 rounded-[10px] border border-border-dim bg-background px-3 py-2 text-secondary focus-within:border-brand/50 focus-within:text-foreground">
-          <Search className="h-[18px] w-[18px]" />
-          <input
-            type="text"
-            placeholder={t("filters.searchPlaceholder")}
+        <div className="flex">
+          <TableSearchInput
             value={searchTerm}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
+            onChange={(next) => {
+              setSearchTerm(next);
               setPage(1);
             }}
-            className="w-full border-none bg-transparent text-[14px] text-foreground outline-none placeholder:text-muted"
+            placeholder={t("filters.searchPlaceholder")}
+            clearLabel={t("filters.searchPlaceholder")}
           />
         </div>
 

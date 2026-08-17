@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import {
   BrainCircuit,
   Library,
   Loader2,
-  Search,
   Trash2,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -171,16 +171,15 @@ export default function CompanyAiSkillsPage() {
       </header>
 
       {/* Search, then the same table and pager the Skill Center uses. */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input
+      <div className="flex">
+        <TableSearchInput
           value={companySearchTerm}
-          onChange={(event) => {
-            setCompanySearchTerm(event.target.value);
+          onChange={(next) => {
+            setCompanySearchTerm(next);
             setPage(1);
           }}
           placeholder="Search skills by name"
-          className="h-10 w-full rounded-[8px] border border-border-dim bg-card pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+          clearLabel="Clear search"
         />
       </div>
 
@@ -264,15 +263,14 @@ export default function CompanyAiSkillsPage() {
             start again for the next one. */}
         <div className="flex flex-col gap-4">
           <ModalFormError>{action.error}</ModalFormError>
-          <label className="relative block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
+          <div className="flex">
+            <TableSearchInput
               value={globalSkillSearchTerm}
-              onChange={(event) => setGlobalSkillSearchTerm(event.target.value)}
+              onChange={setGlobalSkillSearchTerm}
               placeholder="Search skills"
-              className="h-10 w-full rounded-[8px] border border-border-dim bg-background/50 pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+              clearLabel="Clear search"
             />
-          </label>
+          </div>
 
           {importable.status === "LoadingFirstPage" ? (
             <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-brand" /></div>

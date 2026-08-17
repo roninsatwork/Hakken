@@ -8,7 +8,6 @@ import { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  Search,
   Loader2,
   MessageSquareText,
   ShieldAlert,
@@ -27,6 +26,7 @@ import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/C
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 
 export default function CompanyChatLogsDashboard() {
   const { platformName } = useSystemSettings();
@@ -174,14 +174,12 @@ export default function CompanyChatLogsDashboard() {
 
           {/* Roster Search Bar */}
           <div className="p-4 border-b border-border-dim bg-background/50">
-            <div className="flex items-center gap-3 px-4 py-3 bg-foreground/5 rounded-[12px] border border-border-dim focus-within:border-brand/40 transition-colors">
-              <Search className="w-4 h-4 text-muted shrink-0" />
-              <input
-                type="text"
+            <div className="flex">
+              <TableSearchInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={setSearchTerm}
                 placeholder="Search transcripts or IPs..."
-                className="flex-1 bg-transparent border-none outline-none text-[13px] text-foreground placeholder:text-muted/60 tracking-wide"
+                clearLabel="Clear search"
               />
             </div>
           </div>

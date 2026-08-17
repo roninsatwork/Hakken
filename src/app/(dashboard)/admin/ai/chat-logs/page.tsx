@@ -6,7 +6,6 @@ import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  Search,
   Loader2,
   MessageSquareText,
   ShieldAlert,
@@ -25,6 +24,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 
 export default function ChatLogsDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -116,14 +116,12 @@ export default function ChatLogsDashboard() {
 
           {/* Roster Search Bar */}
           <div className="p-4 border-b border-border-dim bg-background/50">
-            <div className="flex items-center gap-3 px-4 py-3 bg-foreground/5 rounded-[12px] border border-border-dim focus-within:border-brand/40 transition-colors">
-              <Search className="w-4 h-4 text-muted shrink-0" />
-              <input
-                type="text"
+            <div className="flex">
+              <TableSearchInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={setSearchTerm}
                 placeholder={t("searchPlaceholder")}
-                className="flex-1 bg-transparent border-none outline-none text-[13px] text-foreground placeholder:text-muted/60 tracking-wide"
+                clearLabel={t("searchPlaceholder")}
               />
             </div>
           </div>

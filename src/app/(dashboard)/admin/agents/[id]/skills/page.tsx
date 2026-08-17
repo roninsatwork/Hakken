@@ -6,13 +6,14 @@ import { useParams } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { BrainCircuit, ExternalLink, Library, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { BrainCircuit, ExternalLink, Library, Loader2, Plus, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import {
   LoadMoreFooter,
   TableEmptyRow,
   TableShell,
 } from "@/src/ui/components/screens/Table";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
@@ -241,15 +242,14 @@ export default function AgentSkillsPage() {
             browser that made the reader pick one skill, read a preview of its
             instructions, attach it, and start again for the next. */}
         <div className="flex flex-col gap-4">
-          <label className="relative block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
+          <div className="flex">
+            <TableSearchInput
               value={skillSearchTerm}
-              onChange={(event) => setSkillSearchTerm(event.target.value)}
+              onChange={setSkillSearchTerm}
               placeholder="Search skills"
-              className="h-10 w-full rounded-[8px] border border-border-dim bg-background/50 pl-9 pr-3 text-[13px] text-foreground outline-none focus:border-brand/50"
+              clearLabel="Clear search"
             />
-          </label>
+          </div>
 
           {isPickerLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-brand" /></div>

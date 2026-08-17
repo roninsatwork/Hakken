@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import type { FormEvent, ReactNode } from "react";
 import { redirect, useSearchParams } from "next/navigation";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { BarChart3, BrainCircuit, FileText, Loader2, Pencil, Search, Trash2 } from "lucide-react";
+import { BarChart3, BrainCircuit, FileText, Loader2, Pencil, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import {
@@ -304,13 +305,12 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
       {/* Search and status lead, because a catalogue of hundreds is navigated
           rather than scanned. Both narrow in the database. */}
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input
+        <div className="flex flex-1">
+          <TableSearchInput
             value={searchTerm}
-            onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }}
+            onChange={(next) => { setSearchTerm(next); setPage(1); }}
             placeholder="Search skills by name"
-            className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
+            clearLabel="Clear search"
           />
         </div>
       </div>

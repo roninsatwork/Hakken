@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, List, RefreshCw, Search } from "lucide-react";
+import { Bot, List, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
@@ -134,14 +135,12 @@ export default function AIModelCataloguePage() {
           placeholder down to "Sea" — with two controls instead of four there is
           room for the search to grow and still read as a search box. */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative min-w-0 flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input
-            type="text"
+        <div className="flex min-w-0 flex-1">
+          <TableSearchInput
             value={searchTerm}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search models by name"
-            className="w-full h-10 pl-9 pr-3 rounded-[8px] border border-border-dim bg-card text-[13px] text-foreground outline-none focus:border-brand/50"
+            clearLabel="Clear search"
           />
         </div>
 

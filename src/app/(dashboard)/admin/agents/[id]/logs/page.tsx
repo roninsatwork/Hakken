@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowRight, ChevronDown, DatabaseZap, FileText, Loader2, Search } from "lucide-react";
+import { ArrowRight, ChevronDown, DatabaseZap, FileText, Loader2 } from "lucide-react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { PaginationFooter } from "@/src/ui/components/screens/Table";
 import useDebounce from "@/src/hooks/useDebounce";
@@ -21,6 +21,7 @@ import {
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 import { classifyLogEntry, type LogCategory } from "@/convex/agentLogGroupingService";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 
 const FILTERS = [
   { key: "ALL", label: "Everything" },
@@ -95,14 +96,12 @@ export default function AgentLogsDashboard() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 relative">
-        <Search className="w-4 h-4 text-muted absolute left-4" />
-        <input
-          type="text"
+      <div className="flex items-center gap-3">
+        <TableSearchInput
           value={searchTerm}
-          onChange={(event) => reset(() => setSearchTerm(event.target.value))}
+          onChange={(next) => reset(() => setSearchTerm(next))}
           placeholder="Search everything this agent said or was told"
-          className="w-full bg-card border border-border-dim rounded-[11px] py-2.5 pl-11 pr-4 text-[13px] text-foreground placeholder:text-muted outline-none transition-all focus:border-brand/50"
+          clearLabel="Clear search"
         />
       </div>
 
