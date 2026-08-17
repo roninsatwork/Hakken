@@ -175,7 +175,10 @@ describe("ManageUsersPage", () => {
     });
 
     fireEvent.click(container.querySelectorAll(".lucide-trash-2")[1].closest("button") as HTMLButtonElement);
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    // The row's own bin now carries a label too, so the confirmation's button is
+    // the last of the pair rather than the only one. It used to have no
+    // accessible name at all, which is what made this unambiguous before.
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete" }).at(-1) as HTMLButtonElement);
 
     await waitFor(() => {
       expect(deleteUser).toHaveBeenCalledWith({ id: "user_1" });

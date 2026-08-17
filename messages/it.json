@@ -2439,7 +2439,8 @@
         "na": "N/D",
         "loadMore": "Carica altri utenti",
         "showingLoaded": "Visualizzazione di {count} utenti",
-        "loadingMore": "Caricamento utenti..."
+        "loadingMore": "Caricamento utenti...",
+        "openProfile": "Apri profilo"
       },
       "roles": {
         "superAdmin": "Super Admin",
