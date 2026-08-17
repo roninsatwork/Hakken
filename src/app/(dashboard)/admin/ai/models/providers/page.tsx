@@ -7,12 +7,7 @@ import { Bot, Loader2, RefreshCw } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { cn } from "@/src/ui/lib/utils";
 import { getErrorMessage } from "@/src/lib/errors";
@@ -156,137 +151,141 @@ export default function AIModelProvidersPage() {
           two screens that describe the same thing finally look related. No
           search box: at four rows it is furniture, and the footer honestly
           reports the count. */}
-      <TableShell
+      <DataTable
+        rows={providersResult === undefined ? undefined : providers}
+        rowKey={(provider) => provider.providerKey}
         minWidthClassName="min-w-[820px]"
-        footer={
-          <PaginationFooter
-            page={1}
-            totalPages={1}
-            totalCount={providers.length}
-            pageSize={Math.max(providers.length, 1)}
-            isLoading={providersResult === undefined}
-            onPageChange={() => {}}
-            labels={{
-              empty: "No providers configured",
-              showing: (_start, _end, total) => `${total} provider${total === 1 ? "" : "s"}`,
-            }}
-          />
-        }
-      >
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium w-[34%]">Provider</th>
-            <th className="px-4 py-3 font-medium w-[16%]">Models</th>
-            <th className="px-4 py-3 font-medium w-[16%]">Status</th>
-            <th className="px-4 py-3 font-medium w-[16%]">Last synced</th>
-            <th className="px-4 py-3 font-medium w-[18%] text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {providersResult === undefined ? (
-            <TableLoadingRow colSpan={5} />
-          ) : providers.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<Bot className="w-8 h-8 text-muted/30" />}
-              label="No providers configured"
-            />
-          ) : (
-            providers.map((provider) => {
+        empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: "No providers configured" }}
+        footer={{
+          mode: "paged",
+          page: 1,
+          totalPages: 1,
+          totalCount: providers.length,
+          pageSize: Math.max(providers.length, 1),
+          isLoading: providersResult === undefined,
+          onPageChange: () => {},
+          labels: {
+            empty: "No providers configured",
+            showing: (_start, _end, total) => `${total} provider${total === 1 ? "" : "s"}`,
+          },
+        }}
+        columns={[
+          {
+            key: "provider",
+            header: "Provider",
+            className: "w-[34%]",
+            /* The name, and nothing under it. The raw provider key and
+               `authMode` used to sit here; the last sync message replaced them
+               and was no more wanted. The Status column says whether the
+               provider answers, and a failed test still reports why in the
+               banner above. */
+            cell: (provider) => (
+              <div
+                className="text-[13px] font-semibold text-foreground"
+                title={getProviderHealthMessage(provider.settings) || undefined}
+              >
+                {provider.displayName}
+              </div>
+            ),
+          },
+          {
+            key: "models",
+            header: "Models",
+            className: "w-[16%]",
+            /* The question this screen exists to answer, and it was not on it:
+               how many models this provider gives you, and how many are on. */
+            cell: (provider) => {
+              const counts = countsByProvider.get(provider.providerKey);
+              return (
+                <span className="text-[12px] text-secondary">
+                  {counts ? (
+                    <>
+                      {counts.total} <span className="text-muted">· {counts.enabled} on</span>
+                    </>
+                  ) : (
+                    <span className="text-muted">None yet</span>
+                  )}
+                </span>
+              );
+            },
+          },
+          {
+            key: "status",
+            header: "Status",
+            className: "w-[16%]",
+            cell: (provider) => (
+              <span className={`text-[12px] ${describeProviderStatusTone(provider.isEnabled, provider.status)}`}>
+                {describeProviderStatus(provider.isEnabled, provider.status)}
+              </span>
+            ),
+          },
+          {
+            key: "lastSynced",
+            header: "Last synced",
+            className: "w-[16%]",
+            cell: (provider) => (
+              <span className="text-[12px] text-secondary">{formatProviderDate(provider.lastSyncedAt)}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            className: "w-[18%]",
+            cell: (provider) => {
               const isTesting = testingProvider === provider.providerKey;
               const syncProviderKey = isSyncProviderKey(provider.providerKey) ? provider.providerKey : null;
               const isSyncing = syncProviderKey !== null && syncingProvider === syncProviderKey;
-              const healthMessage = getProviderHealthMessage(provider.settings);
-              const counts = countsByProvider.get(provider.providerKey);
-
               return (
-                <tr
-                  key={provider.providerKey}
-                  className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors"
-                >
-                  {/* The name, and nothing under it. The raw provider key and
-                      `authMode` used to sit here; the last sync message replaced
-                      them and was no more wanted. The Status column says whether
-                      the provider answers, and a failed test still reports why
-                      in the banner above. */}
-                  <td className="px-4 py-3">
-                    <div className="text-[13px] font-semibold text-foreground" title={healthMessage || undefined}>
-                      {provider.displayName}
-                    </div>
-                  </td>
-                  {/* The question this screen exists to answer, and it was not
-                      on it: how many models this provider gives you, and how
-                      many are switched on. */}
-                  <td className="px-4 py-3 text-[12px] text-secondary">
-                    {counts ? (
-                      <>
-                        {counts.total} <span className="text-muted">· {counts.enabled} on</span>
-                      </>
-                    ) : (
-                      <span className="text-muted">None yet</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-[12px]">
-                    <span className={describeProviderStatusTone(provider.isEnabled, provider.status)}>
-                      {describeProviderStatus(provider.isEnabled, provider.status)}
+                <div className="flex items-center justify-end gap-2">
+                  <WriteButton
+                    type="button"
+                    onClick={() => syncProviderKey && syncProvider(syncProviderKey)}
+                    disabled={!syncProviderKey || syncingProvider !== null}
+                    className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
+                  >
+                    {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    Sync
+                  </WriteButton>
+                  <button
+                    type="button"
+                    onClick={() => testProvider(provider.providerKey)}
+                    disabled={isTesting}
+                    className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
+                  >
+                    {isTesting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Test
+                  </button>
+                  {/* The switch is the control, not a badge beside a button
+                      saying the same thing. */}
+                  <WriteButton
+                    type="button"
+                    role="switch"
+                    aria-checked={provider.isEnabled}
+                    aria-label={`${provider.isEnabled ? "Disable" : "Enable"} ${provider.displayName}`}
+                    onClick={() => toggleProvider(provider.providerKey, provider.isEnabled)}
+                    className="ml-1"
+                  >
+                    <span
+                      className={cn(
+                        "relative block h-5 w-9 rounded-full transition-colors",
+                        provider.isEnabled ? "bg-brand" : "bg-foreground/15"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
+                          provider.isEnabled ? "left-[18px]" : "left-0.5"
+                        )}
+                      />
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-[12px] text-secondary">
-                    {formatProviderDate(provider.lastSyncedAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <WriteButton
-                        type="button"
-                        onClick={() => syncProviderKey && syncProvider(syncProviderKey)}
-                        disabled={!syncProviderKey || syncingProvider !== null}
-                        className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
-                      >
-                        {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                        Sync
-                      </WriteButton>
-                      <button
-                        type="button"
-                        onClick={() => testProvider(provider.providerKey)}
-                        disabled={isTesting}
-                        className="flex h-8 items-center gap-1.5 rounded-[6px] border border-border-dim px-3 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40"
-                      >
-                        {isTesting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        Test
-                      </button>
-                      {/* The switch is the control, not a badge beside a button
-                          saying the same thing. Same treatment the catalogue's
-                          Active column got. */}
-                      <WriteButton
-                        type="button"
-                        role="switch"
-                        aria-checked={provider.isEnabled}
-                        aria-label={`${provider.isEnabled ? "Disable" : "Enable"} ${provider.displayName}`}
-                        onClick={() => toggleProvider(provider.providerKey, provider.isEnabled)}
-                        className="ml-1"
-                      >
-                        <span
-                          className={cn(
-                            "relative block h-5 w-9 rounded-full transition-colors",
-                            provider.isEnabled ? "bg-brand" : "bg-foreground/15"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
-                              provider.isEnabled ? "left-[18px]" : "left-0.5"
-                            )}
-                          />
-                        </span>
-                      </WriteButton>
-                    </div>
-                  </td>
-                </tr>
+                  </WriteButton>
+                </div>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+        ]}
+      />
 
       <SonaeModal
         isOpen={disableTarget !== null}

@@ -8,11 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { getErrorMessage } from "@/src/lib/errors";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
@@ -145,25 +141,53 @@ export default function AIModelDefaultsPage() {
           This screen was nine tall rows of label, paragraph, full-width dropdown
           and a floating price — every row a different height, and nothing lining
           up down the page. */}
-      <TableShell minWidthClassName="min-w-[860px]">
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium w-[38%]">Job</th>
-            <th className="px-4 py-3 font-medium w-[42%]">Model</th>
-            <th className="px-4 py-3 font-medium w-[20%] text-right">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={3} />
-          ) : globalDefaults.length === 0 ? (
-            <TableEmptyRow
-              colSpan={3}
-              icon={<Cpu className="w-8 h-8 text-muted/30" />}
-              label="No jobs to configure yet"
-            />
-          ) : (
-            globalDefaults.map((row) => {
+      <DataTable
+        rows={isLoading ? undefined : globalDefaults}
+        rowKey={(row) => row.useCase}
+        minWidthClassName="min-w-[860px]"
+        empty={{ icon: <Cpu className="w-8 h-8 text-muted/30" />, label: "No jobs to configure yet" }}
+        footer={{
+          mode: "paged",
+          page: 1,
+          totalPages: 1,
+          totalCount: globalDefaults.length,
+          pageSize: Math.max(globalDefaults.length, 1),
+          isLoading,
+          onPageChange: () => {},
+          labels: {
+            empty: "No jobs to configure yet",
+            showing: (_start, _end, total) => `${total} job${total === 1 ? "" : "s"}`,
+          },
+        }}
+        columns={[
+          {
+            key: "job",
+            header: "Job",
+            className: "w-[38%]",
+            cell: (row) => (
+              <>
+                <div className="text-[13px] font-semibold text-foreground">{formatModelTag(row.useCase)}</div>
+                {/* What the job is, in a sentence. The internal key used to sit
+                    here instead, printing the same word twice — once for a
+                    person and once for a machine. */}
+                <div className="text-[12px] leading-relaxed text-secondary mt-0.5">
+                  {describeModelUseCase(row.useCase)}
+                </div>
+                {/* A short list with no explanation reads as a bug; a short list
+                    with a reason reads as a constraint. */}
+                {describeUseCaseProviderLimit(row.useCase) && (
+                  <div className="text-[11px] leading-relaxed text-muted mt-1">
+                    {describeUseCaseProviderLimit(row.useCase)}
+                  </div>
+                )}
+              </>
+            ),
+          },
+          {
+            key: "model",
+            header: "Model",
+            className: "w-[42%]",
+            cell: (row) => {
               // Only models that can actually do this job. The screen used to
               // offer every enabled model for every row, so a reader could pick
               // one that would fail at run time — and find out only when the
@@ -173,21 +197,13 @@ export default function AIModelDefaultsPage() {
                 && modelSupportsUseCase(model, row.useCase)
                 && canProviderServeUseCase(model.providerKey, row.useCase)
               );
-              const providerLimit = describeUseCaseProviderLimit(row.useCase);
-
               /**
-               * A default can be set to a model this row would not offer —
-               * "Apply to every job" wrote every row without checking, and a
-               * model's supported jobs can be narrowed by a later sync.
-               *
-               * When that happens the dropdown's value matches no option, so a
-               * browser silently displays the *first* one — "No platform
-               * default" — beside a price for the default that does exist. The
-               * screen contradicted itself, and touching the dropdown at all
-               * fired a change with an empty value and cleared the setting.
-               *
-               * So the model that is actually set is always an option, named and
-               * marked as unable to do the job.
+               * A default can be set to a model this row would not offer, and
+               * then the dropdown's value matches no option, so a browser
+               * silently displays the *first* one — "No platform default" —
+               * beside a price for the default that does exist. So the model
+               * that is actually set is always an option, named and marked as
+               * unable to do the job.
                */
               const selectedModelId = row.default?.modelId ?? "";
               const isStranded = Boolean(selectedModelId)
@@ -198,68 +214,57 @@ export default function AIModelDefaultsPage() {
               const isSaving = savingDefaultUseCase === row.useCase;
 
               return (
-                <tr key={row.useCase} className="border-b border-border-dim/50">
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-[13px] font-semibold text-foreground">{formatModelTag(row.useCase)}</div>
-                    {/* What the job is, in a sentence. The internal key used to
-                        sit here instead, printing the same word twice — once for
-                        a person and once for a machine. */}
-                    <div className="text-[12px] leading-relaxed text-secondary mt-0.5">
-                      {describeModelUseCase(row.useCase)}
+                <>
+                  <select
+                    value={selectedModelId}
+                    disabled={isSaving}
+                    onChange={(event) => setPlatformDefault(row.useCase, event.target.value)}
+                    className={cn(
+                      "w-full min-w-0 rounded-[8px] border bg-card px-3 h-9 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
+                      isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
+                    )}
+                  >
+                    <option value="">No platform default</option>
+                    {strandedModel && (
+                      <option value={strandedModel.modelId}>
+                        {formatModelDisplayName(strandedModel)} — cannot do this job
+                      </option>
+                    )}
+                    {candidates.map((model) => (
+                      <option key={model.modelId} value={model.modelId}>
+                        {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                      </option>
+                    ))}
+                  </select>
+                  {isStranded && (
+                    <div className="text-[11px] leading-relaxed text-[#f59e0b] mt-1">
+                      This model cannot do this job, so the work falls through to whatever is set
+                      below it. Choose another, or clear it.
                     </div>
-                    {/* A short list with no explanation reads as a bug; a short
-                        list with a reason reads as a constraint. */}
-                    {providerLimit && (
-                      <div className="text-[11px] leading-relaxed text-muted mt-1">{providerLimit}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <select
-                      value={selectedModelId}
-                      disabled={isSaving}
-                      onChange={(event) => setPlatformDefault(row.useCase, event.target.value)}
-                      className={cn(
-                        "w-full min-w-0 rounded-[8px] border bg-card px-3 h-9 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
-                        isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
-                      )}
-                    >
-                      <option value="">No platform default</option>
-                      {strandedModel && (
-                        <option value={strandedModel.modelId}>
-                          {formatModelDisplayName(strandedModel)} — cannot do this job
-                        </option>
-                      )}
-                      {candidates.map((model) => (
-                        <option key={model.modelId} value={model.modelId}>
-                          {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
-                        </option>
-                      ))}
-                    </select>
-                    {isStranded && (
-                      <div className="text-[11px] leading-relaxed text-[#f59e0b] mt-1">
-                        This model cannot do this job, so the work falls through to whatever is set
-                        below it. Choose another, or clear it.
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top text-right">
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-brand inline-block" />
-                    ) : row.default ? (
-                      <span className="text-[12px] text-secondary">{selectedCost(row.default.modelId)}</span>
-                    ) : (
-                      // Only the exception is worth saying. A badge reading
-                      // "Configured" on every row cost attention and carried no
-                      // information.
-                      <span className="text-[12px] text-[#f59e0b]">Not set</span>
-                    )}
-                  </td>
-                </tr>
+                  )}
+                </>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+          {
+            key: "price",
+            header: "Price",
+            align: "right",
+            className: "w-[20%]",
+            cell: (row) =>
+              savingDefaultUseCase === row.useCase ? (
+                <Loader2 className="h-4 w-4 animate-spin text-brand inline-block" />
+              ) : row.default ? (
+                <span className="text-[12px] text-secondary">{selectedCost(row.default.modelId)}</span>
+              ) : (
+                // Only the exception is worth saying. A badge reading
+                // "Configured" on every row cost attention and carried no
+                // information.
+                <span className="text-[12px] text-[#f59e0b]">Not set</span>
+              ),
+          },
+        ]}
+      />
 
       {/* Bulk assignment lives here rather than on a catalogue row, and it names
           what it overwrites. */}
