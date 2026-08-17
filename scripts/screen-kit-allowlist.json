@@ -10,7 +10,6 @@
     "src/app/(dashboard)/app/tasks/page.tsx"
   ],
   "assembled": [
-    "src/app/(dashboard)/_features/auth-diagnostics/AuthDiagnosticsPage.tsx",
     "src/app/(dashboard)/admin/_components/AdminRulesTable.tsx",
     "src/app/(dashboard)/admin/_components/CompanySkillCheckboxPicker.tsx",
     "src/app/(dashboard)/admin/_features/evals/EvalsScreen.tsx",
@@ -31,7 +30,6 @@
     "src/app/(dashboard)/admin/ai/models/providers/page.tsx",
     "src/app/(dashboard)/admin/ai/voice/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/ai/page.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/ai/skills/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/models/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/page.tsx",
@@ -56,9 +54,7 @@
     "src/app/(dashboard)/app/[workspace]/spreadsheet-import/page.tsx",
     "src/app/(dashboard)/app/arcade/ronins-run/page.tsx",
     "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
-    "src/app/(dashboard)/app/properties/scraped-data/page.tsx",
     "src/app/(dashboard)/app/settings/team/page.tsx",
-    "src/app/(dashboard)/app/tasks/page.tsx",
-    "src/app/(dashboard)/demos/movements/_components/MovementLibraryTable.tsx"
+    "src/app/(dashboard)/app/tasks/page.tsx"
   ]
 }

@@ -12,12 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
@@ -183,79 +178,89 @@ export default function CompanyAiSkillsPage() {
         />
       </div>
 
-      <TableShell
+      <DataTable
+        rows={skills.status === "LoadingFirstPage" ? undefined : pageSkills}
+        rowKey={(skill) => skill._id}
         minWidthClassName="min-w-[640px]"
-        footer={
-          <PaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={knownTotal}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={skills.status === "LoadingMore"}
-            onPageChange={goToPage}
-            labels={{
-              empty: "No skills yet",
-              showing: (start, end, total) => `Showing ${start}-${end} of ${total} skills`,
-            }}
-          />
-        }
-      >
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium">Skill</th>
-            <th className="px-4 py-3 font-medium w-[220px]">Where it answers</th>
-            <th className="px-4 py-3 font-medium w-[190px]">Added</th>
-            <th className="px-4 py-3 font-medium w-[90px] text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {skills.status === "LoadingFirstPage" ? (
-            <TableLoadingRow colSpan={4} />
-          ) : skills.results.length === 0 ? (
-            <TableEmptyRow
-              colSpan={4}
-              icon={<BrainCircuit className="h-8 w-8 text-muted/30" />}
-              label={companySearchTerm.trim() ? "No skills match that search" : "No skills yet — add one from the Skill Center"}
-            />
-          ) : pageSkills.map((skill) => (
-            <tr key={skill._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
-              <td className="px-4 py-3">
+        empty={{
+          icon: <BrainCircuit className="h-8 w-8 text-muted/30" />,
+          label: companySearchTerm.trim()
+            ? "No skills match that search"
+            : "No skills yet — add one from the Skill Center",
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages,
+          totalCount: knownTotal,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: skills.status === "LoadingMore" || skills.status === "LoadingFirstPage",
+          onPageChange: goToPage,
+          labels: {
+            empty: "No skills yet",
+            showing: (start, end, total) => `Showing ${start}-${end} of ${total} skills`,
+          },
+        }}
+        columns={[
+          {
+            key: "skill",
+            header: "Skill",
+            cell: (skill) => (
+              <>
                 <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
                 <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
                   {skill.description || "No description."}
                 </div>
-              </td>
-              <td className="px-4 py-3">
-                {/* The switch the runtime reads: off here means the skill does
-                    not reach that surface's answers at all. */}
-                <div className="flex flex-col gap-1.5">
-                  <SurfaceToggle
-                    label="Answers in company chat"
-                    isEnabled={skill.surfaces.chat}
-                    onToggle={() => void handleToggleSurface(skill, "COMPANY_CHAT", !skill.surfaces.chat)}
-                  />
-                  <SurfaceToggle
-                    label="Answers on the widget"
-                    isEnabled={skill.surfaces.widget}
-                    onToggle={() => void handleToggleSurface(skill, "WIDGET", !skill.surfaces.widget)}
-                  />
-                </div>
-              </td>
-              <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
-              <td className="px-4 py-3 text-right">
-                <WriteButton
-                  type="button"
-                  aria-label={`Remove ${skill.name}`}
-                  onClick={() => setArchiveTarget(skill)}
-                  className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </WriteButton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+              </>
+            ),
+          },
+          {
+            key: "surfaces",
+            header: "Where it answers",
+            className: "w-[220px]",
+            /* The switch the runtime reads: off here means the skill does not
+               reach that surface's answers at all. */
+            cell: (skill) => (
+              <div className="flex flex-col gap-1.5">
+                <SurfaceToggle
+                  label="Answers in company chat"
+                  isEnabled={skill.surfaces.chat}
+                  onToggle={() => void handleToggleSurface(skill, "COMPANY_CHAT", !skill.surfaces.chat)}
+                />
+                <SurfaceToggle
+                  label="Answers on the widget"
+                  isEnabled={skill.surfaces.widget}
+                  onToggle={() => void handleToggleSurface(skill, "WIDGET", !skill.surfaces.widget)}
+                />
+              </div>
+            ),
+          },
+          {
+            key: "added",
+            header: "Added",
+            className: "w-[190px]",
+            cell: (skill) => (
+              <span className="text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</span>
+            ),
+          },
+          {
+            key: "remove",
+            header: "",
+            align: "right",
+            className: "w-[90px]",
+            cell: (skill) => (
+              <WriteButton
+                type="button"
+                aria-label={`Remove ${skill.name}`}
+                onClick={() => setArchiveTarget(skill)}
+                className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </WriteButton>
+            ),
+          },
+        ]}
+      />
 
       <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Add skills" size="lg">
         {/* Tick what you want and add it. The previous version made the reader

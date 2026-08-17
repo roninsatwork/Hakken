@@ -5,22 +5,13 @@ import { useTranslations } from "next-intl";
 import { Database, Trash2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  RowIconButton,
-  SearchBar,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useRouter } from "next/navigation";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import Image from "next/image";
 import type { Doc } from "@/convex/_generated/dataModel";
 
@@ -76,125 +67,119 @@ export default function ScrapedDataPage() {
           description="View and manage properties scraped from Rightmove."
         />
 
-        <SearchBar
-          value={searchTerm}
-          onChange={(value) => {
-            setSearchTerm(value);
-            setCurrentPage(1);
-          }}
-          placeholder="Search properties by address..."
-        />
 
-        <TableShell
+        <DataTable
+          rows={status === "LoadingFirstPage" ? undefined : paginatedItems}
+          rowKey={(property) => property._id}
           minWidthClassName="min-w-[860px]"
-          footer={
-            totalItems > 0 ? (
-              <PaginationFooter
-                page={currentPage}
-                totalPages={totalPages}
-                totalCount={totalItems}
-                pageSize={itemsPerPage}
-                isLoading={status === "LoadingMore"}
-                onPageChange={handlePageChange}
-                labels={{
-                  showing: (start, end, total) => `Showing ${start} to ${end} of ${total} properties`,
-                }}
-              />
-            ) : undefined
-          }
-        >
-              <thead>
-                <TableHeaderRow>
-                  <TableHeaderCell className="w-[40%]">Property Address</TableHeaderCell>
-                  <TableHeaderCell>Price</TableHeaderCell>
-                  <TableHeaderCell>Specs</TableHeaderCell>
-                  <TableHeaderCell align="right">Actions</TableHeaderCell>
-                </TableHeaderRow>
-              </thead>
-              <tbody>
-                <AnimatePresence>
-                  {/* While the first page is on its way this fell through to
-                      mapping an empty list, so the table drew nothing at all —
-                      no spinner, no sentence, just column headings. */}
-                  {status === "LoadingFirstPage" ? (
-                    <TableLoadingRow colSpan={4} />
-                  ) : paginatedItems.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="p-0 border-none">
-                        <SonaeEmptyState
-                          title="Nothing found"
-                          description={searchTerm.length > 0 ? "No property matches that search." : "No properties collected yet. Run a search to fill this in."}
-                        />
-                      </td>
-                    </tr>
+          search={{
+            value: searchTerm,
+            onChange: (value) => {
+              setSearchTerm(value);
+              setCurrentPage(1);
+            },
+            placeholder: "Search properties by address...",
+          }}
+          empty={{
+            icon: <Database className="w-8 h-8 text-muted/30" />,
+            label: "Nothing found",
+            action: (
+              <p className="text-[13px] text-secondary">
+                {searchTerm.length > 0
+                  ? "No property matches that search."
+                  : "No properties collected yet. Run a search to fill this in."}
+              </p>
+            ),
+          }}
+          footer={{
+            mode: "paged",
+            page: currentPage,
+            totalPages,
+            totalCount: totalItems,
+            pageSize: itemsPerPage,
+            isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+            onPageChange: handlePageChange,
+            labels: {
+              empty: "Nothing found",
+              showing: (start, end, total) => `Showing ${start} to ${end} of ${total} properties`,
+            },
+          }}
+          columns={[
+            {
+              key: "address",
+              header: "Property Address",
+              className: "w-[40%]",
+              cell: (property) => (
+                <div className="flex items-center gap-4">
+                  {property.imageUrl ? (
+                    <Image src={property.imageUrl} alt="Property" width={48} height={48} unoptimized className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
                   ) : (
-                    paginatedItems.map((property) => (
-                      <motion.tr 
-                        key={property._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-4">
-                            {property.imageUrl ? (
-                              <Image src={property.imageUrl} alt="Property" width={48} height={48} unoptimized className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
-                            ) : (
-                              <div className="w-12 h-12 rounded-[8px] bg-background border border-border-dim flex items-center justify-center">
-                                <span className="text-[9px] font-mono text-muted uppercase">No Img</span>
-                              </div>
-                            )}
-                            <div>
-                              <span className="font-medium text-[13px] text-foreground block line-clamp-1">
-                                {property.address}
-                              </span>
-                              <span className="text-[12px] text-secondary block mt-0.5">{property.propertyType} • {property.agentName}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[13px] font-medium text-brand">
-                            {property.price ? `£${property.price.toLocaleString()}` : 'POA'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
-                              {property.bedrooms} Beds
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
-                              {property.bathrooms} Baths
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {/* Not RowActions: these two are always visible here
-                              rather than appearing on hover, and "View details"
-                              is a labelled button rather than an icon. Only the
-                              delete moves onto the kit, which is what gives a
-                              read-only reader the list without the bin. */}
-                          <div className="flex items-center justify-end gap-2">
-                             <button
-                               onClick={() => router.push(`/app/properties/scraped-data/${property._id}`)}
-                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-brand/10 text-brand text-[12px] font-medium hover:bg-brand/20 transition-colors"
-                             >
-                               View Details
-                             </button>
-                             <RowIconButton
-                               onClick={() => setDeletingProperty(property)}
-                               tone="danger"
-                               label="Delete property"
-                             >
-                               <Trash2 className="w-4 h-4" />
-                             </RowIconButton>
-                           </div>
-                        </td>
-                      </motion.tr>
-                    ))
+                    <div className="w-12 h-12 rounded-[8px] bg-background border border-border-dim flex items-center justify-center">
+                      <span className="text-[9px] font-mono text-muted uppercase">No Img</span>
+                    </div>
                   )}
-                </AnimatePresence>
-              </tbody>
-        </TableShell>
+                  <div>
+                    <span className="font-medium text-[13px] text-foreground block line-clamp-1">
+                      {property.address}
+                    </span>
+                    <span className="text-[12px] text-secondary block mt-0.5">
+                      {property.propertyType} • {property.agentName}
+                    </span>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: "price",
+              header: "Price",
+              cell: (property) => (
+                <span className="text-[13px] font-medium text-brand">
+                  {property.price ? `£${property.price.toLocaleString()}` : "POA"}
+                </span>
+              ),
+            },
+            {
+              key: "specs",
+              header: "Specs",
+              cell: (property) => (
+                <div className="flex gap-2">
+                  <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
+                    {property.bedrooms} Beds
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
+                    {property.bathrooms} Baths
+                  </span>
+                </div>
+              ),
+            },
+            {
+              key: "actions",
+              header: "Actions",
+              align: "right",
+              /* Not RowActions: these two are always visible here rather than
+                 appearing on hover, and "View details" is a labelled button
+                 rather than an icon. Only the delete moves onto the kit, which
+                 is what gives a read-only reader the list without the bin. */
+              cell: (property) => (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => router.push(`/app/properties/scraped-data/${property._id}`)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-brand/10 text-brand text-[12px] font-medium hover:bg-brand/20 transition-colors"
+                  >
+                    View Details
+                  </button>
+                  <RowIconButton
+                    onClick={() => setDeletingProperty(property)}
+                    tone="danger"
+                    label={`Delete ${property.address}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </RowIconButton>
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* Delete Confirmation Modal */}

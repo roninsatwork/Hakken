@@ -2,17 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
-import { Filter, Inbox, Loader2, MailCheck, ShieldCheck } from "lucide-react";
+import { Filter, Inbox, MailCheck, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE, matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
@@ -203,71 +197,81 @@ export function AuthDiagnosticsPage() {
         ) : null}
       </div>
 
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : paginated.items}
+        rowKey={(event) => event._id}
         minWidthClassName="min-w-[1120px]"
-        footer={
-          <PaginationFooter
-            page={paginated.page}
-            totalPages={paginated.totalPages}
-            totalCount={paginated.totalItems}
-            pageSize={paginated.pageSize}
-            isLoading={isLoading}
-            onPageChange={setPage}
-            labels={{
-              previous: common("pagination.previous"),
-              next: common("pagination.next"),
-              empty: t("table.empty"),
-              showing: (start, end, total) => t("pagination.showing", { start, end, total }),
-              page: (current, total) => t("pagination.page", { current, total }),
-            }}
-          />
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("table.event")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.email")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.company")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.reason")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.provider")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("table.timestamp")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <tr>
-              <td colSpan={6} className="px-5 py-16 text-center text-secondary">
-                <Loader2 className="mx-auto h-6 w-6 animate-spin text-brand opacity-80" />
-              </td>
-            </tr>
-          ) : paginated.items.length === 0 ? (
-            <TableEmptyRow
-              colSpan={6}
-              icon={<Inbox className="h-8 w-8 text-muted" />}
-              label={filteredEvents.length === 0 && (events?.length ?? 0) > 0 ? t("table.noMatches") : t("table.empty")}
-            />
-          ) : (
-            paginated.items.map((event) => (
-              <tr key={event._id} className="border-b border-border-dim/50 transition-colors hover:bg-foreground/[0.02]">
-                <td className="px-4 py-3">
-                  <span className="rounded-[4px] border border-border-dim bg-foreground/5 px-2 py-1 text-[10px] font-medium uppercase tracking-widest text-foreground">
-                    {formatCode(event.eventType)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[13px] font-medium text-foreground">{event.email}</td>
-                <td className="px-4 py-3 text-[12px] text-secondary">{event.companyName ?? t("table.unscoped")}</td>
-                <td className="px-4 py-3 text-[12px] text-secondary">{formatCode(event.reasonCode)}</td>
-                <td className="px-4 py-3 text-[12px] text-secondary">{event.provider ?? t("table.unknownProvider")}</td>
-                <td className="px-4 py-3 text-right text-[12px] text-secondary">
-                  {formatDateTime(event.timestamp, {
-                    options: { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
-                  })}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+        empty={{
+          icon: <Inbox className="h-8 w-8 text-muted" />,
+          label:
+            filteredEvents.length === 0 && (events?.length ?? 0) > 0
+              ? t("table.noMatches")
+              : t("table.empty"),
+        }}
+        footer={{
+          mode: "paged",
+          page: paginated.page,
+          totalPages: paginated.totalPages,
+          totalCount: paginated.totalItems,
+          pageSize: paginated.pageSize,
+          isLoading,
+          onPageChange: setPage,
+          labels: {
+            previous: common("pagination.previous"),
+            next: common("pagination.next"),
+            empty: t("table.empty"),
+            showing: (start, end, total) => t("pagination.showing", { start, end, total }),
+            page: (current, total) => t("pagination.page", { current, total }),
+          },
+        }}
+        columns={[
+          {
+            key: "event",
+            header: t("table.event"),
+            cell: (event) => (
+              <span className="rounded-[4px] border border-border-dim bg-foreground/5 px-2 py-1 text-[10px] font-medium uppercase tracking-widest text-foreground">
+                {formatCode(event.eventType)}
+              </span>
+            ),
+          },
+          {
+            key: "email",
+            header: t("table.email"),
+            cell: (event) => <span className="text-[13px] font-medium text-foreground">{event.email}</span>,
+          },
+          {
+            key: "company",
+            header: t("table.company"),
+            cell: (event) => (
+              <span className="text-[12px] text-secondary">{event.companyName ?? t("table.unscoped")}</span>
+            ),
+          },
+          {
+            key: "reason",
+            header: t("table.reason"),
+            cell: (event) => <span className="text-[12px] text-secondary">{formatCode(event.reasonCode)}</span>,
+          },
+          {
+            key: "provider",
+            header: t("table.provider"),
+            cell: (event) => (
+              <span className="text-[12px] text-secondary">{event.provider ?? t("table.unknownProvider")}</span>
+            ),
+          },
+          {
+            key: "timestamp",
+            header: t("table.timestamp"),
+            align: "right",
+            cell: (event) => (
+              <span className="text-[12px] text-secondary">
+                {formatDateTime(event.timestamp, {
+                  options: { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+                })}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
