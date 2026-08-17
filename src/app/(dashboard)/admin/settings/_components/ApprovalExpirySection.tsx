@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { SettingBlock } from "./SettingBlock";
+import { Field } from "@/src/ui/components/screens/Field";
 
 /**
  * How long an agent run may wait for a person before the platform gives up.
@@ -58,12 +59,10 @@ export function ApprovalExpirySection() {
           up sooner on its own settings screen.
         </p>
 
-        <div className="flex flex-col gap-1.5 max-w-[260px]">
-          <label htmlFor="approval-expiry-hours" className="text-[11px] font-mono tracking-widest text-muted uppercase">
-            Give up after (hours)
-          </label>
-          <input
+        <div className="max-w-[260px]">
+          <Field
             id="approval-expiry-hours"
+            label="Give up after (hours)"
             type="number"
             min={config?.minHours ?? 1}
             max={config?.maxHours ?? 720}
@@ -71,13 +70,13 @@ export function ApprovalExpirySection() {
             value={hours}
             onChange={(event) => setHours(event.target.value)}
             disabled={config === undefined}
-            className="w-full h-[42px] rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground focus:border-brand/40 focus:outline-none disabled:opacity-50"
+            className="disabled:opacity-50"
+            hint={
+              config
+                ? `Default ${config.defaultHours} · at least ${config.minHours} · at most ${config.maxHours}`
+                : "Loading..."
+            }
           />
-          <p className="text-[10px] text-muted">
-            {config
-              ? `Default ${config.defaultHours} · at least ${config.minHours} · at most ${config.maxHours}`
-              : "Loading..."}
-          </p>
         </div>
 
         <SaveError>{saveError}</SaveError>

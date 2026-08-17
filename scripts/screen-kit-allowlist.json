@@ -37,7 +37,6 @@
     "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConversationStartersSection.tsx",
     "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetIntegrationSection.tsx",
     "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPreviewPanel.tsx",
-    "src/app/(dashboard)/admin/settings/_components/ApprovalExpirySection.tsx",
     "src/app/(dashboard)/admin/settings/_components/IdentitySettingsSection.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
     "src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx",
