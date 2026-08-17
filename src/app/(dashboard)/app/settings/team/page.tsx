@@ -18,7 +18,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   RowActions,
   RowIconButton,
   SearchBar,
@@ -30,6 +30,7 @@ import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
 import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
 
 type TeamUserRole = "USER" | "ADMIN";
 
@@ -70,9 +71,27 @@ export default function CompanyTeamPage() {
 
   const [formData, setFormData] = useState<TeamUserFormData>({ name: "", email: "", role: "USER", image: "", companyId: "" });
 
-  const filteredInvites = pendingInvites.filter((inv) =>
-    (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase()) && inv.companyId === currentUser?.companyId
-  );
+  const teamRows = [
+    // The company check is not optional: getPendingInvites is a platform query,
+    // so without it this screen would list other companies' invitations.
+    ...pendingInvites
+      .filter((inv) =>
+        (inv.email || "").toLowerCase().includes(searchTerm.toLowerCase()) &&
+        inv.companyId === currentUser?.companyId
+      )
+      .map((invite) => ({ kind: "invite" as const, invite })),
+    ...filteredUsers.map((user) => ({ kind: "user" as const, user })),
+  ];
+
+  const paged = usePagedRows(teamRows, {
+    canLoadMore: status === "CanLoadMore",
+    loadMore,
+    resetKey: searchTerm,
+  });
+
+  const pageInvites = paged.pageRows.flatMap((row) => (row.kind === "invite" ? [row.invite] : []));
+  const pageUsers = paged.pageRows.flatMap((row) => (row.kind === "user" ? [row.user] : []));
+
 
   const handleOpenAdd = () => {
     setFormData({ name: "", email: "", role: "USER", image: "", companyId: currentUser?.companyId || "" });
@@ -143,19 +162,15 @@ export default function CompanyTeamPage() {
       <TableShell
         minWidthClassName="min-w-[720px]"
         footer={
-          status === "CanLoadMore" || status === "LoadingMore" ? (
-            <LoadMoreFooter
-              visibleCount={filteredUsers.length}
-              canLoadMore={status === "CanLoadMore"}
-              isLoading={status === "LoadingMore"}
-              onLoadMore={() => loadMore(15)}
-              labels={{
-                showing: (count) => `${tCommon('pagination.showing')} ${count} ${tCommon('pagination.entries')}`,
-                loadMore: t('table.loadMore'),
-                loading: tCommon('loading'),
-              }}
-            />
-          ) : undefined
+          <PaginationFooter
+            page={paged.page}
+            totalPages={paged.totalPages}
+            totalCount={paged.loadedCount}
+            pageSize={paged.pageSize}
+            isLoading={status === "LoadingMore"}
+            onPageChange={paged.goToPage}
+            labels={{ empty: t('table.noMatches') }}
+          />
         }
       >
             <thead>
@@ -168,7 +183,7 @@ export default function CompanyTeamPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
+                {paged.pageRows.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="p-0 border-none">
                       <SonaeEmptyState 
@@ -179,7 +194,7 @@ export default function CompanyTeamPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredInvites.map((inv) => (
+                    {pageInvites.map((inv) => (
                       <motion.tr
                         key={`inv_${inv._id}`}
                         initial={{ opacity: 0, y: 10 }}
@@ -225,7 +240,7 @@ export default function CompanyTeamPage() {
                       </motion.tr>
                     ))}
 
-                    {filteredUsers.map((user) => (
+                    {pageUsers.map((user) => (
                       <motion.tr
                         key={user._id}
                         initial={{ opacity: 0, y: 10 }}
