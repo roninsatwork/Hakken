@@ -8,15 +8,7 @@ import { Phone } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDateTime } from "@/src/lib/dates";
@@ -69,14 +61,12 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
         divider
       />
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-[240px]">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={t("searchPlaceholder")}
-          />
-        </div>
+      <DataTable
+        rows={calls.isLoading ? undefined : calls.rows}
+        rowKey={(call) => call._id}
+        minWidthClassName="min-w-[760px]"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
+        filters={
         <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
           {STATUS_FILTERS.map((option) => (
             <button
@@ -93,75 +83,62 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
             </button>
           ))}
         </div>
-      </div>
-
-      <TableShell
-        minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={calls.page}
-            totalPages={calls.totalPages}
-            totalCount={calls.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={calls.isBusy}
-            onPageChange={calls.goToPage}
-            labels={{ empty: t("empty") }}
-          />
         }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.caller")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.about")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.status")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.when")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("columns.exchanges")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {calls.isLoading ? (
-            <TableLoadingRow colSpan={5} />
-          ) : calls.rows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<Phone className="w-5 h-5" />}
-              label={searchTerm || status !== "ALL" ? t("emptyFiltered") : t("emptyState")}
-            />
-          ) : (
-            calls.rows.map((call) => (
-              <tr
-                key={call._id}
-                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
-              >
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <Link
-                    href={`calls/${call._id}`}
-                    className="font-mono text-[13px] text-brand hover:underline"
-                  >
-                    {call.fromMasked}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-foreground max-w-[380px]">
-                  <span className="line-clamp-2">{call.summary ?? "—"}</span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusClass[call.status] ?? "text-secondary"}`}
-                  >
-                    {tCalls(`status.${call.status}`)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                  {formatDateTime(call.startedAt)}
-                </td>
-                <td className="px-4 py-3 text-right text-[13px] text-foreground tabular-nums">
-                  {call.turnCount}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+        empty={{
+          icon: <Phone className="w-5 h-5" />,
+          label: searchTerm || status !== "ALL" ? t("emptyFiltered") : t("emptyState"),
+        }}
+        footer={{
+          mode: "paged",
+          page: calls.page,
+          totalPages: calls.totalPages,
+          totalCount: calls.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: calls.isBusy,
+          onPageChange: calls.goToPage,
+          labels: { empty: t("empty") },
+        }}
+        columns={[
+          {
+            key: "caller",
+            header: t("columns.caller"),
+            className: "whitespace-nowrap",
+            cell: (call) => (
+              <Link href={`calls/${call._id}`} className="font-mono text-[13px] text-brand hover:underline">
+                {call.fromMasked}
+              </Link>
+            ),
+          },
+          {
+            key: "about",
+            header: t("columns.about"),
+            className: "max-w-[380px]",
+            cell: (call) => <span className="line-clamp-2 text-[13px] text-foreground">{call.summary ?? "—"}</span>,
+          },
+          {
+            key: "status",
+            header: t("columns.status"),
+            className: "whitespace-nowrap",
+            cell: (call) => (
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusClass[call.status] ?? "text-secondary"}`}>
+                {tCalls(`status.${call.status}`)}
+              </span>
+            ),
+          },
+          {
+            key: "when",
+            header: t("columns.when"),
+            className: "whitespace-nowrap",
+            cell: (call) => <span className="text-[13px] text-secondary">{formatDateTime(call.startedAt)}</span>,
+          },
+          {
+            key: "exchanges",
+            header: t("columns.exchanges"),
+            align: "right",
+            cell: (call) => <span className="text-[13px] text-foreground tabular-nums">{call.turnCount}</span>,
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -5,9 +5,10 @@ import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScree
 import AiRegisterPage from "./page";
 
 /**
- * Pins what the customer's own AI register does today, before it moves onto the
- * shared list part. Same note as the customer policies screen: no search and no
- * page numbers, where the platform's version of the same screen has both.
+ * The workspace AI register, on the shared list part. It used to carry six
+ * summary boxes and nothing else — no search, no filters, no page numbers —
+ * where the platform's version had all three; Anthony closed that gap on
+ * 2026-08-17, so the same assertions now run against both screens.
  */
 
 vi.mock("convex/react", () => ({
@@ -70,7 +71,7 @@ describe("AiRegisterPage (customer)", () => {
       sampleRows: entries,
       sampleRowText: "The Examiner",
       emptyText: "admin.governance.register.empty",
-      hasFooter: false,
+      searchPlaceholder: "admin.governance.register.searchPlaceholder",
     });
   });
 });

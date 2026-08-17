@@ -8,14 +8,7 @@ import { NotebookPen } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
@@ -90,87 +83,81 @@ export function WikiDiaryScreen({
         {companyId ? t("hintCompany") : t("hint")}
       </p>
 
-      <div className="max-w-xs">
-        <select
-          value={action}
-          onChange={(event) => setAction(event.target.value)}
-          className="w-full bg-background border border-border-dim rounded-[10px] px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand/50 transition-colors"
-        >
-          <option value="ALL">{t("filter.all")}</option>
-          {Object.entries(ACTION_KEY).map(([actionType, key]) => (
-            <option key={actionType} value={actionType}>
-              {t(`entries.${key}`)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <TableShell
+      <DataTable
+        rows={entries.isLoading ? undefined : entries.rows}
+        rowKey={(entry, ) => `${entry.at}-${entry.action}-${entry.pageId ?? ""}`}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={entries.page}
-            totalPages={entries.totalPages}
-            totalCount={entries.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={entries.isBusy}
-            onPageChange={entries.goToPage}
-            labels={{ empty: t("empty") }}
-          />
+        filters={
+          <div className="max-w-xs w-full">
+            <select
+              value={action}
+              onChange={(event) => setAction(event.target.value)}
+              className="w-full bg-background border border-border-dim rounded-[10px] px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand/50 transition-colors"
+            >
+              <option value="ALL">{t("filter.all")}</option>
+              {Object.entries(ACTION_KEY).map(([actionType, key]) => (
+                <option key={actionType} value={actionType}>
+                  {t(`entries.${key}`)}
+                </option>
+              ))}
+            </select>
+          </div>
         }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.what")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.page")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.who")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.when")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {entries.isLoading ? (
-            <TableLoadingRow colSpan={4} />
-          ) : entries.rows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={4}
-              icon={<NotebookPen className="w-5 h-5" />}
-              label={action === "ALL" ? t("empty") : t("emptyFiltered")}
-            />
-          ) : (
-            entries.rows.map((entry, index) => {
-              const sentenceKey = ACTION_KEY[entry.action];
-              return (
-                <tr
-                  key={`${entry.at}-${index}`}
-                  className="border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
-                >
-                  <td className="px-4 py-3 text-[13.5px] text-foreground">
-                    {sentenceKey ? t(`entries.${sentenceKey}`) : entry.action}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] max-w-[360px]">
-                    {entry.pageId && entry.pageTitle ? (
-                      <Link
-                        href={`${pageBasePath}/${entry.pageId}`}
-                        className="text-brand hover:underline"
-                      >
-                        {entry.pageTitle.replace(/^https?:\/\/(www\.)?/, "")}
-                      </Link>
-                    ) : (
-                      <span className="text-muted truncate block">{entry.detail ?? "—"}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-[12px] text-secondary whitespace-nowrap">
-                    {entry.byPerson ? t("byPerson") : t("byBrain")}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap tabular-nums">
-                    {formatDateTime(entry.at)}
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </TableShell>
+        empty={{
+          icon: <NotebookPen className="w-5 h-5" />,
+          label: action === "ALL" ? t("empty") : t("emptyFiltered"),
+        }}
+        footer={{
+          mode: "paged",
+          page: entries.page,
+          totalPages: entries.totalPages,
+          totalCount: entries.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: entries.isBusy,
+          onPageChange: entries.goToPage,
+          labels: { empty: t("empty") },
+        }}
+        columns={[
+          {
+            key: "what",
+            header: t("columns.what"),
+            cell: (entry) => (
+              <span className="text-[13.5px] text-foreground">
+                {ACTION_KEY[entry.action] ? t(`entries.${ACTION_KEY[entry.action]}`) : entry.action}
+              </span>
+            ),
+          },
+          {
+            key: "page",
+            header: t("columns.page"),
+            className: "max-w-[360px]",
+            cell: (entry) =>
+              entry.pageId && entry.pageTitle ? (
+                <Link href={`${pageBasePath}/${entry.pageId}`} className="text-[13px] text-brand hover:underline">
+                  {entry.pageTitle.replace(/^https?:\/\/(www\.)?/, "")}
+                </Link>
+              ) : (
+                <span className="text-[13px] text-muted truncate block">{entry.detail ?? "—"}</span>
+              ),
+          },
+          {
+            key: "who",
+            header: t("columns.who"),
+            className: "whitespace-nowrap",
+            cell: (entry) => (
+              <span className="text-[12px] text-secondary">{entry.byPerson ? t("byPerson") : t("byBrain")}</span>
+            ),
+          },
+          {
+            key: "when",
+            header: t("columns.when"),
+            className: "whitespace-nowrap",
+            cell: (entry) => (
+              <span className="text-[13px] text-secondary tabular-nums">{formatDateTime(entry.at)}</span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

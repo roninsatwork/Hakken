@@ -7,15 +7,7 @@ import { Inbox } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDateTime } from "@/src/lib/dates";
@@ -68,95 +60,81 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-[240px]">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={t("searchPlaceholder")}
-          />
-        </div>
-        <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
-          {DECISION_FILTERS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setDecision(option.value)}
-              className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
-                decision === option.value
-                  ? "bg-brand text-white"
-                  : "text-secondary hover:text-foreground"
-              }`}
-            >
-              {t(option.labelKey)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <TableShell
+      <DataTable
+        rows={mail.isLoading ? undefined : mail.rows}
+        rowKey={(row) => row._id}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={mail.page}
-            totalPages={mail.totalPages}
-            totalCount={mail.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={mail.isBusy}
-            onPageChange={mail.goToPage}
-            labels={{ empty: t("empty") }}
-          />
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.from")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.subject")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.decision")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.when")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {mail.isLoading ? (
-            <TableLoadingRow colSpan={4} />
-          ) : mail.rows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={4}
-              icon={<Inbox className="w-5 h-5" />}
-              label={searchTerm || decision !== "ALL" ? t("emptyFiltered") : t("emptyState")}
-            />
-          ) : (
-            mail.rows.map((row) => (
-              <tr
-                key={row._id}
-                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
+        filters={
+          <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
+            {DECISION_FILTERS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setDecision(option.value)}
+                className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
+                  decision === option.value
+                    ? "bg-brand text-white"
+                    : "text-secondary hover:text-foreground"
+                }`}
               >
-                <td className="px-4 py-3 text-[13px] text-foreground whitespace-nowrap max-w-[240px]">
-                  <span className="block truncate">{row.sender}</span>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-foreground max-w-[380px]">
-                  <span className="line-clamp-2">{row.subject}</span>
-                  {row.decisionReason && (
-                    <span className="block text-[12px] text-muted truncate mt-0.5">
-                      {row.decisionReason}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${decisionClass[row.decision] ?? "text-secondary"}`}
-                  >
-                    {t(`decision.${row.decision}`)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                  {formatDateTime(row.createdAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+                {t(option.labelKey)}
+              </button>
+            ))}
+          </div>
+        }
+        empty={{
+          icon: <Inbox className="w-5 h-5" />,
+          label: searchTerm || decision !== "ALL" ? t("emptyFiltered") : t("emptyState"),
+        }}
+        footer={{
+          mode: "paged",
+          page: mail.page,
+          totalPages: mail.totalPages,
+          totalCount: mail.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: mail.isBusy,
+          onPageChange: mail.goToPage,
+          labels: { empty: t("empty") },
+        }}
+        columns={[
+          {
+            key: "from",
+            header: t("columns.from"),
+            className: "whitespace-nowrap max-w-[240px]",
+            cell: (row) => <span className="block truncate text-[13px] text-foreground">{row.sender}</span>,
+          },
+          {
+            key: "subject",
+            header: t("columns.subject"),
+            className: "max-w-[380px]",
+            cell: (row) => (
+              <>
+                <span className="line-clamp-2 text-[13px] text-foreground">{row.subject}</span>
+                {row.decisionReason && (
+                  <span className="block text-[12px] text-muted truncate mt-0.5">{row.decisionReason}</span>
+                )}
+              </>
+            ),
+          },
+          {
+            key: "decision",
+            header: t("columns.decision"),
+            className: "whitespace-nowrap",
+            cell: (row) => (
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${decisionClass[row.decision] ?? "text-secondary"}`}>
+                {t(`decision.${row.decision}`)}
+              </span>
+            ),
+          },
+          {
+            key: "when",
+            header: t("columns.when"),
+            className: "whitespace-nowrap",
+            cell: (row) => <span className="text-[13px] text-secondary">{formatDateTime(row.createdAt)}</span>,
+          },
+        ]}
+      />
     </div>
   );
 }

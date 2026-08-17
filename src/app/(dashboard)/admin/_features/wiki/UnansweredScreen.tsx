@@ -8,15 +8,7 @@ import { MessageCircleQuestion } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
@@ -87,7 +79,6 @@ export function UnansweredScreen({
         ? dismissCompany({ companyId, unansweredId: row.unansweredId })
         : dismissGlobal({ unansweredId: row.unansweredId });
 
-  const columnCount = companyId ? 4 : 5;
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
@@ -104,78 +95,63 @@ export function UnansweredScreen({
         {companyId ? t("hintCompany") : t("hint")}
       </p>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-[240px]">
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={t("searchPlaceholder")}
-          />
-        </div>
-        {!companyId && (
-          <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
-            {scopeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setScope(option.value)}
-                className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
-                  scope === option.value
-                    ? "bg-brand text-white"
-                    : "text-secondary hover:text-foreground"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : visibleRows}
+        rowKey={(row) => row.unansweredId}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={rows.page}
-            totalPages={rows.totalPages}
-            totalCount={rows.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={rows.isBusy}
-            onPageChange={rows.goToPage}
-            labels={{ empty: t("empty") }}
-          />
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
+        filters={
+          <>
+          {!companyId && (
+            <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
+              {scopeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setScope(option.value)}
+                  className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
+                    scope === option.value
+                      ? "bg-brand text-white"
+                      : "text-secondary hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+          </>
         }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.question")}</TableHeaderCell>
-            {!companyId && <TableHeaderCell>{t("columns.where")}</TableHeaderCell>}
-            <TableHeaderCell align="right">{t("columns.asked")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.lastAsked")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("columns.actions")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={columnCount} />
-          ) : visibleRows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={columnCount}
-              icon={<MessageCircleQuestion className="w-5 h-5" />}
-              label={search.trim() || scope !== "ALL" ? t("emptyFiltered") : t("emptyState")}
-            />
-          ) : (
-            visibleRows.map((row) => (
-              <tr
-                key={row.unansweredId}
-                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
-              >
-                <td className="px-4 py-3 text-[14px] text-foreground max-w-[420px]">
-                  <span className="line-clamp-2">“{row.question}”</span>
-                </td>
-                {!companyId && (
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {row.companyId ? (
+        empty={{
+          icon: <MessageCircleQuestion className="w-5 h-5" />,
+          label: search.trim() || scope !== "ALL" ? t("emptyFiltered") : t("emptyState"),
+        }}
+        footer={{
+          mode: "paged",
+          page: rows.page,
+          totalPages: rows.totalPages,
+          totalCount: rows.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: rows.isBusy,
+          onPageChange: rows.goToPage,
+          labels: { empty: t("empty") },
+        }}
+        columns={[
+          {
+            key: "question",
+            header: t("columns.question"),
+            className: "max-w-[420px]",
+            cell: (row) => <span className="line-clamp-2 text-[14px] text-foreground">\u201C{row.question}\u201D</span>,
+          },
+          ...(companyId
+            ? []
+            : [
+                {
+                  key: "where",
+                  header: t("columns.where"),
+                  className: "whitespace-nowrap",
+                  cell: (row: Row) =>
+                    row.companyId ? (
                       <Link
                         href={`/admin/companies/${row.companyId}/ai/unanswered`}
                         className="text-[13px] text-brand hover:underline"
@@ -189,40 +165,55 @@ export function UnansweredScreen({
                           <> · {t("acrossCompanies", { count: row.companyCount ?? 0 })}</>
                         )}
                       </span>
-                    )}
-                  </td>
-                )}
-                <td className="px-4 py-3 text-right text-[13px] text-foreground font-medium tabular-nums">
-                  {row.askCount}×
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                  {new Date(row.lastAskedAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <Link
-                    href={
-                      companyId
-                        ? (feedWikiHref ?? "../pages")
-                        : row.companyId
-                          ? `/admin/companies/${row.companyId}/ai/pages`
-                          : "/admin/ai/knowledge"
-                    }
-                    className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity mr-2"
-                  >
-                    {t("feedWiki")}
-                  </Link>
-                  <WriteButton
-                    onClick={() => void dismiss(row)}
-                    className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
-                  >
-                    {t("dismiss")}
-                  </WriteButton>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+                    ),
+                },
+              ]),
+          {
+            key: "asked",
+            header: t("columns.asked"),
+            align: "right",
+            cell: (row) => (
+              <span className="text-[13px] text-foreground font-medium tabular-nums">{row.askCount}\u00D7</span>
+            ),
+          },
+          {
+            key: "lastAsked",
+            header: t("columns.lastAsked"),
+            className: "whitespace-nowrap",
+            cell: (row) => (
+              <span className="text-[13px] text-secondary">{new Date(row.lastAskedAt).toLocaleDateString()}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: t("columns.actions"),
+            align: "right",
+            className: "whitespace-nowrap",
+            cell: (row) => (
+              <>
+                <Link
+                  href={
+                    companyId
+                      ? (feedWikiHref ?? "../pages")
+                      : row.companyId
+                        ? `/admin/companies/${row.companyId}/ai/pages`
+                        : "/admin/ai/knowledge"
+                  }
+                  className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity mr-2"
+                >
+                  {t("feedWiki")}
+                </Link>
+                <WriteButton
+                  onClick={() => void dismiss(row)}
+                  className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
+                >
+                  {t("dismiss")}
+                </WriteButton>
+              </>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

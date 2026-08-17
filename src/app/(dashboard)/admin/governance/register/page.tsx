@@ -15,15 +15,7 @@ import {
 } from "@/convex/governanceRegisterService";
 import { RegisterEntryPanel } from "./RegisterEntryPanel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
@@ -127,9 +119,9 @@ export default function AiRegisterPage() {
 
 
   /** A heading that reorders the list, with the one in force saying so. */
+  // Returns the button alone: DataTable owns the header cell around it.
   const SortableHeader = ({ label, by }: { label: string; by: RegisterSort }) => (
-    <TableHeaderCell>
-      <button
+    <button
         type="button"
         onClick={() => narrow(() => setSort(sort === by ? "ATTENTION" : by))}
         aria-pressed={sort === by}
@@ -137,10 +129,9 @@ export default function AiRegisterPage() {
           sort === by ? "text-foreground" : ""
         }`}
       >
-        {label}
-        {sort === by ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : null}
-      </button>
-    </TableHeaderCell>
+      {label}
+      {sort === by ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : null}
+    </button>
   );
 
   return (
@@ -151,213 +142,207 @@ export default function AiRegisterPage() {
         description={t("description")}
       />
 
-      <div className="flex flex-col gap-3">
-        <SearchBar
-          value={search}
-          onChange={(value) => narrow(() => setSearch(value))}
-          placeholder={t("searchPlaceholder")}
-        />
+      <DataTable
+        rows={entries === undefined ? undefined : paged.items}
+        rowKey={(entry) => entry.id}
+        minWidthClassName="min-w-[900px]"
+        onRowClick={(entry) => setOpened(entry)}
+        search={{
+          value: search,
+          onChange: (value) => narrow(() => setSearch(value)),
+          placeholder: t("searchPlaceholder"),
+        }}
+        filters={
+          <>
+            {/*
+              The counts are the filters. Six boxes at the top and a separate
+              filter row underneath were two controls doing one job, and the boxes
+              were the half that could not be pressed.
+            */}
+            {chips.map((option) => {
+              const active = chip === option.key;
+              const flagged = option.needsAttention && (option.count ?? 0) > 0;
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/*
-            The counts are the filters. Six boxes at the top and a separate
-            filter row underneath were two controls doing one job, and the boxes
-            were the half that could not be pressed.
-          */}
-          {chips.map((option) => {
-            const active = chip === option.key;
-            const flagged = option.needsAttention && (option.count ?? 0) > 0;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => narrow(() => setChip(option.key))}
+                  aria-pressed={active}
+                  className={`flex h-[34px] items-center gap-2 rounded-full border px-3.5 text-[12px] transition-colors ${
+                    active
+                      ? "border-foreground/40 text-foreground"
+                      : flagged
+                        ? "border-[#fbbf24]/40 text-[#b45309] hover:border-[#fbbf24]/70 dark:text-[#fbbf24]"
+                        : "border-border-dim text-secondary hover:border-foreground/20"
+                  }`}
+                >
+                  {t(`summary.${option.key}`)}
+                  <span className="tabular-nums font-medium">{option.count ?? "—"}</span>
+                </button>
+              );
+            })}
 
-            return (
+            <label className="sr-only" htmlFor="register-kind">
+              {t("filters.kindLabel")}
+            </label>
+            <Select
+              id="register-kind"
+              value={kind}
+              onChange={(next) => narrow(() => setKind(next as AiSystemKind | "ALL"))}
+              className="w-[150px]"
+            >
+              {KINDS.map((option) => (
+                <option key={option} value={option}>
+                  {option === "ALL" ? t("filters.allKinds") : t(`kind.${option}`)}
+                </option>
+              ))}
+            </Select>
+
+            {filtering ? (
               <button
-                key={option.key}
                 type="button"
-                onClick={() => narrow(() => setChip(option.key))}
-                aria-pressed={active}
-                className={`flex h-[34px] items-center gap-2 rounded-full border px-3.5 text-[12px] transition-colors ${
-                  active
-                    ? "border-foreground/40 text-foreground"
-                    : flagged
-                      ? "border-[#fbbf24]/40 text-[#b45309] hover:border-[#fbbf24]/70 dark:text-[#fbbf24]"
-                      : "border-border-dim text-secondary hover:border-foreground/20"
+                onClick={() =>
+                  narrow(() => {
+                    setSearch("");
+                    setChip("total");
+                    setKind("ALL");
+                  })
+                }
+                className="h-[34px] rounded-[10px] px-3 text-[13px] text-secondary transition-colors hover:text-foreground"
+              >
+                {t("filters.clear")}
+              </button>
+            ) : null}
+          </>
+        }
+        /* Nothing matched and nothing exists are different answers, and only one
+           of them means the filters are doing their job. */
+        empty={{
+          icon: <ClipboardList className="w-5 h-5" />,
+          label: filtering ? t("noMatches") : t("empty"),
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.totalItems,
+          pageSize: paged.pageSize,
+          isLoading: entries === undefined,
+          onPageChange: setPage,
+          labels: {
+            previous: t("pagination.previous"),
+            next: t("pagination.next"),
+            empty: filtering ? t("pagination.noMatches") : t("pagination.empty"),
+            page: (current, total) => t("pagination.page", { page: current, total }),
+            showing: (start, end, total) => t("pagination.showing", { start, end, total }),
+          },
+        }}
+        columns={[
+          {
+            key: "system",
+            header: <SortableHeader label={t("table.system")} by="NAME" />,
+            className: "max-w-[340px]",
+            cell: (entry) => (
+              <>
+                <span className="block text-[13px] font-medium leading-tight text-foreground">
+                  {entry.name}
+                </span>
+                <span
+                  className={`mt-0.5 block truncate text-[12px] ${
+                    entry.purpose ? "text-secondary" : "text-[#b45309] dark:text-[#fbbf24]"
+                  }`}
+                >
+                  {entry.purpose || t("noPurpose")}
+                </span>
+              </>
+            ),
+          },
+          {
+            key: "kind",
+            header: t("table.kind"),
+            cell: (entry) => (
+              <>
+                <span className="flex items-center gap-1.5 text-[12px] text-secondary">
+                  {entry.facesPublic ? <Globe className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                  {t(`kind.${entry.kind}`)}
+                </span>
+                {entry.model ? (
+                  <span className="mt-0.5 block truncate text-[11px] text-muted">{entry.model}</span>
+                ) : null}
+              </>
+            ),
+          },
+          {
+            key: "risk",
+            header: <SortableHeader label={t("table.risk")} by="RISK" />,
+            /*
+              The platform's chip, with the amber kept for the ratings that
+              actually ask for something. A text label always — colour on its
+              own would be carrying meaning nobody can rely on.
+            */
+            cell: (entry) => (
+              <span
+                className={`flex w-fit items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${
+                  entry.risk === "HIGH" || entry.risk === "UNRATED"
+                    ? "border-[#fbbf24]/40 bg-[#fbbf24]/10 text-[#b45309] dark:text-[#fbbf24]"
+                    : "border-border-dim bg-foreground/5 text-foreground/80"
                 }`}
               >
-                {t(`summary.${option.key}`)}
-                <span className="tabular-nums font-medium">{option.count ?? "—"}</span>
-              </button>
-            );
-          })}
-
-          <label className="sr-only" htmlFor="register-kind">
-            {t("filters.kindLabel")}
-          </label>
-          <Select
-            id="register-kind"
-            value={kind}
-            onChange={(next) => narrow(() => setKind(next as AiSystemKind | "ALL"))}
-            className="w-[150px]"
-          >
-            {KINDS.map((option) => (
-              <option key={option} value={option}>
-                {option === "ALL" ? t("filters.allKinds") : t(`kind.${option}`)}
-              </option>
-            ))}
-          </Select>
-
-          {filtering ? (
-            <button
-              type="button"
-              onClick={() =>
-                narrow(() => {
-                  setSearch("");
-                  setChip("total");
-                  setKind("ALL");
-                })
-              }
-              className="h-[34px] rounded-[10px] px-3 text-[13px] text-secondary transition-colors hover:text-foreground"
-            >
-              {t("filters.clear")}
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      <TableShell
-        minWidthClassName="min-w-[900px]"
-        footer={
-          <PaginationFooter
-            page={paged.page}
-            totalPages={paged.totalPages}
-            totalCount={paged.totalItems}
-            pageSize={paged.pageSize}
-            isLoading={entries === undefined}
-            onPageChange={setPage}
-            labels={{
-              previous: t("pagination.previous"),
-              next: t("pagination.next"),
-              empty: filtering ? t("pagination.noMatches") : t("pagination.empty"),
-              page: (current, total) => t("pagination.page", { page: current, total }),
-              showing: (start, end, total) => t("pagination.showing", { start, end, total }),
-            }}
-          />
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <SortableHeader label={t("table.system")} by="NAME" />
-            <TableHeaderCell>{t("table.kind")}</TableHeaderCell>
-            <SortableHeader label={t("table.risk")} by="RISK" />
-            <TableHeaderCell>{t("table.owner")}</TableHeaderCell>
-            <TableHeaderCell>{t("table.oversight")}</TableHeaderCell>
-            <SortableHeader label={t("table.activity")} by="ACTIVITY" />
-            <SortableHeader label={t("table.lastActive")} by="LAST_ACTIVE" />
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {entries === undefined ? (
-            <TableLoadingRow colSpan={7} />
-          ) : paged.items.length === 0 ? (
-            <TableEmptyRow
-              colSpan={7}
-              icon={<ClipboardList className="w-5 h-5" />}
-              /* Nothing matched and nothing exists are different answers, and
-                 only one of them means the filters are doing their job. */
-              label={filtering ? t("noMatches") : t("empty")}
-            />
-          ) : (
-            paged.items.map((entry) => (
-              /*
-                The ordinary admin row, and nothing else. This table used to
-                wash whole rows in amber and stack three lines of prose in the
-                first cell, which made it the only table on the platform that
-                looked like this — Anthony, 2026-08-06: *"its not standard no
-                other table in the platform does it."*
-
-                Nothing was lost by stopping. What a row is missing already has
-                its own columns saying so in words: no rating shows in Risk, and
-                nobody accountable shows in Accountable. The tint was repeating
-                what the cells were already telling you, in the one visual
-                language a compliance screen should avoid leaning on.
-              */
-              <tr
-                key={entry.id}
-                onClick={() => setOpened(entry)}
-                className="group cursor-pointer border-b border-border-dim/50 last:border-0 transition-colors hover:bg-foreground/[0.02]"
-              >
-                <td className="px-4 py-3 max-w-[340px]">
-                  <span className="block text-[13px] font-medium leading-tight text-foreground">
-                    {entry.name}
-                  </span>
-                  <span
-                    className={`mt-0.5 block truncate text-[12px] ${
-                      entry.purpose ? "text-secondary" : "text-[#b45309] dark:text-[#fbbf24]"
-                    }`}
-                  >
-                    {entry.purpose || t("noPurpose")}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-1.5 text-[12px] text-secondary">
-                    {entry.facesPublic ? <Globe className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                    {t(`kind.${entry.kind}`)}
-                  </span>
-                  {entry.model ? (
-                    <span className="mt-0.5 block truncate text-[11px] text-muted">{entry.model}</span>
-                  ) : null}
-                </td>
-                <td className="px-4 py-3">
-                  {/*
-                    The platform's chip, with the amber kept for the ratings that
-                    actually ask for something. A text label always — colour on
-                    its own would be carrying meaning nobody can rely on.
-                  */}
-                  <span
-                    className={`flex w-fit items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${
-                      entry.risk === "HIGH" || entry.risk === "UNRATED"
-                        ? "border-[#fbbf24]/40 bg-[#fbbf24]/10 text-[#b45309] dark:text-[#fbbf24]"
-                        : "border-border-dim bg-foreground/5 text-foreground/80"
-                    }`}
-                  >
-                    {t(`risk.${entry.risk}`)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[12px]">
-                  {entry.ownerName ? (
-                    <span className="text-secondary">{entry.ownerName}</span>
-                  ) : (
-                    <span className="text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-1.5 text-[12px] text-secondary">
-                    {entry.humanApproves ? (
-                      <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                    ) : (
-                      <Bolt className="h-3.5 w-3.5" aria-hidden="true" />
-                    )}
-                    {entry.humanApproves ? t("oversight.human") : t("oversight.unattended")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[12px]">
-                  {typeof entry.activity === "number" ? (
-                    <span className={entry.activity > 0 ? "text-foreground" : "text-muted"}>
-                      {t("table.runs", { count: entry.activity })}
-                    </span>
-                  ) : (
-                    /* A widget is not run the way an assistant is, and printing
-                       nought would claim it sat idle rather than that the idea
-                       does not apply to it. */
-                    <span className="text-muted">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {entry.lastActiveAt ? formatDate(entry.lastActiveAt) : "—"}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+                {t(`risk.${entry.risk}`)}
+              </span>
+            ),
+          },
+          {
+            key: "owner",
+            header: t("table.owner"),
+            cell: (entry) =>
+              entry.ownerName ? (
+                <span className="text-[12px] text-secondary">{entry.ownerName}</span>
+              ) : (
+                <span className="text-[12px] text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>
+              ),
+          },
+          {
+            key: "oversight",
+            header: t("table.oversight"),
+            cell: (entry) => (
+              <span className="flex items-center gap-1.5 text-[12px] text-secondary">
+                {entry.humanApproves ? (
+                  <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Bolt className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {entry.humanApproves ? t("oversight.human") : t("oversight.unattended")}
+              </span>
+            ),
+          },
+          {
+            key: "activity",
+            header: <SortableHeader label={t("table.activity")} by="ACTIVITY" />,
+            cell: (entry) =>
+              typeof entry.activity === "number" ? (
+                <span className={`text-[12px] ${entry.activity > 0 ? "text-foreground" : "text-muted"}`}>
+                  {t("table.runs", { count: entry.activity })}
+                </span>
+              ) : (
+                /* A widget is not run the way an assistant is, and printing
+                   nought would claim it sat idle rather than that the idea does
+                   not apply to it. */
+                <span className="text-[12px] text-muted">—</span>
+              ),
+          },
+          {
+            key: "lastActive",
+            header: <SortableHeader label={t("table.lastActive")} by="LAST_ACTIVE" />,
+            cell: (entry) => (
+              <span className="text-[12px] text-secondary">
+                {entry.lastActiveAt ? formatDate(entry.lastActiveAt) : "—"}
+              </span>
+            ),
+          },
+        ]}
+      />
 
       <RegisterEntryPanel entry={opened} onClose={() => setOpened(null)} />
     </div>

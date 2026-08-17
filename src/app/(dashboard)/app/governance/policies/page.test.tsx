@@ -8,11 +8,10 @@ import GovernancePoliciesPage from "./page";
  * Pins what the customer's own policies list does today, before it moves onto
  * the shared list part.
  *
- * `hasFooter: false` records a fact rather than approving it: this screen shows
- * every active rule at once, with no search and no page numbers, while the
- * platform's version of the same screen has both. That gap is written up in the
- * plan; the point of pinning it here is that the conversion has to change it
- * deliberately rather than by accident.
+ * It used to have no search box and no page numbers where the platform's version
+ * of the same screen had both, and that was pinned here as a fact rather than an
+ * endorsement. Anthony closed the gap on 2026-08-17, so the same assertions now
+ * run against both screens.
  */
 
 vi.mock("convex/react", () => ({
@@ -58,7 +57,7 @@ describe("GovernancePoliciesPage (customer)", () => {
       sampleRows: rules,
       sampleRowText: "Stay grounded in approved context",
       emptyText: "admin.governance.policies.empty",
-      hasFooter: false,
+      searchPlaceholder: "admin.governance.policies.searchPlaceholder",
     });
   });
 });
