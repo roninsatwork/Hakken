@@ -358,7 +358,7 @@ export default function AuditTrailPage() {
                 onClick={() => router.push(`/admin/governance/audit-trail/${log._id}`)}
                 className="group cursor-pointer border-b border-border-dim/50 last:border-0 transition-colors hover:bg-foreground/[0.02]"
               >
-                <td className="px-4 py-2.5">
+                <td className="px-4 py-3">
                   <span className="rounded-[4px] border border-border-dim bg-foreground/5 px-2 py-1 font-mono text-[10px] tracking-widest text-foreground/80">
                     {log.actionType}
                   </span>
@@ -367,8 +367,8 @@ export default function AuditTrailPage() {
                     sentence rather than two words, the name is what the table
                     chooses to wrap, and a column of broken names makes the
                     whole trail look like it is struggling. */}
-                <td className="px-4 py-2.5 text-[12px] text-secondary whitespace-nowrap">{log.actorName}</td>
-                <td className="px-4 py-2.5 text-[12px]">
+                <td className="px-4 py-3 text-[12px] text-secondary whitespace-nowrap">{log.actorName}</td>
+                <td className="px-4 py-3 text-[12px]">
                   {log.change ? (
                     <span className="text-foreground">{log.change}</span>
                   ) : (
@@ -382,7 +382,7 @@ export default function AuditTrailPage() {
                 {/* What it was done to, by name where the record still exists.
                     Answering "what happened to this agent" meant opening rows
                     one at a time, and an identifier is not an answer. */}
-                <td className="px-4 py-2.5 text-[12px] text-secondary">
+                <td className="px-4 py-3 text-[12px] text-secondary">
                   {log.targetName ?? (
                     /* Two different silences, and they are not the same fact.
                        An entry with no target at all had nothing done to it;
@@ -398,10 +398,10 @@ export default function AuditTrailPage() {
                 </td>
                 {/* Which client this belonged to. Without it there was no way
                     to tell one workspace's activity from another's. */}
-                <td className="px-4 py-2.5 text-[12px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-[12px] text-secondary whitespace-nowrap">
                   {log.companyName ?? <span className="text-muted">{t("noWorkspace")}</span>}
                 </td>
-                <td className="px-4 py-2.5 text-right text-[12px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-right text-[12px] text-secondary whitespace-nowrap">
                   {new Date(log.timestamp).toLocaleString(undefined, {
                     day: "numeric",
                     month: "short",

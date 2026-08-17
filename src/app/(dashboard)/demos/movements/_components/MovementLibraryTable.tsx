@@ -5,7 +5,7 @@ import { Activity, Bug, ClipboardList, Play, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
-import { TableShell, TableHeaderRow, TableHeaderCell, LoadMoreFooter } from "@/src/ui/components/screens/Table";
+import { TableShell, TableHeaderRow, TableHeaderCell, TableLoadingRow, LoadMoreFooter } from "@/src/ui/components/screens/Table";
 import { getStudioRoutineTitle } from "../_lib/movementPresentation";
 import { getMovementSpineGoalLabel } from "../_lib/movementSpineIntent";
 import {
@@ -108,11 +108,11 @@ export default function MovementLibraryTable({
           <tbody>
             <AnimatePresence>
               {isLoading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-[13px] text-secondary">
-                    Loading posture studio...
-                  </td>
-                </tr>
+                /* The kit's spinner rather than the words "Loading posture
+                   studio...". Every other list in the app spins here, and a
+                   sentence that reads like a row is the thing a reader tries
+                   to click. */
+                <TableLoadingRow colSpan={4} />
               ) : movements.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="p-0 border-none">
@@ -139,7 +139,7 @@ export default function MovementLibraryTable({
                         exit={{ opacity: 0, y: -10 }}
                         className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
                       >
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center">
                             <Activity className="w-4 h-4 text-brand" />
@@ -154,17 +154,17 @@ export default function MovementLibraryTable({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                           <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
                             {movement.difficulty}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-[12px] text-secondary">
+                      <td className="px-4 py-3 text-[12px] text-secondary">
                         {new Date(movement.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                           <MovementActionButton
                             label={`Start practice ${routineTitle}`}

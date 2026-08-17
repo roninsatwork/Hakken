@@ -345,7 +345,7 @@ export default function ProfileTabs() {
 
                   {paginatedItems.map((login) => (
                     <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-foreground/5 border border-white/5 flex items-center justify-center">
                             <MonitorSmartphone className="w-4 h-4 text-foreground/70" />
@@ -356,7 +356,7 @@ export default function ProfileTabs() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 text-secondary" />
                           <div className="flex flex-col">
@@ -365,7 +365,7 @@ export default function ProfileTabs() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-[#10b981]' : 'bg-red-500'}`} />
                           <span className="text-[12px] text-secondary font-medium tracking-wide">
@@ -373,7 +373,7 @@ export default function ProfileTabs() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <span className="text-[12px] text-secondary tracking-wide">
                           {new Date(login.timestamp).toLocaleString(undefined, {
                             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'

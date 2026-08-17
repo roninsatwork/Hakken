@@ -30,9 +30,11 @@ describe("movement library components", () => {
       onDelete: vi.fn(),
     };
 
-    const { rerender } = render(<MovementLibraryTable {...baseProps} isLoading />);
+    const { container, rerender } = render(<MovementLibraryTable {...baseProps} isLoading />);
 
-    expect(screen.getByText("Loading posture studio...")).toBeInTheDocument();
+    // The kit's spinner, since 2026-08-17. This used to be the words "Loading
+    // posture studio..." sitting in the table like a row anyone might click.
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
 
     rerender(<MovementLibraryTable {...baseProps} isLoading={false} searchTerm="spine" />);
 

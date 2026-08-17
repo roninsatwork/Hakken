@@ -422,7 +422,7 @@ export default function RoninArcadePage() {
                    <TableHeaderCell align="right">Timestamp</TableHeaderCell>
                  </TableHeaderRow>
                </thead>
-               <tbody className="divide-y divide-border-dim/30">
+               <tbody>
                  {(status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0 && (
                    <tr>
                      <td colSpan={4} className="px-6 py-12 text-center text-secondary">
@@ -442,13 +442,13 @@ export default function RoninArcadePage() {
                  {paginatedItems.map((entry, index) => {
                    const globalIndex = (currentPage - 1) * itemsPerPage + index;
                    return (
-                     <tr key={entry._id} className="group hover:bg-foreground/[0.03] transition-colors">
-                       <td className="px-6 py-4">
+                     <tr key={entry._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-foreground/[0.03] transition-colors">
+                       <td className="px-4 py-3">
                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold ${globalIndex === 0 ? "bg-amber-400/20 text-amber-500" : globalIndex === 1 ? "bg-slate-300/20 text-slate-400" : globalIndex === 2 ? "bg-amber-700/20 text-amber-600" : "bg-foreground/5 text-foreground/70"}`}>
                            {globalIndex === 0 ? <Crown className="w-4 h-4" /> : `#${globalIndex + 1}`}
                          </div>
                        </td>
-                       <td className="px-6 py-4">
+                       <td className="px-4 py-3">
                          <div className="flex items-center gap-3">
                            {entry.userAvatar ? (
                              <Image
@@ -467,10 +467,10 @@ export default function RoninArcadePage() {
                            <span className="text-[14px] font-medium text-foreground">{entry.userName}</span>
                          </div>
                        </td>
-                       <td className="px-6 py-4 text-right">
+                       <td className="px-4 py-3 text-right">
                          <span className="text-[16px] font-mono font-bold text-brand tracking-widest">{entry.score.toLocaleString()}</span>
                        </td>
-                       <td className="px-6 py-4 text-right">
+                       <td className="px-4 py-3 text-right">
                          <div className="flex items-center justify-end gap-1.5 text-secondary">
                            <Clock className="w-3.5 h-3.5" />
                            <span className="text-[12px] tracking-wide">

@@ -200,9 +200,9 @@ export default function SpokenVoicePage() {
               return (
                 <tr
                   key={option.key}
-                  className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                  className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
                 >
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <span className="flex items-center gap-2 text-[14px] font-medium text-foreground">
                       {option.key}
                       {isCurrent && (
@@ -213,10 +213,10 @@ export default function SpokenVoicePage() {
                       )}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-[13px] text-secondary">
+                  <td className="px-4 py-3 text-[13px] text-secondary">
                     {t(`voices.${option.key}`)}
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"

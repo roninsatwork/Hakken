@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
 import { ToastProvider } from '@/src/context/ToastContext';
+import { UIProvider } from '@/src/context/UIContext';
 
 /**
  * Renders a component inside the providers the root layout always supplies.
@@ -20,7 +21,11 @@ export function renderWithProviders(
 ): RenderResult {
   return render(ui, {
     ...options,
-    wrapper: ({ children }: { children: React.ReactNode }) => <ToastProvider>{children}</ToastProvider>,
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <UIProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </UIProvider>
+    ),
   });
 }
 
