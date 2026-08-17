@@ -308,7 +308,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
             totalPages={cases.totalPages}
             totalCount={cases.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={cases.isLoadingMore}
+            isLoading={cases.isBusy}
             onPageChange={cases.goToPage}
             labels={{ empty: "No evals" }}
           />

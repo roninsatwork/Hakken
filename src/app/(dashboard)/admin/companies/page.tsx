@@ -182,7 +182,7 @@ export default function CompaniesPage() {
             totalPages={companiesTable.totalPages}
             totalCount={companiesTable.loadedCount}
             pageSize={itemsPerPage}
-            isLoading={companiesTable.isLoadingMore}
+            isLoading={companiesTable.isBusy}
             onPageChange={companiesTable.goToPage}
             labels={{ empty: t('emptyState') }}
           />

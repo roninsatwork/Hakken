@@ -257,7 +257,7 @@ export default function CompanyChatLogsDashboard() {
             totalPages={threads.totalPages}
             totalCount={threads.loadedCount}
             pageSize={itemsPerPage}
-            isLoading={threads.isLoadingMore}
+            isLoading={threads.isBusy}
             onPageChange={threads.goToPage}
             labels={{ empty: "No interaction data found." }}
           />

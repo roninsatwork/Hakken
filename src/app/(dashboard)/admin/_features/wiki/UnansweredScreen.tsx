@@ -140,7 +140,7 @@ export function UnansweredScreen({
             totalPages={rows.totalPages}
             totalCount={rows.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={rows.isLoadingMore}
+            isLoading={rows.isBusy}
             onPageChange={rows.goToPage}
             labels={{ empty: t("empty") }}
           />

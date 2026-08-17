@@ -365,7 +365,7 @@ export default function ApiKeysPage() {
           totalPages={keys.totalPages}
           totalCount={keys.loadedCount}
           pageSize={TABLE_PAGE_SIZE}
-          isLoading={keys.isLoadingMore}
+          isLoading={keys.isBusy}
           onPageChange={keys.goToPage}
           labels={{ empty: "No keys yet" }}
         />

@@ -188,7 +188,7 @@ export default function ChatLogsDashboard() {
             totalPages={threads.totalPages}
             totalCount={threads.loadedCount}
             pageSize={itemsPerPage}
-            isLoading={threads.isLoadingMore}
+            isLoading={threads.isBusy}
             onPageChange={threads.goToPage}
             labels={{ empty: t("status.noTraces") }}
           />

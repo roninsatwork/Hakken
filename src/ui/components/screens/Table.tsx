@@ -413,8 +413,10 @@ export function LoadMoreFooter({
 }: AdminLoadMoreFooterProps) {
   return (
     <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
+      {/* Nothing at all while the query is still out — same reason as the
+          numbered footer above. */}
       <div className="text-[12px] font-medium text-secondary">
-        {visibleCount > 0 ? (
+        {isLoading ? null : visibleCount > 0 ? (
           <span>{labels?.showing?.(visibleCount) ?? `Showing ${visibleCount}`}</span>
         ) : (
           <span>{labels?.empty ?? "No entries found"}</span>

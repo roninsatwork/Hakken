@@ -102,7 +102,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
             totalPages={mail.totalPages}
             totalCount={mail.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={mail.isLoadingMore}
+            isLoading={mail.isBusy}
             onPageChange={mail.goToPage}
             labels={{ empty: t("empty") }}
           />
@@ -129,12 +129,12 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
             mail.rows.map((row) => (
               <tr
                 key={row._id}
-                className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
               >
-                <td className="px-4 py-4 text-[13px] text-foreground whitespace-nowrap max-w-[240px]">
+                <td className="px-4 py-3 text-[13px] text-foreground whitespace-nowrap max-w-[240px]">
                   <span className="block truncate">{row.sender}</span>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-foreground max-w-[380px]">
+                <td className="px-4 py-3 text-[13px] text-foreground max-w-[380px]">
                   <span className="line-clamp-2">{row.subject}</span>
                   {row.decisionReason && (
                     <span className="block text-[12px] text-muted truncate mt-0.5">
@@ -142,14 +142,14 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span
                     className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${decisionClass[row.decision] ?? "text-secondary"}`}
                   >
                     {t(`decision.${row.decision}`)}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                   {formatDateTime(row.createdAt)}
                 </td>
               </tr>

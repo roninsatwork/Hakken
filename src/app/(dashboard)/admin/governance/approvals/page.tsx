@@ -121,7 +121,7 @@ export default function AgentApprovalsPage() {
             totalPages={paged.totalPages}
             totalCount={paged.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={paged.isLoadingMore}
+            isLoading={paged.isBusy}
             onPageChange={paged.goToPage}
             labels={{ empty: t("footer.empty") }}
           />

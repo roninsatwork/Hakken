@@ -113,7 +113,7 @@ export function WikiDiaryScreen({
             totalPages={entries.totalPages}
             totalCount={entries.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={entries.isLoadingMore}
+            isLoading={entries.isBusy}
             onPageChange={entries.goToPage}
             labels={{ empty: t("empty") }}
           />
@@ -142,12 +142,12 @@ export function WikiDiaryScreen({
               return (
                 <tr
                   key={`${entry.at}-${index}`}
-                  className="border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                  className="border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
                 >
-                  <td className="px-4 py-4 text-[13.5px] text-foreground">
+                  <td className="px-4 py-3 text-[13.5px] text-foreground">
                     {sentenceKey ? t(`entries.${sentenceKey}`) : entry.action}
                   </td>
-                  <td className="px-4 py-4 text-[13px] max-w-[360px]">
+                  <td className="px-4 py-3 text-[13px] max-w-[360px]">
                     {entry.pageId && entry.pageTitle ? (
                       <Link
                         href={`${pageBasePath}/${entry.pageId}`}
@@ -159,10 +159,10 @@ export function WikiDiaryScreen({
                       <span className="text-muted truncate block">{entry.detail ?? "—"}</span>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-[12px] text-secondary whitespace-nowrap">
+                  <td className="px-4 py-3 text-[12px] text-secondary whitespace-nowrap">
                     {entry.byPerson ? t("byPerson") : t("byBrain")}
                   </td>
-                  <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap tabular-nums">
+                  <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap tabular-nums">
                     {formatDateTime(entry.at)}
                   </td>
                 </tr>

@@ -64,6 +64,16 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
     hasMore: canLoadMore,
     isLoading: status === "LoadingFirstPage",
     isLoadingMore: status === "LoadingMore",
+    /**
+     * Waiting on the server for any reason — what the footer wants.
+     *
+     * Fifteen screens handed the footer `isLoadingMore`, which is false during
+     * the very first load, so the footer read a count of zero as an answer of
+     * zero and said "nothing found" underneath a table that was showing a
+     * spinner. Both states want the same thing from the footer, so they are
+     * said once here rather than combined by hand fifteen times.
+     */
+    isBusy: status === "LoadingFirstPage" || status === "LoadingMore",
     goToPage,
   };
 }

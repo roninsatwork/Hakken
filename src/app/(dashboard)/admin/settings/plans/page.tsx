@@ -172,7 +172,7 @@ export default function SubscriptionPlansPage() {
             totalPages={plans.totalPages}
             totalCount={plans.loadedCount}
             pageSize={itemsPerPage}
-            isLoading={plans.isLoadingMore}
+            isLoading={plans.isBusy}
             onPageChange={plans.goToPage}
             labels={{ empty: t('emptyState') }}
           />

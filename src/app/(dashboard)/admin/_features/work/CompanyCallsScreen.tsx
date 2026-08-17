@@ -103,7 +103,7 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
             totalPages={calls.totalPages}
             totalCount={calls.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={calls.isLoadingMore}
+            isLoading={calls.isBusy}
             onPageChange={calls.goToPage}
             labels={{ empty: t("empty") }}
           />
@@ -131,9 +131,9 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
             calls.rows.map((call) => (
               <tr
                 key={call._id}
-                className="group border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
               >
-                <td className="px-4 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <Link
                     href={`calls/${call._id}`}
                     className="font-mono text-[13px] text-brand hover:underline"
@@ -141,20 +141,20 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
                     {call.fromMasked}
                   </Link>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-foreground max-w-[380px]">
+                <td className="px-4 py-3 text-[13px] text-foreground max-w-[380px]">
                   <span className="line-clamp-2">{call.summary ?? "—"}</span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span
                     className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusClass[call.status] ?? "text-secondary"}`}
                   >
                     {tCalls(`status.${call.status}`)}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                   {formatDateTime(call.startedAt)}
                 </td>
-                <td className="px-4 py-4 text-right text-[13px] text-foreground tabular-nums">
+                <td className="px-4 py-3 text-right text-[13px] text-foreground tabular-nums">
                   {call.turnCount}
                 </td>
               </tr>

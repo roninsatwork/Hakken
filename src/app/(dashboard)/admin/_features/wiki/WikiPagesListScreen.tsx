@@ -418,7 +418,7 @@ export function WikiPagesListScreen({
             totalPages={rows.totalPages}
             totalCount={rows.loadedCount}
             pageSize={PAGE_SIZE}
-            isLoading={rows.isLoadingMore}
+            isLoading={rows.isBusy}
             onPageChange={rows.goToPage}
             labels={{ empty: t("empty") }}
           />

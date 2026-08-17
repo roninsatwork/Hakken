@@ -56,7 +56,7 @@ export default function WorkflowExecutionsPage() {
             totalPages={runs.totalPages}
             totalCount={runs.loadedCount}
             pageSize={TABLE_PAGE_SIZE}
-            isLoading={runs.isLoadingMore}
+            isLoading={runs.isBusy}
             onPageChange={runs.goToPage}
             labels={{ empty: t("empty") }}
           />

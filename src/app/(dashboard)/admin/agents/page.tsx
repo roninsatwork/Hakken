@@ -127,7 +127,7 @@ export default function AgentsPage() {
             totalPages={agents.totalPages}
             totalCount={agents.loadedCount}
             pageSize={itemsPerPage}
-            isLoading={agents.isLoadingMore}
+            isLoading={agents.isBusy}
             onPageChange={agents.goToPage}
             labels={{ empty: t('table.empty') }}
           />

@@ -1065,7 +1065,7 @@ export function KnowledgeManager({
           totalPages={paged.totalPages}
           totalCount={paged.loadedCount}
           pageSize={TABLE_PAGE_SIZE}
-          isLoading={paged.isLoadingMore}
+          isLoading={paged.isBusy}
           onPageChange={paged.goToPage}
           labels={{
             empty: "No knowledge documents loaded",
