@@ -6,8 +6,7 @@ Embedded widgets are the public chat surface implemented by `public/embed.js`, `
 
 - `src/app/(dashboard)/admin/ai/widget/page.tsx` manages the primary global widget. It is super-admin-only through the admin layout and calls `api.widgets.getPrimaryGlobalWidget` and `api.widgets.saveWidget`.
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.tsx` manages the primary company widget for a company workspace.
-- `src/app/(dashboard)/admin/_features/widget-config/*` contains the shared widget configuration sections, tab helpers, preview panel, empty state, and embed snippet builder used by the company widget route.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/*` mirrors the widget section components and local tests for the company route; prefer the shared feature directory for active editor changes unless the route-local file is explicitly under test.
+- `src/app/(dashboard)/admin/_features/widget-config/*` contains the shared widget configuration sections, tab helpers, preview panel, empty state, embed snippet builder, and their tests. Both the global and the company widget route import from here; it is the only copy. A byte-for-byte duplicate of these components once sat under the company route at `_components/`, unimported and carrying the only tests, and was removed on 2026-08-17. Edit the shared files, and do not reintroduce a route-local copy.
 - `src/app/w/[widgetId]/page.tsx` renders the public iframe chat experience server shell, reads the request referrer, and mints the signed widget embed pass passed into the client.
 - `src/app/w/[widgetId]/WidgetIframeClient.tsx` owns the public chat client, including photo staging, upload, thumbnail display, visitor-facing photo-action confirmation, and `createWidgetThread` calls with the embed pass.
 - `src/app/sandbox/[widgetId]/page.tsx` injects `public/embed.js` into a simulated page for manual verification.
@@ -141,7 +140,7 @@ Current coverage lives mainly in:
 - `src/lib/widgetEmbedPolicy.test.ts` and `convex/utils/widgetOriginPolicy.test.ts` for host parsing, frame-ancestor decisions, wildcard handling, direct-open behavior, and suffix-lookalike rejection
 - `convex/agentRuntime.test.ts`, `convex/photoActionService.test.ts`, and task tests for image-bearing widget turns and photo-action confirmation
 - `src/app/(dashboard)/admin/companies/[id]/widget/page.test.tsx` for company widget save and copy behavior
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/*.test.tsx` for section behavior and snippet building
+- `src/app/(dashboard)/admin/_features/widget-config/*.test.tsx` for section behavior and snippet building
 - `convex/kiosk.test.ts` and widget Integration section tests for the Receptionist screen opt-in and full-screen kiosk behavior
 - settings tests that treat widgets as white-label and domain-readiness evidence
 

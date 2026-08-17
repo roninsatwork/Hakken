@@ -20,9 +20,8 @@ health, or reset behavior.
 - `src/app/(dashboard)/admin/_features/widget-config/WidgetIntegrationSection.tsx`
   exposes the Receptionist screen switch, `/kiosk/[widgetId]` link, last-seen
   timestamp, and session count in the shared widget editor.
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetIntegrationSection.tsx`
-  mirrors the same route-local component for the company widget path and has
-  route-local tests.
+  The company widget path imports that same shared component; there is no
+  route-local copy.
 
 The public kiosk route is intentionally not protected by dashboard auth. It is
 served only when the backing widget exists, is active, and has `kioskEnabled`
@@ -139,7 +138,7 @@ Focused coverage lives in:
 - `convex/kiosk.test.ts` for opt-in gating, token access, transcript writes,
   session reservation, hourly ceilings, audit logging, message caps, and
   heartbeat throttling
-- `src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConfigSections.test.tsx`
+- `src/app/(dashboard)/admin/_features/widget-config/WidgetConfigSections.test.tsx`
   for the Receptionist screen switch, link, last-seen timestamp, and count
 - spoken-channel tests for shared relay, voice setting, model, and ticket
   behavior

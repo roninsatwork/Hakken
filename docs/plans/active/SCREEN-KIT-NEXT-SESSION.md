@@ -61,10 +61,19 @@ adoption, not by the allowlist.
 
 **Nothing is open with Anthony.** Both questions from the morning were answered
 on 2026-08-17: the opportunity report stays hand-written, and plain English is
-part of converting a screen rather than a separate pass. Two things were raised
-and left with him, neither blocking: the four widget panels that exist twice
-byte-for-byte under two folders, and the wording of the saved invitation email
-your customers' staff receive.
+part of converting a screen rather than a separate pass. The two things left
+with him were both cleared the same day:
+
+- **The duplicated widget folder is gone.** It was worse than the four panels
+  reported: ten dead files under the company route, byte-identical to the shared
+  ones, holding the only tests the live components had. Both routes already
+  imported the shared copies. The tests moved to
+  `_features/widget-config/`; the dead folder and its two allowlist entries
+  went. Both widget screens verified rendering in the real app afterwards.
+- **The invitation email no longer sends people looking for Google
+  credentials.** The default body told a customer's new starter to "synchronize
+  your verified Google credentials", when the login page offers a one-time code,
+  an emailed link, *and* Google. It now names none of the three.
 
 ## How Anthony wants to be worked with
 

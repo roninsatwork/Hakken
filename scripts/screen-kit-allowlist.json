@@ -1,5 +1,5 @@
 {
-  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow — move the screen onto the kit instead of adding to it. Some entries are settled decisions rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17); the two WidgetPreviewPanel files draw a mock-up of the customer's own chat widget rather than a form; WikiQuickSwitcher is a command palette, where a bordered field would put a box inside a box; and MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them.",
+  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow — move the screen onto the kit instead of adding to it. Some entries are settled decisions rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17); WidgetPreviewPanel draws a mock-up of the customer's own chat widget rather than a form; WikiQuickSwitcher is a command palette, where a bordered field would put a box inside a box; and MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them.",
   "tables": [
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
@@ -11,7 +11,6 @@
     "src/app/(dashboard)/admin/agents/new/page.tsx",
     "src/app/(dashboard)/admin/agents/skills/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new/page.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPreviewPanel.tsx",
     "src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx",
     "src/app/(dashboard)/app/tasks/page.tsx",
     "src/app/(dashboard)/demos/movement-capture/benchmark/device/page.tsx",

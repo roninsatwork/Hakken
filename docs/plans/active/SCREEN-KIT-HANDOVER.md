@@ -113,7 +113,7 @@ nobody "finishes" them by mistake:
 
 | Screen | Why it stays |
 |---|---|
-| Both `WidgetPreviewPanel` files | Their boxes are a mock-up of the customer's own chat widget, styled to look like the customer's site. The house field would restyle a preview of somebody else's website. |
+| `WidgetPreviewPanel` | Its boxes are a mock-up of the customer's own chat widget, styled to look like the customer's site. The house field would restyle a preview of somebody else's website. There were two of this file until 2026-08-17; only the shared one is left. |
 | `MoneyViewScreen` | Two boxes inside a sentence, already named by their wrapping label. Stacking a label above a full-width box turns one line into three. |
 | `SettingBlock`'s opacity box | Same shape: a number, then a per-cent sign, mid-sentence. |
 | `app/tasks` | A grouped list with its own due-date row, recorded as a decision when Tasks first moved onto the kit. |
