@@ -620,6 +620,43 @@ language files, English and Italian change together.
 Those six were what a quick scan found; the rule screens alone carried eight
 more. Assume any screen not yet visited has some.
 
+### What the kit gained on 2026-08-17, and why each was unavoidable
+
+Four things were added to the kit rather than worked around on the screens.
+Every one of them was found the same way — the same fault turning up on a second
+screen — and every one fixed more screens than it touched. **That pattern is the
+finding, not the four parts.** When a fault appears twice, stop converting and
+look at what those screens share.
+
+| Added | Because |
+|---|---|
+| `aria-label` on `SearchBar` | The icon is a picture and the placeholder goes the moment anyone types, so the search box on **28 screens** announced itself as nothing. Its sister in `TableControls` had carried a label all along, which is what made it a miss rather than a decision. |
+| `labelHidden` on `TextAreaField` | The plain field already had it. Four wiki boxes sat under a heading that named them, so the choice was a visible label parroting the heading or a nameless box. |
+| `ModalTextAreaField` | `ModalField` tied a single-line box to its label; the text areas beside it were still the wrapper around a raw `<textarea>`, and the tie was dropped every time. |
+| `InlineSearchInput` | `SearchBar` draws its own card. Four screens needed the box without the card — a command palette, two picker dropdowns, a bordered panel — and hand-wrote one rather than put a box inside a box. **They were the only screens that could never come off the frozen list**, so it could not have reached its floor without this. |
+
+The last was raised with Anthony twice as a decision and answered "go" both
+times, so it was taken as a technical one and made. If a future part looks like
+this — no new look, just the one arrangement the kit cannot say — make it.
+
+### One footer, applied everywhere — 2026-08-17
+
+Ten list screens still ended in a lone "Load more" button. They all carry the
+numbered footer now, through `useServerPagedTable` or `usePagedRows`, and what
+each screen fetches is unchanged. Anthony found the first of them himself and
+the plan had already settled the rule twice, so this was applying a decision
+rather than making one.
+
+Three screens keep the load-more footer and should: a skill picker inside a
+dialog is a picker rather than a list screen; Tasks is a grouped list; the
+movement library is inside the fenced demo.
+
+**The frozen table count was misleading.** It counts screens hand-writing a raw
+`<table>` and stood at 1, which read as "the tables are done". Only four screens
+actually use `DataTable` — the rest import its parts and assemble them by hand,
+which is how a list screen ended up with no paging controls while passing every
+check. Step 4's real measure is `DataTable` adoption.
+
 ### The reference
 
 `/admin/ai/evals` is the screen this converges on: search box on its own row,

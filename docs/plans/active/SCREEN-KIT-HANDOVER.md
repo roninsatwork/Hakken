@@ -6,11 +6,12 @@
 > 3.5 and 3.6 sections of the plan first — the goal changed twice during that
 > day, on Anthony's instruction, and the reasons matter more than the diff.
 
-**State: green.** Typecheck silent, lint 0 errors, 4,994 tests passing across
-550 files, all four source guards pass, `git diff --check` clean.
+**State: green.** Typecheck silent, lint 0 errors, 5,018 tests passing across
+552 files, all four source guards pass, `git diff --check` clean.
 
-**Committed locally, never pushed.** Twelve commits on `dev`. Nothing has been
-pushed — every push runs a metered check and he has not asked for one.
+**Committed locally, never pushed.** 33 commits on `dev`, 23 of them from
+2026-08-17's second session. Nothing has been pushed — every push runs a metered
+check and he has not asked for one.
 
 ---
 
@@ -54,14 +55,14 @@ not done. Phases 3 to 7 are still to do.
 | 1 — the kit moves into reach | **Done** |
 | 2 — the client-facing screens get on it | **Done** |
 | 3 — the wrong thing fails the build | **Done** |
-| 3.5 — one table, everywhere | **In progress**, 17.5 days, ~9 done |
+| 3.5 — one table, everywhere | **In progress**, 17.5 days, ~10.5 done |
 | 3.6 — one page header, everywhere | **Deferred** 2026-08-17, 2.5 days, measured |
 | 4 — accessibility, in the kit | 1 day |
 | 5 — small screens, in the kit | 1 day |
 | 6 — a capability can be withheld | 2 days |
 | 7 — a plan grants capabilities | 1.5 days |
 
-**Overall: 15 of 32.5 days (46%).**
+**Overall: 17 of 32.5 days (52%).**
 
 Phases 4 and 5 need 3.5 done — that is what makes them cheap — but not each
 other. Phases 6 and 7 are independent of 1–5 and can be brought forward if
@@ -91,7 +92,7 @@ is format. What a screen *fetches* is functionality, and that is untouched.
 - `src/test/standardTableScreen.tsx` — the floor every table screen must clear,
   callable from any screen's test.
 
-**Done: 16 of 17 hand-written tables, and 27 of 73 hand-written fields.**
+**Done: 16 of 17 hand-written tables, and 60 of 73 hand-written fields.**
 Every search box in the app is now the shared one — there were sixteen
 variations. The entity generator emits a `DataTable` screen.
 
@@ -100,10 +101,26 @@ hand-written — Anthony, asked twice, on 2026-08-17: *"opp report - leave as
 is."* So the table list locks at **1**, not 0, and that entry wants its reason
 written beside it rather than reading as an unfinished job.
 
-**The 46 fields left are 46 separate small jobs.** Measured: 62 distinct input
-stylings among them. **An earlier claim in this document that they would convert
-invisibly was wrong** — it came from checking one screen and generalising. Most
-will look at least slightly different, so they need Anthony's eye in batches.
+**The 13 fields left are 8 real jobs and 5 settled decisions.**
+
+The eight: the wiki document manager, three agent screens (settings, new,
+skills), one eval form under a company's chat logs, and three inside the fenced
+movement demo.
+
+The five are decisions, not unfinished work, and **each one now carries its
+reason as a comment in the file itself** as well as in the frozen list — so
+nobody "finishes" them by mistake:
+
+| Screen | Why it stays |
+|---|---|
+| Both `WidgetPreviewPanel` files | Their boxes are a mock-up of the customer's own chat widget, styled to look like the customer's site. The house field would restyle a preview of somebody else's website. |
+| `MoneyViewScreen` | Two boxes inside a sentence, already named by their wrapping label. Stacking a label above a full-width box turns one line into three. |
+| `SettingBlock`'s opacity box | Same shape: a number, then a per-cent sign, mid-sentence. |
+| `app/tasks` | A grouped list with its own due-date row, recorded as a decision when Tasks first moved onto the kit. |
+
+**An earlier claim in this document that the fields would convert invisibly was
+wrong** — it came from checking one screen and generalising. Most look at least
+slightly different, so they need Anthony's eye in batches.
 
 **Converting a screen now includes fixing its words.** Standing instruction from
 2026-08-17, given after he looked at a converted rule screen: *"any screen you
@@ -112,7 +129,7 @@ and leave jargon on it, and do not ask again — it has been answered. The
 vocabulary problem is much wider than the six phrases named further down this
 document; the six rule screens alone carried eight more.
 
-**Next, in order:** the 46 fields in small batches with links each time →
+**Next, in order:** the 8 remaining fields in small batches with links each time →
 regression tests for the 35 table screens with none → tighten the check so a
 hand-written `<thead>` and a direct import of the table's parts both fail, and
 lock the field list at `maxEntries: 0` and the table list at 1.
@@ -144,6 +161,37 @@ lock the field list at `maxEntries: 0` and the table list at 1.
 - **The allowlist helper must ask the guard, not the filename.** Removing a
   screen from both lists because its table was converted silently un-froze its
   hand-written field. The guard caught it in a minute.
+
+## Hard-won again, on 2026-08-17's second session
+
+- **Fix it in the kit, not on the screen.** Four faults this session turned out
+  to be one missing thing in a shared part, each affecting many screens at once:
+  the kit's `SearchBar` had no name (28 screens), its text area could not hide a
+  label (four wiki boxes), the modal text area never tied its label (every modal
+  with a paragraph box), and no search box existed for inside a dropdown (four
+  screens, and the lock itself). **When the same fault appears on a second
+  screen, stop converting and go and look at what they share.**
+- **Six guard tests were named for a behaviour and asserted a spelling.** They
+  say the screen must page from the server and checked for the literal word
+  `usePaginatedQuery`; `useServerPagedTable` calls exactly that. Every screen
+  moved onto the house footer read as a regression. The rule is now written once
+  as `PAGES_ON_THE_SERVER` in `src/quality-drift.test.ts`. **Read what a test is
+  named for before assuming it caught something real** — and equally, do not
+  widen one without checking it still fails for the right reason.
+- **A screen can shadow a kit part with a local component of the same name.**
+  The customer account page had its own `Field`, so the screen that most looked
+  like it was using the shared field was the one screen that could not. Grep for
+  `function Field`, `function SearchBar` and friends before believing a name.
+- **A JSX comment cannot go where a single expression is expected.** `{/* … */}`
+  immediately after `? (` or inside `footer={` breaks the parse, and the error
+  points at a closing tag thirty lines away. Use a plain `/* … */` inside an
+  expression, or put it inside the element.
+- **The frozen table count was misleading and nobody noticed for a day.** It
+  counts screens hand-writing a raw `<table>`, and stood at 1 — which reads as
+  "tables are done". Only four screens actually use `DataTable`; the rest import
+  its parts and assemble them by hand, which is exactly how a list screen ended
+  up with no paging controls while passing every check. **The number to watch for
+  step 4 is `DataTable` adoption, not the frozen list.**
 
 
 
