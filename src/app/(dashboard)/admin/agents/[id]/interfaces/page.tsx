@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import JsonSchemaBuilder from "@/src/ui/components/settings/JsonSchemaBuilder";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import {
   SaveAction,
   SaveError,
@@ -40,6 +41,15 @@ export default function AgentInterfacesPage() {
   const updateAgent = useMutation(api.agents.updateAgent);
 
   const [processingId, setProcessingId] = useState<Id<"aiTools"> | null>(null);
+  const [toolSearch, setToolSearch] = useState("");
+  const [toolPage, setToolPage] = useState(1);
+
+  // Every tool the platform offers, so the list grows with the catalogue. It
+  // had no search box and no page numbers; every other list screen has both.
+  const toolNeedle = toolSearch.trim().toLowerCase();
+  const visibleTools = (globalTools ?? []).filter((tool) =>
+    !toolNeedle || `${tool.name} ${tool.description}`.toLowerCase().includes(toolNeedle));
+  const toolPaged = paginateItems(visibleTools, toolPage, TABLE_PAGE_SIZE);
   const [toolError, setToolError] = useState("");
 
   const [outputSchema, setOutputSchema] = useState<string | null>(null);
@@ -101,9 +111,24 @@ export default function AgentInterfacesPage() {
         <SaveError>{toolError}</SaveError>
 
         <DataTable
-          rows={globalTools}
+          rows={globalTools === undefined ? undefined : toolPaged.items}
           rowKey={(tool) => tool._id}
           minWidthClassName="min-w-[720px]"
+          search={{
+            value: toolSearch,
+            onChange: setToolSearch,
+            placeholder: t("tools.searchPlaceholder"),
+          }}
+          footer={{
+            mode: "paged",
+            page: toolPage,
+            totalPages: toolPaged.totalPages,
+            totalCount: toolPaged.totalItems,
+            pageSize: toolPaged.pageSize,
+            isLoading: globalTools === undefined,
+            onPageChange: setToolPage,
+            labels: { empty: t("tools.empty") },
+          }}
           /* The old message read "No tools or integrations mapped to this unit",
              which says this agent has none. The truth is that none exist
              anywhere yet, and the reader was given nowhere to go. */

@@ -1652,7 +1652,8 @@
             "emptyAction": "Set one up",
             "errors": {
               "assignFailed": "That could not be switched. Try again."
-            }
+            },
+            "searchPlaceholder": "Search tools by name"
           },
           "answer": {
             "title": "How it answers",
@@ -3700,8 +3701,11 @@
         "overdue": "Late",
         "neverRan": "Not run yet",
         "failed": "{count, plural, =1 {Failed once} other {Failed # times in a row}}"
-      }
-    }
+      },
+      "searchPlaceholder": "Search jobs by name",
+      "noJobs": "No scheduled jobs yet"
+    },
+    "searchPlaceholder": "Search connections by name"
   },
   "aiMailbox": {
     "title": "Mailbox",

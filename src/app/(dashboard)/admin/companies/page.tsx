@@ -28,7 +28,7 @@ import {
   modalInputClassName,
   modalTextareaClassName,
 } from "@/src/ui/components/screens/ModalForm";
-import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
   TABLE_PAGE_SIZE,
@@ -162,13 +162,12 @@ export default function CompaniesPage() {
         }
       />
 
-      <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
-
       {/* Table */}
       <DataTable
         rows={isLoading ? undefined : paginatedCompanies}
         rowKey={(company) => company._id}
         minWidthClassName="min-w-[800px]"
+        search={{ value: searchTerm, onChange: handleSearch, placeholder: t('searchPlaceholder') }}
         onRowClick={(company) => router.push(`/admin/companies/${company._id}`)}
         empty={{ icon: <Building2 className="w-8 h-8 text-muted/30" />, label: t('emptyState') }}
         footer={{

@@ -127,7 +127,9 @@ describe("HealthPage", () => {
     render(<HealthPage />);
 
     expect(screen.getByText("No agent has run in the last 7 days.")).toBeInTheDocument();
-    expect(screen.getByText("Nothing has run yet")).toBeInTheDocument();
+    // Said twice on purpose since the screen gained page numbers: once in the
+    // table and once in the footer's count slot.
+    expect(screen.getAllByText("Nothing has run yet").length).toBeGreaterThan(0);
   });
 
   /**

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -7,6 +8,7 @@ import { AlertTriangle, ArrowRight, CircleCheck, HeartPulse } from "lucide-react
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { cn } from "@/src/ui/lib/utils";
 
@@ -165,6 +167,18 @@ export default function HealthPage() {
   const totals = runs?.totals;
   const recentRuns = runs?.recentRuns ?? [];
 
+  // The list is short today and will not stay short: it is every run in the
+  // last seven days. A search box and page numbers are what every other list
+  // screen offers, and this had neither.
+  const [runSearch, setRunSearch] = useState("");
+  const [runPage, setRunPage] = useState(1);
+  const runNeedle = runSearch.trim().toLowerCase();
+  const visibleRuns = runNeedle
+    ? recentRuns.filter((run) =>
+        `${run.objective} ${run.agentName}`.toLowerCase().includes(runNeedle))
+    : recentRuns;
+  const runPaged = paginateItems(visibleRuns, runPage, TABLE_PAGE_SIZE);
+
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
@@ -240,9 +254,24 @@ export default function HealthPage() {
         </div>
 
         <DataTable
-          rows={runs === undefined ? undefined : recentRuns}
+          rows={runs === undefined ? undefined : runPaged.items}
           rowKey={(run) => run.runId}
           minWidthClassName="min-w-[820px]"
+          search={{
+            value: runSearch,
+            onChange: setRunSearch,
+            placeholder: "Search by what ran or which agent",
+          }}
+          footer={{
+            mode: "paged",
+            page: runPage,
+            totalPages: runPaged.totalPages,
+            totalCount: runPaged.totalItems,
+            pageSize: runPaged.pageSize,
+            isLoading: runs === undefined,
+            onPageChange: setRunPage,
+            labels: { empty: "Nothing has run yet" },
+          }}
           empty={{ icon: <HeartPulse className="h-8 w-8 text-muted/30" />, label: "Nothing has run yet" }}
           columns={[
             {

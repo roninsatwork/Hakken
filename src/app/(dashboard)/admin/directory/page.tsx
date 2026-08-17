@@ -20,7 +20,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
@@ -108,12 +107,6 @@ export default function UserDirectoryPage() {
         description={t("description")}
       />
 
-      <SearchBar
-        value={searchTerm}
-        onChange={setSearchTerm}
-        placeholder={t("searchPlaceholder")}
-      />
-
       <div className="flex flex-wrap items-center gap-4">
         <FilterSelect
           label={t("filters.company")}
@@ -173,6 +166,7 @@ export default function UserDirectoryPage() {
       <DataTable
         rows={loading ? undefined : results}
         rowKey={(person) => person._id}
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: t("searchPlaceholder") }}
         empty={{ icon: <UserRound className="w-6 h-6 text-muted" />, label: t("empty") }}
         /* Was a bare "load more" link centred in its own bar. The house footer
            says how many are showing as well as offering the next page. */

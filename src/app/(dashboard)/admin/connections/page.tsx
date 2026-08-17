@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -20,8 +21,26 @@ import { formatDateTime } from "@/src/lib/dates";
  */
 export default function ConnectionsPage() {
   const t = useTranslations("connections");
+  const [connectionSearch, setConnectionSearch] = useState("");
+  const [connectionPage, setConnectionPage] = useState(1);
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobPage, setJobPage] = useState(1);
+
   const connections = useQuery(api.connectionProbes.listConnections, {});
   const jobs = useQuery(api.jobLedger.listJobRuns, {});
+
+  // Neither table had a search box or page numbers. Both lists grow with the
+  // number of things wired up, and both are read when something has gone wrong,
+  // which is exactly when finding one row quickly matters.
+  const connectionNeedle = connectionSearch.trim().toLowerCase();
+  const visibleConnections = (connections ?? []).filter((row) =>
+    !connectionNeedle || `${row.name} ${row.detail ?? ""}`.toLowerCase().includes(connectionNeedle));
+  const connectionPaged = paginateItems(visibleConnections, connectionPage, TABLE_PAGE_SIZE);
+
+  const jobNeedle = jobSearch.trim().toLowerCase();
+  const visibleJobs = (jobs ?? []).filter((job) =>
+    !jobNeedle || job.job.toLowerCase().includes(jobNeedle));
+  const jobPaged = paginateItems(visibleJobs, jobPage, TABLE_PAGE_SIZE);
   const probeNow = useAction(api.connectionProbes.probeConnectionsNow);
   const [isChecking, setIsChecking] = useState(false);
 
@@ -78,10 +97,25 @@ export default function ConnectionsPage() {
       </div>
 
       <DataTable
-        rows={connections}
+        rows={connections === undefined ? undefined : connectionPaged.items}
         rowKey={(row) => row.id}
         minWidthClassName="min-w-[780px]"
+        search={{
+          value: connectionSearch,
+          onChange: (value) => { setConnectionSearch(value); setConnectionPage(1); },
+          placeholder: t("searchPlaceholder"),
+        }}
         empty={{ icon: <PlugZap className="w-5 h-5" />, label: t("noConnections") }}
+        footer={{
+          mode: "paged",
+          page: connectionPage,
+          totalPages: connectionPaged.totalPages,
+          totalCount: connectionPaged.totalItems,
+          pageSize: connectionPaged.pageSize,
+          isLoading: connections === undefined,
+          onPageChange: setConnectionPage,
+          labels: { empty: t("noConnections") },
+        }}
         columns={[
           {
             key: "connection",
@@ -154,10 +188,25 @@ export default function ConnectionsPage() {
       </div>
 
       <DataTable
-        rows={jobs}
+        rows={jobs === undefined ? undefined : jobPaged.items}
         rowKey={(job) => job.job}
         minWidthClassName="min-w-[780px]"
-        empty={{ icon: <PlugZap className="w-5 h-5" />, label: t("jobs.columns.job") }}
+        search={{
+          value: jobSearch,
+          onChange: (value) => { setJobSearch(value); setJobPage(1); },
+          placeholder: t("jobs.searchPlaceholder"),
+        }}
+        empty={{ icon: <PlugZap className="w-5 h-5" />, label: t("jobs.noJobs") }}
+        footer={{
+          mode: "paged",
+          page: jobPage,
+          totalPages: jobPaged.totalPages,
+          totalCount: jobPaged.totalItems,
+          pageSize: jobPaged.pageSize,
+          isLoading: jobs === undefined,
+          onPageChange: setJobPage,
+          labels: { empty: t("jobs.noJobs") },
+        }}
         columns={[
           {
             key: "job",

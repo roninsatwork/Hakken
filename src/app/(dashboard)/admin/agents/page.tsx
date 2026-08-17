@@ -21,7 +21,7 @@ import {
   PageHeader,
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
-import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
@@ -107,13 +107,12 @@ export default function AgentsPage() {
         }
       />
 
-      <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
-
       {/* Table */}
       <DataTable
         rows={isLoading ? undefined : paginatedAgents}
         rowKey={(agent) => agent._id}
         minWidthClassName="min-w-[800px]"
+        search={{ value: searchTerm, onChange: handleSearch, placeholder: t('searchPlaceholder') }}
         onRowClick={(agent) => router.push(`/admin/agents/${agent._id}`)}
         empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: t('table.empty') }}
         footer={{

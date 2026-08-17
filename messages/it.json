@@ -1652,7 +1652,8 @@
             "emptyAction": "Configurane uno",
             "errors": {
               "assignFailed": "Non è stato possibile cambiare. Riprova."
-            }
+            },
+            "searchPlaceholder": "Cerca strumenti per nome"
           },
           "answer": {
             "title": "Come risponde",
@@ -3700,8 +3701,11 @@
         "overdue": "In ritardo",
         "neverRan": "Mai eseguito",
         "failed": "{count, plural, =1 {Fallito una volta} other {Fallito # volte di seguito}}"
-      }
-    }
+      },
+      "searchPlaceholder": "Cerca lavori per nome",
+      "noJobs": "Nessun lavoro pianificato"
+    },
+    "searchPlaceholder": "Cerca connessioni per nome"
   },
   "aiMailbox": {
     "title": "Casella di posta",
