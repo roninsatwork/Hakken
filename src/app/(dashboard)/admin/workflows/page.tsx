@@ -22,9 +22,8 @@ import {
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
 import {
+  ModalField,
   ModalFormActions,
-  ModalFormField,
-  modalInputClassName,
 } from "@/src/ui/components/screens/ModalForm";
 import {
   LoadMoreFooter,
@@ -228,26 +227,20 @@ export default function WorkflowsPage() {
           {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <ModalFormField label={t('modal.name')}>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className={modalInputClassName}
-              placeholder={t('placeholders.name')}
-            />
-          </ModalFormField>
+          <ModalField
+            label={t('modal.name')}
+            required
+            value={formData.name}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
+            placeholder={t('placeholders.name')}
+          />
 
-          <ModalFormField label={t('modal.description')}>
-            <input
-              type="text"
-              value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className={modalInputClassName}
-              placeholder={t('placeholders.description')}
-            />
-          </ModalFormField>
+          <ModalField
+            label={t('modal.description')}
+            value={formData.description}
+            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            placeholder={t('placeholders.description')}
+          />
 
           <ModalFormActions
             cancelLabel={t('buttons.cancel')}

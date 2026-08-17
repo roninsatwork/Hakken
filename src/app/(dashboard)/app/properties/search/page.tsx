@@ -8,6 +8,7 @@ import type { FormEvent } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
+import { Field } from "@/src/ui/components/screens/Field";
 
 function isRightmoveSearchUrl(value: string) {
   try {
@@ -108,19 +109,22 @@ export default function PropertiesSearchPage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-brand/10 text-brand flex items-center justify-center text-[12px] font-bold">1</div>
-                <label className="text-[12px] font-semibold text-foreground uppercase tracking-widest">{t('properties.search.step1')}</label>
+                <span className="text-[12px] font-semibold text-foreground uppercase tracking-widest">{t('properties.search.step1')}</span>
               </div>
+              {/* The numbered step above names this box. */}
               <div className="relative">
-                <div className="absolute top-4 left-4 text-muted">
+                <div className="absolute top-1/2 left-4 -translate-y-1/2 text-muted pointer-events-none">
                   <Link2 className="w-5 h-5" />
                 </div>
-                <input 
+                <Field
+                  label={t('properties.search.step1')}
+                  labelHidden
                   type="url"
                   value={baseRightmoveUrl}
                   onChange={e => handleUrlPaste(e.target.value)}
                   placeholder={t('properties.search.urlPlaceholder')}
-                  className="w-full bg-background border border-border-dim rounded-[16px] py-4 pl-12 pr-4 text-[14px] text-foreground focus:border-brand/50 focus:ring-1 focus:ring-brand/50 outline-none transition-all font-mono shadow-sm"
                   required
+                  className="pl-12 font-mono"
                 />
               </div>
             </div>
@@ -131,15 +135,16 @@ export default function PropertiesSearchPage() {
               <div className="flex flex-col gap-2 sm:w-1/3">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-full bg-brand/10 text-brand flex items-center justify-center text-[12px] font-bold">2</div>
-                  <label className="text-[12px] font-semibold text-foreground uppercase tracking-widest">{t('properties.search.step2')}</label>
+                  <span className="text-[12px] font-semibold text-foreground uppercase tracking-widest">{t('properties.search.step2')}</span>
                 </div>
-                <input 
+                <Field
+                  label={t('properties.search.step2')}
+                  labelHidden
                   type="number"
                   value={maxProperties}
                   onChange={e => setMaxProperties(Number(e.target.value))}
                   min={10}
                   max={1000}
-                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground focus:border-brand/50 outline-none hover:border-foreground/20 transition-colors"
                   required
                 />
                 <p className="text-[11px] text-muted">{t('properties.search.limitDesc')}</p>

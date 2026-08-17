@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { Field } from "@/src/ui/components/screens/Field";
 
 /**
  * Answering the two questions a person can ask about their own data.
@@ -83,13 +84,19 @@ export function PersonalDataPanel() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder={t("emailPlaceholder")}
-          className="h-[38px] min-w-[240px] flex-1 rounded-[10px] border border-border-dim bg-background px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
-        />
+        {/* The panel's own title and sentence already say what this box is
+            for, so the label is kept for anyone listening rather than a third
+            line of text saying the same thing. */}
+        <div className="min-w-[240px] flex-1">
+          <Field
+            label={t("title")}
+            labelHidden
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder={t("emailPlaceholder")}
+          />
+        </div>
 
         <button
           type="button"
