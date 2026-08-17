@@ -6,11 +6,16 @@ import { expect, it } from "vitest";
  *
  * Two problems this solves at the same time.
  *
- * **Cost.** Half the table screens in the product — 35 of 64, counted on
- * 2026-08-16 — have no test at all. Writing 35 bespoke test files to cover the
- * same six behaviours is a job nobody finishes. Since every screen renders
- * through `DataTable`, the same assertions genuinely do apply to all of them, so
- * this is one helper called 35 times.
+ * **Cost.** Half the table screens in the product — 30 of 58, counted again on
+ * 2026-08-17 — have no test at all. Writing 30 bespoke test files to cover the
+ * same six behaviours is a job nobody finishes, so this is one helper called 30
+ * times.
+ *
+ * An earlier version of this note said the assertions apply because every screen
+ * renders through `DataTable`. That was wrong: only five do, and the rest
+ * assemble its parts by hand. The assertions apply because they describe the
+ * shape a list screen should have on screen, whichever way it was built — which
+ * is what makes this useful *before* a screen is converted rather than after.
  *
  * **Drift.** A build check reads source and can tell you a screen imported the
  * right component. It cannot tell you what the screen *rendered*. Both faults
@@ -43,16 +48,29 @@ export type StandardTableScreenConfig = {
   searchPlaceholder?: string;
   /** Set when the screen has no footer, which should be rare and deliberate. */
   hasFooter?: boolean;
+  /**
+   * How many tables the screen draws, when it is more than one.
+   *
+   * A detail page legitimately carries two or three — a person's logins beside
+   * their conversations, an agent's runs beside its evals. Asserting one table
+   * everywhere would have meant skipping those screens entirely, which is the
+   * opposite of what a floor is for. The count is still asserted, so a screen
+   * growing or losing a table fails rather than passing quietly.
+   */
+  tableCount?: number;
+  /** Which of them `sampleRows`, `emptyText` and the footer describe. */
+  tableIndex?: number;
 };
 
 /** The house row and cell styling, taken from the two reference screens. */
 const ROW_CLASS = "border-border-dim/50";
 const CELL_CLASSES = ["px-4", "py-3"];
 
-function theTable(container: HTMLElement): HTMLTableElement {
+function tableOf(config: StandardTableScreenConfig, container: HTMLElement): HTMLTableElement {
+  const expected = config.tableCount ?? 1;
   const tables = container.querySelectorAll("table");
-  expect(tables, "a table screen should render exactly one table").toHaveLength(1);
-  return tables[0] as HTMLTableElement;
+  expect(tables, `this screen should render ${expected} table(s)`).toHaveLength(expected);
+  return tables[config.tableIndex ?? 0] as HTMLTableElement;
 }
 
 /**
@@ -69,7 +87,7 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
     const { container } = config.renderScreen();
 
     expect(screen.getByText(config.sampleRowText)).toBeInTheDocument();
-    expect(theTable(container).querySelectorAll("tbody tr").length).toBeGreaterThan(0);
+    expect(tableOf(config, container).querySelectorAll("tbody tr").length).toBeGreaterThan(0);
   });
 
   it("shows a spinner while the query has not answered, not an empty table", () => {
@@ -90,13 +108,13 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
     expect(screen.getAllByText(config.emptyText).length).toBeGreaterThan(0);
   });
 
-  it("renders one table, never a table inside a table", () => {
+  it("renders the tables it should, never a table inside a table", () => {
     // Two governance screens shipped a table nested in an empty one by passing
     // a <table> into the shell, which draws its own. Nobody saw it.
     config.withRows(config.sampleRows);
     const { container } = config.renderScreen();
 
-    theTable(container);
+    tableOf(config, container);
     expect(container.querySelector("table table")).toBeNull();
   });
 
@@ -104,7 +122,7 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
     config.withRows(config.sampleRows);
     const { container } = config.renderScreen();
 
-    const row = theTable(container).querySelector("tbody tr");
+    const row = tableOf(config, container).querySelector("tbody tr");
     expect(row).toHaveClass(ROW_CLASS);
     expect(row?.querySelector("td")).toHaveClass(...CELL_CLASSES);
   });
@@ -113,7 +131,7 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
     config.withRows(config.sampleRows);
     const { container } = config.renderScreen();
 
-    const table = theTable(container);
+    const table = tableOf(config, container);
     const headers = table.querySelectorAll("thead th").length;
     const cells = table.querySelector("tbody tr")?.querySelectorAll("td").length ?? 0;
 
@@ -125,7 +143,7 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
     config.withRows([]);
     const { container } = config.renderScreen();
 
-    const table = theTable(container);
+    const table = tableOf(config, container);
     const headers = table.querySelectorAll("thead th").length;
 
     expect(table.querySelector("tbody td")).toHaveAttribute("colspan", String(headers));
@@ -139,7 +157,7 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
       config.withRows(config.sampleRows);
       const { container } = config.renderScreen();
 
-      const table = theTable(container);
+      const table = tableOf(config, container);
       const shell = table.closest("div")?.parentElement;
       const footer = shell?.lastElementChild;
 
@@ -186,7 +204,7 @@ export function itBehavesLikeAStandardTableScreen(config: StandardTableScreenCon
         target: { value: "zzzzz-matches-nothing" },
       });
 
-      expect(theTable(container)).toBeInTheDocument();
+      expect(tableOf(config, container)).toBeInTheDocument();
     });
   }
 }

@@ -459,7 +459,7 @@ export default function AgentRunsPage() {
               runs.map((run) => (
                 <tr
                   key={run._id}
-                  className="group border-b border-border-dim/40 last:border-b-0 hover:bg-white/[0.02] transition-colors"
+                  className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors"
                 >
                   <td className="px-4 py-3 align-top">
                     <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${STATUS_TONE_CLASSES[getStatusTone(run.status, Boolean(run.continuedByRunId))]}`}>

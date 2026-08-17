@@ -23,7 +23,7 @@ import { useTranslations } from "next-intl";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
-import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter, SearchBar } from "@/src/ui/components/screens/Table";
+import { TableShell, TableHeaderRow, TableHeaderCell, TableLoadingRow, PaginationFooter, SearchBar } from "@/src/ui/components/screens/Table";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
@@ -204,12 +204,17 @@ export default function ManageUsersPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {paged.pageRows.length === 0 ? (
+                {/* Same fault as the workspace team screen: waiting and finding
+                    nothing are different answers, and this showed the second
+                    while the first page was still on its way. */}
+                {status === "LoadingFirstPage" ? (
+                  <TableLoadingRow colSpan={isSuperAdmin ? 5 : 4} />
+                ) : paged.pageRows.length === 0 ? (
                   <tr>
                     <td colSpan={isSuperAdmin ? 5 : 4} className="p-0 border-none">
-                      <SonaeEmptyState 
-                        title="Nessun Risultato" 
-                        description={searchTerm.length > 0 ? "La query di ricerca non ha prodotto corrispondenze nel repository attivo." : t('table.noMatches')} 
+                      <SonaeEmptyState
+                        title="No one found"
+                        description={searchTerm.length > 0 ? "Nobody matches that search." : t('table.noMatches')}
                       />
                     </td>
                   </tr>

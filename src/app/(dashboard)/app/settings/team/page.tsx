@@ -24,6 +24,7 @@ import {
   SearchBar,
   TableHeaderCell,
   TableHeaderRow,
+  TableLoadingRow,
   TableShell,
 } from "@/src/ui/components/screens/Table";
 import { useTranslations } from "next-intl";
@@ -183,12 +184,17 @@ export default function CompanyTeamPage() {
             </thead>
             <tbody>
               <AnimatePresence>
-                {paged.pageRows.length === 0 ? (
+                {/* Waiting and finding nothing are different answers. This went
+                    straight to the empty panel while the first page was still
+                    loading, so an ordinary page load flashed "no one here". */}
+                {status === "LoadingFirstPage" ? (
+                  <TableLoadingRow colSpan={4} />
+                ) : paged.pageRows.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="p-0 border-none">
-                      <SonaeEmptyState 
-                        title="Nessun Risultato" 
-                        description={searchTerm.length > 0 ? "La query di ricerca non ha prodotto corrispondenze nel team." : t('table.noMatches')} 
+                      <SonaeEmptyState
+                        title="No one found"
+                        description={searchTerm.length > 0 ? "Nobody on the team matches that search." : t('table.noMatches')}
                       />
                     </td>
                   </tr>
@@ -248,7 +254,7 @@ export default function CompanyTeamPage() {
                         exit={{ opacity: 0, y: -10 }}
                         className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
                       >
-                        <td className="px-4 py-2.5">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <Image
                               src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name ?? user.email ?? user._id}`}
@@ -266,7 +272,7 @@ export default function CompanyTeamPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
                             {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
                             <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
@@ -274,10 +280,10 @@ export default function CompanyTeamPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-[12px] text-secondary">
+                        <td className="px-4 py-3 text-[12px] text-secondary">
                           {formatDate(user.createdAt, { fallback: t('table.na') })}
                         </td>
-                        <td className="px-4 py-2.5 text-right">
+                        <td className="px-4 py-3 text-right">
                           <RowActions>
                             {user._id !== currentUser?._id && (
                               <>
