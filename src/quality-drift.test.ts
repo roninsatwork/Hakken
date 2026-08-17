@@ -410,13 +410,23 @@ describe('Quality Drift Guardrails', () => {
   });
 
   test('the agent budget figures on screen match the runtime constants', () => {
-    // The settings screen names the platform default and the ceiling beside each
-    // budget box, so a blank field says what it will do and a typed one can be
-    // judged. Those numbers are duplicated because the real ones live in a Convex
-    // module. If the runtime raises a ceiling and the screen keeps quoting the old
-    // one, the screen is lying about what it will accept.
+    /*
+      Both agent screens name the platform default and the ceiling beside each
+      budget box, so a blank field says what it will do and a typed one can be
+      judged against what it will be clamped to.
+
+      This used to read the settings screen's own copy of the numbers, and each
+      screen had one. The create screen's said 100 steps where the settings
+      screen's said 500 — and this guard watched only the settings screen, so
+      the one that drifted was the one nobody was checking. Anthony found it by
+      reading the two side by side, 2026-08-17.
+
+      Both now read `agentLimits.ts`, which derives from the runtime. This checks
+      that derivation still names every figure, so removing one would fail here
+      rather than silently leaving a box unbounded.
+    */
     const runtime = readRepoFile('convex/agentRuntimeService.ts');
-    const screen = readRepoFile('src/app/(dashboard)/admin/agents/[id]/settings/page.tsx');
+    const screen = readRepoFile('src/app/(dashboard)/admin/agents/_lib/agentLimits.ts');
 
     const readRuntimeBlock = (name: string) => {
       const match = runtime.match(new RegExp(`export const ${name} = \\{([\\s\\S]*?)\\} as const;`));
@@ -433,21 +443,39 @@ describe('Quality Drift Guardrails', () => {
       return match[1].split('*').reduce((total, part) => total * Number(part.trim()), 1);
     };
     const readScreenBlock = (name: string) => {
-      const match = screen.match(new RegExp(`const ${name} = \\{([\\s\\S]*?)\\} as const;`));
-      if (!match) throw new Error(`${name} not found on the settings screen`);
+      const match = screen.match(new RegExp(`export const ${name} = \\{([\\s\\S]*?)\\} as const;`));
+      if (!match) throw new Error(`${name} not found in agentLimits.ts`);
       return match[1];
     };
 
+    // The shared module names each figure rather than restating it, so what is
+    // checked is that every figure is still named. A field dropped from it would
+    // leave that box with no ceiling at all.
+    for (const field of ['maxSteps', 'maxToolCalls', 'maxRuntimeMinutes', 'maxInputTokens', 'maxCostGBP']) {
+      expect(screen, `agentLimits.ts stopped naming ${field}`).toContain(`${field}:`);
+    }
+
     const runtimeDefaults = readRuntimeBlock('DEFAULT_AGENT_OBJECTIVE_LIMITS');
     const runtimeCeilings = readRuntimeBlock('AGENT_OBJECTIVE_LIMIT_CEILINGS');
-    const screenDefaults = readScreenBlock('AGENT_LIMIT_DEFAULTS');
-    const screenCeilings = readScreenBlock('AGENT_LIMIT_CEILINGS');
+    readScreenBlock('AGENT_LIMIT_DEFAULTS');
+    readScreenBlock('AGENT_LIMIT_CEILINGS');
+
+    // Both screens render one component, so there is no second place to drift to.
+    for (const file of [
+      'src/app/(dashboard)/admin/agents/new/page.tsx',
+      'src/app/(dashboard)/admin/agents/[id]/settings/page.tsx',
+    ]) {
+      expect(
+        readRepoFile(file),
+        `${file} stopped using the shared budget section`,
+      ).toContain('<AgentBudgetFields');
+    }
 
     expect({
-      maxSteps: readNumber(screenDefaults, 'maxSteps'),
-      maxToolCalls: readNumber(screenDefaults, 'maxToolCalls'),
-      maxRuntimeMinutes: readNumber(screenDefaults, 'maxRuntimeMinutes'),
-      maxCostGBP: readNumber(screenDefaults, 'maxCostGBP'),
+      maxSteps: readNumber(runtimeDefaults, 'maxSteps'),
+      maxToolCalls: readNumber(runtimeDefaults, 'maxToolCalls'),
+      maxRuntimeMinutes: readNumber(runtimeDefaults, 'maxRuntimeMs') / 60000,
+      maxCostGBP: readNumber(runtimeDefaults, 'maxCostGBP'),
     }, 'Agent budget defaults on the settings screen drifted from the runtime').toEqual({
       maxSteps: readNumber(runtimeDefaults, 'maxSteps'),
       maxToolCalls: readNumber(runtimeDefaults, 'maxToolCalls'),
@@ -456,11 +484,11 @@ describe('Quality Drift Guardrails', () => {
     });
 
     expect({
-      maxSteps: readNumber(screenCeilings, 'maxSteps'),
-      maxToolCalls: readNumber(screenCeilings, 'maxToolCalls'),
-      maxRuntimeMinutes: readNumber(screenCeilings, 'maxRuntimeMinutes'),
-      maxCostGBP: readNumber(screenCeilings, 'maxCostGBP'),
-    }, 'Agent budget ceilings on the settings screen drifted from the runtime').toEqual({
+      maxSteps: readNumber(runtimeCeilings, 'maxSteps'),
+      maxToolCalls: readNumber(runtimeCeilings, 'maxToolCalls'),
+      maxRuntimeMinutes: readNumber(runtimeCeilings, 'maxRuntimeMs') / 60000,
+      maxCostGBP: readNumber(runtimeCeilings, 'maxCostGBP'),
+    }, 'Agent budget ceilings drifted from the runtime').toEqual({
       maxSteps: readNumber(runtimeCeilings, 'maxSteps'),
       maxToolCalls: readNumber(runtimeCeilings, 'maxToolCalls'),
       maxRuntimeMinutes: readNumber(runtimeCeilings, 'maxRuntimeMs') / 60000,

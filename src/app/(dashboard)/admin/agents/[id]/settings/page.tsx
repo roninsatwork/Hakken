@@ -1,6 +1,7 @@
 "use client";
 
 import { getErrorMessage } from "@/src/lib/errors";
+import { AgentBudgetFields } from "../../_components/AgentBudgetFields";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -80,14 +81,6 @@ const emptyFormData: AgentSettingsFormData = {
 const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
 
 /**
- * Mirrors of the runtime's platform defaults and ceilings.
- *
- * Named on screen beside each box so a blank field says what it will do and a
- * typed one can be judged against the ceiling it will be clamped to. Duplicated
- * rather than imported because these live in a Convex module; the drift guard in
- * `quality-drift.test.ts` pins them to the runtime values.
- */
-/**
  * The token budget is shown as the number the runtime actually uses.
  *
  * Named for what a stopped run reports — "reached the configured token budget"
@@ -95,15 +88,6 @@ const reasoningLevels: ReasoningEffort[] = ["LOW", "MEDIUM", "HIGH"];
  * shown in whole tokens rather than thousands so the number on screen is the
  * number that applies.
  */
-/** A limit as it should read on screen: grouped, and empty while it is empty. */
-function formatLimitNumber(raw: string) {
-  if (!raw) return "";
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed.toLocaleString("en-GB") : raw;
-}
-
-const AGENT_LIMIT_DEFAULTS = { maxSteps: 25, maxToolCalls: 25, maxRuntimeMinutes: 30, maxInputTokens: 1000000, maxCostGBP: 10 } as const;
-const AGENT_LIMIT_CEILINGS = { maxSteps: 500, maxToolCalls: 500, maxRuntimeMinutes: 60, maxInputTokens: 10000000, maxCostGBP: 50 } as const;
 
 /** Empty, zero and nonsense all mean "inherit the default", matching the server. */
 function parseLimitInput(value: string) {
@@ -490,44 +474,10 @@ export default function AgentOverviewPage() {
             <p className="-mt-1 text-[12px] leading-relaxed text-secondary">
               {t("sections.engine.budget.hint")}
             </p>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-              {([
-                { key: "maxSteps", limit: "maxSteps" },
-                { key: "maxToolCalls", limit: "maxToolCalls" },
-                { key: "maxInputTokens", limit: "maxInputTokens" },
-                { key: "maxRuntimeMinutes", limit: "maxRuntimeMinutes" },
-                { key: "maxCostGBP", limit: "maxCostGBP" },
-              ] as const).map(({ key, limit }) => {
-                // A number input cannot carry separators, so the token budget —
-                // the only limit here in the millions — is a text box that
-                // formats what is typed and strips the commas on the way out.
-                const grouped = key === "maxInputTokens";
-                return (
-                  <Field
-                    key={key}
-                    label={t(`sections.engine.budget.fields.${key}`)}
-                    id={`agent-limit-${key}`}
-                    type={grouped ? "text" : "number"}
-                    inputMode={grouped ? "numeric" : undefined}
-                    {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
-                    step={key === "maxCostGBP" ? "0.01" : "1"}
-                    value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
-                      })
-                    }
-                    placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
-                    hint={t("sections.engine.budget.inherits", {
-                      value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
-                      ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
-                    })}
-                    className="px-3 text-[13px] focus:border-brand/40"
-                  />
-                );
-              })}
-            </div>
+            <AgentBudgetFields
+              values={formData}
+              onChange={(key, value) => setFormData({ ...formData, [key]: value })}
+            />
 
             <div className="mt-2 border-t border-border-dim/40">
               <SettingSwitch
