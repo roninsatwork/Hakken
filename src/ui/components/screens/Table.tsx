@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { ReactNode } from "react";
+import type { KeyboardEventHandler, ReactNode, Ref } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
 import { useCanWriteHere } from "./AccessLevel";
 
@@ -42,6 +42,13 @@ type InlineSearchInputProps = {
   onChange: (value: string) => void;
   placeholder: string;
   disabled?: boolean;
+  /**
+   * Arrow keys and Enter, for a palette whose results are walked from the box.
+   * The one behaviour these boxes genuinely differ on.
+   */
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  /** For a palette that focuses its box the moment it opens. */
+  inputRef?: Ref<HTMLInputElement>;
 };
 
 /**
@@ -62,14 +69,23 @@ type InlineSearchInputProps = {
  * The magnifying glass is a picture and the placeholder disappears the moment
  * anyone types, so the name is not optional here either.
  */
-export function InlineSearchInput({ value, onChange, placeholder, disabled }: InlineSearchInputProps) {
+export function InlineSearchInput({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  onKeyDown,
+  inputRef,
+}: InlineSearchInputProps) {
   return (
     <div className="flex w-full items-center gap-2">
       <Search className="w-4 h-4 shrink-0 text-muted" />
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label={placeholder}
         disabled={disabled}

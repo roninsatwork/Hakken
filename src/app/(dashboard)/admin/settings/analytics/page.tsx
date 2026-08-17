@@ -17,6 +17,7 @@ import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
 import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field } from "@/src/ui/components/screens/Field";
 
 function formatCount(value: number) {
   return new Intl.NumberFormat("en-GB").format(value);
@@ -276,8 +277,10 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="flex flex-col gap-2 relative group max-w-xl">
-          <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase ml-1">Universal Tracking ID</label>
-          <div className="relative w-full bg-transparent border border-border-dim rounded-[10px] overflow-hidden transition-colors group-focus-within:border-foreground/30 shadow-sm dark:bg-[#111111]/30">
+          {/* The border used to live on this wrapper, with a borderless box
+              inside it. The shared field brings its own, so the wrapper is only
+              a place for the connecting overlay to sit now. */}
+          <div className="relative w-full">
             {currentId === undefined ? (
               <div className="absolute inset-0 flex items-center justify-center bg-transparent backdrop-blur-sm z-20">
                  <div className="flex flex-col items-center gap-3 text-muted">
@@ -287,11 +290,13 @@ export default function AnalyticsPage() {
               </div>
             ) : null}
 
-            <input
+            <Field
+              label="Universal Tracking ID"
+              labelHidden
               value={trackingId}
               onChange={(e) => setTrackingId(e.target.value)}
               disabled={currentId === undefined || isSaving}
-              className="w-full outline-none border-none p-5 bg-transparent text-foreground/90 font-mono text-[14px] leading-relaxed tracking-widest placeholder:text-muted/50 focus:outline-none"
+              className="font-mono tracking-widest"
               placeholder="e.g. GTM-XXXXXXX or G-XXXXXXX"
               spellCheck={false}
             />

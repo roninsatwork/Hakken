@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { WriteButton, useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
+import { Field } from "@/src/ui/components/screens/Field";
 import {
   AlertTriangle,
   Clock,
@@ -310,8 +311,8 @@ export function RetentionRulesSection() {
 
             {(configModalData.isCustom || (![30, 60, 90, 180, 365].includes(configModalData.retentionDays ?? 90) && (configModalData.retentionDays ?? 0) > 0)) && (
               <div className="flex flex-col gap-2 relative">
-                <span className="text-[11px] uppercase tracking-widest font-mono text-muted mb-1 ml-1">{t('purges.modals.config.customLabel')}</span>
-                <input
+                <Field
+                  label={t('purges.modals.config.customLabel')}
                   type="number"
                   min="30"
                   value={configModalData.retentionDays || ""}
@@ -324,7 +325,6 @@ export function RetentionRulesSection() {
                       setConfigModalData({ ...configModalData, retentionDays: 30 });
                     }
                   }}
-                  className="w-full bg-background border border-border-dim rounded-[12px] px-4 py-3 text-[14px] text-foreground outline-none focus:border-brand transition-colors"
                   placeholder={t('purges.modals.config.customPlaceholder')}
                 />
               </div>

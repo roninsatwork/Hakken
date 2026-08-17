@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Search } from "lucide-react";
+import { InlineSearchInput } from "@/src/ui/components/screens/Table";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LAYER } from "@/src/ui/lib/layers";
@@ -75,18 +75,11 @@ export function WikiQuickSwitcher({
       />
       <div className="relative w-full max-w-xl rounded-[16px] border border-border-dim bg-sidebar shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border-dim">
-          <Search className="w-4 h-4 text-muted shrink-0" />
-          {/* Left hand-written on purpose, and frozen with that reason: this is
-              a command palette, not a form. The house field draws its own
-              bordered box, which inside a palette would put a box in a box. The
-              one real fault — a box with no name — is fixed here instead. */}
-          <input
-            ref={inputRef}
-            aria-label={t("placeholder")}
-            type="text"
+          <InlineSearchInput
+            inputRef={inputRef}
             value={term}
-            onChange={(event) => {
-              setTerm(event.target.value);
+            onChange={(next) => {
+              setTerm(next);
               // The highlight returns to the first result as the words change.
               // This belongs here rather than in an effect on `term`: typing is
               // the event, and setting state from an effect makes React render
@@ -105,7 +98,6 @@ export function WikiQuickSwitcher({
               }
             }}
             placeholder={t("placeholder")}
-            className="flex-1 bg-transparent text-[15px] text-foreground placeholder:text-muted/60 focus:outline-none"
           />
           <kbd className="px-2 py-0.5 rounded-[6px] border border-border-dim text-[11px] text-muted">esc</kbd>
         </div>

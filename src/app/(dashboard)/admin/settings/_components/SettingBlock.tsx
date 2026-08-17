@@ -79,6 +79,11 @@ export function ColorInput({ label, sub, value, onChange, defaultValue, alpha, r
           </button>
         ) : null}
         {alpha ? (
+          /* Left hand-written on purpose, and frozen with that reason: this sits
+             inside a sentence — a number, then a per-cent sign — and already
+             carries a name. The house field stacks a label above a full-width
+             box, which would break one line into three. Same call as the money
+             view's two boxes. */
           <label className="flex items-center gap-1 text-[11px] font-mono text-muted">
             <input
               type="number"
