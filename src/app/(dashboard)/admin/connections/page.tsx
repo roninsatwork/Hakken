@@ -7,13 +7,7 @@ import { AlertTriangle, CircleCheck, HelpCircle, Loader2, PlugZap } from "lucide
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -83,139 +77,143 @@ export default function ConnectionsPage() {
         <p className="mt-1 text-[12.5px] text-secondary">{t("hint")}</p>
       </div>
 
-      <TableShell minWidthClassName="min-w-[780px]">
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.connection")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.state")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.detail")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.checked")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {connections === undefined ? (
-            <TableLoadingRow colSpan={4} />
-          ) : connections.length === 0 ? (
-            <TableEmptyRow
-              colSpan={4}
-              icon={<PlugZap className="w-5 h-5" />}
-              label={t("noConnections")}
-            />
-          ) : (
-            connections.map((row) => (
-              <tr
-                key={row.id}
-                className="border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
+      <DataTable
+        rows={connections}
+        rowKey={(row) => row.id}
+        minWidthClassName="min-w-[780px]"
+        empty={{ icon: <PlugZap className="w-5 h-5" />, label: t("noConnections") }}
+        columns={[
+          {
+            key: "connection",
+            header: t("columns.connection"),
+            cell: (row) => (
+              <>
+                <span className="text-[14px] text-foreground">{row.name}</span>
+                <span className="block text-[11px] uppercase tracking-[0.1em] text-muted mt-0.5">
+                  {t(`kind.${row.kind}`)}
+                </span>
+              </>
+            ),
+          },
+          {
+            key: "state",
+            header: t("columns.state"),
+            className: "whitespace-nowrap",
+            cell: (row) => (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                  row.working === false
+                    ? "bg-warning/15 text-warning"
+                    : row.working === null
+                      ? "bg-foreground/5 text-muted"
+                      : "bg-info/15 text-info"
+                }`}
               >
-                <td className="px-4 py-3">
-                  <span className="text-[14px] text-foreground">{row.name}</span>
-                  <span className="block text-[11px] uppercase tracking-[0.1em] text-muted mt-0.5">
-                    {t(`kind.${row.kind}`)}
+                {row.working === false ? (
+                  <AlertTriangle className="w-3 h-3" />
+                ) : row.working === null ? (
+                  <HelpCircle className="w-3 h-3" />
+                ) : (
+                  <CircleCheck className="w-3 h-3" />
+                )}
+                {row.working === false
+                  ? t("state.attention")
+                  : row.working === null
+                    ? t("state.unknown")
+                    : t("state.working")}
+              </span>
+            ),
+          },
+          {
+            key: "detail",
+            header: t("columns.detail"),
+            className: "max-w-[380px]",
+            cell: (row) => (
+              <div className="text-[13px] text-secondary">
+                <span className="line-clamp-2">{row.detail}</span>
+                {row.lastHeardAt && (
+                  <span className="block text-[12px] text-muted mt-0.5">
+                    {t("lastHeard", { when: formatDateTime(row.lastHeardAt) })}
                   </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                      row.working === false
-                        ? "bg-warning/15 text-warning"
-                        : row.working === null
-                          ? "bg-foreground/5 text-muted"
-                          : "bg-info/15 text-info"
-                    }`}
-                  >
-                    {row.working === false ? (
-                      <AlertTriangle className="w-3 h-3" />
-                    ) : row.working === null ? (
-                      <HelpCircle className="w-3 h-3" />
-                    ) : (
-                      <CircleCheck className="w-3 h-3" />
-                    )}
-                    {row.working === false
-                      ? t("state.attention")
-                      : row.working === null
-                        ? t("state.unknown")
-                        : t("state.working")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary max-w-[380px]">
-                  <span className="line-clamp-2">{row.detail}</span>
-                  {row.lastHeardAt && (
-                    <span className="block text-[12px] text-muted mt-0.5">
-                      {t("lastHeard", { when: formatDateTime(row.lastHeardAt) })}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                  {when(row.checkedAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "checked",
+            header: t("columns.checked"),
+            className: "whitespace-nowrap",
+            cell: (row) => <span className="text-[13px] text-secondary">{when(row.checkedAt)}</span>,
+          },
+        ]}
+      />
 
       <div className="flex flex-col gap-2">
         <h2 className="text-[15px] font-semibold text-foreground">{t("jobs.title")}</h2>
         <p className="text-[12.5px] text-secondary">{t("jobs.hint")}</p>
       </div>
 
-      <TableShell minWidthClassName="min-w-[780px]">
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("jobs.columns.job")}</TableHeaderCell>
-            <TableHeaderCell>{t("jobs.columns.state")}</TableHeaderCell>
-            <TableHeaderCell>{t("jobs.columns.lastRan")}</TableHeaderCell>
-            <TableHeaderCell>{t("jobs.columns.lastWorked")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {jobs === undefined ? (
-            <TableLoadingRow colSpan={4} />
-          ) : (
-            jobs.map((job) => {
+      <DataTable
+        rows={jobs}
+        rowKey={(job) => job.job}
+        minWidthClassName="min-w-[780px]"
+        empty={{ icon: <PlugZap className="w-5 h-5" />, label: t("jobs.columns.job") }}
+        columns={[
+          {
+            key: "job",
+            header: t("jobs.columns.job"),
+            cell: (job) => <span className="text-[13.5px] text-foreground">{job.job}</span>,
+          },
+          {
+            key: "state",
+            header: t("jobs.columns.state"),
+            className: "whitespace-nowrap",
+            cell: (job) => {
               const bad = job.lastOk === false || job.isOverdue;
               return (
-                <tr
-                  key={job.job}
-                  className="border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                    bad
+                      ? "bg-warning/15 text-warning"
+                      : job.lastRanAt === null
+                        ? "bg-foreground/5 text-muted"
+                        : "bg-info/15 text-info"
+                  }`}
                 >
-                  <td className="px-4 py-3 text-[13.5px] text-foreground">{job.job}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                        bad
-                          ? "bg-warning/15 text-warning"
-                          : job.lastRanAt === null
-                            ? "bg-foreground/5 text-muted"
-                            : "bg-info/15 text-info"
-                      }`}
-                    >
-                      {job.lastOk === false
-                        ? t("jobs.state.failed", { count: job.consecutiveFailures })
-                        : job.isOverdue
-                          ? t("jobs.state.overdue")
-                          : job.lastRanAt === null
-                            ? t("jobs.state.neverRan")
-                            : t("jobs.state.ran")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                    {when(job.lastRanAt)}
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                    {when(job.lastSucceededAt)}
-                    {job.lastError && (
-                      <span className="block text-[12px] text-muted max-w-[280px] truncate">
-                        {job.lastError}
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                  {job.lastOk === false
+                    ? t("jobs.state.failed", { count: job.consecutiveFailures })
+                    : job.isOverdue
+                      ? t("jobs.state.overdue")
+                      : job.lastRanAt === null
+                        ? t("jobs.state.neverRan")
+                        : t("jobs.state.ran")}
+                </span>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+          {
+            key: "lastRan",
+            header: t("jobs.columns.lastRan"),
+            className: "whitespace-nowrap",
+            cell: (job) => <span className="text-[13px] text-secondary">{when(job.lastRanAt)}</span>,
+          },
+          {
+            key: "lastWorked",
+            header: t("jobs.columns.lastWorked"),
+            className: "whitespace-nowrap",
+            cell: (job) => (
+              <span className="text-[13px] text-secondary">
+                {when(job.lastSucceededAt)}
+                {job.lastError && (
+                  <span className="block text-[12px] text-muted max-w-[280px] truncate">
+                    {job.lastError}
+                  </span>
+                )}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

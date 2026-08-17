@@ -6,15 +6,7 @@ import { useTranslations } from "next-intl";
 import { History, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { toneForStatus } from "@/src/ui/atoms/statusTone";
 import {
@@ -87,109 +79,124 @@ export function PurgeHistorySection() {
         <p className="text-[13px] text-secondary mt-1">{t("purges.history.subtitle")}</p>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex-1">
-          <SearchBar
-            value={searchTerm}
-            onChange={(value) => {
-              setSearchTerm(value);
-              resetPaging();
-            }}
-            placeholder={t("purges.history.searchPlaceholder")}
-          />
-        </div>
-        <select
-          value={pipelineFilter}
-          onChange={(event) => {
-            setPipelineFilter(event.target.value as PurgePipelineKey | "all");
-            resetPaging();
-          }}
-          className={selectClassName}
-          aria-label={t("purges.history.table.pipeline")}
-        >
-          <option value="all">{t("purges.history.allPipelines")}</option>
-          {purgePipelineKeys.map((key) => (
-            <option key={key} value={key}>{t(`purges.categories.${key}.title`)}</option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(event) => {
-            setStatusFilter(event.target.value as HistoryStatus | "all");
-            resetPaging();
-          }}
-          className={selectClassName}
-          aria-label={t("purges.history.table.status")}
-        >
-          <option value="all">{t("purges.history.allStatuses")}</option>
-          {HISTORY_STATUSES.map((status) => (
-            <option key={status} value={status}>{t(`purges.history.table.${status.toLowerCase()}`)}</option>
-          ))}
-        </select>
-      </div>
-
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : pageRows}
+        rowKey={(log) => log._id}
         minWidthClassName="min-w-[760px]"
-        footer={knownTotal > 0 ? (
-          <PaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={knownTotal}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={history.status === "LoadingMore"}
-            onPageChange={goToPage}
-            labels={{
-              showing: (start, end, total) => t("purges.history.showingRange", { start, end, total }),
-            }}
-          />
-        ) : undefined}
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("purges.history.table.pipeline")}</TableHeaderCell>
-            <TableHeaderCell>{t("purges.history.table.trigger")}</TableHeaderCell>
-            <TableHeaderCell className="w-[130px]">{t("purges.history.table.status")}</TableHeaderCell>
-            <TableHeaderCell className="w-[140px]">{t("purges.history.table.purged")}</TableHeaderCell>
-            <TableHeaderCell className="w-[190px]" align="right">{t("purges.history.table.started")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={5} />
-          ) : pageRows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<History className="h-8 w-8 text-muted/30" />}
-              label={t("purges.history.table.empty")}
-            />
-          ) : pageRows.map((log) => (
-            <tr key={log._id} className="group border-b border-border-dim/50 transition-colors hover:bg-foreground/[0.02]">
-              <td className="px-4 py-3">
-                <span className="text-[13px] font-medium text-foreground">{t(`purges.categories.${log.pipelineKey}.title`)}</span>
-              </td>
-              <td className="px-4 py-3">
-                <span className="text-[13px] text-secondary">
-                  {log.triggerType === "SCHEDULED" ? t("purges.history.table.system") : `${t("purges.history.table.manual")} (${log.actorName})`}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <StatusPill
-                  tone={log.status === "SUCCESS" ? "success" : toneForStatus(log.status)}
-                  icon={log.status === "RUNNING" ? <Loader2 className="w-3 h-3 animate-spin" /> : undefined}
-                >
-                  {t(`purges.history.table.${log.status.toLowerCase()}`)}
-                </StatusPill>
-              </td>
-              <td className="px-4 py-3">
-                <span className="text-[13px] font-mono text-foreground">{log.recordsPurged.toLocaleString()}</span>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <span className="text-[12px] font-mono text-secondary">{new Date(log.startedAt).toLocaleString()}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+        search={{
+          value: searchTerm,
+          onChange: (value) => {
+            setSearchTerm(value);
+            resetPaging();
+          },
+          placeholder: t("purges.history.searchPlaceholder"),
+        }}
+        filters={
+          <>
+            <select
+              value={pipelineFilter}
+              onChange={(event) => {
+                setPipelineFilter(event.target.value as PurgePipelineKey | "all");
+                resetPaging();
+              }}
+              className={selectClassName}
+              aria-label={t("purges.history.table.pipeline")}
+            >
+              <option value="all">{t("purges.history.allPipelines")}</option>
+              {purgePipelineKeys.map((key) => (
+                <option key={key} value={key}>{t(`purges.categories.${key}.title`)}</option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as HistoryStatus | "all");
+                resetPaging();
+              }}
+              className={selectClassName}
+              aria-label={t("purges.history.table.status")}
+            >
+              <option value="all">{t("purges.history.allStatuses")}</option>
+              {HISTORY_STATUSES.map((status) => (
+                <option key={status} value={status}>{t(`purges.history.table.${status.toLowerCase()}`)}</option>
+              ))}
+            </select>
+          </>
+        }
+        empty={{
+          icon: <History className="h-8 w-8 text-muted/30" />,
+          label: t("purges.history.table.empty"),
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages,
+          totalCount: knownTotal,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: history.status === "LoadingMore" || history.status === "LoadingFirstPage",
+          onPageChange: goToPage,
+          labels: {
+            showing: (start, end, total) => t("purges.history.showingRange", { start, end, total }),
+            empty: t("purges.history.table.empty"),
+          },
+        }}
+        columns={[
+          {
+            key: "pipeline",
+            header: t("purges.history.table.pipeline"),
+            cell: (log) => (
+              <span className="text-[13px] font-medium text-foreground">
+                {t(`purges.categories.${log.pipelineKey}.title`)}
+              </span>
+            ),
+          },
+          {
+            key: "trigger",
+            header: t("purges.history.table.trigger"),
+            cell: (log) => (
+              <span className="text-[13px] text-secondary">
+                {log.triggerType === "SCHEDULED"
+                  ? t("purges.history.table.system")
+                  : `${t("purges.history.table.manual")} (${log.actorName})`}
+              </span>
+            ),
+          },
+          {
+            key: "status",
+            header: t("purges.history.table.status"),
+            className: "w-[130px]",
+            cell: (log) => (
+              <StatusPill
+                tone={log.status === "SUCCESS" ? "success" : toneForStatus(log.status)}
+                icon={log.status === "RUNNING" ? <Loader2 className="w-3 h-3 animate-spin" /> : undefined}
+              >
+                {t(`purges.history.table.${log.status.toLowerCase()}`)}
+              </StatusPill>
+            ),
+          },
+          {
+            key: "purged",
+            header: t("purges.history.table.purged"),
+            className: "w-[140px]",
+            cell: (log) => (
+              <span className="text-[13px] font-mono text-foreground">
+                {log.recordsPurged.toLocaleString()}
+              </span>
+            ),
+          },
+          {
+            key: "started",
+            header: t("purges.history.table.started"),
+            className: "w-[190px]",
+            align: "right",
+            cell: (log) => (
+              <span className="text-[12px] font-mono text-secondary">
+                {new Date(log.startedAt).toLocaleString()}
+              </span>
+            ),
+          },
+        ]}
+      />
     </section>
   );
 }

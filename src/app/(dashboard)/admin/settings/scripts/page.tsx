@@ -14,15 +14,8 @@ import {
   Wrench,
   XCircle,
 } from "lucide-react";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 type ScriptRunStatus = "RUNNING" | "SUCCESS" | "FAILED";
@@ -132,89 +125,82 @@ export default function MaintenanceScriptsPage() {
         </div>
       </div>
 
-      <SearchBar value={searchTerm} onChange={handleSearch} placeholder="Search scripts by name, category, risk, or description..." />
-
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : visibleScripts}
+        rowKey={(script) => script.id}
         minWidthClassName="min-w-[980px]"
-        footer={
-          <PaginationFooter
-            page={safePage}
-            totalPages={totalPages}
-            totalCount={filteredScripts.length}
-            pageSize={pageSize}
-            isLoading={isLoading}
-            onPageChange={setPage}
-            labels={{
-              empty: "No scripts found",
-              showing: (start, end, total) => `Showing ${start}-${end} of ${total}`,
-            }}
-          />
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>Name</TableHeaderCell>
-            <TableHeaderCell>Category</TableHeaderCell>
-            <TableHeaderCell>Risk</TableHeaderCell>
-            <TableHeaderCell>Status</TableHeaderCell>
-            <TableHeaderCell>Last run</TableHeaderCell>
-            <TableHeaderCell>Last run by</TableHeaderCell>
-            <TableHeaderCell align="right">Open</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={7} />
-          ) : visibleScripts.length === 0 ? (
-            <TableEmptyRow
-              colSpan={7}
-              icon={<SearchX className="w-8 h-8 text-muted/30" />}
-              label="No maintenance scripts match your search"
-            />
-          ) : (
-            visibleScripts.map((script) => (
-              <tr
-                key={script.id}
+        onRowClick={(script) => router.push(`/admin/settings/scripts/${script.id}`)}
+        search={{
+          value: searchTerm,
+          onChange: handleSearch,
+          placeholder: "Search scripts by name, category, risk, or description...",
+        }}
+        empty={{
+          icon: <SearchX className="w-8 h-8 text-muted/30" />,
+          label: "No maintenance scripts match your search",
+        }}
+        footer={{
+          mode: "paged",
+          page: safePage,
+          totalPages,
+          totalCount: filteredScripts.length,
+          pageSize,
+          isLoading,
+          onPageChange: setPage,
+          labels: {
+            empty: "No scripts found",
+            showing: (start, end, total) => `Showing ${start}-${end} of ${total}`,
+          },
+        }}
+        columns={[
+          {
+            key: "name",
+            header: "Name",
+            cell: (script) => (
+              <div className="flex flex-col gap-1">
+                <span className="text-[13px] font-semibold text-foreground">{script.name}</span>
+                <span className="text-[12px] text-secondary max-w-[360px]">{script.shortDescription}</span>
+              </div>
+            ),
+          },
+          {
+            key: "category",
+            header: "Category",
+            cell: (script) => <span className="text-[13px] text-secondary">{script.category}</span>,
+          },
+          { key: "risk", header: "Risk", cell: (script) => <RiskBadge riskLevel={script.riskLevel} /> },
+          { key: "status", header: "Status", cell: (script) => <StatusBadge status={script.lastRun?.status} /> },
+          {
+            key: "lastRun",
+            header: "Last run",
+            cell: (script) => (
+              <span className="text-[12px] text-secondary">
+                {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt)}
+              </span>
+            ),
+          },
+          {
+            key: "lastRunBy",
+            header: "Last run by",
+            cell: (script) => (
+              <span className="text-[12px] text-secondary">{script.lastRun?.actorName ?? "None"}</span>
+            ),
+          },
+          {
+            key: "open",
+            header: "Open",
+            align: "right",
+            cell: (script) => (
+              <RowIconButton
+                label={`Open ${script.name}`}
                 onClick={() => router.push(`/admin/settings/scripts/${script.id}`)}
-                className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors cursor-pointer group"
               >
-                <td className="px-4 py-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[13px] font-semibold text-foreground">{script.name}</span>
-                    <span className="text-[12px] text-secondary max-w-[360px]">{script.shortDescription}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary">{script.category}</td>
-                <td className="px-4 py-3">
-                  <RiskBadge riskLevel={script.riskLevel} />
-                </td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={script.lastRun?.status} />
-                </td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {formatDate(script.lastRun?.completedAt ?? script.lastRun?.startedAt)}
-                </td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {script.lastRun?.actorName ?? "None"}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    className="inline-flex items-center justify-center p-2 rounded-full text-secondary group-hover:text-foreground group-hover:bg-foreground/5 transition-colors"
-                    aria-label={`Open ${script.name}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      router.push(`/admin/settings/scripts/${script.id}`);
-                    }}
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+                <ArrowRight className="w-4 h-4" />
+              </RowIconButton>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
