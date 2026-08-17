@@ -10,12 +10,7 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -178,156 +173,152 @@ export default function AIModelCataloguePage() {
         </div>
       </div>
 
-      <TableShell
+      <DataTable
+        rows={isLoading || (paginationStatus === "LoadingMore" && models.length === 0) ? undefined : models}
+        rowKey={(model) => model._id}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={pageSize}
-            isLoading={paginationStatus === "LoadingMore"}
-            onPageChange={goToPage}
-            labels={{
-              empty: "No models found",
-              // While more pages exist than have been fetched, the total is a
-              // floor, not a count — the "+" keeps the pager from claiming a
-              // finished number it does not have.
-              showing: (start, end, total) => {
-                const shownTotal = !totalIsKnown && hasMore ? `${total}+` : `${total}`;
-                return isFiltered
-                  ? `Showing ${start}-${end} of ${shownTotal} matching`
-                  : `Showing ${start}-${end} of ${shownTotal} models`;
-              },
-            }}
-          />
-        }
-      >
-        <thead>
-          {/* A model is a name, who supplies it, whether it is doing any job,
-              and whether it is on. Capabilities and use cases were five to eight
-              chips a row of provider metadata nobody could act on from here. */}
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium w-[38%]">Model name</th>
-            <th className="px-4 py-3 font-medium w-[20%]">Provider</th>
-            <th className="px-4 py-3 font-medium w-[14%]">Pricing</th>
-            <th className="px-4 py-3 font-medium w-[14%]">Default</th>
-            <th className="px-4 py-3 font-medium w-[14%]">Active</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isLoading || (paginationStatus === "LoadingMore" && models.length === 0) ? (
-            <TableLoadingRow colSpan={5} />
-          ) : models.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<Bot className="w-8 h-8 text-muted/30" />}
-              label={t("empty.title")}
-              action={
-                <Link
-                  href="/admin/ai/models/providers"
-                  className="mt-2 h-9 px-5 rounded-full bg-foreground text-background font-medium text-[13px] inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-sm"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Open providers
-                </Link>
-              }
-            />
-          ) : (
-            models.map((model) => {
+        onRowClick={(model) => router.push(`/admin/ai/models/${model._id}`)}
+        empty={{
+          icon: <Bot className="w-8 h-8 text-muted/30" />,
+          label: t("empty.title"),
+          action: (
+            <Link
+              href="/admin/ai/models/providers"
+              className="mt-2 h-9 px-5 rounded-full bg-foreground text-background font-medium text-[13px] inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Open providers
+            </Link>
+          ),
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages,
+          totalCount,
+          pageSize,
+          isLoading: paginationStatus === "LoadingMore",
+          onPageChange: goToPage,
+          labels: {
+            empty: "No models found",
+            // While more pages exist than have been fetched, the total is a
+            // floor, not a count — the "+" keeps the pager from claiming a
+            // finished number it does not have.
+            showing: (start, end, total) => {
+              const shownTotal = !totalIsKnown && hasMore ? `${total}+` : `${total}`;
+              return isFiltered
+                ? `Showing ${start}-${end} of ${shownTotal} matching`
+                : `Showing ${start}-${end} of ${shownTotal} models`;
+            },
+          },
+        }}
+        /* A model is a name, who supplies it, whether it is doing any job, and
+           whether it is on. Capabilities and use cases were five to eight chips
+           a row of provider metadata nobody could act on from here. */
+        columns={[
+          {
+            key: "name",
+            header: "Model name",
+            className: "w-[38%]",
+            /* The name, and the id underneath so a developer can still match it
+               to the provider's docs. Price belongs on the model's own page,
+               where it is set. */
+            cell: (model) => (
+              <>
+                <div className="text-[13px] font-semibold text-foreground truncate">
+                  {model.friendlyName || model.displayName}
+                </div>
+                <div className="text-[11px] font-mono text-muted truncate mt-0.5">
+                  {model.providerModelId || model.modelId}
+                </div>
+              </>
+            ),
+          },
+          {
+            key: "provider",
+            header: "Provider",
+            className: "w-[20%]",
+            cell: (model) => (
+              <span className="text-[12px] text-secondary">
+                {getProviderDisplayName(model.providerKey, providerNameByKey)}
+              </span>
+            ),
+          },
+          {
+            key: "pricing",
+            header: "Pricing",
+            className: "w-[14%]",
+            /* One word. Missing is worth colouring because it has a consequence:
+               without a price the runtime cannot measure spend, so agents on
+               this model are held to a smaller budget. */
+            cell: (model) =>
+              isModelCostMeasurable(model) ? (
+                <span className="text-[12px] text-secondary">Added</span>
+              ) : (
+                <span className="text-[12px] text-[#f59e0b]">Missing</span>
+              ),
+          },
+          {
+            key: "default",
+            header: "Default",
+            className: "w-[14%]",
+            /* Yes or no, and nothing else. Naming the ten jobs here made one row
+               three times taller than the rest. The answer comes from the jobs a
+               model is really handling, not the `isDefault` flag, which is only
+               the fourth thing the runtime tries. */
+            cell: (model) => {
               const defaultJobs = defaultJobsByModelId.get(model.modelId) ?? [];
-              return (
-                <tr
-                  key={model._id}
-                  onClick={() => router.push(`/admin/ai/models/${model._id}`)}
-                  className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors cursor-pointer"
+              return defaultJobs.length > 0 ? (
+                <span
+                  title={`Handles ${defaultJobs.map(formatModelTag).join(", ")}`}
+                  className="inline-flex rounded-full border border-brand/30 bg-brand/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand"
                 >
-                  {/* The name, and the id underneath so a developer can still
-                      match it to the provider's docs. Price belongs on the
-                      model's own page, where it is set. */}
-                  <td className="px-4 py-3">
-                    <div className="text-[13px] font-semibold text-foreground truncate">
-                      {model.friendlyName || model.displayName}
-                    </div>
-                    <div className="text-[11px] font-mono text-muted truncate mt-0.5">
-                      {model.providerModelId || model.modelId}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-[12px] text-secondary">
-                    {getProviderDisplayName(model.providerKey, providerNameByKey)}
-                  </td>
-                  {/* One word. Missing is worth colouring because it has a
-                      consequence: without a price the runtime cannot measure
-                      spend, so agents on this model are held to a smaller
-                      budget. The model's own page says so and is one click
-                      away. */}
-                  <td className="px-4 py-3">
-                    {isModelCostMeasurable(model) ? (
-                      <span className="text-[12px] text-secondary">Added</span>
-                    ) : (
-                      <span className="text-[12px] text-[#f59e0b]">Missing</span>
-                    )}
-                  </td>
-                  {/* Yes or no, and nothing else. Naming the ten jobs here made
-                      one row three times taller than the rest and put back the
-                      wall of text this pass exists to remove — they are on hover
-                      instead, and in full on the Defaults screen.
-
-                      The answer comes from the jobs a model is really handling,
-                      not the `isDefault` flag, which is only the fourth thing
-                      the runtime tries and can sit on a model doing nothing. */}
-                  <td className="px-4 py-3">
-                    {defaultJobs.length > 0 ? (
-                      <span
-                        title={`Handles ${defaultJobs.map(formatModelTag).join(", ")}`}
-                        className="inline-flex rounded-full border border-brand/30 bg-brand/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand"
-                      >
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="text-[12px] text-muted">No</span>
-                    )}
-                  </td>
-                  {/* The column is the control. An Active column beside a
-                      separate Deactivate button would print the same fact
-                      twice, which is the duplication the ONLINE badge was
-                      removed for. */}
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={model.isEnabled}
-                      aria-label={`${model.isEnabled ? "Deactivate" : "Activate"} ${model.friendlyName || model.displayName}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleStatus(model._id, model.isEnabled);
-                      }}
-                      className="flex items-center gap-2 group/switch"
-                    >
-                      <span
-                        className={cn(
-                          "relative h-5 w-9 rounded-full transition-colors",
-                          model.isEnabled ? "bg-brand" : "bg-foreground/15"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
-                            model.isEnabled ? "left-[18px]" : "left-0.5"
-                          )}
-                        />
-                      </span>
-                      <span className="text-[12px] text-secondary group-hover/switch:text-foreground transition-colors">
-                        {model.isEnabled ? "Active" : "Inactive"}
-                      </span>
-                    </button>
-                  </td>
-                </tr>
+                  Yes
+                </span>
+              ) : (
+                <span className="text-[12px] text-muted">No</span>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+          {
+            key: "active",
+            header: "Active",
+            className: "w-[14%]",
+            /* The column is the control. An Active column beside a separate
+               Deactivate button would print the same fact twice. */
+            cell: (model) => (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={model.isEnabled}
+                aria-label={`${model.isEnabled ? "Deactivate" : "Activate"} ${model.friendlyName || model.displayName}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleStatus(model._id, model.isEnabled);
+                }}
+                className="flex items-center gap-2 group/switch"
+              >
+                <span
+                  className={cn(
+                    "relative h-5 w-9 rounded-full transition-colors",
+                    model.isEnabled ? "bg-brand" : "bg-foreground/15"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
+                      model.isEnabled ? "left-[18px]" : "left-0.5"
+                    )}
+                  />
+                </span>
+                <span className="text-[12px] text-secondary group-hover/switch:text-foreground transition-colors">
+                  {model.isEnabled ? "Active" : "Inactive"}
+                </span>
+              </button>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
