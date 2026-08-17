@@ -13,20 +13,10 @@ import {
   Trash2,
   Edit2
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  RowActions,
-  RowIconButton,
-  SearchBar,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
@@ -89,10 +79,6 @@ export default function CompanyTeamPage() {
     loadMore,
     resetKey: searchTerm,
   });
-
-  const pageInvites = paged.pageRows.flatMap((row) => (row.kind === "invite" ? [row.invite] : []));
-  const pageUsers = paged.pageRows.flatMap((row) => (row.kind === "user" ? [row.user] : []));
-
 
   const handleOpenAdd = () => {
     setFormData({ name: "", email: "", role: "USER", image: "", companyId: currentUser?.companyId || "" });
@@ -158,163 +144,133 @@ export default function CompanyTeamPage() {
         }
       />
 
-      <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder={t('searchPlaceholder')} />
-
-      <TableShell
+      <DataTable
+        rows={status === "LoadingFirstPage" ? undefined : paged.pageRows}
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: t('searchPlaceholder') }}
+        rowKey={(row) => (row.kind === "invite" ? `inv_${row.invite._id}` : row.user._id)}
         minWidthClassName="min-w-[720px]"
-        footer={
-          <PaginationFooter
-            page={paged.page}
-            totalPages={paged.totalPages}
-            totalCount={paged.loadedCount}
-            pageSize={paged.pageSize}
-            isLoading={status === "LoadingMore"}
-            onPageChange={paged.goToPage}
-            labels={{ empty: t('table.noMatches') }}
-          />
-        }
-      >
-            <thead>
-              <TableHeaderRow>
-                <TableHeaderCell>{tCommon('table.user')}</TableHeaderCell>
-                <TableHeaderCell>{tCommon('table.role')}</TableHeaderCell>
-                <TableHeaderCell>{t('table.joined')}</TableHeaderCell>
-                <TableHeaderCell align="right">{tCommon('table.actions')}</TableHeaderCell>
-              </TableHeaderRow>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {/* Waiting and finding nothing are different answers. This went
-                    straight to the empty panel while the first page was still
-                    loading, so an ordinary page load flashed "no one here". */}
-                {status === "LoadingFirstPage" ? (
-                  <TableLoadingRow colSpan={4} />
-                ) : paged.pageRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-0 border-none">
-                      <SonaeEmptyState
-                        title="No one found"
-                        description={searchTerm.length > 0 ? "Nobody on the team matches that search." : t('table.noMatches')}
-                      />
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {pageInvites.map((inv) => (
-                      <motion.tr
-                        key={`inv_${inv._id}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="border-b border-border-dim/50 bg-brand/[0.03] hover:bg-brand/[0.05] transition-colors group opacity-80"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
-                              <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                                {t('table.pending')}
-                              </span>
-                              <span className="text-[12px] text-secondary">{inv.email}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-                            <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                              {t('table.pending')} {inv.role}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-[12px] text-secondary">
-                          {formatDate(inv.invitedAt, { fallback: t('table.na') })}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <RowActions>
-                            <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">{t('table.awaiting')}</span>
-                            <RowIconButton
-                              onClick={() => setDeletingInvite(inv)}
-                              tone="danger"
-                              label={t('buttons.revoke')}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </RowIconButton>
-                          </RowActions>
-                        </td>
-                      </motion.tr>
-                    ))}
-
-                    {pageUsers.map((user) => (
-                      <motion.tr
-                        key={user._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <Image
-                              src={user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${user.name ?? user.email ?? user._id}`}
-                              alt={user.name ?? user.email ?? tCommon('table.user')}
-                              width={32}
-                              height={32}
-                              unoptimized
-                              className="w-8 h-8 rounded-full bg-card border border-border-dim"
-                            />
-                            <div>
-                              <span className="font-medium text-[13px] text-foreground block leading-tight">
-                                {user.name}
-                              </span>
-                              <span className="text-[12px] text-secondary">{user.email}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                            {user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {user.role === 'ADMIN' ? t('roles.admin') : t('roles.user')}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-[12px] text-secondary">
-                          {formatDate(user.createdAt, { fallback: t('table.na') })}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <RowActions>
-                            {user._id !== currentUser?._id && (
-                              <>
-                                {/* These two carried no label at all, so they
-                                    read as "button, button" to a screen reader
-                                    and showed no tooltip. RowIconButton makes
-                                    the label a required argument. */}
-                                <RowIconButton
-                                  onClick={() => handleOpenEdit(user)}
-                                  label={tCommon('actions.edit')}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </RowIconButton>
-                                <RowIconButton
-                                  onClick={() => setDeletingUser(user)}
-                                  tone="danger"
-                                  label={t('buttons.delete')}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </RowIconButton>
-                              </>
-                            )}
-                          </RowActions>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </>
-                )}
-              </AnimatePresence>
-            </tbody>
-      </TableShell>
+        /* A pending invitation is not a person yet, and the tint is what says
+           so before the row's words do. */
+        rowClassName={(row) => (row.kind === "invite" ? "bg-brand/[0.03] hover:bg-brand/[0.05] opacity-80" : "")}
+        empty={{
+          icon: <Users className="w-8 h-8 text-muted/30" />,
+          label: "No one found",
+          action: (
+            <p className="text-[13px] text-secondary">
+              {searchTerm.length > 0 ? "Nobody on the team matches that search." : t('table.noMatches')}
+            </p>
+          ),
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.loadedCount,
+          pageSize: paged.pageSize,
+          isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+          onPageChange: paged.goToPage,
+          labels: { empty: t('table.noMatches') },
+        }}
+        columns={[
+          {
+            key: "user",
+            header: tCommon('table.user'),
+            cell: (row) =>
+              row.kind === "invite" ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
+                    <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
+                      {t('table.pending')}
+                    </span>
+                    <span className="text-[12px] text-secondary">{row.invite.email}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={row.user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${row.user.name ?? row.user.email ?? row.user._id}`}
+                    alt={row.user.name ?? row.user.email ?? tCommon('table.user')}
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="w-8 h-8 rounded-full bg-card border border-border-dim"
+                  />
+                  <div>
+                    <span className="font-medium text-[13px] text-foreground block leading-tight">
+                      {row.user.name}
+                    </span>
+                    <span className="text-[12px] text-secondary">{row.user.email}</span>
+                  </div>
+                </div>
+              ),
+          },
+          {
+            key: "role",
+            header: tCommon('table.role'),
+            cell: (row) =>
+              row.kind === "invite" ? (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
+                  <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
+                    {t('table.pending')} {row.invite.role}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                  {row.user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
+                  <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                    {row.user.role === 'ADMIN' ? t('roles.admin') : t('roles.user')}
+                  </span>
+                </div>
+              ),
+          },
+          {
+            key: "joined",
+            header: t('table.joined'),
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">
+                {row.kind === "invite"
+                  ? formatDate(row.invite.invitedAt, { fallback: t('table.na') })
+                  : formatDate(row.user.createdAt, { fallback: t('table.na') })}
+              </span>
+            ),
+          },
+          {
+            key: "actions",
+            header: tCommon('table.actions'),
+            align: "right",
+            cell: (row) =>
+              row.kind === "invite" ? (
+                <RowActions>
+                  <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
+                    {t('table.awaiting')}
+                  </span>
+                  <RowIconButton onClick={() => setDeletingInvite(row.invite)} tone="danger" label={t('buttons.revoke')}>
+                    <Trash2 className="w-4 h-4" />
+                  </RowIconButton>
+                </RowActions>
+              ) : (
+                <RowActions>
+                  {row.user._id !== currentUser?._id && (
+                    <>
+                      {/* These two carried no label at all, so they read as
+                          "button, button" to a screen reader and showed no
+                          tooltip. RowIconButton makes the label required. */}
+                      <RowIconButton onClick={() => handleOpenEdit(row.user)} label={tCommon('actions.edit')}>
+                        <Edit2 className="w-4 h-4" />
+                      </RowIconButton>
+                      <RowIconButton onClick={() => setDeletingUser(row.user)} tone="danger" label={t('buttons.delete')}>
+                        <Trash2 className="w-4 h-4" />
+                      </RowIconButton>
+                    </>
+                  )}
+                </RowActions>
+              ),
+          },
+        ]}
+      />
 
       {/* Add/Edit Modal */}
       <SonaeModal

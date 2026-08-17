@@ -37,7 +37,6 @@
     "src/app/(dashboard)/admin/health/page.tsx",
     "src/app/(dashboard)/admin/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
-    "src/app/(dashboard)/admin/settings/api-keys/page.tsx",
     "src/app/(dashboard)/admin/settings/plans/page.tsx",
     "src/app/(dashboard)/admin/super-admins/[id]/page.tsx",
     "src/app/(dashboard)/admin/users/[id]/page.tsx",
@@ -49,7 +48,6 @@
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx",
     "src/app/(dashboard)/app/[workspace]/spreadsheet-import/page.tsx",
     "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
-    "src/app/(dashboard)/app/settings/team/page.tsx",
     "src/app/(dashboard)/app/tasks/page.tsx"
   ]
 }

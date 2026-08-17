@@ -10,13 +10,8 @@ import { Copy, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
 } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -292,82 +287,99 @@ export default function ApiKeysPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-foreground">Keys you have</h2>
 
-        <TableShell minWidthClassName="min-w-[900px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>Key</TableHeaderCell>
-              <TableHeaderCell>Company</TableHeaderCell>
-              <TableHeaderCell>Allowed to</TableHeaderCell>
-              <TableHeaderCell>Limits</TableHeaderCell>
-              <TableHeaderCell>Status</TableHeaderCell>
-              <TableHeaderCell align="right">{""}</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {status === "LoadingFirstPage" ? (
-              <TableLoadingRow colSpan={6} />
-            ) : apiKeys.length === 0 ? (
-              <TableEmptyRow
-                colSpan={6}
-                icon={<KeyRound className="h-8 w-8 text-muted/30" />}
-                label="No keys yet"
-                action={
-                  <span className="text-[13px] normal-case tracking-normal text-secondary">
-                    Create one above to let another system start your agents.
+        <DataTable
+          rows={status === "LoadingFirstPage" ? undefined : apiKeys}
+          rowKey={(apiKey) => apiKey._id}
+          minWidthClassName="min-w-[900px]"
+          empty={{
+            icon: <KeyRound className="h-8 w-8 text-muted/30" />,
+            label: "No keys yet",
+            action: (
+              <span className="text-[13px] normal-case tracking-normal text-secondary">
+                Create one above to let another system start your agents.
+              </span>
+            ),
+          }}
+          /* The footer used to sit outside the shell, floating under the table
+             as a separate bar rather than closing it. */
+          footer={{
+            mode: "paged",
+            page: keys.page,
+            totalPages: keys.totalPages,
+            totalCount: keys.loadedCount,
+            pageSize: TABLE_PAGE_SIZE,
+            isLoading: keys.isBusy,
+            onPageChange: keys.goToPage,
+            labels: { empty: "No keys yet" },
+          }}
+          columns={[
+            {
+              key: "key",
+              header: "Key",
+              cell: (apiKey) => (
+                <>
+                  <div className="text-[13px] font-medium text-foreground">{apiKey.name}</div>
+                  <div className="text-[12px] text-muted">{apiKey.keyPrefix}…</div>
+                </>
+              ),
+            },
+            {
+              key: "company",
+              header: "Company",
+              cell: (apiKey) => <span className="text-[13px] text-secondary">{apiKey.companyName}</span>,
+            },
+            {
+              key: "scopes",
+              header: "Allowed to",
+              cell: (apiKey) => (
+                <span className="text-[13px] leading-relaxed text-secondary">
+                  {apiKey.scopes.map((scope: string) => SCOPE_LABELS[scope] ?? scope).join(", ")}
+                </span>
+              ),
+            },
+            {
+              key: "limits",
+              header: "Limits",
+              cell: (apiKey) => (
+                <div className="text-[13px] text-secondary">
+                  <div>{apiKey.rateLimitPerMinute} a minute</div>
+                  <div className="text-[12px] text-muted">
+                    {apiKey.expiresAt ? `Stops ${formatDateTime(apiKey.expiresAt)}` : "Never stops"}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              cell: (apiKey) => (
+                <div className="text-[13px]">
+                  <span className={apiKey.status === "ACTIVE" ? "text-[#10b981]" : "text-muted"}>
+                    {apiKey.status === "ACTIVE" ? "Working" : "Turned off"}
                   </span>
-                }
-              />
-            ) : (
-              apiKeys.map((apiKey) => (
-                <tr key={apiKey._id} className="border-b border-border-dim/50">
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-[13px] font-medium text-foreground">{apiKey.name}</div>
-                    <div className="text-[12px] text-muted">{apiKey.keyPrefix}…</div>
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{apiKey.companyName}</td>
-                  <td className="px-4 py-3 align-top text-[13px] leading-relaxed text-secondary">
-                    {apiKey.scopes.map((scope: string) => SCOPE_LABELS[scope] ?? scope).join(", ")}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">
-                    <div>{apiKey.rateLimitPerMinute} a minute</div>
-                    <div className="text-[12px] text-muted">
-                      {apiKey.expiresAt ? `Stops ${formatDateTime(apiKey.expiresAt)}` : "Never stops"}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px]">
-                    <span className={apiKey.status === "ACTIVE" ? "text-[#10b981]" : "text-muted"}>
-                      {apiKey.status === "ACTIVE" ? "Working" : "Turned off"}
-                    </span>
-                    {apiKey.revokedAt ? (
-                      <div className="text-[12px] text-muted">{formatDateTime(apiKey.revokedAt)}</div>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 align-top text-right">
-                    {apiKey.status === "ACTIVE" ? (
-                      <WriteButton
-                        type="button"
-                        onClick={() => setRevokeTarget({ id: apiKey._id, name: apiKey.name })}
-                        aria-label={`Turn off ${apiKey.name}`}
-                        className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </WriteButton>
-                    ) : null}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </TableShell>
-
-        <PaginationFooter
-          page={keys.page}
-          totalPages={keys.totalPages}
-          totalCount={keys.loadedCount}
-          pageSize={TABLE_PAGE_SIZE}
-          isLoading={keys.isBusy}
-          onPageChange={keys.goToPage}
-          labels={{ empty: "No keys yet" }}
+                  {apiKey.revokedAt ? (
+                    <div className="text-[12px] text-muted">{formatDateTime(apiKey.revokedAt)}</div>
+                  ) : null}
+                </div>
+              ),
+            },
+            {
+              key: "revoke",
+              header: "",
+              align: "right",
+              cell: (apiKey) =>
+                apiKey.status === "ACTIVE" ? (
+                  <WriteButton
+                    type="button"
+                    onClick={() => setRevokeTarget({ id: apiKey._id, name: apiKey.name })}
+                    aria-label={`Turn off ${apiKey.name}`}
+                    className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </WriteButton>
+                ) : null,
+            },
+          ]}
         />
       </section>
 
