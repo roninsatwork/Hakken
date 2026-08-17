@@ -2867,22 +2867,22 @@
       "saveChanges": "Save Changes",
       "fields": {
         "name": {
-          "label": "Full Name",
-          "placeholder": "e.g. Aman"
+          "label": "Your name",
+          "placeholder": "For example: Anthony Basker"
         },
         "email": {
-          "label": "Communications (Email)",
+          "label": "Email address",
           "fixed": "FIXED",
-          "description": "Bound securely to your authentication provider."
+          "description": "You sign in with this, so it cannot be changed here."
         },
         "phone": {
-          "label": "Phone Number (Optional)",
+          "label": "Phone number (optional)",
           "placeholder": "+1 (555) 000-0000"
         },
         "photo": {
-          "label": "Profile Photo",
-          "upload": "Upload New Photo",
-          "uploading": "Uploading Securely...",
+          "label": "Profile photo",
+          "upload": "Upload a photo",
+          "uploading": "Uploading...",
           "hint": "JPG or PNG, max 2MB."
         }
       }
