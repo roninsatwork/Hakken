@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import { TableHeaderCell, TableHeaderRow, TableShell } from "@/src/ui/components/screens/Table";
+import { TableHeaderCell, TableHeaderRow, TableLoadingRow, TableShell } from "@/src/ui/components/screens/Table";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
@@ -289,7 +289,7 @@ export default function SalesDataImportPage() {
         <TableShell
           minWidthClassName="min-w-[720px]"
           header={
-            <div className="px-6 py-4 border-b border-border-dim">
+            <div className="px-4 py-3 border-b border-border-dim">
               <h2 className="text-[15px] font-semibold text-foreground">{t("historyTitle")}</h2>
             </div>
           }
@@ -305,11 +305,9 @@ export default function SalesDataImportPage() {
               </thead>
               <tbody>
                 {imports === undefined ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-6 text-[13px] text-secondary">
-                      {t("loading")}
-                    </td>
-                  </tr>
+                  /* The kit's spinner rather than a line of text
+                     sitting where a row goes. */
+                  <TableLoadingRow colSpan={5} />
                 ) : imports.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-0 border-none">
@@ -322,7 +320,7 @@ export default function SalesDataImportPage() {
                 ) : (
                   imports.map((record) => (
                     <tr key={record._id} className="border-b border-border-dim/50">
-                      <td className="px-6 py-3 text-[13px] text-foreground">
+                      <td className="px-4 py-3 text-[13px] text-foreground">
                         <div className="flex flex-col">
                           <span>{record.fileName}</span>
                           {record.importedByName && (
@@ -330,7 +328,7 @@ export default function SalesDataImportPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-[13px]">
+                      <td className="px-4 py-3 text-[13px]">
                         <StatusLabel
                           status={record.status}
                           superseded={record.supersededAt !== null}
@@ -338,15 +336,15 @@ export default function SalesDataImportPage() {
                           t={t}
                         />
                       </td>
-                      <td className="px-6 py-3 text-[13px] text-secondary tabular-nums">
+                      <td className="px-4 py-3 text-[13px] text-secondary tabular-nums">
                         {record.status === "COMPLETED"
                           ? `${record.salesRowCount.toLocaleString()} · ${record.categoryRowCount} · ${record.areasOfInterestRowCount} · ${record.frequencyRowCount}`
                           : "—"}
                       </td>
-                      <td className="px-6 py-3 text-[13px] text-secondary">
+                      <td className="px-4 py-3 text-[13px] text-secondary">
                         {record.periodLabels.length > 0 ? record.periodLabels.join(", ") : "—"}
                       </td>
-                      <td className="px-6 py-3 text-[13px] text-secondary whitespace-nowrap">
+                      <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                         {formatDate(record.startedAt)}
                       </td>
                     </tr>

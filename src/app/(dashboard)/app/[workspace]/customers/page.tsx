@@ -11,7 +11,7 @@ import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { api } from "@/convex/_generated/api";
 import { CursorPaginationFooter, useCursorPagination } from "@/src/ui/components/screens/CursorPagination";
 import { TableFilterSelect, TableSearchInput } from "@/src/ui/components/screens/TableControls";
-import { TableHeaderCell, TableHeaderRow, TableShell } from "@/src/ui/components/screens/Table";
+import { TableHeaderCell, TableHeaderRow, TableLoadingRow, TableShell } from "@/src/ui/components/screens/Table";
 import { LAYER } from "@/src/ui/lib/layers";
 
 /**
@@ -90,7 +90,7 @@ function CustomerList() {
           </p>
         </div>
 
-        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
+        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3`}>
           <TableSearchInput
             value={search}
             onChange={setSearch}
@@ -165,7 +165,7 @@ function CustomerList() {
           import spreadsheet button."* The missing-details filter and the two
           AI sweeps that used to sit here are gone.
         */}
-        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
+        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3`}>
           <ClearDatabaseButton />
           <Link
             href={`/app/${workspace}/spreadsheet-import`}
@@ -215,11 +215,9 @@ function CustomerList() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-6 text-[13px] text-secondary">
-                      {t("loading")}
-                    </td>
-                  </tr>
+                  /* The kit's spinner rather than a line of text
+                     sitting where a row goes. */
+                  <TableLoadingRow colSpan={6} />
                 ) : result.page.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-0 border-none">
@@ -334,7 +332,7 @@ function Td({
   return (
     <td
       className={[
-        "px-4 py-2.5 text-[13px] whitespace-nowrap text-secondary",
+        "px-4 py-3 text-[13px] whitespace-nowrap text-secondary",
         align === "right" ? "text-right" : "",
         numeric ? "tabular-nums" : "",
       ].join(" ")}
@@ -549,7 +547,7 @@ function ResearchRow() {
         </div>
       </div>
     )}
-    <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
+    <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3`}>
       <button
         type="button"
         onClick={() => void onPress("PROSPECTS")}

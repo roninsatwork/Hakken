@@ -13,7 +13,7 @@ import {
   useCursorPagination,
 } from "@/src/ui/components/screens/CursorPagination";
 import { TableFilterSelect, TableSearchInput } from "@/src/ui/components/screens/TableControls";
-import { TableHeaderCell, TableHeaderRow, TableShell } from "@/src/ui/components/screens/Table";
+import { TableHeaderCell, TableHeaderRow, TableLoadingRow, TableShell } from "@/src/ui/components/screens/Table";
 import { LAYER } from "@/src/ui/lib/layers";
 
 /**
@@ -248,7 +248,7 @@ function SalesDataTables() {
             context of its own, and a later sibling with one paints over an
             earlier sibling's absolutely positioned child however high that
             child's own z-index is. The control bar has to out-rank the card. */}
-        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl`}>
+        <div className={`relative ${LAYER.PAGE_CHROME} flex flex-wrap items-center gap-3`}>
           <TableSearchInput
             value={search}
             onChange={setSearch}
@@ -408,11 +408,9 @@ function SalesDataTables() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={columnCount} className="px-6 py-6 text-[13px] text-secondary">
-                      {t("loading")}
-                    </td>
-                  </tr>
+                  /* The kit's spinner rather than a line of text
+                     sitting where a row goes. */
+                  <TableLoadingRow colSpan={columnCount} />
                 ) : result.page.length === 0 ? (
                   <tr>
                     <td colSpan={columnCount} className="p-0 border-none">
@@ -522,7 +520,7 @@ function Td({
   return (
     <td
       className={[
-        "px-4 py-2.5 text-[13px] whitespace-nowrap",
+        "px-4 py-3 text-[13px] whitespace-nowrap",
         strong ? "text-foreground" : "text-secondary",
         align === "right" ? "text-right" : "",
         numeric ? "tabular-nums" : "",

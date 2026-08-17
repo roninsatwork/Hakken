@@ -42,6 +42,12 @@ export function nextIntl() {
       (key: string) => `${namespace}.${key}`,
       { rich: (key: string) => `${namespace}.${key}` },
     ),
+    useLocale: () => "en",
+    useFormatter: () => ({
+      dateTime: (value: Date) => value.toISOString(),
+      number: (value: number) => String(value),
+      relativeTime: () => "",
+    }),
   };
 }
 
