@@ -2,6 +2,7 @@ import Image from "next/image";
 import { AppWindow, Bell, Loader2, UploadCloud, Volume2, X } from "lucide-react";
 import type { LogoUploadHandler } from "./types";
 import { WidgetPanel } from "./WidgetPanel";
+import { Field } from "@/src/ui/components/screens/Field";
 
 type WidgetAppearanceSectionProps = {
   activeColor: string;
@@ -43,40 +44,36 @@ export function WidgetAppearanceSection({
   return (
     <WidgetPanel
       title="Appearance"
-      description="Customize widget appearance that will be shown to the user."
+      description="How the chat window looks to your visitors."
     >
       <div className="grid grid-cols-1 gap-6">
-        <div className="flex flex-col gap-2">
-          <label className="text-[13px] font-semibold text-secondary">Public Name</label>
+        <Field
+          label="Name people see"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="For example: Sales Assistant"
+        />
+
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field
+              label="Main colour"
+              value={themePrimaryColor}
+              onChange={(event) => setThemePrimaryColor(event.target.value)}
+              className="font-mono tracking-wider"
+            />
+          </div>
           <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="w-full bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:border-brand transition-colors"
-            placeholder="e.g. Sales Assistant"
+            type="color"
+            aria-label="Pick the main colour"
+            value={activeColor}
+            onChange={(event) => setThemePrimaryColor(event.target.value)}
+            className="h-[46px] w-14 shrink-0 cursor-pointer rounded-[12px] border border-border-dim bg-transparent"
           />
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-[13px] font-semibold text-secondary">Primary Widget Color</label>
-          <div className="flex items-center gap-2 bg-background border border-border-dim rounded-[10px] px-2 py-1.5 focus-within:border-brand transition-colors">
-            <input
-              type="text"
-              value={themePrimaryColor}
-              onChange={(event) => setThemePrimaryColor(event.target.value)}
-              className="flex-1 bg-transparent border-none outline-none font-mono text-[14px] tracking-wider text-foreground placeholder:text-muted/60"
-            />
-            <input
-              type="color"
-              value={activeColor}
-              onChange={(event) => setThemePrimaryColor(event.target.value)}
-              className="w-10 h-8 rounded shrink-0 cursor-pointer border-none bg-transparent"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-[13px] font-semibold text-secondary">Custom Source Logo</label>
+          <label className="mt-1 text-[12px] font-medium text-secondary">Logo</label>
           {themeLogoUrl ? (
             <div className="flex items-center gap-4 bg-background border border-border-dim rounded-[10px] p-3">
               <div className="w-12 h-12 rounded-full overflow-hidden border border-border-dim/50 flex-shrink-0 bg-sidebar/50">
@@ -130,16 +127,12 @@ export function WidgetAppearanceSection({
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-[13px] font-semibold text-secondary">Input Placeholder Text</label>
-          <input
-            type="text"
-            value={themePlaceholder}
-            onChange={(event) => setThemePlaceholder(event.target.value)}
-            className="w-full bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:border-brand transition-colors"
-            placeholder="Write a reply..."
-          />
-        </div>
+        <Field
+          label="Greyed-out text in the message box"
+          value={themePlaceholder}
+          onChange={(event) => setThemePlaceholder(event.target.value)}
+          placeholder="Write a reply..."
+        />
 
         <div className="flex flex-col gap-4 mt-2">
           <label className="flex items-center justify-between p-4 rounded-[12px] border border-border-dim bg-background/50 cursor-pointer hover:bg-foreground/5 transition-colors">

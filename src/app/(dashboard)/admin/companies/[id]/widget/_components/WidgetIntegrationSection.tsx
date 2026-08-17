@@ -1,6 +1,7 @@
 import { AppWindow, MonitorSpeaker } from "lucide-react";
 import { formatDateTime } from "@/src/lib/dates";
 import { WidgetPanel } from "./WidgetPanel";
+import { Field } from "@/src/ui/components/screens/Field";
 
 type WidgetIntegrationSectionProps = {
   allowedDomains: string;
@@ -33,20 +34,20 @@ export function WidgetIntegrationSection({
       description="Connect your secure agent connection pipeline into external domains."
     >
       <div className="flex flex-col gap-3">
-        <label className="text-[13px] font-semibold text-secondary">Authorized Domains</label>
-        <input
-          type="text"
+        <Field
+          label="Websites allowed to show it"
+          hint="Separate several with commas. The chat window will not open anywhere else."
           value={allowedDomains}
           onChange={(event) => setAllowedDomains(event.target.value)}
-          className="w-full bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[14px] text-foreground focus:outline-none focus:border-brand transition-colors font-mono"
           placeholder="https://example.com, https://app.example.com"
+          className="font-mono"
         />
       </div>
 
       <div className="mt-4">
-        <label className="text-[13px] font-semibold text-secondary mb-3 block">
-          Copy AI chat code snippet to clipboard
-        </label>
+        <span className="mb-3 block mt-1 text-[12px] font-medium text-secondary">
+          The code to paste into your website
+        </span>
         <div className="bg-background border border-border-dim rounded-[12px] overflow-hidden flex flex-col relative group">
           <pre className="p-5 text-[13px] text-muted overflow-x-auto font-mono leading-relaxed select-all">
             {codeSnippet}

@@ -1,5 +1,5 @@
 {
-  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Frozen 2026-08-16. Each list may shrink, never grow — move the screen onto the kit instead of adding to it. The five /app entries were left deliberately and the reason for each is written up in docs/plans/active/shared-screen-kit-plan.md; the rest are admin and demo screens that predate the kit being reachable.",
+  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow \u2014 move the screen onto the kit instead of adding to it. Some entries are settled decisions rather than unfinished work, and are named in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17), and the two WidgetPreviewPanel files draw a mock-up of the customer's own chat widget rather than a form, so the house field would restyle a preview of somebody else's site.",
   "tables": [
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
@@ -8,9 +8,6 @@
     "src/app/(dashboard)/admin/_features/evals/EditEvalScreen.tsx",
     "src/app/(dashboard)/admin/_features/evals/NewEvalScreen.tsx",
     "src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx",
-    "src/app/(dashboard)/admin/_features/widget-config/WidgetAppearanceSection.tsx",
-    "src/app/(dashboard)/admin/_features/widget-config/WidgetConversationStartersSection.tsx",
-    "src/app/(dashboard)/admin/_features/widget-config/WidgetIntegrationSection.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx",
     "src/app/(dashboard)/admin/_features/wiki/MoneyViewScreen.tsx",
     "src/app/(dashboard)/admin/_features/wiki/WikiAskBox.tsx",
@@ -24,9 +21,6 @@
     "src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/invites/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/overview/page.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetAppearanceSection.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetConversationStartersSection.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetIntegrationSection.tsx",
     "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetPreviewPanel.tsx",
     "src/app/(dashboard)/admin/settings/_components/IdentitySettingsSection.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",

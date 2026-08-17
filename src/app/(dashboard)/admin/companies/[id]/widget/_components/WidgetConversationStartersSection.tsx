@@ -1,6 +1,7 @@
 import { Plus, X } from "lucide-react";
 import { canAddConversationStarter } from "./widgetConfigUtils";
 import { WidgetPanel } from "./WidgetPanel";
+import { Field } from "@/src/ui/components/screens/Field";
 
 type WidgetConversationStartersSectionProps = {
   conversationStarters: string[];
@@ -26,15 +27,20 @@ export function WidgetConversationStartersSection({
     >
       <div className="flex flex-col gap-4 bg-background/50 p-6 rounded-[16px] border border-border-dim">
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={starterInput}
-            onChange={(event) => setStarterInput(event.target.value)}
-            onKeyDown={(event) => event.key === "Enter" && onAddStarter()}
-            disabled={conversationStarters.length >= 4}
-            className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
-            placeholder="Enter a conversation starter"
-          />
+          {/* The panel's own heading already names this box, so the label is
+              kept for anyone listening rather than repeated on screen. */}
+          <div className="flex-1">
+            <Field
+              label="Add a quick reply"
+              labelHidden
+              value={starterInput}
+              onChange={(event) => setStarterInput(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && onAddStarter()}
+              disabled={conversationStarters.length >= 4}
+              placeholder="Enter a conversation starter"
+              className="disabled:opacity-50"
+            />
+          </div>
           <span className="text-[12px] text-muted font-medium w-12 text-right">
             {conversationStarters.length}/4
           </span>
