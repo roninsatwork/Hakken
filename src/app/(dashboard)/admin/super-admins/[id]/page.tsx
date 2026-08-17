@@ -203,7 +203,7 @@ export default function UserProfilePage() {
                     <TableHeaderCell align="right">Timestamp</TableHeaderCell>
                   </TableHeaderRow>
                 </thead>
-                <tbody className="divide-y divide-border-dim/30">
+                <tbody>
                   {status === "LoadingFirstPage" && (
                     <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-secondary">
@@ -212,7 +212,8 @@ export default function UserProfilePage() {
                     </tr>
                   )}
                   
-                  {logins.length === 0 && status === "CanLoadMore" && (
+                  {/* Was `status === "CanLoadMore"`, so the message only appeared when the list was not empty. Same fault on the profile screen and on Manage Team. */}
+                  {logins.length === 0 && status !== "LoadingFirstPage" && status !== "LoadingMore" && (
                      <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-secondary text-[13px]">
                         No login records found for this user.
@@ -221,8 +222,8 @@ export default function UserProfilePage() {
                   )}
 
                   {pagedLogins.pageRows.map((login) => (
-                    <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="px-5 py-4">
+                    <tr key={login._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-foreground/5 border border-border-dim flex items-center justify-center">
                             <MonitorSmartphone className="w-4 h-4 text-foreground/70" />
@@ -233,7 +234,7 @@ export default function UserProfilePage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 text-secondary" />
                           <div className="flex flex-col">
@@ -242,7 +243,7 @@ export default function UserProfilePage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-[#10b981]' : 'bg-red-500'}`} />
                           <span className="text-[12px] text-secondary font-medium tracking-wide">
@@ -250,7 +251,7 @@ export default function UserProfilePage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <span className="text-[12px] text-secondary tracking-wide">
                           {formatDateTime(login.timestamp, {
                             options: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
@@ -355,7 +356,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                 <TableHeaderCell align="right">Cost ($)</TableHeaderCell>
               </TableHeaderRow>
             </thead>
-            <tbody className="divide-y divide-border-dim/30">
+            <tbody>
               {pagedThreads.pageRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">
@@ -364,22 +365,22 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                 </tr>
               ) : (
                 pagedThreads.pageRows.map((thread) => (
-                  <tr key={thread.threadId} className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="px-5 py-4">
+                  <tr key={thread.threadId} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] text-secondary">
                         {formatDate(thread.createdAt, { options: { month: 'short', day: 'numeric', year: 'numeric' } })}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] text-secondary">{thread.messageCount}</span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] text-secondary">{thread.threadTokens.toLocaleString()}</span>
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <span className="text-[13px] font-medium text-brand">${thread.costGBP.toFixed(4)}</span>
                     </td>
                   </tr>

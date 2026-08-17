@@ -326,7 +326,7 @@ export default function ProfileTabs() {
                     <TableHeaderCell align="right">{t('table.timestamp')}</TableHeaderCell>
                   </TableHeaderRow>
                 </thead>
-                <tbody className="divide-y divide-border-dim/30">
+                <tbody>
                   {(status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-secondary">
@@ -335,7 +335,12 @@ export default function ProfileTabs() {
                     </tr>
                   )}
 
-                  {paginatedItems.length === 0 && status === "CanLoadMore" && (
+                  {/* The condition used to be `status === "CanLoadMore"` — the
+                      message only appeared when there was more to load, which is
+                      the one case where the list is not empty. Anyone with no
+                      sign-ins recorded got a table of headings and nothing else,
+                      with no way to tell it apart from a screen that broke. */}
+                  {paginatedItems.length === 0 && status !== "LoadingFirstPage" && status !== "LoadingMore" && (
                     <tr>
                       <td colSpan={4} className="px-5 py-8 text-center text-secondary text-[13px]">
                         {t('table.empty')}
@@ -344,7 +349,7 @@ export default function ProfileTabs() {
                   )}
 
                   {paginatedItems.map((login) => (
-                    <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
+                    <tr key={login._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-foreground/5 border border-white/5 flex items-center justify-center">
