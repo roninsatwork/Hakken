@@ -4,9 +4,44 @@ import {
   ModalFormActions,
   ModalFormError,
   ModalFormField,
+  ModalTextAreaField,
   modalInputClassName,
   modalTextareaClassName,
 } from "./ModalForm";
+
+/**
+ * `ModalField` already tied a single-line box to its label. The text areas beside
+ * it were still written out by hand — the shared wrapper around a raw
+ * `<textarea>` — and the tie is the part that got dropped every time, which is
+ * invisible on screen and silent to whoever wrote the form.
+ */
+describe("ModalTextAreaField", () => {
+  it("ties its label to the text area, so clicking the label reaches it", () => {
+    render(<ModalTextAreaField label="What a good answer looks like" />);
+
+    const box = screen.getByLabelText("What a good answer looks like");
+    expect(box.tagName).toBe("TEXTAREA");
+  });
+
+  it("gives two on one form separate labels rather than one shared id", () => {
+    render(
+      <>
+        <ModalTextAreaField label="First" />
+        <ModalTextAreaField label="Second" />
+      </>,
+    );
+
+    expect(screen.getByLabelText("First").id).not.toBe(screen.getByLabelText("Second").id);
+  });
+
+  it("keeps the shared styling and takes only a height from the caller", () => {
+    render(<ModalTextAreaField label="Notes" minHeightClassName="min-h-[130px]" />);
+
+    const box = screen.getByLabelText("Notes");
+    expect(box.className).toContain(modalTextareaClassName);
+    expect(box.className).toContain("min-h-[130px]");
+  });
+});
 
 describe("ModalFormField", () => {
   it("renders a shared label, optional hint, and control", () => {

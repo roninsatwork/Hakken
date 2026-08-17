@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 import { useCanWriteHere } from "./AccessLevel";
 
 export const modalInputClassName =
@@ -77,6 +77,45 @@ export function ModalField({ label, hint, children, id, ...inputProps }: ModalFi
     <ModalFormField label={label} hint={hint} htmlFor={fieldId}>
       <input {...inputProps} id={fieldId} className={modalInputClassName} />
       {children}
+    </ModalFormField>
+  );
+}
+
+type ModalTextAreaFieldProps = {
+  label: ReactNode;
+  /** Sits to the right of the label — a character count, an "optional". */
+  hint?: ReactNode;
+} & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className">;
+
+/**
+ * One text area inside a modal, with its label tied to it.
+ *
+ * `ModalField` covered single-line boxes and the text areas beside them kept
+ * being written out by hand — `ModalFormField` wrapping a raw `<textarea>`,
+ * with the label addressing nothing. Same fault as before, in the half of the
+ * form the shorter component did not reach.
+ *
+ * Height is the one thing a caller genuinely varies — a one-line note and a
+ * paragraph of instructions want different boxes — so `minHeightClassName`
+ * takes it, and everything else is `modalTextareaClassName` unchanged.
+ */
+export function ModalTextAreaField({
+  label,
+  hint,
+  minHeightClassName,
+  id,
+  ...textAreaProps
+}: ModalTextAreaFieldProps & { minHeightClassName?: string }) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
+
+  return (
+    <ModalFormField label={label} hint={hint} htmlFor={fieldId}>
+      <textarea
+        {...textAreaProps}
+        id={fieldId}
+        className={minHeightClassName ? `${modalTextareaClassName} ${minHeightClassName}` : modalTextareaClassName}
+      />
     </ModalFormField>
   );
 }

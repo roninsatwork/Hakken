@@ -4,8 +4,6 @@
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
   "inputs": [
-    "src/app/(dashboard)/admin/_features/evals/EditEvalScreen.tsx",
-    "src/app/(dashboard)/admin/_features/evals/NewEvalScreen.tsx",
     "src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx",
     "src/app/(dashboard)/admin/_features/wiki/MoneyViewScreen.tsx",

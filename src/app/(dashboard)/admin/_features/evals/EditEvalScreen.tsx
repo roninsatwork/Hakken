@@ -11,8 +11,7 @@ import {
   ModalField,
   ModalFormError,
   ModalFormField,
-  modalInputClassName,
-  modalTextareaClassName,
+  ModalTextAreaField,
 } from "@/src/ui/components/screens/ModalForm";
 import {
   CompanyAiFormActions,
@@ -145,42 +144,38 @@ export function EditEvalScreen({
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
           />
 
-          <ModalFormField label="What would someone ask?">
-            <textarea
-              required
-              className={`${modalTextareaClassName} min-h-[110px]`}
-              value={form.prompt}
-              onChange={(event) => setForm((current) => ({ ...current, prompt: event.target.value }))}
-            />
-          </ModalFormField>
+          <ModalTextAreaField
+            label="What would someone ask?"
+            required
+            minHeightClassName="min-h-[110px]"
+            value={form.prompt}
+            onChange={(event) => setForm((current) => ({ ...current, prompt: event.target.value }))}
+          />
 
-          <ModalFormField
+          <ModalTextAreaField
             label="What does a good answer look like?"
             hint="Plain English. This is what the marking AI reads."
-          >
-            <textarea
-              required
-              className={`${modalTextareaClassName} min-h-[130px]`}
-              value={form.expectedBehavior}
-              onChange={(event) => setForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
-            />
-          </ModalFormField>
+            required
+            minHeightClassName="min-h-[130px]"
+            value={form.expectedBehavior}
+            onChange={(event) => setForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
+          />
 
-          <ModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
+          <ModalField
+            label="Words it must never say"
+            hint="Optional. Press Enter after each one."
+            value={phraseDraft}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPhraseDraft(event.target.value)}
+            onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addPhrase();
+              }
+            }}
+            onBlur={addPhrase}
+            placeholder="enterprise is free"
+          >
             <div className="flex flex-col gap-2">
-              <input
-                className={modalInputClassName}
-                value={phraseDraft}
-                onChange={(event) => setPhraseDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addPhrase();
-                  }
-                }}
-                onBlur={addPhrase}
-                placeholder="enterprise is free"
-              />
               {bannedPhrases.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {bannedPhrases.map((phrase) => (
@@ -199,7 +194,7 @@ export function EditEvalScreen({
                 </div>
               )}
             </div>
-          </ModalFormField>
+          </ModalField>
 
           <ModalFormField label="Where does this apply?">
             <div className="flex flex-col gap-2">
