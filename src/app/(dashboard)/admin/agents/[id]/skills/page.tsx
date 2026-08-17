@@ -8,11 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BrainCircuit, ExternalLink, Library, Loader2, Plus, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -189,61 +185,66 @@ export default function AgentSkillsPage() {
       </header>
 
 
-      <TableShell
+      <DataTable
+        rows={pagedBindings.pageRows}
+        rowKey={(row) => row.binding._id}
         minWidthClassName="min-w-[640px]"
-        footer={
-          /* This list is not paged on the server — it arrives whole — so it
-             wore the load-more footer with its button permanently disabled,
-             purely to get a count line. `usePagedRows` gives it the same
-             footer as every other table over a list already in hand. */
-          <PaginationFooter
-            page={pagedBindings.page}
-            totalPages={pagedBindings.totalPages}
-            totalCount={pagedBindings.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={false}
-            onPageChange={pagedBindings.goToPage}
-            labels={{ empty: "No skills yet" }}
-          />
-        }
-      >
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium">Skill</th>
-            <th className="px-4 py-3 font-medium w-[190px]">Added</th>
-            <th className="px-4 py-3 font-medium w-[90px] text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {bindings.length === 0 ? (
-            <TableEmptyRow
-              colSpan={3}
-              icon={<BrainCircuit className="h-8 w-8 text-muted/30" />}
-              label="No skills yet — add one from the Skill Center"
-            />
-          ) : pagedBindings.pageRows.map((row) => (
-            <tr key={row.binding._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
-              <td className="px-4 py-3">
+        empty={{
+          icon: <BrainCircuit className="h-8 w-8 text-muted/30" />,
+          label: "No skills yet — add one from the Skill Center",
+        }}
+        /* This list is not paged on the server — it arrives whole — so it wore
+           the load-more footer with its button permanently disabled, purely to
+           get a count line. */
+        footer={{
+          mode: "paged",
+          page: pagedBindings.page,
+          totalPages: pagedBindings.totalPages,
+          totalCount: pagedBindings.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: false,
+          onPageChange: pagedBindings.goToPage,
+          labels: { empty: "No skills yet" },
+        }}
+        columns={[
+          {
+            key: "skill",
+            header: "Skill",
+            cell: (row) => (
+              <>
                 <div className="text-[13px] font-semibold text-foreground">{row.skill.name}</div>
                 <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">
                   {row.skill.description || "No description."}
                 </div>
-              </td>
-              <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(row.binding.assignedAt)}</td>
-              <td className="px-4 py-3 text-right">
-                <WriteButton
-                  type="button"
-                  aria-label={`Remove ${row.skill.name}`}
-                  onClick={() => setRemoveTarget(row)}
-                  className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </WriteButton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+              </>
+            ),
+          },
+          {
+            key: "added",
+            header: "Added",
+            className: "w-[190px]",
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">{formatDateTime(row.binding.assignedAt)}</span>
+            ),
+          },
+          {
+            key: "remove",
+            header: "",
+            align: "right",
+            className: "w-[90px]",
+            cell: (row) => (
+              <WriteButton
+                type="button"
+                aria-label={`Remove ${row.skill.name}`}
+                onClick={() => setRemoveTarget(row)}
+                className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </WriteButton>
+            ),
+          },
+        ]}
+      />
 
       <SonaeModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title="Add skills" size="lg">
         {/* The same tick-list the company screen uses. It replaced a two-pane

@@ -19,7 +19,6 @@
     "src/app/(dashboard)/admin/agents/[id]/logs/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/runs/page.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/skills/page.tsx",
     "src/app/(dashboard)/admin/agents/skills/page.tsx",
     "src/app/(dashboard)/admin/ai/chat-logs/page.tsx",
     "src/app/(dashboard)/admin/ai/models/catalogue/page.tsx",
