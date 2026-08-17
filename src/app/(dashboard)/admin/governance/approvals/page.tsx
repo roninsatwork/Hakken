@@ -8,16 +8,11 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
-  PaginationFooter,
   RowActions,
   RowIconButton,
   SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
 } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
@@ -30,7 +25,6 @@ import { useState } from "react";
 type Decision = "APPROVED" | "REJECTED" | "CANCELLED";
 type ConfirmableDecision = Exclude<Decision, "APPROVED">;
 
-const COLUMN_COUNT = 5;
 
 function safeFormatJson(value?: string) {
   if (!value) return null;
@@ -113,141 +107,145 @@ export default function AgentApprovalsPage() {
 
       <SaveError>{action.error}</SaveError>
 
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : approvals}
+        rowKey={(entry) => entry.approval._id}
         minWidthClassName="min-w-[900px]"
-        footer={(
-          <PaginationFooter
-            page={paged.page}
-            totalPages={paged.totalPages}
-            totalCount={paged.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={paged.isBusy}
-            onPageChange={paged.goToPage}
-            labels={{ empty: t("footer.empty") }}
-          />
-        )}
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.tool")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.agent")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.run")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.requested")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("columns.actions")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={COLUMN_COUNT} />
-          ) : approvals.length === 0 ? (
-            <TableEmptyRow
-              colSpan={COLUMN_COUNT}
-              icon={<ShieldCheck className="w-8 h-8 text-muted/30" />}
-              label={searchTerm.trim() ? t("empty.noMatches") : t("empty.none")}
-            />
-          ) : (
-            approvals.map((entry) => {
+        empty={{
+          icon: <ShieldCheck className="w-8 h-8 text-muted/30" />,
+          label: searchTerm.trim() ? t("empty.noMatches") : t("empty.none"),
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: paged.isBusy,
+          onPageChange: paged.goToPage,
+          labels: { empty: t("footer.empty") },
+        }}
+        columns={[
+          {
+            key: "tool",
+            header: t("columns.tool"),
+            cell: (entry) => {
               const approvalId = entry.approval._id;
-              const preview = safeFormatJson(entry.approval.previewJson);
-              const isSubmitting = action.isBusy(approvalId);
               const isExpanded = expandedId === approvalId;
+              const preview = safeFormatJson(entry.approval.previewJson);
               const toolName = entry.toolCall?.normalizedToolName || t("unknownTool");
 
               return (
-                <tr key={approvalId} className="border-b border-border-dim/40 last:border-0 group align-top">
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(isExpanded ? null : approvalId)}
-                      aria-expanded={isExpanded}
-                      className="flex items-start gap-2 text-left"
-                    >
-                      {/* One rotated chevron rather than a pair of directional
-                          icons. The drift guard treats those as the signature of
-                          the hand-rolled pagination the shared footer replaced,
-                          and it matches on text, so it cannot tell an expander
-                          from a pager. Rotation sidesteps the ambiguity. */}
-                      <ChevronDown
-                        className={`w-4 h-4 mt-0.5 shrink-0 text-muted transition-transform ${isExpanded ? "" : "-rotate-90"}`}
-                      />
-                      <span className="flex flex-col gap-1.5">
-                        <span className="text-[13px] font-medium text-foreground">{toolName}</span>
-                        {entry.toolCall?.sideEffectLevel && (
-                          <span className={`self-start px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${sideEffectToneClass(entry.toolCall.sideEffectLevel)}`}>
-                            {t(`sideEffect.${entry.toolCall.sideEffectLevel}`)}
-                          </span>
-                        )}
-                      </span>
-                    </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : approvalId)}
+                    aria-expanded={isExpanded}
+                    className="flex items-start gap-2 text-left"
+                  >
+                    {/* One rotated chevron rather than a pair of directional
+                        icons. The drift guard treats those as the signature of
+                        the hand-rolled pagination the shared footer replaced,
+                        and it matches on text, so it cannot tell an expander
+                        from a pager. Rotation sidesteps the ambiguity. */}
+                    <ChevronDown
+                      className={`w-4 h-4 mt-0.5 shrink-0 text-muted transition-transform ${isExpanded ? "" : "-rotate-90"}`}
+                    />
+                    <span className="flex flex-col gap-1.5">
+                      <span className="text-[13px] font-medium text-foreground">{toolName}</span>
+                      {entry.toolCall?.sideEffectLevel && (
+                        <span className={`self-start px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${sideEffectToneClass(entry.toolCall.sideEffectLevel)}`}>
+                          {t(`sideEffect.${entry.toolCall.sideEffectLevel}`)}
+                        </span>
+                      )}
+                    </span>
+                  </button>
 
-                    {isExpanded && (
-                      <div className="mt-3 flex flex-col gap-2">
-                        <p className="text-[12px] text-secondary leading-relaxed">
-                          {entry.approval.message || t("defaultMessage")}
-                        </p>
-                        {/* The payload the decision is actually made on. It does not
-                            get summarised away, only folded out of the way. */}
-                        {preview && (
-                          <pre className="max-h-[240px] max-w-[520px] overflow-auto rounded-[8px] border border-border-dim bg-background/60 p-3 text-[11px] leading-relaxed text-secondary">
-                            {preview}
-                          </pre>
-                        )}
-                      </div>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    {entry.agent?.name || t("unknownAgent")}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1 max-w-[280px]">
-                      <span className="text-[13px] text-secondary truncate">
-                        {entry.run?.objective || t("unknownObjective")}
-                      </span>
-                      {entry.run && (
-                        <div className="flex items-center gap-3 text-[11px]">
-                          {/* The timeline, which is where the context for this
-                              decision lives. The old link went to the agent and
-                              the run itself was not reachable at all. */}
-                          <Link href={`/admin/agents/${entry.run.agentId}/runs`} className="text-brand hover:underline">
-                            {t("links.openRun")}
-                          </Link>
-                          <Link href={`/admin/agents/${entry.run.agentId}`} className="text-secondary hover:text-foreground hover:underline">
-                            {t("links.openAgent")}
-                          </Link>
-                        </div>
+                  {isExpanded && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      <p className="text-[12px] text-secondary leading-relaxed">
+                        {entry.approval.message || t("defaultMessage")}
+                      </p>
+                      {/* The payload the decision is actually made on. It does
+                          not get summarised away, only folded out of the way. */}
+                      {preview && (
+                        <pre className="max-h-[240px] max-w-[520px] overflow-auto rounded-[8px] border border-border-dim bg-background/60 p-3 text-[11px] leading-relaxed text-secondary">
+                          {preview}
+                        </pre>
                       )}
                     </div>
-                  </td>
-
-                  <td className="px-4 py-3 text-[12px] text-muted whitespace-nowrap">
-                    {formatDateTime(entry.approval.requestedAt)}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <RowActions>
-                      <RowIconButton
-                        label={t("actions.approve")}
-                        onClick={() => submitDecision(approvalId, "APPROVED")}
-                      >
-                        <CheckCircle2 className={`w-4 h-4 ${isSubmitting ? "opacity-40" : ""}`} />
-                      </RowIconButton>
-                      <RowIconButton
-                        label={t("actions.reject")}
-                        tone="danger"
-                        onClick={() => setPendingConfirmation({ approvalId, decision: "REJECTED", toolName })}
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </RowIconButton>
-                    </RowActions>
-                  </td>
-                </tr>
+                  )}
+                </>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+          {
+            key: "agent",
+            header: t("columns.agent"),
+            cell: (entry) => (
+              <span className="text-[13px] text-secondary">{entry.agent?.name || t("unknownAgent")}</span>
+            ),
+          },
+          {
+            key: "run",
+            header: t("columns.run"),
+            cell: (entry) => (
+              <div className="flex flex-col gap-1 max-w-[280px]">
+                <span className="text-[13px] text-secondary truncate">
+                  {entry.run?.objective || t("unknownObjective")}
+                </span>
+                {entry.run && (
+                  <div className="flex items-center gap-3 text-[11px]">
+                    {/* The timeline, which is where the context for this decision
+                        lives. The old link went to the agent and the run itself
+                        was not reachable at all. */}
+                    <Link href={`/admin/agents/${entry.run.agentId}/runs`} className="text-brand hover:underline">
+                      {t("links.openRun")}
+                    </Link>
+                    <Link href={`/admin/agents/${entry.run.agentId}`} className="text-secondary hover:text-foreground hover:underline">
+                      {t("links.openAgent")}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "requested",
+            header: t("columns.requested"),
+            className: "whitespace-nowrap",
+            cell: (entry) => (
+              <span className="text-[12px] text-muted">{formatDateTime(entry.approval.requestedAt)}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: t("columns.actions"),
+            align: "right",
+            cell: (entry) => {
+              const approvalId = entry.approval._id;
+              const toolName = entry.toolCall?.normalizedToolName || t("unknownTool");
+              return (
+                <RowActions>
+                  <RowIconButton
+                    label={t("actions.approve")}
+                    onClick={() => submitDecision(approvalId, "APPROVED")}
+                  >
+                    <CheckCircle2 className={`w-4 h-4 ${action.isBusy(approvalId) ? "opacity-40" : ""}`} />
+                  </RowIconButton>
+                  <RowIconButton
+                    label={t("actions.reject")}
+                    tone="danger"
+                    onClick={() => setPendingConfirmation({ approvalId, decision: "REJECTED", toolName })}
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </RowIconButton>
+                </RowActions>
+              );
+            },
+          },
+        ]}
+      />
 
       <ConfirmationModal
         isOpen={pendingConfirmation !== null}
