@@ -7,7 +7,7 @@ import { BrainCircuit, Loader2, MessageSquareText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Id } from "@/convex/_generated/dataModel";
-import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
+import { ModalField, ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import {
   CompanyAiFormActions,
   CompanyAiFormPageHeader,
@@ -20,7 +20,6 @@ import {
 } from "@/src/app/(dashboard)/admin/_components/MemoryFields";
 import {
   ModalFormField,
-  modalInputClassName,
   modalTextareaClassName,
 } from "@/src/ui/components/screens/ModalForm";
 
@@ -131,15 +130,14 @@ export default function NewChatMemoryCandidatePage() {
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
           <ModalFormError>{action.error}</ModalFormError>
-          <ModalFormField label="Title" hint="Optional">
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))}
-              className={modalInputClassName}
-              placeholder="No delivery dates over chat"
-            />
-          </ModalFormField>
+          <ModalField
+            label="Title"
+            hint="Optional"
+            type="text"
+            value={formData.title}
+            onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))}
+            placeholder="No delivery dates over chat"
+          />
           <MemoryContentField
             value={formData.content}
             onChange={(content) => setFormData((current) => ({ ...current, content }))}

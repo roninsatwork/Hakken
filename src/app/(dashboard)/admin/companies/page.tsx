@@ -22,6 +22,7 @@ import {
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
 import {
+  ModalField,
   ModalFormActions,
   ModalFormError,
   ModalFormField,
@@ -266,16 +267,14 @@ export default function CompaniesPage() {
           <ModalFormError>{submitError}</ModalFormError>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <ModalFormField label={t('nameLabel')}>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className={modalInputClassName}
-              placeholder={t('namePlaceholder')}
-            />
-          </ModalFormField>
+          <ModalField
+            label={t('nameLabel')}
+            type="text"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder={t('namePlaceholder')}
+          />
 
           <ModalFormField label={t('promptLabel')} hint={t('promptOptional')}>
             <textarea

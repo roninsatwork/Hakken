@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
+  ModalField,
   ModalFormError,
   ModalFormField,
   modalInputClassName,
@@ -138,13 +139,11 @@ export function EditEvalScreen({
         <div className="flex flex-col gap-5">
           <ModalFormError>{action.error}</ModalFormError>
 
-          <ModalFormField label="Name this eval">
-            <input
-              className={modalInputClassName}
-              value={form.name}
-              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-            />
-          </ModalFormField>
+          <ModalField
+            label="Name this eval"
+            value={form.name}
+            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+          />
 
           <ModalFormField label="What would someone ask?">
             <textarea
