@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
   FieldLabel,
@@ -19,7 +20,6 @@ import {
   SettingSwitch,
   SettingsCard,
   fieldClassName,
-  textAreaClassName,
 } from "@/src/ui/components/screens/SettingsCard";
 import {
   formatModelDisplayName,
@@ -279,24 +279,22 @@ export default function NewAgentPage() {
               }
             />
 
-            <FieldLabel htmlFor="agent-name">{ts("sections.identity.name")}</FieldLabel>
-            <input
+            <Field
+              label={ts("sections.identity.name")}
               id="agent-name"
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={fieldClassName}
               placeholder={t("placeholders.name")}
             />
 
-            <FieldLabel htmlFor="agent-description">{ts("sections.identity.description")}</FieldLabel>
-            <textarea
+            <TextAreaField
+              label={ts("sections.identity.description")}
               id="agent-description"
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className={textAreaClassName}
               placeholder={t("placeholders.description")}
             />
 
@@ -400,27 +398,22 @@ export default function NewAgentPage() {
                 onChange={(next) => setFormData({ ...formData, requireHumanApproval: next })}
               >
                 {formData.requireHumanApproval && (
-                  <div className="flex flex-col gap-1.5 pt-3">
-                    <label htmlFor="agent-approval-expiry" className="text-[11px] text-secondary">
-                      {ts("sections.engine.approval.expiryLabel")}
-                    </label>
-                    <input
-                      id="agent-approval-expiry"
-                      type="number"
-                      min={0}
-                      step="1"
-                      max={approvalExpiry?.maxHours ?? 720}
-                      value={formData.approvalExpiryHours}
-                      onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
-                      placeholder={String(approvalExpiry?.expiryHours ?? 24)}
-                      className="h-[42px] w-full max-w-[220px] rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
-                    />
-                    <p className="text-[11px] leading-relaxed text-muted">
-                      {ts("sections.engine.approval.expiryHint", {
-                        hours: approvalExpiry?.expiryHours ?? 24,
-                      })}
-                    </p>
-                  </div>
+                  <Field
+                    label={ts("sections.engine.approval.expiryLabel")}
+                    id="agent-approval-expiry"
+                    type="number"
+                    min={0}
+                    step="1"
+                    max={approvalExpiry?.maxHours ?? 720}
+                    value={formData.approvalExpiryHours}
+                    onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
+                    placeholder={String(approvalExpiry?.expiryHours ?? 24)}
+                    hint={ts("sections.engine.approval.expiryHint", {
+                      hours: approvalExpiry?.expiryHours ?? 24,
+                    })}
+                    wrapperClassName="pt-3"
+                    className="h-[42px] max-w-[220px] px-3 text-[13px] focus:border-brand/40"
+                  />
                 )}
               </SettingSwitch>
             </div>
@@ -443,33 +436,28 @@ export default function NewAgentPage() {
                 // formats what is typed and strips the commas on the way out.
                 const grouped = key === "maxInputTokens";
                 return (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
-                      {ts(`sections.engine.budget.fields.${key}`)}
-                    </label>
-                    <input
-                      id={`agent-limit-${key}`}
-                      type={grouped ? "text" : "number"}
-                      inputMode={grouped ? "numeric" : undefined}
-                      {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
-                      step={key === "maxCostGBP" ? "0.01" : "1"}
-                      value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
-                        })
-                      }
-                      placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
-                      className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
-                    />
-                    <p className="text-[11px] text-muted">
-                      {ts("sections.engine.budget.inherits", {
-                        value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
-                        ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
-                      })}
-                    </p>
-                  </div>
+                  <Field
+                    key={key}
+                    label={ts(`sections.engine.budget.fields.${key}`)}
+                    id={`agent-limit-${key}`}
+                    type={grouped ? "text" : "number"}
+                    inputMode={grouped ? "numeric" : undefined}
+                    {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
+                    step={key === "maxCostGBP" ? "0.01" : "1"}
+                    value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
+                      })
+                    }
+                    placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
+                    hint={ts("sections.engine.budget.inherits", {
+                      value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
+                      ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
+                    })}
+                    className="px-3 text-[13px] focus:border-brand/40"
+                  />
                 );
               })}
             </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download, Gauge, Share2, ShieldCheck } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
+import { Field } from "@/src/ui/components/screens/Field";
 import type { MovementDenseCaptureAdapter } from "../../../movements/_lib/movementDenseCapture";
 import {
   MOVEMENT_DENSE_CAPTURE_DEVICE_BENCHMARK,
@@ -438,15 +439,13 @@ export default function DenseCaptureDeviceBenchmarkPage() {
                   <option value="hot-or-unstable">Became hot, slowed down, or became unstable</option>
                 </select>
               </label>
-              <label className="text-sm text-foreground">
-                <span className="mb-2 block font-semibold">Optional observation note</span>
-                <input
-                  className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3"
-                  onChange={(event) => setObservationNote(event.target.value)}
-                  placeholder="For example: warm near the camera, no slowdown"
-                  value={observationNote}
-                />
-              </label>
+              <Field
+                label="Optional observation note"
+                className="rounded-xl border-white/10 bg-black/25 px-3"
+                onChange={(event) => setObservationNote(event.target.value)}
+                placeholder="For example: warm near the camera, no slowdown"
+                value={observationNote}
+              />
               {thermalOutcome === "hot-or-unstable" && (
                 <p className="text-sm text-amber-100 md:col-span-2">
                   Download the report, but this device result will correctly block model approval until the browser workload is reduced.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, Ref, TextareaHTMLAttributes } from "react";
 import { cn } from "@/src/ui/lib/utils";
 import { FieldHint, FieldLabel, fieldClassName, textAreaClassName } from "./SettingsCard";
 
@@ -39,15 +39,31 @@ type FieldProps = {
    */
   labelHidden?: boolean;
   className?: string;
+  /**
+   * Classes for the label-and-box wrapper, not the box.
+   *
+   * A field is three elements stacked, so a screen that needs the field itself
+   * to behave — to stretch into the height a card has left, to sit in a grid
+   * cell, to be capped narrower than its neighbours — has to reach the wrapper.
+   * Before this existed the only way to keep that behaviour was to leave the
+   * field hand-written, which is how a stretching text area stayed off the kit.
+   */
+  wrapperClassName?: string;
+  /**
+   * For a screen that has to reach the box itself — to focus it, or to read
+   * what is in it on a key press. Named rather than passed as `ref` so it says
+   * which of the three elements it lands on, matching `InlineSearchInput`.
+   */
+  inputRef?: Ref<HTMLInputElement>;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
 
-export function Field({ label, hint, error, labelHidden, className, id, ...inputProps }: FieldProps) {
+export function Field({ label, hint, error, labelHidden, className, wrapperClassName, inputRef, id, ...inputProps }: FieldProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const describedById = hint || error ? `${fieldId}-description` : undefined;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={cn("flex flex-col gap-1.5", wrapperClassName)}>
       {labelHidden ? (
         <label htmlFor={fieldId} className="sr-only">{label}</label>
       ) : (
@@ -55,6 +71,7 @@ export function Field({ label, hint, error, labelHidden, className, id, ...input
       )}
       <input
         {...inputProps}
+        ref={inputRef}
         id={fieldId}
         aria-describedby={describedById}
         aria-invalid={error ? true : undefined}
@@ -78,15 +95,17 @@ type TextAreaFieldProps = {
   /** As on `Field`: keep the label for whoever is listening, not for whoever is looking. */
   labelHidden?: boolean;
   className?: string;
+  /** As on `Field`: classes for the label-and-box wrapper, not the box. */
+  wrapperClassName?: string;
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className">;
 
-export function TextAreaField({ label, hint, error, labelHidden, className, id, ...textAreaProps }: TextAreaFieldProps) {
+export function TextAreaField({ label, hint, error, labelHidden, className, wrapperClassName, id, ...textAreaProps }: TextAreaFieldProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const describedById = hint || error ? `${fieldId}-description` : undefined;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={cn("flex flex-col gap-1.5", wrapperClassName)}>
       {labelHidden ? (
         <label htmlFor={fieldId} className="sr-only">{label}</label>
       ) : (

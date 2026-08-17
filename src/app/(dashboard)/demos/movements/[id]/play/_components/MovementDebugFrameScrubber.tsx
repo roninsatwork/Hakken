@@ -1,6 +1,7 @@
 "use client";
 
 import { Bookmark, Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { Field } from "@/src/ui/components/screens/Field";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import type { MovementInstructorRetargetAnalysis } from "../../../_hooks/useMovementInstructorPlayback";
 import type { MovementDebugQaPreset } from "../../../_lib/movementDebugQaPresets";
@@ -196,9 +197,13 @@ export default function MovementDebugFrameScrubber({
           </div>
           <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-white/60">
             <span>Frame</span>
-            <input
-              aria-label="Debug frame number"
-              className={`h-7 w-20 rounded-lg border border-white/10 bg-white/10 px-2 text-center font-mono text-white outline-none transition focus:border-[${MOVEMENT_MINT}]/60`}
+            {/* The word "Frame" sits beside it, so the name is kept for a screen
+                reader and not repeated. The overlay has its own dark styling,
+                which is why so much of the house field is overridden here. */}
+            <Field
+              label="Debug frame number"
+              labelHidden
+              className={`h-7 w-20 rounded-lg border-white/10 bg-white/10 px-2 text-center font-mono text-[13px] text-white transition focus:border-[${MOVEMENT_MINT}]/60`}
               defaultValue={Math.min(frameIndex + 1, frameCount)}
               max={frameCount}
               min={1}
@@ -212,7 +217,7 @@ export default function MovementDebugFrameScrubber({
                   jumpToInputFrame();
                 }
               }}
-              ref={frameInputRef}
+              inputRef={frameInputRef}
               type="number"
             />
             <button

@@ -2,6 +2,7 @@
 
 import Typography from "@/src/ui/atoms/typography";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { ModalField } from "@/src/ui/components/screens/ModalForm";
 import { MIN_MOVEMENT_CAPTURE_FRAMES } from "../_lib/saveMovementRecording";
 import {
   MOVEMENT_BODY_FOCUS_OPTIONS,
@@ -85,18 +86,13 @@ export default function MovementSaveDialog({
   return (
     <SonaeModal isOpen={isOpen} onClose={onClose} title="Save Practice">
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground tracking-wide uppercase">
-            Practice Name
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => onTitleChange(event.target.value)}
-            placeholder="e.g., Tall Spine Flow"
-            className={`bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[${MOVEMENT_SALMON}]/50 focus:ring-1 focus:ring-[${MOVEMENT_SALMON}]/50 transition-all`}
-          />
-        </div>
+        <ModalField
+          label="Practice Name"
+          type="text"
+          value={title}
+          onChange={(event) => onTitleChange(event.target.value)}
+          placeholder="e.g., Tall Spine Flow"
+        />
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-foreground tracking-wide uppercase">
             Difficulty
@@ -130,18 +126,13 @@ export default function MovementSaveDialog({
             {MOVEMENT_SPINE_GOAL_OPTIONS.find((option) => option.value === spineGoal)?.description}
           </Typography>
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground tracking-wide uppercase">
-            Instructor Cue
-          </label>
-          <input
-            type="text"
-            value={primaryCue}
-            onChange={(event) => onPrimaryCueChange(event.target.value)}
-            placeholder="e.g., Keep ribs over hips"
-            className={`bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[${MOVEMENT_SALMON}]/50 focus:ring-1 focus:ring-[${MOVEMENT_SALMON}]/50 transition-all`}
-          />
-        </div>
+        <ModalField
+          label="Instructor Cue"
+          type="text"
+          value={primaryCue}
+          onChange={(event) => onPrimaryCueChange(event.target.value)}
+          placeholder="e.g., Keep ribs over hips"
+        />
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-medium text-foreground tracking-wide uppercase">
             Body Focus

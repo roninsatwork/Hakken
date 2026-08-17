@@ -14,6 +14,7 @@ import {
   SaveAction,
   SaveError,
 } from "@/src/ui/components/screens/SaveControls";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 // Shared with the create screen, which used to be built from a different set of
 // cards, labels and buttons entirely.
 import {
@@ -319,24 +320,25 @@ export default function AgentOverviewPage() {
               }
             />
 
-            <FieldLabel htmlFor="agent-name">{t("sections.identity.name")}</FieldLabel>
-            <input
+            <Field
+              label={t("sections.identity.name")}
               id="agent-name"
               type="text"
               value={formData.name || ""}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand/50"
             />
 
-            <FieldLabel htmlFor="agent-description">{t("sections.identity.description")}</FieldLabel>
             {/* Grows into whatever height the column ends up at, rather than
-                leaving the card half empty beside a taller neighbour. */}
-            <textarea
+                leaving the card half empty beside a taller neighbour. Both the
+                wrapper and the box have to stretch for that to reach through. */}
+            <TextAreaField
+              label={t("sections.identity.description")}
               id="agent-description"
               rows={3}
               value={formData.description || ""}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="min-h-[96px] w-full flex-1 resize-none rounded-[12px] border border-border-dim bg-black/20 px-4 py-3 text-[13px] leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand/50"
+              wrapperClassName="flex-1"
+              className="flex-1"
             />
 
             {/*
@@ -460,27 +462,22 @@ export default function AgentOverviewPage() {
                 {/* Only meaningful while approval is on: an autonomous agent never
                     waits, so there is nothing for a window to bound. */}
                 {formData.requireHumanApproval && (
-                  <div className="flex flex-col gap-1.5 pt-3">
-                    <label htmlFor="agent-approval-expiry" className="text-[11px] text-secondary">
-                      {t("sections.engine.approval.expiryLabel")}
-                    </label>
-                    <input
-                      id="agent-approval-expiry"
-                      type="number"
-                      min={0}
-                      step="1"
-                      max={approvalExpiry?.maxHours ?? 720}
-                      value={formData.approvalExpiryHours}
-                      onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
-                      placeholder={String(approvalExpiry?.expiryHours ?? 24)}
-                      className="h-[42px] w-full max-w-[220px] rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
-                    />
-                    <p className="text-[11px] leading-relaxed text-muted">
-                      {t("sections.engine.approval.expiryHint", {
-                        hours: approvalExpiry?.expiryHours ?? 24,
-                      })}
-                    </p>
-                  </div>
+                  <Field
+                    label={t("sections.engine.approval.expiryLabel")}
+                    id="agent-approval-expiry"
+                    type="number"
+                    min={0}
+                    step="1"
+                    max={approvalExpiry?.maxHours ?? 720}
+                    value={formData.approvalExpiryHours}
+                    onChange={(e) => setFormData({ ...formData, approvalExpiryHours: e.target.value })}
+                    placeholder={String(approvalExpiry?.expiryHours ?? 24)}
+                    hint={t("sections.engine.approval.expiryHint", {
+                      hours: approvalExpiry?.expiryHours ?? 24,
+                    })}
+                    wrapperClassName="pt-3"
+                    className="h-[42px] max-w-[220px] px-3 text-[13px] focus:border-brand/40"
+                  />
                 )}
               </SettingSwitch>
             </div>
@@ -506,33 +503,28 @@ export default function AgentOverviewPage() {
                 // formats what is typed and strips the commas on the way out.
                 const grouped = key === "maxInputTokens";
                 return (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    <label htmlFor={`agent-limit-${key}`} className="text-[11px] text-secondary">
-                      {t(`sections.engine.budget.fields.${key}`)}
-                    </label>
-                    <input
-                      id={`agent-limit-${key}`}
-                      type={grouped ? "text" : "number"}
-                      inputMode={grouped ? "numeric" : undefined}
-                      {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
-                      step={key === "maxCostGBP" ? "0.01" : "1"}
-                      value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
-                        })
-                      }
-                      placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
-                      className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-3 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/40"
-                    />
-                    <p className="text-[11px] text-muted">
-                      {t("sections.engine.budget.inherits", {
-                        value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
-                        ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
-                      })}
-                    </p>
-                  </div>
+                  <Field
+                    key={key}
+                    label={t(`sections.engine.budget.fields.${key}`)}
+                    id={`agent-limit-${key}`}
+                    type={grouped ? "text" : "number"}
+                    inputMode={grouped ? "numeric" : undefined}
+                    {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[limit] })}
+                    step={key === "maxCostGBP" ? "0.01" : "1"}
+                    value={grouped ? formatLimitNumber(formData[key]) : formData[key]}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        [key]: grouped ? e.target.value.replace(/[^0-9]/g, "") : e.target.value,
+                      })
+                    }
+                    placeholder={AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB")}
+                    hint={t("sections.engine.budget.inherits", {
+                      value: AGENT_LIMIT_DEFAULTS[limit].toLocaleString("en-GB"),
+                      ceiling: AGENT_LIMIT_CEILINGS[limit].toLocaleString("en-GB"),
+                    })}
+                    className="px-3 text-[13px] focus:border-brand/40"
+                  />
                 );
               })}
             </div>

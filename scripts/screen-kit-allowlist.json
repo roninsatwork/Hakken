@@ -1,20 +1,12 @@
 {
-  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow — move the screen onto the kit instead of adding to it. Some entries are settled decisions rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17); WidgetPreviewPanel draws a mock-up of the customer's own chat widget rather than a form; WikiQuickSwitcher is a command palette, where a bordered field would put a box inside a box; and MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them.",
+  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Each list may shrink, never grow — move the screen onto the kit instead of adding to it. As of 2026-08-17 every entry left is a settled decision rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md: the opportunity report stays hand-written (Anthony, 2026-08-17); WidgetPreviewPanel draws a mock-up of the customer's own chat widget rather than a form; MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them; SettingBlock's opacity box is the same shape, a number and a per-cent sign mid-sentence; and app/tasks is a grouped list with its own due-date row, recorded as a decision when Tasks first moved onto the kit.",
   "tables": [
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
   "inputs": [
-    "src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx",
     "src/app/(dashboard)/admin/_features/wiki/MoneyViewScreen.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/settings/page.tsx",
-    "src/app/(dashboard)/admin/agents/new/page.tsx",
-    "src/app/(dashboard)/admin/agents/skills/page.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/ai/chat-logs/[threadId]/evals/new/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx",
-    "src/app/(dashboard)/app/tasks/page.tsx",
-    "src/app/(dashboard)/demos/movement-capture/benchmark/device/page.tsx",
-    "src/app/(dashboard)/demos/movements/[id]/play/_components/MovementDebugFrameScrubber.tsx",
-    "src/app/(dashboard)/demos/movements/_components/MovementSaveDialog.tsx"
+    "src/app/(dashboard)/app/tasks/page.tsx"
   ]
 }

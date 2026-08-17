@@ -20,6 +20,11 @@ import {
 import { formatDateTime } from "@/src/lib/dates";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import {
+  ModalField,
+  ModalFormField,
+  ModalTextAreaField,
+} from "@/src/ui/components/screens/ModalForm";
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
@@ -409,27 +414,24 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
       <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Edit skill" size="lg">
         <form onSubmit={saveEdit} className="flex flex-col gap-4 px-1 pb-2">
           {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Name
+          <ModalField
+            label="Name"
+            value={editName}
+            onChange={(event) => setEditName(event.target.value)}
+          />
+          <ModalTextAreaField
+            label="Description"
+            value={editDescription}
+            onChange={(event) => setEditDescription(event.target.value)}
+            rows={3}
+            placeholder="What this skill is for, in your own words."
+          />
+          {/* A file picker is the browser's own control, so it keeps its own
+              styling; the kit's wrapper is here for the label tie and the
+              sentence underneath. */}
+          <ModalFormField label="Replace the file" htmlFor="skill-edit-file">
             <input
-              value={editName}
-              onChange={(event) => setEditName(event.target.value)}
-              className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Description
-            <textarea
-              value={editDescription}
-              onChange={(event) => setEditDescription(event.target.value)}
-              rows={3}
-              placeholder="What this skill is for, in your own words."
-              className="rounded-[8px] border border-border-dim bg-card px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand/50 resize-none"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Replace the file
-            <input
+              id="skill-edit-file"
               type="file"
               accept=".md,.markdown,text/markdown"
               onChange={(event) => setEditFile(event.target.files?.[0] ?? null)}
@@ -440,7 +442,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
                 ? `Currently ${editTarget.sourceFilename}. Leave empty to keep it.`
                 : "No file behind this skill yet."}
             </span>
-          </label>
+          </ModalFormField>
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setEditTarget(null)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
               Cancel
@@ -486,35 +488,29 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             a list of validation warnings before it would let anyone finish. */}
         <form onSubmit={addSkill} className="flex flex-col gap-4 px-1 pb-2">
           {error && <div className="rounded-[8px] border border-red-500/20 bg-red-500/10 p-3 text-[12px] text-red-300">{error}</div>}
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Name
+          <ModalField
+            label="Name"
+            value={newName}
+            onChange={(event) => setNewName(event.target.value)}
+            placeholder="What you want to call this skill"
+          />
+          <ModalTextAreaField
+            label="Description"
+            value={newDescription}
+            onChange={(event) => setNewDescription(event.target.value)}
+            rows={3}
+            placeholder="What this skill is for, in your own words."
+          />
+          <ModalFormField label="Skill file" htmlFor="skill-new-file">
             <input
-              value={newName}
-              onChange={(event) => setNewName(event.target.value)}
-              placeholder="What you want to call this skill"
-              className="h-10 rounded-[8px] border border-border-dim bg-card px-3 text-[13px] text-foreground outline-none focus:border-brand/50"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Description
-            <textarea
-              value={newDescription}
-              onChange={(event) => setNewDescription(event.target.value)}
-              rows={3}
-              placeholder="What this skill is for, in your own words."
-              className="rounded-[8px] border border-border-dim bg-card px-3 py-2 text-[13px] text-foreground outline-none focus:border-brand/50 resize-none"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[12px] text-secondary">
-            Skill file
-            <input
+              id="skill-new-file"
               type="file"
               accept=".md,.markdown,text/markdown"
               onChange={(event) => setNewFile(event.target.files?.[0] ?? null)}
               className="text-[13px] text-secondary file:mr-3 file:rounded-[8px] file:border-0 file:bg-foreground/10 file:px-3 file:py-2 file:text-[12px] file:text-foreground"
             />
             <span className="text-[11px] text-muted">A SKILL.md file. Its contents become the instructions the agent follows.</span>
-          </label>
+          </ModalFormField>
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
               Cancel

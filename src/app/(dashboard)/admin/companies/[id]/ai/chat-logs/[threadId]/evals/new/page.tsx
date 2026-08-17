@@ -8,10 +8,10 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
+  ModalField,
   ModalFormError,
   ModalFormField,
-  modalInputClassName,
-  modalTextareaClassName,
+  ModalTextAreaField,
 } from "@/src/ui/components/screens/ModalForm";
 import {
   CompanyAiFormActions,
@@ -159,15 +159,13 @@ export default function NewChatEvalPage() {
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
           <ModalFormError>{action.error}</ModalFormError>
-          <ModalFormField label="Name">
-            <input
-              required
-              className={modalInputClassName}
-              value={evalForm.name}
-              onChange={(event) => setEvalForm((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Regression name"
-            />
-          </ModalFormField>
+          <ModalField
+            label="Name"
+            required
+            value={evalForm.name}
+            onChange={(event) => setEvalForm((current) => ({ ...current, name: event.target.value }))}
+            placeholder="Regression name"
+          />
           <ModalFormField label="Where does this apply?">
             <div className="flex flex-col gap-2">
               {WHERE_OPTIONS.map((option) => (
@@ -188,58 +186,54 @@ export default function NewChatEvalPage() {
             </div>
           </ModalFormField>
 
-          <ModalFormField label="What would someone ask?">
-            <textarea
-              required
-              className={`${modalTextareaClassName} min-h-[190px]`}
-              value={evalForm.prompt}
-              onChange={(event) => setEvalForm((current) => ({ ...current, prompt: event.target.value }))}
-              placeholder="Question or task to replay as an eval."
-            />
-          </ModalFormField>
-          <ModalFormField label="What does a good answer look like?">
-            <textarea
-              required
-              className={`${modalTextareaClassName} min-h-[190px]`}
-              value={evalForm.expectedBehavior}
-              onChange={(event) => setEvalForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
-              placeholder="What a passing answer must do."
-            />
-          </ModalFormField>
-          <ModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
-            <div className="flex flex-col gap-2">
-              <input
-                className={modalInputClassName}
-                value={phraseDraft}
-                onChange={(event) => setPhraseDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addPhrase();
-                  }
-                }}
-                onBlur={addPhrase}
-                placeholder="enterprise is free"
-              />
-              {bannedPhrases.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {bannedPhrases.map((phrase) => (
-                    <span key={phrase} className="inline-flex items-center gap-1.5 rounded-full border border-border-dim bg-foreground/5 px-3 py-1 text-[12px] text-foreground">
-                      {phrase}
-                      <button
-                        type="button"
-                        aria-label={`Remove ${phrase}`}
-                        onClick={() => setBannedPhrases((current) => current.filter((entry) => entry !== phrase))}
-                        className="text-muted transition-colors hover:text-red-400"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </ModalFormField>
+          <ModalTextAreaField
+            label="What would someone ask?"
+            required
+            minHeightClassName="min-h-[190px]"
+            value={evalForm.prompt}
+            onChange={(event) => setEvalForm((current) => ({ ...current, prompt: event.target.value }))}
+            placeholder="Question or task to replay as an eval."
+          />
+          <ModalTextAreaField
+            label="What does a good answer look like?"
+            required
+            minHeightClassName="min-h-[190px]"
+            value={evalForm.expectedBehavior}
+            onChange={(event) => setEvalForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
+            placeholder="What a passing answer must do."
+          />
+          <ModalField
+            label="Words it must never say"
+            hint="Optional. Press Enter after each one."
+            value={phraseDraft}
+            onChange={(event) => setPhraseDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addPhrase();
+              }
+            }}
+            onBlur={addPhrase}
+            placeholder="enterprise is free"
+          >
+            {bannedPhrases.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {bannedPhrases.map((phrase) => (
+                  <span key={phrase} className="inline-flex items-center gap-1.5 rounded-full border border-border-dim bg-foreground/5 px-3 py-1 text-[12px] text-foreground">
+                    {phrase}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${phrase}`}
+                      onClick={() => setBannedPhrases((current) => current.filter((entry) => entry !== phrase))}
+                      className="text-muted transition-colors hover:text-red-400"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </ModalField>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
             <input

@@ -30,7 +30,8 @@ import {
   History,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { PaginationFooter } from "@/src/ui/components/screens/Table";
+import { InlineSearchInput, PaginationFooter } from "@/src/ui/components/screens/Table";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
@@ -566,12 +567,17 @@ export function KnowledgeManager({
               <h3 className="text-[13px] font-semibold text-foreground">Retrieval test</h3>
             </div>
             <form onSubmit={handleRunRetrievalTest} className="flex flex-col sm:flex-row gap-2 lg:min-w-[460px]">
-              <input
+              {/* The heading beside it already says what this box is for, so the
+                  name is kept for a screen reader and not repeated on screen. */}
+              <Field
+                label="Search the stored text"
                 type="text"
                 value={retrievalQuery}
                 onChange={(event) => setRetrievalQuery(event.target.value)}
-                placeholder="Search stored chunks"
-                className="h-9 flex-1 bg-background border border-border-dim rounded-[8px] px-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors"
+                placeholder="Search the stored text"
+                labelHidden
+                wrapperClassName="flex-1"
+                className="h-9 bg-background px-3 text-[13px] focus:border-brand"
               />
               <WriteButton
                 type="submit"
@@ -724,19 +730,21 @@ export function KnowledgeManager({
           <div className="bg-sidebar/30 border border-border-dim rounded-[16px] p-6">
             <h3 className="text-sm font-bold mb-4">Text</h3>
             <div className="flex flex-col gap-4">
-              <input
+              <Field
+                label="Title"
                 type="text"
                 value={textTitle}
                 onChange={(event) => setTextTitle(event.target.value)}
-                placeholder="Enter title"
-                className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-brand transition-colors"
+                placeholder="What this document is called"
+                className="h-auto bg-background px-4 py-3 focus:border-brand"
               />
-              <textarea
+              <TextAreaField
+                label="Text"
                 value={textContent}
                 onChange={(event) => setTextContent(event.target.value)}
-                placeholder="+ Insert text here"
+                placeholder="Paste or type the text here"
                 rows={6}
-                className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors resize-y"
+                className="resize-y bg-background focus:border-brand"
               />
               <div className="flex justify-end">
                 <WriteButton
@@ -762,15 +770,21 @@ export function KnowledgeManager({
                   <span className="font-medium">{websiteError}</span>
                 </div>
               )}
+              {/* The heading above says "Website URL", so the name is kept for a
+                  screen reader and not repeated on screen. A hidden label sits
+                  outside the flow, so the field is exactly as tall as its box
+                  and the state icon still centres on it. */}
               <div className="relative">
-                <input
+                <Field
+                  label="Website URL"
                   type="text"
                   value={websiteUrl}
                   onChange={(event) => setWebsiteUrl(event.target.value)}
                   onKeyDown={handleMapUrl}
-                  placeholder="+Add website URL and press Enter"
+                  placeholder="Paste a website address and press Enter"
                   disabled={isMapping || isQueueing}
-                  className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-success transition-colors pr-10"
+                  labelHidden
+                  className="h-auto bg-background px-4 py-3 pr-10 focus:border-success"
                 />
                 {isMapping ? (
                   <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-success animate-spin" />
@@ -881,19 +895,16 @@ export function KnowledgeManager({
                     </div>
                     {isExpanded && (
                       <div className="flex flex-col border-t border-border-dim bg-background">
-                        <div className="px-4 py-3 flex items-center gap-2 border-b border-border-dim/50">
-                          <Search className="w-4 h-4 text-muted" />
-                          <input
-                            type="text"
+                        <div className="px-4 py-3 border-b border-border-dim/50">
+                          <InlineSearchInput
                             value={searchTerm}
-                            onChange={(event) =>
+                            onChange={(next) =>
                               setWebsiteGroupSearchTerms((prev) => ({
                                 ...prev,
-                                [root]: event.target.value,
+                                [root]: next,
                               }))
                             }
                             placeholder="Search stored pages"
-                            className="bg-transparent border-none outline-none text-[13px] w-full"
                           />
                         </div>
                         <div className="p-2 text-[12px] font-medium text-secondary">
