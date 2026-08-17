@@ -11,6 +11,7 @@ import { use } from "react";
 import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 
@@ -129,7 +130,7 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
-               <span className="text-foreground text-[14px] font-bold tracking-wide">Rule Name</span>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
              </div>
              
              {/* Read-Only Identity Tag */}
@@ -138,14 +139,13 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
              </div>
            </div>
            
-           <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Friendly Label</label>
-             <input
+           <div className="ml-1">
+             <Field
+               label="What to call this rule"
                autoFocus
-	               value={form.name}
-	               onChange={(e) => updateDraft({ name: e.target.value })}
-               placeholder="e.g. 'Geography Extraction'"
-               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-indigo-500/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+               value={form.name}
+               onChange={(e) => updateDraft({ name: e.target.value })}
+               placeholder="For example: Office address"
              />
            </div>
         </section>
@@ -158,13 +158,12 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
               <span className="text-foreground text-[14px] font-bold tracking-wide">{t("trigger.label")}</span>
             </div>
           </div>
-          <div className="flex flex-col gap-2 relative group ml-1">
-            <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("trigger.entity")}</label>
-            <input
-	              value={form.trigger}
-	              onChange={(e) => updateDraft({ trigger: e.target.value })}
+          <div className="ml-1">
+            <Field
+              label={t("trigger.entity")}
+              value={form.trigger}
+              onChange={(e) => updateDraft({ trigger: e.target.value })}
               placeholder={t("trigger.placeholder")}
-              className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
             />
           </div>
         </section>
@@ -196,13 +195,13 @@ export default function EditAgentRulePage({ params }: { params: Promise<{ id: Id
             <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("instruction.label")}</span>
           </div>
-          <div className="flex flex-col gap-2 relative group ml-1 min-h-[160px] flex-1">
-            <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("instruction.context")}</label>
-            <textarea
-	              value={form.instruction}
-	              onChange={(e) => updateDraft({ instruction: e.target.value })}
+          <div className="ml-1">
+            <TextAreaField
+              label={t("instruction.context")}
+              value={form.instruction}
+              onChange={(e) => updateDraft({ instruction: e.target.value })}
               placeholder={t("instruction.placeholder.edit")}
-              className="w-full h-full resize-y min-h-[160px] bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
+              className="min-h-[300px] resize-y"
               spellCheck={false}
             />
           </div>

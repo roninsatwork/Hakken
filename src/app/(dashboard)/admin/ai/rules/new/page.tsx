@@ -9,6 +9,7 @@ import { BrainCircuit, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
 export default function NewRulePage() {
   const router = useRouter();
@@ -62,14 +63,14 @@ export default function NewRulePage() {
           className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Engine Logic</span>
+          <span>Back to rules</span>
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
           <BrainCircuit className="w-6 h-6 text-brand" />
-          Construct Semantic Rule
+          Add a rule
         </h1>
         <p className="text-[13px] text-secondary tracking-wide">
-          Map explicit user behavioral triggers to rigorous framework instructions.
+          Tell the assistant what to do when someone says something in particular.
         </p>
       </header>
 
@@ -81,17 +82,16 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Rule Name</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
            </div>
-           
-           <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Friendly Label</label>
-             <input
+
+           <div className="ml-1">
+             <Field
+               label="What to call this rule"
                autoFocus
                value={name}
                onChange={(e) => setName(e.target.value)}
-               placeholder="e.g. 'Geography Extraction'"
-               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-indigo-500/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+               placeholder="For example: Office address"
              />
            </div>
         </section>
@@ -100,17 +100,15 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">2</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Semantic Trigger Vector</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">When to use it</span>
            </div>
-           
-           <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Keyword Correlation Entity</label>
-             <input
-               autoFocus
+
+           <div className="ml-1">
+             <Field
+               label="Words or phrases that set it off"
                value={trigger}
                onChange={(e) => setTrigger(e.target.value)}
-               placeholder="e.g. 'book a meeting' or 'refund'"
-               className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+               placeholder="For example: where are you based, what is your address"
              />
            </div>
         </section>
@@ -119,7 +117,7 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">3</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Behavioral Priority Tier</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">How important it is</span>
            </div>
            
            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-1">
@@ -140,16 +138,16 @@ export default function NewRulePage() {
         <section className="flex flex-col gap-3 flex-1">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Execution Framework Instructions</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">What the assistant should do</span>
            </div>
-           
-           <div className="flex flex-col gap-2 relative group ml-1 h-[300px]">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">LLM Execution Context</label>
-             <textarea
+
+           <div className="ml-1">
+             <TextAreaField
+               label="The instruction, in your own words"
                value={instruction}
                onChange={(e) => setInstruction(e.target.value)}
-               placeholder="e.g. Inform the user that we do not handle refunds, and explicitly tell them to route to support@example.com..."
-               className="w-full h-full resize-none bg-transparent border border-border-dim rounded-[10px] p-5 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
+               placeholder="For example: Tell them our office is in London and offer to book a visit."
+               className="min-h-[300px] resize-y"
                spellCheck={false}
              />
            </div>
@@ -165,7 +163,7 @@ export default function NewRulePage() {
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-            <span>Compile New Logic Branch</span>
+            <span>Create rule</span>
           </WriteButton>
         </div>
       </form>

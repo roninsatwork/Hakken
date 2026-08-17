@@ -1529,25 +1529,25 @@
             "confirm": "Delete"
           },
           "form": {
-            "back": "Back to Rules",
+            "back": "Back to rules",
             "create": {
-              "title": "Add Rule",
-              "subtitle": "Create a new instruction for this agent.",
-              "submit": "Create Rule"
+              "title": "Add a rule",
+              "subtitle": "Tell the assistant what to do when someone says something in particular.",
+              "submit": "Create rule"
             },
             "edit": {
-              "title": "Edit Rule",
-              "subtitle": "Modify an existing instruction for this agent.",
+              "title": "Edit rule",
+              "subtitle": "Change what the assistant does when someone says something.",
               "idLabel": "ID: {id}",
-              "submit": "Save Changes"
+              "submit": "Save changes"
             },
             "trigger": {
-              "label": "Activation Trigger",
-              "entity": "When this happens...",
-              "placeholder": "e.g., When asked about pricing..."
+              "label": "When to use it",
+              "entity": "Words or phrases that set it off",
+              "placeholder": "For example: where are you based, what is your address"
             },
             "priority": {
-              "label": "Execution Priority",
+              "label": "How important it is",
               "levels": {
                 "LOW": "Low",
                 "NORMAL": "Normal",
@@ -1556,11 +1556,11 @@
               }
             },
             "instruction": {
-              "label": "Agent Instruction",
-              "context": "Agent must do the following:",
+              "label": "What the assistant should do",
+              "context": "The instruction, in your own words",
               "placeholder": {
-                "new": "Type the exact instruction the agent must follow...",
-                "edit": "Type the exact instruction the agent must follow..."
+                "new": "For example: Tell them our office is in London and offer to book a visit.",
+                "edit": "For example: Tell them our office is in London and offer to book a visit."
               }
             }
           }

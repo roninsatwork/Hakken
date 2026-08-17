@@ -9,6 +9,7 @@ import { BrainCircuit, Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
 
@@ -106,14 +107,14 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
           className="flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors mb-2 w-max"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Company Rules</span>
+          <span>Back to rules</span>
         </Link>
         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
           <BrainCircuit className="w-6 h-6 text-brand" />
-          Edit Rule
+          Edit rule
         </h1>
         <p className="text-[13px] text-secondary tracking-wide">
-          Change how the AI responds to this trigger phrase.
+          Change what the assistant does when someone says something.
         </p>
       </header>
 
@@ -126,7 +127,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
-               <span className="text-foreground text-[14px] font-bold tracking-wide">Rule Name</span>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
              </div>
              
              {/* Read-Only Identity Tag */}
@@ -135,14 +136,13 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
              </div>
            </div>
            
-           <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Friendly Label</label>
-             <input
+           <div className="ml-1">
+             <Field
+               label="What to call this rule"
                autoFocus
-	               value={form.name}
-	               onChange={(e) => updateDraft({ name: e.target.value })}
-               placeholder="e.g. 'Geography Extraction'"
-               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-indigo-500/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+               value={form.name}
+               onChange={(e) => updateDraft({ name: e.target.value })}
+               placeholder="For example: Office address"
              />
            </div>
         </section>
@@ -152,18 +152,17 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
            <div className="flex items-center justify-between">
              <div className="flex items-center gap-3">
                <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">2</div>
-               <span className="text-foreground text-[14px] font-bold tracking-wide">Trigger Phrase</span>
+               <span className="text-foreground text-[14px] font-bold tracking-wide">When to use it</span>
              </div>
              
            </div>
            
-           <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Keywords</label>
-             <input
-	               value={form.trigger}
-	               onChange={(e) => updateDraft({ trigger: e.target.value })}
-               placeholder="e.g. 'book a meeting'"
-               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+           <div className="ml-1">
+             <Field
+               label="Words or phrases that set it off"
+               value={form.trigger}
+               onChange={(e) => updateDraft({ trigger: e.target.value })}
+               placeholder="For example: where are you based, what is your address"
              />
            </div>
         </section>
@@ -172,7 +171,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-amber-500/20">3</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Priority Level</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">How important it is</span>
            </div>
            
            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 ml-1">
@@ -193,16 +192,16 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
         <section className="flex flex-col gap-3 flex-1">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">AI Instructions</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">What the assistant should do</span>
            </div>
-           
-           <div className="flex flex-col gap-2 relative group ml-1 min-h-[160px] flex-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Instructions</label>
-             <textarea
-	               value={form.instruction}
-	               onChange={(e) => updateDraft({ instruction: e.target.value })}
-               placeholder="Provide explicit instructions for how the AI should react..."
-               className="w-full h-full resize-y min-h-[160px] bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
+
+           <div className="ml-1">
+             <TextAreaField
+               label="The instruction, in your own words"
+               value={form.instruction}
+               onChange={(e) => updateDraft({ instruction: e.target.value })}
+               placeholder="For example: Tell them our office is in London and offer to book a visit."
+               className="min-h-[300px] resize-y"
                spellCheck={false}
              />
            </div>
@@ -218,7 +217,7 @@ export default function EditCompanyRulePage({ params }: { params: Promise<{ id: 
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Save Rule</span>
+            <span>Save changes</span>
           </WriteButton>
         </div>
       </form>

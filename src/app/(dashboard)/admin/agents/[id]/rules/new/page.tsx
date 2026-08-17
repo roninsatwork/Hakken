@@ -10,6 +10,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
 export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<"agents"> }> }) {
   const t = useTranslations("admin.agents.details.rules.form");
@@ -87,17 +88,16 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
         <section className="flex flex-col gap-3">
            <div className="flex items-center gap-3">
              <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
-             <span className="text-foreground text-[14px] font-bold tracking-wide">Rule Name</span>
+             <span className="text-foreground text-[14px] font-bold tracking-wide">Name</span>
            </div>
            
-           <div className="flex flex-col gap-2 relative group ml-1">
-             <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Friendly Label</label>
-             <input
+           <div className="ml-1">
+             <Field
+               label="What to call this rule"
                autoFocus
                value={name}
                onChange={(e) => setName(e.target.value)}
-               placeholder="e.g. 'Geography Extraction'"
-               className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-3 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-indigo-500/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
+               placeholder="For example: Office address"
              />
            </div>
         </section>
@@ -108,14 +108,12 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
             <div className="w-5 h-5 rounded-full bg-[#10b981] text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-[#10b981]/20">2</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("trigger.label")}</span>
           </div>
-          <div className="flex flex-col gap-2 relative group ml-1">
-            <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("trigger.entity")}</label>
-            <input
-              autoFocus
+          <div className="ml-1">
+            <Field
+              label={t("trigger.entity")}
               value={trigger}
               onChange={(e) => setTrigger(e.target.value)}
               placeholder={t("trigger.placeholder")}
-              className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-[#10b981]/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
             />
           </div>
         </section>
@@ -147,13 +145,13 @@ export default function NewAgentRulePage({ params }: { params: Promise<{ id: Id<
             <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("instruction.label")}</span>
           </div>
-          <div className="flex flex-col gap-2 relative group ml-1 h-[300px]">
-            <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("instruction.context")}</label>
-            <textarea
+          <div className="ml-1">
+            <TextAreaField
+              label={t("instruction.context")}
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               placeholder={t("instruction.placeholder.new")}
-              className="w-full h-full resize-none bg-transparent border border-border-dim rounded-[10px] p-5 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
+              className="min-h-[300px] resize-y"
               spellCheck={false}
             />
           </div>

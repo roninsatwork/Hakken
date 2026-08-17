@@ -32,11 +32,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const NAME = "e.g. 'Geography Extraction'";
-const TRIGGER = "e.g. 'book a meeting' or 'refund'";
-const INSTRUCTION =
-  "e.g. Inform the user that we do not handle refunds, and explicitly tell them to route to support@example.com...";
-const SUBMIT = "Compile New Logic Branch";
+const NAME = "For example: Office address";
+const TRIGGER = "For example: where are you based, what is your address";
+const INSTRUCTION = "For example: Tell them our office is in London and offer to book a visit.";
+const SUBMIT = "Create rule";
 
 describe("NewRulePage", () => {
   const createRuleMock = vi.fn();
@@ -97,6 +96,28 @@ describe("NewRulePage", () => {
       target: { value: "Answer with the London office address." },
     });
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
+  });
+
+  /**
+   * True only since the screen moved onto the shared field. All three labels
+   * were loose text before, so clicking one focused nothing and a screen reader
+   * announced three unlabelled boxes.
+   */
+  it("gives every box a label that addresses it", () => {
+    renderWithProviders(<NewRulePage />);
+
+    expect(screen.getByLabelText("What to call this rule")).toBe(screen.getByPlaceholderText(NAME));
+    expect(screen.getByLabelText("Words or phrases that set it off")).toBe(screen.getByPlaceholderText(TRIGGER));
+    expect(screen.getByLabelText("The instruction, in your own words")).toBe(screen.getByPlaceholderText(INSTRUCTION));
+  });
+
+  /**
+   * Two boxes both claimed the cursor before, so it landed in the second one.
+   */
+  it("starts the cursor in the first box", () => {
+    renderWithProviders(<NewRulePage />);
+
+    expect(screen.getByPlaceholderText(NAME)).toHaveFocus();
   });
 
   it("returns to the rules list once the rule is created", async () => {

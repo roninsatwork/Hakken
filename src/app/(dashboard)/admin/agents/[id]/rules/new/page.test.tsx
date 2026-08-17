@@ -39,7 +39,7 @@ vi.mock("next-intl", () => ({
 }));
 
 const FORM = "admin.agents.details.rules.form";
-const NAME = "e.g. 'Geography Extraction'";
+const NAME = "For example: Office address";
 const TRIGGER = `${FORM}.trigger.placeholder`;
 const INSTRUCTION = `${FORM}.instruction.placeholder.new`;
 const SUBMIT = `${FORM}.create.submit`;
@@ -110,6 +110,28 @@ describe("NewAgentRulePage", () => {
       target: { value: "Answer with the London office address." },
     });
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
+  });
+
+  /**
+   * True only since the screen moved onto the shared field. All three labels
+   * were loose text before, so clicking one focused nothing and a screen reader
+   * announced three unlabelled boxes.
+   */
+  it("gives every box a label that addresses it", () => {
+    show();
+
+    expect(screen.getByLabelText("What to call this rule")).toBe(screen.getByPlaceholderText(NAME));
+    expect(screen.getByLabelText(`${FORM}.trigger.entity`)).toBe(screen.getByPlaceholderText(TRIGGER));
+    expect(screen.getByLabelText(`${FORM}.instruction.context`)).toBe(screen.getByPlaceholderText(INSTRUCTION));
+  });
+
+  /**
+   * Two boxes both claimed the cursor before, so it landed in the second one.
+   */
+  it("starts the cursor in the first box", () => {
+    show();
+
+    expect(screen.getByPlaceholderText(NAME)).toHaveFocus();
   });
 
   it("returns to the agent's rules once the rule is created", async () => {

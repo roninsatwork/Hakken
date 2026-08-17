@@ -12,7 +12,7 @@
  * synchronously, with its params in hand.
  */
 export function routeParams<T extends object>(value: T): Promise<T> {
-  const thenable = Promise.resolve(value) as Promise<T> & {
+  const thenable = Promise.resolve(value) as unknown as Promise<T> & {
     status: "fulfilled";
     value: T;
   };
