@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
  * so it is in reach from both halves of the app; this check is what stops the
  * next screen drifting back off it.
  *
- * Two rules, both about a part that already exists:
+ * Three rules, each about a part that already exists:
  *
  * - A `<table>` written by hand. `TableShell` owns the shell, the overflow, the
  *   header row and cells, the loading and empty rows, and both footers.
@@ -27,6 +27,16 @@ import { fileURLToPath } from "node:url";
  *   `Field` ties the label to the input and will not let you skip it, which is
  *   the part 88 screens were skipping — an untied label is silent to a screen
  *   reader and invisible to whoever wrote the screen.
+ * - A table **assembled** from the kit's loose parts rather than taken whole
+ *   from `DataTable`. Added 2026-08-17, and it is the rule the other two kept
+ *   missing. Importing every shared part and wiring them together passes both
+ *   the rules above and still produces a screen that does not match: the drift
+ *   lives in the wiring. Thirty screens were read closely over 2026-08-16 and
+ *   17 and every fault found was of that kind — a footer that appeared only
+ *   when there was more to load, a search box inside a second border, a loading
+ *   state written as a sentence, an empty message conditioned so it never
+ *   showed when the list was actually empty. Sixty-one screens are frozen here
+ *   at the moment the rule was written.
  *
  * A tick box, a file picker, a colour swatch and a slider are deliberately not
  * covered. The kit has no replacement for them, so flagging one would be a
@@ -65,6 +75,7 @@ const CONTROL_TYPES = new Set([
 const RULES = {
   tables: {
     part: "a table",
+    headline: "These draw a table by hand instead of using the kit:",
     fix:
       "Use TableShell from src/ui/components/screens/Table.tsx, with TableHeaderRow,\n" +
       "TableHeaderCell, TableLoadingRow and TableEmptyRow inside it. TableShell draws\n" +
@@ -72,12 +83,41 @@ const RULES = {
   },
   inputs: {
     part: "a text field",
+    headline: "These draw a text field by hand instead of using the kit:",
     fix:
       "Use Field from src/ui/components/screens/Field.tsx — it ties the label to the\n" +
       "input for you. TableSearchInput (screens/TableControls.tsx) for a table's search\n" +
       "box, ModalFormField (screens/ModalForm.tsx) for a field inside a modal.",
   },
+  assembled: {
+    part: "a table out of the kit's loose parts",
+    headline: "These build a table out of the kit's loose parts instead of using DataTable:",
+    fix:
+      "Use DataTable from src/ui/components/screens/DataTable.tsx. Importing TableShell\n" +
+      "and its friends and wiring them together is not sharing a table — it is one more\n" +
+      "assembly of the same parts, and every drift found so far lived in the wiring\n" +
+      "rather than the parts: a footer that only appeared when there was more to load,\n" +
+      "a search box inside a second border, a loading state that was a line of text.\n" +
+      "A screen should say its columns, its rows, what its empty state says, and which\n" +
+      "footer it uses. Nothing else is left to arrange.",
+  },
 };
+
+/**
+ * Parts that only make sense as pieces of a table.
+ *
+ * `SearchBar` is deliberately not here: a screen can legitimately put one above
+ * a set of cards, and failing that would be a build error with no correct fix.
+ */
+const TABLE_PARTS = [
+  "TableShell",
+  "TableHeaderRow",
+  "TableHeaderCell",
+  "TableLoadingRow",
+  "TableEmptyRow",
+  "PaginationFooter",
+  "LoadMoreFooter",
+];
 
 const ALLOWLIST_FILE = path.join(rootDir, "scripts", "screen-kit-allowlist.json");
 
@@ -96,6 +136,7 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
   return {
     tables: new Set(allowlist.tables ?? []),
     inputs: new Set(allowlist.inputs ?? []),
+    assembled: new Set(allowlist.assembled ?? []),
   };
 }
 
@@ -186,6 +227,21 @@ function findInFile(relative, text) {
     found.push({ rule: "inputs", file: relative, line: lineOf(match.index) });
   }
 
+  // One hit per file rather than per part: the fault is the assembly, and
+  // listing nine lines of it would read as nine problems rather than one.
+  if (!/<DataTable\b/.test(text)) {
+    const firstPart = TABLE_PARTS
+      .map((part) => text.search(new RegExp(`\\b${part}\\b`)))
+      .filter((index) => index >= 0)
+      .sort((left, right) => left - right)[0];
+    const firstHead = text.search(/<thead\b/);
+    const at = [firstPart, firstHead >= 0 ? firstHead : undefined]
+      .filter((index) => index !== undefined)
+      .sort((left, right) => left - right)[0];
+
+    if (at !== undefined) found.push({ rule: "assembled", file: relative, line: lineOf(at) });
+  }
+
   return found;
 }
 
@@ -241,8 +297,8 @@ function main() {
 
   if (offenders.length === 0 && stale.length === 0) {
     console.log(
-      `Screen kit: ${frozen.tables.size} tables and ${frozen.inputs.size} fields frozen, ` +
-        "no new hand-written ones."
+      `Screen kit: ${frozen.tables.size} tables, ${frozen.inputs.size} fields and ` +
+        `${frozen.assembled.size} hand-assembled tables frozen, no new ones.`
     );
     return;
   }
@@ -251,7 +307,7 @@ function main() {
     const forRule = offenders.filter((offender) => offender.rule === rule);
     if (forRule.length === 0) continue;
 
-    console.error(`\nThese draw ${RULES[rule].part} by hand instead of using the kit:\n`);
+    console.error(`\n${RULES[rule].headline}\n`);
     for (const offender of forRule) {
       console.error(`  ${offender.file}:${offender.line}`);
     }

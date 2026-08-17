@@ -39,6 +39,10 @@ Shared backend helpers for admin-style listing behavior live in `convex/adminQue
 
 ## Tables And Search
 
+**Use `DataTable` for a list screen.** It owns the whole arrangement — shell, header row and cells, loading row, empty row, search box and both footers — and a screen says only what is different about it: its columns, its rows, what its empty state says, and which footer it uses. The loose parts below are what `DataTable` is built from; reach for them only when building something that is not a list screen.
+
+That distinction is not a style preference. Sixty-four screens each imported the loose parts and wired them together, and every fault found while reading thirty of them closely lived in the wiring rather than the parts: a footer that only appeared when there was more to load, a search box drawn inside a second border, a loading state written as a sentence where a row goes, an empty message conditioned so it never showed when the list was actually empty. None of it was visible in the code. The build now fails on a new screen that assembles its own — see below.
+
 Use `TableShell` for admin tables. It supplies the bordered glass shell, horizontal overflow, and optional footer slot. The default minimum table width is `min-w-[1000px]`; pass `minWidthClassName` only when a table truly needs a different fixed scanning width.
 
 Use:
@@ -179,14 +183,15 @@ When adding a new screen, under `/admin` or `/app`:
 
 Do not put UI cards inside other UI cards unless the component already owns that framing. Avoid page-specific table/modal variants unless the existing shared components cannot express the behavior.
 
-## The Build Enforces Two Of These
+## The Build Enforces Three Of These
 
 `scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.
 
-Two rules:
+Three rules:
 
 - **A hand-written `<table>`.** Use `TableShell` with `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow` and `TableEmptyRow`. `TableShell` renders the `<table>` element itself — pass it a `<thead>`/`<tbody>`, never another `<table>`. Two governance screens did the latter and shipped a table nested inside an empty one; that defect is the reason this check exists.
 - **A hand-written `<input>` that a person types into.** Use `Field`, or `TableSearchInput` for a table's search box, or `ModalFormField` inside a modal. `Field` ties the label to the input and will not let a caller skip it.
+- **A table assembled from the loose parts instead of `DataTable`.** Added 2026-08-17, and it is the rule the other two kept missing: a screen can import every shared part, write no `<table>` and no `<input>`, pass both rules above, and still be one more assembly that drifts. Triggered by a `<thead>` or by importing `TableShell`, `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow`, `TableEmptyRow`, `PaginationFooter` or `LoadMoreFooter` in a file that does not render `DataTable`. `SearchBar` is deliberately excluded — a screen may legitimately put one above a set of cards. Sixty-one screens are frozen under `assembled`, to be worked down as each moves across.
 
 A tick box, radio, file picker, colour swatch, slider or hidden input is not covered. The kit has no part for those, so flagging one would be a build failure with no correct fix.
 

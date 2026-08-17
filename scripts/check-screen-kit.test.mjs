@@ -112,14 +112,47 @@ describe("the screen kit guard", () => {
 
   it("accepts a screen built from the kit", () => {
     write(
-      'import { TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";\n' +
+      'import { DataTable } from "@/src/ui/components/screens/DataTable";\n' +
         'import { Field } from "@/src/ui/components/screens/Field";\n' +
+        "export const Probe = () => (\n" +
+        "  <DataTable\n" +
+        '    columns={[{ key: "name", header: "Name", cell: () => <Field label="Name" value="" onChange={() => {}} /> }]}\n' +
+        "    rows={[]}\n" +
+        "  />\n" +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts().some((o) => o.file === probeRelative)).toBe(false);
+  });
+
+  /*
+    The rule the other two kept missing. This probe passes both of them — it
+    writes no `<table>` and no `<input>`, and every part it uses is the shared
+    one — and it is still a screen assembling its own table, which is where
+    every drift found on 2026-08-16 and 17 actually lived.
+  */
+  it("catches a screen that assembles a table from the kit's loose parts", () => {
+    write(
+      'import { TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";\n' +
         "export const Probe = () => (\n" +
         "  <TableShell>\n" +
         "    <thead><TableHeaderRow><TableHeaderCell>Name</TableHeaderCell></TableHeaderRow></thead>\n" +
-        '    <tbody><tr><td><Field label="Name" value="" onChange={() => {}} /></td></tr></tbody>\n' +
+        "    <tbody><tr><td>probe</td></tr></tbody>\n" +
         "  </TableShell>\n" +
         ");\n"
+    );
+
+    expect(findHandWrittenParts()).toContainEqual({
+      rule: "assembled",
+      file: probeRelative,
+      line: 1,
+    });
+  });
+
+  it("leaves a screen with no table alone", () => {
+    write(
+      'import { Field } from "@/src/ui/components/screens/Field";\n' +
+        "export const Probe = () => <Field label=\"Name\" value=\"\" onChange={() => {}} />;\n"
     );
 
     expect(findHandWrittenParts().some((o) => o.file === probeRelative)).toBe(false);
