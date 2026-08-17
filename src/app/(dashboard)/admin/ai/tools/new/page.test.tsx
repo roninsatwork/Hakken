@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation } from "convex/react";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
+import { expectStandardFormScreen } from "@/src/test/standardFormScreen";
 import RegisterToolPage from "./page";
 
 /**
@@ -116,7 +117,7 @@ describe("RegisterToolPage", () => {
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "DESTRUCTIVE" } });
     fireEvent.click(screen.getByLabelText("Require approval"));
     fireEvent.click(screen.getByLabelText("Active"));
-    fireEvent.click(screen.getByRole("button", { name: "SUPER_ADMIN" }));
+    fireEvent.click(screen.getByRole("button", { name: "System admin" }));
     fireEvent.change(screen.getByPlaceholderText(OUTPUT_SCHEMA), { target: { value: '{"type":"object"}' } });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 
@@ -141,6 +142,12 @@ describe("RegisterToolPage", () => {
 
     fireEvent.change(screen.getByPlaceholderText(HANDLER), { target: { value: "api.stock.check" } });
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
+  });
+
+  it("meets the floor every form screen has to clear", () => {
+    renderWithProviders(<RegisterToolPage />);
+
+    expectStandardFormScreen({ minBoxes: 5 });
   });
 
   it("returns to the tools list once the tool is created", async () => {

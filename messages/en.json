@@ -1169,28 +1169,28 @@
     },
     "aiTools": {
       "new": {
-        "back": "Back to Tools Library",
-        "title": "Add AI Tool",
-        "subtitle": "Create a new executable function for the AI to use.",
+        "back": "Back to tools",
+        "title": "Add a tool",
+        "subtitle": "Give the assistant something it can go and do.",
         "fields": {
           "name": {
-            "label": "Tool Name",
-            "placeholder": "e.g. check_inventory",
-            "help": "Must be strictly snake_case with no spaces. This is the exact name the AI model will receive."
+            "label": "Name the assistant will use",
+            "placeholder": "For example: check_stock",
+            "help": "Lower case, words joined by underscores, no spaces. The box tidies it as you type."
           },
           "description": {
-            "label": "How to use",
-            "placeholder": "Tell the AI exactly what this tool does and when it should use it..."
+            "label": "What it does, and when to use it",
+            "placeholder": "For example: Looks up how many of an item are left in stock."
           },
           "handler": {
-            "label": "Internal Function Path",
-            "placeholder": "e.g. api.integrations.stripe.createCharge"
+            "label": "Which piece of code it runs",
+            "placeholder": "For example: api.stock.check"
           },
           "role": {
-            "label": "Required Role"
+            "label": "Who is allowed to use it"
           }
         },
-        "submit": "Add AI Tool"
+        "submit": "Add tool"
       }
     },
     "agents": {

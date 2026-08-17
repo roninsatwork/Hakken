@@ -12,6 +12,7 @@ import { ArrowLeft, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { formatDateTime } from "@/src/lib/dates";
 import { SaveAction } from "@/src/ui/components/screens/SaveControls";
+import { Field } from "@/src/ui/components/screens/Field";
 
 type ConnectorDraft = {
   configuredSecretRefs: string;
@@ -279,19 +280,14 @@ export default function ConnectorSetupPage() {
               )}
               {accountRefLabel && (
                 <div className="flex flex-col gap-2 py-4">
-                  <label htmlFor="connector-account-ref" className="text-[13px] font-medium text-foreground">
-                    {accountRefLabel}
-                  </label>
-                  <p className="text-[12px] leading-relaxed text-muted">
-                    The account this connector is bound to. Calls, messages or requests arriving for it are routed to this workspace.
-                  </p>
-                  <input
+                  <Field
                     id="connector-account-ref"
-                    type="text"
+                    label={accountRefLabel}
+                    hint="The account this connector is bound to. Calls, messages or requests arriving for it are routed to this workspace."
                     value={form.authAccountRef}
                     onChange={(event) => updateDraft({ authAccountRef: event.target.value })}
                     placeholder="+44..."
-                    className="h-[46px] w-full max-w-sm rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
+                    className="max-w-sm"
                   />
                 </div>
               )}
@@ -300,19 +296,14 @@ export default function ConnectorSetupPage() {
                   answered "No secret references are required" directly beneath it. */}
               {requiredSecretRefs.length > 0 && (
                 <div className="flex flex-col gap-2 py-4">
-                  <label htmlFor="connector-secrets" className="text-[13px] font-medium text-foreground">
-                    Keys it needs
-                  </label>
-                  <p className="text-[12px] leading-relaxed text-muted">
-                    This tool needs {requiredSecretRefs.join(" and ")} set on the server. Name them here so Sonae knows where to look — the values themselves never live in this screen.
-                  </p>
-                  <input
+                  <Field
                     id="connector-secrets"
-                    type="text"
+                    label="Keys it needs"
+                    hint={`This tool needs ${requiredSecretRefs.join(" and ")} set on the server. Name them here so Sonae knows where to look — the values themselves never live in this screen.`}
                     value={form.configuredSecretRefs}
                     onChange={(event) => updateDraft({ configuredSecretRefs: event.target.value })}
                     placeholder={requiredSecretRefs.join(", ")}
-                    className="h-[46px] w-full max-w-sm rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
+                    className="max-w-sm"
                   />
                   {missingRefs.length > 0 && (
                     <p className="text-[12px] leading-relaxed text-amber-400">

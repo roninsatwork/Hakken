@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
+import { expectStandardFormScreen } from "@/src/test/standardFormScreen";
 import ConnectorSetupPage from "./page";
 
 vi.mock("convex/react", () => ({
@@ -116,6 +117,16 @@ describe("ConnectorSetupPage", () => {
   it("asks for keys only when the tool actually needs them", () => {
     render(<ConnectorSetupPage />);
     expect(screen.queryByLabelText("Keys it needs")).not.toBeInTheDocument();
+  });
+
+  it("meets the floor every form screen has to clear", () => {
+    details = {
+      ...baseDetails,
+      definition: { ...baseDetails.definition, requiredSecretRefs: ["base_url"] },
+    };
+    render(<ConnectorSetupPage />);
+
+    expectStandardFormScreen();
   });
 
   it("names the keys a tool needs, and says which are still missing", () => {

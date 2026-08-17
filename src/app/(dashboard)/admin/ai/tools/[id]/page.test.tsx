@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { routeParams } from "@/src/test/routeParams";
+import { expectStandardFormScreen } from "@/src/test/standardFormScreen";
 import EditToolPage from "./page";
 
 /**
@@ -35,12 +36,12 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const NAME = "e.g. check_inventory_status";
-const DESCRIPTION = "Tell the LLM exactly what this tool does and when to use it...";
-const HANDLER = "e.g. api.integrations.stripe.createCharge";
+const NAME = "For example: check_stock";
+const DESCRIPTION = "For example: Looks up how many of an item are left in stock.";
+const HANDLER = "For example: api.stock.check";
 const INPUT_SCHEMA = '{"type":"object","properties":{}}';
 const OUTPUT_SCHEMA = 'Optional: {"type":"object","properties":{}}';
-const SUBMIT = "Commit System Modifications";
+const SUBMIT = "Save changes";
 
 const TOOL_ID = "tool_1234567890" as Id<"aiTools">;
 
@@ -133,7 +134,7 @@ describe("EditToolPage", () => {
 
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "DESTRUCTIVE" } });
     fireEvent.click(screen.getByLabelText("Require approval"));
-    fireEvent.click(screen.getByRole("button", { name: "SUPER_ADMIN" }));
+    fireEvent.click(screen.getByRole("button", { name: "System admin" }));
     fireEvent.change(screen.getByPlaceholderText(OUTPUT_SCHEMA), { target: { value: '{"type":"string"}' } });
     fireEvent.click(screen.getByRole("button", { name: SUBMIT }));
 
@@ -152,6 +153,12 @@ describe("EditToolPage", () => {
     expect(screen.getByRole("button", { name: SUBMIT })).toBeEnabled();
     fireEvent.change(screen.getByPlaceholderText(HANDLER), { target: { value: "   " } });
     expect(screen.getByRole("button", { name: SUBMIT })).toBeDisabled();
+  });
+
+  it("meets the floor every form screen has to clear", () => {
+    show();
+
+    expectStandardFormScreen({ minBoxes: 5 });
   });
 
   it("returns to the tools list once the edit is saved", async () => {

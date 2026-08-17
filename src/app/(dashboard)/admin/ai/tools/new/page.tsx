@@ -8,6 +8,7 @@ import { Wrench, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
 type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 
@@ -88,30 +89,25 @@ export default function RegisterToolPage() {
           
           {/* Left Column */}
           <div className="flex flex-col gap-8">
-            <div className="flex flex-col gap-2 relative group">
-              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("fields.name.label")}</label>
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
-                placeholder={t("fields.name.placeholder")}
-                className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
-              />
-              <p className="text-[11px] text-muted mt-1 px-1">{t("fields.name.help")}</p>
-            </div>
+            <Field
+              label={t("fields.name.label")}
+              hint={t("fields.name.help")}
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+              placeholder={t("fields.name.placeholder")}
+            />
+
+            <Field
+              label={t("fields.handler.label")}
+              value={handlerMapping}
+              onChange={(e) => setHandlerMapping(e.target.value)}
+              placeholder={t("fields.handler.placeholder")}
+              className="font-mono"
+            />
 
             <div className="flex flex-col gap-2 relative group">
-              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("fields.handler.label")}</label>
-              <input
-                value={handlerMapping}
-                onChange={(e) => setHandlerMapping(e.target.value)}
-                placeholder={t("fields.handler.placeholder")}
-                className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 relative group">
-              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("fields.role.label")}</label>
+              <span className="mt-1 text-[12px] font-medium text-secondary">{t("fields.role.label")}</span>
               <div className="grid grid-cols-2 gap-3">
                  {(["ADMIN", "SUPER_ADMIN"] as const).map(p => (
                    <button
@@ -120,7 +116,7 @@ export default function RegisterToolPage() {
                      onClick={() => setRequiredRole(p)}
                      className={`flex flex-col items-start gap-1 p-3.5 rounded-[10px] border transition-all text-left ${p === requiredRole ? selectedRoleClasses[p] : `border-border-dim bg-transparent text-secondary ${roleClasses[p]}`}`}
                    >
-                     <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{p}</span>
+                     <span className="text-[13px] font-bold tracking-wide">{p === "ADMIN" ? "Admin" : "System admin"}</span>
                    </button>
                  ))}
               </div>
@@ -128,11 +124,12 @@ export default function RegisterToolPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Side Effect</label>
+                <label htmlFor="tool-side-effect" className="mt-1 text-[12px] font-medium text-secondary">What it can do</label>
                 <select
+                  id="tool-side-effect"
                   value={sideEffectLevel}
                   onChange={(e) => setSideEffectLevel(e.target.value as ToolSideEffectLevel)}
-                  className="w-full bg-transparent border border-border-dim rounded-[10px] p-4 text-[14px] text-foreground outline-none focus:border-brand/40 shadow-sm dark:bg-[#111111]/30"
+                  className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors focus:border-brand/50"
                 >
                   <option value="READ">Read</option>
                   <option value="WRITE">Write</option>
@@ -142,7 +139,7 @@ export default function RegisterToolPage() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Runtime Policy</label>
+                <span className="mt-1 text-[12px] font-medium text-secondary">Before it runs</span>
                 <label className="flex items-center gap-3 min-h-[52px] px-4 rounded-[10px] border border-border-dim text-[13px] text-secondary">
                   <input
                     type="checkbox"
@@ -165,37 +162,31 @@ export default function RegisterToolPage() {
 
           {/* Right Column */}
           <div className="flex flex-col gap-5 relative group h-full">
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t("fields.description.label")}</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t("fields.description.placeholder")}
-                className="w-full min-h-[150px] resize-none bg-transparent border border-border-dim rounded-[10px] p-5 text-[13px] text-foreground/90 placeholder:text-muted/40 outline-none transition-colors focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono tracking-wide leading-relaxed custom-scrollbar"
-                spellCheck={false}
-              />
-            </div>
+            <TextAreaField
+              label={t("fields.description.label")}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t("fields.description.placeholder")}
+              className="min-h-[150px] resize-y"
+              spellCheck={false}
+            />
 
             <div className="grid grid-cols-1 gap-5">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Input JSON Schema</label>
-                <textarea
-                  value={inputSchema}
-                  onChange={(e) => setInputSchema(e.target.value)}
-                  className="w-full min-h-[130px] resize-y bg-transparent border border-border-dim rounded-[10px] p-4 text-[12px] text-foreground/90 outline-none focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono leading-relaxed custom-scrollbar"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">Output JSON Schema</label>
-                <textarea
-                  value={outputSchema}
-                  onChange={(e) => setOutputSchema(e.target.value)}
-                  placeholder='Optional: {"type":"object","properties":{}}'
-                  className="w-full min-h-[110px] resize-y bg-transparent border border-border-dim rounded-[10px] p-4 text-[12px] text-foreground/90 placeholder:text-muted/40 outline-none focus:border-brand/40 shadow-sm dark:bg-[#111111]/30 font-mono leading-relaxed custom-scrollbar"
-                  spellCheck={false}
-                />
-              </div>
+              <TextAreaField
+                label="What it needs (JSON)"
+                value={inputSchema}
+                onChange={(e) => setInputSchema(e.target.value)}
+                className="min-h-[130px] resize-y font-mono text-[12px]"
+                spellCheck={false}
+              />
+              <TextAreaField
+                label="What it gives back (JSON)"
+                value={outputSchema}
+                onChange={(e) => setOutputSchema(e.target.value)}
+                placeholder='Optional: {"type":"object","properties":{}}'
+                className="min-h-[110px] resize-y font-mono text-[12px]"
+                spellCheck={false}
+              />
             </div>
           </div>
 
