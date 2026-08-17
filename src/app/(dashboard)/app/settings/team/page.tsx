@@ -29,6 +29,7 @@ import {
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
+import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
 
 type TeamUserRole = "USER" | "ADMIN";
 
@@ -302,33 +303,27 @@ export default function CompanyTeamPage() {
       >
         <p className="text-secondary mb-6 text-[15px]">{editingUser ? t('modal.editDesc') : t('modal.inviteDesc')}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.fullName')}</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder={t('modal.namePlaceholder')}
-            />
-          </div>
+          <ModalField
+            label={t('modal.fullName')}
+            type="text"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder={t('modal.namePlaceholder')}
+          />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">{t('modal.email')}</label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={e => setFormData({ ...formData, email: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder={t('modal.emailPlaceholder')}
-            />
-          </div>
+          <ModalField
+            label={t('modal.email')}
+            type="email"
+            required
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder={t('modal.emailPlaceholder')}
+          />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.role')}</label>
+          <ModalFormField label={t('modal.role')} htmlFor="team-member-role">
             <select
+              id="team-member-role"
               value={formData.role}
               onChange={e => setFormData({ ...formData, role: e.target.value as TeamUserRole })}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
@@ -336,19 +331,17 @@ export default function CompanyTeamPage() {
               <option value="USER">{t('roles.user')}</option>
               <option value="ADMIN">{t('roles.admin')}</option>
             </select>
-          </div>
+          </ModalFormField>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">{t('modal.avatar')}</label>
-            <input
-              type="url"
-              value={formData.image}
-              onChange={e => setFormData({ ...formData, image: e.target.value })}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder={t('modal.avatarPlaceholder')}
-            />
+          <ModalField
+            label={t('modal.avatar')}
+            type="url"
+            value={formData.image}
+            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+            placeholder={t('modal.avatarPlaceholder')}
+          >
             <p className="text-[11px] text-muted">{t('modal.avatarHint')}</p>
-          </div>
+          </ModalField>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
             <button

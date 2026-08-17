@@ -52,7 +52,6 @@
     "src/app/(dashboard)/app/[workspace]/customers/[account]/page.tsx",
     "src/app/(dashboard)/app/profile/page.tsx",
     "src/app/(dashboard)/app/properties/search/page.tsx",
-    "src/app/(dashboard)/app/settings/team/page.tsx",
     "src/app/(dashboard)/app/tasks/page.tsx",
     "src/app/(dashboard)/demos/movement-capture/benchmark/device/page.tsx",
     "src/app/(dashboard)/demos/movements/[id]/play/_components/MovementDebugFrameScrubber.tsx",
