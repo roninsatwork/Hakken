@@ -49,10 +49,15 @@ export const getActiveTemplate = publicQuery({
       .first();
 
     if (!template) {
+      // What a customer's staff read the first time they hear of us, until an
+      // admin edits it. It must not name a single way of signing in: the login
+      // page offers a one-time code, an emailed link, and Google, and the old
+      // wording sent everyone looking for Google credentials to "synchronize".
+      // Voice matches the invite sample in src/app/api/email-preview.
       return {
         subject: "You have been invited to Sonae Workspace",
         headline: "Welcome to the Team",
-        body: "We are actively thrilled to have you onboard. Use the secure portal button below to synchronize your verified Google credentials and join the workspace.",
+        body: "You have been added to the Sonae workspace. Use the button below and sign in with this email address — it will pick you up automatically, and there is no password to set.",
         ctaText: "Accept Invitation",
       };
     }
