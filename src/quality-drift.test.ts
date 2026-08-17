@@ -490,6 +490,12 @@ describe('Quality Drift Guardrails', () => {
     const listPagesWithoutSearch = ['src/app/(dashboard)/admin/workflows/executions/page.tsx']
       .filter((filePath) => {
         const contents = readRepoFile(filePath);
+        // A screen on `DataTable` satisfies all of this at once: it owns the
+        // shell and both footers, so naming the parts is no longer how a screen
+        // proves it is on the kit. Added 2026-08-17, when the first converted
+        // screens failed this guard for having done exactly the right thing —
+        // it was checking a spelling rather than the behaviour it is named for.
+        if (/<DataTable[\s<>]/.test(contents)) return false;
         return !/<TableShell[\s>]/.test(contents)
           // Either house footer satisfies this — the rule is that the screen
           // wears one of them rather than drawing its own. It moved from the
@@ -506,6 +512,10 @@ describe('Quality Drift Guardrails', () => {
 
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
+
+      // Same reason as above: `DataTable` is the shell, the search box and both
+      // footers in one part.
+      if (/<DataTable[\s<>]/.test(contents)) return false;
 
       return !contents.includes('SearchBar') ||
         !contents.includes('TableShell') ||

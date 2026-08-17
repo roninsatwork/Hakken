@@ -10,7 +10,6 @@ import {
   Trash2,
   Edit2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -29,17 +28,8 @@ import {
   modalInputClassName,
   modalTextareaClassName,
 } from "@/src/ui/components/screens/ModalForm";
-import {
-  PaginationFooter,
-  RowActions,
-  RowIconButton,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
   TABLE_PAGE_SIZE,
 } from "@/src/ui/components/screens/pagination";
@@ -175,86 +165,72 @@ export default function CompaniesPage() {
       <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <TableShell
-        footer={
-          <PaginationFooter
-            page={companiesTable.page}
-            totalPages={companiesTable.totalPages}
-            totalCount={companiesTable.loadedCount}
-            pageSize={itemsPerPage}
-            isLoading={companiesTable.isBusy}
-            onPageChange={companiesTable.goToPage}
-            labels={{ empty: t('emptyState') }}
-          />
-        }
+      <DataTable
+        rows={isLoading ? undefined : paginatedCompanies}
+        rowKey={(company) => company._id}
         minWidthClassName="min-w-[800px]"
-      >
-            <thead>
-              <TableHeaderRow>
-                <TableHeaderCell>{t('tenantName')}</TableHeaderCell>
-                <TableHeaderCell>{t('provisionedDate')}</TableHeaderCell>
-                <TableHeaderCell>{t('assignedUsers')}</TableHeaderCell>
-                <TableHeaderCell align="right">{t('actions')}</TableHeaderCell>
-              </TableHeaderRow>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {isLoading ? (
-                  <TableLoadingRow colSpan={4} />
-                ) : paginatedCompanies.length === 0 ? (
-                  <TableEmptyRow
-                    colSpan={4}
-                    icon={<Building2 className="w-8 h-8 text-muted/30" />}
-                    label={t('emptyState')}
-                  />
-                ) : (
-                  <>
-                    {paginatedCompanies.map((company) => (
-                      <motion.tr
-                        key={company._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        onClick={() => router.push(`/admin/companies/${company._id}`)}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
-                      >
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground font-semibold text-[13px]">
-                              {company.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="font-medium text-[13px] text-foreground block leading-tight">
-                              {company.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-[12px] text-secondary">
-                          {formatDate(company.createdAt)}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {t('users', { count: company.userCount || 0 })}{company.userCountIsCapped ? "+" : ""}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <RowActions>
-                            <RowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
-                              <Edit2 className="w-4 h-4" />
-                            </RowIconButton>
-                            <RowIconButton label="Delete Company & Wipe Data" tone="danger" onClick={() => setDeletingCompany(company)}>
-                              <Trash2 className="w-4 h-4" />
-                            </RowIconButton>
-                          </RowActions>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </>
-                )}
-              </AnimatePresence>
-            </tbody>
-      </TableShell>
+        onRowClick={(company) => router.push(`/admin/companies/${company._id}`)}
+        empty={{ icon: <Building2 className="w-8 h-8 text-muted/30" />, label: t('emptyState') }}
+        footer={{
+          mode: "paged",
+          page: companiesTable.page,
+          totalPages: companiesTable.totalPages,
+          totalCount: companiesTable.loadedCount,
+          pageSize: itemsPerPage,
+          isLoading: companiesTable.isBusy,
+          onPageChange: companiesTable.goToPage,
+          labels: { empty: t('emptyState') },
+        }}
+        columns={[
+          {
+            key: "name",
+            header: t('tenantName'),
+            cell: (company) => (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground font-semibold text-[13px]">
+                  {company.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="font-medium text-[13px] text-foreground block leading-tight">
+                  {company.name}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "created",
+            header: t('provisionedDate'),
+            cell: (company) => (
+              <span className="text-[12px] text-secondary">{formatDate(company.createdAt)}</span>
+            ),
+          },
+          {
+            key: "users",
+            header: t('assignedUsers'),
+            cell: (company) => (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                  {t('users', { count: company.userCount || 0 })}{company.userCountIsCapped ? "+" : ""}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "actions",
+            header: t('actions'),
+            align: "right",
+            cell: (company) => (
+              <RowActions>
+                <RowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
+                  <Edit2 className="w-4 h-4" />
+                </RowIconButton>
+                <RowIconButton label="Delete Company & Wipe Data" tone="danger" onClick={() => setDeletingCompany(company)}>
+                  <Trash2 className="w-4 h-4" />
+                </RowIconButton>
+              </RowActions>
+            ),
+          },
+        ]}
+      />
 
       {/* Add/Edit Modal */}
       <SonaeModal

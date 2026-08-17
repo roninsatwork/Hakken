@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatTime } from "@/src/lib/dates";
@@ -99,108 +99,105 @@ export default function AgentDashboard() {
       </div>
 
       {/* Transactions Table Container */}
-      <TableShell
+      <DataTable
+        rows={status === "LoadingFirstPage" ? undefined : pagedRuns.pageRows}
+        rowKey={(tx) => tx._id}
         className="mt-2"
         minWidthClassName="min-w-[800px]"
-        footer={
-          <PaginationFooter
-            page={pagedRuns.page}
-            totalPages={pagedRuns.totalPages}
-            totalCount={pagedRuns.loadedCount}
-            pageSize={pagedRuns.pageSize}
-            isLoading={status === "LoadingMore"}
-            onPageChange={pagedRuns.goToPage}
-          />
-        }
-      >
-            <thead>
-              <TableHeaderRow variant="strip">
-                <TableHeaderCell>{t("table.timestamp")}</TableHeaderCell>
-                <TableHeaderCell>{t("table.context")}</TableHeaderCell>
-                <TableHeaderCell>{t("table.pipeline")}</TableHeaderCell>
-                <TableHeaderCell align="right">{t("table.tokens")}</TableHeaderCell>
-                <TableHeaderCell align="right">{t("table.cost")}</TableHeaderCell>
-                <TableHeaderCell align="right" className="w-[100px]">{t("table.status")}</TableHeaderCell>
-              </TableHeaderRow>
-            </thead>
-            <tbody>
-              {status === "LoadingFirstPage" && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-secondary">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-brand opacity-80" />
-                    <p className="mt-2 text-[12px] font-medium">{t("table.loading")}</p>
-                  </td>
-                </tr>
-              )}
-
-              {results.length === 0 && status === "Exhausted" && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center">
-                    <div className="flex flex-col items-center justify-center gap-4 w-full">
-                      <Activity className="w-8 h-8 text-muted/30" />
-                      <div className="flex flex-col gap-1 items-center">
-                        <span className="text-[14px] font-medium text-foreground tracking-wide">{t("table.noTransactions")}</span>
-                        <span className="text-muted text-[12px]">{t("table.noTransactionsDesc")}</span>
-                      </div>
-
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              {pagedRuns.pageRows.map((tx) => {
-                const model = activeModels.find((activeModel) => activeModel.modelId === tx.modelUsed);
-
-                return (
-                <tr key={tx._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-medium text-foreground tracking-wide">
-                        {formatDate(tx.createdAt, { options: { month: 'short', day: 'numeric' } })}
-                      </span>
-                      <span className="text-[11px] font-mono text-muted">
-                        {formatTime(tx.createdAt, { options: { hour: '2-digit', minute: '2-digit', second: '2-digit' } })}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-[13px] text-foreground tracking-wide inline-block font-medium">
-                      {tx.actionContext}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-secondary/70 bg-foreground/5 px-2 py-1 rounded-[6px] w-max border border-border-dim/50">
-                      {model?.friendlyName || model?.displayName || tx.modelUsed}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2 text-[12px] font-mono text-secondary">
-                      <span title="Input Tokens">{tx.inputTokens.toLocaleString()}</span>
-                      <ArrowRight className="w-3 h-3 text-muted" />
-                      <span title="Output Tokens" className="text-foreground">{tx.outputTokens.toLocaleString()}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-[13px] font-mono font-medium text-foreground tracking-tight">
-                      ${tx.costGBP.toFixed(6)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 pr-6 flex justify-end">
-                    {tx.status === "SUCCESS" ? (
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500" title={t("table.status") + ": Success"}>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500" title={t("table.status") + ": Failed"}>
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      </div>
-                    )}
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-      </TableShell>
+        headerVariant="strip"
+        empty={{
+          icon: <Activity className="w-8 h-8 text-muted/30" />,
+          label: t("table.noTransactions"),
+          action: <span className="text-muted text-[12px]">{t("table.noTransactionsDesc")}</span>,
+        }}
+        footer={{
+          mode: "paged",
+          page: pagedRuns.page,
+          totalPages: pagedRuns.totalPages,
+          totalCount: pagedRuns.loadedCount,
+          pageSize: pagedRuns.pageSize,
+          isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+          onPageChange: pagedRuns.goToPage,
+        }}
+        columns={[
+          {
+            key: "timestamp",
+            header: t("table.timestamp"),
+            cell: (tx) => (
+              <div className="flex flex-col">
+                <span className="text-[13px] font-medium text-foreground tracking-wide">
+                  {formatDate(tx.createdAt, { options: { month: 'short', day: 'numeric' } })}
+                </span>
+                <span className="text-[11px] font-mono text-muted">
+                  {formatTime(tx.createdAt, { options: { hour: '2-digit', minute: '2-digit', second: '2-digit' } })}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "context",
+            header: t("table.context"),
+            cell: (tx) => (
+              <span className="text-[13px] text-foreground tracking-wide inline-block font-medium">
+                {tx.actionContext}
+              </span>
+            ),
+          },
+          {
+            key: "pipeline",
+            header: t("table.pipeline"),
+            cell: (tx) => {
+              const model = activeModels.find((activeModel) => activeModel.modelId === tx.modelUsed);
+              return (
+                <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-secondary/70 bg-foreground/5 px-2 py-1 rounded-[6px] w-max border border-border-dim/50">
+                  {model?.friendlyName || model?.displayName || tx.modelUsed}
+                </div>
+              );
+            },
+          },
+          {
+            key: "tokens",
+            header: t("table.tokens"),
+            align: "right",
+            cell: (tx) => (
+              <div className="flex items-center justify-end gap-2 text-[12px] font-mono text-secondary">
+                <span title="Input Tokens">{tx.inputTokens.toLocaleString()}</span>
+                <ArrowRight className="w-3 h-3 text-muted" />
+                <span title="Output Tokens" className="text-foreground">{tx.outputTokens.toLocaleString()}</span>
+              </div>
+            ),
+          },
+          {
+            key: "cost",
+            header: t("table.cost"),
+            align: "right",
+            cell: (tx) => (
+              <span className="text-[13px] font-mono font-medium text-foreground tracking-tight">
+                ${tx.costGBP.toFixed(6)}
+              </span>
+            ),
+          },
+          {
+            key: "status",
+            header: t("table.status"),
+            align: "right",
+            className: "w-[100px]",
+            cell: (tx) => (
+              <div className="flex justify-end">
+                {tx.status === "SUCCESS" ? (
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500" title={t("table.status") + ": Success"}>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500" title={t("table.status") + ": Failed"}>
+                    <AlertCircle className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

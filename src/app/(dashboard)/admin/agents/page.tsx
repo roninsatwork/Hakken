@@ -14,7 +14,6 @@ import {
   Trash2,
   Settings,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
@@ -22,17 +21,8 @@ import {
   PageHeader,
   PagePrimaryAction,
 } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  RowActions,
-  RowIconButton,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 type Agent = Doc<"agents">;
@@ -120,119 +110,105 @@ export default function AgentsPage() {
       <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <TableShell
-        footer={
-          <PaginationFooter
-            page={agents.page}
-            totalPages={agents.totalPages}
-            totalCount={agents.loadedCount}
-            pageSize={itemsPerPage}
-            isLoading={agents.isBusy}
-            onPageChange={agents.goToPage}
-            labels={{ empty: t('table.empty') }}
-          />
-        }
+      <DataTable
+        rows={isLoading ? undefined : paginatedAgents}
+        rowKey={(agent) => agent._id}
         minWidthClassName="min-w-[800px]"
-      >
-            <thead>
-              <TableHeaderRow>
-                <TableHeaderCell>{t('table.agent')}</TableHeaderCell>
-                <TableHeaderCell>{t('table.model')}</TableHeaderCell>
-                <TableHeaderCell>{t('table.status')}</TableHeaderCell>
-                <TableHeaderCell align="right">{t('table.actions')}</TableHeaderCell>
-              </TableHeaderRow>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {isLoading ? (
-                  <TableLoadingRow colSpan={4} />
-                ) : paginatedAgents.length === 0 ? (
-                  <TableEmptyRow
-                    colSpan={4}
-                    icon={<Bot className="w-8 h-8 text-muted/30" />}
-                    label={t('table.empty')}
+        onRowClick={(agent) => router.push(`/admin/agents/${agent._id}`)}
+        empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: t('table.empty') }}
+        footer={{
+          mode: "paged",
+          page: agents.page,
+          totalPages: agents.totalPages,
+          totalCount: agents.loadedCount,
+          pageSize: itemsPerPage,
+          isLoading: agents.isBusy,
+          onPageChange: agents.goToPage,
+          labels: { empty: t('table.empty') },
+        }}
+        columns={[
+          {
+            key: "agent",
+            header: t('table.agent'),
+            cell: (agent) => (
+              <div className="flex items-center gap-3">
+                {agent.avatar ? (
+                  <Image
+                    src={agent.avatar}
+                    alt={agent.name}
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="w-8 h-8 rounded-full border border-border-dim object-cover"
                   />
                 ) : (
-                  <>
-                    {paginatedAgents.map((agent) => (
-                      <motion.tr
-                        key={agent._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        onClick={() => router.push(`/admin/agents/${agent._id}`)}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {agent.avatar ? (
-                              <Image
-                                src={agent.avatar}
-                                alt={agent.name}
-                                width={32}
-                                height={32}
-                                unoptimized
-                                className="w-8 h-8 rounded-full border border-border-dim object-cover"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground">
-                                <Bot className="w-4 h-4 text-brand" />
-                              </div>
-                            )}
-                            <div className="flex flex-col">
-                              <span className="font-medium text-[13px] text-foreground leading-tight flex items-center gap-2">
-                                {agent.name}
-                                {/* The wiki's staff (wiki-agents plan, phase 0):
-                                    built in, switchable, never deletable. */}
-                                {agent.systemKey && (
-                                  <span className="px-1.5 py-0.5 rounded-full bg-brand/10 border border-brand/30 text-brand text-[10px] font-medium">
-                                    Wiki staff
-                                  </span>
-                                )}
-                              </span>
-                              {agent.description && (
-                                <span className="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-[300px]">
-                                  {agent.description}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                            {/* Not lowercased: a published model name such as
-                                "MoonshotAI: Kimi K3" is not the platform's to
-                                restyle, and the label is now a phrase. */}
-                            <span className="text-[10px] font-mono tracking-widest text-foreground/80">
-                              {describeAgentModel(agent)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className={`flex items-center gap-2 text-[12px] font-medium ${isWorking(agent._id) ? 'text-brand' : agent.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${isWorking(agent._id) ? 'bg-brand animate-pulse' : agent.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
-                            {isWorking(agent._id)
-                              ? t('table.working')
-                              : agent.isActive ? t('table.active') : t('table.draft')}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <RowActions>
-                            <RowIconButton navigates label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
-                              <Settings className="w-4 h-4" />
-                            </RowIconButton>
-                            <RowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>
-                              <Trash2 className="w-4 h-4" />
-                            </RowIconButton>
-                          </RowActions>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </>
+                  <div className="w-8 h-8 rounded-full bg-card border border-border-dim flex items-center justify-center text-foreground">
+                    <Bot className="w-4 h-4 text-brand" />
+                  </div>
                 )}
-              </AnimatePresence>
-            </tbody>
-      </TableShell>
+                <div className="flex flex-col">
+                  <span className="font-medium text-[13px] text-foreground leading-tight flex items-center gap-2">
+                    {agent.name}
+                    {/* The wiki's staff (wiki-agents plan, phase 0): built in,
+                        switchable, never deletable. */}
+                    {agent.systemKey && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-brand/10 border border-brand/30 text-brand text-[10px] font-medium">
+                        Wiki staff
+                      </span>
+                    )}
+                  </span>
+                  {agent.description && (
+                    <span className="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-[300px]">
+                      {agent.description}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: "model",
+            header: t('table.model'),
+            cell: (agent) => (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                {/* Not lowercased: a published model name such as
+                    "MoonshotAI: Kimi K3" is not the platform's to restyle, and
+                    the label is now a phrase. */}
+                <span className="text-[10px] font-mono tracking-widest text-foreground/80">
+                  {describeAgentModel(agent)}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: "status",
+            header: t('table.status'),
+            cell: (agent) => (
+              <div className={`flex items-center gap-2 text-[12px] font-medium ${isWorking(agent._id) ? 'text-brand' : agent.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${isWorking(agent._id) ? 'bg-brand animate-pulse' : agent.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
+                {isWorking(agent._id)
+                  ? t('table.working')
+                  : agent.isActive ? t('table.active') : t('table.draft')}
+              </div>
+            ),
+          },
+          {
+            key: "actions",
+            header: t('table.actions'),
+            align: "right",
+            cell: (agent) => (
+              <RowActions>
+                <RowIconButton navigates label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
+                  <Settings className="w-4 h-4" />
+                </RowIconButton>
+                <RowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>
+                  <Trash2 className="w-4 h-4" />
+                </RowIconButton>
+              </RowActions>
+            ),
+          },
+        ]}
+      />
 
       <ConfirmationModal
         isOpen={!!deletingAgent}
