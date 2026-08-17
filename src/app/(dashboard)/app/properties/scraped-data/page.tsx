@@ -11,6 +11,7 @@ import {
   SearchBar,
   TableHeaderCell,
   TableHeaderRow,
+  TableLoadingRow,
   TableShell,
 } from "@/src/ui/components/screens/Table";
 import { useRouter } from "next/navigation";
@@ -112,12 +113,17 @@ export default function ScrapedDataPage() {
               </thead>
               <tbody>
                 <AnimatePresence>
-                  {paginatedItems.length === 0 && status !== "LoadingFirstPage" ? (
+                  {/* While the first page is on its way this fell through to
+                      mapping an empty list, so the table drew nothing at all —
+                      no spinner, no sentence, just column headings. */}
+                  {status === "LoadingFirstPage" ? (
+                    <TableLoadingRow colSpan={4} />
+                  ) : paginatedItems.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="p-0 border-none">
-                        <SonaeEmptyState 
-                          title="No Results" 
-                          description={searchTerm.length > 0 ? "Your search query did not match any properties." : "No scraped properties found. Run a new search to populate data."} 
+                        <SonaeEmptyState
+                          title="Nothing found"
+                          description={searchTerm.length > 0 ? "No property matches that search." : "No properties collected yet. Run a search to fill this in."}
                         />
                       </td>
                     </tr>
@@ -129,7 +135,7 @@ export default function ScrapedDataPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-4">
                             {property.imageUrl ? (
                               <Image src={property.imageUrl} alt="Property" width={48} height={48} unoptimized className="w-12 h-12 rounded-[8px] object-cover border border-border-dim" />
@@ -146,12 +152,12 @@ export default function ScrapedDataPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <span className="text-[13px] font-medium text-brand">
                             {property.price ? `£${property.price.toLocaleString()}` : 'POA'}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <div className="flex gap-2">
                             <span className="px-2 py-0.5 rounded bg-background border border-border-dim text-[11px] text-secondary">
                               {property.bedrooms} Beds
@@ -161,7 +167,7 @@ export default function ScrapedDataPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-right">
                           {/* Not RowActions: these two are always visible here
                               rather than appearing on hover, and "View details"
                               is a labelled button rather than an icon. Only the

@@ -123,7 +123,7 @@ export default function AgentDashboard() {
                 <TableHeaderCell align="right" className="w-[100px]">{t("table.status")}</TableHeaderCell>
               </TableHeaderRow>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody>
               {status === "LoadingFirstPage" && (
                 <tr>
                   <td colSpan={6} className="px-5 py-16 text-center text-secondary">
@@ -152,8 +152,8 @@ export default function AgentDashboard() {
                 const model = activeModels.find((activeModel) => activeModel.modelId === tx.modelUsed);
 
                 return (
-                <tr key={tx._id} className="group hover:bg-white/[0.02] transition-colors">
-                  <td className="px-5 py-4">
+                <tr key={tx._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-3">
                     <div className="flex flex-col">
                       <span className="text-[13px] font-medium text-foreground tracking-wide">
                         {formatDate(tx.createdAt, { options: { month: 'short', day: 'numeric' } })}
@@ -163,29 +163,29 @@ export default function AgentDashboard() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-3">
                     <span className="text-[13px] text-foreground tracking-wide inline-block font-medium">
                       {tx.actionContext}
                     </span>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-secondary/70 bg-foreground/5 px-2 py-1 rounded-[6px] w-max border border-border-dim/50">
                       {model?.friendlyName || model?.displayName || tx.modelUsed}
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2 text-[12px] font-mono text-secondary">
                       <span title="Input Tokens">{tx.inputTokens.toLocaleString()}</span>
                       <ArrowRight className="w-3 h-3 text-muted" />
                       <span title="Output Tokens" className="text-foreground">{tx.outputTokens.toLocaleString()}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <span className="text-[13px] font-mono font-medium text-foreground tracking-tight">
                       ${tx.costGBP.toFixed(6)}
                     </span>
                   </td>
-                  <td className="px-5 py-4 pr-6 flex justify-end">
+                  <td className="px-4 py-3 pr-6 flex justify-end">
                     {tx.status === "SUCCESS" ? (
                       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500" title={t("table.status") + ": Success"}>
                         <CheckCircle2 className="w-3.5 h-3.5" />

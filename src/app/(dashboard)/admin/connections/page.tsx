@@ -105,15 +105,15 @@ export default function ConnectionsPage() {
             connections.map((row) => (
               <tr
                 key={row.id}
-                className="border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                className="border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
               >
-                <td className="px-4 py-4">
+                <td className="px-4 py-3">
                   <span className="text-[14px] text-foreground">{row.name}</span>
                   <span className="block text-[11px] uppercase tracking-[0.1em] text-muted mt-0.5">
                     {t(`kind.${row.kind}`)}
                   </span>
                 </td>
-                <td className="px-4 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span
                     className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       row.working === false
@@ -137,7 +137,7 @@ export default function ConnectionsPage() {
                         : t("state.working")}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary max-w-[380px]">
+                <td className="px-4 py-3 text-[13px] text-secondary max-w-[380px]">
                   <span className="line-clamp-2">{row.detail}</span>
                   {row.lastHeardAt && (
                     <span className="block text-[12px] text-muted mt-0.5">
@@ -145,7 +145,7 @@ export default function ConnectionsPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                   {when(row.checkedAt)}
                 </td>
               </tr>
@@ -177,10 +177,10 @@ export default function ConnectionsPage() {
               return (
                 <tr
                   key={job.job}
-                  className="border-b border-border-dim/40 last:border-b-0 hover:bg-hover/40 transition-colors"
+                  className="border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
                 >
-                  <td className="px-4 py-4 text-[13.5px] text-foreground">{job.job}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 text-[13.5px] text-foreground">{job.job}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
                         bad
@@ -199,10 +199,10 @@ export default function ConnectionsPage() {
                             : t("jobs.state.ran")}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                  <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                     {when(job.lastRanAt)}
                   </td>
-                  <td className="px-4 py-4 text-[13px] text-secondary whitespace-nowrap">
+                  <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
                     {when(job.lastSucceededAt)}
                     {job.lastError && (
                       <span className="block text-[12px] text-muted max-w-[280px] truncate">
