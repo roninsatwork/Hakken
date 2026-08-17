@@ -148,9 +148,9 @@ describe("AgentEvalsPage", () => {
   it("uses the standard table and leads with one sentence", () => {
     render(<AgentEvalsPage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Checks" })).toBeInTheDocument();
-    expect(screen.getByText("0 of 2 checks passing. 2 not proven yet.")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Check" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Evals" })).toBeInTheDocument();
+    expect(screen.getByText("0 of 2 evals passing. 2 not proven yet.")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Eval" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Must pass" })).toBeInTheDocument();
     expect(screen.getByText("Assess whether a new adverse event should be escalated.")).toBeInTheDocument();
@@ -197,7 +197,7 @@ describe("AgentEvalsPage", () => {
 
     expect(screen.getByText("Setup only")).toBeInTheDocument();
     expect(screen.queryByText("Passing")).not.toBeInTheDocument();
-    expect(screen.getByText("0 of 2 checks passing. 2 not proven yet.")).toBeInTheDocument();
+    expect(screen.getByText("0 of 2 evals passing. 2 not proven yet.")).toBeInTheDocument();
   });
 
   // The per-row Run button used to default to the configuration check — the thing
@@ -217,6 +217,6 @@ describe("AgentEvalsPage", () => {
   it("says plainly when nothing has to pass before going live", () => {
     render(<AgentEvalsPage />);
 
-    expect(screen.getByText(/No check has to pass before this agent goes live/)).toBeInTheDocument();
+    expect(screen.getByText(/No eval has to pass before this agent goes live/)).toBeInTheDocument();
   });
 });

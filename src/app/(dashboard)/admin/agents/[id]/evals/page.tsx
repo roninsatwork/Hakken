@@ -18,10 +18,15 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
+  PaginationFooter,
+  SearchBar,
   TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
   TableLoadingRow,
   TableShell,
 } from "@/src/ui/components/screens/Table";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
 import {
   ModalFormError,
   ModalField,
@@ -41,7 +46,7 @@ const MUST_PASS_TAG = "critical";
 /**
  * Every check carries a type in the database and none of it ever helped a reader —
  * ten lowercased enum values in a dropdown, with no explanation of what any of them
- * meant. New checks are stamped with the plainest one.
+ * meant. New evals are stamped with the plainest one.
  */
 const DEFAULT_FIXTURE_TYPE = "HAPPY_PATH" as const;
 
@@ -110,7 +115,15 @@ export default function AgentEvalsPage() {
     return map;
   }, [evalHistory]);
 
-  const rows = fixtures ?? [];
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const rows = (fixtures ?? []).filter((fixture) =>
+    fixture.objective.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
+
+  // A plain array rather than a server page, so there is nothing to fetch — but
+  // the footer is the house footer either way.
+  const paged = usePagedRows(rows, { canLoadMore: false, loadMore: () => {}, resetKey: searchTerm });
   const unproven = rows.filter((fixture) => {
     const latest = latestByFixture.get(fixture._id);
     return !latest || latest.gradingMode !== "MODEL_GRADED" || latest.status !== "SUCCESS";
@@ -166,7 +179,7 @@ export default function AgentEvalsPage() {
     };
 
     const outcome = await formAction.run(save, {
-      fallbackMessage: "The check could not be saved.",
+      fallbackMessage: "The eval could not be saved.",
       suppressErrorToast: true,
     });
 
@@ -178,8 +191,8 @@ export default function AgentEvalsPage() {
     // Editing bumps the check's timestamp, which retires its earlier passes. That
     // used to happen in silence, so a gate could re-block with no explanation.
     setNotice(wasEditing
-      ? "Check saved. Its earlier results no longer count, so run it again."
-      : "Check created. Run it to see how the agent does.");
+      ? "Eval saved. Its earlier results no longer count, so run it again."
+      : "Eval created. Run it to see how the agent does.");
   };
 
   const handleRun = async (fixtureId: Id<"agentEvalFixtures">) => {
@@ -188,14 +201,14 @@ export default function AgentEvalsPage() {
     // configuration check — the thing that is not a test — and say it had passed.
     await runAction.run(() => runSmokeEval({ agentId, fixtureId, gradingMode: "MODEL_GRADED" }), {
       key: `run:${fixtureId}`,
-      fallbackMessage: "The check could not be run.",
+      fallbackMessage: "The eval could not be run.",
     });
   };
 
   const handleRunUnproven = async () => {
     setNotice("");
     // Unproven first; once everything passes, re-run the lot. A check that passed
-    // last week is not evidence about today, and a button labelled "Run checks"
+    // last week is not evidence about today, and a button labelled "Run evals"
     // must always run some.
     const target = unproven.length > 0 ? unproven : rows;
     const count = target.length;
@@ -205,7 +218,7 @@ export default function AgentEvalsPage() {
       gradingMode: "MODEL_GRADED",
     }), {
       key: "run:unproven",
-      fallbackMessage: "The checks could not be run.",
+      fallbackMessage: "The evals could not be run.",
       suppressErrorToast: true,
     });
     if (outcome.ok) setNotice(`Running ${count} check${count === 1 ? "" : "s"}. Results appear here as each one finishes.`);
@@ -215,7 +228,7 @@ export default function AgentEvalsPage() {
     setNotice("");
     const outcome = await runAction.run(() => runEvalSuite({ agentId, gradingMode: "CONTRACT_ONLY" }), {
       key: "run:setup",
-      fallbackMessage: "The setup check could not be run.",
+      fallbackMessage: "The setup eval could not be run.",
     });
     if (outcome.ok) setNotice("Setup checked. This confirms the agent is wired up correctly — it does not test its answers.");
   };
@@ -223,7 +236,7 @@ export default function AgentEvalsPage() {
   const handleArchive = async () => {
     if (!archiveTarget) return;
     const outcome = await archiveAction.run(() => archiveFixture({ fixtureId: archiveTarget._id }), {
-      fallbackMessage: "The check could not be removed.",
+      fallbackMessage: "The eval could not be removed.",
     });
     if (outcome.ok) setArchiveTarget(null);
   };
@@ -234,10 +247,10 @@ export default function AgentEvalsPage() {
         <div>
           <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
             <ClipboardCheck className="h-6 w-6 text-brand" />
-            Checks
+            Evals
           </h1>
           <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">
-            A check is a task, and a description of a good result. Running one gives the task to
+            An eval is a task, and a description of a good result. Running one gives the task to
             this agent for real, then has a second AI mark what it did.
           </p>
         </div>
@@ -247,8 +260,8 @@ export default function AgentEvalsPage() {
             {fixtures === undefined
               ? "Loading…"
               : rows.length === 0
-                ? "No checks yet."
-                : `${passing} of ${rows.length} check${rows.length === 1 ? "" : "s"} passing.${unproven.length > 0 ? ` ${unproven.length} not proven yet.` : ""}`}
+                ? "No evals yet."
+                : `${passing} of ${rows.length} eval${rows.length === 1 ? "" : "s"} passing.${unproven.length > 0 ? ` ${unproven.length} not proven yet.` : ""}`}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -258,7 +271,7 @@ export default function AgentEvalsPage() {
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {runAction.isBusy("run:unproven") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Run checks
+              Run evals
             </button>
             <button
               type="button"
@@ -268,7 +281,7 @@ export default function AgentEvalsPage() {
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
             >
               {runAction.isBusy("run:setup") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
-              Check setup
+              Eval setup
             </button>
             <WriteButton
               type="button"
@@ -276,7 +289,7 @@ export default function AgentEvalsPage() {
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
               <Plus className="h-4 w-4" />
-              New check
+              New eval
             </WriteButton>
           </div>
         </div>
@@ -289,7 +302,7 @@ export default function AgentEvalsPage() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              {gate.passedCriticalFixtureCount} of {gate.criticalFixtureCount} must-pass checks are
+              {gate.passedCriticalFixtureCount} of {gate.criticalFixtureCount} must-pass evals are
               passing. This agent cannot go live until all of them do.
             </p>
           </div>
@@ -299,7 +312,7 @@ export default function AgentEvalsPage() {
         <section className="rounded-[8px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>No check has to pass before this agent goes live. Mark at least one as must-pass.</p>
+            <p>No eval has to pass before this agent goes live. Mark at least one as must-pass.</p>
           </div>
         </section>
       )}
@@ -319,26 +332,45 @@ export default function AgentEvalsPage() {
         </section>
       )}
 
-      <TableShell minWidthClassName="min-w-[760px]">
+      <SearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Search evals by what they ask"
+      />
+
+      <TableShell
+        minWidthClassName="min-w-[760px]"
+        footer={
+          <PaginationFooter
+            page={paged.page}
+            totalPages={paged.totalPages}
+            totalCount={paged.loadedCount}
+            pageSize={paged.pageSize}
+            isLoading={false}
+            onPageChange={paged.goToPage}
+            labels={{ empty: "No evals" }}
+          />
+        }
+      >
         <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium">Check</th>
-            <th className="px-4 py-3 font-medium w-[130px]">Status</th>
-            <th className="px-4 py-3 font-medium w-[120px]">Must pass</th>
-            <th className="px-4 py-3 font-medium w-[170px]">Last run</th>
-            <th className="px-4 py-3 font-medium w-[150px] text-right"></th>
-          </tr>
+          <TableHeaderRow>
+            <TableHeaderCell>Eval</TableHeaderCell>
+            <TableHeaderCell className="w-[130px]">Status</TableHeaderCell>
+            <TableHeaderCell className="w-[120px]">Must pass</TableHeaderCell>
+            <TableHeaderCell className="w-[170px]">Last run</TableHeaderCell>
+            <TableHeaderCell align="right" className="w-[150px]">{""}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {fixtures === undefined ? (
             <TableLoadingRow colSpan={5} />
-          ) : rows.length === 0 ? (
+          ) : paged.pageRows.length === 0 ? (
             <TableEmptyRow
               colSpan={5}
               icon={<ClipboardCheck className="h-8 w-8 text-muted/30" />}
-              label="No checks yet — add one to catch this agent getting it wrong"
+              label="No evals yet — add one to catch this agent getting it wrong"
             />
-          ) : rows.map((fixture) => {
+          ) : paged.pageRows.map((fixture) => {
             const latest = latestByFixture.get(fixture._id);
             const status = describeStatus(latest);
             const isRunning = runAction.isBusy(`run:${fixture._id}`);
@@ -400,11 +432,11 @@ export default function AgentEvalsPage() {
 
       {/* Two questions and a toggle, where there were six fields including a nested
           JSON blob whose required keys were documented nowhere and which the shipped
-          starter checks got wrong. */}
+          starter evals got wrong. */}
       <SonaeModal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        title={editingId ? "Edit check" : "New check"}
+        title={editingId ? "Edit eval" : "New eval"}
         size="lg"
       >
         <div className="flex flex-col gap-5 pt-2">
@@ -440,7 +472,7 @@ export default function AgentEvalsPage() {
             />
             <span>
               <span className="block text-[13px] font-semibold text-foreground">This must pass before the agent goes live</span>
-              <span className="block text-[12px] text-secondary">Nothing stops an agent going live unless at least one check says so.</span>
+              <span className="block text-[12px] text-secondary">Nothing stops an agent going live unless at least one eval says so.</span>
             </span>
           </label>
 
@@ -449,7 +481,7 @@ export default function AgentEvalsPage() {
             <div className="mt-4 flex flex-col gap-5">
               <ModalFormField
                 label="Give it the task more than once"
-                hint="A check that passes two times in three is a check that fails one conversation in three. Each extra attempt is a whole agent turn plus a grade."
+                hint="An eval that passes two times in three is an eval that fails one conversation in three. Each extra attempt is a whole agent turn plus a grade."
               >
                 <select
                   className={modalInputClassName}

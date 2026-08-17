@@ -1,8 +1,6 @@
 {
   "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/. Frozen 2026-08-16. Each list may shrink, never grow — move the screen onto the kit instead of adding to it. The five /app entries were left deliberately and the reason for each is written up in docs/plans/active/shared-screen-kit-plan.md; the rest are admin and demo screens that predate the kit being reachable.",
   "tables": [
-    "src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSection.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/widget/_components/WidgetGreetingSection.tsx",
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
   "inputs": [
