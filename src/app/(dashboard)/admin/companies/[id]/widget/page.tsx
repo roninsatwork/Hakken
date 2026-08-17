@@ -23,9 +23,9 @@ import {
   parseAllowedDomains,
   WIDGET_CONFIG_TABS,
 } from "@/src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 function getWidgetSectionSlug(tab: WidgetConfigTab) {
   return tab.toLowerCase().replaceAll(" ", "-");
@@ -227,18 +227,18 @@ export default function CompanyWidgetPage() {
           </p>
         </div>
         {widget && (
-          <AdminWriteButton
+          <WriteButton
             onClick={handleCreateOrUpdate}
             disabled={isSaving}
             className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-brand text-white font-medium tracking-wide text-[13px] hover:bg-brand/90 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] transition-all shrink-0"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Publish Configuration</span>
-          </AdminWriteButton>
+          </WriteButton>
         )}
       </header>
 
-      <AdminSaveError>{feedbackMessage}</AdminSaveError>
+      <SaveError>{feedbackMessage}</SaveError>
 
       {widget === undefined ? (
         <div className="py-24 flex justify-center">
@@ -247,7 +247,7 @@ export default function CompanyWidgetPage() {
       ) : !widget ? (
         <WidgetEmptyState isSaving={isSaving} onInitialize={handleCreateOrUpdate} />
       ) : (
-        <div className="flex flex-col gap-6 items-start relative mt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-8 items-start relative mt-4">
           <div className="flex-1 w-full min-w-0 flex flex-col gap-8">
             {activeTab === "Appearance" && (
               <WidgetAppearanceSection

@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Eye } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
-import { AdminAccessLevelProvider } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { AccessLevelProvider } from "@/src/ui/components/screens/AccessLevel";
 import { canWrite } from "@/src/lib/userRoles";
 
 /**
@@ -16,7 +16,7 @@ import { canWrite } from "@/src/lib/userRoles";
  * It was super admins only. `READ_ONLY` joins them because that is the entire
  * point of the role — someone who needs to see how the platform is set up
  * without being able to alter it. Their write controls are removed by
- * `AdminAccessLevelProvider`, and the backend refuses the writes regardless, so
+ * `AccessLevelProvider`, and the backend refuses the writes regardless, so
  * the two together mean a read-only account sees the same screens and can act
  * on none of them.
  *
@@ -62,7 +62,7 @@ export default function AdminLayout({
   const readerOnly = !canWrite(user?.role);
 
   return (
-    <AdminAccessLevelProvider role={user?.role}>
+    <AccessLevelProvider role={user?.role}>
       <div className="flex flex-col flex-1 h-full min-h-[calc(100vh-64px)] w-full relative">
         <Header />
         {readerOnly ? (
@@ -90,6 +90,6 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
-    </AdminAccessLevelProvider>
+    </AccessLevelProvider>
   );
 }

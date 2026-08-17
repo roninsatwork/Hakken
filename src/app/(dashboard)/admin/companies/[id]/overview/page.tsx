@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Save, Loader2, PoundSterling, Blocks } from "lucide-react";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 
 export default function CompanyOverviewPage() {
@@ -152,14 +152,15 @@ export default function CompanyOverviewPage() {
               </span>
             )}
           </div>
-          <AdminWriteButton 
+          <WriteButton
+
             onClick={handleSave}
             disabled={isSaving || isPristine || !nameVal.trim()}
             className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] bg-brand text-white font-bold tracking-wide hover:bg-brand/90 transition-all text-[13px] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(var(--brand-rgb),0.2)]"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Profile
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </div>
 
@@ -326,14 +327,14 @@ function CompanyModulesSection({
             </span>
           )}
         </div>
-        <AdminWriteButton
+        <WriteButton
           onClick={handleSave}
           disabled={isSaving || isPristine}
           className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] bg-brand text-white font-bold tracking-wide hover:bg-brand/90 transition-all text-[13px] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save Modules
-        </AdminWriteButton>
+        </WriteButton>
       </div>
     </div>
   );

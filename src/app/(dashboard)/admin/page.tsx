@@ -20,14 +20,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { cn } from "@/src/ui/lib/utils";
 
 type ClientState = "HEALTHY" | "NEEDS_ATTENTION" | "UNUSED";
@@ -251,7 +251,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <AdminPageHeader
+      <PageHeader
         icon={<LayoutDashboard className="h-6 w-6 text-brand" />}
         title="Admin Dashboard"
         description="How the business is doing, and which client needs you today."
@@ -439,22 +439,22 @@ export default function AdminDashboardPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-foreground">Clients</h2>
 
-        <AdminTableShell minWidthClassName="min-w-[900px]">
+        <TableShell minWidthClassName="min-w-[900px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>Client</AdminTableHeaderCell>
-              <AdminTableHeaderCell>State</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Active this week</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Gone quiet</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Revenue</AdminTableHeaderCell>
-              <AdminTableHeaderCell align="right">{""}</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>Client</TableHeaderCell>
+              <TableHeaderCell>State</TableHeaderCell>
+              <TableHeaderCell>Active this week</TableHeaderCell>
+              <TableHeaderCell>Gone quiet</TableHeaderCell>
+              <TableHeaderCell>Revenue</TableHeaderCell>
+              <TableHeaderCell align="right">{""}</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {overview === undefined ? (
-              <AdminTableLoadingRow colSpan={6} />
+              <TableLoadingRow colSpan={6} />
             ) : portfolio.length === 0 ? (
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={6}
                 icon={<LayoutDashboard className="h-8 w-8 text-muted/30" />}
                 label="No clients yet"
@@ -487,7 +487,7 @@ export default function AdminDashboardPage() {
               ))
             )}
           </tbody>
-        </AdminTableShell>
+        </TableShell>
       </section>
 
       {/* Only when there is something to do. A permanent panel of zeroes is the

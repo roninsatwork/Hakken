@@ -5,7 +5,7 @@ import { History } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AuditLogsTable } from "@/src/app/(dashboard)/admin/settings/_components/AuditLogsTable";
 
 /**
@@ -25,7 +25,7 @@ export default function AuditTrailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<History className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}

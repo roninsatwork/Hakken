@@ -9,16 +9,16 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BarChart3, BrainCircuit, FileText, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDateTime } from "@/src/lib/dates";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("en-GB") : "...";
@@ -179,7 +179,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
   } = usePaginatedQuery(
     api.agentSkills.getPaginatedSkills,
     { searchTerm },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
   /**
    * A page at a time, out of what has been fetched.
@@ -190,19 +190,19 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
    * filtered, and while searching the pager simply stops claiming a total it
    * cannot know.
    */
-  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
-  const pageSkills = skills.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
+  const pageStart = (page - 1) * TABLE_PAGE_SIZE;
+  const pageSkills = skills.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
   const isFiltered = Boolean(searchTerm.trim());
   const knownTotal = !isFiltered && analytics?.computedAt && !analytics.isPartial
     ? analytics.totals?.skills ?? skills.length
     : skills.length;
-  const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(knownTotal / TABLE_PAGE_SIZE));
 
   // Stepping past what has been fetched pulls the next page in first.
   const goToPage = (next: number) => {
     setPage(next);
-    const needed = next * ADMIN_PAGE_SIZE;
-    if (skills.length < needed && status === "CanLoadMore") loadMore(ADMIN_PAGE_SIZE);
+    const needed = next * TABLE_PAGE_SIZE;
+    if (skills.length < needed && status === "CanLoadMore") loadMore(TABLE_PAGE_SIZE);
   };
 
   // Undefined while loading. Zero counted skills and an empty page means there
@@ -218,7 +218,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
       {/* The shared admin header, so this page's title sits where every other
           title in this section sits. It had its own copy of the same markup,
           which is how it ended up a different size with no dividing rule. */}
-      <AdminPageHeader
+      <PageHeader
         divider
         icon={<BrainCircuit className="w-6 h-6 text-brand" />}
         title="Skill Center"
@@ -323,14 +323,14 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           not — it was still the card grid this argues against, and stayed that
           way until the approvals queue was rebuilt. Both are now in the drift
           guard, so the claim is checked rather than asserted. */}
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[640px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={page}
             totalPages={totalPages}
             totalCount={knownTotal}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={status === "LoadingMore"}
             onPageChange={goToPage}
             labels={{
@@ -356,9 +356,9 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
         </thead>
         <tbody>
           {status === "LoadingFirstPage" ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : skills.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
               label="No skills yet — upload a SKILL.md file to add your first one"
@@ -404,7 +404,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             </tr>
           ))}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Edit skill" size="lg">
         <form onSubmit={saveEdit} className="flex flex-col gap-4 px-1 pb-2">
@@ -445,10 +445,10 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             <button type="button" onClick={() => setEditTarget(null)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
               Cancel
             </button>
-            <AdminWriteButton type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+            <WriteButton type="submit" disabled={action.isBusy(EDIT_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
               {action.isBusy(EDIT_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
               Save
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </form>
       </SonaeModal>
@@ -467,7 +467,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={confirmDelete}
               disabled={action.isBusy(DELETE_KEY)}
@@ -475,7 +475,7 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             >
               {action.isBusy(DELETE_KEY) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               Delete skill
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -519,10 +519,10 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
             <button type="button" onClick={() => setIsMarkdownOpen(false)} className="h-10 px-4 rounded-[8px] border border-border-dim text-[13px] text-secondary hover:text-foreground">
               Cancel
             </button>
-            <AdminWriteButton type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+            <WriteButton type="submit" disabled={action.isBusy(ADD_KEY)} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
               {action.isBusy(ADD_KEY) && <Loader2 className="w-4 h-4 animate-spin" />}
               Add skill
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </form>
       </SonaeModal>

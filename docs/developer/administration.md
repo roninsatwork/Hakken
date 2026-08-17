@@ -16,7 +16,7 @@ The normal app sidebar also exposes an organization section for company admins a
 
 ## Shared Admin UI Patterns
 
-Admin pages use a family of shared components under `src/app/(dashboard)/admin/_components/`: `AdminConfirmationModal`, `AdminDetailLayout`, `AdminDetailTabs`, `AdminModalForm`, `AdminPageHeader`, `AdminRouteSubmenu`, `AdminRulesTable`, `AdminSaveControls`, and `AdminTable`. These are covered by component tests and should be reused before adding new admin-specific table or modal patterns. Pagination helpers live in `src/app/(dashboard)/admin/_lib/pagination.ts`; administrative tables and feeds should default to 15 rows per page unless a product requirement says otherwise.
+Admin pages use the shared screen kit under `src/ui/components/screens/`: `ConfirmationModal`, `DetailLayout`, `DetailTabs`, `ModalForm`, `PageHeader`, `SaveControls`, `Select`, `SettingsCard`, `AccessLevel`, and `Table`. The kit serves `/app` screens too — see [Screen Kit](./screen-kit.md). `AdminRulesTable` stays under `src/app/(dashboard)/admin/_components/` because it is genuinely specific to AI rules. These are covered by component tests and should be reused before adding new table or modal patterns. Pagination helpers live in `src/ui/components/screens/pagination.ts`; tables and feeds should default to 15 rows per page unless a product requirement says otherwise.
 
 The users page at `src/app/(dashboard)/admin/users/page.tsx` shows the typical pattern: it uses `usePaginatedQuery`, `ADMIN_PAGE_SIZE`, a search input, a table, pending invitation rows, hover actions, a modal form, and `AdminConfirmationModal` for destructive actions. It avoids native browser dialogs and surfaces save/delete errors inline. New admin pages should follow the same feedback pattern.
 

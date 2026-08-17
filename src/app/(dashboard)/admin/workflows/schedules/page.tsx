@@ -9,21 +9,19 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   Timer,
   Plus,
-  Search,
   Trash2,
   ToggleLeft,
   ToggleRight,
-  ChevronLeft,
-  ChevronRight,
   Play
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
   formatUtcPreview,
   getPrimaryScheduleTime,
@@ -55,7 +53,7 @@ export default function SchedulesPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = ADMIN_PAGE_SIZE;
+  const itemsPerPage = TABLE_PAGE_SIZE;
 
   const filteredSchedules = schedules.filter((s) =>
     (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -150,6 +148,90 @@ export default function SchedulesPage() {
     });
   };
 
+  const columns: DataTableColumn<ScheduleRow>[] = [
+    {
+      key: "details",
+      header: t('table.details'),
+      cell: (schedule) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-[8px] bg-card border border-border-dim flex items-center justify-center text-foreground">
+            <Timer className="w-4 h-4 text-brand" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-medium text-[13px] text-foreground leading-tight">{schedule.name}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "workflow",
+      header: t('table.workflow'),
+      cell: (schedule) => (
+        <div className="flex items-center gap-2">
+          <span className="truncate text-[13px] text-foreground/80 font-medium">
+            {schedule.targetName || schedule.workflowName || schedule.agentName}
+          </span>
+          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-border-dim/50 text-muted">
+            {schedule.agentId ? 'Agent' : 'Workflow'}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "interval",
+      header: t('table.interval'),
+      cell: (schedule) => (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
+          <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+            {formatScheduleInterval(schedule.intervalStr)}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: t('table.status'),
+      cell: (schedule) => (
+        <button
+          onClick={(e) => handleToggle(schedule._id, schedule.isActive, e)}
+          className={`transition-colors flex-shrink-0 flex items-center gap-2 ${schedule.isActive ? "text-[#10B981]" : "text-border-dim"}`}
+        >
+          {schedule.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+          <span className="text-[12px] uppercase tracking-wider font-semibold text-foreground/50">
+            {schedule.isActive ? t('status.armed') : t('status.paused')}
+          </span>
+        </button>
+      ),
+    },
+    {
+      key: "actions",
+      header: t('table.actions'),
+      align: "right",
+      cell: (schedule) => (
+        <RowActions>
+          <RowIconButton
+            label={t('actions.forceRun')}
+            onClick={() =>
+              handleManualRun(
+                { workflowId: schedule.workflowId, agentId: schedule.agentId },
+                { stopPropagation: () => {} } as MouseEvent<HTMLButtonElement>
+              )
+            }
+          >
+            <Play className="w-4 h-4 fill-current" />
+          </RowIconButton>
+          <RowIconButton
+            label={t('actions.delete')}
+            tone="danger"
+            onClick={() => setDeletingSchedule(schedule)}
+          >
+            <Trash2 className="w-4 h-4" />
+          </RowIconButton>
+        </RowActions>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-5 h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
@@ -162,155 +244,42 @@ export default function SchedulesPage() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
-          <div className="flex-1 sm:w-[250px] flex items-center gap-2 px-3 py-2 bg-sidebar/50 border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all shadow-sm">
-            <Search className="w-4 h-4 text-muted" />
-            <input
-              type="text"
-              placeholder={t('searchPlaceholder')}
-              value={searchTerm}
-              onChange={e => handleSearch(e.target.value)}
-              className="bg-transparent border-none outline-none w-full text-[13px] placeholder:text-muted"
-            />
-          </div>
-          <AdminWriteButton
+          <WriteButton
             onClick={handleOpenAdd}
             className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>{t('newSchedule')}</span>
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </div>
 
-      <div className="bg-sidebar/40 border border-border-dim rounded-[16px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col w-full">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">{t('table.details')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.workflow')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.interval')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
-                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {paginatedSchedules.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-secondary">
-                      {t('table.noSchedules')}
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {paginatedSchedules.map((schedule) => (
-                      <motion.tr
-                        key={schedule._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        onClick={() => router.push(`/admin/workflows/schedules/${schedule._id}`)}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-[8px] bg-card border border-border-dim flex items-center justify-center text-foreground">
-                              <Timer className="w-4 h-4 text-brand" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-[13px] text-foreground leading-tight">
-                                {schedule.name}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-[13px] text-foreground/80 font-medium">
-                              {schedule.targetName || schedule.workflowName || schedule.agentName}
-                            </span>
-                            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-border-dim/50 text-muted">
-                              {schedule.agentId ? 'Agent' : 'Workflow'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
-                            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                              {formatScheduleInterval(schedule.intervalStr)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={(e) => handleToggle(schedule._id, schedule.isActive, e)}
-                            className={`transition-colors flex-shrink-0 flex items-center gap-2 ${schedule.isActive ? "text-[#10B981]" : "text-border-dim"}`}
-                          >
-                            {schedule.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                            <span className="text-[12px] uppercase tracking-wider font-semibold text-foreground/50">{schedule.isActive ? t('status.armed') : t('status.paused')}</span>
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-
-                            <button
-                              onClick={(e) => handleManualRun({ workflowId: schedule.workflowId, agentId: schedule.agentId }, e)}
-                              className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors"
-                              title={t('actions.forceRun')}
-                            >
-                              <Play className="w-4 h-4 fill-current" />
-                            </button>
-
-                            <button onClick={(e) => { e.stopPropagation(); setDeletingSchedule(schedule); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('actions.delete')}>
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </>
-                )}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        {totalItems > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-            <div className="flex items-center gap-2 text-[12px] text-muted">
-              <span>{tCommon('pagination.showing')}</span>
-              <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-              <span>{tCommon('pagination.to')}</span>
-              <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-              <span>{tCommon('pagination.of')}</span>
-              <span className="font-medium text-foreground">{totalItems}</span>
-              <span>{tCommon('pagination.items')}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <DataTable<ScheduleRow>
+        rows={paginatedSchedules}
+        rowKey={(schedule) => schedule._id}
+        columns={columns}
+        search={{ value: searchTerm, onChange: handleSearch, placeholder: t('searchPlaceholder') }}
+        onRowClick={(schedule) => router.push(`/admin/workflows/schedules/${schedule._id}`)}
+        className="flex-1"
+        empty={{
+          icon: <Timer className="w-8 h-8 text-muted/30" />,
+          label: t('table.noSchedules'),
+        }}
+        footer={{
+          mode: "paged",
+          page: currentPage,
+          totalPages,
+          totalCount: totalItems,
+          pageSize: itemsPerPage,
+          isLoading: false,
+          onPageChange: setCurrentPage,
+          labels: { empty: t('table.noSchedules') },
+        }}
+      />
 
 
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingSchedule}
         onClose={() => setDeletingSchedule(null)}
         title={t('modals.delete.title')}
@@ -322,7 +291,7 @@ export default function SchedulesPage() {
         <p>
           {t('modals.delete.confirm', { name: deletingSchedule?.name ?? "" })}
         </p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
 
       {/* Generic Message Modal */}
       <SonaeModal

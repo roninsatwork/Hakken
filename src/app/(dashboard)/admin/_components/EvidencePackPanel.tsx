@@ -6,9 +6,9 @@ import { Download, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { AdminSelect } from "./AdminSelect";
+import { Select } from "@/src/ui/components/screens/Select";
 import { getErrorMessage } from "@/src/lib/errors";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { buildEvidencePackDocument } from "@/src/lib/evidencePackDocument";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -93,7 +93,7 @@ export function EvidencePackPanel() {
         <label className="text-[13px] text-secondary" htmlFor="evidence-period">
           {t("periodLabel")}
         </label>
-        <AdminSelect
+        <Select
           id="evidence-period"
           value={days}
           onChange={(next) => setDays(Number(next))}
@@ -104,10 +104,10 @@ export function EvidencePackPanel() {
               {t(`periods.${period}`)}
             </option>
           ))}
-        </AdminSelect>
+        </Select>
 
         {/*
-          An ordinary button rather than AdminWriteButton: an auditor cannot
+          An ordinary button rather than WriteButton: an auditor cannot
           write anywhere and must still be able to take this. The export records
           that it happened, but the person exporting changes nothing.
         */}
@@ -126,7 +126,7 @@ export function EvidencePackPanel() {
         </button>
       </div>
 
-      <AdminSaveError>{error}</AdminSaveError>
+      <SaveError>{error}</SaveError>
     </div>
   );
 }

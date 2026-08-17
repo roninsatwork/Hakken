@@ -9,8 +9,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { AiSystemEntry, AiSystemRisk } from "@/convex/governanceRegisterService";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { useCanWriteHere } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
-import { AdminSelect } from "@/src/app/(dashboard)/admin/_components/AdminSelect";
+import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
+import { Select } from "@/src/ui/components/screens/Select";
 
 /**
  * Closing a gap where you found it.
@@ -138,7 +138,7 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
             <label className="mb-1.5 block text-[12px] text-secondary" htmlFor="register-owner">
               {t("ownerLabel")}
             </label>
-            <AdminSelect
+            <Select
               id="register-owner"
               value={ownerId}
               onChange={setOwnerId}
@@ -156,7 +156,7 @@ export function RegisterEntryPanel({ entry, onClose }: RegisterEntryPanelProps) 
                   {user.name}
                 </option>
               ))}
-            </AdminSelect>
+            </Select>
             {users !== undefined && users.length === 0 ? (
               /* An empty picker with no explanation reads as a broken screen.
                  If there is genuinely nobody who could be named, say so. */

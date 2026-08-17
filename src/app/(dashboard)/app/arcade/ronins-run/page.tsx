@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
+import { PaginationFooter, TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";
 import { api } from "@/convex/_generated/api";
-import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from "lucide-react";
+import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, Maximize2, Minimize2, X } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { Press_Start_2P } from "next/font/google";
 import RoninCanvas from "./RoninCanvas";
@@ -74,19 +75,16 @@ export default function RoninArcadePage() {
 
   const paginatedItems = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      const next = currentPage + 1;
-      setCurrentPage(next);
-      if (next * itemsPerPage > results.length && status === "CanLoadMore") {
-         loadMore(15);
-      }
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => Math.max(1, prev - 1));
+  /**
+   * One handler for both directions, because the shared footer asks for a page
+   * rather than a step. The same pair was written out on four screens; this is
+   * the shape the kit's footer expects.
+   */
+  const handlePageChange = (nextPage: number) => {
+    const target = Math.min(Math.max(nextPage, 1), totalPages);
+    setCurrentPage(target);
+    if (target * itemsPerPage > results.length && status === "CanLoadMore") {
+      loadMore(15);
     }
   };
 
@@ -399,15 +397,30 @@ export default function RoninArcadePage() {
              </div>
            </div>
 
-           <div className="w-full overflow-x-auto">
-             <table className="w-full text-left border-collapse">
+           <TableShell
+             variant="bare"
+             footer={
+               <PaginationFooter
+                 page={currentPage}
+                 totalPages={totalPages}
+                 totalCount={totalItems}
+                 pageSize={itemsPerPage}
+                 isLoading={status === "LoadingMore"}
+                 onPageChange={handlePageChange}
+                 labels={{
+                   empty: "No attempts yet",
+                   showing: (start, end, total) => `Showing ${start} to ${end} of ${total} attempts`,
+                 }}
+               />
+             }
+           >
                <thead>
-                 <tr className="border-b border-border-dim/50 bg-foreground/[0.02] whitespace-nowrap">
-                   <th className="px-6 py-4 text-[11px] font-medium text-secondary uppercase tracking-[0.1em] w-[80px]">Rank</th>
-                   <th className="px-6 py-4 text-[11px] font-medium text-secondary uppercase tracking-[0.1em]">User</th>
-                   <th className="px-6 py-4 text-[11px] font-medium text-secondary uppercase tracking-[0.1em] text-right">Score</th>
-                   <th className="px-6 py-4 text-[11px] font-medium text-secondary uppercase tracking-[0.1em] text-right">Timestamp</th>
-                 </tr>
+                 <TableHeaderRow variant="strip" className="whitespace-nowrap">
+                   <TableHeaderCell className="w-[80px]">Rank</TableHeaderCell>
+                   <TableHeaderCell>User</TableHeaderCell>
+                   <TableHeaderCell align="right">Score</TableHeaderCell>
+                   <TableHeaderCell align="right">Timestamp</TableHeaderCell>
+                 </TableHeaderRow>
                </thead>
                <tbody className="divide-y divide-border-dim/30">
                  {(status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0 && (
@@ -469,36 +482,7 @@ export default function RoninArcadePage() {
                    );
                  })}
                </tbody>
-             </table>
-           </div>
-
-           <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-             <div className="flex items-center gap-2 text-[12px] text-muted">
-                 <span>Showing</span>
-                 <span className="font-medium text-foreground">{totalItems === 0 ? 0 : Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-                 <span>to</span>
-                 <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-                 <span>of</span>
-                 <span className="font-medium text-foreground">{totalItems}</span>
-                 <span>attempts</span>
-             </div>
-             <div className="flex items-center gap-2">
-                 <button 
-                   disabled={currentPage === 1}
-                   onClick={handlePrevPage}
-                   className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                 >
-                   <ChevronLeft className="w-4 h-4" />
-                 </button>
-                 <button 
-                   disabled={currentPage >= totalPages || totalItems === 0}
-                   onClick={handleNextPage}
-                   className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                 >
-                   <ChevronRight className="w-4 h-4" />
-                 </button>
-             </div>
-            </div>
+           </TableShell>
           </div>
         )}
 

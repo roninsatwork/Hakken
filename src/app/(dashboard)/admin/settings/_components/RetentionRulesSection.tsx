@@ -5,9 +5,9 @@ import { useMutation, useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminWriteButton, useCanWriteHere } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton, useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import {
   AlertTriangle,
   Clock,
@@ -20,14 +20,14 @@ import {
   ToggleRight,
 } from "lucide-react";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
   purgePipelineKeys,
   type PurgeConfigMap,
@@ -73,9 +73,9 @@ export function RetentionRulesSection() {
     return haystack.includes(needle);
   });
 
-  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
-  const pageKeys = filteredKeys.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
-  const totalPages = Math.max(1, Math.ceil(filteredKeys.length / ADMIN_PAGE_SIZE));
+  const pageStart = (page - 1) * TABLE_PAGE_SIZE;
+  const pageKeys = filteredKeys.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filteredKeys.length / TABLE_PAGE_SIZE));
 
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [configModalPipeline, setConfigModalPipeline] = useState<PurgePipelineKey | null>(null);
@@ -103,7 +103,7 @@ export function RetentionRulesSection() {
 
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
               <div className="flex-1">
-                <AdminSearchBar
+                <SearchBar
                   value={searchTerm}
                   onChange={(value) => {
                     setSearchTerm(value);
@@ -137,34 +137,34 @@ export function RetentionRulesSection() {
               </div>
             </div>
 
-            <AdminTableShell
+            <TableShell
               minWidthClassName="min-w-[900px]"
               footer={filteredKeys.length > 0 ? (
-                <AdminPaginationFooter
+                <PaginationFooter
                   page={page}
                   totalPages={totalPages}
                   totalCount={filteredKeys.length}
-                  pageSize={ADMIN_PAGE_SIZE}
+                  pageSize={TABLE_PAGE_SIZE}
                   isLoading={purgeConfigs === undefined}
                   onPageChange={setPage}
                 />
               ) : undefined}
             >
                 <thead>
-                  <AdminTableHeaderRow>
-                    <AdminTableHeaderCell>{t('purges.table.category')}</AdminTableHeaderCell>
-                    <AdminTableHeaderCell>{t('purges.table.description')}</AdminTableHeaderCell>
-                    <AdminTableHeaderCell className="w-[190px]">{t('purges.table.retention')}</AdminTableHeaderCell>
-                    <AdminTableHeaderCell className="w-[190px]">{t('purges.table.interval')}</AdminTableHeaderCell>
-                    <AdminTableHeaderCell className="w-[120px]">{t('purges.table.status')}</AdminTableHeaderCell>
-                    <AdminTableHeaderCell className="w-[110px]" align="right">{t('purges.table.actions')}</AdminTableHeaderCell>
-                  </AdminTableHeaderRow>
+                  <TableHeaderRow>
+                    <TableHeaderCell>{t('purges.table.category')}</TableHeaderCell>
+                    <TableHeaderCell>{t('purges.table.description')}</TableHeaderCell>
+                    <TableHeaderCell className="w-[190px]">{t('purges.table.retention')}</TableHeaderCell>
+                    <TableHeaderCell className="w-[190px]">{t('purges.table.interval')}</TableHeaderCell>
+                    <TableHeaderCell className="w-[120px]">{t('purges.table.status')}</TableHeaderCell>
+                    <TableHeaderCell className="w-[110px]" align="right">{t('purges.table.actions')}</TableHeaderCell>
+                  </TableHeaderRow>
                 </thead>
                 <tbody>
                     {purgeConfigs === undefined ? (
-                      <AdminTableLoadingRow colSpan={6} />
+                      <TableLoadingRow colSpan={6} />
                     ) : filteredKeys.length === 0 ? (
-                      <AdminTableEmptyRow
+                      <TableEmptyRow
                         colSpan={6}
                         icon={<Database className="h-8 w-8 text-muted/30" />}
                         label={t('purges.table.noMatches')}
@@ -263,7 +263,7 @@ export function RetentionRulesSection() {
                       })
                     )}
                 </tbody>
-            </AdminTableShell>
+            </TableShell>
 
           </section>
 
@@ -419,7 +419,7 @@ export function RetentionRulesSection() {
             >
               {t('purges.modals.config.cancel')}
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={async () => {
                 if (configModalPipeline) {
                   // Write exactly what the select displays. The old fallback
@@ -442,7 +442,7 @@ export function RetentionRulesSection() {
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-[13px]"
             >
               {t('purges.modals.config.save')}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -477,7 +477,7 @@ export function RetentionRulesSection() {
             >
               {t('purges.modals.confirm.cancel')}
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={async () => {
                 if (confirmModalPipeline) {
                   setIsManualRunning(true);
@@ -496,7 +496,7 @@ export function RetentionRulesSection() {
             >
               {isManualRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               {t('purges.modals.confirm.confirm')}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -529,7 +529,7 @@ export function RetentionRulesSection() {
             >
               {t('purges.modals.cancelConfirm.cancel')}
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={async () => {
                 if (cancelModalHistoryId) {
                   setIsCancelRunning(true);
@@ -548,7 +548,7 @@ export function RetentionRulesSection() {
             >
               {isCancelRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-3.5 h-3.5 fill-white" />}
               {t('purges.modals.cancelConfirm.confirm')}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

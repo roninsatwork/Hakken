@@ -2,14 +2,14 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Activity, Settings } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AdminDetailLayout } from "./AdminDetailLayout";
+import { DetailLayout } from "./DetailLayout";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
   useSearchParams: vi.fn(),
 }));
 
-describe("AdminDetailLayout", () => {
+describe("DetailLayout", () => {
   const tabs = [
     { label: "Dashboard", href: "/admin/companies/company-1", icon: Activity },
     { label: "Settings", href: "/admin/companies/company-1/settings", icon: Settings },
@@ -20,7 +20,7 @@ describe("AdminDetailLayout", () => {
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(
-      <AdminDetailLayout
+      <DetailLayout
         title="Acme Workspace"
         description="Manage workspace settings."
         leading={<div aria-label="Workspace icon" />}
@@ -29,7 +29,7 @@ describe("AdminDetailLayout", () => {
         rootHref="/admin/companies/company-1"
       >
         <section>Detail body</section>
-      </AdminDetailLayout>
+      </DetailLayout>
     );
 
     expect(screen.getByRole("heading", { name: "Acme Workspace" })).toBeInTheDocument();

@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, Minus, Network, Plus, RotateCcw } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 
@@ -292,7 +292,7 @@ export function WikiMapScreen({
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
       <WikiQuickSwitcher companyId={companyId} basePath={basePath} />
-      <AdminPageHeader
+      <PageHeader
         icon={<Network className="w-6 h-6 text-brand" />}
         title={t("map.title")}
         description={t("map.subtitle")}

@@ -6,8 +6,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight, ChevronDown, DatabaseZap, FileText, Loader2, Search } from "lucide-react";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { AdminPaginationFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { PaginationFooter } from "@/src/ui/components/screens/Table";
 import useDebounce from "@/src/hooks/useDebounce";
 import {
   describeInteractionType,
@@ -51,7 +51,7 @@ export default function AgentLogsDashboard() {
     filter,
     ...(failureKey ? { failureKey } : {}),
     page,
-    pageSize: ADMIN_PAGE_SIZE,
+    pageSize: TABLE_PAGE_SIZE,
   });
 
   const isLoading = data === undefined;
@@ -145,11 +145,11 @@ export default function AgentLogsDashboard() {
       )}
 
       {!isLoading && groups.length > 0 && (
-        <AdminPaginationFooter
+        <PaginationFooter
           page={page}
           totalPages={data.totalPages}
           totalCount={data.totalGroups}
-          pageSize={ADMIN_PAGE_SIZE}
+          pageSize={TABLE_PAGE_SIZE}
           isLoading={isLoading}
           onPageChange={setPage}
           labels={{

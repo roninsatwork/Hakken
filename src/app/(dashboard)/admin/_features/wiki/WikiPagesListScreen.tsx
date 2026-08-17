@@ -3,23 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useConvex, useMutation, useQuery } from "convex/react";
-import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, BookOpen, Download, Network, Pin, X } from "lucide-react";
 import { strToU8, zipSync } from "fflate";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiImportBox } from "./WikiImportBox";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
@@ -183,7 +183,7 @@ export function WikiPagesListScreen({
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
       <WikiQuickSwitcher companyId={companyId} basePath={basePath} />
-      <AdminPageHeader
+      <PageHeader
         icon={<BookOpen className="w-6 h-6 text-brand" />}
         title={companyId ? t("title") : t("globalTitle")}
         description={companyId ? t("subtitle") : t("globalSubtitle")}
@@ -302,18 +302,18 @@ export function WikiPagesListScreen({
                   </ul>
                 )}
                 <div className="flex items-center gap-2">
-                  <AdminWriteButton
+                  <WriteButton
                     onClick={() => void decideReview(review.reviewId, true)}
                     className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium"
                   >
                     {t("reviews.approve")}
-                  </AdminWriteButton>
-                  <AdminWriteButton
+                  </WriteButton>
+                  <WriteButton
                     onClick={() => void decideReview(review.reviewId, false)}
                     className="px-3 py-1.5 rounded-[8px] border border-border-dim text-secondary hover:text-foreground text-[12px] font-medium transition-colors"
                   >
                     {t("reviews.reject")}
-                  </AdminWriteButton>
+                  </WriteButton>
                 </div>
               </li>
             ))}
@@ -366,14 +366,14 @@ export function WikiPagesListScreen({
                       <span className="text-[12px] text-secondary">{question.detail}</span>
                     )}
                   </div>
-                  <AdminWriteButton
+                  <WriteButton
                     onClick={() => void dismissQuestion(question.questionId)}
                     aria-label={t("questions.dismiss")}
                     title={t("questions.dismiss")}
                     className="text-muted hover:text-foreground transition-colors shrink-0"
                   >
                     <X className="w-4 h-4" />
-                  </AdminWriteButton>
+                  </WriteButton>
                 </li>
               );
             })}
@@ -383,7 +383,7 @@ export function WikiPagesListScreen({
 
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <AdminSearchBar
+          <SearchBar
             value={search}
             onChange={(value) => {
               setSearch(value);
@@ -410,10 +410,10 @@ export function WikiPagesListScreen({
         </Link>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={rows.page}
             totalPages={rows.totalPages}
             totalCount={rows.loadedCount}
@@ -425,11 +425,11 @@ export function WikiPagesListScreen({
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.customer")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.remembers")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.lastChange")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.customer")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.remembers")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.lastChange")}</TableHeaderCell>
+            <TableHeaderCell align="right">
               <button
                 type="button"
                 onClick={() => {
@@ -442,15 +442,15 @@ export function WikiPagesListScreen({
                 {t("columns.used")}
                 {sortByUse ? " ↓" : ""}
               </button>
-            </AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("columns.sources")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+            </TableHeaderCell>
+            <TableHeaderCell align="right">{t("columns.sources")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : visibleRows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<BookOpen className="w-5 h-5" />}
               label={
@@ -510,7 +510,7 @@ export function WikiPagesListScreen({
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

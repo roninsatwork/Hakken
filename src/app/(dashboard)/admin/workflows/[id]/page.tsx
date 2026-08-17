@@ -29,7 +29,7 @@ import { ArrowLeft, Play, Save, Loader2, Plus } from "lucide-react";
 import { GenericNode } from "@/src/ui/components/workflows/GenericNode";
 import { WorkflowSidebar } from "@/src/ui/components/workflows/WorkflowSidebar";
 import { ConfigDrawer } from "@/src/ui/components/workflows/ConfigDrawer";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import type {
   UpdatableWorkflowNodeData,
   WorkflowCanvasEdge,
@@ -176,14 +176,14 @@ function FlowCanvasWithProvider({ workflow, isSaving, isRunning, feedbackMessage
         </div>
 
         <div className="flex items-center gap-3">
-           <AdminWriteButton
+           <WriteButton
               onClick={() => handleSave(nodes, edges)}
               disabled={isSaving}
               className="flex items-center gap-2 px-4 py-1.5 rounded-[10px] text-[13px] bg-brand text-brand-foreground font-medium hover:bg-brand/90 transition-all shadow-xl shadow-brand/20 disabled:opacity-50"
            >
               <Save className="w-4 h-4" />
               <span>{isSaving ? t('header.saving') : t('header.saveGraph')}</span>
-           </AdminWriteButton>
+           </WriteButton>
            <button
               onClick={handleManualRun}
               disabled={isRunning}

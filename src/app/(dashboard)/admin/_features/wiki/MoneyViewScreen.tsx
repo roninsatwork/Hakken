@@ -6,8 +6,8 @@ import { useTranslations } from "next-intl";
 import { CircleDollarSign, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 /**
@@ -82,7 +82,7 @@ export function MoneyViewScreen({
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<CircleDollarSign className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("subtitleCompany") : t("subtitleGlobal")}
@@ -139,13 +139,13 @@ export function MoneyViewScreen({
                 className="w-16 bg-background border border-border-dim rounded-[8px] px-2 py-1.5 text-[13px] text-foreground focus:outline-none focus:border-brand/50"
               />
             </label>
-            <AdminWriteButton
+            <WriteButton
               onClick={() => void saveAssumptions()}
               disabled={isSaving}
               className="px-3.5 py-1.5 rounded-[9px] bg-brand text-white text-[12px] font-medium disabled:opacity-40"
             >
               {isSaving ? t("assumptions.saving") : t("assumptions.save")}
-            </AdminWriteButton>
+            </WriteButton>
             <button
               type="button"
               onClick={() => {

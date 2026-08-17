@@ -16,23 +16,23 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
-  AdminPageHeader,
-  AdminPagePrimaryAction,
-} from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+  PageHeader,
+  PagePrimaryAction,
+} from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminLoadMoreFooter,
-  AdminRowActions,
-  AdminRowIconButton,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  LoadMoreFooter,
+  RowActions,
+  RowIconButton,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 type Agent = Doc<"agents">;
 
@@ -76,7 +76,7 @@ export default function AgentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const itemsPerPage = ADMIN_PAGE_SIZE;
+  const itemsPerPage = TABLE_PAGE_SIZE;
   const {
     results: paginatedAgents,
     status,
@@ -114,23 +114,23 @@ export default function AgentsPage() {
 
   return (
     <div className="flex flex-col gap-5 h-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<Workflow className="w-6 h-6 text-brand" />}
         title={t('title')}
         description={t('description')}
         action={
-          <AdminPagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+          <PagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
             {t('new')}
-          </AdminPagePrimaryAction>
+          </PagePrimaryAction>
         }
       />
 
-      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
+      <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <AdminTableShell
+      <TableShell
         footer={
-          <AdminLoadMoreFooter
+          <LoadMoreFooter
             visibleCount={paginatedAgents.length}
             canLoadMore={canLoadMore}
             isLoading={isLoadingMore}
@@ -146,19 +146,19 @@ export default function AgentsPage() {
         minWidthClassName="min-w-[800px]"
       >
             <thead>
-              <AdminTableHeaderRow>
-                <AdminTableHeaderCell>{t('table.agent')}</AdminTableHeaderCell>
-                <AdminTableHeaderCell>{t('table.model')}</AdminTableHeaderCell>
-                <AdminTableHeaderCell>{t('table.status')}</AdminTableHeaderCell>
-                <AdminTableHeaderCell align="right">{t('table.actions')}</AdminTableHeaderCell>
-              </AdminTableHeaderRow>
+              <TableHeaderRow>
+                <TableHeaderCell>{t('table.agent')}</TableHeaderCell>
+                <TableHeaderCell>{t('table.model')}</TableHeaderCell>
+                <TableHeaderCell>{t('table.status')}</TableHeaderCell>
+                <TableHeaderCell align="right">{t('table.actions')}</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
                 {isLoading ? (
-                  <AdminTableLoadingRow colSpan={4} />
+                  <TableLoadingRow colSpan={4} />
                 ) : paginatedAgents.length === 0 ? (
-                  <AdminTableEmptyRow
+                  <TableEmptyRow
                     colSpan={4}
                     icon={<Bot className="w-8 h-8 text-muted/30" />}
                     label={t('table.empty')}
@@ -228,14 +228,14 @@ export default function AgentsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <AdminRowActions>
-                            <AdminRowIconButton navigates label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
+                          <RowActions>
+                            <RowIconButton navigates label={t('table.configure')} onClick={() => router.push(`/admin/agents/${agent._id}`)}>
                               <Settings className="w-4 h-4" />
-                            </AdminRowIconButton>
-                            <AdminRowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>
+                            </RowIconButton>
+                            <RowIconButton label={t('buttons.delete')} tone="danger" onClick={() => setDeletingAgent(agent)}>
                               <Trash2 className="w-4 h-4" />
-                            </AdminRowIconButton>
-                          </AdminRowActions>
+                            </RowIconButton>
+                          </RowActions>
                         </td>
                       </motion.tr>
                     ))}
@@ -243,9 +243,9 @@ export default function AgentsPage() {
                 )}
               </AnimatePresence>
             </tbody>
-      </AdminTableShell>
+      </TableShell>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingAgent}
         onClose={() => {
           setDeletingAgent(null);
@@ -262,7 +262,7 @@ export default function AgentsPage() {
           {t('modal.deleteConfirm', { name: deletingAgent?.name ?? "" })}
         </p>
         <p className="text-[13px] text-muted">{t('modal.undone')}</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

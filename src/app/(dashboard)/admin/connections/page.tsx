@@ -5,15 +5,15 @@ import { useAction, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CircleCheck, HelpCircle, Loader2, PlugZap } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -46,20 +46,20 @@ export default function ConnectionsPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<PlugZap className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
         divider
         action={
-          <AdminWriteButton
+          <WriteButton
             onClick={() => void check()}
             disabled={isChecking}
             className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
           >
             {isChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isChecking ? t("checking") : t("checkNow")}
-          </AdminWriteButton>
+          </WriteButton>
         }
       />
 
@@ -83,20 +83,20 @@ export default function ConnectionsPage() {
         <p className="mt-1 text-[12.5px] text-secondary">{t("hint")}</p>
       </div>
 
-      <AdminTableShell minWidthClassName="min-w-[780px]">
+      <TableShell minWidthClassName="min-w-[780px]">
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.connection")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.state")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.detail")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.checked")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.connection")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.state")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.detail")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.checked")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {connections === undefined ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : connections.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<PlugZap className="w-5 h-5" />}
               label={t("noConnections")}
@@ -152,25 +152,25 @@ export default function ConnectionsPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <div className="flex flex-col gap-2">
         <h2 className="text-[15px] font-semibold text-foreground">{t("jobs.title")}</h2>
         <p className="text-[12.5px] text-secondary">{t("jobs.hint")}</p>
       </div>
 
-      <AdminTableShell minWidthClassName="min-w-[780px]">
+      <TableShell minWidthClassName="min-w-[780px]">
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("jobs.columns.job")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("jobs.columns.state")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("jobs.columns.lastRan")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("jobs.columns.lastWorked")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("jobs.columns.job")}</TableHeaderCell>
+            <TableHeaderCell>{t("jobs.columns.state")}</TableHeaderCell>
+            <TableHeaderCell>{t("jobs.columns.lastRan")}</TableHeaderCell>
+            <TableHeaderCell>{t("jobs.columns.lastWorked")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {jobs === undefined ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : (
             jobs.map((job) => {
               const bad = job.lastOk === false || job.isOverdue;
@@ -215,7 +215,7 @@ export default function ConnectionsPage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

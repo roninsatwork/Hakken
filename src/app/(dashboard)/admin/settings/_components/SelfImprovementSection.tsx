@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { ToggleLeft, ToggleRight } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
-import { AdminSaveAction, AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { SettingBlock } from "./SettingBlock";
 
 type SwitchKey =
@@ -130,10 +130,10 @@ export function SelfImprovementSection() {
           )}
         </div>
 
-        <AdminSaveError>{saveError}</AdminSaveError>
+        <SaveError>{saveError}</SaveError>
 
         <div className="flex justify-end">
-          <AdminSaveAction
+          <SaveAction
             onClick={handleSave}
             isSaving={isSaving}
             showSuccess={saveSuccess}

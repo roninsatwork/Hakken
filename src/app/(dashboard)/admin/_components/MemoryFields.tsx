@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminModalFormField, adminModalTextareaClassName } from "./AdminModalForm";
+import { ModalFormField, modalTextareaClassName } from "@/src/ui/components/screens/ModalForm";
 
 /**
  * The one thing that changes what a memory does.
@@ -53,7 +53,7 @@ type MemoryApplyModeChoiceProps = {
 
 export function MemoryApplyModeChoice({ value, onChange, alwaysRemaining }: MemoryApplyModeChoiceProps) {
   return (
-    <AdminModalFormField label="When should the AI use this?">
+    <ModalFormField label="When should the AI use this?">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {MEMORY_APPLY_MODE_OPTIONS.map((option) => {
           const isSelected = value === option.value;
@@ -84,7 +84,7 @@ export function MemoryApplyModeChoice({ value, onChange, alwaysRemaining }: Memo
           );
         })}
       </div>
-    </AdminModalFormField>
+    </ModalFormField>
   );
 }
 
@@ -95,14 +95,14 @@ type MemoryContentFieldProps = {
 
 export function MemoryContentField({ value, onChange }: MemoryContentFieldProps) {
   return (
-    <AdminModalFormField label="What the AI should know">
+    <ModalFormField label="What the AI should know">
       <textarea
         required
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`${adminModalTextareaClassName} min-h-[180px]`}
+        className={`${modalTextareaClassName} min-h-[180px]`}
         placeholder="We do not give delivery dates over chat. Ask the customer to email orders@ instead."
       />
-    </AdminModalFormField>
+    </ModalFormField>
   );
 }

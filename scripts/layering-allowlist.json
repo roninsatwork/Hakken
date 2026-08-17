@@ -1,9 +1,6 @@
 {
   "note": "Files that hardcoded a z-index before src/ui/lib/layers.ts existed. Frozen 2026-08-01. This list may shrink, never grow \u2014 move the file onto LAYER instead of adding to it.",
   "files": [
-    "src/app/(dashboard)/admin/_components/AdminDetailLayout.tsx",
-    "src/app/(dashboard)/admin/_components/AdminDetailTabs.tsx",
-    "src/app/(dashboard)/admin/_components/AdminRouteSubmenu.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetConfigTabs.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetGreetingSection.tsx",
     "src/app/(dashboard)/admin/_features/widget-config/WidgetPreviewPanel.tsx",

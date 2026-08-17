@@ -15,7 +15,9 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter } from "@/src/ui/components/screens/Table";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatTime } from "@/src/lib/dates";
 
 export default function AgentDashboard() {
@@ -30,8 +32,13 @@ export default function AgentDashboard() {
   const { results, status, loadMore } = usePaginatedQuery(
     api.agentTransactions.getForAgent,
     { agentId },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
+
+  const pagedRuns = usePagedRows(results, {
+    canLoadMore: status === "CanLoadMore",
+    loadMore,
+  });
 
 
 
@@ -92,18 +99,29 @@ export default function AgentDashboard() {
       </div>
 
       {/* Transactions Table Container */}
-      <div className="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden mt-2 shadow-sm relative">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+      <TableShell
+        className="mt-2"
+        minWidthClassName="min-w-[800px]"
+        footer={
+          <PaginationFooter
+            page={pagedRuns.page}
+            totalPages={pagedRuns.totalPages}
+            totalCount={pagedRuns.loadedCount}
+            pageSize={pagedRuns.pageSize}
+            isLoading={status === "LoadingMore"}
+            onPageChange={pagedRuns.goToPage}
+          />
+        }
+      >
             <thead>
-              <tr className="border-b border-border-dim/50 bg-sidebar/40">
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.timestamp")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.context")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase">{t("table.pipeline")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase text-right">{t("table.tokens")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase text-right">{t("table.cost")}</th>
-                <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase text-right w-[100px]">{t("table.status")}</th>
-              </tr>
+              <TableHeaderRow variant="strip">
+                <TableHeaderCell>{t("table.timestamp")}</TableHeaderCell>
+                <TableHeaderCell>{t("table.context")}</TableHeaderCell>
+                <TableHeaderCell>{t("table.pipeline")}</TableHeaderCell>
+                <TableHeaderCell align="right">{t("table.tokens")}</TableHeaderCell>
+                <TableHeaderCell align="right">{t("table.cost")}</TableHeaderCell>
+                <TableHeaderCell align="right" className="w-[100px]">{t("table.status")}</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody className="divide-y divide-white/5">
               {status === "LoadingFirstPage" && (
@@ -130,7 +148,7 @@ export default function AgentDashboard() {
                 </tr>
               )}
 
-              {results.map((tx) => {
+              {pagedRuns.pageRows.map((tx) => {
                 const model = activeModels.find((activeModel) => activeModel.modelId === tx.modelUsed);
 
                 return (
@@ -182,21 +200,7 @@ export default function AgentDashboard() {
                 );
               })}
             </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Bound */}
-        {status === "CanLoadMore" && (
-          <div className="w-full p-4 border-t border-border-dim/50 flex justify-center bg-sidebar/20">
-            <button
-              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-              className="px-5 py-2 text-[12px] font-medium tracking-wide text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all border border-transparent hover:border-border-dim"
-            >
-              {t("table.loadMore")}
-            </button>
-          </div>
-        )}
-      </div>
+      </TableShell>
     </div>
   );
 }

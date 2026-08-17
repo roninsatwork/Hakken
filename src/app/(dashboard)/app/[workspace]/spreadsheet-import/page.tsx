@@ -11,8 +11,9 @@ import { api } from "@/convex/_generated/api";
 import {
   CursorPaginationFooter,
   useCursorPagination,
-} from "../_components/CursorPagination";
-import { TableFilterSelect, TableSearchInput } from "../_components/TableControls";
+} from "@/src/ui/components/screens/CursorPagination";
+import { TableFilterSelect, TableSearchInput } from "@/src/ui/components/screens/TableControls";
+import { TableHeaderCell, TableHeaderRow, TableShell } from "@/src/ui/components/screens/Table";
 import { LAYER } from "@/src/ui/lib/layers";
 
 /**
@@ -342,11 +343,27 @@ function SalesDataTables() {
           )}
         </div>
 
-        <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+        <TableShell
+          minWidthClassName="min-w-[900px]"
+          footer={
+              <CursorPaginationFooter
+                pageIndex={pagination.pageIndex}
+                rowsOnPage={result?.page.length ?? 0}
+                isDone={result?.isDone ?? true}
+                isLoading={isLoading}
+                onPrevious={pagination.previous}
+                onNext={() => {
+                  if (result && !result.isDone) pagination.next(result.continueCursor);
+                }}
+                labels={{
+                  page: (page) => t("pageNumber", { page }),
+                  showing: (count) => t("rowsShown", { count }),
+                }}
+              />
+          }
+        >
               <thead>
-                <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+                <TableHeaderRow>
                   {tab === "sales" && (
                     <>
                       <Th>{t("column.sourceRow")}</Th>
@@ -387,7 +404,7 @@ function SalesDataTables() {
                       <Th>{t("column.frequency")}</Th>
                     </>
                   )}
-                </tr>
+                </TableHeaderRow>
               </thead>
               <tbody>
                 {isLoading ? (
@@ -463,42 +480,25 @@ function SalesDataTables() {
                   ))
                 )}
               </tbody>
-            </table>
-          </div>
+        </TableShell>
 
-          <CursorPaginationFooter
-            pageIndex={pagination.pageIndex}
-            rowsOnPage={result?.page.length ?? 0}
-            isDone={result?.isDone ?? true}
-            isLoading={isLoading}
-            onPrevious={pagination.previous}
-            onNext={() => {
-              if (result && !result.isDone) pagination.next(result.continueCursor);
-            }}
-            labels={{
-              page: (page) => t("pageNumber", { page }),
-              showing: (count) => t("rowsShown", { count }),
-            }}
-          />
-        </div>
       </div>
     </>
   );
 }
 
-function Th({
-  children,
-  align = "left",
-}: {
-  children: React.ReactNode;
-  align?: "left" | "right";
-}) {
+/**
+ * The house header cell, with the nowrap these dense tables need.
+ *
+ * This was a local copy of the kit's cell, and so was the one in the
+ * spreadsheet import next door — the same eight classes written out three
+ * times across this folder. It delegates now, so the styling has one home.
+ */
+function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
   return (
-    <th
-      className={`px-4 py-3 font-medium whitespace-nowrap ${align === "right" ? "text-right" : ""}`}
-    >
+    <TableHeaderCell align={align} className="whitespace-nowrap">
       {children}
-    </th>
+    </TableHeaderCell>
   );
 }
 

@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 
 /**
  * Answering the two questions a person can ask about their own data.
@@ -118,7 +118,7 @@ export function PersonalDataPanel() {
         ) : null}
       </div>
 
-      <AdminSaveError>{error}</AdminSaveError>
+      <SaveError>{error}</SaveError>
 
       {summary.length > 0 ? (
         <div className="rounded-[10px] border border-border-dim bg-background/60 p-4">
@@ -149,7 +149,7 @@ export function PersonalDataPanel() {
         </div>
       ) : null}
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={confirming}
         onClose={() => setConfirming(false)}
         title={t("confirmTitle")}
@@ -160,7 +160,7 @@ export function PersonalDataPanel() {
         warning={{ title: t("confirmWarningTitle"), description: t("confirmWarning") }}
       >
         {t("confirmBody", { email: email.trim() })}
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

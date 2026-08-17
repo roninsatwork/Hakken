@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
 import { ArrowLeft, History, Loader2, Pencil, Pin, RefreshCw, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminSaveError, AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { WikiProse } from "./WikiProse";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
@@ -144,7 +144,7 @@ export function WikiPageDetailScreen({
           </span>
         </h1>
         <span className="flex items-center gap-2">
-          <AdminWriteButton
+          <WriteButton
             onClick={() => {
               setIsEditing((current) => !current);
               setDraft(detail.content);
@@ -157,7 +157,7 @@ export function WikiPageDetailScreen({
           >
             <Pencil className="w-3.5 h-3.5" />
             {isEditing ? t("read.reading") : t("read.edit")}
-          </AdminWriteButton>
+          </WriteButton>
           <button
             type="button"
             onClick={() => setOpenFold((current) => (current === "history" ? "none" : "history"))}
@@ -167,7 +167,7 @@ export function WikiPageDetailScreen({
             {t("read.history")}
           </button>
           {detail.kind === "SOURCE" && (
-            <AdminWriteButton
+            <WriteButton
               onClick={() =>
                 void run(async () => {
                   if (companyId) await rereadCompany({ companyId, pageId });
@@ -180,7 +180,7 @@ export function WikiPageDetailScreen({
             >
               <RefreshCw className="w-3.5 h-3.5" />
               {rereadState === "queued" ? t("read.rereadQueued") : t("read.reread")}
-            </AdminWriteButton>
+            </WriteButton>
           )}
         </span>
       </div>
@@ -233,14 +233,14 @@ export function WikiPageDetailScreen({
           : t("usageNever")}
       </p>
 
-      <AdminSaveFeedback
+      <SaveFeedback
         status={saveStatus}
         successTitle={t("success.title")}
         successMessage={t("success.message")}
         errorTitle={t("errors.saveTitle")}
         errorMessage=""
       />
-      <AdminSaveError>{errorMessage}</AdminSaveError>
+      <SaveError>{errorMessage}</SaveError>
 
       {/* Pinned facts ride on top: Sonae always respects them. */}
       {detail.pinnedCorrections.map((correction) => (
@@ -255,7 +255,7 @@ export function WikiPageDetailScreen({
               <span className="block text-[11.5px] text-muted mt-0.5">{t("pinned.hintShort")}</span>
             </span>
           </span>
-          <AdminWriteButton
+          <WriteButton
             onClick={() => void run(() => unpin(correction.pinnedAt))}
             disabled={isSaving}
             aria-label={t("pinned.remove")}
@@ -263,7 +263,7 @@ export function WikiPageDetailScreen({
             className="text-muted hover:text-foreground transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       ))}
 
@@ -278,7 +278,7 @@ export function WikiPageDetailScreen({
             className="w-full bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] leading-relaxed text-foreground focus:outline-none focus:border-brand/50 transition-colors resize-y"
           />
           <div className="flex items-center gap-3">
-            <AdminWriteButton
+            <WriteButton
               onClick={() =>
                 void run(async () => {
                   await editContent(draft ?? "");
@@ -289,7 +289,7 @@ export function WikiPageDetailScreen({
               className="px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity w-fit"
             >
               {isSaving ? t("body.saving") : t("body.save")}
-            </AdminWriteButton>
+            </WriteButton>
             <button
               type="button"
               onClick={() => {
@@ -480,7 +480,7 @@ export function WikiPageDetailScreen({
               placeholder={t("pinned.placeholder")}
               className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
             />
-            <AdminWriteButton
+            <WriteButton
               onClick={() =>
                 void run(async () => {
                   await pin(newPin);
@@ -492,7 +492,7 @@ export function WikiPageDetailScreen({
               className="px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
             >
               {t("pinned.add")}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </section>
       )}

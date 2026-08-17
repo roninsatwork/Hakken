@@ -6,20 +6,20 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { Copy, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminLoadMoreFooter,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  LoadMoreFooter,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { cn } from "@/src/ui/lib/utils";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type ApiKeyScope = "agent:run" | "workflow:run" | "run:read";
 
@@ -106,7 +106,7 @@ export default function ApiKeysPage() {
   const { results: apiKeys, status, loadMore } = usePaginatedQuery(
     api.apiKeys.list,
     selectedCompanyId ? { companyId: selectedCompanyId } : {},
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
 
   const toggleScope = (scope: ApiKeyScope) => {
@@ -171,7 +171,7 @@ export default function ApiKeysPage() {
           surfaces". The public API is live — four endpoints, every one checking
           the key and what it is allowed to do — so the screen that unlocks it
           was telling the reader it did not exist yet. */}
-      <AdminPageHeader
+      <PageHeader
         icon={<KeyRound className="h-6 w-6 text-brand" />}
         title="API Keys"
         description="Let another system start your agents and check on runs. A key belongs to one company, and you can turn it off at any time."
@@ -257,7 +257,7 @@ export default function ApiKeysPage() {
           <p className="text-[13px] text-rose-300">{validationError || createAction.error}</p>
         ) : null}
 
-        <AdminWriteButton
+        <WriteButton
           type="button"
           onClick={handleCreate}
           disabled={createAction.isBusy()}
@@ -265,7 +265,7 @@ export default function ApiKeysPage() {
         >
           {createAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Create key
-        </AdminWriteButton>
+        </WriteButton>
 
         {oneTimeKey ? (
           <div className="flex flex-col gap-3 rounded-[12px] border border-amber-500/20 bg-amber-500/10 p-4">
@@ -298,22 +298,22 @@ export default function ApiKeysPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-foreground">Keys you have</h2>
 
-        <AdminTableShell minWidthClassName="min-w-[900px]">
+        <TableShell minWidthClassName="min-w-[900px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>Key</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Company</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Allowed to</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Limits</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Status</AdminTableHeaderCell>
-              <AdminTableHeaderCell align="right">{""}</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>Key</TableHeaderCell>
+              <TableHeaderCell>Company</TableHeaderCell>
+              <TableHeaderCell>Allowed to</TableHeaderCell>
+              <TableHeaderCell>Limits</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell align="right">{""}</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {status === "LoadingFirstPage" ? (
-              <AdminTableLoadingRow colSpan={6} />
+              <TableLoadingRow colSpan={6} />
             ) : apiKeys.length === 0 ? (
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={6}
                 icon={<KeyRound className="h-8 w-8 text-muted/30" />}
                 label="No keys yet"
@@ -350,27 +350,27 @@ export default function ApiKeysPage() {
                   </td>
                   <td className="px-4 py-3 align-top text-right">
                     {apiKey.status === "ACTIVE" ? (
-                      <AdminWriteButton
+                      <WriteButton
                         type="button"
                         onClick={() => setRevokeTarget({ id: apiKey._id, name: apiKey.name })}
                         aria-label={`Turn off ${apiKey.name}`}
                         className="rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </AdminWriteButton>
+                      </WriteButton>
                     ) : null}
                   </td>
                 </tr>
               ))
             )}
           </tbody>
-        </AdminTableShell>
+        </TableShell>
 
-        <AdminLoadMoreFooter
+        <LoadMoreFooter
           visibleCount={apiKeys.length}
           canLoadMore={status === "CanLoadMore"}
           isLoading={status === "LoadingMore"}
-          onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+          onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
           labels={{
             empty: "No keys yet",
             showing: (count) => `Showing ${count} key${count === 1 ? "" : "s"}`,
@@ -409,7 +409,7 @@ export default function ApiKeysPage() {
             >
               Keep it
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={handleRevoke}
               disabled={revokeAction.isBusy()}
@@ -417,7 +417,7 @@ export default function ApiKeysPage() {
             >
               {revokeAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Turn it off
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

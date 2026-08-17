@@ -8,7 +8,6 @@ import Image from "next/image";
 import { 
   Users, 
   Plus, 
-  Search, 
   ShieldCheck,
   User,
   Trash2,
@@ -22,11 +21,14 @@ import Link from "next/link";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
+import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter, SearchBar } from "@/src/ui/components/screens/Table";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { ASSIGNABLE_ROLES, ROLE_DESCRIPTION_KEYS, ROLE_LABEL_KEYS, type UserRole } from "@/src/lib/userRoles";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type CompanyUser = Doc<"users">;
 type PendingInvite = Doc<"invitations">;
@@ -52,7 +54,7 @@ export default function CompanyUsersPage() {
   const { results: paginatedUsers, status, loadMore } = usePaginatedQuery(
     api.users.getUsersByCompany,
     { companyId },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
 
   const pendingInvites = useQuery(api.invites.getInvitesByCompany, { companyId }) || [];
@@ -119,6 +121,23 @@ export default function CompanyUsersPage() {
   const handleSearch = (v: string) => {
     setSearchTerm(v);
   };
+
+  // Invitations and people share one table, so they share one page count.
+  // Paged together, then split again for rendering — the footer must report the
+  // table, not one half of it.
+  const directoryRows = [
+    ...filteredInvites.map((invite) => ({ kind: "invite" as const, invite })),
+    ...filteredUsers.map((user) => ({ kind: "user" as const, user })),
+  ];
+
+  const paged = usePagedRows(directoryRows, {
+    canLoadMore: status === "CanLoadMore",
+    loadMore,
+    resetKey: searchTerm,
+  });
+
+  const pageInvites = paged.pageRows.flatMap((row) => (row.kind === "invite" ? [row.invite] : []));
+  const pageUsers = paged.pageRows.flatMap((row) => (row.kind === "user" ? [row.user] : []));
 
   const handleOpenEdit = (user: CompanyUser) => {
     setFormData({ name: user.name || "", email: user.email || "", role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
@@ -211,35 +230,33 @@ export default function CompanyUsersPage() {
 
       </header>
 
-      {/* Control Bar */}
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input 
-            type="text" 
-            placeholder="Search users by name or email..." 
-            value={searchTerm}
-            onChange={e => handleSearch(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
-        </div>
-      </div>
+      <SearchBar value={searchTerm} onChange={handleSearch} placeholder="Search users by name or email..." />
 
       {/* Users Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse">
+      <TableShell
+        footer={
+          <PaginationFooter
+            page={paged.page}
+            totalPages={paged.totalPages}
+            totalCount={paged.loadedCount}
+            pageSize={paged.pageSize}
+            isLoading={status === "LoadingMore"}
+            onPageChange={paged.goToPage}
+            labels={{ empty: t('table.empty') }}
+          />
+        }
+      >
             <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">User</th>
-                <th className="px-4 py-3 font-medium">Role</th>
-                <th className="px-4 py-3 font-medium">Joined</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
-              </tr>
+              <TableHeaderRow>
+                <TableHeaderCell>User</TableHeaderCell>
+                <TableHeaderCell>Role</TableHeaderCell>
+                <TableHeaderCell>Joined</TableHeaderCell>
+                <TableHeaderCell align="right">Actions</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
-                {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
+                {paged.pageRows.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
                       No users or pending invitations found matching your search.
@@ -247,7 +264,7 @@ export default function CompanyUsersPage() {
                   </tr>
                 ) : (
                   <>
-                    {filteredInvites.map((inv) => (
+                    {pageInvites.map((inv) => (
                         <motion.tr 
                           key={`inv-${inv._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -289,7 +306,7 @@ export default function CompanyUsersPage() {
                         </motion.tr>
                     ))}
 
-                    {filteredUsers.map((item) => (
+                    {pageUsers.map((item) => (
                         <motion.tr 
                           key={`user-${item._id}`}
                           initial={{ opacity: 0, y: 10 }}
@@ -361,20 +378,7 @@ export default function CompanyUsersPage() {
                 )}
               </AnimatePresence>
             </tbody>
-          </table>
-        </div>
-
-        {status === "CanLoadMore" && (
-          <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
-            <button
-              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-              className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
-            >
-              Load More Users
-            </button>
-          </div>
-        )}
-      </div>
+      </TableShell>
 
       {/* Add/Edit Modal */}
       <SonaeModal
@@ -397,35 +401,29 @@ export default function CompanyUsersPage() {
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-medium text-secondary tracking-wide">Full Name</label>
-                <input 
-                  type="text" 
-                  required
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-                  placeholder="e.g. Aman"
-                />
-              </div>
+              <ModalField
+                label="Full Name"
+                type="text"
+                required
+                value={formData.name}
+                onChange={e => setFormData({...formData, name: e.target.value})}
+                placeholder="e.g. Aman"
+              />
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-medium text-secondary tracking-wide">Email Address</label>
-                <input 
-                  type="email" 
-                  required
-                  value={formData.email}
-                  onChange={e => setFormData({...formData, email: e.target.value})}
-                  className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-                  placeholder="aman@example.com"
-                />
-              </div>
+              <ModalField
+                label="Email Address"
+                type="email"
+                required
+                value={formData.email}
+                onChange={e => setFormData({...formData, email: e.target.value})}
+                placeholder="aman@example.com"
+              />
             </>
           )}
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
-            <select 
+          <ModalFormField label="System Role" htmlFor="company-user-role">
+            <select
+              id="company-user-role"
               value={formData.role}
               onChange={e => setFormData({...formData, role: e.target.value as UserRole})}
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm appearance-none"
@@ -439,20 +437,18 @@ export default function CompanyUsersPage() {
             <p className="text-[13px] text-secondary">
               {t(`roles.${ROLE_DESCRIPTION_KEYS[formData.role]}`)}
             </p>
-          </div>
+          </ModalFormField>
 
           {!editingUser && (
-            <div className="flex flex-col gap-2">
-              <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
-              <input 
-                type="url" 
-                value={formData.image}
-                onChange={e => setFormData({...formData, image: e.target.value})}
-                className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-                placeholder="https://example.com/avatar.jpg"
-              />
+            <ModalField
+              label="Avatar URL (Optional)"
+              type="url"
+              value={formData.image}
+              onChange={e => setFormData({...formData, image: e.target.value})}
+              placeholder="https://example.com/avatar.jpg"
+            >
               <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
-            </div>
+            </ModalField>
           )}
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
@@ -463,18 +459,19 @@ export default function CompanyUsersPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton 
+            <WriteButton
+
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? "Saving..." : (editingUser ? "Update User" : "Send Invite")}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </form>
       </SonaeModal>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingUser}
         onClose={() => { setDeletingUser(null); setSubmitError(""); }}
         title="Delete User"
@@ -486,10 +483,10 @@ export default function CompanyUsersPage() {
       >
         Are you sure you want to delete{" "}
         <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
-      </AdminConfirmationModal>
+      </ConfirmationModal>
 
       {/* Revoke Invitation Modal */}
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingInvite}
         onClose={() => { setDeletingInvite(null); setSubmitError(""); }}
         title="Revoke Access"
@@ -501,7 +498,7 @@ export default function CompanyUsersPage() {
       >
         Are you sure you want to revoke the active invitation for{" "}
         <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
-      </AdminConfirmationModal>
+      </ConfirmationModal>
 
       {/* Assign System Admin Modal */}
       <SonaeModal
@@ -547,18 +544,18 @@ export default function CompanyUsersPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="submit"
               disabled={isSubmitting || !selectedAdminId}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? "Assigning..." : t("assignToWorkspace")}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </form>
       </SonaeModal>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!detachingAdmin}
         onClose={() => { setDetachingAdmin(null); setSubmitError(""); }}
         title={t("detachSystemAdmin")}
@@ -569,7 +566,7 @@ export default function CompanyUsersPage() {
         error={submitError}
       >
         {t("detachConfirm", { name: detachingAdmin?.name || "" })}
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

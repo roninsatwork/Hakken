@@ -6,18 +6,18 @@ import { useTranslations } from "next-intl";
 import { Inbox } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDateTime } from "@/src/lib/dates";
 
 type Decision = "PENDING" | "REPLIED" | "TASK" | "SKIPPED";
@@ -59,7 +59,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<Inbox className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
@@ -70,7 +70,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[240px]">
-          <AdminSearchBar
+          <SearchBar
             value={search}
             onChange={setSearch}
             placeholder={t("searchPlaceholder")}
@@ -94,14 +94,14 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
         </div>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={mail.page}
             totalPages={mail.totalPages}
             totalCount={mail.loadedCount}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={mail.isLoadingMore}
             onPageChange={mail.goToPage}
             labels={{ empty: t("empty") }}
@@ -109,18 +109,18 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.from")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.subject")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.decision")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.when")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.from")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.subject")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.decision")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.when")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {mail.isLoading ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : mail.rows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<Inbox className="w-5 h-5" />}
               label={searchTerm || decision !== "ALL" ? t("emptyFiltered") : t("emptyState")}
@@ -156,7 +156,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

@@ -14,12 +14,12 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminSearchBar } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { SearchBar } from "@/src/ui/components/screens/Table";
 import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRulesTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 export default function RulesDashboard() {
   const t = useTranslations("ai.rules");
@@ -29,7 +29,7 @@ export default function RulesDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 400);
   const [page, setPage] = useState(1);
-  const pageSize = ADMIN_PAGE_SIZE;
+  const pageSize = TABLE_PAGE_SIZE;
 
   const [deleteId, setDeleteId] = useState<Id<"aiRules"> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -88,7 +88,7 @@ export default function RulesDashboard() {
 
       <AiWorkspaceNav />
 
-      <AdminSearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
+      <SearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
 
       <AdminRulesTable
         rules={filteredRules}
@@ -140,14 +140,14 @@ export default function RulesDashboard() {
             >
               {t("deleteModal.abort")}
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={handleDeleteRule}
               disabled={isDeleting}
               className="flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-medium tracking-wide bg-rose-500 hover:bg-rose-600 text-white shadow-[0_0_20px_rgba(244,63,94,0.3)] transition-all disabled:opacity-50"
             >
               {isDeleting ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               <span>{t("deleteModal.confirm")}</span>
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

@@ -2,13 +2,16 @@
 
 import React, { useState } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
+import { PaginationFooter, TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { api } from "@/convex/_generated/api";
-import { Search, Loader2, MonitorSmartphone, MapPin, ChevronLeft, ChevronRight, Palette, Check, Globe } from "lucide-react";
+import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
 export default function ProfileTabs() {
   const t = useTranslations('user.logins');
+  const tCommon = useTranslations('common');
   const tPrefs = useTranslations('user.preferences');
   const { theme, setTheme } = useTheme();
   const user = useQuery(api.users.getMe);
@@ -32,19 +35,16 @@ export default function ProfileTabs() {
 
   const paginatedItems = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      const next = currentPage + 1;
-      setCurrentPage(next);
-      if (next * itemsPerPage > results.length && status === "CanLoadMore") {
-         loadMore(15);
-      }
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => Math.max(1, prev - 1));
+  /**
+   * One handler for both directions, because the shared footer asks for a page
+   * rather than a step. The same pair was written out on four screens; this is
+   * the shape the kit's footer expects.
+   */
+  const handlePageChange = (nextPage: number) => {
+    const target = Math.min(Math.max(nextPage, 1), totalPages);
+    setCurrentPage(target);
+    if (target * itemsPerPage > results.length && status === "CanLoadMore") {
+      loadMore(15);
     }
   };
 
@@ -293,31 +293,38 @@ export default function ProfileTabs() {
               <p className="text-[12px] text-secondary mt-0.5">{t('header.description')}</p>
             </div>
 
-            <div className="relative w-full sm:w-[260px]">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="w-4 h-4 text-muted" />
-              </div>
-              <input
-                type="text"
-                placeholder={t('searchPlaceholder')}
+            <div className="w-full sm:w-[260px] flex">
+              <TableSearchInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-sidebar/40 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
+                onChange={setSearchTerm}
+                placeholder={t('searchPlaceholder')}
+                clearLabel={tCommon('clearSearch')}
               />
             </div>
           </div>
 
           {/* Table Container */}
-          <div className="w-full bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden">
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+          <TableShell
+            variant="panel"
+            footer={
+              <PaginationFooter
+                page={currentPage}
+                totalPages={totalPages}
+                totalCount={totalItems}
+                pageSize={itemsPerPage}
+                isLoading={status === "LoadingMore"}
+                onPageChange={handlePageChange}
+                labels={{ showing: (start, end, total) => `Showing ${start} to ${end} of ${total} logins` }}
+              />
+            }
+          >
                 <thead>
-                  <tr className="border-b border-border-dim/50 bg-sidebar/20">
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.device')}</th>
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.location')}</th>
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.status')}</th>
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">{t('table.timestamp')}</th>
-                  </tr>
+                  <TableHeaderRow variant="strip">
+                    <TableHeaderCell>{t('table.device')}</TableHeaderCell>
+                    <TableHeaderCell>{t('table.location')}</TableHeaderCell>
+                    <TableHeaderCell>{t('table.status')}</TableHeaderCell>
+                    <TableHeaderCell align="right">{t('table.timestamp')}</TableHeaderCell>
+                  </TableHeaderRow>
                 </thead>
                 <tbody className="divide-y divide-border-dim/30">
                   {(status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0 && (
@@ -376,39 +383,7 @@ export default function ProfileTabs() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
-
-            {totalItems > 0 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-                <div className="flex items-center gap-2 text-[12px] text-muted">
-                    <span>Showing</span>
-                    <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-                    <span>to</span>
-                    <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-                    <span>of</span>
-                    <span className="font-medium text-foreground">{totalItems}</span>
-                    <span>logins</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button 
-                      disabled={currentPage === 1}
-                      onClick={handlePrevPage}
-                      className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button 
-                      disabled={currentPage >= totalPages}
-                      onClick={handleNextPage}
-                      className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                </div>
-              </div>
-            )}
-          </div>
+          </TableShell>
         </div>
       )}
     </div>

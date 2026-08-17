@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { useCanWriteHere } from "./AdminAccessLevel";
+import { useCanWriteHere } from "./AccessLevel";
 
 type AdminPageHeaderProps = {
   icon: ReactNode;
@@ -19,7 +19,7 @@ type AdminPageHeaderProps = {
   divider?: boolean;
 };
 
-export function AdminPageHeader({ icon, title, description, action, divider = false }: AdminPageHeaderProps) {
+export function PageHeader({ icon, title, description, action, divider = false }: AdminPageHeaderProps) {
   return (
     <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4${divider ? " border-b border-border-dim pb-6" : ""}`}>
       <div>
@@ -40,7 +40,7 @@ type AdminPagePrimaryActionProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
 };
 
-export function AdminPagePrimaryAction({
+export function PagePrimaryAction({
   icon,
   children,
   className = "",

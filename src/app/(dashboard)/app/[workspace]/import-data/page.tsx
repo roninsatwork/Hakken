@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
+import { TableHeaderCell, TableHeaderRow, TableShell } from "@/src/ui/components/screens/Table";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
@@ -285,20 +286,22 @@ export default function SalesDataImportPage() {
         )}
 
         {/* History */}
-        <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-border-dim">
-            <h2 className="text-[15px] font-semibold text-foreground">{t("historyTitle")}</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[720px]">
+        <TableShell
+          minWidthClassName="min-w-[720px]"
+          header={
+            <div className="px-6 py-4 border-b border-border-dim">
+              <h2 className="text-[15px] font-semibold text-foreground">{t("historyTitle")}</h2>
+            </div>
+          }
+        >
               <thead>
-                <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                  <th className="px-6 py-3 font-medium">{t("historyFile")}</th>
-                  <th className="px-6 py-3 font-medium">{t("historyStatus")}</th>
-                  <th className="px-6 py-3 font-medium">{t("historyRows")}</th>
-                  <th className="px-6 py-3 font-medium">{t("historyPeriods")}</th>
-                  <th className="px-6 py-3 font-medium">{t("historyWhen")}</th>
-                </tr>
+                <TableHeaderRow>
+                  <TableHeaderCell className="px-6">{t("historyFile")}</TableHeaderCell>
+                  <TableHeaderCell className="px-6">{t("historyStatus")}</TableHeaderCell>
+                  <TableHeaderCell className="px-6">{t("historyRows")}</TableHeaderCell>
+                  <TableHeaderCell className="px-6">{t("historyPeriods")}</TableHeaderCell>
+                  <TableHeaderCell className="px-6">{t("historyWhen")}</TableHeaderCell>
+                </TableHeaderRow>
               </thead>
               <tbody>
                 {imports === undefined ? (
@@ -350,9 +353,7 @@ export default function SalesDataImportPage() {
                   ))
                 )}
               </tbody>
-            </table>
-          </div>
-        </div>
+        </TableShell>
       </div>
     </>
   );

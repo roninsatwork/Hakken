@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Wrench, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 
@@ -203,14 +203,14 @@ export default function RegisterToolPage() {
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-6 border-t border-border-dim mt-2">
-          <AdminWriteButton
+          <WriteButton
             type="submit"
             disabled={!name.trim() || !description.trim() || !handlerMapping.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
             <span>{t("submit")}</span>
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </form>
     </div>

@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import type { HTMLAttributes, ReactNode } from "react";
 import ManageSuperAdminsPage from "./page";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
+import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -77,6 +78,30 @@ describe("ManageSuperAdminsPage", () => {
     vi.mocked(useMutation).mockReturnValue(vi.fn().mockResolvedValue({}) as unknown as ReturnType<typeof useMutation>);
   });
 
+  // The floor every table screen has to clear. If one of these fails, this
+  // screen has stopped matching the rest of the app rather than stopped working.
+  describe("as a standard table screen", () => {
+    itBehavesLikeAStandardTableScreen({
+      renderScreen: () => render(<ManageSuperAdminsPage />),
+      withRows: (rows) => {
+        vi.mocked(usePaginatedQuery).mockImplementation(
+          () =>
+            ({
+              results: (rows ?? []) as MockUser[],
+              status: rows === undefined ? "LoadingFirstPage" : "CanLoadMore",
+              isLoading: rows === undefined,
+              loadMore: mockLoadMore,
+            }) as unknown as ReturnType<typeof usePaginatedQuery>
+        );
+        currentMockInvites = rows === undefined || rows.length === 0 ? [] : mockPendingInvites;
+      },
+      sampleRows: mockPaginatedUsers,
+      sampleRowText: "John Doe",
+      emptyText: "No users or pending invitations found matching your search.",
+      searchPlaceholder: "Search users by name or email...",
+    });
+  });
+
   it("renders unauthorized if user is not SUPER_ADMIN", () => {
     currentMockUser = { ...mockCurrentUser, role: "ADMIN" };
     render(<ManageSuperAdminsPage />);
@@ -122,26 +147,32 @@ describe("ManageSuperAdminsPage", () => {
     expect(screen.queryByText("pending@example.com")).not.toBeInTheDocument(); // pending@ doesn't match jane
   });
 
-  it("shows 'Load More' button when status is CanLoadMore and triggers loadMore", () => {
+  it("wears the house paginated footer, and fetches when the reader walks past what is loaded", () => {
     render(<ManageSuperAdminsPage />);
-    
-    const loadMoreButton = screen.getByText("Load More Administrators");
-    expect(loadMoreButton).toBeInTheDocument();
-    
-    fireEvent.click(loadMoreButton);
+
+    // The server says there is more, so a further page exists to walk to.
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    expect(screen.getByText("Showing 1-3 of 3")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Next"));
+
     expect(mockLoadMore).toHaveBeenCalledWith(15);
   });
 
-  it("hides 'Load More' button when status is Exhausted", () => {
-    vi.mocked(usePaginatedQuery).mockImplementation(() => ({
-      results: mockPaginatedUsers,
-      status: "Exhausted",
-      isLoading: false,
-      loadMore: mockLoadMore,
-    }));
+  it("offers no further page once the server has nothing left", () => {
+    vi.mocked(usePaginatedQuery).mockImplementation(
+      () =>
+        ({
+          results: mockPaginatedUsers,
+          status: "Exhausted",
+          isLoading: false,
+          loadMore: mockLoadMore,
+        }) as unknown as ReturnType<typeof usePaginatedQuery>
+    );
 
     render(<ManageSuperAdminsPage />);
-    
-    expect(screen.queryByText("Load More Administrators")).not.toBeInTheDocument();
+
+    expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
+    expect(screen.getByText("Next").closest("button")).toBeDisabled();
   });
 });

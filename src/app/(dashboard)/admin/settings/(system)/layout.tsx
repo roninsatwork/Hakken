@@ -12,7 +12,7 @@ import {
   TerminalSquare,
 } from "lucide-react";
 
-import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
+import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 
 const SETTINGS_ROOT = "/admin/settings";
 
@@ -69,7 +69,7 @@ export default function SystemSettingsLayout({ children }: { children: React.Rea
   ];
 
   return (
-    <AdminDetailLayout
+    <DetailLayout
       leading={<SettingsIcon className="w-6 h-6 text-brand shrink-0" />}
       title={t("title")}
       description={t("subtitle")}
@@ -77,6 +77,6 @@ export default function SystemSettingsLayout({ children }: { children: React.Rea
       rootHref={SETTINGS_ROOT}
     >
       {children}
-    </AdminDetailLayout>
+    </DetailLayout>
   );
 }

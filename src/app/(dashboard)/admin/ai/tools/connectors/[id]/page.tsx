@@ -11,7 +11,7 @@ import { useToast } from "@/src/context/ToastContext";
 import { ArrowLeft, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { formatDateTime } from "@/src/lib/dates";
-import { AdminSaveAction } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveAction } from "@/src/ui/components/screens/SaveControls";
 
 type ConnectorDraft = {
   configuredSecretRefs: string;
@@ -220,7 +220,7 @@ export default function ConnectorSetupPage() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">{name}</h1>
             <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-secondary">{description}</p>
           </div>
-          <AdminSaveAction
+          <SaveAction
             isSaving={isSaving}
             label="Save"
             savingLabel="Saving..."

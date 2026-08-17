@@ -7,6 +7,7 @@
     "saving": "Saving...",
     "deleting": "Deleting...",
     "dismiss": "Dismiss",
+    "clearSearch": "Clear search",
     "back": "Back",
     "actions": {
       "save": "Save",
@@ -388,7 +389,8 @@
           "1m 27s of work",
           "£0.043",
           "18 of 40 steps"
-        ]
+        ],
+        "empty": "Nothing recorded yet."
       }
     },
     "proof": {
@@ -2434,7 +2436,10 @@
         "systemLevel": "System Level",
         "sonaeGlobal": "Sonae Global",
         "noMatches": "No active identities found matching the query.",
-        "na": "N/A"
+        "na": "N/A",
+        "loadMore": "Load more users",
+        "showingLoaded": "Showing {count} users",
+        "loadingMore": "Loading users..."
       },
       "roles": {
         "superAdmin": "Super Admin",
@@ -2473,6 +2478,58 @@
         "namePlaceholder": "e.g. John Doe",
         "emailPlaceholder": "e.g. john@sonae.ai",
         "avatarPlaceholder": "https://..."
+      },
+      "invitePage": {
+        "title": "Invite a user",
+        "description": "Send someone an invitation to join. They get an email with a link to set up their account.",
+        "steps": {
+          "targeting": "Who it is for",
+          "payload": "What the email says"
+        },
+        "fields": {
+          "email": {
+            "label": "Email address",
+            "placeholder": "name@company.com"
+          },
+          "role": {
+            "label": "Role",
+            "standardUser": "Standard user",
+            "systemAdmin": "Administrator"
+          },
+          "company": {
+            "label": "Workspace",
+            "noCompany": "No workspace"
+          },
+          "subject": {
+            "label": "Subject line"
+          },
+          "headline": {
+            "label": "Headline"
+          },
+          "body": {
+            "label": "Message"
+          },
+          "cta": {
+            "label": "Button text"
+          }
+        },
+        "actions": {
+          "saveTemplate": "Save as template",
+          "saving": "Saving...",
+          "synchronized": "Saved",
+          "sendInvitation": "Send invitation",
+          "sending": "Sending..."
+        },
+        "messages": {
+          "sendError": "The invitation could not be sent. Check the email address and try again.",
+          "sendSuccess": "Invitation sent."
+        },
+        "preview": {
+          "headlineEmpty": "Your headline appears here",
+          "bodyEmpty": "Your message appears here",
+          "ctaEmpty": "Your button text",
+          "footer": "Sent by Sonae"
+        }
       }
     },
     "directory": {
@@ -2897,7 +2954,13 @@
     "detachSystemAdmin": "Detach System Admin",
     "detachConfirm": "Are you sure you want to detach {name} from this company? They will retain their system admin account but will no longer be assigned to this workspace.",
     "detach": "Detach",
-    "detaching": "Detaching..."
+    "detaching": "Detaching...",
+    "table": {
+      "empty": "No users found matching your query.",
+      "showingLoaded": "Showing {count} users",
+      "loadMore": "Load more users",
+      "loadingMore": "Loading users..."
+    }
   },
   "salesData": {
     "importTitle": "Import Data",
@@ -3048,7 +3111,8 @@
       "salesMonthsNote": "Months with no sales are not listed — a blank cell in the workbook means no sale, not zero.",
       "lineProduct": "Product",
       "lineValue": "Value",
-      "chainHeading": "Others in {chain}"
+      "chainHeading": "Others in {chain}",
+      "lineEmpty": "No line items."
     },
     "tablesTitle": "Spreadsheet Imports",
     "tablesSubtitle": "From {fileName} — {rows} sales rows.",

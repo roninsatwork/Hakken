@@ -8,9 +8,9 @@ import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { SquareTerminal, RefreshCcw, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 
 export default function AgentSystemPromptPage() {
@@ -86,17 +86,17 @@ export default function AgentSystemPromptPage() {
         {/* Dynamic Action Area */}
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <AdminWriteButton
+            <WriteButton
               onClick={handleRevert}
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
               <span>{t("revertButton")}</span>
-            </AdminWriteButton>
+            </WriteButton>
           )}
 
-          <AdminWriteButton
+          <WriteButton
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
             className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${hasUnsavedChanges
@@ -110,11 +110,11 @@ export default function AgentSystemPromptPage() {
               <Save className="w-3.5 h-3.5" />
             )}
             <span>{t("saveButton")}</span>
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </header>
 
-      <AdminSaveFeedback
+      <SaveFeedback
         status={saveStatus}
         successTitle={t("feedback.success.title")}
         successMessage={t("feedback.success.subtitle")}

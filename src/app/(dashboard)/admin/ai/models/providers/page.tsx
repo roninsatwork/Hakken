@@ -5,19 +5,19 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { Bot, Loader2, RefreshCw } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { cn } from "@/src/ui/lib/utils";
 import { getErrorMessage } from "@/src/lib/errors";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
   describeProviderStatus,
   describeProviderStatusTone,
@@ -143,23 +143,23 @@ export default function AIModelProvidersPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full h-full pb-12">
-      <AdminPageHeader
+      <PageHeader
         divider
         icon={<Bot className="w-6 h-6 text-brand" />}
         title="AI Providers"
         description="Where the models come from, and whether this platform can reach them."
       />
       <AiWorkspaceNav />
-      <AdminSaveError>{providerError}</AdminSaveError>
+      <SaveError>{providerError}</SaveError>
 
       {/* The standard admin table, the same one the model catalogue uses, so the
           two screens that describe the same thing finally look related. No
           search box: at four rows it is furniture, and the footer honestly
           reports the count. */}
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[820px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={1}
             totalPages={1}
             totalCount={providers.length}
@@ -184,9 +184,9 @@ export default function AIModelProvidersPage() {
         </thead>
         <tbody>
           {providersResult === undefined ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : providers.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<Bot className="w-8 h-8 text-muted/30" />}
               label="No providers configured"
@@ -236,7 +236,7 @@ export default function AIModelProvidersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <AdminWriteButton
+                      <WriteButton
                         type="button"
                         onClick={() => syncProviderKey && syncProvider(syncProviderKey)}
                         disabled={!syncProviderKey || syncingProvider !== null}
@@ -244,7 +244,7 @@ export default function AIModelProvidersPage() {
                       >
                         {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                         Sync
-                      </AdminWriteButton>
+                      </WriteButton>
                       <button
                         type="button"
                         onClick={() => testProvider(provider.providerKey)}
@@ -257,7 +257,7 @@ export default function AIModelProvidersPage() {
                       {/* The switch is the control, not a badge beside a button
                           saying the same thing. Same treatment the catalogue's
                           Active column got. */}
-                      <AdminWriteButton
+                      <WriteButton
                         type="button"
                         role="switch"
                         aria-checked={provider.isEnabled}
@@ -278,7 +278,7 @@ export default function AIModelProvidersPage() {
                             )}
                           />
                         </span>
-                      </AdminWriteButton>
+                      </WriteButton>
                     </div>
                   </td>
                 </tr>
@@ -286,7 +286,7 @@ export default function AIModelProvidersPage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <SonaeModal
         isOpen={disableTarget !== null}
@@ -346,7 +346,7 @@ export default function AIModelProvidersPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={confirmDisable}
               disabled={isDisabling}
@@ -354,7 +354,7 @@ export default function AIModelProvidersPage() {
             >
               {isDisabling && <Loader2 className="h-4 w-4 animate-spin" />}
               Switch it off
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

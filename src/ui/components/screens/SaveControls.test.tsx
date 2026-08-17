@@ -1,18 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  AdminFeedbackPill,
-  AdminSaveAction,
-  AdminSaveError,
-  AdminSaveFeedback,
-} from "./AdminSaveControls";
+  FeedbackPill,
+  SaveAction,
+  SaveError,
+  SaveFeedback,
+} from "./SaveControls";
 
-describe("AdminSaveAction", () => {
+describe("SaveAction", () => {
   it("renders the save label and forwards click handling", () => {
     const onClick = vi.fn();
 
     render(
-      <AdminSaveAction
+      <SaveAction
         isSaving={false}
         label="Save settings"
         savingLabel="Saving..."
@@ -27,7 +27,7 @@ describe("AdminSaveAction", () => {
 
   it("renders success feedback and disabled saving state", () => {
     render(
-      <AdminSaveAction
+      <SaveAction
         isSaving
         label="Save"
         savingLabel="Saving..."
@@ -43,7 +43,7 @@ describe("AdminSaveAction", () => {
   it("can submit a parent form", () => {
     render(
       <form>
-        <AdminSaveAction isSaving={false} label="Save" savingLabel="Saving..." type="submit" />
+        <SaveAction isSaving={false} label="Save" savingLabel="Saving..." type="submit" />
       </form>
     );
 
@@ -51,22 +51,22 @@ describe("AdminSaveAction", () => {
   });
 });
 
-describe("AdminSaveError", () => {
+describe("SaveError", () => {
   it("renders only when an error is present", () => {
-    const { rerender } = render(<AdminSaveError />);
+    const { rerender } = render(<SaveError />);
 
     expect(document.querySelector(".text-red-400")).not.toBeInTheDocument();
 
-    rerender(<AdminSaveError>Save failed</AdminSaveError>);
+    rerender(<SaveError>Save failed</SaveError>);
 
     expect(screen.getByText("Save failed")).toHaveClass("text-red-400");
   });
 });
 
-describe("AdminSaveFeedback", () => {
+describe("SaveFeedback", () => {
   it("renders success feedback", () => {
     render(
-      <AdminSaveFeedback
+      <SaveFeedback
         status="success"
         successTitle="Saved"
         successMessage="Everything is synchronized."
@@ -81,7 +81,7 @@ describe("AdminSaveFeedback", () => {
 
   it("renders error feedback", () => {
     render(
-      <AdminSaveFeedback
+      <SaveFeedback
         status="error"
         successTitle="Saved"
         successMessage="Everything is synchronized."
@@ -96,7 +96,7 @@ describe("AdminSaveFeedback", () => {
 
   it("renders nothing when idle", () => {
     render(
-      <AdminSaveFeedback
+      <SaveFeedback
         status="idle"
         successTitle="Saved"
         successMessage="Everything is synchronized."
@@ -110,13 +110,13 @@ describe("AdminSaveFeedback", () => {
   });
 });
 
-describe("AdminFeedbackPill", () => {
+describe("FeedbackPill", () => {
   it("renders compact success and error feedback", () => {
-    const { rerender } = render(<AdminFeedbackPill tone="success">Sent</AdminFeedbackPill>);
+    const { rerender } = render(<FeedbackPill tone="success">Sent</FeedbackPill>);
 
     expect(screen.getByText("Sent").parentElement).toHaveClass("text-[#10b981]");
 
-    rerender(<AdminFeedbackPill tone="error">Send failed</AdminFeedbackPill>);
+    rerender(<FeedbackPill tone="error">Send failed</FeedbackPill>);
 
     expect(screen.getByText("Send failed")).toHaveClass("leading-snug");
   });

@@ -9,8 +9,9 @@ import { Users } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
 import { api } from "@/convex/_generated/api";
-import { CursorPaginationFooter, useCursorPagination } from "../_components/CursorPagination";
-import { TableFilterSelect, TableSearchInput } from "../_components/TableControls";
+import { CursorPaginationFooter, useCursorPagination } from "@/src/ui/components/screens/CursorPagination";
+import { TableFilterSelect, TableSearchInput } from "@/src/ui/components/screens/TableControls";
+import { TableHeaderCell, TableHeaderRow, TableShell } from "@/src/ui/components/screens/Table";
 import { LAYER } from "@/src/ui/lib/layers";
 
 /**
@@ -176,18 +177,41 @@ function CustomerList() {
 
         <ResearchRow />
 
-        <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[860px]">
+        <TableShell
+          minWidthClassName="min-w-[860px]"
+          footer={
+              <CursorPaginationFooter
+                pageIndex={pagination.pageIndex}
+                rowsOnPage={result?.page.length ?? 0}
+                isDone={result?.isDone ?? true}
+                isLoading={isLoading}
+                onPrevious={pagination.previous}
+                onNext={() => {
+                  if (result && !result.isDone) pagination.next(result.continueCursor);
+                }}
+                labels={{
+                  page: (page) => t("pageNumber", { page }),
+                  // Named for what is actually on screen: "19 customers" under a
+                  // list of prospects is a small lie that reads as a bug.
+                  showing: (count) =>
+                    record === "PROSPECTS"
+                      ? t("rowsShownProspects", { count })
+                      : record === "SUSPECTS"
+                        ? t("rowsShownSuspects", { count })
+                        : t("rowsShown", { count }),
+                }}
+              />
+          }
+        >
               <thead>
-                <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+                <TableHeaderRow>
                   <Th>{t("columnName")}</Th>
                   <Th>{t("columnCode")}</Th>
                   <Th>{t("columnGroup")}</Th>
                   <Th>{t("columnType")}</Th>
                   <Th>{t("columnLocation")}</Th>
                   <Th align="right">{t("columnSpend")}</Th>
-                </tr>
+                </TableHeaderRow>
               </thead>
               <tbody>
                 {isLoading ? (
@@ -276,43 +300,25 @@ function CustomerList() {
                   })
                 )}
               </tbody>
-            </table>
-          </div>
+        </TableShell>
 
-          <CursorPaginationFooter
-            pageIndex={pagination.pageIndex}
-            rowsOnPage={result?.page.length ?? 0}
-            isDone={result?.isDone ?? true}
-            isLoading={isLoading}
-            onPrevious={pagination.previous}
-            onNext={() => {
-              if (result && !result.isDone) pagination.next(result.continueCursor);
-            }}
-            labels={{
-              page: (page) => t("pageNumber", { page }),
-              // Named for what is actually on screen: "19 customers" under a
-              // list of prospects is a small lie that reads as a bug.
-              showing: (count) =>
-                record === "PROSPECTS"
-                  ? t("rowsShownProspects", { count })
-                  : record === "SUSPECTS"
-                    ? t("rowsShownSuspects", { count })
-                    : t("rowsShown", { count }),
-            }}
-          />
-        </div>
       </div>
     </>
   );
 }
 
+/**
+ * The house header cell, with the nowrap these dense tables need.
+ *
+ * This was a local copy of the kit's cell, and so was the one in the
+ * spreadsheet import next door — the same eight classes written out three
+ * times across this folder. It delegates now, so the styling has one home.
+ */
 function Th({ children, align = "left" }: { children: React.ReactNode; align?: "left" | "right" }) {
   return (
-    <th
-      className={`px-4 py-3 font-medium whitespace-nowrap ${align === "right" ? "text-right" : ""}`}
-    >
+    <TableHeaderCell align={align} className="whitespace-nowrap">
       {children}
-    </th>
+    </TableHeaderCell>
   );
 }
 

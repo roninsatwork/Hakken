@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, Bug, ChevronDown, ClipboardList, Play, Trash2 } from "lucide-react";
+import { Activity, Bug, ClipboardList, Play, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Doc } from "@/convex/_generated/dataModel";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import { TableShell, TableHeaderRow, TableHeaderCell, LoadMoreFooter } from "@/src/ui/components/screens/Table";
 import { getStudioRoutineTitle } from "../_lib/movementPresentation";
 import { getMovementSpineGoalLabel } from "../_lib/movementSpineIntent";
 import {
@@ -85,16 +86,24 @@ export default function MovementLibraryTable({
   onDelete,
 }: MovementLibraryTableProps) {
   return (
-    <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+    <TableShell
+      footer={
+        <LoadMoreFooter
+          visibleCount={movements.length}
+          canLoadMore={canLoadMore}
+          isLoading={isLoadingMore}
+          onLoadMore={() => onLoadMore(itemsPerPage)}
+          labels={{ empty: "No routines recorded", showing: (count) => `Showing ${count} routines` }}
+        />
+      }
+    >
           <thead>
-            <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-              <th className="px-4 py-3 font-medium">Routine Title</th>
-              <th className="px-4 py-3 font-medium">Difficulty</th>
-              <th className="px-4 py-3 font-medium">Recorded</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
-            </tr>
+            <TableHeaderRow>
+              <TableHeaderCell>Routine Title</TableHeaderCell>
+              <TableHeaderCell>Difficulty</TableHeaderCell>
+              <TableHeaderCell>Recorded</TableHeaderCell>
+              <TableHeaderCell align="right">Actions</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             <AnimatePresence>
@@ -193,26 +202,6 @@ export default function MovementLibraryTable({
               )}
             </AnimatePresence>
           </tbody>
-        </table>
-      </div>
-
-      <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-        <div className="flex items-center gap-2 text-[12px] text-muted">
-          <span>Showing</span>
-          <span className="font-medium text-foreground">{movements.length}</span>
-          <span>items</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={!canLoadMore || isLoadingMore}
-            onClick={() => onLoadMore(itemsPerPage)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-[12px] font-medium"
-          >
-            {isLoadingMore ? "Loading..." : "Load more"}
-            <ChevronDown className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
+    </TableShell>
   );
 }

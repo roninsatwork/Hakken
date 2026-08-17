@@ -39,10 +39,10 @@ export function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: 
 }
 
 /** The input, textarea and select styling both screens use. */
-export const adminFieldClassName =
+export const fieldClassName =
   "h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[14px] text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand/50";
 
-export const adminTextAreaClassName =
+export const textAreaClassName =
   "min-h-[96px] w-full flex-1 resize-none rounded-[12px] border border-border-dim bg-black/20 px-4 py-3 text-[13px] leading-relaxed text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand/50";
 
 /**
@@ -85,8 +85,8 @@ export function SegmentedChoice<T extends string>({ label, value, options, onCha
   );
 }
 
-export function FieldHint({ children }: { children: ReactNode }) {
-  return <p className="text-[11px] leading-relaxed text-muted">{children}</p>;
+export function FieldHint({ children, id }: { children: ReactNode; id?: string }) {
+  return <p id={id} className="text-[11px] leading-relaxed text-muted">{children}</p>;
 }
 
 /**

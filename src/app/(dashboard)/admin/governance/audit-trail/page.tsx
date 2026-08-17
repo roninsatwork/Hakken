@@ -8,18 +8,18 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminSelect } from "@/src/app/(dashboard)/admin/_components/AdminSelect";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { Select } from "@/src/ui/components/screens/Select";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 /**
  * Everything anyone changed, and when.
@@ -82,7 +82,7 @@ export default function AuditTrailPage() {
   const { results, status, loadMore } = usePaginatedQuery(
     api.auditLogs.getAuditPage,
     filters,
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
 
   /**
@@ -114,14 +114,14 @@ export default function AuditTrailPage() {
    * page turn, and this screen has already been caught once announcing a
    * confident "of 500" it could not stand behind.
    */
-  const loadedPages = Math.max(Math.ceil(results.length / ADMIN_PAGE_SIZE), 1);
+  const loadedPages = Math.max(Math.ceil(results.length / TABLE_PAGE_SIZE), 1);
   const canLoadMore = status === "CanLoadMore";
   const totalPages = loadedPages + (canLoadMore ? 1 : 0);
-  const start = (page - 1) * ADMIN_PAGE_SIZE;
-  const visible = results.slice(start, start + ADMIN_PAGE_SIZE);
+  const start = (page - 1) * TABLE_PAGE_SIZE;
+  const visible = results.slice(start, start + TABLE_PAGE_SIZE);
 
   const goToPage = (next: number) => {
-    if (next > loadedPages && canLoadMore) loadMore(ADMIN_PAGE_SIZE);
+    if (next > loadedPages && canLoadMore) loadMore(TABLE_PAGE_SIZE);
     setPage(Math.max(1, next));
   };
 
@@ -182,7 +182,7 @@ export default function AuditTrailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<History className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
@@ -193,14 +193,14 @@ export default function AuditTrailPage() {
           page on what is really one line. */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-[240px] flex-1">
-          <AdminSearchBar value={search} onChange={(value) => narrow(() => setSearch(value))} placeholder={t("searchPlaceholder")} />
+          <SearchBar value={search} onChange={(value) => narrow(() => setSearch(value))} placeholder={t("searchPlaceholder")} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="audit-period">
             {t("filters.periodLabel")}
           </label>
-          <AdminSelect
+          <Select
             id="audit-period"
             value={days}
             onChange={(next) => narrow(() => setDays(Number(next)))}
@@ -211,12 +211,12 @@ export default function AuditTrailPage() {
                 {period === 0 ? t("filters.allTime") : t("filters.period", { count: period })}
               </option>
             ))}
-          </AdminSelect>
+          </Select>
 
           <label className="sr-only" htmlFor="audit-action">
             {t("filters.actionLabel")}
           </label>
-          <AdminSelect
+          <Select
             id="audit-action"
             value={actionType}
             onChange={(next) => narrow(() => setActionType(next))}
@@ -228,12 +228,12 @@ export default function AuditTrailPage() {
                 {action}
               </option>
             ))}
-          </AdminSelect>
+          </Select>
 
           <label className="sr-only" htmlFor="audit-person">
             {t("filters.personLabel")}
           </label>
-          <AdminSelect
+          <Select
             id="audit-person"
             value={actorId}
             onChange={(next) => narrow(() => setActorId(String(next)))}
@@ -245,7 +245,7 @@ export default function AuditTrailPage() {
                 {person.name}
               </option>
             ))}
-          </AdminSelect>
+          </Select>
 
           {/* Offered only where there is more than one to choose between. A
               workspace administrator is already pinned to their own, and a
@@ -255,7 +255,7 @@ export default function AuditTrailPage() {
               <label className="sr-only" htmlFor="audit-workspace">
                 {t("filters.workspaceLabel")}
               </label>
-              <AdminSelect
+              <Select
                 id="audit-workspace"
                 value={companyId}
                 onChange={(next) => narrow(() => setCompanyId(String(next)))}
@@ -267,7 +267,7 @@ export default function AuditTrailPage() {
                     {workspace.name}
                   </option>
                 ))}
-              </AdminSelect>
+              </Select>
             </>
           ) : null}
 
@@ -307,14 +307,14 @@ export default function AuditTrailPage() {
         </p>
       ) : null}
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[1180px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={page}
             totalPages={totalPages}
             totalCount={results.length}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={status === "LoadingMore" || loading}
             onPageChange={goToPage}
             labels={{
@@ -330,23 +330,23 @@ export default function AuditTrailPage() {
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.action")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.who")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.change")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.target")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.workspace")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("columns.when")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.action")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.who")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.change")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.target")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.workspace")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("columns.when")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {loading ? (
-            <AdminTableLoadingRow colSpan={6} />
+            <TableLoadingRow colSpan={6} />
           ) : visible.length === 0 ? (
             /* An empty trail shows nothing. This table used to invent four
                entries when it had none — including a user deletion for a
                "TOS Violation" against an account that never existed. */
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={6}
               icon={<History className="w-5 h-5" />}
               label={t("empty")}
@@ -413,7 +413,7 @@ export default function AuditTrailPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

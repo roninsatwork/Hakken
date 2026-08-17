@@ -9,21 +9,23 @@ import type { FormEvent } from "react";
 import { 
   Users, 
   Plus, 
-  Search, 
   ShieldCheck,
   User,
   Trash2,
   Edit2,
   Loader2
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type SuperAdminFormData = {
   name: string;
@@ -31,6 +33,118 @@ type SuperAdminFormData = {
   role: "SUPER_ADMIN";
   image: string;
 };
+
+/**
+ * The directory lists two things in one table: people, and invitations nobody
+ * has accepted yet. They read differently and only the person opens, so the row
+ * carries which it is and each column decides what to draw.
+ */
+type DirectoryRow =
+  | { kind: "invite"; invite: Doc<"invitations"> }
+  | { kind: "user"; user: Doc<"users"> };
+
+function buildDirectoryColumns(actions: {
+  onEdit: (user: Doc<"users">) => void;
+  onDelete: (user: Doc<"users">) => void;
+  onRevoke: (invite: Doc<"invitations">) => void;
+}): DataTableColumn<DirectoryRow>[] {
+  return [
+    {
+      key: "administrator",
+      header: "System Administrator",
+      cell: (row) =>
+        row.kind === "invite" ? (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
+              <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+            </div>
+            <div>
+              <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
+                Pending Invitation
+              </span>
+              <span className="text-[12px] text-secondary">{row.invite.email}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Image
+              src={
+                row.user.image ||
+                `https://api.dicebear.com/7.x/notionists/svg?seed=${row.user.name ?? row.user.email ?? row.user._id}`
+              }
+              alt={row.user.name ?? row.user.email ?? "Super admin"}
+              width={32}
+              height={32}
+              unoptimized
+              className="w-8 h-8 rounded-full bg-card border border-border-dim"
+            />
+            <div>
+              <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
+                {row.user.name}
+              </span>
+              <span className="text-[12px] text-secondary">{row.user.email}</span>
+            </div>
+          </div>
+        ),
+    },
+    {
+      key: "joined",
+      header: "Joined Date",
+      cell: (row) =>
+        row.kind === "invite" ? (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
+            <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
+              PENDING {row.invite.role}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+            {row.user.role === "ADMIN" ? (
+              <ShieldCheck className="w-3 h-3 text-brand" />
+            ) : (
+              <User className="w-3 h-3 text-foreground/70" />
+            )}
+            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+              {row.user.role || "USER"}
+            </span>
+          </div>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      cell: (row) =>
+        row.kind === "invite" ? (
+          <RowActions>
+            <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
+              Awaiting Login
+            </span>
+            <RowIconButton
+              label="Revoke invitation"
+              tone="danger"
+              onClick={() => actions.onRevoke(row.invite)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </RowIconButton>
+          </RowActions>
+        ) : (
+          <RowActions>
+            <RowIconButton label="Edit administrator" onClick={() => actions.onEdit(row.user)}>
+              <Edit2 className="w-4 h-4" />
+            </RowIconButton>
+            <RowIconButton
+              label="Delete administrator"
+              tone="danger"
+              onClick={() => actions.onDelete(row.user)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </RowIconButton>
+          </RowActions>
+        ),
+    },
+  ];
+}
 
 
 export default function ManageSuperAdminsPage() {
@@ -41,7 +155,7 @@ export default function ManageSuperAdminsPage() {
   const { results: paginatedUsers, status, loadMore } = usePaginatedQuery(
     api.users.getSuperAdmins,
     isSuperAdmin ? {} : "skip",
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
 
   const pendingInvites = useQuery(api.invites.getPendingInvites, isSuperAdmin ? {} : "skip") || [];
@@ -72,6 +186,23 @@ export default function ManageSuperAdminsPage() {
   const handleSearch = (v: string) => {
     setSearchTerm(v);
   };
+
+  // Invitations first, then people — the order the hand-written table had.
+  const directoryRows: DirectoryRow[] = [
+    ...filteredInvites.map((invite) => ({ kind: "invite" as const, invite })),
+    ...filteredUsers.map((user) => ({ kind: "user" as const, user })),
+  ];
+
+  // Undefined while the first page is still coming, so the table shows a
+  // spinner. The hand-written table had no such distinction and told the reader
+  // "no users found" during every load, which is a different and wrong claim.
+  const isLoadingFirstPage = status === "LoadingFirstPage";
+
+  const paged = usePagedRows(directoryRows, {
+    canLoadMore: status === "CanLoadMore",
+    loadMore,
+    resetKey: searchTerm,
+  });
 
   if (currentUser === undefined) {
     return (
@@ -155,145 +286,40 @@ export default function ManageSuperAdminsPage() {
         </Link>
       </div>
 
-      {/* Control Bar */}
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input 
-            type="text" 
-            placeholder="Search users by name or email..." 
-            value={searchTerm}
-            onChange={e => handleSearch(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
-        </div>
-      </div>
+      <DataTable<DirectoryRow>
+        rows={isLoadingFirstPage ? undefined : paged.pageRows}
+        rowKey={(row) => (row.kind === "invite" ? `inv-${row.invite._id}` : `user-${row.user._id}`)}
+        columns={buildDirectoryColumns({ onEdit: handleOpenEdit, onDelete: setDeletingUser, onRevoke: setDeletingInvite })}
+        search={{
+          value: searchTerm,
+          onChange: handleSearch,
+          placeholder: "Search users by name or email...",
+        }}
+        onRowClick={(row) => {
+          if (row.kind === "user") router.push(`/admin/users/${row.user._id}`);
+        }}
+        rowClickable={(row) => row.kind === "user"}
+        rowClassName={(row) =>
+          row.kind === "invite" ? "bg-brand/[0.03] hover:bg-brand/[0.05] opacity-80" : ""
+        }
+        empty={{
+          icon: <Users className="w-8 h-8 text-muted/30" />,
+          label: "No users or pending invitations found matching your search.",
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.loadedCount,
+          pageSize: paged.pageSize,
+          isLoading: status === "LoadingMore",
+          onPageChange: paged.goToPage,
+          // Short, because the empty row above already says it in full — the
+          // reference screens keep the footer to a count, not a sentence.
+          labels: { empty: "No administrators" },
+        }}
+      />
 
-      {/* Users Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm flex-1 flex flex-col">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">System Administrator</th>
-                <th className="px-4 py-3 font-medium">Joined Date</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {filteredUsers.length === 0 && filteredInvites.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-secondary">
-                      No users or pending invitations found matching your search.
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {filteredInvites.map((inv) => (
-                        <motion.tr 
-                          key={`inv-${inv._id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="border-b border-border-dim/50 bg-brand/[0.03] hover:bg-brand/[0.05] transition-colors group opacity-80"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
-                                 <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                                  Pending Invitation
-                                </span>
-                                <span className="text-[12px] text-secondary">{inv.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-                              <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                                PENDING {inv.role}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
-                               <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
-                                 <Trash2 className="w-4 h-4" />
-                               </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                    ))}
-                    
-                    {filteredUsers.map((item) => (
-                        <motion.tr 
-                          key={`user-${item._id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          onClick={() => router.push(`/admin/users/${item._id}`)}
-                          className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
-                        >
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <Image
-                                src={item.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${item.name ?? item.email ?? item._id}`}
-                                alt={item.name ?? item.email ?? "Super admin"}
-                                width={32}
-                                height={32}
-                                unoptimized
-                                className="w-8 h-8 rounded-full bg-card border border-border-dim"
-                              />
-                              <div>
-                                <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
-                                  {item.name}
-                                </span>
-                                <span className="text-[12px] text-secondary">{item.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                              {item.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                              <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                                {item.role || 'USER'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); setDeletingUser(item); }} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                    ))}
-                  </>
-                )}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-
-        {status === "CanLoadMore" && (
-          <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
-            <button
-              onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-              className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
-            >
-              Load More Administrators
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Add/Edit Modal */}
       <SonaeModal
@@ -306,52 +332,44 @@ export default function ManageSuperAdminsPage() {
            {submitError && <p className="text-red-500 text-[13px] font-medium">{submitError}</p>}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Full Name</label>
-            <input 
-              type="text" 
-              required
-              value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="e.g. Aman"
-            />
-          </div>
+          <ModalField
+            label="Full Name"
+            type="text"
+            required
+            value={formData.name}
+            onChange={e => setFormData({...formData, name: e.target.value})}
+            placeholder="e.g. Aman"
+          />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary tracking-wide">Email Address</label>
-            <input 
-              type="email" 
-              required
-              value={formData.email}
-              onChange={e => setFormData({...formData, email: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="aman@example.com"
-            />
-          </div>
+          <ModalField
+            label="Email Address"
+            type="email"
+            required
+            value={formData.email}
+            onChange={e => setFormData({...formData, email: e.target.value})}
+            placeholder="aman@example.com"
+          />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">System Role</label>
-            <select 
+          <ModalFormField label="System Role" htmlFor="super-admin-role">
+            <select
+              id="super-admin-role"
               value={formData.role}
               disabled
               className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground outline-none text-sm appearance-none opacity-50 cursor-not-allowed"
             >
               <option value="SUPER_ADMIN">System Super Admin</option>
             </select>
-          </div>
+          </ModalFormField>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-[13px] font-medium text-secondary uppercase tracking-widest">Avatar URL (Optional)</label>
-            <input 
-              type="url" 
-              value={formData.image}
-              onChange={e => setFormData({...formData, image: e.target.value})}
-              className="px-4 py-3 bg-background border border-border-dim rounded-[10px] text-foreground focus:border-brand/50 outline-none transition-all text-sm"
-              placeholder="https://example.com/avatar.jpg"
-            />
+          <ModalField
+            label="Avatar URL (Optional)"
+            type="url"
+            value={formData.image}
+            onChange={e => setFormData({...formData, image: e.target.value})}
+            placeholder="https://example.com/avatar.jpg"
+          >
             <p className="text-[11px] text-muted">Leave blank to auto-generate from name.</p>
-          </div>
+          </ModalField>
 
           <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-border-dim">
             <button 
@@ -361,18 +379,19 @@ export default function ManageSuperAdminsPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton 
+            <WriteButton
+
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? "Saving..." : (editingUser ? "Update User" : "Send Invite")}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </form>
       </SonaeModal>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingUser}
         onClose={() => {
           setDeletingUser(null);
@@ -388,9 +407,9 @@ export default function ManageSuperAdminsPage() {
         <p>
           Are you sure you want to delete <strong className="text-foreground font-semibold">{deletingUser?.name}</strong>? This action cannot be undone.
         </p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingInvite}
         onClose={() => {
           setDeletingInvite(null);
@@ -406,7 +425,7 @@ export default function ManageSuperAdminsPage() {
         <p>
           Are you sure you want to revoke the active invitation for <strong className="text-foreground font-semibold">{deletingInvite?.email}</strong>? This will permanently disable their sign-on link and delete their invitation record.
         </p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

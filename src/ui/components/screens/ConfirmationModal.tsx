@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
-import { useCanWriteHere } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
+import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 
 type AdminConfirmationWarningProps = {
   title?: ReactNode;
@@ -24,7 +24,7 @@ type AdminConfirmationModalProps = {
   warning?: AdminConfirmationWarningProps;
 };
 
-export function AdminConfirmationModal({
+export function ConfirmationModal({
   isOpen,
   onClose,
   title,
@@ -57,7 +57,7 @@ export function AdminConfirmationModal({
             {warning.description}
           </div>
         ) : null}
-        <AdminModalFormError>{error}</AdminModalFormError>
+        <ModalFormError>{error}</ModalFormError>
       </div>
 
       <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-dim">

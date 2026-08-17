@@ -2,7 +2,7 @@
 
 Sonae's frontend is a Next.js App Router application with authenticated dashboard routes, super-admin routes, public widget routes, and a small number of support pages. This guide covers current layout, styling, component, and verification expectations.
 
-Read this with [Shared Admin UI](./shared-admin-ui.md), [Architecture](./architecture.md), and the feature-specific guide before adding or changing UI.
+Read this with [Screen Kit](./screen-kit.md), [Architecture](./architecture.md), and the feature-specific guide before adding or changing UI.
 
 ## Route Structure
 

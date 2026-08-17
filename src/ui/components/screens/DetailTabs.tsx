@@ -7,10 +7,11 @@ import type { ComponentType } from "react";
 import { Check, ChevronDown } from "lucide-react";
 
 import { cn } from "@/src/ui/lib/utils";
+import { LAYER } from "@/src/ui/lib/layers";
 
 type AdminDetailTabIcon = ComponentType<{ className?: string }>;
 
-export type AdminDetailDropdownItem = {
+export type DetailDropdownItem = {
   href: string;
   icon: AdminDetailTabIcon;
   label: string;
@@ -18,8 +19,8 @@ export type AdminDetailDropdownItem = {
   query?: Record<string, string>;
 };
 
-export type AdminDetailTab = {
-  dropdownItems?: AdminDetailDropdownItem[];
+export type DetailTab = {
+  dropdownItems?: DetailDropdownItem[];
   href: string;
   icon: AdminDetailTabIcon;
   label: string;
@@ -27,7 +28,7 @@ export type AdminDetailTab = {
 };
 
 type AdminDetailTabsProps = {
-  tabs: AdminDetailTab[];
+  tabs: DetailTab[];
   rootHref: string;
 };
 
@@ -50,7 +51,7 @@ function isActiveTab(pathname: string, href: string, rootHref: string) {
 function isActiveDropdownItem(
   pathname: string,
   searchParams: URLSearchParams,
-  item: AdminDetailDropdownItem,
+  item: DetailDropdownItem,
   parentHref: string
 ) {
   if (item.matches) return item.matches(pathname, searchParams);
@@ -62,7 +63,7 @@ function isActiveDropdownItem(
   return pathname === hrefPath || pathname.startsWith(`${hrefPath}/`);
 }
 
-export function AdminDetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
+export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
   const pathname = usePathname() || rootHref;
   const readonlySearchParams = useSearchParams();
   const searchParams = new URLSearchParams(readonlySearchParams?.toString());
@@ -132,7 +133,15 @@ export function AdminDetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
               {isOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-full z-[100] mt-2 w-[240px] overflow-hidden rounded-[10px] border border-border-dim bg-card shadow-2xl"
+                  className={cn(
+                    "absolute left-0 top-full mt-2 w-[240px] overflow-hidden rounded-[10px] border border-border-dim bg-card shadow-2xl",
+                    // A menu opened out of page chrome, so it must clear every
+                    // sibling bar. The hand-picked number this used to carry
+                    // read as "above everything", but it sits inside
+                    // DetailLayout's own stacking context and never escaped it,
+                    // so only the local order was ever real.
+                    LAYER.PAGE_MENU,
+                  )}
                 >
                   {tab.dropdownItems.map((item) => {
                     const ItemIcon = item.icon;

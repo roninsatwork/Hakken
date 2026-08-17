@@ -67,7 +67,9 @@ describe("movement library components", () => {
     expect(screen.getByText("Roll Down")).toBeInTheDocument();
     expect(screen.getByText("Beginner")).toBeInTheDocument();
     expect(screen.getByText("Spine awareness")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    // The house footer states the count in a sentence; the hand-written one it
+    // replaced put the bare number in its own element.
+    expect(screen.getByText("Showing 1 routines")).toBeInTheDocument();
     expect(screen.getByTitle("Start live practice")).toBeInTheDocument();
     expect(screen.getByTitle("Debug auto baseline")).toBeInTheDocument();
     expect(screen.getByTitle("Review recording")).toBeInTheDocument();

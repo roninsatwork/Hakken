@@ -7,14 +7,14 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Ban, Brain, Check, ClipboardCheck, Eye, Lightbulb, Loader2, MessageSquare, MinusCircle, MoreHorizontal, PlayCircle, RotateCcw, SlidersHorizontal, ThumbsDown, ThumbsUp, Timer } from "lucide-react";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import {
@@ -28,7 +28,7 @@ import { describeStepKind, describeStepStatus } from "@/src/app/(dashboard)/admi
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { STATUS_TONE_CLASSES, type StatusTone } from "@/src/ui/atoms/statusTone";
 import { useToast } from "@/src/context/ToastContext";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type AgentRun = Doc<"agentRuns">;
 type AgentRunFeedback = Doc<"agentRunFeedback">;
@@ -184,7 +184,7 @@ export default function AgentRunsPage() {
   const runPage = useQuery(api.agentRuns.getPageForAgent, {
     agentId,
     ...(statusFilter === "ALL" ? {} : { status: statusFilter }),
-    paginationOpts: { numItems: ADMIN_PAGE_SIZE, cursor },
+    paginationOpts: { numItems: TABLE_PAGE_SIZE, cursor },
   });
 
   const runs = runPage?.page ?? [];
@@ -401,7 +401,7 @@ export default function AgentRunsPage() {
 
 
 
-        <AdminTableShell
+        <TableShell
           minWidthClassName="min-w-[860px]"
           footer={
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border-dim text-[12px] text-muted">
@@ -434,19 +434,19 @@ export default function AgentRunsPage() {
           }
         >
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell className="w-[110px]">Outcome</AdminTableHeaderCell>
-              <AdminTableHeaderCell>What it was asked to do</AdminTableHeaderCell>
-              <AdminTableHeaderCell className="w-[150px]">When</AdminTableHeaderCell>
-              <AdminTableHeaderCell align="right" className="w-[130px]">Took / cost</AdminTableHeaderCell>
-              <AdminTableHeaderCell align="right" className="w-[150px]">&nbsp;</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell className="w-[110px]">Outcome</TableHeaderCell>
+              <TableHeaderCell>What it was asked to do</TableHeaderCell>
+              <TableHeaderCell className="w-[150px]">When</TableHeaderCell>
+              <TableHeaderCell align="right" className="w-[130px]">Took / cost</TableHeaderCell>
+              <TableHeaderCell align="right" className="w-[150px]">&nbsp;</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {isLoading ? (
-              <AdminTableLoadingRow colSpan={5} />
+              <TableLoadingRow colSpan={5} />
             ) : runs.length === 0 ? (
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={5}
                 icon={<Timer className="w-9 h-9 text-brand opacity-60" />}
                 label={
@@ -554,7 +554,7 @@ export default function AgentRunsPage() {
               ))
             )}
           </tbody>
-        </AdminTableShell>
+        </TableShell>
 
         <div className="border border-border-dim rounded-[14px] bg-card px-4 py-4 flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -801,7 +801,7 @@ export default function AgentRunsPage() {
                   </button>
                 )}
                 {runDetail.evalFixtureContext.canCreateFromRun && (
-                  <AdminWriteButton
+                  <WriteButton
                     type="button"
                     onClick={() => handleCreateEvalFixture(runDetail.run._id)}
                     disabled={action.isBusy(runDetail.run._id)}
@@ -809,7 +809,7 @@ export default function AgentRunsPage() {
                   >
                     {action.isBusy(runDetail.run._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardCheck className="w-4 h-4" />}
                     {runDetail.evalFixtureContext.activeCount > 0 ? "Update eval" : "Create eval"}
-                  </AdminWriteButton>
+                  </WriteButton>
                 )}
               </div>
             </div>
@@ -1206,7 +1206,7 @@ export default function AgentRunsPage() {
               >
                 Cancel
               </button>
-              <AdminWriteButton
+              <WriteButton
                 type="button"
                 onClick={handleFeedbackSubmit}
                 disabled={action.isBusy()}
@@ -1214,7 +1214,7 @@ export default function AgentRunsPage() {
               >
                 {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
                 Save feedback
-              </AdminWriteButton>
+              </WriteButton>
             </div>
           </div>
         )}

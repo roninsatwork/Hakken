@@ -13,18 +13,18 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  PaginationFooter,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_COMPANY } from "@/convex/utils/skillLimits";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type CompanySkill = Doc<"companySkills"> & { surfaces: { chat: boolean; widget: boolean } };
 type GlobalSkill = Doc<"agentSkills">;
@@ -51,7 +51,7 @@ export default function CompanyAiSkillsPage() {
   const skills = usePaginatedQuery(
     api.companySkills.getSkillsForCompany,
     { companyId, status: statusFilter, ...(companySearchTerm.trim() ? { searchTerm: companySearchTerm.trim() } : {}) },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [globalSkillSearchTerm, setGlobalSkillSearchTerm] = useState("");
@@ -63,7 +63,7 @@ export default function CompanyAiSkillsPage() {
   const importable = usePaginatedQuery(
     api.companySkills.searchImportableGlobalSkills,
     { companyId, ...(globalSkillSearchTerm.trim() ? { searchTerm: globalSkillSearchTerm.trim() } : {}) },
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
 
   const toggleGlobalSkill = (skillId: Id<"agentSkills">) => {
@@ -79,17 +79,17 @@ export default function CompanyAiSkillsPage() {
 
 
 
-  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
-  const pageSkills = skills.results.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
+  const pageStart = (page - 1) * TABLE_PAGE_SIZE;
+  const pageSkills = skills.results.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
   // No maintained total for a company's own skills, so the count is what has
   // been fetched — honest, if conservative, while more pages remain.
   const knownTotal = skills.results.length;
-  const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(knownTotal / TABLE_PAGE_SIZE));
 
   const goToPage = (next: number) => {
     setPage(next);
-    if (skills.results.length < next * ADMIN_PAGE_SIZE && skills.status === "CanLoadMore") {
-      skills.loadMore(ADMIN_PAGE_SIZE);
+    if (skills.results.length < next * TABLE_PAGE_SIZE && skills.status === "CanLoadMore") {
+      skills.loadMore(TABLE_PAGE_SIZE);
     }
   };
 
@@ -184,14 +184,14 @@ export default function CompanyAiSkillsPage() {
         />
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[640px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={page}
             totalPages={totalPages}
             totalCount={knownTotal}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={skills.status === "LoadingMore"}
             onPageChange={goToPage}
             labels={{
@@ -211,9 +211,9 @@ export default function CompanyAiSkillsPage() {
         </thead>
         <tbody>
           {skills.status === "LoadingFirstPage" ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : skills.results.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<BrainCircuit className="h-8 w-8 text-muted/30" />}
               label={companySearchTerm.trim() ? "No skills match that search" : "No skills yet — add one from the Skill Center"}
@@ -244,26 +244,26 @@ export default function CompanyAiSkillsPage() {
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
               <td className="px-4 py-3 text-right">
-                <AdminWriteButton
+                <WriteButton
                   type="button"
                   aria-label={`Remove ${skill.name}`}
                   onClick={() => setArchiveTarget(skill)}
                   className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
-                </AdminWriteButton>
+                </WriteButton>
               </td>
             </tr>
           ))}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <SonaeModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} title="Add skills" size="lg">
         {/* Tick what you want and add it. The previous version made the reader
             select one skill, read a preview of its instructions, confirm, and
             start again for the next one. */}
         <div className="flex flex-col gap-4">
-          <AdminModalFormError>{action.error}</AdminModalFormError>
+          <ModalFormError>{action.error}</ModalFormError>
           <label className="relative block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
@@ -306,7 +306,7 @@ export default function CompanyAiSkillsPage() {
               {importable.status === "CanLoadMore" && (
                 <button
                   type="button"
-                  onClick={() => importable.loadMore(ADMIN_PAGE_SIZE)}
+                  onClick={() => importable.loadMore(TABLE_PAGE_SIZE)}
                   className="w-full px-4 py-3 text-[12px] font-semibold text-secondary hover:bg-foreground/[0.03] hover:text-foreground"
                 >
                   Show more skills
@@ -323,7 +323,7 @@ export default function CompanyAiSkillsPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={handleImportGlobalSkill}
               disabled={selectedGlobalSkillIds.length === 0 || action.isBusy()}
@@ -333,7 +333,7 @@ export default function CompanyAiSkillsPage() {
               {selectedGlobalSkillIds.length > 1
                 ? `Add ${selectedGlobalSkillIds.length} skills`
                 : "Add skill"}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -349,10 +349,10 @@ export default function CompanyAiSkillsPage() {
             <button type="button" onClick={() => setArchiveTarget(null)} disabled={action.isBusy()} className="h-10 rounded-[8px] border border-border-dim px-4 text-[13px] text-secondary hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <AdminWriteButton type="button" onClick={handleArchiveSkill} disabled={action.isBusy()} className="flex h-10 items-center gap-2 rounded-[8px] bg-red-500 px-4 text-[13px] font-semibold text-white hover:bg-red-600 disabled:opacity-50">
+            <WriteButton type="button" onClick={handleArchiveSkill} disabled={action.isBusy()} className="flex h-10 items-center gap-2 rounded-[8px] bg-red-500 px-4 text-[13px] font-semibold text-white hover:bg-red-600 disabled:opacity-50">
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove skill
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -371,7 +371,7 @@ function SurfaceToggle({
 }) {
   return (
     <label className="flex w-fit cursor-pointer items-center gap-2">
-      <AdminWriteButton
+      <WriteButton
         type="button"
         role="switch"
         aria-checked={isEnabled}
@@ -386,7 +386,7 @@ function SurfaceToggle({
             isEnabled ? "left-[16px]" : "left-[2px]"
           }`}
         />
-      </AdminWriteButton>
+      </WriteButton>
       <span className="text-[12px] text-secondary">{label}</span>
     </label>
   );

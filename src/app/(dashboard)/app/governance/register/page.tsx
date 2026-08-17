@@ -5,14 +5,14 @@ import { AlertTriangle, Bolt, ClipboardList, Globe, UserCheck } from "lucide-rea
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDate } from "@/src/lib/dates";
 
 /**
@@ -44,7 +44,7 @@ export default function AiRegisterPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<ClipboardList className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
@@ -67,23 +67,23 @@ export default function AiRegisterPage() {
         ))}
       </div>
 
-      <AdminTableShell minWidthClassName="min-w-[900px]">
-        <table className="w-full text-left border-collapse">
+      {/* TableShell draws the table element itself — see the policies screen. */}
+      <TableShell minWidthClassName="min-w-[900px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>{t("table.system")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.kind")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.risk")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.owner")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.oversight")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.lastActive")}</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>{t("table.system")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.kind")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.risk")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.owner")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.oversight")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.lastActive")}</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {entries === undefined ? (
-              <AdminTableLoadingRow colSpan={6} />
+              <TableLoadingRow colSpan={6} />
             ) : entries.length === 0 ? (
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={6}
                 icon={<ClipboardList className="w-5 h-5" />}
                 label={t("empty")}
@@ -157,8 +157,7 @@ export default function AiRegisterPage() {
               ))
             )}
           </tbody>
-        </table>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

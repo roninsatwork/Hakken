@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/src/ui/lib/utils";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { validateUploadFile } from "@/src/lib/constants/uploads";
 
 /**
@@ -131,7 +131,7 @@ export function AdminAvatarPicker({ avatar, labels, onUploaded }: {
       >
         <div className="flex flex-col gap-6 mt-2 relative">
           <p className="text-[13px] text-secondary">{labels.modalSubtitle}</p>
-          <AdminSaveError>{uploadError}</AdminSaveError>
+          <SaveError>{uploadError}</SaveError>
 
           <div
             onDragEnter={handleDrag}

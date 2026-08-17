@@ -18,7 +18,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { formatDate } from "@/src/lib/dates";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { toneForStatus } from "@/src/ui/atoms/statusTone";
 
@@ -119,7 +119,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
               </a>
             )}
           </div>
-          <AdminWriteButton
+          <WriteButton
             type="button"
             onClick={handleRetry}
             disabled={isRetrying}
@@ -127,7 +127,7 @@ export default function InspectKnowledgeDocumentPage({ params }: InspectKnowledg
           >
             {isRetrying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
             Retry ingestion
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </header>
 

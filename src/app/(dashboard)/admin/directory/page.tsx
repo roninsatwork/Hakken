@@ -19,16 +19,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 
 type RoleFilter = "any" | "USER" | "ADMIN";
@@ -102,20 +102,20 @@ export default function UserDirectoryPage() {
       activity,
       sortBy,
     },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
 
   const loading = status === "LoadingFirstPage";
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<Users className="w-5 h-5" />}
         title={t("title")}
         description={t("description")}
       />
 
-      <AdminSearchBar
+      <SearchBar
         value={searchTerm}
         onChange={setSearchTerm}
         placeholder={t("searchPlaceholder")}
@@ -177,13 +177,13 @@ export default function UserDirectoryPage() {
         )}
       </div>
 
-      <AdminTableShell
+      <TableShell
         footer={
           status === "CanLoadMore" ? (
             <div className="p-3 border-t border-border-dim flex justify-center">
               <button
                 type="button"
-                onClick={() => loadMore(ADMIN_PAGE_SIZE)}
+                onClick={() => loadMore(TABLE_PAGE_SIZE)}
                 className="text-[13px] text-secondary hover:text-foreground transition-colors px-4 py-2"
               >
                 {t("loadMore")}
@@ -193,20 +193,20 @@ export default function UserDirectoryPage() {
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("table.person")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.company")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.role")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.lastLogin")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("table.logins30d")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.joined")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("table.person")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.company")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.role")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.lastLogin")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("table.logins30d")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.joined")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
-          {loading && <AdminTableLoadingRow colSpan={COLUMN_COUNT} />}
+          {loading && <TableLoadingRow colSpan={COLUMN_COUNT} />}
 
           {!loading && results.length === 0 && (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={COLUMN_COUNT}
               icon={<UserRound className="w-6 h-6 text-muted" />}
               label={t("empty")}
@@ -278,7 +278,7 @@ export default function UserDirectoryPage() {
             </tr>
           ))}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

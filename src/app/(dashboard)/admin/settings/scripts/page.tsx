@@ -15,15 +15,15 @@ import {
   XCircle,
 } from "lucide-react";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 type ScriptRunStatus = "RUNNING" | "SUCCESS" | "FAILED";
 
@@ -97,7 +97,7 @@ export default function MaintenanceScriptsPage() {
     });
   }, [scripts, searchTerm]);
 
-  const pageSize = ADMIN_PAGE_SIZE;
+  const pageSize = TABLE_PAGE_SIZE;
   const totalPages = Math.max(1, Math.ceil(filteredScripts.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const visibleScripts = filteredScripts.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -132,12 +132,12 @@ export default function MaintenanceScriptsPage() {
         </div>
       </div>
 
-      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder="Search scripts by name, category, risk, or description..." />
+      <SearchBar value={searchTerm} onChange={handleSearch} placeholder="Search scripts by name, category, risk, or description..." />
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[980px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={safePage}
             totalPages={totalPages}
             totalCount={filteredScripts.length}
@@ -152,21 +152,21 @@ export default function MaintenanceScriptsPage() {
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>Name</AdminTableHeaderCell>
-            <AdminTableHeaderCell>Category</AdminTableHeaderCell>
-            <AdminTableHeaderCell>Risk</AdminTableHeaderCell>
-            <AdminTableHeaderCell>Status</AdminTableHeaderCell>
-            <AdminTableHeaderCell>Last run</AdminTableHeaderCell>
-            <AdminTableHeaderCell>Last run by</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">Open</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>Name</TableHeaderCell>
+            <TableHeaderCell>Category</TableHeaderCell>
+            <TableHeaderCell>Risk</TableHeaderCell>
+            <TableHeaderCell>Status</TableHeaderCell>
+            <TableHeaderCell>Last run</TableHeaderCell>
+            <TableHeaderCell>Last run by</TableHeaderCell>
+            <TableHeaderCell align="right">Open</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={7} />
+            <TableLoadingRow colSpan={7} />
           ) : visibleScripts.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={7}
               icon={<SearchX className="w-8 h-8 text-muted/30" />}
               label="No maintenance scripts match your search"
@@ -214,7 +214,7 @@ export default function MaintenanceScriptsPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

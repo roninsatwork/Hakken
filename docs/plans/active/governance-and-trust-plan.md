@@ -533,7 +533,7 @@ imported from somewhere else undermines the very thing it is selling.
   table shell, search bar, header rows, loading and empty rows, row actions,
   pagination footer, page header, detail layout, tabs, modals, confirmation
   modals, and save controls. They are catalogued in
-  [Shared Admin UI](../../developer/shared-admin-ui.md); read it before writing a
+  [Screen Kit](../../developer/screen-kit.md); read it before writing a
   screen, not after.
 - Global styling rules are in [Frontend](../../developer/frontend.md). Follow
   them.

@@ -7,7 +7,7 @@ import { BrainCircuit, Loader2, MessageSquareText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminModalFormError } from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+import { ModalFormError } from "@/src/ui/components/screens/ModalForm";
 import {
   CompanyAiFormActions,
   CompanyAiFormPageHeader,
@@ -19,10 +19,10 @@ import {
   type MemoryApplyMode,
 } from "@/src/app/(dashboard)/admin/_components/MemoryFields";
 import {
-  AdminModalFormField,
-  adminModalInputClassName,
-  adminModalTextareaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+  ModalFormField,
+  modalInputClassName,
+  modalTextareaClassName,
+} from "@/src/ui/components/screens/ModalForm";
 
 type ChatMemoryFormData = {
   title: string;
@@ -130,16 +130,16 @@ export default function NewChatMemoryCandidatePage() {
 
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{action.error}</AdminModalFormError>
-          <AdminModalFormField label="Title" hint="Optional">
+          <ModalFormError>{action.error}</ModalFormError>
+          <ModalFormField label="Title" hint="Optional">
             <input
               type="text"
               value={formData.title}
               onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))}
-              className={adminModalInputClassName}
+              className={modalInputClassName}
               placeholder="No delivery dates over chat"
             />
-          </AdminModalFormField>
+          </ModalFormField>
           <MemoryContentField
             value={formData.content}
             onChange={(content) => setFormData((current) => ({ ...current, content }))}
@@ -148,14 +148,14 @@ export default function NewChatMemoryCandidatePage() {
             value={formData.applyMode}
             onChange={(applyMode) => setFormData((current) => ({ ...current, applyMode }))}
           />
-          <AdminModalFormField label="Why?" hint="Optional review note">
+          <ModalFormField label="Why?" hint="Optional review note">
             <textarea
               value={formData.reason}
               onChange={(event) => setFormData((current) => ({ ...current, reason: event.target.value }))}
-              className={adminModalTextareaClassName}
+              className={modalTextareaClassName}
               placeholder="Why should this become durable memory?"
             />
-          </AdminModalFormField>
+          </ModalFormField>
           <CompanyAiFormActions
             backHref={backHref}
             submitLabel={action.isBusy() ? "Saving..." : "Suggest memory"}

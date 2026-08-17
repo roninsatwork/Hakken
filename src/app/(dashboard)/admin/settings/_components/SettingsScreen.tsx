@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { AdminSaveAction } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveAction } from "@/src/ui/components/screens/SaveControls";
 
 type SettingsScreenProps = {
   children: ReactNode;
@@ -40,7 +40,7 @@ export function SettingsScreen({ children, isLoading = false, save }: SettingsSc
       {children}
       {save ? (
         <div className="flex justify-end">
-          <AdminSaveAction
+          <SaveAction
             onClick={save.onSave}
             isSaving={save.isSaving}
             showSuccess={save.saveSuccess}

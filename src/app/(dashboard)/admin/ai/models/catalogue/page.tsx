@@ -10,14 +10,14 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+  PaginationFooter,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import useDebounce from "@/src/hooks/useDebounce";
 import { isModelCostMeasurable } from "@/convex/agentRuntimeService";
 import { cn } from "@/src/ui/lib/utils";
@@ -40,7 +40,7 @@ export default function AIModelCataloguePage() {
   const [providerFilter, setProviderFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [modelError, setModelError] = useState("");
-  const pageSize = ADMIN_PAGE_SIZE;
+  const pageSize = TABLE_PAGE_SIZE;
 
   /**
    * A page at a time, out of what the database has actually returned.
@@ -120,14 +120,14 @@ export default function AIModelCataloguePage() {
 
   return (
     <div className="flex flex-col gap-5 w-full h-full pb-12">
-      <AdminPageHeader
+      <PageHeader
         divider
         icon={<List className="w-6 h-6 text-brand" />}
         title="Model Catalogue"
         description="Which models this platform has, and which of them are switched on."
       />
       <AiWorkspaceNav />
-      <AdminSaveError>{modelError}</AdminSaveError>
+      <SaveError>{modelError}</SaveError>
 
       {/* Search and both filters on one line. The original crammed three
           dropdowns and a toggle in beside the search box, squeezing its
@@ -179,10 +179,10 @@ export default function AIModelCataloguePage() {
         </div>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={page}
             totalPages={totalPages}
             totalCount={totalCount}
@@ -218,9 +218,9 @@ export default function AIModelCataloguePage() {
         </thead>
         <tbody>
           {isLoading || (paginationStatus === "LoadingMore" && models.length === 0) ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : models.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<Bot className="w-8 h-8 text-muted/30" />}
               label={t("empty.title")}
@@ -328,7 +328,7 @@ export default function AIModelCataloguePage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

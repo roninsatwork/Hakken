@@ -5,15 +5,15 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AudioLines, Check, Loader2, Play, Square } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminSaveError, AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import {
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage } from "@/src/lib/googleLiveVoice";
 import { decodePcm16Base64 } from "@/src/lib/voiceSession";
@@ -162,7 +162,7 @@ export default function SpokenVoicePage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<AudioLines className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
@@ -171,28 +171,28 @@ export default function SpokenVoicePage() {
 
       <AiWorkspaceNav />
 
-      <AdminSaveFeedback
+      <SaveFeedback
         status={saveStatus}
         successTitle={t("success.title")}
         successMessage={t("success.message")}
         errorTitle={t("errors.saveTitle")}
         errorMessage=""
       />
-      <AdminSaveError>{errorMessage}</AdminSaveError>
+      <SaveError>{errorMessage}</SaveError>
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
 
-      <AdminTableShell minWidthClassName="min-w-[640px]">
+      <TableShell minWidthClassName="min-w-[640px]">
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.voice")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.sound")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("columns.actions")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.voice")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.sound")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("columns.actions")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={3} />
+            <TableLoadingRow colSpan={3} />
           ) : (
             setting.options.map((option) => {
               const isCurrent = option.key === setting.voice;
@@ -241,7 +241,7 @@ export default function SpokenVoicePage() {
                         <span>{isPreviewing ? t("stop") : t("listen")}</span>
                       </button>
                       {!isCurrent && (
-                        <AdminWriteButton
+                        <WriteButton
                           onClick={() => chooseVoice(option.key)}
                           disabled={savingVoice !== null}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12px] bg-foreground text-background font-medium hover:opacity-90 transition-all disabled:opacity-50"
@@ -250,7 +250,7 @@ export default function SpokenVoicePage() {
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : null}
                           <span>{t("use")}</span>
-                        </AdminWriteButton>
+                        </WriteButton>
                       )}
                     </div>
                   </td>
@@ -259,7 +259,7 @@ export default function SpokenVoicePage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

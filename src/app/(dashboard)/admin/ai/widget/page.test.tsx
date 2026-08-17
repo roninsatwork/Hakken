@@ -170,7 +170,18 @@ describe("GlobalWidgetPage", () => {
     expect(screen.queryByRole("button", { name: /Widget section/i })).not.toBeInTheDocument();
   });
 
-  it("keeps widget section content full-width instead of restoring the old side rail", () => {
+  /**
+   * The section navigation rail stays gone — sections come from the URL now, and
+   * that is what this test was written to protect.
+   *
+   * It also used to pin the layout to a single column, which is a different
+   * claim and was not the point. Anthony asked on 2026-08-17 for the live
+   * preview back beside the form, so the form and the preview are two grid
+   * tracks at desktop width. Fixed tracks rather than flexible ones on purpose:
+   * the preview previously sized itself and could overrun its neighbour, which
+   * squashed the form to one word per line. A track cannot be overrun.
+   */
+  it("keeps the section rail gone, and sits the preview beside the form at desktop width", () => {
     navigationState.section = "integration";
     const { container } = render(<GlobalWidgetPage />);
 
@@ -178,9 +189,14 @@ describe("GlobalWidgetPage", () => {
     const contentColumn = integrationPanel.parentElement;
     const layoutWrapper = contentColumn?.parentElement;
 
-    expect(contentColumn).toHaveClass("flex-1", "w-full", "min-w-0");
-    expect(layoutWrapper).toHaveClass("flex", "flex-col");
-    expect(layoutWrapper).not.toHaveClass("2xl:flex-row");
+    // The rail is what must not come back.
     expect(container.querySelector("[aria-label^='Widget section']")).not.toBeInTheDocument();
+
+    // One column on a narrow screen, form-then-preview on a wide one.
+    expect(layoutWrapper).toHaveClass("grid", "grid-cols-1");
+    expect(layoutWrapper?.className).toContain("lg:grid-cols-[minmax(0,1fr)_380px]");
+
+    // The form must be able to give way rather than overflow.
+    expect(contentColumn).toHaveClass("min-w-0");
   });
 });

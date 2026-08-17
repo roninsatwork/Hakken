@@ -2,8 +2,17 @@
 
 import { useTranslations } from "next-intl";
 
-import { Database, Search, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Database, Trash2 } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import {
+  PaginationFooter,
+  RowIconButton,
+  SearchBar,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { useRouter } from "next/navigation";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
@@ -35,19 +44,17 @@ export default function ScrapedDataPage() {
 
   const paginatedItems = results.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      const next = currentPage + 1;
-      setCurrentPage(next);
-      if (next * itemsPerPage > results.length && status === "CanLoadMore") {
-         loadMore(15);
-      }
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => Math.max(1, prev - 1));
+  /**
+   * One handler for both directions, because the shared footer asks for a page
+   * rather than a step. It still fetches the next slice when moving past what
+   * has been loaded, which is the only thing the two old handlers did that a
+   * plain setState would not.
+   */
+  const handlePageChange = (nextPage: number) => {
+    const target = Math.min(Math.max(nextPage, 1), totalPages);
+    setCurrentPage(target);
+    if (target * itemsPerPage > results.length && status === "CanLoadMore") {
+      loadMore(15);
     }
   };
 
@@ -62,45 +69,46 @@ export default function ScrapedDataPage() {
     <>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <Database className="w-6 h-6 text-brand" />
-              {t('propertiesScrapedData')}
-            </h1>
-            <p className="text-[13px] text-secondary mt-1">View and manage properties scraped from Rightmove.</p>
-          </div>
-        </div>
+        <PageHeader
+          icon={<Database className="w-6 h-6 text-brand" />}
+          title={t('propertiesScrapedData')}
+          description="View and manage properties scraped from Rightmove."
+        />
 
-        {/* Control Bar */}
-        <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl flex-shrink-0">
-          <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-            <Search className="w-[18px] h-[18px]" />
-            <input
-              type="text"
-              placeholder="Search properties by address..."
-              value={searchTerm}
-              onChange={e => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-            />
-          </div>
-        </div>
+        <SearchBar
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setCurrentPage(1);
+          }}
+          placeholder="Search properties by address..."
+        />
 
-        {/* Data Table */}
-        <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <TableShell
+          minWidthClassName="min-w-[860px]"
+          footer={
+            totalItems > 0 ? (
+              <PaginationFooter
+                page={currentPage}
+                totalPages={totalPages}
+                totalCount={totalItems}
+                pageSize={itemsPerPage}
+                isLoading={status === "LoadingMore"}
+                onPageChange={handlePageChange}
+                labels={{
+                  showing: (start, end, total) => `Showing ${start} to ${end} of ${total} properties`,
+                }}
+              />
+            ) : undefined
+          }
+        >
               <thead>
-                <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                  <th className="px-6 py-4 font-medium w-[40%]">Property Address</th>
-                  <th className="px-6 py-4 font-medium">Price</th>
-                  <th className="px-6 py-4 font-medium">Specs</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
-                </tr>
+                <TableHeaderRow>
+                  <TableHeaderCell className="w-[40%]">Property Address</TableHeaderCell>
+                  <TableHeaderCell>Price</TableHeaderCell>
+                  <TableHeaderCell>Specs</TableHeaderCell>
+                  <TableHeaderCell align="right">Actions</TableHeaderCell>
+                </TableHeaderRow>
               </thead>
               <tbody>
                 <AnimatePresence>
@@ -154,20 +162,25 @@ export default function ScrapedDataPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
+                          {/* Not RowActions: these two are always visible here
+                              rather than appearing on hover, and "View details"
+                              is a labelled button rather than an icon. Only the
+                              delete moves onto the kit, which is what gives a
+                              read-only reader the list without the bin. */}
                           <div className="flex items-center justify-end gap-2">
-                             <button 
+                             <button
                                onClick={() => router.push(`/app/properties/scraped-data/${property._id}`)}
                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-brand/10 text-brand text-[12px] font-medium hover:bg-brand/20 transition-colors"
                              >
                                View Details
                              </button>
-                             <button 
+                             <RowIconButton
                                onClick={() => setDeletingProperty(property)}
-                               className="p-1.5 rounded-[8px] bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
-                               title="Delete Property"
+                               tone="danger"
+                               label="Delete property"
                              >
                                <Trash2 className="w-4 h-4" />
-                             </button>
+                             </RowIconButton>
                            </div>
                         </td>
                       </motion.tr>
@@ -175,39 +188,7 @@ export default function ScrapedDataPage() {
                   )}
                 </AnimatePresence>
               </tbody>
-            </table>
-          </div>
-
-          {totalItems > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-border-dim bg-sidebar/50">
-              <div className="flex items-center gap-2 text-[12px] text-muted">
-                <span>Showing</span>
-                <span className="font-medium text-foreground">{Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}</span>
-                <span>to</span>
-                <span className="font-medium text-foreground">{Math.min(currentPage * itemsPerPage, totalItems)}</span>
-                <span>of</span>
-                <span className="font-medium text-foreground">{totalItems}</span>
-                <span>properties</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={handlePrevPage}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  disabled={currentPage >= totalPages}
-                  onClick={handleNextPage}
-                  className="p-1.5 rounded-[8px] bg-foreground/5 text-secondary hover:text-foreground hover:bg-foreground/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        </TableShell>
       </div>
 
       {/* Delete Confirmation Modal */}

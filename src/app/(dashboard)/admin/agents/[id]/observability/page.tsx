@@ -20,6 +20,7 @@ import {
   formatRelativeTime,
   type Change,
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
+import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { useNow } from "@/src/app/(dashboard)/admin/agents/_lib/useNow";
 
 /** How many jobs the "latest" list shows before sending the reader to Activity. */
@@ -615,61 +616,67 @@ function ToolReliability({
         </p>
       </div>
 
-      {tools.length === 0 ? (
-        <p className="text-[13px] text-secondary">
-          No tools used yet. This agent has answered without reaching for anything.
-        </p>
-      ) : (
-        <table className="w-full text-left text-[13px]">
-          <thead>
-            <tr className="text-[11.5px] text-muted">
-              <th className="font-medium pb-2">Tool</th>
-              <th className="font-medium pb-2 text-right w-[58px] pr-4">Used</th>
-              <th className="font-medium pb-2 w-[104px] text-right pr-4">Worked</th>
-              {/* The column that shows which tool is slow. */}
-              <th className="font-medium pb-2 text-right w-[58px]">Usually</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tools.map((tool) => {
+      <CompactList
+        rows={tools}
+        rowKey={(tool) => tool.handlerMapping}
+        dividers="rule"
+        empty="No tools used yet. This agent has answered without reaching for anything."
+        columns={[
+          {
+            key: "tool",
+            header: "Tool",
+            className: "px-0 pr-3 py-2.5 text-foreground truncate max-w-0",
+            cell: (tool) => (
+              <>
+                {describeToolName(tool.handlerMapping, toolNameByHandler)}
+                {tool.notImplemented > 0 && (
+                  <span className="block text-[11px] text-warning mt-0.5">
+                    {formatCount(tool.notImplemented)} of these went to a tool that is not connected
+                  </span>
+                )}
+              </>
+            ),
+          },
+          {
+            key: "used",
+            header: "Used",
+            align: "right",
+            className: "px-0 pr-4 py-2.5 w-[58px] tabular-nums text-secondary",
+            cell: (tool) => formatCount(tool.calls),
+          },
+          {
+            key: "worked",
+            header: "Worked",
+            align: "right",
+            className: "px-0 pr-4 py-2.5 w-[104px]",
+            cell: (tool) => {
               const rate = tool.calls > 0 ? tool.successes / tool.calls : 0;
               const struggling = rate < 0.95;
 
               return (
-                <tr key={tool.handlerMapping} className="border-t border-border-dim/40">
-                  <td className="py-2.5 pr-3 text-foreground truncate max-w-0">
-                    {describeToolName(tool.handlerMapping, toolNameByHandler)}
-                    {tool.notImplemented > 0 && (
-                      <span className="block text-[11px] text-warning mt-0.5">
-                        {formatCount(tool.notImplemented)} of these went to a tool that is not connected
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2.5 text-right tabular-nums text-secondary pr-4">
-                    {formatCount(tool.calls)}
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <div className="flex items-center gap-2">
-                      <span className="h-[5px] flex-1 rounded-[3px] bg-border-dim overflow-hidden min-w-[30px]">
-                        <span
-                          className={`block h-full rounded-[3px] ${struggling ? "bg-destructive" : "bg-success"}`}
-                          style={{ width: `${Math.round(rate * 100)}%` }}
-                        />
-                      </span>
-                      <span className="text-[11.5px] text-secondary tabular-nums w-[38px] text-right">
-                        {formatPercent(rate)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 text-right tabular-nums text-secondary">
-                    {tool.typicalMs > 0 ? formatDuration(tool.typicalMs) : "—"}
-                  </td>
-                </tr>
+                <div className="flex items-center gap-2">
+                  <span className="h-[5px] flex-1 rounded-[3px] bg-border-dim overflow-hidden min-w-[30px]">
+                    <span
+                      className={`block h-full rounded-[3px] ${struggling ? "bg-destructive" : "bg-success"}`}
+                      style={{ width: `${Math.round(rate * 100)}%` }}
+                    />
+                  </span>
+                  <span className="text-[11.5px] text-secondary tabular-nums w-[38px] text-right">
+                    {formatPercent(rate)}
+                  </span>
+                </div>
               );
-            })}
-          </tbody>
-        </table>
-      )}
+            },
+          },
+          {
+            key: "usually",
+            header: "Usually",
+            align: "right",
+            className: "px-0 py-2.5 w-[58px] tabular-nums text-secondary",
+            cell: (tool) => (tool.typicalMs > 0 ? formatDuration(tool.typicalMs) : "\u2014"),
+          },
+        ]}
+      />
     </div>
   );
 }

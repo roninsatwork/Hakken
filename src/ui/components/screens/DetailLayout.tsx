@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/src/ui/lib/utils";
-import { AdminDetailTabs, type AdminDetailTab } from "./AdminDetailTabs";
+import { LAYER } from "@/src/ui/lib/layers";
+import { DetailTabs, type DetailTab } from "./DetailTabs";
 
 type AdminDetailLayoutProps = {
   actions?: ReactNode;
@@ -13,11 +14,11 @@ type AdminDetailLayoutProps = {
   headerClassName?: string;
   leading?: ReactNode;
   rootHref: string;
-  tabs: AdminDetailTab[];
+  tabs: DetailTab[];
   title: ReactNode;
 };
 
-export function AdminDetailLayout({
+export function DetailLayout({
   actions,
   children,
   className,
@@ -32,9 +33,11 @@ export function AdminDetailLayout({
   return (
     <div className={cn("flex flex-col gap-6 w-full h-full pl-2", className)}>
       {/* Above the page body so the tab dropdowns clear it, but below the app
-          header, which owns the account menu. At z-50 this block sat over that
-          menu, so "Back to Agents" drew straight through it. */}
-      <div className={cn("flex flex-col gap-6 relative z-20", headerClassName)}>
+          header, which owns the account menu. Raised to the sidebar's level
+          this block sat over that menu, and "Back to Agents" drew straight
+          through it. PAGE_CHROME is defined below HEADER, so the role now
+          guarantees what the hand-picked number only happened to get right. */}
+      <div className={cn("flex flex-col gap-6 relative", LAYER.PAGE_CHROME, headerClassName)}>
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             {leading}
@@ -50,15 +53,16 @@ export function AdminDetailLayout({
             </div>
           </div>
 
-          {actions ? <div className="flex items-center gap-3 z-20">{actions}</div> : null}
+          {actions ? <div className={cn("flex items-center gap-3", LAYER.PAGE_CHROME)}>{actions}</div> : null}
         </header>
 
-        <AdminDetailTabs tabs={tabs} rootHref={rootHref} />
+        <DetailTabs tabs={tabs} rootHref={rootHref} />
       </div>
 
       <div
         className={cn(
-          "relative z-0 flex-1 flex flex-col min-h-0 bg-transparent pt-4",
+          "relative flex-1 flex flex-col min-h-0 bg-transparent pt-4",
+          LAYER.CONTENT,
           contentClassName,
         )}
       >

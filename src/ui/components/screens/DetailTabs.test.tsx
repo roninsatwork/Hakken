@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Activity, BrainCircuit, Database, Settings } from "lucide-react";
-import { AdminDetailTabs } from "./AdminDetailTabs";
+import { DetailTabs } from "./DetailTabs";
 import { usePathname, useSearchParams } from "next/navigation";
 
 vi.mock("next/navigation", () => ({
@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: vi.fn(),
 }));
 
-describe("AdminDetailTabs", () => {
+describe("DetailTabs", () => {
   const tabs = [
     { label: "Dashboard", href: "/admin/agents/agent-1", icon: Activity },
     { label: "Settings", href: "/admin/agents/agent-1/settings", icon: Settings },
@@ -19,7 +19,7 @@ describe("AdminDetailTabs", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/agents/agent-1");
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
-    render(<AdminDetailTabs tabs={tabs} rootHref="/admin/agents/agent-1" />);
+    render(<DetailTabs tabs={tabs} rootHref="/admin/agents/agent-1" />);
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("border-brand");
     expect(screen.getByRole("link", { name: "Settings" })).toHaveClass("border-transparent");
@@ -29,7 +29,7 @@ describe("AdminDetailTabs", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/agents/agent-1/settings");
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
-    render(<AdminDetailTabs tabs={tabs} rootHref="/admin/agents/agent-1" />);
+    render(<DetailTabs tabs={tabs} rootHref="/admin/agents/agent-1" />);
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("border-transparent");
     expect(screen.getByRole("link", { name: "Settings" })).toHaveClass("border-brand");
@@ -40,7 +40,7 @@ describe("AdminDetailTabs", () => {
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
     render(
-      <AdminDetailTabs
+      <DetailTabs
         rootHref="/admin/agents/agent-1"
         tabs={[
           ...tabs,
@@ -97,7 +97,7 @@ describe("AdminDetailTabs", () => {
     render(
       <div>
         <button type="button">Outside</button>
-        <AdminDetailTabs
+        <DetailTabs
           rootHref="/admin/agents/agent-1"
           tabs={[
             ...tabs,
@@ -138,7 +138,7 @@ describe("AdminDetailTabs", () => {
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("section=integration") as never);
 
     render(
-      <AdminDetailTabs
+      <DetailTabs
         rootHref="/admin/agents/agent-1"
         tabs={[
           ...tabs,

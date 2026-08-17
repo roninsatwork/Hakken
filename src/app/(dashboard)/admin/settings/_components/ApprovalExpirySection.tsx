@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getErrorMessage } from "@/src/lib/errors";
-import { AdminSaveAction, AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { SettingBlock } from "./SettingBlock";
 
 /**
@@ -80,10 +80,10 @@ export function ApprovalExpirySection() {
           </p>
         </div>
 
-        <AdminSaveError>{saveError}</AdminSaveError>
+        <SaveError>{saveError}</SaveError>
 
         <div className="flex justify-end">
-          <AdminSaveAction
+          <SaveAction
             onClick={handleSave}
             isSaving={isSaving}
             showSuccess={saveSuccess}

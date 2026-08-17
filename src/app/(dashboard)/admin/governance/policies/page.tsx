@@ -14,18 +14,18 @@ import {
   type PolicyPriority,
   type PolicyScope,
 } from "@/convex/governancePolicyService";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminSelect } from "@/src/app/(dashboard)/admin/_components/AdminSelect";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Select } from "@/src/ui/components/screens/Select";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE, paginateAdminItems } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 
 /**
  * Every rule currently governing what the AI may do, as a record.
@@ -69,12 +69,12 @@ export default function GovernancePoliciesPage() {
     return apply();
   };
 
-  const paged = paginateAdminItems(visible, page, ADMIN_PAGE_SIZE);
+  const paged = paginateItems(visible, page, TABLE_PAGE_SIZE);
   const filtering = search.trim() !== "" || priority !== "ALL" || scope !== "ALL";
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<ScrollText className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
@@ -82,14 +82,14 @@ export default function GovernancePoliciesPage() {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-[240px] flex-1">
-          <AdminSearchBar
+          <SearchBar
             value={search}
             onChange={(value) => narrow(() => setSearch(value))}
             placeholder={t("searchPlaceholder")}
           />
         </div>
 
-        <AdminSelect
+        <Select
           id="policy-priority"
           value={priority}
           onChange={(next) => narrow(() => setPriority(next as PolicyPriority | "ALL"))}
@@ -101,9 +101,9 @@ export default function GovernancePoliciesPage() {
               {option === "ALL" ? t("filters.allPriorities") : t(`priority.${option}`)}
             </option>
           ))}
-        </AdminSelect>
+        </Select>
 
-        <AdminSelect
+        <Select
           id="policy-scope"
           value={scope}
           onChange={(next) => narrow(() => setScope(next as PolicyScope | "ALL"))}
@@ -115,7 +115,7 @@ export default function GovernancePoliciesPage() {
               {option === "ALL" ? t("filters.allScopes") : t(`scope.${option}`)}
             </option>
           ))}
-        </AdminSelect>
+        </Select>
 
         {filtering ? (
           <button
@@ -134,10 +134,10 @@ export default function GovernancePoliciesPage() {
         ) : null}
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[820px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={paged.page}
             totalPages={paged.totalPages}
             totalCount={paged.totalItems}
@@ -155,18 +155,18 @@ export default function GovernancePoliciesPage() {
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("table.name")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.applies")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.priority")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.instruction")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("table.name")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.applies")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.priority")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.instruction")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {active === undefined ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : paged.items.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<ScrollText className="w-5 h-5" />}
               /* Nothing matched and nothing exists are different answers. */
@@ -214,7 +214,7 @@ export default function GovernancePoliciesPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

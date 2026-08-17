@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AdminConfirmationModal } from "./AdminConfirmationModal";
+import { ConfirmationModal } from "./ConfirmationModal";
 
-describe("AdminConfirmationModal", () => {
+describe("ConfirmationModal", () => {
   it("renders the shared confirmation content, warning, error, and actions", () => {
     render(
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen
         onClose={vi.fn()}
         title="Delete Tenant"
@@ -17,7 +17,7 @@ describe("AdminConfirmationModal", () => {
         warning={{ title: "Cascade warning", description: "All linked data will be removed." }}
       >
         <p>Are you sure?</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     );
 
     expect(screen.getByRole("heading", { name: "Delete Tenant" })).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("AdminConfirmationModal", () => {
 
   it("supports warning copy without a warning title", () => {
     render(
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen
         onClose={vi.fn()}
         title="Delete Plan"
@@ -40,7 +40,7 @@ describe("AdminConfirmationModal", () => {
         warning={{ description: "Existing subscribers may be affected." }}
       >
         <p>Delete this plan?</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     );
 
     expect(screen.getByText("Existing subscribers may be affected.")).toBeInTheDocument();
@@ -48,7 +48,7 @@ describe("AdminConfirmationModal", () => {
 
   it("can render as a compact confirmation dialog", () => {
     render(
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen
         onClose={vi.fn()}
         title="Delete Trace"
@@ -59,7 +59,7 @@ describe("AdminConfirmationModal", () => {
         onConfirm={vi.fn()}
       >
         <p>Remove this trace?</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     );
 
     expect(screen.getByRole("heading", { name: "Delete Trace" })).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe("AdminConfirmationModal", () => {
     const onConfirm = vi.fn();
 
     render(
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen
         onClose={onClose}
         title="Delete Agent"
@@ -81,7 +81,7 @@ describe("AdminConfirmationModal", () => {
         onConfirm={onConfirm}
       >
         <p>Delete this agent?</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -96,7 +96,7 @@ describe("AdminConfirmationModal", () => {
     const onConfirm = vi.fn();
 
     render(
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen
         onClose={onClose}
         title="Delete Agent"
@@ -106,7 +106,7 @@ describe("AdminConfirmationModal", () => {
         onConfirm={onConfirm}
       >
         <p>Delete this agent?</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     );
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();

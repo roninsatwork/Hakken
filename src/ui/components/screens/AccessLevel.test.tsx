@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { AdminAccessLevelProvider, AdminWriteButton } from "./AdminAccessLevel";
-import { AdminPagePrimaryAction } from "./AdminPageHeader";
-import { AdminRowIconButton } from "./AdminTable";
-import { AdminSaveAction } from "./AdminSaveControls";
+import { AccessLevelProvider, WriteButton } from "./AccessLevel";
+import { PagePrimaryAction } from "./PageHeader";
+import { RowIconButton } from "./Table";
+import { SaveAction } from "./SaveControls";
 
 /**
  * The oversight roles read admin screens and write nothing.
@@ -19,24 +19,24 @@ import { AdminSaveAction } from "./AdminSaveControls";
  * `convex/authz.test.ts` is what proves it.
  */
 function renderAs(role: string | undefined, ui: React.ReactNode) {
-  return render(<AdminAccessLevelProvider role={role}>{ui}</AdminAccessLevelProvider>);
+  return render(<AccessLevelProvider role={role}>{ui}</AccessLevelProvider>);
 }
 
 describe("admin write controls follow the caller's role", () => {
   test("an administrator sees the primary action", () => {
-    renderAs("ADMIN", <AdminPagePrimaryAction>Create agent</AdminPagePrimaryAction>);
+    renderAs("ADMIN", <PagePrimaryAction>Create agent</PagePrimaryAction>);
 
     expect(screen.getByRole("button", { name: "Create agent" })).toBeTruthy();
   });
 
   test("a super admin sees the primary action", () => {
-    renderAs("SUPER_ADMIN", <AdminPagePrimaryAction>Create agent</AdminPagePrimaryAction>);
+    renderAs("SUPER_ADMIN", <PagePrimaryAction>Create agent</PagePrimaryAction>);
 
     expect(screen.getByRole("button", { name: "Create agent" })).toBeTruthy();
   });
 
   test.each(["READ_ONLY", "AUDITOR"])("%s sees no primary action at all", (role) => {
-    renderAs(role, <AdminPagePrimaryAction>Create agent</AdminPagePrimaryAction>);
+    renderAs(role, <PagePrimaryAction>Create agent</PagePrimaryAction>);
 
     // Absent rather than disabled: a greyed-out button invites the reader to
     // work out why it will not press.
@@ -44,7 +44,7 @@ describe("admin write controls follow the caller's role", () => {
   });
 
   test.each(["READ_ONLY", "AUDITOR"])("%s sees no save button", (role) => {
-    renderAs(role, <AdminSaveAction isSaving={false} label="Save" savingLabel="Saving" />);
+    renderAs(role, <SaveAction isSaving={false} label="Save" savingLabel="Saving" />);
 
     expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
   });
@@ -52,9 +52,9 @@ describe("admin write controls follow the caller's role", () => {
   test.each(["READ_ONLY", "AUDITOR"])("%s sees no delete action on a row", (role) => {
     renderAs(
       role,
-      <AdminRowIconButton label="Delete" tone="danger" onClick={vi.fn()}>
+      <RowIconButton label="Delete" tone="danger" onClick={vi.fn()}>
         <span />
-      </AdminRowIconButton>
+      </RowIconButton>
     );
 
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -63,9 +63,9 @@ describe("admin write controls follow the caller's role", () => {
   test.each(["READ_ONLY", "AUDITOR"])("%s can still open a record, or the list is useless", (role) => {
     renderAs(
       role,
-      <AdminRowIconButton navigates label="Configure" onClick={vi.fn()}>
+      <RowIconButton navigates label="Configure" onClick={vi.fn()}>
         <span />
-      </AdminRowIconButton>
+      </RowIconButton>
     );
 
     expect(screen.getByRole("button", { name: "Configure" })).toBeTruthy();
@@ -74,26 +74,26 @@ describe("admin write controls follow the caller's role", () => {
   test("a component rendered with no provider keeps its controls", () => {
     // Everything outside the admin layout must behave exactly as before, or
     // adding these roles would have quietly stripped buttons elsewhere.
-    render(<AdminPagePrimaryAction>Create agent</AdminPagePrimaryAction>);
+    render(<PagePrimaryAction>Create agent</PagePrimaryAction>);
 
     expect(screen.getByRole("button", { name: "Create agent" })).toBeTruthy();
   });
 });
 
 /**
- * `AdminWriteButton` is a drop-in for `<button>` used by the ~50 admin screens
+ * `WriteButton` is a drop-in for `<button>` used by the ~50 admin screens
  * that carry their own buttons rather than the shared page and table
  * components. It must behave identically for anyone who can write, or swapping
  * the tag would have changed those screens for everybody.
  */
-describe("AdminWriteButton", () => {
+describe("WriteButton", () => {
   test("behaves exactly like a button for someone who can write", async () => {
     const onClick = vi.fn();
     renderAs(
       "SUPER_ADMIN",
-      <AdminWriteButton type="submit" onClick={onClick} className="x" disabled={false}>
+      <WriteButton type="submit" onClick={onClick} className="x" disabled={false}>
         Save changes
-      </AdminWriteButton>
+      </WriteButton>
     );
 
     const button = screen.getByRole("button", { name: "Save changes" });
@@ -106,14 +106,14 @@ describe("AdminWriteButton", () => {
 
   test.each(["READ_ONLY", "AUDITOR"])("%s never sees it, so it can never be pressed", (role) => {
     const onClick = vi.fn();
-    renderAs(role, <AdminWriteButton onClick={onClick}>Delete everything</AdminWriteButton>);
+    renderAs(role, <WriteButton onClick={onClick}>Delete everything</WriteButton>);
 
     expect(screen.queryByRole("button", { name: "Delete everything" })).toBeNull();
     expect(onClick).not.toHaveBeenCalled();
   });
 
   test("outside the admin layout it is an ordinary button", () => {
-    render(<AdminWriteButton>Save changes</AdminWriteButton>);
+    render(<WriteButton>Save changes</WriteButton>);
 
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
   });

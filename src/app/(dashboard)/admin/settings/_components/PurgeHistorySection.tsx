@@ -5,16 +5,16 @@ import { usePaginatedQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { History, Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { toneForStatus } from "@/src/ui/atoms/statusTone";
 import {
@@ -48,7 +48,7 @@ export function PurgeHistorySection() {
       ...(pipelineFilter !== "all" ? { pipelineKey: pipelineFilter } : {}),
       ...(statusFilter !== "all" ? { status: statusFilter } : {}),
     },
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
 
   const needle = searchTerm.trim().toLowerCase();
@@ -59,17 +59,17 @@ export function PurgeHistorySection() {
   });
 
   const isLoading = history.status === "LoadingFirstPage";
-  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
-  const pageRows = rows.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
+  const pageStart = (page - 1) * TABLE_PAGE_SIZE;
+  const pageRows = rows.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
   // No maintained total for the ledger, so the count is what has been
   // fetched — honest, if conservative, while more pages remain.
   const knownTotal = rows.length;
-  const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(knownTotal / TABLE_PAGE_SIZE));
 
   const goToPage = (next: number) => {
     setPage(next);
-    if (history.results.length < next * ADMIN_PAGE_SIZE && history.status === "CanLoadMore") {
-      history.loadMore(ADMIN_PAGE_SIZE);
+    if (history.results.length < next * TABLE_PAGE_SIZE && history.status === "CanLoadMore") {
+      history.loadMore(TABLE_PAGE_SIZE);
     }
   };
 
@@ -89,7 +89,7 @@ export function PurgeHistorySection() {
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="flex-1">
-          <AdminSearchBar
+          <SearchBar
             value={searchTerm}
             onChange={(value) => {
               setSearchTerm(value);
@@ -128,14 +128,14 @@ export function PurgeHistorySection() {
         </select>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={knownTotal > 0 ? (
-          <AdminPaginationFooter
+          <PaginationFooter
             page={page}
             totalPages={totalPages}
             totalCount={knownTotal}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={history.status === "LoadingMore"}
             onPageChange={goToPage}
             labels={{
@@ -145,19 +145,19 @@ export function PurgeHistorySection() {
         ) : undefined}
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("purges.history.table.pipeline")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("purges.history.table.trigger")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[130px]">{t("purges.history.table.status")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[140px]">{t("purges.history.table.purged")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[190px]" align="right">{t("purges.history.table.started")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("purges.history.table.pipeline")}</TableHeaderCell>
+            <TableHeaderCell>{t("purges.history.table.trigger")}</TableHeaderCell>
+            <TableHeaderCell className="w-[130px]">{t("purges.history.table.status")}</TableHeaderCell>
+            <TableHeaderCell className="w-[140px]">{t("purges.history.table.purged")}</TableHeaderCell>
+            <TableHeaderCell className="w-[190px]" align="right">{t("purges.history.table.started")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : pageRows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<History className="h-8 w-8 text-muted/30" />}
               label={t("purges.history.table.empty")}
@@ -189,7 +189,7 @@ export function PurgeHistorySection() {
             </tr>
           ))}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </section>
   );
 }

@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { Loader2, MessageCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
 
 /**
@@ -72,14 +72,14 @@ export function WikiAskBox({
           disabled={isAsking}
           className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
         />
-        <AdminWriteButton
+        <WriteButton
           onClick={() => void ask()}
           disabled={isAsking || !question.trim()}
           className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
         >
           {isAsking ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {isAsking ? t("asking") : t("askButton")}
-        </AdminWriteButton>
+        </WriteButton>
       </div>
       {error && <p className="text-[13px] text-destructive">{error}</p>}
       {result && (

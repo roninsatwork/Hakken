@@ -6,19 +6,19 @@ import { Cpu, Loader2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { getErrorMessage } from "@/src/lib/errors";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { cn } from "@/src/ui/lib/utils";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
   describeModelUseCase,
   formatModelDisplayName,
@@ -127,14 +127,14 @@ export default function AIModelDefaultsPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full h-full pb-12">
-      <AdminPageHeader
+      <PageHeader
         divider
         icon={<Cpu className="w-6 h-6 text-brand" />}
         title="Model Defaults"
         description="Which model handles each kind of work, unless something more specific says otherwise."
       />
       <AiWorkspaceNav />
-      <AdminSaveError>{defaultsError}</AdminSaveError>
+      <SaveError>{defaultsError}</SaveError>
 
       <p className="text-[13px] text-secondary">
         The model Sonae reaches for when nothing more specific has been chosen. A company, an agent
@@ -145,7 +145,7 @@ export default function AIModelDefaultsPage() {
           This screen was nine tall rows of label, paragraph, full-width dropdown
           and a floating price — every row a different height, and nothing lining
           up down the page. */}
-      <AdminTableShell minWidthClassName="min-w-[860px]">
+      <TableShell minWidthClassName="min-w-[860px]">
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="px-4 py-3 font-medium w-[38%]">Job</th>
@@ -155,9 +155,9 @@ export default function AIModelDefaultsPage() {
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={3} />
+            <TableLoadingRow colSpan={3} />
           ) : globalDefaults.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={3}
               icon={<Cpu className="w-8 h-8 text-muted/30" />}
               label="No jobs to configure yet"
@@ -259,7 +259,7 @@ export default function AIModelDefaultsPage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       {/* Bulk assignment lives here rather than on a catalogue row, and it names
           what it overwrites. */}
@@ -284,14 +284,14 @@ export default function AIModelDefaultsPage() {
                 </option>
               ))}
             </select>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               disabled={!everyJobModel}
               onClick={() => setIsEveryJobConfirmOpen(true)}
               className="h-9 shrink-0 rounded-[8px] border border-border-dim px-4 text-[12px] font-medium text-secondary transition-colors hover:text-foreground disabled:opacity-40 disabled:pointer-events-none"
             >
               Apply
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       )}
@@ -331,7 +331,7 @@ export default function AIModelDefaultsPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={applyToEveryJob}
               disabled={isApplyingEveryJob}
@@ -339,7 +339,7 @@ export default function AIModelDefaultsPage() {
             >
               {isApplyingEveryJob && <Loader2 className="w-4 h-4 animate-spin" />}
               Apply to every job
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

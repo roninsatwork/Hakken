@@ -1,8 +1,9 @@
 "use client";
 
+import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Loader2, Search } from "lucide-react";
-import { useCanWriteHere } from "./AdminAccessLevel";
+import { useCanWriteHere } from "./AccessLevel";
 
 type AdminSearchBarProps = {
   value: string;
@@ -10,7 +11,7 @@ type AdminSearchBarProps = {
   placeholder: string;
 };
 
-export function AdminSearchBar({ value, onChange, placeholder }: AdminSearchBarProps) {
+export function SearchBar({ value, onChange, placeholder }: AdminSearchBarProps) {
   return (
     <div className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">
       <div className="flex items-center gap-2 px-3 flex-1">
@@ -27,15 +28,58 @@ export function AdminSearchBar({ value, onChange, placeholder }: AdminSearchBarP
   );
 }
 
-type AdminTableShellProps = {
-  children: ReactNode;
-  footer?: ReactNode;
-  minWidthClassName?: string;
+/**
+ * The three ways a table is framed in this app.
+ *
+ * `default` is the list-screen card. `panel` is the softer, tighter card the
+ * detail pages use — a login history, a conversation list — and pairs with the
+ * `strip` header. `bare` draws no card at all, for a table that already sits
+ * inside somebody else's panel.
+ *
+ * `bare` is the one worth explaining. Five screens were left hand-writing their
+ * table because wrapping them in the card would have put a card inside a card,
+ * which is a worse outcome than the duplication. That was a real objection to a
+ * missing option, not to the kit — so the option exists now, and they came on.
+ */
+type TableShellVariant = "default" | "panel" | "bare";
+
+const SHELL_CLASSES: Record<TableShellVariant, string> = {
+  default:
+    "flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full",
+  panel:
+    "flex flex-col gap-0 bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden w-full",
+  bare: "flex flex-col gap-0 w-full",
 };
 
-export function AdminTableShell({ children, footer, minWidthClassName = "min-w-[1000px]" }: AdminTableShellProps) {
+type AdminTableShellProps = {
+  children: ReactNode;
+  /**
+   * A bar above the table, inside the same border — a heading, usually.
+   *
+   * The mirror of `footer`, added when the sales-data import history moved onto
+   * the kit: it carries "Import history" inside the card, and without a slot
+   * for it the choice was to lift the heading outside the border (a visible
+   * change) or keep hand-writing the shell (the thing this is replacing).
+   */
+  header?: ReactNode;
+  footer?: ReactNode;
+  minWidthClassName?: string;
+  variant?: TableShellVariant;
+  /** Layout the surrounding page needs — spacing, growing to fill a column. */
+  className?: string;
+};
+
+export function TableShell({
+  children,
+  header,
+  footer,
+  minWidthClassName = "min-w-[1000px]",
+  variant = "default",
+  className = "",
+}: AdminTableShellProps) {
   return (
-    <div className="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full">
+    <div className={`${SHELL_CLASSES[variant]} ${className}`.trim()}>
+      {header}
       <div className="w-full overflow-x-auto">
         <table className={`w-full text-left border-collapse ${minWidthClassName}`}>{children}</table>
       </div>
@@ -44,15 +88,50 @@ export function AdminTableShell({ children, footer, minWidthClassName = "min-w-[
   );
 }
 
-type AdminTableHeaderRowProps = {
-  children: ReactNode;
+/**
+ * The two header looks this app actually has.
+ *
+ * `default` is the plain rule-under-the-labels used by the list screens.
+ * `strip` fills the header band and is what the detail pages use for a table
+ * sitting inside a panel — a login history, a conversation list — where a bare
+ * rule reads as part of the panel above it rather than as a table header.
+ *
+ * They were found by counting, not chosen: six tables were already drawing the
+ * filled band by hand, in three slightly different fills. One of them is now
+ * the fill, and the other two were drift.
+ */
+type TableHeaderVariant = "default" | "strip";
+
+const HEADER_ROW_CLASSES: Record<TableHeaderVariant, string> = {
+  default: "border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted",
+  strip: "border-b border-border-dim/50 bg-sidebar/20",
 };
 
-export function AdminTableHeaderRow({ children }: AdminTableHeaderRowProps) {
+const HEADER_CELL_CLASSES: Record<TableHeaderVariant, string> = {
+  default: "px-4 py-3 font-medium",
+  strip: "px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest",
+};
+
+/**
+ * The row tells its cells which look to wear.
+ *
+ * Passing the variant to every cell would be five chances per table to get it
+ * wrong, and a header whose cells disagree with their row is exactly the kind
+ * of near-miss nobody spots in review.
+ */
+const TableHeaderVariantContext = createContext<TableHeaderVariant>("default");
+
+type AdminTableHeaderRowProps = {
+  children: ReactNode;
+  variant?: TableHeaderVariant;
+  className?: string;
+};
+
+export function TableHeaderRow({ children, variant = "default", className = "" }: AdminTableHeaderRowProps) {
   return (
-    <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-      {children}
-    </tr>
+    <TableHeaderVariantContext.Provider value={variant}>
+      <tr className={`${HEADER_ROW_CLASSES[variant]} ${className}`.trim()}>{children}</tr>
+    </TableHeaderVariantContext.Provider>
   );
 }
 
@@ -62,9 +141,13 @@ type AdminTableHeaderCellProps = {
   className?: string;
 };
 
-export function AdminTableHeaderCell({ children, align = "left", className = "" }: AdminTableHeaderCellProps) {
+export function TableHeaderCell({ children, align = "left", className = "" }: AdminTableHeaderCellProps) {
+  const variant = useContext(TableHeaderVariantContext);
+
   return (
-    <th className={`px-4 py-3 font-medium ${align === "right" ? "text-right" : ""} ${className}`}>
+    <th
+      className={`${HEADER_CELL_CLASSES[variant]} ${align === "right" ? "text-right" : ""} ${className}`}
+    >
       {children}
     </th>
   );
@@ -75,7 +158,7 @@ type AdminTableLoadingRowProps = {
   accentClassName?: string;
 };
 
-export function AdminTableLoadingRow({ colSpan, accentClassName = "text-brand" }: AdminTableLoadingRowProps) {
+export function TableLoadingRow({ colSpan, accentClassName = "text-brand" }: AdminTableLoadingRowProps) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-5 py-16 text-center text-secondary">
@@ -92,7 +175,7 @@ type AdminTableEmptyRowProps = {
   action?: ReactNode;
 };
 
-export function AdminTableEmptyRow({ colSpan, icon, label, action }: AdminTableEmptyRowProps) {
+export function TableEmptyRow({ colSpan, icon, label, action }: AdminTableEmptyRowProps) {
   return (
     <tr>
       <td colSpan={colSpan} className="px-5 py-16 text-center">
@@ -110,7 +193,7 @@ type AdminRowActionsProps = {
   children: ReactNode;
 };
 
-export function AdminRowActions({ children }: AdminRowActionsProps) {
+export function RowActions({ children }: AdminRowActionsProps) {
   return (
     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
       {children}
@@ -135,7 +218,7 @@ type AdminRowIconButtonProps = {
   navigates?: boolean;
 };
 
-export function AdminRowIconButton({
+export function RowIconButton({
   children,
   label,
   onClick,
@@ -183,7 +266,7 @@ type AdminPaginationFooterProps = {
   };
 };
 
-export function AdminPaginationFooter({
+export function PaginationFooter({
   page,
   totalPages,
   totalCount,
@@ -247,7 +330,7 @@ type AdminLoadMoreFooterProps = {
   };
 };
 
-export function AdminLoadMoreFooter({
+export function LoadMoreFooter({
   visibleCount,
   canLoadMore,
   isLoading,

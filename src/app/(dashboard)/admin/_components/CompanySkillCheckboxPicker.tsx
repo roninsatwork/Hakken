@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
 
 type CompanySkill = Doc<"companySkills">;
 
@@ -65,7 +65,7 @@ export function CompanySkillCheckboxPicker({
           })}
         </div>
       )}
-      <AdminLoadMoreFooter
+      <LoadMoreFooter
         visibleCount={skills.length}
         canLoadMore={status === "CanLoadMore"}
         isLoading={status === "LoadingMore"}

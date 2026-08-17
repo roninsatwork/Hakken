@@ -7,6 +7,7 @@
     "saving": "Salvataggio...",
     "deleting": "Eliminazione...",
     "dismiss": "Chiudi",
+    "clearSearch": "Cancella ricerca",
     "back": "Indietro",
     "actions": {
       "save": "Salva",
@@ -388,7 +389,8 @@
           "1m 27s di lavoro",
           "£0,043",
           "18 passaggi su 40"
-        ]
+        ],
+        "empty": "Nessuna registrazione."
       }
     },
     "proof": {
@@ -2434,7 +2436,10 @@
         "systemLevel": "Livello di Sistema",
         "sonaeGlobal": "Sonae Global",
         "noMatches": "Nessuna identità attiva trovata corrispondente alla query.",
-        "na": "N/D"
+        "na": "N/D",
+        "loadMore": "Carica altri utenti",
+        "showingLoaded": "Visualizzazione di {count} utenti",
+        "loadingMore": "Caricamento utenti..."
       },
       "roles": {
         "superAdmin": "Super Admin",
@@ -2473,6 +2478,58 @@
         "namePlaceholder": "es. Mario Rossi",
         "emailPlaceholder": "es. mario@sonae.ai",
         "avatarPlaceholder": "https://..."
+      },
+      "invitePage": {
+        "title": "Invita un utente",
+        "description": "Invia a qualcuno un invito a partecipare. Riceverà un’email con un link per configurare il proprio account.",
+        "steps": {
+          "targeting": "A chi è destinato",
+          "payload": "Cosa dice l’email"
+        },
+        "fields": {
+          "email": {
+            "label": "Indirizzo email",
+            "placeholder": "nome@azienda.com"
+          },
+          "role": {
+            "label": "Ruolo",
+            "standardUser": "Utente standard",
+            "systemAdmin": "Amministratore"
+          },
+          "company": {
+            "label": "Area di lavoro",
+            "noCompany": "Nessuna area di lavoro"
+          },
+          "subject": {
+            "label": "Oggetto"
+          },
+          "headline": {
+            "label": "Titolo"
+          },
+          "body": {
+            "label": "Messaggio"
+          },
+          "cta": {
+            "label": "Testo del pulsante"
+          }
+        },
+        "actions": {
+          "saveTemplate": "Salva come modello",
+          "saving": "Salvataggio...",
+          "synchronized": "Salvato",
+          "sendInvitation": "Invia invito",
+          "sending": "Invio..."
+        },
+        "messages": {
+          "sendError": "Non è stato possibile inviare l’invito. Controlla l’indirizzo email e riprova.",
+          "sendSuccess": "Invito inviato."
+        },
+        "preview": {
+          "headlineEmpty": "Il tuo titolo appare qui",
+          "bodyEmpty": "Il tuo messaggio appare qui",
+          "ctaEmpty": "Testo del pulsante",
+          "footer": "Inviato da Sonae"
+        }
       }
     },
     "directory": {
@@ -2897,7 +2954,13 @@
     "detachSystemAdmin": "Scollega Amministratore di Sistema",
     "detachConfirm": "Sei sicuro di voler scollegare {name} da questa azienda? Manterrà il suo account amministratore di sistema ma non sarà più assegnato a questo spazio di lavoro.",
     "detach": "Scollega",
-    "detaching": "Scollegamento in corso..."
+    "detaching": "Scollegamento in corso...",
+    "table": {
+      "empty": "Nessun utente trovato corrispondente alla query.",
+      "showingLoaded": "Visualizzazione di {count} utenti",
+      "loadMore": "Carica altri utenti",
+      "loadingMore": "Caricamento utenti..."
+    }
   },
   "salesData": {
     "importTitle": "Importa dati",
@@ -3048,7 +3111,8 @@
       "salesMonthsNote": "I mesi senza vendite non sono elencati: una cella vuota nel file significa nessuna vendita, non zero.",
       "lineProduct": "Prodotto",
       "lineValue": "Valore",
-      "chainHeading": "Altri in {chain}"
+      "chainHeading": "Altri in {chain}",
+      "lineEmpty": "Nessuna voce."
     },
     "tablesTitle": "Importazioni da fogli di calcolo",
     "tablesSubtitle": "Da {fileName} — {rows} righe di vendita.",

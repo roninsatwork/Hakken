@@ -30,14 +30,14 @@ describe("admin user directory is read-only", () => {
   });
 
   test("renders no destructive control", () => {
-    for (const forbidden of ["Trash2", "Edit2", "Pencil", "AdminConfirmationModal", "AdminModalForm"]) {
+    for (const forbidden of ["Trash2", "Edit2", "Pencil", "ConfirmationModal", "AdminModalForm"]) {
       expect(source).not.toContain(forbidden);
     }
   });
 
   test("pages server-side on the shared admin page size", () => {
     // A client-side slice of a full read would defeat the point of the indexes.
-    expect(source).toContain("ADMIN_PAGE_SIZE");
+    expect(source).toContain("TABLE_PAGE_SIZE");
     expect(source).toContain("usePaginatedQuery");
     expect(source).toContain("listDirectoryUsers");
   });

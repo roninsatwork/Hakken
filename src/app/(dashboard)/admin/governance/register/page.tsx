@@ -14,18 +14,18 @@ import {
   type RegisterSort,
 } from "@/convex/governanceRegisterService";
 import { RegisterEntryPanel } from "./RegisterEntryPanel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminSelect } from "@/src/app/(dashboard)/admin/_components/AdminSelect";
-import { ADMIN_PAGE_SIZE, paginateAdminItems } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { Select } from "@/src/ui/components/screens/Select";
+import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 
 /**
@@ -122,13 +122,13 @@ export default function AiRegisterPage() {
     return apply();
   };
 
-  const paged = paginateAdminItems(visible, page, ADMIN_PAGE_SIZE);
+  const paged = paginateItems(visible, page, TABLE_PAGE_SIZE);
   const filtering = search.trim() !== "" || chip !== "total" || kind !== "ALL";
 
 
   /** A heading that reorders the list, with the one in force saying so. */
   const SortableHeader = ({ label, by }: { label: string; by: RegisterSort }) => (
-    <AdminTableHeaderCell>
+    <TableHeaderCell>
       <button
         type="button"
         onClick={() => narrow(() => setSort(sort === by ? "ATTENTION" : by))}
@@ -140,19 +140,19 @@ export default function AiRegisterPage() {
         {label}
         {sort === by ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : null}
       </button>
-    </AdminTableHeaderCell>
+    </TableHeaderCell>
   );
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<ClipboardList className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
       />
 
       <div className="flex flex-col gap-3">
-        <AdminSearchBar
+        <SearchBar
           value={search}
           onChange={(value) => narrow(() => setSearch(value))}
           placeholder={t("searchPlaceholder")}
@@ -191,7 +191,7 @@ export default function AiRegisterPage() {
           <label className="sr-only" htmlFor="register-kind">
             {t("filters.kindLabel")}
           </label>
-          <AdminSelect
+          <Select
             id="register-kind"
             value={kind}
             onChange={(next) => narrow(() => setKind(next as AiSystemKind | "ALL"))}
@@ -202,7 +202,7 @@ export default function AiRegisterPage() {
                 {option === "ALL" ? t("filters.allKinds") : t(`kind.${option}`)}
               </option>
             ))}
-          </AdminSelect>
+          </Select>
 
           {filtering ? (
             <button
@@ -222,10 +222,10 @@ export default function AiRegisterPage() {
         </div>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[900px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={paged.page}
             totalPages={paged.totalPages}
             totalCount={paged.totalItems}
@@ -243,21 +243,21 @@ export default function AiRegisterPage() {
         }
       >
         <thead>
-          <AdminTableHeaderRow>
+          <TableHeaderRow>
             <SortableHeader label={t("table.system")} by="NAME" />
-            <AdminTableHeaderCell>{t("table.kind")}</AdminTableHeaderCell>
+            <TableHeaderCell>{t("table.kind")}</TableHeaderCell>
             <SortableHeader label={t("table.risk")} by="RISK" />
-            <AdminTableHeaderCell>{t("table.owner")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.oversight")}</AdminTableHeaderCell>
+            <TableHeaderCell>{t("table.owner")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.oversight")}</TableHeaderCell>
             <SortableHeader label={t("table.activity")} by="ACTIVITY" />
             <SortableHeader label={t("table.lastActive")} by="LAST_ACTIVE" />
-          </AdminTableHeaderRow>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {entries === undefined ? (
-            <AdminTableLoadingRow colSpan={7} />
+            <TableLoadingRow colSpan={7} />
           ) : paged.items.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={7}
               icon={<ClipboardList className="w-5 h-5" />}
               /* Nothing matched and nothing exists are different answers, and
@@ -357,7 +357,7 @@ export default function AiRegisterPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <RegisterEntryPanel entry={opened} onClose={() => setOpened(null)} />
     </div>

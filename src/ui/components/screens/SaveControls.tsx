@@ -3,7 +3,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Save } from "lucide-react";
-import { useCanWriteHere } from "./AdminAccessLevel";
+import { useCanWriteHere } from "./AccessLevel";
 
 type AdminSaveActionProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   isSaving: boolean;
@@ -13,7 +13,7 @@ type AdminSaveActionProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "child
   showSuccess?: boolean;
 };
 
-export function AdminSaveAction({
+export function SaveAction({
   isSaving,
   label,
   savingLabel,
@@ -53,7 +53,7 @@ type AdminSaveErrorProps = {
   children?: ReactNode;
 };
 
-export function AdminSaveError({ children }: AdminSaveErrorProps) {
+export function SaveError({ children }: AdminSaveErrorProps) {
   if (!children) return null;
 
   return (
@@ -71,7 +71,7 @@ type AdminSaveFeedbackProps = {
   errorMessage: ReactNode;
 };
 
-export function AdminSaveFeedback({
+export function SaveFeedback({
   status,
   successTitle,
   successMessage,
@@ -124,7 +124,7 @@ type AdminFeedbackPillProps = {
   tone: "success" | "error";
 };
 
-export function AdminFeedbackPill({ children, tone }: AdminFeedbackPillProps) {
+export function FeedbackPill({ children, tone }: AdminFeedbackPillProps) {
   const Icon = tone === "success" ? CheckCircle2 : AlertCircle;
   const toneClassName =
     tone === "success"

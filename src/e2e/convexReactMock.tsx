@@ -708,7 +708,7 @@ function getCurrentUser() {
   }
 
   // Reaches the admin section like a super admin, and every write control on
-  // it is removed by AdminAccessLevelProvider.
+  // it is removed by AccessLevelProvider.
   if (role === "read-only") {
     return {
       _id: superAdminId,

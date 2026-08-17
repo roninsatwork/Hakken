@@ -2,12 +2,12 @@
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { cn } from "@/src/ui/lib/utils";
 import { useQuery } from "convex/react";
 import { AlertTriangle, ArrowRight, CircleCheck, Sparkles } from "lucide-react";
@@ -68,7 +68,7 @@ export default function CompanyAiOverviewPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-10">
-      <AdminPageHeader
+      <PageHeader
         icon={<Sparkles className="h-6 w-6 text-brand" />}
         title="Company AI"
         description="What this company has set up of its own, and whether any of it needs attention."
@@ -133,7 +133,7 @@ export default function CompanyAiOverviewPage() {
         </div>
       )}
 
-      <AdminTableShell minWidthClassName="min-w-[720px]">
+      <TableShell minWidthClassName="min-w-[720px]">
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="w-[24%] px-4 py-3 font-medium">Area</th>
@@ -143,9 +143,9 @@ export default function CompanyAiOverviewPage() {
         </thead>
         <tbody>
           {readiness === undefined ? (
-            <AdminTableLoadingRow colSpan={3} />
+            <TableLoadingRow colSpan={3} />
           ) : sortedAreas.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={3}
               icon={<Sparkles className="h-8 w-8 text-muted/30" />}
               label="Nothing to report yet"
@@ -171,7 +171,7 @@ export default function CompanyAiOverviewPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

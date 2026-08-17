@@ -5,14 +5,14 @@ import { ScrollText } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 
 /**
  * The customer's own view of policies.
@@ -33,27 +33,29 @@ export default function GovernancePoliciesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<ScrollText className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
       />
 
-      <AdminTableShell minWidthClassName="min-w-[820px]">
-        <table className="w-full text-left border-collapse">
+      {/* TableShell draws the table element itself, so what goes in is the
+          head and body. Passing another table nested one inside the other and
+          left the outer one empty. */}
+      <TableShell minWidthClassName="min-w-[820px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>{t("table.name")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.applies")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.priority")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("table.instruction")}</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>{t("table.name")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.applies")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.priority")}</TableHeaderCell>
+              <TableHeaderCell>{t("table.instruction")}</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {active === undefined ? (
-              <AdminTableLoadingRow colSpan={4} />
+              <TableLoadingRow colSpan={4} />
             ) : active.length === 0 ? (
-              <AdminTableEmptyRow colSpan={4} icon={<ScrollText className="w-5 h-5" />} label={t("empty")} />
+              <TableEmptyRow colSpan={4} icon={<ScrollText className="w-5 h-5" />} label={t("empty")} />
             ) : (
               active.map((rule) => (
                 <tr key={rule._id} className="border-b border-border-dim/50 last:border-0">
@@ -77,8 +79,7 @@ export default function GovernancePoliciesPage() {
               ))
             )}
           </tbody>
-        </table>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

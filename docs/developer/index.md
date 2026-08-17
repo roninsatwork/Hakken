@@ -36,7 +36,7 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Gmail Mailbox](./gmail-mailbox.md)
 - [Route Protection And Authentication](./route-protection-and-authentication.md)
 - [Tenancy Enforcement](./tenancy-enforcement.md)
-- [Shared Admin UI](./shared-admin-ui.md)
+- [Screen Kit](./screen-kit.md)
 - [AI Administration](./ai-administration.md)
 - [AI Rules And Prompts](./ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./ai-models-providers-and-costs.md)

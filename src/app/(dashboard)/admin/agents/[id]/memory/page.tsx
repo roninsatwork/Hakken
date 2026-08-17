@@ -21,24 +21,24 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import {
-  AdminPaginationFooter,
-  AdminRowActions,
-  AdminRowIconButton,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  RowActions,
+  RowIconButton,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
-  AdminModalFormActions,
-  AdminModalFormError,
-  AdminModalFormField,
-  adminModalTextareaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+  ModalFormActions,
+  ModalFormError,
+  ModalFormField,
+  modalTextareaClassName,
+} from "@/src/ui/components/screens/ModalForm";
 import {
   MemoryApplyModeBadge,
   MemoryApplyModeChoice,
@@ -50,7 +50,7 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/atoms/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type AgentMemory = Doc<"agentMemories">;
 type SourceRunSummary = {
@@ -328,7 +328,7 @@ export default function AgentMemoryPage() {
       isActive: !showRemoved,
       ...(searchTerm.trim() ? { searchTerm: searchTerm.trim() } : {}),
     },
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
   // Only what is waiting: the mode and reviewer pill rows filtered a list that
   // was already three columns wide, and nothing was reachable through them that
@@ -345,10 +345,10 @@ export default function AgentMemoryPage() {
   const action = useAdminAction({ scope: "admin-agent-memory" });
 
   const isLoading = memories.status === "LoadingFirstPage";
-  const pageStart = (page - 1) * ADMIN_PAGE_SIZE;
-  const pageMemories = memories.results.slice(pageStart, pageStart + ADMIN_PAGE_SIZE);
+  const pageStart = (page - 1) * TABLE_PAGE_SIZE;
+  const pageMemories = memories.results.slice(pageStart, pageStart + TABLE_PAGE_SIZE);
   const knownTotal = memories.results.length;
-  const totalPages = Math.max(1, Math.ceil(knownTotal / ADMIN_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(knownTotal / TABLE_PAGE_SIZE));
 
   const alwaysUsed = memories.results.filter(
     (memory) => memory.isActive && resolveApplyMode(memory) === "ALWAYS",
@@ -357,8 +357,8 @@ export default function AgentMemoryPage() {
 
   const goToPage = (next: number) => {
     setPage(next);
-    if (memories.results.length < next * ADMIN_PAGE_SIZE && memories.status === "CanLoadMore") {
-      memories.loadMore(ADMIN_PAGE_SIZE);
+    if (memories.results.length < next * TABLE_PAGE_SIZE && memories.status === "CanLoadMore") {
+      memories.loadMore(TABLE_PAGE_SIZE);
     }
   };
 
@@ -503,7 +503,7 @@ export default function AgentMemoryPage() {
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex-1">
-            <AdminSearchBar
+            <SearchBar
               value={searchTerm}
               onChange={(value) => {
                 setSearchTerm(value);
@@ -537,16 +537,16 @@ export default function AgentMemoryPage() {
         </div>
       </header>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[720px]"
         // No pager over an empty list: it would only repeat the empty row
         // above it in fewer words.
         footer={knownTotal > 0 ? (
-          <AdminPaginationFooter
+          <PaginationFooter
             page={page}
             totalPages={totalPages}
             totalCount={knownTotal}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={memories.status === "LoadingMore"}
             onPageChange={goToPage}
             labels={{
@@ -556,19 +556,19 @@ export default function AgentMemoryPage() {
         ) : undefined}
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>What the agent knows</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[150px]">Applies</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[150px]">Track record</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[190px]">Added</AdminTableHeaderCell>
-            <AdminTableHeaderCell className="w-[110px]" align="right"> </AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>What the agent knows</TableHeaderCell>
+            <TableHeaderCell className="w-[150px]">Applies</TableHeaderCell>
+            <TableHeaderCell className="w-[150px]">Track record</TableHeaderCell>
+            <TableHeaderCell className="w-[190px]">Added</TableHeaderCell>
+            <TableHeaderCell className="w-[110px]" align="right"> </TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : pageMemories.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<Brain className="h-8 w-8 text-muted/30" />}
               label={showRemoved ? "Nothing has been removed" : "No memories yet — add what the agent should know"}
@@ -596,19 +596,19 @@ export default function AgentMemoryPage() {
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(memory.createdAt)}</td>
               <td className="px-4 py-3">
-                <AdminRowActions>
+                <RowActions>
                   {showRemoved ? (
-                    <AdminRowIconButton label="Put this memory back" onClick={() => handleRestore(memory)}>
+                    <RowIconButton label="Put this memory back" onClick={() => handleRestore(memory)}>
                       {action.isBusy(memory._id)
                         ? <Loader2 className="h-4 w-4 animate-spin" />
                         : <RotateCcw className="h-4 w-4" />}
-                    </AdminRowIconButton>
+                    </RowIconButton>
                   ) : (
                     <>
-                      <AdminRowIconButton label="Edit memory" onClick={() => openEditor(memory)}>
+                      <RowIconButton label="Edit memory" onClick={() => openEditor(memory)}>
                         <Edit2 className="h-4 w-4" />
-                      </AdminRowIconButton>
-                      <AdminRowIconButton
+                      </RowIconButton>
+                      <RowIconButton
                         label="Remove memory"
                         tone="danger"
                         onClick={() => {
@@ -617,15 +617,15 @@ export default function AgentMemoryPage() {
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
-                      </AdminRowIconButton>
+                      </RowIconButton>
                     </>
                   )}
-                </AdminRowActions>
+                </RowActions>
               </td>
             </tr>
           ))}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <section className="overflow-hidden rounded-[16px] border border-border-dim/80 bg-sidebar/20">
         <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">
@@ -664,7 +664,7 @@ export default function AgentMemoryPage() {
                 />
                 {candidate.status === "PROPOSED" && (
                   <div className="flex flex-wrap gap-2">
-                    <AdminWriteButton
+                    <WriteButton
                       type="button"
                       onClick={() => handleApproveCandidate(candidate.candidateId)}
                       disabled={action.isBusy(`memory:${candidate.candidateId}`)}
@@ -674,7 +674,7 @@ export default function AgentMemoryPage() {
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <Check className="h-3.5 w-3.5" />}
                       Approve
-                    </AdminWriteButton>
+                    </WriteButton>
                     <button
                       type="button"
                       onClick={() => {
@@ -716,7 +716,7 @@ export default function AgentMemoryPage() {
                 />
                 {suggestion.status === "PROPOSED" && (
                   <div className="flex flex-wrap gap-2">
-                    <AdminWriteButton
+                    <WriteButton
                       type="button"
                       onClick={() => handleSuggestionDecision(suggestion.suggestionId, "APPROVED")}
                       disabled={action.isBusy(`suggestion:${suggestion.suggestionId}`)}
@@ -726,8 +726,8 @@ export default function AgentMemoryPage() {
                         ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         : <SlidersHorizontal className="h-3.5 w-3.5" />}
                       Apply
-                    </AdminWriteButton>
-                    <AdminWriteButton
+                    </WriteButton>
+                    <WriteButton
                       type="button"
                       onClick={() => handleSuggestionDecision(suggestion.suggestionId, "REJECTED")}
                       disabled={action.isBusy(`suggestion:${suggestion.suggestionId}`)}
@@ -735,7 +735,7 @@ export default function AgentMemoryPage() {
                     >
                       <X className="h-3.5 w-3.5" />
                       Turn down
-                    </AdminWriteButton>
+                    </WriteButton>
                   </div>
                 )}
               </div>
@@ -764,7 +764,7 @@ export default function AgentMemoryPage() {
                 {reflection.status === "GENERATED" && (
                   <div className="flex flex-wrap gap-2">
                     {reflection.sourceRun && reflection.proposedEvalFixture && (
-                      <AdminWriteButton
+                      <WriteButton
                         type="button"
                         onClick={() => handleCreateEvalFromReflection(reflection.reflectionId, reflection.sourceRun!.runId)}
                         disabled={action.isBusy(`reflection:${reflection.reflectionId}`)}
@@ -774,7 +774,7 @@ export default function AgentMemoryPage() {
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           : <ClipboardCheck className="h-3.5 w-3.5" />}
                         Create eval
-                      </AdminWriteButton>
+                      </WriteButton>
                     )}
                     <button
                       type="button"
@@ -813,8 +813,8 @@ export default function AgentMemoryPage() {
                 : alwaysRemaining
             }
           />
-          <AdminModalFormError>{action.error}</AdminModalFormError>
-          <AdminModalFormActions
+          <ModalFormError>{action.error}</ModalFormError>
+          <ModalFormActions
             cancelLabel="Cancel"
             submitLabel={action.isBusy() ? "Saving..." : "Save memory"}
             isSubmitting={action.isBusy()}
@@ -833,7 +833,7 @@ export default function AgentMemoryPage() {
           <p className="text-[13px] leading-relaxed text-secondary">
             The agent stops using this straight away. It stays under &ldquo;Removed&rdquo; and can be put back.
           </p>
-          <AdminModalFormError>{action.error}</AdminModalFormError>
+          <ModalFormError>{action.error}</ModalFormError>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
             <button
               type="button"
@@ -843,7 +843,7 @@ export default function AgentMemoryPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={handleDelete}
               disabled={action.isBusy()}
@@ -851,7 +851,7 @@ export default function AgentMemoryPage() {
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -863,15 +863,15 @@ export default function AgentMemoryPage() {
         size="sm"
       >
         <div className="flex flex-col gap-5">
-          <AdminModalFormField label="Why?" hint="Optional">
+          <ModalFormField label="Why?" hint="Optional">
             <textarea
               value={rejectionReason}
               onChange={(event) => setRejectionReason(event.target.value)}
-              className={adminModalTextareaClassName}
+              className={modalTextareaClassName}
               placeholder="Why should the agent not remember this?"
             />
-          </AdminModalFormField>
-          <AdminModalFormError>{action.error}</AdminModalFormError>
+          </ModalFormField>
+          <ModalFormError>{action.error}</ModalFormError>
           <div className="flex justify-end gap-3 border-t border-border-dim pt-5">
             <button
               type="button"
@@ -881,7 +881,7 @@ export default function AgentMemoryPage() {
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={handleRejectCandidate}
               disabled={action.isBusy()}
@@ -889,7 +889,7 @@ export default function AgentMemoryPage() {
             >
               {action.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
               Turn down
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

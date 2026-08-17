@@ -54,6 +54,10 @@ vi.mock("next-intl", () => ({
       detachConfirm: "Are you sure you want to detach...",
       detach: "Detach",
       detaching: "Detaching...",
+      "table.empty": "No users found matching your query.",
+      "table.loadMore": "Load more users",
+      "table.loadingMore": "Loading users...",
+      "table.showingLoaded": "Showing users",
     };
     return translations[key] || key;
   }),
@@ -165,17 +169,17 @@ describe("CompanyUsersPage", () => {
     expect(screen.queryByText("Acme Employee")).not.toBeInTheDocument();
   });
 
-  it("shows 'Load More' button when status is CanLoadMore and triggers loadMore", () => {
+  it("wears the house paginated footer, and fetches when the reader walks past what is loaded", () => {
     render(<CompanyUsersPage />);
-    
-    const loadMoreButton = screen.getByText("Load More Users");
-    expect(loadMoreButton).toBeInTheDocument();
-    
-    fireEvent.click(loadMoreButton);
+
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Next"));
+
     expect(mockLoadMore).toHaveBeenCalledWith(15);
   });
 
-  it("hides 'Load More' button when status is Exhausted", () => {
+  it("offers no further page once the server has nothing left", () => {
     (usePaginatedQuery as unknown as HookMock).mockImplementation(() => ({
       results: mockPaginatedUsers,
       status: "Exhausted",
@@ -183,8 +187,9 @@ describe("CompanyUsersPage", () => {
     }));
 
     render(<CompanyUsersPage />);
-    
-    expect(screen.queryByText("Load More Users")).not.toBeInTheDocument();
+
+    expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
+    expect(screen.getByText("Next").closest("button")).toBeDisabled();
   });
 
   it("does not render the old directory section selector inside the page", () => {

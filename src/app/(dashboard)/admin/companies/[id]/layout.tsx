@@ -36,7 +36,7 @@ import {
   PhoneCall,
   CircleDollarSign,
 } from "lucide-react";
-import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
+import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 
 function matchesCompanyRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -280,7 +280,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   ];
 
   return (
-    <AdminDetailLayout
+    <DetailLayout
       leading={
         <Building2 className="w-6 h-6 text-brand shrink-0" />
       }
@@ -312,6 +312,6 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
       }
     >
       {children}
-    </AdminDetailLayout>
+    </DetailLayout>
   );
 }

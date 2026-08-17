@@ -1,11 +1,11 @@
-export const ADMIN_PAGE_SIZE = 15;
+export const TABLE_PAGE_SIZE = 15;
 
-export function normalizeAdminSearchTerm(value: string) {
+export function normalizeSearchTerm(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function matchesAdminSearchTerm(searchTerm: string, values: Array<string | null | undefined>) {
-  const normalizedSearch = normalizeAdminSearchTerm(searchTerm);
+export function matchesSearchTerm(searchTerm: string, values: Array<string | null | undefined>) {
+  const normalizedSearch = normalizeSearchTerm(searchTerm);
 
   if (!normalizedSearch) {
     return true;
@@ -14,7 +14,7 @@ export function matchesAdminSearchTerm(searchTerm: string, values: Array<string 
   return values.some((value) => value?.toLowerCase().includes(normalizedSearch));
 }
 
-export function paginateAdminItems<T>(items: T[], page: number, pageSize: number = ADMIN_PAGE_SIZE) {
+export function paginateItems<T>(items: T[], page: number, pageSize: number = TABLE_PAGE_SIZE) {
   const totalItems = items.length;
   const totalPages = Math.max(Math.ceil(totalItems / pageSize), 1);
   const safePage = Math.min(Math.max(page, 1), totalPages);

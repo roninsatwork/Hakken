@@ -8,11 +8,11 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  AdminModalFormError,
-  AdminModalFormField,
-  adminModalInputClassName,
-  adminModalTextareaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+  ModalFormError,
+  ModalFormField,
+  modalInputClassName,
+  modalTextareaClassName,
+} from "@/src/ui/components/screens/ModalForm";
 import {
   CompanyAiFormActions,
   CompanyAiFormPageHeader,
@@ -158,17 +158,17 @@ export default function NewChatEvalPage() {
 
       <form onSubmit={handleSubmit} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{action.error}</AdminModalFormError>
-          <AdminModalFormField label="Name">
+          <ModalFormError>{action.error}</ModalFormError>
+          <ModalFormField label="Name">
             <input
               required
-              className={adminModalInputClassName}
+              className={modalInputClassName}
               value={evalForm.name}
               onChange={(event) => setEvalForm((current) => ({ ...current, name: event.target.value }))}
               placeholder="Regression name"
             />
-          </AdminModalFormField>
-          <AdminModalFormField label="Where does this apply?">
+          </ModalFormField>
+          <ModalFormField label="Where does this apply?">
             <div className="flex flex-col gap-2">
               {WHERE_OPTIONS.map((option) => (
                 <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
@@ -186,30 +186,30 @@ export default function NewChatEvalPage() {
                 </label>
               ))}
             </div>
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField label="What would someone ask?">
+          <ModalFormField label="What would someone ask?">
             <textarea
               required
-              className={`${adminModalTextareaClassName} min-h-[190px]`}
+              className={`${modalTextareaClassName} min-h-[190px]`}
               value={evalForm.prompt}
               onChange={(event) => setEvalForm((current) => ({ ...current, prompt: event.target.value }))}
               placeholder="Question or task to replay as an eval."
             />
-          </AdminModalFormField>
-          <AdminModalFormField label="What does a good answer look like?">
+          </ModalFormField>
+          <ModalFormField label="What does a good answer look like?">
             <textarea
               required
-              className={`${adminModalTextareaClassName} min-h-[190px]`}
+              className={`${modalTextareaClassName} min-h-[190px]`}
               value={evalForm.expectedBehavior}
               onChange={(event) => setEvalForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
               placeholder="What a passing answer must do."
             />
-          </AdminModalFormField>
-          <AdminModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
+          </ModalFormField>
+          <ModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
             <div className="flex flex-col gap-2">
               <input
-                className={adminModalInputClassName}
+                className={modalInputClassName}
                 value={phraseDraft}
                 onChange={(event) => setPhraseDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -239,7 +239,7 @@ export default function NewChatEvalPage() {
                 </div>
               )}
             </div>
-          </AdminModalFormField>
+          </ModalFormField>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
             <input

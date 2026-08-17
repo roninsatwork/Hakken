@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, test } from 'vitest';
-import { ADMIN_PAGE_SIZE } from './app/(dashboard)/admin/_lib/pagination';
+import { TABLE_PAGE_SIZE } from './ui/components/screens/pagination';
 
 const repoRoot = process.cwd();
 
@@ -269,7 +269,7 @@ const findConvexBroadReads = () => {
 
 describe('Quality Drift Guardrails', () => {
   test('admin pagination standard stays at 15 rows', () => {
-    expect(ADMIN_PAGE_SIZE).toBe(15);
+    expect(TABLE_PAGE_SIZE).toBe(15);
   });
 
   test('app UI does not use native browser dialogs', () => {
@@ -468,15 +468,15 @@ describe('Quality Drift Guardrails', () => {
     // a catalogue, and the thing worth finding on it — a run waiting on a person —
     // is flagged on the row and counted in the nav. Checked separately so it still
     // has to use the shared table and footer.
-    // Matched as JSX tags rather than bare substrings. `includes('AdminTableShell')`
+    // Matched as JSX tags rather than bare substrings. `includes('TableShell')`
     // is satisfied by `AdminTableShellX`, so a renamed or hand-rolled lookalike
     // would slip straight past — which it did, when this guard was checked by
     // deliberately breaking it.
     const listPagesWithoutSearch = ['src/app/(dashboard)/admin/workflows/executions/page.tsx']
       .filter((filePath) => {
         const contents = readRepoFile(filePath);
-        return !/<AdminTableShell[\s>]/.test(contents)
-          || !/<AdminLoadMoreFooter[\s>]/.test(contents)
+        return !/<TableShell[\s>]/.test(contents)
+          || !/<LoadMoreFooter[\s>]/.test(contents)
           || contents.includes('ChevronLeft')
           || contents.includes('ChevronRight');
       });
@@ -488,9 +488,9 @@ describe('Quality Drift Guardrails', () => {
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
 
-      return !contents.includes('AdminSearchBar') ||
-        !contents.includes('AdminTableShell') ||
-        (!contents.includes('AdminPaginationFooter') && !contents.includes('AdminLoadMoreFooter')) ||
+      return !contents.includes('SearchBar') ||
+        !contents.includes('TableShell') ||
+        (!contents.includes('PaginationFooter') && !contents.includes('LoadMoreFooter')) ||
         contents.includes('ChevronLeft') ||
         contents.includes('ChevronRight');
     });
@@ -1019,7 +1019,7 @@ describe('Quality Drift Guardrails', () => {
     expect(contents).toContain('usePaginatedQuery');
     expect(contents).toContain('api.plans.getPaginatedPlans');
     expect(contents).not.toContain('api.plans.getPlans');
-    expect(contents).not.toContain('paginateAdminItems');
+    expect(contents).not.toContain('paginateItems');
   });
 
   test('widget config pages use primary widget queries instead of full widget catalogues', () => {

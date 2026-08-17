@@ -1,19 +1,19 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  AdminModalFormActions,
-  AdminModalFormError,
-  AdminModalFormField,
-  adminModalInputClassName,
-  adminModalTextareaClassName,
-} from "./AdminModalForm";
+  ModalFormActions,
+  ModalFormError,
+  ModalFormField,
+  modalInputClassName,
+  modalTextareaClassName,
+} from "./ModalForm";
 
-describe("AdminModalFormField", () => {
+describe("ModalFormField", () => {
   it("renders a shared label, optional hint, and control", () => {
     render(
-      <AdminModalFormField label="Name" hint="Optional">
-        <input className={adminModalInputClassName} />
-      </AdminModalFormField>
+      <ModalFormField label="Name" hint="Optional">
+        <input className={modalInputClassName} />
+      </ModalFormField>
     );
 
     expect(screen.getByText("Name")).toBeInTheDocument();
@@ -22,25 +22,25 @@ describe("AdminModalFormField", () => {
   });
 });
 
-describe("AdminModalFormError", () => {
+describe("ModalFormError", () => {
   it("renders only when an error is present", () => {
-    const { rerender } = render(<AdminModalFormError />);
+    const { rerender } = render(<ModalFormError />);
 
     expect(document.querySelector(".text-red-500")).not.toBeInTheDocument();
 
-    rerender(<AdminModalFormError>Save failed</AdminModalFormError>);
+    rerender(<ModalFormError>Save failed</ModalFormError>);
 
     expect(screen.getByText("Save failed")).toHaveClass("text-red-500");
   });
 });
 
-describe("AdminModalFormActions", () => {
+describe("ModalFormActions", () => {
   it("forwards cancel clicks and disables both actions while submitting", () => {
     const onCancel = vi.fn();
 
     render(
       <form>
-        <AdminModalFormActions
+        <ModalFormActions
           cancelLabel="Cancel"
           submitLabel="Saving"
           isSubmitting
@@ -58,7 +58,7 @@ describe("AdminModalFormActions", () => {
 
     render(
       <form>
-        <AdminModalFormActions
+        <ModalFormActions
           cancelLabel="Cancel"
           submitLabel="Save"
           isSubmitting={false}
@@ -76,7 +76,7 @@ describe("AdminModalFormActions", () => {
 
 describe("admin modal control classes", () => {
   it("keeps textarea styling aligned with the shared input control", () => {
-    expect(adminModalTextareaClassName).toContain(adminModalInputClassName);
-    expect(adminModalTextareaClassName).toContain("min-h-[120px]");
+    expect(modalTextareaClassName).toContain(modalInputClassName);
+    expect(modalTextareaClassName).toContain("min-h-[120px]");
   });
 });

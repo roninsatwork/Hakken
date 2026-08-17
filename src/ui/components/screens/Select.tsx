@@ -18,7 +18,7 @@ import { ChevronDown } from "lucide-react";
  * Shared rather than repeated inline, because the reason this looked wrong in
  * three places at once is that it was written out three times.
  */
-export function AdminSelect({
+export function Select({
   id,
   value,
   onChange,

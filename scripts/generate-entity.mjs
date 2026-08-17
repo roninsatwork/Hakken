@@ -336,11 +336,15 @@ ${createArgs}
 }
 
 function adminPage(names, fields) {
-  const headerCells = fields
-    .map((field) => `                <AdminTableHeaderCell>{t("columns.${field.name}")}</AdminTableHeaderCell>`)
-    .join("\n");
-  const bodyCells = fields
-    .map((field) => `                    <td className="px-4 py-3 text-[13px] text-foreground">{String(row.${field.name} ?? "")}</td>`)
+  const columnEntries = fields
+    .map(
+      (field) => `    {
+      key: "${field.name}",
+      header: t("columns.${field.name}"),
+      className: "text-[13px] text-foreground",
+      cell: (row) => String(row.${field.name} ?? ""),
+    },`
+    )
     .join("\n");
 
   return `"use client";
@@ -351,20 +355,12 @@ import { useTranslations } from "next-intl";
 import { Boxes, Trash2 } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { AdminPageHeader } from "../_components/AdminPageHeader";
-import {
-  AdminRowActions,
-  AdminRowIconButton,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "../_components/AdminTable";
-import { AdminConfirmationModal } from "../_components/AdminConfirmationModal";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 
-const COLUMN_COUNT = ${fields.length + 1};
+type ${names.Pascal}Row = NonNullable<ReturnType<typeof useQuery<typeof api.${names.plural}.list${names.PascalPlural}>>>[number];
 
 export default function ${names.PascalPlural}Page() {
   const t = useTranslations("admin.${names.plural}");
@@ -393,54 +389,43 @@ export default function ${names.PascalPlural}Page() {
     }
   }
 
+  const columns: DataTableColumn<${names.Pascal}Row>[] = [
+${columnEntries}
+    {
+      key: "actions",
+      header: t("columns.actions"),
+      align: "right",
+      cell: (row) => (
+        <RowActions>
+          <RowIconButton
+            label={t("actions.delete")}
+            tone="danger"
+            onClick={() => setPendingDeleteId(row._id)}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </RowIconButton>
+        </RowActions>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <AdminPageHeader
+      <PageHeader
         icon={<Boxes className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
       />
 
-      <AdminSearchBar value={searchTerm} onChange={setSearchTerm} placeholder={t("searchPlaceholder")} />
+      <DataTable<${names.Pascal}Row>
+        rows={visibleRows}
+        rowKey={(row) => row._id}
+        columns={columns}
+        search={{ value: searchTerm, onChange: setSearchTerm, placeholder: t("searchPlaceholder") }}
+        empty={{ icon: <Boxes className="w-8 h-8 text-muted/30" />, label: t("empty") }}
+      />
 
-      <AdminTableShell>
-        <thead>
-          <AdminTableHeaderRow>
-${headerCells}
-            <AdminTableHeaderCell align="right">{t("columns.actions")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
-        </thead>
-        <tbody>
-          {visibleRows === undefined ? (
-            <AdminTableLoadingRow colSpan={COLUMN_COUNT} />
-          ) : visibleRows.length === 0 ? (
-            <AdminTableEmptyRow
-              colSpan={COLUMN_COUNT}
-              icon={<Boxes className="w-5 h-5" />}
-              label={t("empty")}
-            />
-          ) : (
-            visibleRows.map((row) => (
-              <tr key={row._id} className="border-b border-border-dim/60 last:border-0">
-${bodyCells}
-                <td className="px-4 py-3">
-                  <AdminRowActions>
-                    <AdminRowIconButton
-                      label={t("actions.delete")}
-                      tone="danger"
-                      onClick={() => setPendingDeleteId(row._id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </AdminRowIconButton>
-                  </AdminRowActions>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </AdminTableShell>
-
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={pendingDeleteId !== null}
         onClose={() => setPendingDeleteId(null)}
         title={t("deleteConfirm.title")}
@@ -450,7 +435,7 @@ ${bodyCells}
         onConfirm={handleDelete}
       >
         <p className="text-[13px] text-muted">{t("deleteConfirm.description")}</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

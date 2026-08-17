@@ -33,11 +33,15 @@ export function WidgetPreviewPanel({
   themePlaceholder,
 }: WidgetPreviewPanelProps) {
   return (
-    <div className="flex w-full shrink-0 flex-col gap-4 self-start 2xl:sticky 2xl:top-6 2xl:w-[380px]">
-      <div className="relative mx-auto flex aspect-[3/4] w-full max-w-[380px] flex-col items-end justify-end overflow-hidden rounded-[24px] border border-border-dim bg-[#f8f9fc] p-6 shadow-inner 2xl:max-w-none">
-        <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-black/5 pointer-events-none" />
-
-        <div className="w-[320px] flex flex-col items-end gap-3 transform scale-90 origin-bottom-right drop-shadow-2xl relative">
+    <div className="flex w-full min-w-0 flex-col gap-4 self-start lg:sticky lg:top-6">
+      {/*
+        No staged backdrop behind the widget.
+        A pale card with a fixed 3:4 shape used to stand in for a website page.
+        It reserved a tall block whatever the widget's own height was, and that
+        is space the configuration form beside it wants back.
+      */}
+      <div className="relative mx-auto flex w-full max-w-[380px] flex-col items-end justify-end">
+        <div className="w-[320px] flex flex-col items-end gap-3 drop-shadow-2xl relative">
           {!isSimulatorOpen && showPopupPreview && enableGreeting && themeGreeting && (
             <div className="w-full relative animate-in slide-in-from-bottom-4 fade-in duration-500 mb-2">
               <div className="bg-white p-4 rounded-[16px] shadow-lg text-[13.5px] font-medium text-gray-800 leading-[1.6]">

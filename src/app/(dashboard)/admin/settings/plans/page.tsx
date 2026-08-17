@@ -16,18 +16,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
-  AdminLoadMoreFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  LoadMoreFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
-  ADMIN_PAGE_SIZE,
-} from "@/src/app/(dashboard)/admin/_lib/pagination";
+  TABLE_PAGE_SIZE,
+} from "@/src/ui/components/screens/pagination";
 
 type Plan = Doc<"plans">;
 
@@ -55,7 +55,7 @@ export default function SubscriptionPlansPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const itemsPerPage = ADMIN_PAGE_SIZE;
+  const itemsPerPage = TABLE_PAGE_SIZE;
   const {
     results: paginatedPlans,
     status,
@@ -149,13 +149,13 @@ export default function SubscriptionPlansPage() {
           <p className="text-[13px] text-secondary mt-1">{t('subtitle')}</p>
         </div>
 
-        <AdminWriteButton
+        <WriteButton
           onClick={handleOpenAdd}
           className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
         >
           <Plus className="w-4 h-4" />
           <span>{t('newPlan')}</span>
-        </AdminWriteButton>
+        </WriteButton>
       </div>
 
       {/* Explanation Notice */}
@@ -169,12 +169,12 @@ export default function SubscriptionPlansPage() {
          </div>
       </div>
 
-      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
+      <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <AdminTableShell
+      <TableShell
         footer={
-          <AdminLoadMoreFooter
+          <LoadMoreFooter
             visibleCount={paginatedPlans.length}
             canLoadMore={canLoadMore}
             isLoading={isLoadingMore}
@@ -201,9 +201,9 @@ export default function SubscriptionPlansPage() {
             <tbody>
               <AnimatePresence>
                 {isLoading ? (
-                  <AdminTableLoadingRow colSpan={5} />
+                  <TableLoadingRow colSpan={5} />
                 ) : paginatedPlans.length === 0 ? (
-                  <AdminTableEmptyRow
+                  <TableEmptyRow
                     colSpan={5}
                     icon={<CreditCard className="w-8 h-8 text-muted/30" />}
                     label={t('emptyState')}
@@ -265,7 +265,7 @@ export default function SubscriptionPlansPage() {
                 )}
               </AnimatePresence>
             </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       {/* Add/Edit Modal */}
       <SonaeModal
@@ -347,18 +347,18 @@ export default function SubscriptionPlansPage() {
             >
               {tCommon('cancel')}
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="submit"
               disabled={isSubmitting}
               className="px-6 py-2.5 rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 text-sm disabled:opacity-50"
             >
               {isSubmitting ? tCommon('saving') : (editingPlan ? t('savePlan') : t('newPlan'))}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </form>
       </SonaeModal>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingPlan}
         onClose={() => {
           setDeletingPlan(null);
@@ -375,7 +375,7 @@ export default function SubscriptionPlansPage() {
         <p>
           {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingPlan?.name}</strong> })}
         </p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

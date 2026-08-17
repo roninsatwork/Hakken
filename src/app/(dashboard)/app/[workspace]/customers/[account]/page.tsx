@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { ArrowLeft, Building2, ChevronRight, Sparkles } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { api } from "@/convex/_generated/api";
@@ -519,31 +520,34 @@ function SalesByMonth({ accountNameKey }: { accountNameKey: string }) {
                     {lines === undefined ? (
                       <p className="text-[12px] text-secondary py-1">{t("loading")}</p>
                     ) : (
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="text-[11px] uppercase tracking-[0.08em] text-muted">
-                            <th className="font-medium py-1">{t("lineProduct")}</th>
-                            <th className="font-medium py-1 text-right">{t("lineValue")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lines.map((line) => (
-                            <tr key={line.rowId}>
-                              <td className="py-1 text-[13px] text-secondary">
+                      <CompactList
+                        rows={lines}
+                        rowKey={(line) => line.rowId}
+                        dividers="none"
+                        empty={t("lineEmpty")}
+                        columns={[
+                          {
+                            key: "product",
+                            header: t("lineProduct"),
+                            className: "px-0 py-1 text-[13px] text-secondary",
+                            cell: (line) => (
+                              <>
                                 {line.productDescription}
                                 <span className="block text-[11px] text-muted">
-                                  {[line.productCategory, line.productType]
-                                    .filter(Boolean)
-                                    .join(" · ")}
+                                  {[line.productCategory, line.productType].filter(Boolean).join(" · ")}
                                 </span>
-                              </td>
-                              <td className="py-1 text-[13px] text-secondary text-right tabular-nums align-top">
-                                {formatMoney(line.value)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </>
+                            ),
+                          },
+                          {
+                            key: "value",
+                            header: t("lineValue"),
+                            align: "right",
+                            className: "px-0 py-1 text-[13px] text-secondary tabular-nums align-top",
+                            cell: (line) => formatMoney(line.value),
+                          },
+                        ]}
+                      />
                     )}
                   </div>
                 )}

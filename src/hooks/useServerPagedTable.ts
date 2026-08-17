@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePaginatedQuery } from "convex/react";
-import { ADMIN_PAGE_SIZE } from "./pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 /**
  * The house table footer, over a query that pages on the server.
@@ -22,7 +22,7 @@ import { ADMIN_PAGE_SIZE } from "./pagination";
 export function useServerPagedTable<Query extends Parameters<typeof usePaginatedQuery>[0]>(
   query: Query,
   args: Parameters<typeof usePaginatedQuery<Query>>[1],
-  pageSize: number = ADMIN_PAGE_SIZE
+  pageSize: number = TABLE_PAGE_SIZE
 ) {
   const [page, setPage] = useState(1);
   const paginated = usePaginatedQuery(query, args, { initialNumItems: pageSize });

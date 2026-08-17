@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AdminPageHeader, AdminPagePrimaryAction } from "./AdminPageHeader";
+import { PageHeader, PagePrimaryAction } from "./PageHeader";
 
-describe("AdminPageHeader", () => {
+describe("PageHeader", () => {
   it("renders the shared title, description, icon, and action", () => {
     render(
-      <AdminPageHeader
+      <PageHeader
         icon={<span aria-hidden="true">Icon</span>}
         title="Agents"
         description="Manage your agents"
@@ -19,21 +19,21 @@ describe("AdminPageHeader", () => {
   });
 
   it("omits the description when none is provided", () => {
-    render(<AdminPageHeader icon={<span aria-hidden="true">Icon</span>} title="Companies" />);
+    render(<PageHeader icon={<span aria-hidden="true">Icon</span>} title="Companies" />);
 
     expect(screen.getByRole("heading", { name: "Companies" })).toBeInTheDocument();
     expect(screen.queryByText("Manage your agents")).not.toBeInTheDocument();
   });
 });
 
-describe("AdminPagePrimaryAction", () => {
+describe("PagePrimaryAction", () => {
   it("uses button semantics and forwards click handling", () => {
     const onClick = vi.fn();
 
     render(
-      <AdminPagePrimaryAction icon={<span aria-hidden="true">Plus</span>} onClick={onClick}>
+      <PagePrimaryAction icon={<span aria-hidden="true">Plus</span>} onClick={onClick}>
         New agent
-      </AdminPagePrimaryAction>
+      </PagePrimaryAction>
     );
 
     const action = screen.getByRole("button", { name: "New agent" });

@@ -12,9 +12,9 @@ import { ArrowLeft, Settings, Terminal, Library, Scale, Bot, Cpu, LayoutDashboar
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminDetailLayout } from "@/src/app/(dashboard)/admin/_components/AdminDetailLayout";
+import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useToast } from "@/src/context/ToastContext";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 
 export default function AgentDashboardLayout({ children }: { children: ReactNode }) {
@@ -148,7 +148,7 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const isPrimaryActionBusy = isManualRunning || isStoppingAgent || isRunStateLoading;
 
   return (
-    <AdminDetailLayout
+    <DetailLayout
       className="absolute inset-0 pl-2 pr-4 pb-4 overflow-hidden"
       headerClassName="shrink-0 pr-4"
       contentClassName="w-full pr-4 overflow-y-auto custom-scrollbar"
@@ -267,14 +267,14 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
             >
               Keep running
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={() => void handleConfirmStop()}
               disabled={isStoppingAgent}
               className="px-5 py-2.5 rounded-[10px] bg-rose-600 text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isStoppingAgent ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
               Stop Agent
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -297,6 +297,6 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
           </div>
         </div>
       </SonaeModal>
-    </AdminDetailLayout>
+    </DetailLayout>
   );
 }

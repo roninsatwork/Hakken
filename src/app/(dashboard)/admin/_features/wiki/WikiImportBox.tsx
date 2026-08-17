@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { FileUp, Globe, Loader2, Type, FolderOpen } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
 import {
@@ -198,14 +198,14 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
             disabled={isBusy}
             className="flex-1 bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors"
           />
-          <AdminWriteButton
+          <WriteButton
             onClick={() => void importWebsite()}
             disabled={isBusy || !url.trim()}
             className="flex items-center gap-2 px-4 py-3 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity whitespace-nowrap"
           >
             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {t("readIt")}
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       )}
 
@@ -241,14 +241,14 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
             disabled={isBusy}
             className="bg-background border border-border-dim rounded-[10px] px-4 py-3 text-[13px] text-foreground placeholder:text-muted/60 focus:outline-none focus:border-brand/50 transition-colors resize-y"
           />
-          <AdminWriteButton
+          <WriteButton
             onClick={() => void importText()}
             disabled={isBusy || !textTitle.trim() || !textBody.trim()}
             className="flex items-center gap-2 w-fit px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
           >
             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {t("readIt")}
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       )}
 

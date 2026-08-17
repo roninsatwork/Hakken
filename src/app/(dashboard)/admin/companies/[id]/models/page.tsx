@@ -4,13 +4,13 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import {
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
   describeModelUseCase,
   formatModelDisplayName,
@@ -122,13 +122,13 @@ export default function CompanyModelDefaultsPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-10">
-      <AdminPageHeader
+      <PageHeader
         icon={<Cpu className="h-6 w-6 text-brand" />}
         title="Company AI Model Defaults"
         description="Which model this company uses for each kind of work."
       />
 
-      <AdminSaveError>{saveError}</AdminSaveError>
+      <SaveError>{saveError}</SaveError>
 
       <p className="text-[13px] text-secondary">
         Every row follows the platform default unless this company is given its own model. An agent
@@ -138,7 +138,7 @@ export default function CompanyModelDefaultsPage() {
       {/* The standard admin table, as the platform Defaults screen and the Model
           Catalogue use. This was a hand-rolled grid with its own header styling
           and a spinner that blanked the whole page before anything drew. */}
-      <AdminTableShell minWidthClassName="min-w-[920px]">
+      <TableShell minWidthClassName="min-w-[920px]">
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="w-[32%] px-4 py-3 font-medium">Job</th>
@@ -149,9 +149,9 @@ export default function CompanyModelDefaultsPage() {
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : rows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<Cpu className="h-8 w-8 text-muted/30" />}
               label="No jobs to configure yet"
@@ -290,7 +290,7 @@ export default function CompanyModelDefaultsPage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

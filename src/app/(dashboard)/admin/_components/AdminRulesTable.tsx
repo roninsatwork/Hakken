@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { Edit2, Power, Trash2 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { STATUS_TONE_CLASSES, toneForStatus, type StatusTone } from "@/src/ui/atoms/statusTone";
 
 export type AdminRuleTableRow = {
@@ -81,9 +81,9 @@ export function AdminRulesTable({
   const router = useRouter();
 
   return (
-    <AdminTableShell
+    <TableShell
       footer={
-        <AdminPaginationFooter
+        <PaginationFooter
           page={page}
           totalPages={totalPages}
           totalCount={totalCount}
@@ -109,9 +109,9 @@ export function AdminRulesTable({
       </thead>
       <tbody className="divide-y divide-white/5">
         {isLoading ? (
-          <AdminTableLoadingRow colSpan={4} />
+          <TableLoadingRow colSpan={4} />
         ) : rules.length === 0 ? (
-          <AdminTableEmptyRow colSpan={4} icon={emptyIcon} label={emptyLabel} />
+          <TableEmptyRow colSpan={4} icon={emptyIcon} label={emptyLabel} />
         ) : (
           rules.map((rule) => (
             <tr
@@ -169,6 +169,6 @@ export function AdminRulesTable({
           ))
         )}
       </tbody>
-    </AdminTableShell>
+    </TableShell>
   );
 }

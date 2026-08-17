@@ -54,6 +54,9 @@ vi.mock("next-intl", () => ({
       "modal.revokeTitle": "Revoke Invite",
       "modal.role": "Role",
       "modal.workspace": "Workspace",
+      "table.loadMore": "Load more users",
+      "table.loadingMore": "Loading users...",
+      "table.showingLoaded": "Showing {count} users",
       "roles.admin": "Admin",
       "roles.superAdmin": "Super Admin",
       "roles.user": "User",
@@ -153,7 +156,10 @@ describe("ManageUsersPage", () => {
     // workspace. See convex/users.ts.
     expect(usePaginatedQuery).toHaveBeenLastCalledWith(expect.anything(), { searchTerm: "grace", scope: "platform" }, { initialNumItems: 15 });
 
-    fireEvent.click(screen.getByRole("button", { name: "Load More Identities" }));
+    // The house paginated footer, not a lone Load-more button. Walking past
+    // what is loaded is what fetches the next batch.
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Next"));
     expect(loadMore).toHaveBeenCalledWith(15);
   });
 

@@ -9,18 +9,18 @@ import { AlertTriangle, ArrowRight, Cpu, Wrench } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import JsonSchemaBuilder from "@/src/ui/components/settings/JsonSchemaBuilder";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
-  AdminSaveAction,
-  AdminSaveError,
-} from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+  SaveAction,
+  SaveError,
+} from "@/src/ui/components/screens/SaveControls";
 import { cn } from "@/src/ui/lib/utils";
 
 type AgentTool = Doc<"aiTools"> & { bindingId: Id<"agentTools"> };
@@ -91,7 +91,7 @@ export default function AgentInterfacesPage() {
 
   return (
     <div className="flex w-full flex-col gap-8 pb-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <AdminPageHeader
+      <PageHeader
         icon={<Cpu className="h-6 w-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
@@ -104,25 +104,25 @@ export default function AgentInterfacesPage() {
             {t("tools.description")}
           </p>
         </div>
-        <AdminSaveError>{toolError}</AdminSaveError>
+        <SaveError>{toolError}</SaveError>
 
-        <AdminTableShell minWidthClassName="min-w-[720px]">
+        <TableShell minWidthClassName="min-w-[720px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>{t("tools.columns.name")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("tools.columns.description")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell>{t("tools.columns.access")}</AdminTableHeaderCell>
-              <AdminTableHeaderCell align="right">{t("tools.columns.state")}</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>{t("tools.columns.name")}</TableHeaderCell>
+              <TableHeaderCell>{t("tools.columns.description")}</TableHeaderCell>
+              <TableHeaderCell>{t("tools.columns.access")}</TableHeaderCell>
+              <TableHeaderCell align="right">{t("tools.columns.state")}</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {globalTools === undefined ? (
-              <AdminTableLoadingRow colSpan={4} />
+              <TableLoadingRow colSpan={4} />
             ) : globalTools.length === 0 ? (
               /* The old message read "No tools or integrations mapped to this
                  unit", which says this agent has none. The truth is that none
                  exist anywhere yet, and the reader was given nowhere to go. */
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={4}
                 icon={<Wrench className="h-8 w-8 text-muted/30" />}
                 label={t("tools.empty")}
@@ -185,7 +185,7 @@ export default function AgentInterfacesPage() {
               })
             )}
           </tbody>
-        </AdminTableShell>
+        </TableShell>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -196,7 +196,7 @@ export default function AgentInterfacesPage() {
               {t("answer.description")}
             </p>
           </div>
-          <AdminSaveAction
+          <SaveAction
             isSaving={isSaving}
             label={t("answer.saveButton")}
             savingLabel={t("answer.savingButton")}
@@ -205,7 +205,7 @@ export default function AgentInterfacesPage() {
             onClick={handleSaveAnswer}
           />
         </div>
-        <AdminSaveError>{saveError}</AdminSaveError>
+        <SaveError>{saveError}</SaveError>
 
         <JsonSchemaBuilder
           title={t("answer.builderTitle")}

@@ -12,7 +12,7 @@ import { canWrite } from "@/src/lib/userRoles";
  * anyone adds default to showing buttons that fail when pressed.
  *
  * So the rule lives here and the shared admin components consult it. A screen
- * built from `AdminPagePrimaryAction`, `AdminRowIconButton`, `AdminSaveAction`
+ * built from `PagePrimaryAction`, `RowIconButton`, `SaveAction`
  * and the modal form actions loses its write controls automatically, and a
  * screen written next year inherits the same behaviour without knowing this
  * exists.
@@ -25,7 +25,7 @@ import { canWrite } from "@/src/lib/userRoles";
  */
 const AdminWriteAccessContext = createContext<boolean>(true);
 
-export function AdminAccessLevelProvider({
+export function AccessLevelProvider({
   role,
   children,
 }: {
@@ -66,7 +66,7 @@ export function useCanWriteHere(): boolean {
  * anything that only navigates — hiding a cancel button traps the reader inside
  * a dialog with no way out.
  */
-export function AdminWriteButton({
+export function WriteButton({
   children,
   ...buttonProps
 }: ButtonHTMLAttributes<HTMLButtonElement>) {

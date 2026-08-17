@@ -19,9 +19,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
-import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
+import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
 import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
@@ -33,7 +33,7 @@ export default function ChatLogsDashboard() {
   const t = useTranslations("ai.chatLogs");
   const { platformName } = useSystemSettings();
 
-  const itemsPerPage = ADMIN_PAGE_SIZE;
+  const itemsPerPage = TABLE_PAGE_SIZE;
 
   const { results, status, loadMore } = usePaginatedQuery(
     api.chatAdmin.getPaginatedThreads,
@@ -189,7 +189,7 @@ export default function ChatLogsDashboard() {
             </AnimatePresence>
           </div>
 
-          <AdminLoadMoreFooter
+          <LoadMoreFooter
             visibleCount={results.length}
             canLoadMore={canLoadMore}
             isLoading={isLoadingMore}

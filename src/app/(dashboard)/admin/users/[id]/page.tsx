@@ -3,13 +3,16 @@
 import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, User, ShieldCheck, ShieldAlert, Search, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
+import { ArrowLeft, User, ShieldCheck, ShieldAlert, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter } from "@/src/ui/components/screens/Table";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 
 export default function UserProfilePage() {
@@ -19,12 +22,19 @@ export default function UserProfilePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"logins" | "costs">("logins");
   const t = useTranslations('admin.users.profilePage');
+  const tCommon = useTranslations('common');
 
   const { results: logins, status, loadMore } = usePaginatedQuery(
     api.users.getUserLogins,
     { userId, searchTerm },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
+
+  const pagedLogins = usePagedRows(logins, {
+    canLoadMore: status === "CanLoadMore",
+    loadMore,
+    resetKey: searchTerm,
+  });
 
   const parseUserAgent = (ua: string) => {
     if (ua.includes("Mac OS")) return t('devices.macOS');
@@ -165,30 +175,36 @@ export default function UserProfilePage() {
                 <p className="text-[12px] text-secondary mt-0.5">{t('logins.description')}</p>
               </div>
 
-              <div className="relative w-full sm:w-[260px]">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="w-4 h-4 text-muted" />
-                </div>
-                <input
-                  type="text"
-                  placeholder={t('logins.searchPlaceholder')}
+              <div className="w-full sm:w-[260px] flex">
+                <TableSearchInput
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-background/50 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
+                  onChange={setSearchTerm}
+                  placeholder={t('logins.searchPlaceholder')}
+                  clearLabel={tCommon('clearSearch')}
                 />
               </div>
             </div>
 
-            <div className="w-full bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden">
-              <div className="w-full overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+            <TableShell
+              variant="panel"
+              footer={
+                <PaginationFooter
+                  page={pagedLogins.page}
+                  totalPages={pagedLogins.totalPages}
+                  totalCount={pagedLogins.loadedCount}
+                  pageSize={pagedLogins.pageSize}
+                  isLoading={status === "LoadingMore"}
+                  onPageChange={pagedLogins.goToPage}
+                />
+              }
+            >
                   <thead>
-                    <tr className="border-b border-border-dim/50 bg-sidebar/20">
-                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('logins.table.device')}</th>
-                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('logins.table.location')}</th>
-                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('logins.table.status')}</th>
-                      <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">{t('logins.table.timestamp')}</th>
-                    </tr>
+                    <TableHeaderRow variant="strip">
+                      <TableHeaderCell>{t('logins.table.device')}</TableHeaderCell>
+                      <TableHeaderCell>{t('logins.table.location')}</TableHeaderCell>
+                      <TableHeaderCell>{t('logins.table.status')}</TableHeaderCell>
+                      <TableHeaderCell align="right">{t('logins.table.timestamp')}</TableHeaderCell>
+                    </TableHeaderRow>
                   </thead>
                   <tbody className="divide-y divide-border-dim/30">
                     {status === "LoadingFirstPage" && (
@@ -207,7 +223,7 @@ export default function UserProfilePage() {
                       </tr>
                     )}
 
-                    {logins.map((login) => (
+                    {pagedLogins.pageRows.map((login) => (
                       <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
@@ -247,23 +263,7 @@ export default function UserProfilePage() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
-
-              <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-sidebar/10 px-5">
-                <span className="text-[12px] text-secondary">
-                  {logins.length > 0 ? t('logins.showing', { count: logins.length }) : ''}
-                </span>
-                {status === "CanLoadMore" && (
-                  <button
-                    onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-                    className="px-4 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all"
-                  >
-                    {t('logins.loadMore')}
-                  </button>
-                )}
-              </div>
-            </div>
+            </TableShell>
           </div>
         </div>
       )}
@@ -278,14 +278,27 @@ export default function UserProfilePage() {
 
 function AIUserCosts({ userId }: { userId: Id<"users"> }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const t = useTranslations('admin.users.profilePage.costs');
+  const t = useTranslations("admin.users.profilePage.costs");
+  const tCommon = useTranslations("common");
 
   const costs = useQuery(api.analytics.getUserCostOverview, { userId });
   const { results: costThreads, status: costThreadStatus, loadMore: loadMoreCostThreads } = usePaginatedQuery(
     api.analytics.getUserCostThreads,
     { userId },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
+
+  const filteredThreads = costThreads.filter((thread) =>
+    thread.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Above the early return: a hook cannot sit behind a condition, or React
+  // loses track of which state belongs to which call between renders.
+  const pagedThreads = usePagedRows(filteredThreads, {
+    canLoadMore: costThreadStatus === "CanLoadMore",
+    loadMore: loadMoreCostThreads,
+    resetKey: searchTerm,
+  });
 
   if (costs === undefined || costThreadStatus === "LoadingFirstPage") {
     return (
@@ -294,10 +307,6 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
       </div>
     );
   }
-
-  const filteredThreads = costThreads.filter((thread) =>
-    thread.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="flex flex-col gap-6 mt-4 w-full">
@@ -326,47 +335,56 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         </div>
       </div>
 
-      <div className="w-full bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden mt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
-          <div>
-            <h3 className="text-[14px] font-medium text-foreground tracking-wide">{t('usageLog')}</h3>
-            <p className="text-[12px] text-secondary mt-0.5">{t('usageLogDesc')}</p>
-          </div>
-
-          <div className="relative w-full sm:w-[260px]">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-muted" />
+      <TableShell
+        variant="panel"
+        className="mt-2"
+        header={
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
+            <div>
+              <h3 className="text-[14px] font-medium text-foreground tracking-wide">{t('usageLog')}</h3>
+              <p className="text-[12px] text-secondary mt-0.5">{t('usageLogDesc')}</p>
             </div>
-            <input
-              type="text"
-              placeholder={t('searchPlaceholder')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-background/10 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
-            />
-          </div>
-        </div>
 
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+            <div className="w-full sm:w-[260px] flex">
+              <TableSearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder={t('searchPlaceholder')}
+                clearLabel={tCommon('clearSearch')}
+              />
+            </div>
+          </div>
+        }
+        footer={
+          <PaginationFooter
+            page={pagedThreads.page}
+            totalPages={pagedThreads.totalPages}
+            totalCount={pagedThreads.loadedCount}
+            pageSize={pagedThreads.pageSize}
+            isLoading={costThreadStatus === "LoadingMore"}
+            onPageChange={pagedThreads.goToPage}
+            labels={{ next: t('pagination.next') }}
+          />
+        }
+      >
             <thead>
-              <tr className="border-b border-border-dim/50 bg-sidebar/20">
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.conversation')}</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.date')}</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.messages')}</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">{t('table.tokens')}</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">{t('table.cost')}</th>
-              </tr>
+              <TableHeaderRow variant="strip">
+                <TableHeaderCell>{t('table.conversation')}</TableHeaderCell>
+                <TableHeaderCell>{t('table.date')}</TableHeaderCell>
+                <TableHeaderCell>{t('table.messages')}</TableHeaderCell>
+                <TableHeaderCell>{t('table.tokens')}</TableHeaderCell>
+                <TableHeaderCell align="right">{t('table.cost')}</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody className="divide-y divide-border-dim/30">
-              {filteredThreads.length === 0 ? (
+              {pagedThreads.pageRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">
                     {costThreads.length === 0 ? t('empty') : t('noMatch')}
                   </td>
                 </tr>
               ) : (
-                filteredThreads.map((thread) => (
+                pagedThreads.pageRows.map((thread) => (
                   <tr key={thread.threadId} className="group hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-4">
                       <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
@@ -389,26 +407,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
-
-        <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-sidebar/10 px-5">
-          <span className="text-[12px] text-secondary">
-            {costThreads.length > 0 ? (
-              <>{t('pagination.showing')} 1 {t('pagination.to')} {filteredThreads.length} {t('pagination.of')} {costThreads.length} {t('pagination.entries')}</>
-            ) : null}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => loadMoreCostThreads(ADMIN_PAGE_SIZE)}
-              disabled={costThreadStatus !== "CanLoadMore"}
-              className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            >
-              {t('pagination.next')}
-            </button>
-          </div>
-        </div>
-      </div>
+      </TableShell>
     </div>
   );
 }

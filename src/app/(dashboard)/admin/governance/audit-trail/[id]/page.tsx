@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { auditFieldWords } from "@/convex/auditLogService";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 /**
  * One entry, in full.
@@ -89,7 +89,7 @@ export default function AuditEntryPage({ params }: { params: Promise<{ id: strin
     <div className="flex flex-col gap-6">
       {back}
 
-      <AdminPageHeader
+      <PageHeader
         icon={<History className="w-6 h-6 text-brand" />}
         title={entry.actionType}
         description={entry.change || t("noChangeRecorded")}

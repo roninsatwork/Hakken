@@ -3,16 +3,16 @@
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 import { ArrowLeft, CheckCircle2, History, XCircle } from "lucide-react";
@@ -79,7 +79,7 @@ export default function WorkflowExecutionDetailPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
-      <AdminPageHeader
+      <PageHeader
         icon={<History className="w-6 h-6 text-brand" />}
         title={execution?.workflowName ?? t("detail.loadingTitle")}
         description={execution
@@ -99,22 +99,22 @@ export default function WorkflowExecutionDetailPage() {
         )}
       />
 
-      <AdminSaveError>{action.error}</AdminSaveError>
+      <SaveError>{action.error}</SaveError>
 
-      <AdminTableShell minWidthClassName="min-w-[820px]">
+      <TableShell minWidthClassName="min-w-[820px]">
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("detail.columns.node")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("detail.columns.status")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("detail.columns.started")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("detail.columns.decision")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("detail.columns.node")}</TableHeaderCell>
+            <TableHeaderCell>{t("detail.columns.status")}</TableHeaderCell>
+            <TableHeaderCell>{t("detail.columns.started")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("detail.columns.decision")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {execution === undefined ? (
-            <AdminTableLoadingRow colSpan={COLUMN_COUNT} />
+            <TableLoadingRow colSpan={COLUMN_COUNT} />
           ) : steps.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={COLUMN_COUNT}
               icon={<History className="w-8 h-8 text-muted/30" />}
               label={t("detail.noSteps")}
@@ -191,9 +191,9 @@ export default function WorkflowExecutionDetailPage() {
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={pendingRejection !== null}
         onClose={() => setPendingRejection(null)}
         title={t("detail.confirm.title")}
@@ -209,7 +209,7 @@ export default function WorkflowExecutionDetailPage() {
         }}
       >
         <p>{t("detail.confirm.body", { node: pendingRejection?.nodeId ?? "" })}</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

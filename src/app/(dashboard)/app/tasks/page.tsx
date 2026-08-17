@@ -12,6 +12,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { formatTaskDue, groupTasks, type TaskGroup } from "@/src/lib/taskGrouping";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
+import { Field } from "@/src/ui/components/screens/Field";
+import { Select } from "@/src/ui/components/screens/Select";
 import { LAYER } from "@/src/ui/lib/layers";
 
 const TASK_PAGE_SIZE = 30;
@@ -88,45 +91,40 @@ export default function TasksPage() {
     <>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              <ListChecks className="w-6 h-6 text-brand" />
-              {t("title")}
-            </h1>
-            <p className="text-[13px] text-secondary mt-1">{t("subtitle")}</p>
-          </div>
+        <PageHeader
+          icon={<ListChecks className="w-6 h-6 text-brand" />}
+          title={t("title")}
+          description={t("subtitle")}
+          action={
+            <div className={`relative ${LAYER.PAGE_CHROME} flex items-center gap-2`}>
+              <div className="flex rounded-[10px] border border-border-dim p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMineOnly(false)}
+                  aria-pressed={!mineOnly}
+                  className={`px-3 py-1.5 rounded-[8px] text-[12px] transition-colors ${!mineOnly ? "bg-foreground/10 text-foreground" : "text-secondary hover:text-foreground"}`}
+                >
+                  {t("all")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMineOnly(true)}
+                  aria-pressed={mineOnly}
+                  className={`px-3 py-1.5 rounded-[8px] text-[12px] transition-colors ${mineOnly ? "bg-foreground/10 text-foreground" : "text-secondary hover:text-foreground"}`}
+                >
+                  {t("mine")}
+                </button>
+              </div>
 
-          <div className={`relative ${LAYER.PAGE_CHROME} flex items-center gap-2`}>
-            <div className="flex rounded-[10px] border border-border-dim p-0.5">
-              <button
-                type="button"
-                onClick={() => setMineOnly(false)}
-                aria-pressed={!mineOnly}
-                className={`px-3 py-1.5 rounded-[8px] text-[12px] transition-colors ${!mineOnly ? "bg-foreground/10 text-foreground" : "text-secondary hover:text-foreground"}`}
+              <PagePrimaryAction
+                onClick={() => setIsAdding(!isAdding)}
+                icon={<Plus className="w-3.5 h-3.5" />}
               >
-                {t("all")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMineOnly(true)}
-                aria-pressed={mineOnly}
-                className={`px-3 py-1.5 rounded-[8px] text-[12px] transition-colors ${mineOnly ? "bg-foreground/10 text-foreground" : "text-secondary hover:text-foreground"}`}
-              >
-                {t("mine")}
-              </button>
+                {t("new")}
+              </PagePrimaryAction>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setIsAdding(!isAdding)}
-              className="h-8 px-3 inline-flex items-center gap-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:brightness-110 active:scale-95 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {t("new")}
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {isAdding && (
           <motion.form
@@ -135,20 +133,26 @@ export default function TasksPage() {
             onSubmit={handleCreate}
             className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-foreground/[0.02] p-4"
           >
-            <input
+            {/* The title carries no visible label on purpose — this is a
+                quick-add row under a heading that already says Tasks. Hidden
+                rather than absent, so it is still announced. */}
+            <Field
               autoFocus
+              label={t("titlePlaceholder")}
+              labelHidden
               value={newTitle}
               onChange={(event) => setNewTitle(event.target.value)}
               placeholder={t("titlePlaceholder")}
-              className="w-full bg-transparent border-0 border-b border-border-dim rounded-none px-0 pb-2 text-[15px] text-foreground focus:outline-none focus:border-brand/50 placeholder:text-muted/70"
+              className="h-auto rounded-none border-0 border-b border-border-dim bg-transparent px-0 pb-2 text-[15px] placeholder:text-muted/70 focus:border-brand/50"
             />
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-[12px] text-muted">
+              <label htmlFor="task-assignee" className="flex items-center gap-2 text-[12px] text-muted">
                 {t("assignee")}
-                <select
+                <Select
+                  id="task-assignee"
                   value={newAssignee}
-                  onChange={(event) => setNewAssignee(event.target.value)}
-                  className="bg-transparent border border-border-dim rounded-[8px] px-2 py-1 text-[12px] text-foreground focus:outline-none focus:border-brand/50"
+                  onChange={setNewAssignee}
+                  selectClassName="bg-transparent border border-border-dim rounded-[8px] px-2 py-1 text-[12px] text-foreground focus:outline-none focus:border-brand/50"
                 >
                   <option value="">{t("unassigned")}</option>
                   {team?.map((member) => (
@@ -156,9 +160,11 @@ export default function TasksPage() {
                       {member.name || member.email}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
 
+              {/* Wrapping label, which is a real association — this one is not
+                  a bare input, and stacking it in a Field would break the row. */}
               <label className="flex items-center gap-2 text-[12px] text-muted">
                 {t("due")}
                 <input
@@ -302,6 +308,9 @@ export default function TasksPage() {
               </section>
             ))}
 
+            {/* Not the kit's LoadMoreFooter: that is a table footer, with the
+                rule and fill to match, and this is a grouped list. Forcing it
+                on here would look like a table had lost its table. */}
             {status === "CanLoadMore" && (
               <button
                 type="button"

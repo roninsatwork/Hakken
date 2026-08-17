@@ -11,9 +11,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminSaveFeedback } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+import { SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 
 export default function CompanySystemPromptPage() {
@@ -85,17 +85,19 @@ export default function CompanySystemPromptPage() {
         {/* Dynamic Action Area */}
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <AdminWriteButton 
+            <WriteButton
+
               onClick={handleRevert}
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 rounded-full border border-border-dim text-secondary text-[12px] font-medium tracking-wide hover:bg-hover transition-colors disabled:opacity-50"
             >
               <RefreshCcw className="w-3.5 h-3.5" />
               <span>Revert</span>
-            </AdminWriteButton>
+            </WriteButton>
           )}
 
-          <AdminWriteButton 
+          <WriteButton
+
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
             className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${
@@ -110,11 +112,11 @@ export default function CompanySystemPromptPage() {
               <Save className="w-3.5 h-3.5" />
             )}
             <span>Save Prompt</span>
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </header>
 
-      <AdminSaveFeedback
+      <SaveFeedback
         status={saveStatus}
         successTitle="Prompt Saved"
         successMessage="The company prompt was successfully updated."

@@ -18,20 +18,20 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
-  AdminModalFormError,
-  AdminModalFormField,
-  adminModalInputClassName,
-  adminModalTextareaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+  ModalFormError,
+  ModalFormField,
+  modalInputClassName,
+  modalTextareaClassName,
+} from "@/src/ui/components/screens/ModalForm";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type AgentEvalFixture = Doc<"agentEvalFixtures">;
 
@@ -269,14 +269,14 @@ export default function AgentEvalsPage() {
               {runAction.isBusy("run:setup") ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
               Check setup
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={openCreate}
               className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/5"
             >
               <Plus className="h-4 w-4" />
               New check
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </header>
@@ -318,7 +318,7 @@ export default function AgentEvalsPage() {
         </section>
       )}
 
-      <AdminTableShell minWidthClassName="min-w-[760px]">
+      <TableShell minWidthClassName="min-w-[760px]">
         <thead>
           <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
             <th className="px-4 py-3 font-medium">Check</th>
@@ -330,9 +330,9 @@ export default function AgentEvalsPage() {
         </thead>
         <tbody>
           {fixtures === undefined ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : rows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<ClipboardCheck className="h-8 w-8 text-muted/30" />}
               label="No checks yet — add one to catch this agent getting it wrong"
@@ -380,7 +380,7 @@ export default function AgentEvalsPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <AdminWriteButton
+                    <WriteButton
                       type="button"
                       aria-label={`Remove ${fixture.objective}`}
                       title="Remove"
@@ -388,14 +388,14 @@ export default function AgentEvalsPage() {
                       className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </AdminWriteButton>
+                    </WriteButton>
                   </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       {/* Two questions and a toggle, where there were six fields including a nested
           JSON blob whose required keys were documented nowhere and which the shipped
@@ -407,28 +407,28 @@ export default function AgentEvalsPage() {
         size="lg"
       >
         <div className="flex flex-col gap-5 pt-2">
-          <AdminModalFormError>{formAction.error}</AdminModalFormError>
+          <ModalFormError>{formAction.error}</ModalFormError>
 
-          <AdminModalFormField label="What should the agent be asked to do?">
+          <ModalFormField label="What should the agent be asked to do?">
             <textarea
-              className={`${adminModalTextareaClassName} min-h-[110px]`}
+              className={`${modalTextareaClassName} min-h-[110px]`}
               value={form.objective}
               onChange={(event) => setForm((current) => ({ ...current, objective: event.target.value }))}
               placeholder="Find this month's overdue invoices and summarise who owes what."
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField
+          <ModalFormField
             label="What does a good result look like?"
             hint="Plain English. This is what the marking AI reads."
           >
             <textarea
-              className={`${adminModalTextareaClassName} min-h-[130px]`}
+              className={`${modalTextareaClassName} min-h-[130px]`}
               value={form.rubric}
               onChange={(event) => setForm((current) => ({ ...current, rubric: event.target.value }))}
               placeholder="Lists each overdue invoice with the customer and the amount. Never invents a figure it did not look up."
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
             <input
@@ -446,12 +446,12 @@ export default function AgentEvalsPage() {
           <details className="rounded-[8px] border border-border-dim px-3 py-2.5">
             <summary className="cursor-pointer text-[13px] font-semibold text-foreground">Advanced</summary>
             <div className="mt-4 flex flex-col gap-5">
-              <AdminModalFormField
+              <ModalFormField
                 label="Give it the task more than once"
                 hint="A check that passes two times in three is a check that fails one conversation in three. Each extra attempt is a whole agent turn plus a grade."
               >
                 <select
-                  className={adminModalInputClassName}
+                  className={modalInputClassName}
                   value={String(form.sampleCount)}
                   onChange={(event) => setForm((current) => ({ ...current, sampleCount: Number(event.target.value) }))}
                 >
@@ -459,18 +459,18 @@ export default function AgentEvalsPage() {
                   <option value="3">3 times — all must pass</option>
                   <option value="5">5 times — all must pass</option>
                 </select>
-              </AdminModalFormField>
-              <AdminModalFormField
+              </ModalFormField>
+              <ModalFormField
                 label="Tools it should use"
                 hint="Optional, comma separated. Leave empty unless you are testing that a particular tool gets used."
               >
                 <input
-                  className={adminModalInputClassName}
+                  className={modalInputClassName}
                   value={form.tools}
                   onChange={(event) => setForm((current) => ({ ...current, tools: event.target.value }))}
                   placeholder="knowledge.search, crm.lookup"
                 />
-              </AdminModalFormField>
+              </ModalFormField>
             </div>
           </details>
 
@@ -478,10 +478,10 @@ export default function AgentEvalsPage() {
             <button type="button" onClick={() => setIsFormOpen(false)} disabled={formAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <AdminWriteButton type="button" onClick={handleSave} disabled={formAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
+            <WriteButton type="button" onClick={handleSave} disabled={formAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
               {formAction.isBusy() && <Loader2 className="h-4 w-4 animate-spin" />}
               {editingId ? "Save check" : "Create check"}
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -495,10 +495,10 @@ export default function AgentEvalsPage() {
             <button type="button" onClick={() => setArchiveTarget(null)} disabled={archiveAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <AdminWriteButton type="button" onClick={handleArchive} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+            <WriteButton type="button" onClick={handleArchive} disabled={archiveAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
               {archiveAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Remove
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

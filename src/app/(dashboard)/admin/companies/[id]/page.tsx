@@ -17,14 +17,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { cn } from "@/src/ui/lib/utils";
 
 type EngagementPerson = {
@@ -195,7 +195,7 @@ export default function CompanyDashboardPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <AdminPageHeader
+      <PageHeader
         icon={<LayoutDashboard className="h-6 w-6 text-brand" />}
         title="Dashboard"
         description="Who is using Sonae here, how often, and who has gone quiet."
@@ -326,21 +326,21 @@ export default function CompanyDashboardPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-foreground">People</h2>
 
-        <AdminTableShell minWidthClassName="min-w-[820px]">
+        <TableShell minWidthClassName="min-w-[820px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>Person</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Last seen</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Sign-ins</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Questions</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Agents run</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>Person</TableHeaderCell>
+              <TableHeaderCell>Last seen</TableHeaderCell>
+              <TableHeaderCell>Sign-ins</TableHeaderCell>
+              <TableHeaderCell>Questions</TableHeaderCell>
+              <TableHeaderCell>Agents run</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {engagement === undefined ? (
-              <AdminTableLoadingRow colSpan={5} />
+              <TableLoadingRow colSpan={5} />
             ) : everyone.length === 0 ? (
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={5}
                 icon={<Users className="h-8 w-8 text-muted/30" />}
                 label="Nobody here yet"
@@ -379,7 +379,7 @@ export default function CompanyDashboardPage() {
               })
             )}
           </tbody>
-        </AdminTableShell>
+        </TableShell>
       </section>
 
       {/* Only when somebody has been invited and has not arrived. A permanent

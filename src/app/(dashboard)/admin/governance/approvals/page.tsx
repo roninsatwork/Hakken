@@ -3,21 +3,21 @@
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import {
-  AdminLoadMoreFooter,
-  AdminRowActions,
-  AdminRowIconButton,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+  LoadMoreFooter,
+  RowActions,
+  RowIconButton,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 import { CheckCircle2, ChevronDown, Clock, ShieldCheck, XCircle } from "lucide-react";
@@ -68,7 +68,7 @@ export default function AgentApprovalsPage() {
   } = usePaginatedQuery(
     api.agentRuns.getPendingApprovals,
     { searchTerm: searchTerm.trim() || undefined },
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
   // The total, not the loaded count. The header used to read `approvals.length`,
   // which silently under-reported as soon as there were more than one page.
@@ -101,7 +101,7 @@ export default function AgentApprovalsPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
-      <AdminPageHeader
+      <PageHeader
         icon={<ShieldCheck className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
@@ -113,18 +113,18 @@ export default function AgentApprovalsPage() {
         )}
       />
 
-      <AdminSearchBar value={searchTerm} onChange={setSearchTerm} placeholder={t("searchPlaceholder")} />
+      <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder={t("searchPlaceholder")} />
 
-      <AdminSaveError>{action.error}</AdminSaveError>
+      <SaveError>{action.error}</SaveError>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[900px]"
         footer={(
-          <AdminLoadMoreFooter
+          <LoadMoreFooter
             visibleCount={approvals.length}
             canLoadMore={canLoadMore}
             isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+            onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
             labels={{
               empty: t("footer.empty"),
               showing: (count) => t("footer.showing", { count }),
@@ -135,19 +135,19 @@ export default function AgentApprovalsPage() {
         )}
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.tool")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.agent")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.run")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.requested")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("columns.actions")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.tool")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.agent")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.run")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.requested")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("columns.actions")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={COLUMN_COUNT} />
+            <TableLoadingRow colSpan={COLUMN_COUNT} />
           ) : approvals.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={COLUMN_COUNT}
               icon={<ShieldCheck className="w-8 h-8 text-muted/30" />}
               label={searchTerm.trim() ? t("empty.noMatches") : t("empty.none")}
@@ -233,30 +233,30 @@ export default function AgentApprovalsPage() {
                   </td>
 
                   <td className="px-4 py-3">
-                    <AdminRowActions>
-                      <AdminRowIconButton
+                    <RowActions>
+                      <RowIconButton
                         label={t("actions.approve")}
                         onClick={() => submitDecision(approvalId, "APPROVED")}
                       >
                         <CheckCircle2 className={`w-4 h-4 ${isSubmitting ? "opacity-40" : ""}`} />
-                      </AdminRowIconButton>
-                      <AdminRowIconButton
+                      </RowIconButton>
+                      <RowIconButton
                         label={t("actions.reject")}
                         tone="danger"
                         onClick={() => setPendingConfirmation({ approvalId, decision: "REJECTED", toolName })}
                       >
                         <XCircle className="w-4 h-4" />
-                      </AdminRowIconButton>
-                    </AdminRowActions>
+                      </RowIconButton>
+                    </RowActions>
                   </td>
                 </tr>
               );
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={pendingConfirmation !== null}
         onClose={() => setPendingConfirmation(null)}
         title={t("confirm.title")}
@@ -274,7 +274,7 @@ export default function AgentApprovalsPage() {
         }}
       >
         <p>{t("confirm.body", { tool: pendingConfirmation?.toolName ?? "" })}</p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

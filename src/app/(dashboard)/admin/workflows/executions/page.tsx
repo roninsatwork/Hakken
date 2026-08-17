@@ -2,16 +2,16 @@
 
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminLoadMoreFooter,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  LoadMoreFooter,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDateTime } from "@/src/lib/dates";
 import { History, ShieldQuestion } from "lucide-react";
 import Link from "next/link";
@@ -39,27 +39,27 @@ export default function WorkflowExecutionsPage() {
   const { results: executions, status, loadMore } = usePaginatedQuery(
     api.scheduler.getWorkflowExecutions,
     {},
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
 
   const isLoading = status === "LoadingFirstPage";
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-in fade-in slide-in-from-bottom-2">
-      <AdminPageHeader
+      <PageHeader
         icon={<History className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
       />
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[900px]"
         footer={(
-          <AdminLoadMoreFooter
+          <LoadMoreFooter
             visibleCount={executions.length}
             canLoadMore={status === "CanLoadMore"}
             isLoading={status === "LoadingMore"}
-            onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+            onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
             labels={{
               empty: t("empty"),
               showing: (count) => t("footer.showing", { count }),
@@ -70,19 +70,19 @@ export default function WorkflowExecutionsPage() {
         )}
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.workflow")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.status")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.trigger")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.startedBy")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.started")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.workflow")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.status")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.trigger")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.startedBy")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.started")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={COLUMN_COUNT} />
+            <TableLoadingRow colSpan={COLUMN_COUNT} />
           ) : executions.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={COLUMN_COUNT}
               icon={<History className="w-8 h-8 text-muted/30" />}
               label={t("empty")}
@@ -122,7 +122,7 @@ export default function WorkflowExecutionsPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

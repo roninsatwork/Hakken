@@ -8,7 +8,6 @@ import Image from "next/image";
 import {
   Users,
   Plus,
-  Search,
   ShieldCheck,
   User,
   Trash2,
@@ -17,6 +16,16 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import SonaeEmptyState from "@/src/ui/components/feedback/SonaeEmptyState";
+import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
+import {
+  LoadMoreFooter,
+  RowActions,
+  RowIconButton,
+  SearchBar,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { useTranslations } from "next-intl";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { formatDate } from "@/src/lib/dates";
@@ -112,50 +121,49 @@ export default function CompanyTeamPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Users className="w-6 h-6 text-brand" />
-            Manage Team
-          </h1>
-          <p className="text-[13px] text-secondary mt-1">Add, remove, or modify roles for users in your organization.</p>
-        </div>
+      {/* The words stay exactly as they were. `admin.users.title` reads
+          "Access & Identity Control", which is the platform screen's wording
+          and not this one's — swapping it in here would change the page while
+          claiming to move it onto the kit. These two strings are hardcoded and
+          so untranslated; that is recorded with the other copy findings. */}
+      <PageHeader
+        icon={<Users className="w-6 h-6 text-brand" />}
+        title="Manage Team"
+        description="Add, remove, or modify roles for users in your organization."
+        action={
+          <PagePrimaryAction onClick={handleOpenAdd} icon={<Plus className="w-4 h-4" />}>
+            {t('invite')}
+          </PagePrimaryAction>
+        }
+      />
 
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{t('invite')}</span>
-        </button>
-      </div>
+      <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder={t('searchPlaceholder')} />
 
-      {/* Control Bar */}
-      <div className="flex items-center gap-4 bg-sidebar/40 border border-border-dim rounded-[16px] p-2 backdrop-blur-xl">
-        <div className="flex-1 flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-          <Search className="w-[18px] h-[18px]" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder')}
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted"
-          />
-        </div>
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-sidebar/40 border border-border-dim rounded-[24px] backdrop-blur-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+      <TableShell
+        minWidthClassName="min-w-[720px]"
+        footer={
+          status === "CanLoadMore" || status === "LoadingMore" ? (
+            <LoadMoreFooter
+              visibleCount={filteredUsers.length}
+              canLoadMore={status === "CanLoadMore"}
+              isLoading={status === "LoadingMore"}
+              onLoadMore={() => loadMore(15)}
+              labels={{
+                showing: (count) => `${tCommon('pagination.showing')} ${count} ${tCommon('pagination.entries')}`,
+                loadMore: t('table.loadMore'),
+                loading: tCommon('loading'),
+              }}
+            />
+          ) : undefined
+        }
+      >
             <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">{tCommon('table.user')}</th>
-                <th className="px-4 py-3 font-medium">{tCommon('table.role')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.joined')}</th>
-                <th className="px-4 py-3 font-medium text-right">{tCommon('table.actions')}</th>
-              </tr>
+              <TableHeaderRow>
+                <TableHeaderCell>{tCommon('table.user')}</TableHeaderCell>
+                <TableHeaderCell>{tCommon('table.role')}</TableHeaderCell>
+                <TableHeaderCell>{t('table.joined')}</TableHeaderCell>
+                <TableHeaderCell align="right">{tCommon('table.actions')}</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
@@ -202,12 +210,16 @@ export default function CompanyTeamPage() {
                           {formatDate(inv.invitedAt, { fallback: t('table.na') })}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <RowActions>
                             <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">{t('table.awaiting')}</span>
-                            <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title={t('buttons.revoke')}>
+                            <RowIconButton
+                              onClick={() => setDeletingInvite(inv)}
+                              tone="danger"
+                              label={t('buttons.revoke')}
+                            >
                               <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                            </RowIconButton>
+                          </RowActions>
                         </td>
                       </motion.tr>
                     ))}
@@ -250,18 +262,29 @@ export default function CompanyTeamPage() {
                           {formatDate(user.createdAt, { fallback: t('table.na') })}
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <RowActions>
                             {user._id !== currentUser?._id && (
                               <>
-                                <button onClick={() => handleOpenEdit(user)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
+                                {/* These two carried no label at all, so they
+                                    read as "button, button" to a screen reader
+                                    and showed no tooltip. RowIconButton makes
+                                    the label a required argument. */}
+                                <RowIconButton
+                                  onClick={() => handleOpenEdit(user)}
+                                  label={tCommon('actions.edit')}
+                                >
                                   <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setDeletingUser(user)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors">
+                                </RowIconButton>
+                                <RowIconButton
+                                  onClick={() => setDeletingUser(user)}
+                                  tone="danger"
+                                  label={t('buttons.delete')}
+                                >
                                   <Trash2 className="w-4 h-4" />
-                                </button>
+                                </RowIconButton>
                               </>
                             )}
-                          </div>
+                          </RowActions>
                         </td>
                       </motion.tr>
                     ))}
@@ -269,20 +292,7 @@ export default function CompanyTeamPage() {
                 )}
               </AnimatePresence>
             </tbody>
-          </table>
-        </div>
-        
-        {status === "CanLoadMore" && (
-          <div className="p-4 border-t border-border-dim flex justify-center bg-sidebar/10">
-            <button
-              onClick={() => loadMore(15)}
-              className="px-6 py-2 rounded-full text-xs font-medium bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all flex items-center gap-2"
-            >
-              Load More Identities
-            </button>
-          </div>
-        )}
-      </div>
+      </TableShell>
 
       {/* Add/Edit Modal */}
       <SonaeModal

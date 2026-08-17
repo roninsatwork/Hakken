@@ -7,19 +7,19 @@ import { useTranslations } from "next-intl";
 import { MessageCircleQuestion } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 type ScopeFilter = "ALL" | "PLATFORM" | "COMPANIES";
@@ -91,7 +91,7 @@ export function UnansweredScreen({
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<MessageCircleQuestion className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("subtitleCompany") : t("subtitle")}
@@ -106,7 +106,7 @@ export function UnansweredScreen({
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[240px]">
-          <AdminSearchBar
+          <SearchBar
             value={search}
             onChange={setSearch}
             placeholder={t("searchPlaceholder")}
@@ -132,14 +132,14 @@ export function UnansweredScreen({
         )}
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={rows.page}
             totalPages={rows.totalPages}
             totalCount={rows.loadedCount}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={rows.isLoadingMore}
             onPageChange={rows.goToPage}
             labels={{ empty: t("empty") }}
@@ -147,19 +147,19 @@ export function UnansweredScreen({
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.question")}</AdminTableHeaderCell>
-            {!companyId && <AdminTableHeaderCell>{t("columns.where")}</AdminTableHeaderCell>}
-            <AdminTableHeaderCell align="right">{t("columns.asked")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.lastAsked")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("columns.actions")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.question")}</TableHeaderCell>
+            {!companyId && <TableHeaderCell>{t("columns.where")}</TableHeaderCell>}
+            <TableHeaderCell align="right">{t("columns.asked")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.lastAsked")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("columns.actions")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
-            <AdminTableLoadingRow colSpan={columnCount} />
+            <TableLoadingRow colSpan={columnCount} />
           ) : visibleRows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={columnCount}
               icon={<MessageCircleQuestion className="w-5 h-5" />}
               label={search.trim() || scope !== "ALL" ? t("emptyFiltered") : t("emptyState")}
@@ -211,18 +211,18 @@ export function UnansweredScreen({
                   >
                     {t("feedWiki")}
                   </Link>
-                  <AdminWriteButton
+                  <WriteButton
                     onClick={() => void dismiss(row)}
                     className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
                   >
                     {t("dismiss")}
-                  </AdminWriteButton>
+                  </WriteButton>
                 </td>
               </tr>
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

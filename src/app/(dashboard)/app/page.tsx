@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
+import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { ArrowRight } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
@@ -557,22 +558,37 @@ export default function AppDashboardPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[34rem] border-collapse">
-                <tbody>
-                  {ledgerRows.map((row) => (
-                    <tr key={row.time + row.what} className="border-b border-border-dim last:border-b-0">
-                      <td className="w-px whitespace-nowrap px-4 py-2.5 font-mono text-[15px] tabular-nums text-secondary">{row.time}</td>
-                      <td className="px-4 py-2.5 text-[15px] text-foreground">{row.what}</td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-[15px] text-secondary">{row.who}</td>
-                      <td className="w-px px-4 py-2.5 text-right">
-                        <span className={`whitespace-nowrap rounded-full border px-2 py-1 font-mono text-[11px] uppercase tracking-[0.1em] ${LedgerTagTone(row.tone)}`}>
-                          {row.tag}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <CompactList<LedgerRow>
+                rows={ledgerRows}
+                rowKey={(row) => row.time + row.what}
+                minWidthClassName="min-w-[34rem]"
+                empty={t("governance.ledger.empty")}
+                columns={[
+                  {
+                    key: "time",
+                    className: "w-px whitespace-nowrap font-mono text-[15px] tabular-nums text-secondary",
+                    cell: (row) => row.time,
+                  },
+                  { key: "what", className: "text-[15px] text-foreground", cell: (row) => row.what },
+                  {
+                    key: "who",
+                    className: "whitespace-nowrap text-[15px] text-secondary",
+                    cell: (row) => row.who,
+                  },
+                  {
+                    key: "tag",
+                    align: "right",
+                    className: "w-px",
+                    cell: (row) => (
+                      <span
+                        className={`whitespace-nowrap rounded-full border px-2 py-1 font-mono text-[11px] uppercase tracking-[0.1em] ${LedgerTagTone(row.tone)}`}
+                      >
+                        {row.tag}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
             </div>
 
             <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-border-dim px-4 py-3 font-mono text-[12px] tabular-nums text-secondary">

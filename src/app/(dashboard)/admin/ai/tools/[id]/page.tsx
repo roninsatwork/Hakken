@@ -7,7 +7,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { Wrench, Loader2, ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type ToolRole = "ADMIN" | "SUPER_ADMIN";
 type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
@@ -196,14 +196,14 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
            
            <div className="grid grid-cols-2 gap-3 ml-1">
               {(["ADMIN", "SUPER_ADMIN"] as const).map(p => (
-                <AdminWriteButton
+                <WriteButton
                   key={p}
                   type="button"
 	                  onClick={() => updateDraft({ requiredRole: p })}
 	                  className={`flex flex-col items-start gap-1 p-4 rounded-[12px] border transition-all text-left ${p === form.requiredRole ? selectedRoleClasses[p] : `border-border-dim bg-transparent text-secondary ${roleClasses[p]}`}`}
                 >
                   <span className="text-[12px] font-bold tracking-widest uppercase font-mono">{p}</span>
-                </AdminWriteButton>
+                </WriteButton>
               ))}
            </div>
         </section>
@@ -283,14 +283,14 @@ export default function EditToolPage({ params }: { params: Promise<{ id: Id<"aiT
 
         {/* Submit Actions */}
         <div className="flex justify-end pt-6 border-t border-border-dim mt-4">
-          <AdminWriteButton
+          <WriteButton
             type="submit"
 	            disabled={!form.name.trim() || !form.description.trim() || !form.handlerMapping.trim() || isSubmitting}
             className="flex items-center gap-2 px-8 py-3 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.05)]"
           >
              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Commit System Modifications</span>
-          </AdminWriteButton>
+          </WriteButton>
         </div>
       </form>
     </div>

@@ -3,7 +3,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { GovernanceDashboard } from "@/src/app/(dashboard)/admin/_components/GovernanceDashboard";
 import { EvidencePackPanel } from "@/src/app/(dashboard)/admin/_components/EvidencePackPanel";
 import { PersonalDataPanel } from "@/src/app/(dashboard)/admin/_components/PersonalDataPanel";
@@ -23,7 +23,7 @@ export default function GovernanceOverviewPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader
+      <PageHeader
         icon={<ShieldCheck className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}

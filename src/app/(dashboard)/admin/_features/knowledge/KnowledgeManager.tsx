@@ -29,8 +29,8 @@ import {
   History,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { AdminLoadMoreFooter } from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
 import { groupWebsiteDocuments } from "./knowledgeManagerUtils";
@@ -44,7 +44,7 @@ import {
   partitionReservedBundleFiles,
   type CollectedFile,
 } from "./knowledgeUploadUtils";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { StatusPill } from "@/src/ui/atoms/StatusPill";
 import { STATUS_TONE_CLASSES } from "@/src/ui/atoms/statusTone";
 
@@ -101,7 +101,7 @@ export function KnowledgeManager({
   } = usePaginatedQuery(
     api.knowledge.getPaginatedDocuments,
     scopeArgs,
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
   const websiteDocuments = useQuery(api.knowledge.getWebsiteDocuments, scopeArgs);
   const qualitySummary = useQuery(api.knowledge.getQualitySummary, scopeArgs);
@@ -581,14 +581,14 @@ export function KnowledgeManager({
                 placeholder="Search stored chunks"
                 className="h-9 flex-1 bg-background border border-border-dim rounded-[8px] px-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors"
               />
-              <AdminWriteButton
+              <WriteButton
                 type="submit"
                 disabled={!retrievalQuery.trim()}
                 className="h-9 px-4 rounded-[8px] bg-foreground text-background font-medium text-[13px] flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-50"
               >
                 <Search className="w-3.5 h-3.5" />
                 Test
-              </AdminWriteButton>
+              </WriteButton>
             </form>
           </div>
 
@@ -701,7 +701,7 @@ export function KnowledgeManager({
                     "px-3 py-1.5 rounded-[8px] border border-warning/20 bg-warning/10 text-warning text-[12px] font-semibold flex items-center gap-2 shrink-0 disabled:opacity-40",
                     "Inspect",
                   )}
-                  <AdminWriteButton
+                  <WriteButton
                     type="button"
                     onClick={() => handleRetryDocument(item.documentId)}
                     disabled={repairingDocumentIds[item.documentId]}
@@ -709,7 +709,7 @@ export function KnowledgeManager({
                   >
                     {repairingDocumentIds[item.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                     Repair
-                  </AdminWriteButton>
+                  </WriteButton>
                 </div>
               ))}
             </div>
@@ -747,14 +747,14 @@ export function KnowledgeManager({
                 className="w-full bg-background border border-border-dim rounded-[8px] px-4 py-3 text-[13px] text-foreground focus:outline-none focus:border-brand transition-colors resize-y"
               />
               <div className="flex justify-end">
-                <AdminWriteButton
+                <WriteButton
                   onClick={handleSaveText}
                   disabled={isSavingText || !textTitle.trim() || !textContent.trim()}
                   className="h-10 px-6 rounded-[8px] bg-secondary text-background font-medium text-[13px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSavingText ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Add text
-                </AdminWriteButton>
+                </WriteButton>
               </div>
             </div>
           </div>
@@ -875,13 +875,13 @@ export function KnowledgeManager({
                         >
                           <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
                         </button>
-                        <AdminWriteButton
+                        <WriteButton
                           onClick={() => setRootToDelete(root)}
                           title="Delete Complete Domain"
                           className="p-1.5 rounded-lg text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </AdminWriteButton>
+                        </WriteButton>
                         <button onClick={() => toggleGroup(root)} className="ml-2 flex items-center gap-1 bg-brand/10 text-brand px-3 py-1 rounded-md text-[13px] font-medium hover:bg-brand/20 transition-colors">
                           {totalDocs} pages {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
@@ -929,22 +929,22 @@ export function KnowledgeManager({
                                 "text-secondary hover:text-brand transition-colors opacity-50 group-hover:opacity-100",
                               )}
                               {document.status === "failed" && (
-                                <AdminWriteButton
+                                <WriteButton
                                   onClick={() => handleRetryDocument(document._id)}
                                   disabled={repairingDocumentIds[document._id]}
                                   className="text-secondary hover:text-warning transition-colors opacity-50 group-hover:opacity-100 disabled:opacity-50"
                                   title="Retry ingestion"
                                 >
                                   {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-                                </AdminWriteButton>
+                                </WriteButton>
                               )}
-                              <AdminWriteButton
+                              <WriteButton
                                 onClick={() => setDocumentToDelete(document)}
                                 className="text-secondary hover:text-destructive transition-colors opacity-50 group-hover:opacity-100"
                                 title="Delete Document"
                               >
                                 <Trash2 className="w-4 h-4" />
-                              </AdminWriteButton>
+                              </WriteButton>
                             </div>
                           </div>
                         ))}
@@ -1032,23 +1032,23 @@ export function KnowledgeManager({
                       )}
 
                       {document.status === "failed" && (
-                        <AdminWriteButton
+                        <WriteButton
                           onClick={() => handleRetryDocument(document._id)}
                           disabled={repairingDocumentIds[document._id]}
                           className="p-2 rounded-lg border border-transparent text-secondary hover:text-warning hover:bg-warning/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                           title="Retry ingestion"
                         >
                           {repairingDocumentIds[document._id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-                        </AdminWriteButton>
+                        </WriteButton>
                       )}
 
-                      <AdminWriteButton
+                      <WriteButton
                         onClick={() => setDocumentToDelete(document)}
                         className="p-2 rounded-lg border border-transparent text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                         title="Delete Document"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </AdminWriteButton>
+                      </WriteButton>
                     </div>
                   </div>
                 ))}
@@ -1057,11 +1057,11 @@ export function KnowledgeManager({
           </div>
         )}
 
-        <AdminLoadMoreFooter
+        <LoadMoreFooter
           visibleCount={documents.length}
           canLoadMore={canLoadMoreDocuments}
           isLoading={isLoadingMoreDocuments}
-          onLoadMore={() => loadMore(ADMIN_PAGE_SIZE)}
+          onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
           labels={{
             empty: "No knowledge documents loaded",
             showing: (count) => qualitySummary
@@ -1238,14 +1238,14 @@ export function KnowledgeManager({
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={handleConfirmDocumentDelete}
               disabled={isDeletingDocument}
               className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-destructive/90 disabled:opacity-50"
             >
               {isDeletingDocument && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Delete Document
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>
@@ -1300,7 +1300,7 @@ export function KnowledgeManager({
                 )}
                 {documentInspection.document.status === "failed" && (
                   <div className="pt-2">
-                    <AdminWriteButton
+                    <WriteButton
                       type="button"
                       onClick={() => handleRetryDocument(documentInspection.document.documentId)}
                       disabled={repairingDocumentIds[documentInspection.document.documentId]}
@@ -1308,7 +1308,7 @@ export function KnowledgeManager({
                     >
                       {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                       Retry ingestion
-                    </AdminWriteButton>
+                    </WriteButton>
                   </div>
                 )}
               </div>
@@ -1328,7 +1328,7 @@ export function KnowledgeManager({
                     <div>Stored: {documentInspection.embeddingDrift.storedModelId || "unknown"} ({documentInspection.embeddingDrift.storedDimensions || "?"} dims)</div>
                     <div>Active: {documentInspection.embeddingDrift.activeModelId} ({documentInspection.embeddingDrift.activeDimensions || "?"} dims)</div>
                   </div>
-                  <AdminWriteButton
+                  <WriteButton
                     type="button"
                     onClick={() => handleRetryDocument(documentInspection.document.documentId)}
                     disabled={repairingDocumentIds[documentInspection.document.documentId]}
@@ -1336,7 +1336,7 @@ export function KnowledgeManager({
                   >
                     {repairingDocumentIds[documentInspection.document.documentId] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                     Re-embed with active model
-                  </AdminWriteButton>
+                  </WriteButton>
                 </div>
               )}
 
@@ -1406,14 +1406,14 @@ export function KnowledgeManager({
             >
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               onClick={handleConfirmBulkDelete}
               disabled={isDeletingBulk}
               className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium flex items-center gap-2 hover:bg-destructive/90"
             >
               {isDeletingBulk && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Delete Everything
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

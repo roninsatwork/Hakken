@@ -9,14 +9,14 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BrainCircuit, ExternalLink, Library, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import {
-  AdminLoadMoreFooter,
-  AdminTableEmptyRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  LoadMoreFooter,
+  TableEmptyRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 /** One screenful of candidates; "load more" fetches the next. */
 const PICKER_PAGE_SIZE = 20;
@@ -183,10 +183,10 @@ export default function AgentSkillsPage() {
       </header>
 
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[640px]"
         footer={
-          <AdminLoadMoreFooter
+          <LoadMoreFooter
             visibleCount={bindings.length}
             canLoadMore={false}
             isLoading={false}
@@ -207,7 +207,7 @@ export default function AgentSkillsPage() {
         </thead>
         <tbody>
           {bindings.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={3}
               icon={<BrainCircuit className="h-8 w-8 text-muted/30" />}
               label="No skills yet — add one from the Skill Center"
@@ -222,19 +222,19 @@ export default function AgentSkillsPage() {
               </td>
               <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(row.binding.assignedAt)}</td>
               <td className="px-4 py-3 text-right">
-                <AdminWriteButton
+                <WriteButton
                   type="button"
                   aria-label={`Remove ${row.skill.name}`}
                   onClick={() => setRemoveTarget(row)}
                   className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
-                </AdminWriteButton>
+                </WriteButton>
               </td>
             </tr>
           ))}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       <SonaeModal isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} title="Add skills" size="lg">
         {/* The same tick-list the company screen uses. It replaced a two-pane
@@ -316,14 +316,14 @@ export default function AgentSkillsPage() {
             <button type="button" onClick={() => setRemoveTarget(null)} className="h-9 px-4 rounded-[8px] border border-border-dim text-[12px] hover:text-foreground">
               Cancel
             </button>
-            <AdminWriteButton
+            <WriteButton
               type="button"
               onClick={confirmRemove}
               disabled={!!removeTarget && action.isBusy(removeTarget.binding._id)}
               className="h-9 px-4 rounded-[8px] bg-red-500 text-white text-[12px] font-medium disabled:opacity-50"
             >
               Remove skill
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

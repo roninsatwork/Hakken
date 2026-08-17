@@ -16,20 +16,20 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  AdminPaginationFooter,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+  PaginationFooter,
+  SearchBar,
+  TableEmptyRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
-import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 type CompanyEvalCase = Doc<"companyEvalCases">;
 
@@ -180,7 +180,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <AdminPageHeader
+      <PageHeader
         icon={<ClipboardCheck className="h-6 w-6 text-brand" />}
         title="Evals"
         description={
@@ -201,7 +201,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
           )}
           <div className="flex flex-wrap gap-2">
             {hasEvals && (
-              <AdminWriteButton
+              <WriteButton
                 type="button"
                 onClick={() => setConfirmBatch(true)}
                 disabled={batchAction.isBusy() || runnableCount === 0}
@@ -209,7 +209,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
               >
                 {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 Run evals
-              </AdminWriteButton>
+              </WriteButton>
             )}
             {/* On an empty screen the invitation lives in the table, with the
                 sentence explaining why anyone would want one. A second identical
@@ -259,18 +259,18 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                   <span className="text-[12px] text-secondary line-clamp-2">{draft.expectedBehavior}</span>
                 </div>
                 <span className="flex items-center gap-2 shrink-0">
-                  <AdminWriteButton
+                  <WriteButton
                     onClick={() => void decideProposed({ companyId, caseId: draft.caseId, approve: true })}
                     className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
                   >
                     Approve
-                  </AdminWriteButton>
-                  <AdminWriteButton
+                  </WriteButton>
+                  <WriteButton
                     onClick={() => void decideProposed({ companyId, caseId: draft.caseId, approve: false })}
                     className="px-3 py-1 rounded-[8px] border border-border-dim text-secondary text-[12px] font-medium hover:text-foreground transition-colors"
                   >
                     Reject
-                  </AdminWriteButton>
+                  </WriteButton>
                 </span>
               </li>
             ))}
@@ -280,7 +280,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
 
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[240px]">
-          <AdminSearchBar value={search} onChange={setSearch} placeholder="Search evals..." />
+          <SearchBar value={search} onChange={setSearch} placeholder="Search evals..." />
         </div>
         <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
           {RESULT_FILTERS.map((option) => (
@@ -300,14 +300,14 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
         </div>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={cases.page}
             totalPages={cases.totalPages}
             totalCount={cases.loadedCount}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={cases.isLoadingMore}
             onPageChange={cases.goToPage}
             labels={{ empty: "No evals" }}
@@ -325,9 +325,9 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
         </thead>
         <tbody>
           {cases.isLoading ? (
-            <AdminTableLoadingRow colSpan={5} />
+            <TableLoadingRow colSpan={5} />
           ) : cases.rows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={5}
               icon={<ClipboardCheck className="h-8 w-8 text-muted/30" />}
               label="No evals yet"
@@ -338,7 +338,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     {companyId && (
-                      <AdminWriteButton
+                      <WriteButton
                         type="button"
                         onClick={handleAddStarters}
                         disabled={starterAction.isBusy()}
@@ -346,7 +346,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                       >
                         {starterAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                         Add 3 starter evals
-                      </AdminWriteButton>
+                      </WriteButton>
                     )}
                     <Link
                       href={`${evalsHref}/new?returnTo=${encodeURIComponent(evalsHref)}`}
@@ -394,7 +394,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                       {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                       Run
                     </button>
-                    <AdminWriteButton
+                    <WriteButton
                       type="button"
                       aria-label={`Delete ${evalCase.name}`}
                       title="Delete"
@@ -402,14 +402,14 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                       className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </AdminWriteButton>
+                    </WriteButton>
                   </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       {/* Running is real provider work, so it says what it will do before it does
           it. The old batch button spent nothing, which is why it proved nothing. */}
@@ -448,10 +448,10 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
             <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleteAction.isBusy()} className="rounded-[8px] px-4 py-2 text-[13px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50">
               Cancel
             </button>
-            <AdminWriteButton type="button" onClick={handleDeleteCase} disabled={deleteAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+            <WriteButton type="button" onClick={handleDeleteCase} disabled={deleteAction.isBusy()} className="inline-flex items-center gap-2 rounded-[8px] bg-red-500 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50">
               {deleteAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Delete eval
-            </AdminWriteButton>
+            </WriteButton>
           </div>
         </div>
       </SonaeModal>

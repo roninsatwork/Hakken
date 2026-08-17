@@ -7,18 +7,18 @@ import { useTranslations } from "next-intl";
 import { NotebookPen } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
-import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDateTime } from "@/src/lib/dates";
 
 /**
@@ -77,7 +77,7 @@ export function WikiDiaryScreen({
 
   return (
     <div className="flex flex-col gap-6 pb-12 w-full">
-      <AdminPageHeader
+      <PageHeader
         icon={<NotebookPen className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("subtitleCompany") : t("subtitle")}
@@ -105,14 +105,14 @@ export function WikiDiaryScreen({
         </select>
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[760px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={entries.page}
             totalPages={entries.totalPages}
             totalCount={entries.loadedCount}
-            pageSize={ADMIN_PAGE_SIZE}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={entries.isLoadingMore}
             onPageChange={entries.goToPage}
             labels={{ empty: t("empty") }}
@@ -120,18 +120,18 @@ export function WikiDiaryScreen({
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("columns.what")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.page")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.who")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("columns.when")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("columns.what")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.page")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.who")}</TableHeaderCell>
+            <TableHeaderCell>{t("columns.when")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {entries.isLoading ? (
-            <AdminTableLoadingRow colSpan={4} />
+            <TableLoadingRow colSpan={4} />
           ) : entries.rows.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={4}
               icon={<NotebookPen className="w-5 h-5" />}
               label={action === "ALL" ? t("empty") : t("emptyFiltered")}
@@ -170,7 +170,7 @@ export function WikiDiaryScreen({
             })
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

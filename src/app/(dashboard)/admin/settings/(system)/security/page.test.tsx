@@ -29,7 +29,7 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-vi.mock("@/src/app/(dashboard)/admin/_components/AdminAccessLevel", () => ({
+vi.mock("@/src/ui/components/screens/AccessLevel", () => ({
   useCanWriteHere: () => true,
 }));
 

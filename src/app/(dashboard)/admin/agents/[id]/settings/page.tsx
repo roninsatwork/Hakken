@@ -11,9 +11,9 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
-  AdminSaveAction,
-  AdminSaveError,
-} from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
+  SaveAction,
+  SaveError,
+} from "@/src/ui/components/screens/SaveControls";
 // Shared with the create screen, which used to be built from a different set of
 // cards, labels and buttons entirely.
 import {
@@ -21,7 +21,7 @@ import {
   SegmentedChoice,
   SettingSwitch,
   SettingsCard,
-} from "@/src/app/(dashboard)/admin/_components/AdminSettingsCard";
+} from "@/src/ui/components/screens/SettingsCard";
 import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import {
   formatModelDisplayName,
@@ -282,7 +282,7 @@ export default function AgentOverviewPage() {
     <div className="w-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300 antialiased">
       <form onSubmit={handleSave} className="flex w-full flex-col gap-6">
         <div className="flex justify-end">
-          <AdminSaveAction
+          <SaveAction
             type="submit"
             isSaving={isSaving}
             label={t("sections.identity.saveButton")}
@@ -291,7 +291,7 @@ export default function AgentOverviewPage() {
             showSuccess={saveSuccess}
           />
         </div>
-        <AdminSaveError>{saveError}</AdminSaveError>
+        <SaveError>{saveError}</SaveError>
 
         {/* Two columns rather than one.
             Every control on this page used to be full width, so seven settings

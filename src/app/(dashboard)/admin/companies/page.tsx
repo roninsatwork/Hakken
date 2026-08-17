@@ -15,33 +15,33 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AdminConfirmationModal } from "@/src/app/(dashboard)/admin/_components/AdminConfirmationModal";
-import { useServerPagedTable } from "@/src/app/(dashboard)/admin/_lib/useServerPagedTable";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import {
-  AdminPageHeader,
-  AdminPagePrimaryAction,
-} from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+  PageHeader,
+  PagePrimaryAction,
+} from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminModalFormActions,
-  AdminModalFormError,
-  AdminModalFormField,
-  adminModalInputClassName,
-  adminModalTextareaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+  ModalFormActions,
+  ModalFormError,
+  ModalFormField,
+  modalInputClassName,
+  modalTextareaClassName,
+} from "@/src/ui/components/screens/ModalForm";
 import {
-  AdminPaginationFooter,
-  AdminRowActions,
-  AdminRowIconButton,
-  AdminSearchBar,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  PaginationFooter,
+  RowActions,
+  RowIconButton,
+  SearchBar,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import {
-  ADMIN_PAGE_SIZE,
-} from "@/src/app/(dashboard)/admin/_lib/pagination";
+  TABLE_PAGE_SIZE,
+} from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 
@@ -72,7 +72,7 @@ export default function CompaniesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const itemsPerPage = ADMIN_PAGE_SIZE;
+  const itemsPerPage = TABLE_PAGE_SIZE;
   // The house footer — Previous, Page X of Y, Next — over a query that still
   // pages on the server.
   const companiesTable = useServerPagedTable(
@@ -160,23 +160,23 @@ export default function CompaniesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <AdminPageHeader
+      <PageHeader
         icon={<Building2 className="w-6 h-6 text-brand" />}
         title={t('title')}
         description={t('subtitle')}
         action={
-          <AdminPagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
+          <PagePrimaryAction icon={<Plus className="w-4 h-4" />} onClick={handleOpenAdd}>
             {t('newCompany')}
-          </AdminPagePrimaryAction>
+          </PagePrimaryAction>
         }
       />
 
-      <AdminSearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
+      <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <AdminTableShell
+      <TableShell
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={companiesTable.page}
             totalPages={companiesTable.totalPages}
             totalCount={companiesTable.loadedCount}
@@ -189,19 +189,19 @@ export default function CompaniesPage() {
         minWidthClassName="min-w-[800px]"
       >
             <thead>
-              <AdminTableHeaderRow>
-                <AdminTableHeaderCell>{t('tenantName')}</AdminTableHeaderCell>
-                <AdminTableHeaderCell>{t('provisionedDate')}</AdminTableHeaderCell>
-                <AdminTableHeaderCell>{t('assignedUsers')}</AdminTableHeaderCell>
-                <AdminTableHeaderCell align="right">{t('actions')}</AdminTableHeaderCell>
-              </AdminTableHeaderRow>
+              <TableHeaderRow>
+                <TableHeaderCell>{t('tenantName')}</TableHeaderCell>
+                <TableHeaderCell>{t('provisionedDate')}</TableHeaderCell>
+                <TableHeaderCell>{t('assignedUsers')}</TableHeaderCell>
+                <TableHeaderCell align="right">{t('actions')}</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody>
               <AnimatePresence>
                 {isLoading ? (
-                  <AdminTableLoadingRow colSpan={4} />
+                  <TableLoadingRow colSpan={4} />
                 ) : paginatedCompanies.length === 0 ? (
-                  <AdminTableEmptyRow
+                  <TableEmptyRow
                     colSpan={4}
                     icon={<Building2 className="w-8 h-8 text-muted/30" />}
                     label={t('emptyState')}
@@ -238,14 +238,14 @@ export default function CompaniesPage() {
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <AdminRowActions>
-                            <AdminRowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
+                          <RowActions>
+                            <RowIconButton label={t('editTitle')} onClick={() => handleOpenEdit(company)}>
                               <Edit2 className="w-4 h-4" />
-                            </AdminRowIconButton>
-                            <AdminRowIconButton label="Delete Company & Wipe Data" tone="danger" onClick={() => setDeletingCompany(company)}>
+                            </RowIconButton>
+                            <RowIconButton label="Delete Company & Wipe Data" tone="danger" onClick={() => setDeletingCompany(company)}>
                               <Trash2 className="w-4 h-4" />
-                            </AdminRowIconButton>
-                          </AdminRowActions>
+                            </RowIconButton>
+                          </RowActions>
                         </td>
                       </motion.tr>
                     ))}
@@ -253,7 +253,7 @@ export default function CompaniesPage() {
                 )}
               </AnimatePresence>
             </tbody>
-      </AdminTableShell>
+      </TableShell>
 
       {/* Add/Edit Modal */}
       <SonaeModal
@@ -263,34 +263,34 @@ export default function CompaniesPage() {
       >
         <div className="flex flex-col gap-2 mb-6">
           <p className="text-secondary text-[15px]">{editingCompany ? t('editSubtitle') : t('createSubtitle')}</p>
-          <AdminModalFormError>{submitError}</AdminModalFormError>
+          <ModalFormError>{submitError}</ModalFormError>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <AdminModalFormField label={t('nameLabel')}>
+          <ModalFormField label={t('nameLabel')}>
             <input
               type="text"
               required
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className={adminModalInputClassName}
+              className={modalInputClassName}
               placeholder={t('namePlaceholder')}
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField label={t('promptLabel')} hint={t('promptOptional')}>
+          <ModalFormField label={t('promptLabel')} hint={t('promptOptional')}>
             <textarea
               value={formData.systemPrompt}
               onChange={e => setFormData({ ...formData, systemPrompt: e.target.value })}
-              className={adminModalTextareaClassName}
+              className={modalTextareaClassName}
               placeholder={t('promptPlaceholder')}
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField label="Subscription Plan">
+          <ModalFormField label="Subscription Plan">
              <select
                  value={formData.planId}
                  onChange={e => setFormData({ ...formData, planId: e.target.value })}
-                 className={adminModalInputClassName}
+                 className={modalInputClassName}
               >
                   <option value="">No Plan (Unlimited / System Default)</option>
                   {activePlans.map(plan => (
@@ -299,10 +299,10 @@ export default function CompaniesPage() {
                      </option>
                   ))}
              </select>
-          </AdminModalFormField>
+          </ModalFormField>
 
           {COMPANY_MODULES.length > 0 && (
-            <AdminModalFormField label={t('modulesLabel')} hint={t('modulesHint')}>
+            <ModalFormField label={t('modulesLabel')} hint={t('modulesHint')}>
               <div className="flex flex-col gap-2">
                 {COMPANY_MODULES.map((module) => (
                   <label
@@ -326,10 +326,10 @@ export default function CompaniesPage() {
                   </label>
                 ))}
               </div>
-            </AdminModalFormField>
+            </ModalFormField>
           )}
 
-          <AdminModalFormActions
+          <ModalFormActions
             cancelLabel={tCommon('cancel')}
             submitLabel={isSubmitting ? tCommon('saving') : (editingCompany ? t('editTitle') : t('provisionTenant'))}
             isSubmitting={isSubmitting}
@@ -338,7 +338,7 @@ export default function CompaniesPage() {
         </form>
       </SonaeModal>
 
-      <AdminConfirmationModal
+      <ConfirmationModal
         isOpen={!!deletingCompany}
         onClose={() => { setDeletingCompany(null); setSubmitError(""); }}
         title={t('deleteTitle')}
@@ -355,7 +355,7 @@ export default function CompaniesPage() {
         <p>
           {t.rich('deleteConfirm', { name: () => <strong className="text-foreground font-semibold">{deletingCompany?.name}</strong> })}
         </p>
-      </AdminConfirmationModal>
+      </ConfirmationModal>
     </div>
   );
 }

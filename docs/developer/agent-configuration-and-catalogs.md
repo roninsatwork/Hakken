@@ -1,6 +1,6 @@
 # Agent Configuration And Catalogs Developer Guide
 
-This guide covers the implemented agent configuration surfaces that sit around the runtime: the agent builder, built-in templates, input/output schema editing, reusable skill catalog administration, agent logs, and transaction summaries. Read it with [Agents](./agents.md), [Agent Runtime Operations](./agent-runtime-operations.md), [Shared Admin UI](./shared-admin-ui.md), [AI Tools And Connectors](./ai-tools-and-connectors.md), and [Knowledge Management](./knowledge-management.md).
+This guide covers the implemented agent configuration surfaces that sit around the runtime: the agent builder, built-in templates, input/output schema editing, reusable skill catalog administration, agent logs, and transaction summaries. Read it with [Agents](./agents.md), [Agent Runtime Operations](./agent-runtime-operations.md), [Screen Kit](./screen-kit.md), [AI Tools And Connectors](./ai-tools-and-connectors.md), and [Knowledge Management](./knowledge-management.md).
 
 ## Route Map
 

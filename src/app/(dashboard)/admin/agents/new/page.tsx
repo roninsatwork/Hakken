@@ -9,18 +9,18 @@ import { ArrowLeft, Bot } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { getErrorMessage } from "@/src/lib/errors";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
-import { AdminSaveError } from "@/src/app/(dashboard)/admin/_components/AdminSaveControls";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
+import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
   FieldLabel,
   SegmentedChoice,
   SettingSwitch,
   SettingsCard,
-  adminFieldClassName,
-  adminTextAreaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminSettingsCard";
+  fieldClassName,
+  textAreaClassName,
+} from "@/src/ui/components/screens/SettingsCard";
 import {
   formatModelDisplayName,
   formatTokenCost,
@@ -248,7 +248,7 @@ export default function NewAgentPage() {
           <ArrowLeft className="w-3.5 h-3.5" />
           {t("builder.backToAgents")}
         </Link>
-        <AdminPageHeader
+        <PageHeader
           icon={<Bot className="w-6 h-6 text-brand" />}
           title={t("modal.initTitle")}
           description={t("modal.initDesc")}
@@ -256,7 +256,7 @@ export default function NewAgentPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
-        <AdminSaveError>{submitError}</AdminSaveError>
+        <SaveError>{submitError}</SaveError>
 
         {/* The settings screen's layout, card for card. */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -286,7 +286,7 @@ export default function NewAgentPage() {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={adminFieldClassName}
+              className={fieldClassName}
               placeholder={t("placeholders.name")}
             />
 
@@ -296,7 +296,7 @@ export default function NewAgentPage() {
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className={adminTextAreaClassName}
+              className={textAreaClassName}
               placeholder={t("placeholders.description")}
             />
 
@@ -310,7 +310,7 @@ export default function NewAgentPage() {
               id="agent-owner"
               value={formData.ownerId}
               onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
-              className={adminFieldClassName}
+              className={fieldClassName}
             >
               <option value="">{t("owner.choose")}</option>
               {accountablePeople.map((person) => (
@@ -328,7 +328,7 @@ export default function NewAgentPage() {
               id="agent-risk"
               value={formData.riskLevel}
               onChange={(e) => setFormData({ ...formData, riskLevel: e.target.value })}
-              className={adminFieldClassName}
+              className={fieldClassName}
             >
               <option value="">{t("risk.unrated")}</option>
               <option value="LOW">{t("risk.low")}</option>
@@ -494,13 +494,13 @@ export default function NewAgentPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <AdminWriteButton
+          <WriteButton
             type="submit"
             disabled={isSubmitting || !canCreate}
             className="rounded-[8px] bg-foreground px-4 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {isSubmitting ? t("buttons.creating") : t("buttons.createDraft")}
-          </AdminWriteButton>
+          </WriteButton>
           <Link
             href="/admin/agents"
             className="rounded-[8px] border border-border-dim px-4 py-2 text-[13px] text-secondary transition-colors hover:text-foreground"

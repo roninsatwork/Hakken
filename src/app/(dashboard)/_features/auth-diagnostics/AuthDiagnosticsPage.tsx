@@ -7,14 +7,14 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
-  AdminPaginationFooter,
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { ADMIN_PAGE_SIZE, matchesAdminSearchTerm, paginateAdminItems } from "@/src/app/(dashboard)/admin/_lib/pagination";
+  PaginationFooter,
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { TABLE_PAGE_SIZE, matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 
 type AuthDiagnosticsEvent = {
@@ -93,7 +93,7 @@ export function AuthDiagnosticsPage() {
       if (event.timestamp < cutoff) return false;
       if (eventType !== "all" && event.eventType !== eventType) return false;
       if (companyId !== "all" && event.companyId !== companyId) return false;
-      return matchesAdminSearchTerm(searchTerm, [
+      return matchesSearchTerm(searchTerm, [
         event.email,
         event.eventType,
         event.reasonCode,
@@ -105,7 +105,7 @@ export function AuthDiagnosticsPage() {
     });
   }, [companyId, eventType, events, searchTerm, timeFilter]);
 
-  const paginated = paginateAdminItems(filteredEvents, page, ADMIN_PAGE_SIZE);
+  const paginated = paginateItems(filteredEvents, page, TABLE_PAGE_SIZE);
   const isLoading = currentUser === undefined || (canReadDiagnostics && events === undefined);
 
   if (currentUser !== undefined && !canReadDiagnostics) {
@@ -122,7 +122,7 @@ export function AuthDiagnosticsPage() {
 
   return (
     <div className="flex w-full flex-col gap-5 pb-12">
-      <AdminPageHeader
+      <PageHeader
         icon={<MailCheck className="h-6 w-6 text-brand" />}
         title={t("title")}
         description={t("description")}
@@ -204,10 +204,10 @@ export function AuthDiagnosticsPage() {
         ) : null}
       </div>
 
-      <AdminTableShell
+      <TableShell
         minWidthClassName="min-w-[1120px]"
         footer={
-          <AdminPaginationFooter
+          <PaginationFooter
             page={paginated.page}
             totalPages={paginated.totalPages}
             totalCount={paginated.totalItems}
@@ -225,14 +225,14 @@ export function AuthDiagnosticsPage() {
         }
       >
         <thead>
-          <AdminTableHeaderRow>
-            <AdminTableHeaderCell>{t("table.event")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.email")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.company")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.reason")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell>{t("table.provider")}</AdminTableHeaderCell>
-            <AdminTableHeaderCell align="right">{t("table.timestamp")}</AdminTableHeaderCell>
-          </AdminTableHeaderRow>
+          <TableHeaderRow>
+            <TableHeaderCell>{t("table.event")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.email")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.company")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.reason")}</TableHeaderCell>
+            <TableHeaderCell>{t("table.provider")}</TableHeaderCell>
+            <TableHeaderCell align="right">{t("table.timestamp")}</TableHeaderCell>
+          </TableHeaderRow>
         </thead>
         <tbody>
           {isLoading ? (
@@ -242,7 +242,7 @@ export function AuthDiagnosticsPage() {
               </td>
             </tr>
           ) : paginated.items.length === 0 ? (
-            <AdminTableEmptyRow
+            <TableEmptyRow
               colSpan={6}
               icon={<Inbox className="h-8 w-8 text-muted" />}
               label={filteredEvents.length === 0 && (events?.length ?? 0) > 0 ? t("table.noMatches") : t("table.empty")}
@@ -268,7 +268,7 @@ export function AuthDiagnosticsPage() {
             ))
           )}
         </tbody>
-      </AdminTableShell>
+      </TableShell>
     </div>
   );
 }

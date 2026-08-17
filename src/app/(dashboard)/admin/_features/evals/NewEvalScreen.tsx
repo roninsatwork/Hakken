@@ -8,13 +8,13 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
-  AdminModalFormError,
-  AdminModalFormField,
-  adminModalInputClassName,
-  adminModalTextareaClassName,
-} from "@/src/app/(dashboard)/admin/_components/AdminModalForm";
+  ModalFormError,
+  ModalFormField,
+  modalInputClassName,
+  modalTextareaClassName,
+} from "@/src/ui/components/screens/ModalForm";
 import { CompanySkillCheckboxPicker } from "@/src/app/(dashboard)/admin/_components/CompanySkillCheckboxPicker";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import {
   CompanyAiFormActions,
   CompanyAiFormPageHeader,
@@ -66,7 +66,7 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
   const activeSkills = usePaginatedQuery(
     api.companySkills.getSkillsForCompany,
     companyId ? { companyId, status: "ACTIVE" } : "skip",
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
 
   const [form, setForm] = useState(DEFAULT_FORM);
@@ -117,46 +117,46 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
 
       <form onSubmit={handleCreate} className="rounded-[8px] border border-border-dim bg-sidebar/30 p-5">
         <div className="flex flex-col gap-5">
-          <AdminModalFormError>{action.error}</AdminModalFormError>
+          <ModalFormError>{action.error}</ModalFormError>
 
-          <AdminModalFormField label="Name this eval">
+          <ModalFormField label="Name this eval">
             <input
-              className={adminModalInputClassName}
+              className={modalInputClassName}
               value={form.name}
               onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
               placeholder="Doesn't invent pricing"
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField label="What would someone ask?">
+          <ModalFormField label="What would someone ask?">
             <textarea
               required
-              className={`${adminModalTextareaClassName} min-h-[110px]`}
+              className={`${modalTextareaClassName} min-h-[110px]`}
               value={form.prompt}
               onChange={(event) => setForm((current) => ({ ...current, prompt: event.target.value }))}
               placeholder="How much does your enterprise plan cost?"
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField
+          <ModalFormField
             label="What does a good answer look like?"
             hint="Plain English. This is what the marking AI reads."
           >
             <textarea
               required
-              className={`${adminModalTextareaClassName} min-h-[130px]`}
+              className={`${modalTextareaClassName} min-h-[130px]`}
               value={form.expectedBehavior}
               onChange={(event) => setForm((current) => ({ ...current, expectedBehavior: event.target.value }))}
               placeholder="Should say pricing isn't published and offer to put them in touch with sales. Must never quote a figure."
             />
-          </AdminModalFormField>
+          </ModalFormField>
 
           {/* A tag list, not a JSON array. The old form asked for ["enterprise is
               free"] typed by hand, brackets and quotes included. */}
-          <AdminModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
+          <ModalFormField label="Words it must never say" hint="Optional. Press Enter after each one.">
             <div className="flex flex-col gap-2">
               <input
-                className={adminModalInputClassName}
+                className={modalInputClassName}
                 value={phraseDraft}
                 onChange={(event) => setPhraseDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -186,9 +186,9 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
                 </div>
               )}
             </div>
-          </AdminModalFormField>
+          </ModalFormField>
 
-          <AdminModalFormField label="Where does this apply?">
+          <ModalFormField label="Where does this apply?">
             <div className="flex flex-col gap-2">
               {WHERE_OPTIONS.map((option) => (
                 <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
@@ -206,7 +206,7 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
                 </label>
               ))}
             </div>
-          </AdminModalFormField>
+          </ModalFormField>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-border-dim px-3 py-2.5 transition-colors hover:bg-foreground/5">
             <input
@@ -229,12 +229,12 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
               Advanced
             </summary>
             <div className="mt-4">
-              <AdminModalFormField
+              <ModalFormField
                 label="Ask this more than once"
                 hint="Optional. A eval that passes two times in three is an eval that fails one conversation in three. Each extra ask costs another two AI calls."
               >
                 <select
-                  className={adminModalInputClassName}
+                  className={modalInputClassName}
                   value={String(form.sampleCount)}
                   onChange={(event) => setForm((current) => ({ ...current, sampleCount: Number(event.target.value) }))}
                 >
@@ -242,9 +242,9 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
                   <option value="3">Ask 3 times — all must pass</option>
                   <option value="5">Ask 5 times — all must pass</option>
                 </select>
-              </AdminModalFormField>
+              </ModalFormField>
               {companyId && (
-              <AdminModalFormField
+              <ModalFormField
                 label="The answer must use these skills"
                 hint={`${requiredSkillIds.length} selected. Leave empty unless you are testing that a particular skill gets used.`}
               >
@@ -258,9 +258,9 @@ export function NewEvalScreen({ companyId }: { companyId?: Id<"companies"> }) {
                       ? current.filter((id) => id !== skillId)
                       : [...current, skillId]
                   )}
-                  onLoadMore={() => activeSkills.loadMore(ADMIN_PAGE_SIZE)}
+                  onLoadMore={() => activeSkills.loadMore(TABLE_PAGE_SIZE)}
                 />
-              </AdminModalFormField>
+              </ModalFormField>
               )}
             </div>
           </details>

@@ -6,10 +6,10 @@ import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
 import { Loader2, Plus, Trash2, Wrench, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
-import { AdminSearchBar } from "@/src/app/(dashboard)/admin/_components/AdminTable";
-import { AdminWriteButton } from "@/src/app/(dashboard)/admin/_components/AdminAccessLevel";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { SearchBar } from "@/src/ui/components/screens/Table";
+import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "System admins",
@@ -65,7 +65,7 @@ export default function ToolsPage() {
   const { results: tools, status, loadMore } = usePaginatedQuery(
     api.aiTools.getPaginatedTools,
     { ...(term ? { searchTerm: term } : {}), ...(term ? {} : { category: group }) },
-    { initialNumItems: ADMIN_PAGE_SIZE },
+    { initialNumItems: TABLE_PAGE_SIZE },
   );
 
   const connections = (marketplace ?? []).filter((entry) =>
@@ -116,7 +116,7 @@ export default function ToolsPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <AdminPageHeader
+      <PageHeader
         icon={<Wrench className="h-6 w-6 text-brand" />}
         title="Tools"
         description="What your agents can reach, and what each one is allowed to do."
@@ -139,7 +139,7 @@ export default function ToolsPage() {
       ) : null}
 
       <div className="max-w-xl">
-        <AdminSearchBar
+        <SearchBar
           value={searchTerm}
           onChange={setSearchTerm}
           placeholder="Search tools by name..."
@@ -205,13 +205,13 @@ export default function ToolsPage() {
                         Settings
                       </Link>
                     ) : (
-                      <AdminWriteButton
+                      <WriteButton
                         onClick={() => void handleAddConnector(entry.key)}
                         disabled={addingKey === entry.key}
                         className="shrink-0 rounded-[8px] bg-brand px-3 py-1.5 text-[12.5px] font-medium text-white transition-opacity disabled:opacity-40"
                       >
                         {addingKey === entry.key ? "Adding..." : "Add"}
-                      </AdminWriteButton>
+                      </WriteButton>
                     )}
                   </div>
                 );
@@ -263,7 +263,7 @@ export default function ToolsPage() {
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
-                      <AdminWriteButton
+                      <WriteButton
                         type="button"
                         onClick={() => void handleDeleteTool(tool._id)}
                         disabled={isDeleting}
@@ -271,17 +271,17 @@ export default function ToolsPage() {
                         className="rounded-[8px] bg-rose-500 p-1.5 text-white transition-colors hover:bg-rose-600 disabled:opacity-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </AdminWriteButton>
+                      </WriteButton>
                     </span>
                   ) : (
-                    <AdminWriteButton
+                    <WriteButton
                       type="button"
                       onClick={() => setDeleteId(tool._id)}
                       aria-label={`Remove ${tool.name}`}
                       className="shrink-0 rounded-[8px] p-1.5 text-rose-500/70 transition-colors hover:bg-rose-500/10 hover:text-rose-500"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </AdminWriteButton>
+                    </WriteButton>
                   )}
                 </div>
               ))
@@ -290,7 +290,7 @@ export default function ToolsPage() {
             {status === "CanLoadMore" && (
               <button
                 type="button"
-                onClick={() => loadMore(ADMIN_PAGE_SIZE)}
+                onClick={() => loadMore(TABLE_PAGE_SIZE)}
                 className="self-start rounded-[8px] border border-border-dim px-3 py-1.5 text-[12.5px] font-medium text-secondary transition-colors hover:text-foreground"
               >
                 Show more

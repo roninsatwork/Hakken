@@ -4,11 +4,14 @@ import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, User, ShieldCheck, ShieldAlert, Search, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
+import { ArrowLeft, User, ShieldCheck, ShieldAlert, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { ADMIN_PAGE_SIZE } from "@/src/app/(dashboard)/admin/_lib/pagination";
+import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter } from "@/src/ui/components/screens/Table";
+import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 
 export default function UserProfilePage() {
@@ -21,8 +24,14 @@ export default function UserProfilePage() {
   const { results: logins, status, loadMore } = usePaginatedQuery(
     api.users.getUserLogins,
     { userId, searchTerm },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
   );
+
+  const pagedLogins = usePagedRows(logins, {
+    canLoadMore: status === "CanLoadMore",
+    loadMore,
+    resetKey: searchTerm,
+  });
 
   const parseUserAgent = (ua: string) => {
     if (ua.includes("Mac OS")) return "macOS Device";
@@ -163,30 +172,36 @@ export default function UserProfilePage() {
               <p className="text-[12px] text-secondary mt-0.5">Track devices and geographic locations accessing this account.</p>
             </div>
             
-            <div className="relative w-full sm:w-[260px]">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="w-4 h-4 text-muted" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search devices or locations..."
+            <div className="w-full sm:w-[260px] flex">
+              <TableSearchInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-background/50 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
+                onChange={setSearchTerm}
+                placeholder="Search devices or locations..."
+                clearLabel="Clear search"
               />
             </div>
           </div>
 
-          <div className="w-full bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden">
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+          <TableShell
+            variant="panel"
+            footer={
+              <PaginationFooter
+                page={pagedLogins.page}
+                totalPages={pagedLogins.totalPages}
+                totalCount={pagedLogins.loadedCount}
+                pageSize={pagedLogins.pageSize}
+                isLoading={status === "LoadingMore"}
+                onPageChange={pagedLogins.goToPage}
+              />
+            }
+          >
                 <thead>
-                  <tr className="border-b border-border-dim/50 bg-sidebar/20">
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Device</th>
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Location & IP</th>
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Status</th>
-                    <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">Timestamp</th>
-                  </tr>
+                  <TableHeaderRow variant="strip">
+                    <TableHeaderCell>Device</TableHeaderCell>
+                    <TableHeaderCell>Location &amp; IP</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    <TableHeaderCell align="right">Timestamp</TableHeaderCell>
+                  </TableHeaderRow>
                 </thead>
                 <tbody className="divide-y divide-border-dim/30">
                   {status === "LoadingFirstPage" && (
@@ -205,7 +220,7 @@ export default function UserProfilePage() {
                     </tr>
                   )}
 
-                  {logins.map((login) => (
+                  {pagedLogins.pageRows.map((login) => (
                     <tr key={login._id} className="group hover:bg-white/[0.02] transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -245,20 +260,7 @@ export default function UserProfilePage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
-            
-            {status === "CanLoadMore" && (
-              <div className="w-full p-3 border-t border-border-dim/50 flex justify-center bg-sidebar/10">
-                <button 
-                  onClick={() => loadMore(ADMIN_PAGE_SIZE)}
-                  className="px-4 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all"
-                >
-                  Load More History
-                </button>
-              </div>
-            )}
-          </div>
+          </TableShell>
         </div>
         </div>
       )}
@@ -278,7 +280,18 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
   const { results: costThreads, status: costThreadStatus, loadMore: loadMoreCostThreads } = usePaginatedQuery(
     api.analytics.getUserCostThreads,
     { userId },
-    { initialNumItems: ADMIN_PAGE_SIZE }
+    { initialNumItems: TABLE_PAGE_SIZE }
+  );
+
+  // Above the early return: a hook cannot sit behind a condition, or React
+  // loses track of which state belongs to which call between renders.
+  const pagedThreads = usePagedRows(
+    costThreads.filter((t) => t.title.toLowerCase().includes(searchTerm.toLowerCase())),
+    {
+      canLoadMore: costThreadStatus === "CanLoadMore",
+      loadMore: loadMoreCostThreads,
+      resetKey: searchTerm,
+    }
   );
 
   if (costs === undefined || costThreadStatus === "LoadingFirstPage") {
@@ -288,10 +301,6 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
       </div>
     );
   }
-
-  const filteredThreads = costThreads.filter((t) =>
-    t.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="flex flex-col gap-6 mt-4 w-full">
@@ -306,47 +315,55 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         </div>
       </div>
 
-      <div className="w-full bg-background/30 border border-border-dim/50 rounded-[12px] overflow-hidden mt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
-          <div>
-            <h3 className="text-[14px] font-medium text-foreground tracking-wide">AI Usage Log</h3>
-            <p className="text-[12px] text-secondary mt-0.5">Track AI execution instances specific to this user.</p>
-          </div>
-          
-          <div className="relative w-full sm:w-[260px]">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-muted" />
+      <TableShell
+        variant="panel"
+        className="mt-2"
+        header={
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
+            <div>
+              <h3 className="text-[14px] font-medium text-foreground tracking-wide">AI Usage Log</h3>
+              <p className="text-[12px] text-secondary mt-0.5">Track AI execution instances specific to this user.</p>
             </div>
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-background/10 border border-border-dim rounded-[10px] text-[13px] text-foreground focus:border-brand/50 outline-none transition-all placeholder:text-muted"
-            />
-          </div>
-        </div>
 
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+            <div className="w-full sm:w-[260px] flex">
+              <TableSearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Search conversations..."
+                clearLabel="Clear search"
+              />
+            </div>
+          </div>
+        }
+        footer={
+          <PaginationFooter
+            page={pagedThreads.page}
+            totalPages={pagedThreads.totalPages}
+            totalCount={pagedThreads.loadedCount}
+            pageSize={pagedThreads.pageSize}
+            isLoading={costThreadStatus === "LoadingMore"}
+            onPageChange={pagedThreads.goToPage}
+          />
+        }
+      >
             <thead>
-              <tr className="border-b border-border-dim/50 bg-sidebar/20">
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Conversation</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Date Started</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Messages</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest">Tokens Used</th>
-                <th className="px-5 py-3 text-[11px] font-medium text-secondary uppercase tracking-widest text-right">Cost ($)</th>
-              </tr>
+              <TableHeaderRow variant="strip">
+                <TableHeaderCell>Conversation</TableHeaderCell>
+                <TableHeaderCell>Date Started</TableHeaderCell>
+                <TableHeaderCell>Messages</TableHeaderCell>
+                <TableHeaderCell>Tokens Used</TableHeaderCell>
+                <TableHeaderCell align="right">Cost ($)</TableHeaderCell>
+              </TableHeaderRow>
             </thead>
             <tbody className="divide-y divide-border-dim/30">
-              {filteredThreads.length === 0 ? (
+              {pagedThreads.pageRows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">
                     {costThreads.length === 0 ? "No AI conversations logged for this user." : "No conversations match your search."}
                   </td>
                 </tr>
               ) : (
-                filteredThreads.map((thread) => (
+                pagedThreads.pageRows.map((thread) => (
                   <tr key={thread.threadId} className="group hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-4">
                       <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
@@ -369,24 +386,7 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
-        
-        <div className="w-full p-3 border-t border-border-dim/50 flex items-center justify-between bg-sidebar/10 px-5">
-          <span className="text-[12px] text-secondary">
-            Showing {filteredThreads.length > 0 ? 1 : 0} to {filteredThreads.length} of {costThreads.length} entries
-          </span>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => loadMoreCostThreads(ADMIN_PAGE_SIZE)}
-              disabled={costThreadStatus !== "CanLoadMore"}
-              className="px-3 py-1.5 text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-            >
-              Load More
-            </button>
-          </div>
-        </div>
-      </div>
+      </TableShell>
     </div>
   );
 }

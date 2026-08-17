@@ -107,7 +107,7 @@ operator procedures continue to change.
 - [Gmail Mailbox](./developer/gmail-mailbox.md)
 - [Route Protection And Authentication](./developer/route-protection-and-authentication.md)
 - [Tenancy Enforcement](./developer/tenancy-enforcement.md)
-- [Shared Admin UI](./developer/shared-admin-ui.md)
+- [Screen Kit](./developer/screen-kit.md)
 - [AI Administration](./developer/ai-administration.md)
 - [AI Rules And Prompts](./developer/ai-rules-and-prompts.md)
 - [AI Models, Providers, And Costs](./developer/ai-models-providers-and-costs.md)

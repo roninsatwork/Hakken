@@ -5,14 +5,14 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AlertTriangle, ArrowRight, CircleCheck, HeartPulse } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
-import { AdminPageHeader } from "@/src/app/(dashboard)/admin/_components/AdminPageHeader";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  AdminTableEmptyRow,
-  AdminTableHeaderCell,
-  AdminTableHeaderRow,
-  AdminTableLoadingRow,
-  AdminTableShell,
-} from "@/src/app/(dashboard)/admin/_components/AdminTable";
+  TableEmptyRow,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableLoadingRow,
+  TableShell,
+} from "@/src/ui/components/screens/Table";
 import { formatDateTime } from "@/src/lib/dates";
 import { cn } from "@/src/ui/lib/utils";
 
@@ -173,7 +173,7 @@ export default function HealthPage() {
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <AdminPageHeader
+      <PageHeader
         icon={<HeartPulse className="h-6 w-6 text-brand" />}
         title="Health"
         description="Whether anything needs your attention, and how your agents have been running."
@@ -245,22 +245,22 @@ export default function HealthPage() {
           </p>
         </div>
 
-        <AdminTableShell minWidthClassName="min-w-[820px]">
+        <TableShell minWidthClassName="min-w-[820px]">
           <thead>
-            <AdminTableHeaderRow>
-              <AdminTableHeaderCell>What ran</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Agent</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Result</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Took</AdminTableHeaderCell>
-              <AdminTableHeaderCell>Cost</AdminTableHeaderCell>
-              <AdminTableHeaderCell>When</AdminTableHeaderCell>
-            </AdminTableHeaderRow>
+            <TableHeaderRow>
+              <TableHeaderCell>What ran</TableHeaderCell>
+              <TableHeaderCell>Agent</TableHeaderCell>
+              <TableHeaderCell>Result</TableHeaderCell>
+              <TableHeaderCell>Took</TableHeaderCell>
+              <TableHeaderCell>Cost</TableHeaderCell>
+              <TableHeaderCell>When</TableHeaderCell>
+            </TableHeaderRow>
           </thead>
           <tbody>
             {runs === undefined ? (
-              <AdminTableLoadingRow colSpan={6} />
+              <TableLoadingRow colSpan={6} />
             ) : recentRuns.length === 0 ? (
-              <AdminTableEmptyRow
+              <TableEmptyRow
                 colSpan={6}
                 icon={<HeartPulse className="h-8 w-8 text-muted/30" />}
                 label="Nothing has run yet"
@@ -301,7 +301,7 @@ export default function HealthPage() {
               ))
             )}
           </tbody>
-        </AdminTableShell>
+        </TableShell>
       </section>
     </div>
   );
