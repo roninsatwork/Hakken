@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -21,7 +22,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import { SonaeMarkdown } from "@/src/ui/components/chat/SonaeMarkdown";
-import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
+import { PaginationFooter } from "@/src/ui/components/screens/Table";
 import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
@@ -42,13 +43,12 @@ export default function CompanyChatLogsDashboard() {
 
   const itemsPerPage = TABLE_PAGE_SIZE;
 
-  const { results, status, loadMore } = usePaginatedQuery(
+  const threads = useServerPagedTable(
     api.chatAdmin.getPaginatedCompanyThreads,
     { companyId, searchTerm },
-    { initialNumItems: itemsPerPage }
+    itemsPerPage,
   );
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
+  const results = threads.rows;
 
   // Message Extractor securely bound to current selection
   const messages = useQuery(
@@ -186,14 +186,14 @@ export default function CompanyChatLogsDashboard() {
 
           {/* Roster Thread List */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-2">
-            {status === "LoadingFirstPage" && (
+            {threads.isLoading && (
               <div className="flex flex-col items-center justify-center p-12 text-muted gap-4">
                 <Loader2 className="w-6 h-6 animate-spin opacity-50" />
                 <span className="text-[12px] uppercase tracking-widest font-mono">LOADING LOGS...</span>
               </div>
             )}
 
-            {status !== "LoadingFirstPage" && results.length === 0 && (
+            {!threads.isLoading && results.length === 0 && (
               <div className="flex flex-col items-center justify-center p-10 text-muted gap-3 opacity-60">
                 <ShieldAlert className="w-8 h-8" />
                 <span className="text-[13px] font-medium tracking-wide">No interaction data found.</span>
@@ -252,17 +252,14 @@ export default function CompanyChatLogsDashboard() {
 
           </div>
 
-          <LoadMoreFooter
-            visibleCount={results.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(itemsPerPage)}
-            labels={{
-              empty: "No interaction data found.",
-              showing: (count) => `Showing ${count} threads`,
-              loadMore: "Load more threads",
-              loading: "Loading threads...",
-            }}
+          <PaginationFooter
+            page={threads.page}
+            totalPages={threads.totalPages}
+            totalCount={threads.loadedCount}
+            pageSize={itemsPerPage}
+            isLoading={threads.isLoadingMore}
+            onPageChange={threads.goToPage}
+            labels={{ empty: "No interaction data found." }}
           />
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
@@ -8,7 +9,7 @@ import { Copy, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   TableEmptyRow,
   TableHeaderCell,
   TableHeaderRow,
@@ -103,11 +104,12 @@ export default function ApiKeysPage() {
   const createAction = useAdminAction({ scope: "admin-api-keys-create" });
   const revokeAction = useAdminAction({ scope: "admin-api-keys-revoke" });
 
-  const { results: apiKeys, status, loadMore } = usePaginatedQuery(
+  const keys = useServerPagedTable(
     api.apiKeys.list,
     selectedCompanyId ? { companyId: selectedCompanyId } : {},
-    { initialNumItems: TABLE_PAGE_SIZE },
+    TABLE_PAGE_SIZE,
   );
+  const apiKeys = keys.rows;
 
   const toggleScope = (scope: ApiKeyScope) => {
     setScopes((current) => current.includes(scope)
@@ -366,17 +368,14 @@ export default function ApiKeysPage() {
           </tbody>
         </TableShell>
 
-        <LoadMoreFooter
-          visibleCount={apiKeys.length}
-          canLoadMore={status === "CanLoadMore"}
-          isLoading={status === "LoadingMore"}
-          onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
-          labels={{
-            empty: "No keys yet",
-            showing: (count) => `Showing ${count} key${count === 1 ? "" : "s"}`,
-            loadMore: "Show more",
-            loading: "Loading...",
-          }}
+        <PaginationFooter
+          page={keys.page}
+          totalPages={keys.totalPages}
+          totalCount={keys.loadedCount}
+          pageSize={TABLE_PAGE_SIZE}
+          isLoading={keys.isLoadingMore}
+          onPageChange={keys.goToPage}
+          labels={{ empty: "No keys yet" }}
         />
       </section>
 

@@ -5,6 +5,21 @@ import { TABLE_PAGE_SIZE } from './ui/components/screens/pagination';
 
 const repoRoot = process.cwd();
 
+/**
+ * A screen fetches one page at a time from the server.
+ *
+ * Several guards below are named for this and used to assert the literal word
+ * `usePaginatedQuery`, which stopped being the whole story once
+ * `useServerPagedTable` existed — that hook calls `usePaginatedQuery` and adds
+ * the numbered footer on top, so a screen using it pages exactly as before.
+ * Spelled out here once so the next screen to move onto the house footer does
+ * not read as a regression in six places at once.
+ *
+ * What each guard still checks for itself is the query: swapping the paged one
+ * for a query that returns everything fails, which is the fault worth catching.
+ */
+const PAGES_ON_THE_SERVER = /usePaginatedQuery|useServerPagedTable/;
+
 const walkFiles = (dir: string, extensions: ReadonlySet<string>): string[] => {
   if (!fs.existsSync(dir)) {
     return [];
@@ -991,33 +1006,18 @@ describe('Quality Drift Guardrails', () => {
     expect(contents).not.toContain('api.companies.getCompanies');
   });
 
-  /**
-   * As with the workflows page: what this guards is that the screen fetches a
-   * page at a time from the server, not the literal spelling of the hook.
-   * `useServerPagedTable` is the house wrapper around `usePaginatedQuery`.
-   */
   test('admin agents page uses the paginated inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/agents/page.tsx');
 
-    expect(contents).toMatch(/usePaginatedQuery|useServerPagedTable/);
+    expect(contents).toMatch(PAGES_ON_THE_SERVER);
     expect(contents).toContain('api.agents.getPaginatedAgents');
     expect(contents).not.toContain('api.agents.list');
   });
 
-  /**
-   * What this guards is that the screen fetches a page at a time from the
-   * server rather than pulling the whole table into the browser — not the
-   * literal spelling of the hook. `useServerPagedTable` is the house wrapper
-   * around `usePaginatedQuery`, added so a cursor-paged query can wear the
-   * numbered footer, so either spelling satisfies the rule this test is named
-   * for. The screen moved onto it on 2026-08-17, when Anthony spotted it was
-   * drawing a lone "Load more" button where every other list screen has the
-   * standard footer.
-   */
   test('admin workflows page uses the paginated inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/workflows/page.tsx');
 
-    expect(contents).toMatch(/usePaginatedQuery|useServerPagedTable/);
+    expect(contents).toMatch(PAGES_ON_THE_SERVER);
     expect(contents).toContain('api.workflows.getPaginatedWorkflows');
     expect(contents).not.toContain('api.workflows.list');
     expect(contents).not.toContain('ChevronLeft');
@@ -1035,7 +1035,7 @@ describe('Quality Drift Guardrails', () => {
   test('admin plans page uses the paginated inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/settings/plans/page.tsx');
 
-    expect(contents).toContain('usePaginatedQuery');
+    expect(contents).toMatch(PAGES_ON_THE_SERVER);
     expect(contents).toContain('api.plans.getPaginatedPlans');
     expect(contents).not.toContain('api.plans.getPlans');
     expect(contents).not.toContain('paginateItems');
@@ -1063,10 +1063,10 @@ describe('Quality Drift Guardrails', () => {
     const globalChatLogs = readRepoFile('src/app/(dashboard)/admin/ai/chat-logs/page.tsx');
     const companyChatLogs = readRepoFile('src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx');
 
-    expect(globalChatLogs).toContain('usePaginatedQuery');
+    expect(globalChatLogs).toMatch(PAGES_ON_THE_SERVER);
     expect(globalChatLogs).toContain('api.chatAdmin.getPaginatedThreads');
     expect(globalChatLogs).not.toContain('api.chatAdmin.getOffsetPaginatedThreads');
-    expect(companyChatLogs).toContain('usePaginatedQuery');
+    expect(companyChatLogs).toMatch(PAGES_ON_THE_SERVER);
     expect(companyChatLogs).toContain('api.chatAdmin.getPaginatedCompanyThreads');
     expect(companyChatLogs).not.toContain('api.chatAdmin.getOffsetPaginatedCompanyThreads');
   });

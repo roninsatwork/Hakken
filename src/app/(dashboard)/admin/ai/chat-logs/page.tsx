@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -18,7 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { SonaeMarkdown } from "../../../../../ui/components/chat/SonaeMarkdown";
-import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
+import { PaginationFooter } from "@/src/ui/components/screens/Table";
 import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/CompanyMemoryEvidence";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
@@ -35,13 +36,8 @@ export default function ChatLogsDashboard() {
 
   const itemsPerPage = TABLE_PAGE_SIZE;
 
-  const { results, status, loadMore } = usePaginatedQuery(
-    api.chatAdmin.getPaginatedThreads,
-    { searchTerm },
-    { initialNumItems: itemsPerPage }
-  );
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
+  const threads = useServerPagedTable(api.chatAdmin.getPaginatedThreads, { searchTerm }, itemsPerPage);
+  const results = threads.rows;
 
   // Message Extractor securely bound to current selection
   const messages = useQuery(
@@ -128,14 +124,14 @@ export default function ChatLogsDashboard() {
 
           {/* Roster Thread List */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-2">
-            {status === "LoadingFirstPage" && (
+            {threads.isLoading && (
               <div className="flex flex-col items-center justify-center p-12 text-muted gap-4">
                 <Loader2 className="w-6 h-6 animate-spin opacity-50" />
                 <span className="text-[12px] uppercase tracking-widest font-mono">{t("status.loading")}</span>
               </div>
             )}
 
-            {status !== "LoadingFirstPage" && results.length === 0 && (
+            {!threads.isLoading && results.length === 0 && (
               <div className="flex flex-col items-center justify-center p-10 text-muted gap-3 opacity-60">
                 <ShieldAlert className="w-8 h-8" />
                 <span className="text-[13px] font-medium tracking-wide">{t("status.noTraces")}</span>
@@ -187,17 +183,14 @@ export default function ChatLogsDashboard() {
             </AnimatePresence>
           </div>
 
-          <LoadMoreFooter
-            visibleCount={results.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(itemsPerPage)}
-            labels={{
-              empty: t("status.noTraces"),
-              showing: (count) => `Showing ${count} threads`,
-              loadMore: "Load more threads",
-              loading: "Loading threads...",
-            }}
+          <PaginationFooter
+            page={threads.page}
+            totalPages={threads.totalPages}
+            totalCount={threads.loadedCount}
+            pageSize={itemsPerPage}
+            isLoading={threads.isLoadingMore}
+            onPageChange={threads.goToPage}
+            labels={{ empty: t("status.noTraces") }}
           />
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import {
@@ -20,7 +21,7 @@ import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   SearchBar,
   TableEmptyRow,
   TableLoadingRow,
@@ -57,18 +58,9 @@ export default function SubscriptionPlansPage() {
   const [submitError, setSubmitError] = useState("");
 
   const itemsPerPage = TABLE_PAGE_SIZE;
-  const {
-    results: paginatedPlans,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.plans.getPaginatedPlans,
-    { searchTerm },
-    { initialNumItems: itemsPerPage }
-  );
-  const isLoading = status === "LoadingFirstPage";
-  const isLoadingMore = status === "LoadingMore";
-  const canLoadMore = status === "CanLoadMore";
+  const plans = useServerPagedTable(api.plans.getPaginatedPlans, { searchTerm }, itemsPerPage);
+  const paginatedPlans = plans.rows;
+  const isLoading = plans.isLoading;
 
   const handleSearch = (v: string) => {
     setSearchTerm(v);
@@ -175,17 +167,14 @@ export default function SubscriptionPlansPage() {
       {/* Table */}
       <TableShell
         footer={
-          <LoadMoreFooter
-            visibleCount={paginatedPlans.length}
-            canLoadMore={canLoadMore}
-            isLoading={isLoadingMore}
-            onLoadMore={() => loadMore(itemsPerPage)}
-            labels={{
-              empty: t('emptyState'),
-              showing: (count) => t('showingLoaded', { count }),
-              loadMore: t('loadMore'),
-              loading: t('loadingMore'),
-            }}
+          <PaginationFooter
+            page={plans.page}
+            totalPages={plans.totalPages}
+            totalCount={plans.loadedCount}
+            pageSize={itemsPerPage}
+            isLoading={plans.isLoadingMore}
+            onPageChange={plans.goToPage}
+            labels={{ empty: t('emptyState') }}
           />
         }
         minWidthClassName="min-w-[900px]"
