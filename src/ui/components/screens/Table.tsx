@@ -37,6 +37,48 @@ export function SearchBar({ value, onChange, placeholder }: AdminSearchBarProps)
   );
 }
 
+type InlineSearchInputProps = {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  disabled?: boolean;
+};
+
+/**
+ * A search box that sits inside something else's border.
+ *
+ * `SearchBar` draws its own card, which is right for a search box sitting above
+ * a table and wrong everywhere else. Four screens needed the box without the
+ * card — inside a command palette, inside a picker's dropdown, inside a panel
+ * that already has a border — and each hand-wrote a borderless input with an
+ * icon beside it, because putting `SearchBar` there would have drawn a box
+ * inside a box.
+ *
+ * They were the last screens that could not move onto the kit at all, so the
+ * frozen list could not reach zero while this was missing. That is the whole
+ * reason it exists: not a new look, but the one arrangement the kit had no way
+ * of saying.
+ *
+ * The magnifying glass is a picture and the placeholder disappears the moment
+ * anyone types, so the name is not optional here either.
+ */
+export function InlineSearchInput({ value, onChange, placeholder, disabled }: InlineSearchInputProps) {
+  return (
+    <div className="flex w-full items-center gap-2">
+      <Search className="w-4 h-4 shrink-0 text-muted" />
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        disabled={disabled}
+        className="w-full bg-transparent border-none outline-none text-[14px] text-foreground placeholder:text-muted disabled:opacity-50"
+      />
+    </div>
+  );
+}
+
 /**
  * The three ways a table is framed in this app.
  *

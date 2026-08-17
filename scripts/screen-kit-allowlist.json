@@ -18,8 +18,6 @@
     "src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx",
     "src/app/(dashboard)/admin/settings/analytics/page.tsx",
     "src/app/(dashboard)/admin/settings/api-keys/page.tsx",
-    "src/app/(dashboard)/admin/workflows/schedules/[id]/page.tsx",
-    "src/app/(dashboard)/admin/workflows/schedules/new/page.tsx",
     "src/app/(dashboard)/app/[workspace]/customers/[account]/page.tsx",
     "src/app/(dashboard)/app/profile/page.tsx",
     "src/app/(dashboard)/app/tasks/page.tsx",

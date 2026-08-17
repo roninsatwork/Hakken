@@ -4,6 +4,7 @@ import {
   PaginationFooter,
   RowActions,
   RowIconButton,
+  InlineSearchInput,
   SearchBar,
   TableEmptyRow,
   TableHeaderCell,
@@ -57,6 +58,43 @@ describe("SearchBar", () => {
     render(<SearchBar value="" onChange={vi.fn()} placeholder="Search records" />);
 
     expect(screen.getByLabelText("Search records")).toBe(screen.getByPlaceholderText("Search records"));
+  });
+});
+
+/**
+ * The one arrangement the kit could not say. `SearchBar` draws its own card,
+ * which is right above a table and wrong inside a palette, a picker's dropdown
+ * or a panel that already has a border — four screens hand-wrote a borderless
+ * input rather than put a box inside a box, and were the last that could not
+ * move onto the kit at all.
+ */
+describe("InlineSearchInput", () => {
+  it("emits search changes through the shared callback", () => {
+    const onChange = vi.fn();
+
+    render(<InlineSearchInput value="" onChange={onChange} placeholder="Search workflows" />);
+
+    fireEvent.change(screen.getByPlaceholderText("Search workflows"), { target: { value: "nightly" } });
+
+    expect(onChange).toHaveBeenCalledWith("nightly");
+  });
+
+  it("names the box, since the icon is a picture and the placeholder goes when typing starts", () => {
+    render(<InlineSearchInput value="" onChange={vi.fn()} placeholder="Search workflows" />);
+
+    expect(screen.getByLabelText("Search workflows")).toBe(screen.getByPlaceholderText("Search workflows"));
+  });
+
+  /**
+   * The whole point: it must not draw a border of its own, or the screens that
+   * needed it end up with the box-in-a-box they were avoiding.
+   */
+  it("draws no card of its own, so it can sit inside someone else's border", () => {
+    render(<InlineSearchInput value="" onChange={vi.fn()} placeholder="Search workflows" />);
+
+    const box = screen.getByPlaceholderText("Search workflows");
+    expect(box.className).toContain("border-none");
+    expect(box.className).toContain("bg-transparent");
   });
 });
 

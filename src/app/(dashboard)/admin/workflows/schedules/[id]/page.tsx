@@ -9,7 +9,6 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   ArrowLeft,
   Timer,
-  Search,
   CheckCircle2,
   ToggleRight,
   ToggleLeft
@@ -18,6 +17,8 @@ import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { useTranslations } from "next-intl";
 import ScheduleBuilder from "../_components/ScheduleBuilder";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field } from "@/src/ui/components/screens/Field";
+import { InlineSearchInput } from "@/src/ui/components/screens/Table";
 import {
   createDefaultScheduleDraft,
   hydrateScheduleDraft,
@@ -193,15 +194,13 @@ export default function EditSchedulePage() {
         <section className="flex flex-col gap-4">
 
           <div className="flex flex-col gap-3 ml-1">
-            <label className="text-[10px] font-mono tracking-[0.2em] text-muted uppercase">{t('fields.name.label')}</label>
-            <input
-              type="text"
+            <Field
+              label={t('fields.name.label')}
               required
               autoFocus
               value={form.formData.name}
               onChange={e => updateFormData({ name: e.target.value })}
               placeholder={t('fields.name.placeholder')}
-              className="w-full bg-transparent border border-border-dim rounded-[10px] px-4 py-2.5 text-[13px] text-foreground outline-none focus:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30 font-medium tracking-wide"
             />
           </div>
         </section>
@@ -260,13 +259,10 @@ export default function EditSchedulePage() {
                 // Search & Select State
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3 px-4 py-2.5 bg-transparent border border-border-dim rounded-[10px] focus-within:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30">
-                    <Search className="w-5 h-5 text-muted" />
-                    <input
-                      type="text"
-                      placeholder={t('fields.workflow.searchPlaceholder')}
+                    <InlineSearchInput
                       value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="bg-transparent border-none outline-none w-full text-[14px] text-foreground placeholder:text-muted"
+                      onChange={setSearchQuery}
+                      placeholder={t('fields.workflow.searchPlaceholder')}
                     />
                   </div>
 
@@ -315,13 +311,10 @@ export default function EditSchedulePage() {
                 // Search & Select Agent State
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3 px-4 py-2.5 bg-transparent border border-border-dim rounded-[10px] focus-within:border-brand/40 transition-colors shadow-sm dark:bg-[#111111]/30">
-                    <Search className="w-5 h-5 text-muted" />
-                    <input
-                      type="text"
-                      placeholder={t('fields.agent.searchPlaceholder')}
+                    <InlineSearchInput
                       value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="bg-transparent border-none outline-none w-full text-[14px] text-foreground placeholder:text-muted"
+                      onChange={setSearchQuery}
+                      placeholder={t('fields.agent.searchPlaceholder')}
                     />
                   </div>
 
