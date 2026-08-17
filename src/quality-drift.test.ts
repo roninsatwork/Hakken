@@ -995,10 +995,20 @@ describe('Quality Drift Guardrails', () => {
     expect(contents).not.toContain('api.agents.list');
   });
 
+  /**
+   * What this guards is that the screen fetches a page at a time from the
+   * server rather than pulling the whole table into the browser — not the
+   * literal spelling of the hook. `useServerPagedTable` is the house wrapper
+   * around `usePaginatedQuery`, added so a cursor-paged query can wear the
+   * numbered footer, so either spelling satisfies the rule this test is named
+   * for. The screen moved onto it on 2026-08-17, when Anthony spotted it was
+   * drawing a lone "Load more" button where every other list screen has the
+   * standard footer.
+   */
   test('admin workflows page uses the paginated inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/workflows/page.tsx');
 
-    expect(contents).toContain('usePaginatedQuery');
+    expect(contents).toMatch(/usePaginatedQuery|useServerPagedTable/);
     expect(contents).toContain('api.workflows.getPaginatedWorkflows');
     expect(contents).not.toContain('api.workflows.list');
     expect(contents).not.toContain('ChevronLeft');
