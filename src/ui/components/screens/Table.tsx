@@ -21,6 +21,15 @@ export function SearchBar({ value, onChange, placeholder }: AdminSearchBarProps)
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          /**
+           * The magnifying glass is a picture and the placeholder disappears the
+           * moment anyone types, so without this the search box on every screen
+           * using this bar announced itself as nothing at all. Its sister in
+           * `TableControls` has carried a label all along; this one had been
+           * missed, which is the argument for fixing it here rather than on the
+           * screens.
+           */
+          aria-label={placeholder}
           className="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"
         />
       </div>

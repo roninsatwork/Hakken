@@ -46,6 +46,18 @@ describe("SearchBar", () => {
 
     expect(onChange).toHaveBeenCalledWith("acme");
   });
+
+  /**
+   * Found on the plans screen and the wiki on 2026-08-17, and it was the same
+   * box both times, because it is this one. The icon beside it is a picture and
+   * the placeholder goes as soon as anyone types, so without a name the search
+   * box on every screen built from this bar announced itself as nothing.
+   */
+  it("names the search box, so it is not announced as an unlabelled input", () => {
+    render(<SearchBar value="" onChange={vi.fn()} placeholder="Search records" />);
+
+    expect(screen.getByLabelText("Search records")).toBe(screen.getByPlaceholderText("Search records"));
+  });
 });
 
 describe("Admin table rows", () => {
