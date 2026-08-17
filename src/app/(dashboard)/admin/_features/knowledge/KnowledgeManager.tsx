@@ -4,7 +4,8 @@ import { getErrorMessage } from "@/src/lib/errors";
 import { useState, useRef, useMemo } from "react";
 import type { ChangeEvent, DragEvent, FormEvent, KeyboardEvent, ReactNode } from "react";
 import Link from "next/link";
-import { useMutation, useAction, usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, useAction, useQuery } from "convex/react";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -29,7 +30,7 @@ import {
   History,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
-import { LoadMoreFooter } from "@/src/ui/components/screens/Table";
+import { PaginationFooter } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { resolveUploadContentType, validateUploadFile } from "@/src/lib/constants/uploads";
@@ -94,15 +95,8 @@ export function KnowledgeManager({
   getInspectDocumentHref,
 }: KnowledgeManagerProps) {
   const scopeArgs = buildScopeArgs(scope);
-  const {
-    results: documents,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
-    api.knowledge.getPaginatedDocuments,
-    scopeArgs,
-    { initialNumItems: TABLE_PAGE_SIZE }
-  );
+  const paged = useServerPagedTable(api.knowledge.getPaginatedDocuments, scopeArgs, TABLE_PAGE_SIZE);
+  const documents = paged.rows;
   const websiteDocuments = useQuery(api.knowledge.getWebsiteDocuments, scopeArgs);
   const qualitySummary = useQuery(api.knowledge.getQualitySummary, scopeArgs);
   // Which documents keep grounding well-rated answers (self-improvement
@@ -169,9 +163,7 @@ export function KnowledgeManager({
     api.knowledge.testRetrieval,
     submittedRetrievalQuery.trim() ? { ...scopeArgs, query: submittedRetrievalQuery.trim() } : "skip"
   );
-  const isLoadingDocuments = status === "LoadingFirstPage";
-  const isLoadingMoreDocuments = status === "LoadingMore";
-  const canLoadMoreDocuments = status === "CanLoadMore";
+  const isLoadingDocuments = paged.isLoading;
 
   const updateQueueEntry = (key: string, patch: Partial<UploadQueueEntry>) => {
     setUploadQueue((entries) => entries.map((entry) => (entry.key === key ? { ...entry, ...patch } : entry)));
@@ -1057,18 +1049,20 @@ export function KnowledgeManager({
           </div>
         )}
 
-        <LoadMoreFooter
-          visibleCount={documents.length}
-          canLoadMore={canLoadMoreDocuments}
-          isLoading={isLoadingMoreDocuments}
-          onLoadMore={() => loadMore(TABLE_PAGE_SIZE)}
+        <PaginationFooter
+          page={paged.page}
+          totalPages={paged.totalPages}
+          totalCount={paged.loadedCount}
+          pageSize={TABLE_PAGE_SIZE}
+          isLoading={paged.isLoadingMore}
+          onPageChange={paged.goToPage}
           labels={{
             empty: "No knowledge documents loaded",
-            showing: (count) => qualitySummary
-              ? `Showing ${count} loaded of ${qualitySummary.totals.documents.toLocaleString()} total knowledge documents`
-              : `Showing ${count} loaded knowledge documents`,
-            loadMore: "Load more documents",
-            loading: "Loading documents...",
+            // The true total is counted separately and is worth keeping: the
+            // footer's own count is only what has been fetched so far.
+            showing: (start, end, loaded) => qualitySummary
+              ? `Showing ${start}-${end} of ${qualitySummary.totals.documents.toLocaleString()} documents`
+              : `Showing ${start}-${end} of ${loaded} documents`,
           }}
         />
       </div>

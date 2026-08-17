@@ -134,7 +134,11 @@ describe("KnowledgeManager", () => {
     expect(screen.getByText("Website pages are grouped by domain. Search filters the pages stored for this website source.")).toBeInTheDocument();
     expect(screen.getByText("15 ready / 15 stored (100%)")).toBeInTheDocument();
     expect(screen.getByText("15 pages")).toBeInTheDocument();
-    expect(screen.getByText("Showing 15 loaded of 148 total knowledge documents")).toBeInTheDocument();
+    // The number that matters here is 148 — the true total, counted separately —
+    // rather than the 15 fetched so far. The screen moved onto the house
+    // numbered footer on 2026-08-17, so it now reads as a page range, but it is
+    // still the full count it reports.
+    expect(screen.getByText("Showing 1-15 of 148 documents")).toBeInTheDocument();
   });
 
   it("filters expanded website groups by loaded page URL", () => {

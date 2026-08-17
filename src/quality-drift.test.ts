@@ -1054,7 +1054,7 @@ describe('Quality Drift Guardrails', () => {
   test('knowledge manager uses the paginated document inventory query', () => {
     const contents = readRepoFile('src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx');
 
-    expect(contents).toContain('usePaginatedQuery');
+    expect(contents).toMatch(PAGES_ON_THE_SERVER);
     expect(contents).toContain('api.knowledge.getPaginatedDocuments');
     expect(contents).not.toContain('api.knowledge.getDocuments');
   });

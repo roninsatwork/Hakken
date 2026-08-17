@@ -9,13 +9,15 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BrainCircuit, ExternalLink, Library, Loader2, Plus, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import {
-  LoadMoreFooter,
+  PaginationFooter,
   TableEmptyRow,
   TableShell,
 } from "@/src/ui/components/screens/Table";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { formatDateTime } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { usePagedRows } from "@/src/hooks/usePagedRows";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { MAX_SKILLS_PER_AGENT } from "@/convex/utils/skillLimits";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
@@ -102,6 +104,9 @@ export default function AgentSkillsPage() {
   // The picker loads inside its own modal, so the page no longer waits on the
   // whole skill catalogue before it can render the agent's own skills.
   const isLoading = bindings === undefined;
+  // The agent's own skills arrive whole rather than a page at a time, so the
+  // house footer comes from the list already in hand.
+  const pagedBindings = usePagedRows(bindings ?? [], { canLoadMore: false, loadMore: () => undefined });
 
   const attachSelected = async () => {
     if (selectedSkillIds.length === 0) return;
@@ -187,15 +192,18 @@ export default function AgentSkillsPage() {
       <TableShell
         minWidthClassName="min-w-[640px]"
         footer={
-          <LoadMoreFooter
-            visibleCount={bindings.length}
-            canLoadMore={false}
+          /* This list is not paged on the server — it arrives whole — so it
+             wore the load-more footer with its button permanently disabled,
+             purely to get a count line. `usePagedRows` gives it the same
+             footer as every other table over a list already in hand. */
+          <PaginationFooter
+            page={pagedBindings.page}
+            totalPages={pagedBindings.totalPages}
+            totalCount={pagedBindings.loadedCount}
+            pageSize={TABLE_PAGE_SIZE}
             isLoading={false}
-            onLoadMore={() => undefined}
-            labels={{
-              empty: "No skills yet",
-              showing: (count) => `Showing ${count} skill${count === 1 ? "" : "s"}`,
-            }}
+            onPageChange={pagedBindings.goToPage}
+            labels={{ empty: "No skills yet" }}
           />
         }
       >
@@ -213,7 +221,7 @@ export default function AgentSkillsPage() {
               icon={<BrainCircuit className="h-8 w-8 text-muted/30" />}
               label="No skills yet — add one from the Skill Center"
             />
-          ) : bindings.map((row) => (
+          ) : pagedBindings.pageRows.map((row) => (
             <tr key={row.binding._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
               <td className="px-4 py-3">
                 <div className="text-[13px] font-semibold text-foreground">{row.skill.name}</div>
