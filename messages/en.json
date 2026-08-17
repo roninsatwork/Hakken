@@ -1319,7 +1319,8 @@
       "builder": {
         "backToAgents": "All agents",
         "whatIsMissing": "Give it a name first.",
-        "startsOff": "A new agent is always created switched off. Turn it on from its settings once it has passed a check."
+        "startsOff": "A new agent is always created switched off. Turn it on from its settings once it has passed a check.",
+        "startsOnWarning": "Switched on, this agent will start running on its own as soon as it is created. Leave it off until it has passed a check."
       },
       "details": {
         "loading": "Loading agent...",

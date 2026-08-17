@@ -15,14 +15,14 @@ import {
   ChevronDown,
   RefreshCw
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import Link from "next/link";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ModalField, ModalFormField } from "@/src/ui/components/screens/ModalForm";
-import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter, SearchBar } from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
@@ -136,8 +136,6 @@ export default function CompanyUsersPage() {
     resetKey: searchTerm,
   });
 
-  const pageInvites = paged.pageRows.flatMap((row) => (row.kind === "invite" ? [row.invite] : []));
-  const pageUsers = paged.pageRows.flatMap((row) => (row.kind === "user" ? [row.user] : []));
 
   const handleOpenEdit = (user: CompanyUser) => {
     setFormData({ name: user.name || "", email: user.email || "", role: user.role || "USER", image: user.image || "", companyId: user.companyId || "" });
@@ -233,152 +231,131 @@ export default function CompanyUsersPage() {
       <SearchBar value={searchTerm} onChange={handleSearch} placeholder="Search users by name or email..." />
 
       {/* Users Table */}
-      <TableShell
-        footer={
-          <PaginationFooter
-            page={paged.page}
-            totalPages={paged.totalPages}
-            totalCount={paged.loadedCount}
-            pageSize={paged.pageSize}
-            isLoading={status === "LoadingMore"}
-            onPageChange={paged.goToPage}
-            labels={{ empty: t('table.empty') }}
-          />
-        }
-      >
-            <thead>
-              <TableHeaderRow>
-                <TableHeaderCell>User</TableHeaderCell>
-                <TableHeaderCell>Role</TableHeaderCell>
-                <TableHeaderCell>Joined</TableHeaderCell>
-                <TableHeaderCell align="right">Actions</TableHeaderCell>
-              </TableHeaderRow>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {paged.pageRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                      No users or pending invitations found matching your search.
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {pageInvites.map((inv) => (
-                        <motion.tr 
-                          key={`inv-${inv._id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="border-b border-border-dim/50 bg-brand/[0.03] hover:bg-brand/[0.05] transition-colors group opacity-80"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
-                                 <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
-                                  Pending Invitation
-                                </span>
-                                <span className="text-[12px] text-secondary">{inv.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-                              <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                                PENDING {inv.role}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-[12px] text-secondary">
-                            {formatDate(inv.invitedAt)}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">Awaiting Login</span>
-                               <button onClick={() => setDeletingInvite(inv)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Revoke Invitation">
-                                 <Trash2 className="w-4 h-4" />
-                               </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                    ))}
-
-                    {pageUsers.map((item) => (
-                        <motion.tr 
-                          key={`user-${item._id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          onClick={() => router.push(`/admin/users/${item._id}`)}
-                          className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group cursor-pointer"
-                        >
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <Image
-                                src={item.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${item.name}`} 
-                                alt={item.name || "User avatar"}
-                                width={32}
-                                height={32}
-                                unoptimized
-                                className="w-8 h-8 rounded-full bg-card border border-border-dim"
-                              />
-                              <div>
-                                <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
-                                  {item.name}
-                                </span>
-                                <span className="text-[12px] text-secondary">{item.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                              {item.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                              <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                                {item.role || 'USER'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5 text-[12px] text-secondary">
-                            {formatDate(item.createdAt)}
-                          </td>
-                          <td className="px-4 py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {(item.role !== "SUPER_ADMIN" || isSuperAdmin) && (
-                                <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                              )}
-                              {item.role === "SUPER_ADMIN" ? (
-                                isSuperAdmin && (
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); setDetachingAdmin(item); }} 
-                                    className="p-2 rounded-full hover:bg-brand/10 text-secondary hover:text-brand transition-colors"
-                                    title={t("detachSystemAdmin")}
-                                  >
-                                    <RefreshCw className="w-4 h-4" />
-                                  </button>
-                                )
-                              ) : (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); setDeletingUser(item); }} 
-                                  className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors"
-                                  title="Delete User"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </motion.tr>
-                    ))}
-                  </>
-                )}
-              </AnimatePresence>
-            </tbody>
-      </TableShell>
+      <DataTable
+        rows={status === "LoadingFirstPage" ? undefined : paged.pageRows}
+        rowKey={(row) => (row.kind === "invite" ? `inv-${row.invite._id}` : `user-${row.user._id}`)}
+        /* A pending invitation is not a person yet. */
+        rowClassName={(row) => (row.kind === "invite" ? "bg-brand/[0.03] hover:bg-brand/[0.05] opacity-80" : "")}
+        /* Only a person's row opens; an invitation has nothing to open. */
+        rowClickable={(row) => row.kind === "user"}
+        onRowClick={(row) => {
+          if (row.kind === "user") router.push(`/admin/users/${row.user._id}`);
+        }}
+        empty={{
+          icon: <Users className="w-8 h-8 text-muted/30" />,
+          label: "No users or pending invitations found matching your search.",
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.loadedCount,
+          pageSize: paged.pageSize,
+          isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+          onPageChange: paged.goToPage,
+          labels: { empty: t('table.empty') },
+        }}
+        columns={[
+          {
+            key: "user",
+            header: "User",
+            cell: (row) =>
+              row.kind === "invite" ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-black border border-brand/20 border-dashed flex items-center justify-center">
+                    <span className="text-[9px] font-mono text-brand/50 uppercase tracking-widest">PND</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-[13px] text-foreground/70 block leading-tight">
+                      Pending Invitation
+                    </span>
+                    <span className="text-[12px] text-secondary">{row.invite.email}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={row.user.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${row.user.name}`}
+                    alt={row.user.name || "User avatar"}
+                    width={32}
+                    height={32}
+                    unoptimized
+                    className="w-8 h-8 rounded-full bg-card border border-border-dim"
+                  />
+                  <div>
+                    <span className="font-medium text-[13px] text-foreground group-hover:text-brand transition-colors block leading-tight">
+                      {row.user.name}
+                    </span>
+                    <span className="text-[12px] text-secondary">{row.user.email}</span>
+                  </div>
+                </div>
+              ),
+          },
+          {
+            key: "role",
+            header: "Role",
+            cell: (row) =>
+              row.kind === "invite" ? (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
+                  <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
+                    PENDING {row.invite.role}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
+                  {row.user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
+                  <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
+                    {row.user.role || 'USER'}
+                  </span>
+                </div>
+              ),
+          },
+          {
+            key: "joined",
+            header: "Joined",
+            cell: (row) => (
+              <span className="text-[12px] text-secondary">
+                {row.kind === "invite" ? formatDate(row.invite.invitedAt) : formatDate(row.user.createdAt)}
+              </span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "Actions",
+            align: "right",
+            cell: (row) =>
+              row.kind === "invite" ? (
+                <RowActions>
+                  <span className="text-[11px] font-mono text-brand/50 uppercase tracking-widest mr-2">
+                    Awaiting Login
+                  </span>
+                  <RowIconButton onClick={() => setDeletingInvite(row.invite)} tone="danger" label="Revoke Invitation">
+                    <Trash2 className="w-4 h-4" />
+                  </RowIconButton>
+                </RowActions>
+              ) : (
+                <RowActions>
+                  {(row.user.role !== "SUPER_ADMIN" || isSuperAdmin) && (
+                    <RowIconButton onClick={() => handleOpenEdit(row.user)} label="Edit user">
+                      <Edit2 className="w-4 h-4" />
+                    </RowIconButton>
+                  )}
+                  {row.user.role === "SUPER_ADMIN" ? (
+                    isSuperAdmin && (
+                      <RowIconButton onClick={() => setDetachingAdmin(row.user)} label={t("detachSystemAdmin")}>
+                        <RefreshCw className="w-4 h-4" />
+                      </RowIconButton>
+                    )
+                  ) : (
+                    <RowIconButton onClick={() => setDeletingUser(row.user)} tone="danger" label="Delete User">
+                      <Trash2 className="w-4 h-4" />
+                    </RowIconButton>
+                  )}
+                </RowActions>
+              ),
+          },
+        ]}
+      />
 
       {/* Add/Edit Modal */}
       <SonaeModal

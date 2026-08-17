@@ -1319,7 +1319,8 @@
       "builder": {
         "backToAgents": "Tutti gli agenti",
         "whatIsMissing": "Dagli prima un nome.",
-        "startsOff": "Un nuovo agente viene sempre creato spento. Accendilo dalle sue impostazioni una volta superato un controllo."
+        "startsOff": "Un nuovo agente viene sempre creato spento. Accendilo dalle sue impostazioni una volta superato un controllo.",
+        "startsOnWarning": "Se attivo, questo agente inizierà a funzionare da solo appena creato. Lascialo spento finché non ha superato un controllo."
       },
       "details": {
         "loading": "Caricamento agent...",
