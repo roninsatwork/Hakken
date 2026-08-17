@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePaginatedQuery, useQuery, useMutation } from "convex/react";
-import { PaginationFooter, TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { api } from "@/convex/_generated/api";
-import { Trophy, Gamepad2, Play, Crown, Clock, Loader2, Maximize2, Minimize2, X } from "lucide-react";
+import { Trophy, Gamepad2, Play, Crown, Clock, Maximize2, Minimize2, X } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 import { Press_Start_2P } from "next/font/google";
 import RoninCanvas from "./RoninCanvas";
@@ -397,92 +397,94 @@ export default function RoninArcadePage() {
              </div>
            </div>
 
-           <TableShell
-             variant="bare"
-             footer={
-               <PaginationFooter
-                 page={currentPage}
-                 totalPages={totalPages}
-                 totalCount={totalItems}
-                 pageSize={itemsPerPage}
-                 isLoading={status === "LoadingMore"}
-                 onPageChange={handlePageChange}
-                 labels={{
-                   empty: "No attempts yet",
-                   showing: (start, end, total) => `Showing ${start} to ${end} of ${total} attempts`,
-                 }}
-               />
+           <DataTable
+             rows={
+               (status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0
+                 ? undefined
+                 : paginatedItems
              }
-           >
-               <thead>
-                 <TableHeaderRow variant="strip" className="whitespace-nowrap">
-                   <TableHeaderCell className="w-[80px]">Rank</TableHeaderCell>
-                   <TableHeaderCell>User</TableHeaderCell>
-                   <TableHeaderCell align="right">Score</TableHeaderCell>
-                   <TableHeaderCell align="right">Timestamp</TableHeaderCell>
-                 </TableHeaderRow>
-               </thead>
-               <tbody>
-                 {(status === "LoadingFirstPage" || status === "LoadingMore") && paginatedItems.length === 0 && (
-                   <tr>
-                     <td colSpan={4} className="px-6 py-12 text-center text-secondary">
-                       <Loader2 className="w-5 h-5 animate-spin mx-auto opacity-50" />
-                     </td>
-                   </tr>
-                 )}
-
-                 {paginatedItems.length === 0 && status !== "LoadingFirstPage" && status !== "LoadingMore" && (
-                   <tr>
-                     <td colSpan={4} className="px-6 py-12 text-center text-secondary text-[13px]">
-                        No scores recorded. Be the first to enter the matrix.
-                     </td>
-                   </tr>
-                 )}
-
-                 {paginatedItems.map((entry, index) => {
-                   const globalIndex = (currentPage - 1) * itemsPerPage + index;
+             rowKey={(entry) => entry._id}
+             variant="bare"
+             headerVariant="strip"
+             empty={{
+               icon: <Trophy className="w-8 h-8 text-muted/30" />,
+               label: "No scores recorded. Be the first to enter the matrix.",
+             }}
+             footer={{
+               mode: "paged",
+               page: currentPage,
+               totalPages,
+               totalCount: totalItems,
+               pageSize: itemsPerPage,
+               isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+               onPageChange: handlePageChange,
+               labels: {
+                 empty: "No attempts yet",
+                 showing: (start, end, total) => `Showing ${start} to ${end} of ${total} attempts`,
+               },
+             }}
+             columns={[
+               {
+                 key: "rank",
+                 header: "Rank",
+                 className: "w-[80px]",
+                 cell: (entry) => {
+                   const globalIndex = paginatedItems.indexOf(entry) + (currentPage - 1) * itemsPerPage;
                    return (
-                     <tr key={entry._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-foreground/[0.03] transition-colors">
-                       <td className="px-4 py-3">
-                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold ${globalIndex === 0 ? "bg-amber-400/20 text-amber-500" : globalIndex === 1 ? "bg-slate-300/20 text-slate-400" : globalIndex === 2 ? "bg-amber-700/20 text-amber-600" : "bg-foreground/5 text-foreground/70"}`}>
-                           {globalIndex === 0 ? <Crown className="w-4 h-4" /> : `#${globalIndex + 1}`}
-                         </div>
-                       </td>
-                       <td className="px-4 py-3">
-                         <div className="flex items-center gap-3">
-                           {entry.userAvatar ? (
-                             <Image
-                               src={entry.userAvatar}
-                               alt={entry.userName || "Player avatar"}
-                               width={32}
-                               height={32}
-                               unoptimized
-                               className="w-8 h-8 rounded-full object-cover shadow-sm bg-background border border-border-dim"
-                             />
-                           ) : (
-                             <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-bold text-[12px]">
-                               {entry.userName?.charAt(0).toUpperCase() || "?"}
-                             </div>
-                           )}
-                           <span className="text-[14px] font-medium text-foreground">{entry.userName}</span>
-                         </div>
-                       </td>
-                       <td className="px-4 py-3 text-right">
-                         <span className="text-[16px] font-mono font-bold text-brand tracking-widest">{entry.score.toLocaleString()}</span>
-                       </td>
-                       <td className="px-4 py-3 text-right">
-                         <div className="flex items-center justify-end gap-1.5 text-secondary">
-                           <Clock className="w-3.5 h-3.5" />
-                           <span className="text-[12px] tracking-wide">
-                             {new Date(entry.playedAt).toLocaleDateString()}
-                           </span>
-                         </div>
-                       </td>
-                     </tr>
+                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold ${globalIndex === 0 ? "bg-amber-400/20 text-amber-500" : globalIndex === 1 ? "bg-slate-300/20 text-slate-400" : globalIndex === 2 ? "bg-amber-700/20 text-amber-600" : "bg-foreground/5 text-foreground/70"}`}>
+                       {globalIndex === 0 ? <Crown className="w-4 h-4" /> : `#${globalIndex + 1}`}
+                     </div>
                    );
-                 })}
-               </tbody>
-           </TableShell>
+                 },
+               },
+               {
+                 key: "user",
+                 header: "User",
+                 cell: (entry) => (
+                   <div className="flex items-center gap-3">
+                     {entry.userAvatar ? (
+                       <Image
+                         src={entry.userAvatar}
+                         alt={entry.userName || "Player avatar"}
+                         width={32}
+                         height={32}
+                         unoptimized
+                         className="w-8 h-8 rounded-full object-cover shadow-sm bg-background border border-border-dim"
+                       />
+                     ) : (
+                       <div className="w-8 h-8 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-bold text-[12px]">
+                         {entry.userName?.charAt(0).toUpperCase() || "?"}
+                       </div>
+                     )}
+                     <span className="text-[14px] font-medium text-foreground">{entry.userName}</span>
+                   </div>
+                 ),
+               },
+               {
+                 key: "score",
+                 header: "Score",
+                 align: "right",
+                 cell: (entry) => (
+                   <span className="text-[16px] font-mono font-bold text-brand tracking-widest">
+                     {entry.score.toLocaleString()}
+                   </span>
+                 ),
+               },
+               {
+                 key: "timestamp",
+                 header: "Timestamp",
+                 align: "right",
+                 cell: (entry) => (
+                   <div className="flex items-center justify-end gap-1.5 text-secondary">
+                     <Clock className="w-3.5 h-3.5" />
+                     <span className="text-[12px] tracking-wide">
+                       {new Date(entry.playedAt).toLocaleDateString()}
+                     </span>
+                   </div>
+                 ),
+               },
+             ]}
+           />
           </div>
         )}
 

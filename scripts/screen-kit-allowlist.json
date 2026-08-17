@@ -37,7 +37,6 @@
     "src/app/(dashboard)/admin/companies/page.tsx",
     "src/app/(dashboard)/admin/directory/page.tsx",
     "src/app/(dashboard)/admin/governance/approvals/page.tsx",
-    "src/app/(dashboard)/admin/governance/audit-trail/page.tsx",
     "src/app/(dashboard)/admin/health/page.tsx",
     "src/app/(dashboard)/admin/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
@@ -52,7 +51,6 @@
     "src/app/(dashboard)/app/[workspace]/import-data/page.tsx",
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx",
     "src/app/(dashboard)/app/[workspace]/spreadsheet-import/page.tsx",
-    "src/app/(dashboard)/app/arcade/ronins-run/page.tsx",
     "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
     "src/app/(dashboard)/app/settings/team/page.tsx",
     "src/app/(dashboard)/app/tasks/page.tsx"

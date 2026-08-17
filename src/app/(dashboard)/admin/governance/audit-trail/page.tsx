@@ -9,15 +9,8 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
@@ -118,7 +111,10 @@ export default function AuditTrailPage() {
   const canLoadMore = status === "CanLoadMore";
   const totalPages = loadedPages + (canLoadMore ? 1 : 0);
   const start = (page - 1) * TABLE_PAGE_SIZE;
-  const visible = results.slice(start, start + TABLE_PAGE_SIZE);
+  // Named so the shared table can infer what a row is; the paginated query
+  // hands these back untyped.
+  type AuditRow = (typeof results)[number];
+  const visible: AuditRow[] = results.slice(start, start + TABLE_PAGE_SIZE);
 
   const goToPage = (next: number) => {
     if (next > loadedPages && canLoadMore) loadMore(TABLE_PAGE_SIZE);
@@ -307,113 +303,120 @@ export default function AuditTrailPage() {
         </p>
       ) : null}
 
-      <TableShell
+      <DataTable<AuditRow>
+        rows={loading ? undefined : visible}
+        rowKey={(log) => log._id}
         minWidthClassName="min-w-[1180px]"
-        footer={
-          <PaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={results.length}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={status === "LoadingMore" || loading}
-            onPageChange={goToPage}
-            labels={{
-              previous: t("pagination.previous"),
-              next: t("pagination.next"),
-              empty: t("empty"),
-              // No "of M" in either label. There is no honest total without
-              // counting every matching row on every page turn.
-              page: (current) => t("pagination.page", { page: current }),
-              showing: (from, to) => t("showing", { from, to }),
-            }}
-          />
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.action")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.who")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.change")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.target")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.workspace")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("columns.when")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {loading ? (
-            <TableLoadingRow colSpan={6} />
-          ) : visible.length === 0 ? (
-            /* An empty trail shows nothing. This table used to invent four
-               entries when it had none — including a user deletion for a
-               "TOS Violation" against an account that never existed. */
-            <TableEmptyRow
-              colSpan={6}
-              icon={<History className="w-5 h-5" />}
-              label={t("empty")}
-            />
-          ) : (
-            visible.map((log) => (
-              <tr
-                key={log._id}
-                onClick={() => router.push(`/admin/governance/audit-trail/${log._id}`)}
-                className="group cursor-pointer border-b border-border-dim/50 last:border-0 transition-colors hover:bg-foreground/[0.02]"
-              >
-                <td className="px-4 py-3">
-                  <span className="rounded-[4px] border border-border-dim bg-foreground/5 px-2 py-1 font-mono text-[10px] tracking-widest text-foreground/80">
-                    {log.actionType}
+        onRowClick={(log) => router.push(`/admin/governance/audit-trail/${log._id}`)}
+        /* An empty trail shows nothing. This table used to invent four entries
+           when it had none — including a user deletion for a "TOS Violation"
+           against an account that never existed. */
+        empty={{ icon: <History className="w-5 h-5" />, label: t("empty") }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages,
+          totalCount: results.length,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: status === "LoadingMore" || loading,
+          onPageChange: goToPage,
+          labels: {
+            previous: t("pagination.previous"),
+            next: t("pagination.next"),
+            empty: t("empty"),
+            // No "of M" in either label. There is no honest total without
+            // counting every matching row on every page turn.
+            page: (current) => t("pagination.page", { page: current }),
+            showing: (from, to) => t("showing", { from, to }),
+          },
+        }}
+        columns={[
+          {
+            key: "action",
+            header: t("columns.action"),
+            cell: (log) => (
+              <span className="rounded-[4px] border border-border-dim bg-foreground/5 px-2 py-1 font-mono text-[10px] tracking-widest text-foreground/80">
+                {log.actionType}
+              </span>
+            ),
+          },
+          {
+            key: "who",
+            header: t("columns.who"),
+            /* Held on one line. Now that the change column carries a sentence
+               rather than two words, the name is what the table chooses to
+               wrap, and a column of broken names makes the whole trail look
+               like it is struggling. */
+            className: "whitespace-nowrap",
+            cell: (log) => <span className="text-[12px] text-secondary">{log.actorName}</span>,
+          },
+          {
+            key: "change",
+            header: t("columns.change"),
+            cell: (log) =>
+              log.change ? (
+                <span className="text-[12px] text-foreground">{log.change}</span>
+              ) : (
+                /* The entry holds the action and genuinely nothing else. Rare
+                   now that this column reads whatever the record does hold
+                   rather than only before-and-after values, and still the
+                   honest limit of what such an entry knows. */
+                <span className="text-[12px] text-muted">{t("noChangeRecorded")}</span>
+              ),
+          },
+          {
+            key: "target",
+            header: t("columns.target"),
+            /* What it was done to, by name where the record still exists.
+               Answering "what happened to this agent" meant opening rows one at
+               a time, and an identifier is not an answer. */
+            cell: (log) => (
+              <span className="text-[12px] text-secondary">
+                {log.targetName ?? (
+                  /* Two different silences, and they are not the same fact. An
+                     entry with no target at all had nothing done to it; one
+                     carrying an identifier that resolves to no name is pointing
+                     at something deleted, or at a marker like "USER_SESSION"
+                     that was never a record. The identifier itself stays in the
+                     export, where it is evidence, and off the screen, where it
+                     is noise. */
+                  <span className="text-muted">
+                    {log.entityId ? t("targetNotNamed") : t("noTarget")}
                   </span>
-                </td>
-                {/* Held on one line. Now that the change column carries a
-                    sentence rather than two words, the name is what the table
-                    chooses to wrap, and a column of broken names makes the
-                    whole trail look like it is struggling. */}
-                <td className="px-4 py-3 text-[12px] text-secondary whitespace-nowrap">{log.actorName}</td>
-                <td className="px-4 py-3 text-[12px]">
-                  {log.change ? (
-                    <span className="text-foreground">{log.change}</span>
-                  ) : (
-                    /* The entry holds the action and genuinely nothing else.
-                       Rare now that this column reads whatever the record does
-                       hold rather than only before-and-after values, and still
-                       the honest limit of what such an entry knows. */
-                    <span className="text-muted">{t("noChangeRecorded")}</span>
-                  )}
-                </td>
-                {/* What it was done to, by name where the record still exists.
-                    Answering "what happened to this agent" meant opening rows
-                    one at a time, and an identifier is not an answer. */}
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {log.targetName ?? (
-                    /* Two different silences, and they are not the same fact.
-                       An entry with no target at all had nothing done to it;
-                       one carrying an identifier that resolves to no name is
-                       pointing at something deleted, or at a marker like
-                       "USER_SESSION" that was never a record. The identifier
-                       itself stays in the export, where it is evidence, and off
-                       the screen, where it is noise. */
-                    <span className="text-muted">
-                      {log.entityId ? t("targetNotNamed") : t("noTarget")}
-                    </span>
-                  )}
-                </td>
-                {/* Which client this belonged to. Without it there was no way
-                    to tell one workspace's activity from another's. */}
-                <td className="px-4 py-3 text-[12px] text-secondary whitespace-nowrap">
-                  {log.companyName ?? <span className="text-muted">{t("noWorkspace")}</span>}
-                </td>
-                <td className="px-4 py-3 text-right text-[12px] text-secondary whitespace-nowrap">
-                  {new Date(log.timestamp).toLocaleString(undefined, {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+                )}
+              </span>
+            ),
+          },
+          {
+            key: "workspace",
+            header: t("columns.workspace"),
+            /* Which client this belonged to. Without it there was no way to
+               tell one workspace's activity from another's. */
+            className: "whitespace-nowrap",
+            cell: (log) => (
+              <span className="text-[12px] text-secondary">
+                {log.companyName ?? <span className="text-muted">{t("noWorkspace")}</span>}
+              </span>
+            ),
+          },
+          {
+            key: "when",
+            header: t("columns.when"),
+            align: "right",
+            className: "whitespace-nowrap",
+            cell: (log) => (
+              <span className="text-[12px] text-secondary">
+                {new Date(log.timestamp).toLocaleString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
