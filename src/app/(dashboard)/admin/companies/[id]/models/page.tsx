@@ -6,11 +6,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import {
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
   describeModelUseCase,
   formatModelDisplayName,
@@ -138,53 +134,86 @@ export default function CompanyModelDefaultsPage() {
       {/* The standard admin table, as the platform Defaults screen and the Model
           Catalogue use. This was a hand-rolled grid with its own header styling
           and a spinner that blanked the whole page before anything drew. */}
-      <TableShell minWidthClassName="min-w-[920px]">
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="w-[32%] px-4 py-3 font-medium">Job</th>
-            <th className="w-[22%] px-4 py-3 font-medium">Platform default</th>
-            <th className="w-[30%] px-4 py-3 font-medium">This company</th>
-            <th className="w-[16%] px-4 py-3 text-right font-medium">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={4} />
-          ) : rows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={4}
-              icon={<Cpu className="h-8 w-8 text-muted/30" />}
-              label="No jobs to configure yet"
-            />
-          ) : (
-            rows.map((row) => {
+      <DataTable
+        rows={isLoading ? undefined : rows}
+        rowKey={(row) => row.useCase}
+        minWidthClassName="min-w-[920px]"
+        empty={{ icon: <Cpu className="h-8 w-8 text-muted/30" />, label: "No jobs to configure yet" }}
+        footer={{
+          mode: "paged",
+          page: 1,
+          totalPages: 1,
+          totalCount: rows.length,
+          pageSize: Math.max(rows.length, 1),
+          isLoading,
+          onPageChange: () => {},
+          labels: {
+            empty: "No jobs to configure yet",
+            showing: (_start, _end, total) => `${total} job${total === 1 ? "" : "s"}`,
+          },
+        }}
+        columns={[
+          {
+            key: "job",
+            header: "Job",
+            className: "w-[32%]",
+            cell: (row) => (
+              <>
+                <div className="text-[13px] font-semibold text-foreground">
+                  {formatModelTag(row.useCase)}
+                </div>
+                {/* What the job is, in a sentence. The rows used to read
+                    "Router", "Title", "Transcription" with nothing to say what
+                    any of them were. */}
+                <div className="mt-0.5 text-[12px] leading-relaxed text-secondary">
+                  {describeModelUseCase(row.useCase)}
+                </div>
+                {describeUseCaseProviderLimit(row.useCase) && (
+                  <div className="mt-1 text-[11px] leading-relaxed text-muted">
+                    {describeUseCaseProviderLimit(row.useCase)}
+                  </div>
+                )}
+              </>
+            ),
+          },
+          {
+            key: "platformDefault",
+            header: "Platform default",
+            className: "w-[22%]",
+            cell: (row) =>
+              row.globalDefault ? (
+                <>
+                  <div className="text-[13px] text-foreground">
+                    {describeModel(row.globalDefault.modelId, row.globalDefault.model)}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted">
+                    {getProviderDisplayName(row.globalDefault.providerKey, providerNameByKey)}
+                  </div>
+                </>
+              ) : (
+                <span className="text-[13px] text-[#f59e0b]">Not set</span>
+              ),
+          },
+          {
+            key: "companyChoice",
+            header: "This company",
+            className: "w-[30%]",
+            cell: (row) => {
               // Same rule as the platform Defaults screen: a company can only
               // override a job with a model whose provider can actually do it.
               const candidates = activeModels.filter((model) =>
                 modelSupportsUseCase(model, row.useCase)
                 && canProviderServeUseCase(model.providerKey, row.useCase)
               );
-              const providerLimit = describeUseCaseProviderLimit(row.useCase);
               const isSaving = savingUseCase === row.useCase;
 
               /**
                * An override can point at a model this row would not offer — a
-               * model switched off, or a provider narrowed by a later sync.
-               *
-               * When that happens the dropdown's value matches no option, so a
-               * browser silently displays the *first* one — "Follow the platform
-               * default" — while the row is still overridden. The screen
-               * contradicted itself, and touching the dropdown at all fired a
-               * change with an empty value and destroyed the setting.
-               *
-               * So the model that is actually set is always an option, named and
-               * marked with why it is not running.
-               *
-               * The name comes from the row's own summary rather than the model
-               * list, because the commonest way to stand a row up is to switch
-               * the model off — and a switched-off model is not in that list at
-               * all. Reading it from there would have left this fix covering
-               * only the rarer case.
+               * model switched off, or a provider narrowed by a later sync. The
+               * dropdown's value would then match no option, so a browser
+               * silently shows the *first* one while the row is still
+               * overridden. So the model that is actually set is always an
+               * option, named and marked with why it is not running.
                */
               const selectedModelId = row.companyDefault?.modelId ?? "";
               const isStranded = Boolean(selectedModelId)
@@ -201,6 +230,55 @@ export default function CompanyModelDefaultsPage() {
                 ? "is switched off"
                 : "cannot do this job";
 
+              return (
+                <>
+                  <select
+                    value={selectedModelId}
+                    disabled={isSaving}
+                    aria-label={`${formatModelTag(row.useCase)} model for this company`}
+                    onChange={(event) => handleChange(row.useCase, event.target.value)}
+                    className={cn(
+                      "h-9 w-full min-w-0 rounded-[8px] border bg-card px-3 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
+                      isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
+                    )}
+                  >
+                    {/* Also the way to clear an override. There used to be a
+                        second control beside this one doing the same thing. */}
+                    <option value="">Follow the platform default</option>
+                    {strandedModel && (
+                      <option value={strandedModel.modelId}>
+                        {formatModelDisplayName(strandedModel)} — {strandedReason}
+                      </option>
+                    )}
+                    {candidates.map((model) => (
+                      <option key={model.modelId} value={model.modelId}>
+                        {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
+                      </option>
+                    ))}
+                  </select>
+                  {isStranded && (
+                    <div className="mt-1 text-[11px] leading-relaxed text-[#f59e0b]">
+                      This model {strandedReason}, so the work falls back to the platform
+                      default. Choose another, or follow the platform default.
+                    </div>
+                  )}
+                </>
+              );
+            },
+          },
+          {
+            key: "price",
+            header: "Price",
+            align: "right",
+            className: "w-[16%]",
+            cell: (row) => {
+              const candidates = activeModels.filter((model) =>
+                modelSupportsUseCase(model, row.useCase)
+                && canProviderServeUseCase(model.providerKey, row.useCase)
+              );
+              const selectedModelId = row.companyDefault?.modelId ?? "";
+              const isStranded = Boolean(selectedModelId)
+                && !candidates.some((model) => model.modelId === selectedModelId);
               // What this company will actually run: its own choice where it has
               // one, otherwise the platform's. A stranded override runs neither,
               // so the price belongs to the platform default it falls through to.
@@ -208,89 +286,20 @@ export default function CompanyModelDefaultsPage() {
                 ?? row.globalDefault?.modelId
                 ?? "";
 
-              return (
-                <tr key={row.useCase} className="border-b border-border-dim/50">
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-[13px] font-semibold text-foreground">
-                      {formatModelTag(row.useCase)}
-                    </div>
-                    {/* What the job is, in a sentence. The rows used to read
-                        "Router", "Title", "Transcription" with nothing to say
-                        what any of them were. */}
-                    <div className="mt-0.5 text-[12px] leading-relaxed text-secondary">
-                      {describeModelUseCase(row.useCase)}
-                    </div>
-                    {providerLimit && (
-                      <div className="mt-1 text-[11px] leading-relaxed text-muted">{providerLimit}</div>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 align-top">
-                    {row.globalDefault ? (
-                      <>
-                        <div className="text-[13px] text-foreground">
-                          {describeModel(row.globalDefault.modelId, row.globalDefault.model)}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-muted">
-                          {getProviderDisplayName(row.globalDefault.providerKey, providerNameByKey)}
-                        </div>
-                      </>
-                    ) : (
-                      <span className="text-[13px] text-[#f59e0b]">Not set</span>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 align-top">
-                    <select
-                      value={selectedModelId}
-                      disabled={isSaving}
-                      aria-label={`${formatModelTag(row.useCase)} model for this company`}
-                      onChange={(event) => handleChange(row.useCase, event.target.value)}
-                      className={cn(
-                        "h-9 w-full min-w-0 rounded-[8px] border bg-card px-3 text-[13px] text-foreground outline-none transition-all focus:border-brand/50 disabled:opacity-60",
-                        isStranded ? "border-[#f59e0b]/50" : "border-border-dim"
-                      )}
-                    >
-                      {/* Also the way to clear an override. There used to be a
-                          second control beside this one doing the same thing. */}
-                      <option value="">Follow the platform default</option>
-                      {strandedModel && (
-                        <option value={strandedModel.modelId}>
-                          {formatModelDisplayName(strandedModel)} — {strandedReason}
-                        </option>
-                      )}
-                      {candidates.map((model) => (
-                        <option key={model.modelId} value={model.modelId}>
-                          {formatModelDisplayName(model)} · {getProviderDisplayName(model.providerKey, providerNameByKey)}
-                        </option>
-                      ))}
-                    </select>
-                    {isStranded && (
-                      <div className="mt-1 text-[11px] leading-relaxed text-[#f59e0b]">
-                        This model {strandedReason}, so the work falls back to the platform
-                        default. Choose another, or follow the platform default.
-                      </div>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 text-right align-top">
-                    {isSaving ? (
-                      <Loader2 className="inline-block h-4 w-4 animate-spin text-brand" />
-                    ) : effectiveModelId ? (
-                      <span className="text-[12px] text-secondary">{describeCost(effectiveModelId)}</span>
-                    ) : (
-                      // Only the exception is worth saying. A pill reading
-                      // "Inherited" on every row cost attention and carried no
-                      // information the dropdown beside it did not already give.
-                      <span className="text-[12px] text-[#f59e0b]">Not set</span>
-                    )}
-                  </td>
-                </tr>
+              return savingUseCase === row.useCase ? (
+                <Loader2 className="inline-block h-4 w-4 animate-spin text-brand" />
+              ) : effectiveModelId ? (
+                <span className="text-[12px] text-secondary">{describeCost(effectiveModelId)}</span>
+              ) : (
+                // Only the exception is worth saying. A pill reading "Inherited"
+                // on every row cost attention and carried no information the
+                // dropdown beside it did not already give.
+                <span className="text-[12px] text-[#f59e0b]">Not set</span>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -4,20 +4,12 @@ import { api } from "@/convex/_generated/api";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { History, ShieldQuestion } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-const COLUMN_COUNT = 5;
 
 function statusToneClass(status: string) {
   if (status === "FAILED") return "text-red-500 bg-red-500/10 border-red-500/20";
@@ -48,74 +40,77 @@ export default function WorkflowExecutionsPage() {
         description={t("description")}
       />
 
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : executions}
+        rowKey={(execution) => execution._id}
         minWidthClassName="min-w-[900px]"
-        footer={(
-          <PaginationFooter
-            page={runs.page}
-            totalPages={runs.totalPages}
-            totalCount={runs.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={runs.isBusy}
-            onPageChange={runs.goToPage}
-            labels={{ empty: t("empty") }}
-          />
-        )}
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.workflow")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.status")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.trigger")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.startedBy")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.started")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={COLUMN_COUNT} />
-          ) : executions.length === 0 ? (
-            <TableEmptyRow
-              colSpan={COLUMN_COUNT}
-              icon={<History className="w-8 h-8 text-muted/30" />}
-              label={t("empty")}
-            />
-          ) : (
-            executions.map((execution) => (
-              <tr key={execution._id} className="border-b border-border-dim/40 last:border-0 hover:bg-foreground/[0.02]">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/workflows/executions/${execution._id}`}
-                    className="text-[13px] font-medium text-foreground hover:text-brand hover:underline"
-                  >
-                    {execution.workflowName}
-                  </Link>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${statusToneClass(execution.status)}`}>
-                      {t(`status.${execution.status}`)}
-                    </span>
-                    {/* The one thing on this list that needs acting on rather than
-                        reading, so it is on the row and not behind a click. */}
-                    {execution.awaitingApprovalNodeId && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border text-[#f59e0b] bg-[#f59e0b]/10 border-[#f59e0b]/20">
-                        <ShieldQuestion className="w-3 h-3" />
-                        {t("awaitingApproval")}
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-[12px] text-secondary">{execution.triggerType}</td>
-                <td className="px-4 py-3 text-[12px] text-secondary">{execution.startedByName}</td>
-                <td className="px-4 py-3 text-[12px] text-muted whitespace-nowrap">
-                  {formatDateTime(execution.startedAt)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+        empty={{ icon: <History className="w-8 h-8 text-muted/30" />, label: t("empty") }}
+        footer={{
+          mode: "paged",
+          page: runs.page,
+          totalPages: runs.totalPages,
+          totalCount: runs.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: runs.isBusy,
+          onPageChange: runs.goToPage,
+          labels: { empty: t("empty") },
+        }}
+        columns={[
+          {
+            key: "workflow",
+            header: t("columns.workflow"),
+            cell: (execution) => (
+              <Link
+                href={`/admin/workflows/executions/${execution._id}`}
+                className="text-[13px] font-medium text-foreground hover:text-brand hover:underline"
+              >
+                {execution.workflowName}
+              </Link>
+            ),
+          },
+          {
+            key: "status",
+            header: t("columns.status"),
+            cell: (execution) => (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${statusToneClass(execution.status)}`}>
+                  {t(`status.${execution.status}`)}
+                </span>
+                {/* The one thing on this list that needs acting on rather than
+                    reading, so it is on the row and not behind a click. */}
+                {execution.awaitingApprovalNodeId && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border text-[#f59e0b] bg-[#f59e0b]/10 border-[#f59e0b]/20">
+                    <ShieldQuestion className="w-3 h-3" />
+                    {t("awaitingApproval")}
+                  </span>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "trigger",
+            header: t("columns.trigger"),
+            cell: (execution) => (
+              <span className="text-[12px] text-secondary">{execution.triggerType}</span>
+            ),
+          },
+          {
+            key: "startedBy",
+            header: t("columns.startedBy"),
+            cell: (execution) => (
+              <span className="text-[12px] text-secondary">{execution.startedByName}</span>
+            ),
+          },
+          {
+            key: "started",
+            header: t("columns.started"),
+            className: "whitespace-nowrap",
+            cell: (execution) => (
+              <span className="text-[12px] text-muted">{formatDateTime(execution.startedAt)}</span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
