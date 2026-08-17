@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { Save, Loader2, PoundSterling, Blocks } from "lucide-react";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 
 
 export default function CompanyOverviewPage() {
@@ -86,41 +87,29 @@ export default function CompanyOverviewPage() {
 
         <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="flex flex-col gap-2.5">
-                <label className="text-[12px] font-medium text-secondary tracking-widest uppercase">Company Name</label>
-                <input 
-                  type="text"
-                  value={nameVal}
-                  onChange={(e) => setNameVal(e.target.value)}
-                  className="w-full py-2.5 px-4 bg-background/50 border border-border-dim rounded-[10px] text-[14px] text-foreground focus:border-brand/40 outline-none transition-all"
-                  placeholder="e.g. ACME Inc"
-                />
-              </div>
+              <Field
+                label="Company name"
+                value={nameVal}
+                onChange={(e) => setNameVal(e.target.value)}
+                placeholder="For example: ACME Inc"
+              />
 
-              <div className="flex flex-col gap-2.5">
-                <label className="text-[12px] font-medium text-secondary tracking-widest uppercase">Company Tagline</label>
-                <input 
-                  type="text"
-                  value={descVal}
-                  onChange={(e) => setDescVal(e.target.value)}
-                  className="w-full py-2.5 px-4 bg-background/50 border border-border-dim rounded-[10px] text-[14px] text-foreground focus:border-brand/40 outline-none transition-all"
-                  placeholder="e.g. Manage workspace settings."
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-secondary tracking-widest uppercase">Detailed Profile Overview</label>
-                <span className="text-[11px] text-secondary/60">Visible to team members for business context</span>
-              </div>
-              <textarea 
-                value={overviewVal}
-                onChange={(e) => setOverviewVal(e.target.value)}
-                className="w-full h-auto min-h-[220px] p-4 bg-background/50 border border-border-dim rounded-[12px] text-[14px] text-foreground focus:border-brand/40 outline-none transition-all resize-y font-mono custom-scrollbar"
-                placeholder="Enter the company description, mission, structure, or massive background knowledge here..."
+              <Field
+                label="One-line description"
+                value={descVal}
+                onChange={(e) => setDescVal(e.target.value)}
+                placeholder="For example: Manage workspace settings."
               />
             </div>
+
+            <TextAreaField
+              label="About this company"
+              hint="Your team can see this. It gives the assistant background to work from."
+              value={overviewVal}
+              onChange={(e) => setOverviewVal(e.target.value)}
+              className="min-h-[220px] resize-y"
+              placeholder="What the company does, who it serves, how it is organised — anything worth the assistant knowing."
+            />
 
             {isSuperAdmin && (
               <div className="flex flex-col gap-2.5 mt-2 pt-4 border-t border-border-dim/50">

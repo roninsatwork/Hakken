@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { Field } from "@/src/ui/components/screens/Field";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
@@ -202,40 +203,31 @@ export default function ApiKeysPage() {
               </select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label htmlFor="api-key-name" className="text-[12px] font-medium text-secondary">What is it for?</label>
-              <input
-                id="api-key-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Website contact form"
-                className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
-              />
-            </div>
+            <Field
+              id="api-key-name"
+              label="What is it for?"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Website contact form"
+            />
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="api-key-rate-limit" className="text-[12px] font-medium text-secondary">Requests a minute</label>
-                <input
-                  id="api-key-rate-limit"
-                  type="number"
-                  min={1}
-                  max={600}
-                  value={requestsPerMinute}
-                  onChange={(event) => setRequestsPerMinute(Number(event.target.value))}
-                  className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="api-key-expires-at" className="text-[12px] font-medium text-secondary">Stops working on</label>
-                <input
-                  id="api-key-expires-at"
-                  type="datetime-local"
-                  value={expiresAt}
-                  onChange={(event) => setExpiresAt(event.target.value)}
-                  className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none focus:border-brand/50"
-                />
-              </div>
+              <Field
+                id="api-key-rate-limit"
+                label="Requests a minute"
+                type="number"
+                min={1}
+                max={600}
+                value={requestsPerMinute}
+                onChange={(event) => setRequestsPerMinute(Number(event.target.value))}
+              />
+              <Field
+                id="api-key-expires-at"
+                label="Stops working on"
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(event) => setExpiresAt(event.target.value)}
+              />
             </div>
           </div>
 
@@ -389,16 +381,13 @@ export default function ApiKeysPage() {
           <p className="text-[13px] leading-relaxed text-secondary">
             Anything using <span className="text-foreground">{revokeTarget?.name}</span> stops working straight away. This cannot be undone — you would need to create a new key.
           </p>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="api-key-revoke-reason" className="text-[12px] font-medium text-secondary">Why? (optional)</label>
-            <input
-              id="api-key-revoke-reason"
-              value={revokeReason}
-              onChange={(event) => setRevokeReason(event.target.value)}
-              placeholder="No longer needed"
-              className="h-[46px] w-full rounded-[12px] border border-border-dim bg-black/20 px-4 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-brand/50"
-            />
-          </div>
+          <Field
+            id="api-key-revoke-reason"
+            label="Why? (optional)"
+            value={revokeReason}
+            onChange={(event) => setRevokeReason(event.target.value)}
+            placeholder="No longer needed"
+          />
           {revokeAction.error ? <p className="text-[13px] text-rose-300">{revokeAction.error}</p> : null}
           <div className="flex justify-end gap-2">
             <button
