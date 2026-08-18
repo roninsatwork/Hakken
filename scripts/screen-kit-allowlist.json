@@ -20,7 +20,6 @@
     "src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
     "src/app/(dashboard)/admin/super-admins/[id]/page.tsx",
-    "src/app/(dashboard)/admin/users/[id]/page.tsx",
     "src/app/(dashboard)/app/[workspace]/customers/page.tsx",
     "src/app/(dashboard)/app/[workspace]/import-data/page.tsx",
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx",

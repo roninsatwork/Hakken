@@ -66,6 +66,8 @@ describe("UserProfilePage", () => {
 
     render(<UserProfilePage />);
 
-    expect(screen.getByText("admin.users.profilePage.logins.empty")).toBeInTheDocument();
+    // Said twice on purpose now the table has a numbered footer: once in the
+    // table and once in the footer's count slot.
+    expect(screen.getAllByText("admin.users.profilePage.logins.empty").length).toBeGreaterThan(0);
   });
 });
