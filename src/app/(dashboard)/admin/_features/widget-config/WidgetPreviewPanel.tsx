@@ -17,6 +17,20 @@ type WidgetPreviewPanelProps = {
   themePlaceholder: string;
 };
 
+/**
+ * A picture of the customer's chat widget as it will look on their own website.
+ *
+ * Every box below is hand-written and stays that way. This is not a form on a
+ * Sonae screen — nothing here can be typed into, nothing is submitted, and the
+ * styling is deliberately the widget's own rather than the house one: white
+ * background, grey borders, the customer's brand colour. Putting the shared
+ * field in here would make the preview stop looking like the thing it is
+ * previewing, which is the only job it has.
+ *
+ * The usual reason for the shared field — that it ties a label to a box so a
+ * screen reader can name it — does not apply either. These are disabled
+ * placeholders in a picture, not controls.
+ */
 export function WidgetPreviewPanel({
   activeColor,
   conversationStarters,
