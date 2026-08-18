@@ -156,7 +156,7 @@ export default function SonaeModal({
             </button>
 
             {/* Header Content */}
-            <div className="px-10 pt-12 pb-6 flex flex-col gap-2 relative z-10">
+            <div className="px-6 sm:px-10 pt-12 pb-6 flex flex-col gap-2 relative z-10">
               {title && (
                 <h2 id={titleId} className="text-2xl font-light text-foreground tracking-[0.12em] uppercase opacity-90">
                   {title}
@@ -165,7 +165,7 @@ export default function SonaeModal({
             </div>
 
             {/* Content Body */}
-            <div className="px-10 pb-10 overflow-y-auto max-h-[85vh] custom-scrollbar relative z-10">
+            <div className="px-6 sm:px-10 pb-10 overflow-y-auto max-h-[85vh] custom-scrollbar relative z-10">
               {children}
             </div>
           </motion.div>

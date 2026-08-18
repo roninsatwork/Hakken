@@ -814,6 +814,16 @@ depend on it.
 **Done when:** every shared part passes axe with no violations, and a
 deliberately broken part fails the test.
 
+> **Done 2026-08-18.** `accessibility.test.tsx` runs axe over every part in
+> every state, and ends by handing axe a deliberately nameless input and
+> insisting it objects. It found one fault, present on every list screen: the
+> actions column's header was written as nothing, which names a column of
+> buttons nothing. Fixed in the kit once — a column with no visible heading now
+> carries a hidden name for screen readers. Contrast is the one thing axe
+> cannot judge in jsdom (no layout engine); the house rule that colour is never
+> the only signal stands in for it, and the test says so where the rule is
+> turned off.
+
 *Shrunk from 2.5 days by Phase 3.5: with one table instead of sixty-four
 assemblies, there is one place to fix rather than a sweep.*
 
@@ -826,6 +836,35 @@ assemblies, there is one place to fix rather than a sweep.*
 
 **Done when:** the shared parts are usable at 390px, and the desktop-only list
 is written down rather than implied.
+
+> **Done 2026-08-18.** Most of it was already true: the table scrolls sideways
+> in its shell, the search row wraps, all three footers stack their count above
+> their buttons, and both page headers stack their actions under the title —
+> `smallScreens.test.tsx` now pins each of those arrangements so they cannot
+> quietly unstack. Two things were not true and were fixed in the kit:
+>
+> - **A tab row with a menu in it could not scroll.** The row switched to
+>   `overflow-visible` so the open menu would not be clipped, and a row that
+>   cannot scroll runs off the right edge of a narrow window with the far tabs
+>   unreachable. The menu is now fixed to the viewport and measured from its
+>   tab — the same placement `TableFilterSelect` already used — so the row
+>   scrolls at every width and the menu clips against nothing.
+> - **The modal's side padding was 40px at every width**, which is a fifth of a
+>   phone screen spent on margins. It is 24px below the small breakpoint now
+>   and unchanged above it.
+>
+> **The desktop-only list, written down:**
+>
+> - **The admin side is designed at a 13-inch MacBook (~1280px) and stays
+>   that way.** That is the machine it is used on. This phase makes the parts
+>   *survive* a narrow window — nothing crushed, nothing unreachable — and
+>   deliberately redesigns no admin screen for a phone.
+> - **Reception is a browser kiosk page on the reception machine** — settled
+>   2026-08-15, web-app only, no tablet build.
+> - **The client-facing half under `app/` and the posture studio** are outside
+>   this plan by Anthony's instruction of 2026-08-17, so no judgement about
+>   their phone behaviour is made here.
+> - **The movement demo** is fenced by standing instruction.
 
 ## Phase 6 — A capability can be withheld (2 days)
 
