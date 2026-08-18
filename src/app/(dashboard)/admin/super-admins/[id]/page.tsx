@@ -34,14 +34,6 @@ export default function UserProfilePage() {
     resetKey: searchTerm,
   });
 
-  const parseUserAgent = (ua: string) => {
-    if (ua.includes("Mac OS")) return "macOS Device";
-    if (ua.includes("Windows")) return "Windows PC";
-    if (ua.includes("iPhone")) return "iPhone";
-    if (ua.includes("Android")) return "Android Device";
-    return "Unknown Device";
-  };
-
   // Assume user exists for the deep link
   const user = useQuery(api.users.getUserById, { id: userId });
 
@@ -230,12 +222,7 @@ export default function UserProfilePage() {
                             <MonitorSmartphone className="w-4 h-4 text-foreground/70" />
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-[13px] font-medium text-foreground tracking-wide">{parseUserAgent(login.device)}</span>
-                            {/* The raw browser string stays in the tooltip as evidence; the row
-                                shows what a person can read. */}
-                            <span className="text-[11px] text-muted truncate max-w-[200px]" title={login.device}>
-                              {describeDevice(login.device)}
-                            </span>
+                            <span className="text-[13px] font-medium text-foreground tracking-wide">{describeDevice(login.device)}</span>
                           </div>
                         </div>
                       </td>
@@ -250,7 +237,10 @@ export default function UserProfilePage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-[#10b981]' : 'bg-red-500'}`} />
+                          {/* Blue for a sign-in that worked, amber for one that did not. Green
+                                against red is the one pairing this platform does not use,
+                                and the word beside it carries the answer regardless. */}
+                            <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-info' : 'bg-warning'}`} />
                           <span className="text-[12px] text-secondary font-medium tracking-wide">
                             {login.status}
                           </span>
