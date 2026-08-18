@@ -1,3 +1,4 @@
+import { normalizeEnabledModules } from "./utils/companyModules";
 import type { Doc } from "./_generated/dataModel";
 
 export interface PlanStatus {
@@ -48,6 +49,7 @@ export function buildPlanRecord(args: {
   description?: string;
   messageLimit: number;
   priceGBP: number;
+  grantedModules?: string[];
   isActive: boolean;
 }, now = Date.now()) {
   return {
@@ -55,6 +57,9 @@ export function buildPlanRecord(args: {
     description: args.description,
     messageLimit: args.messageLimit,
     priceGBP: args.priceGBP,
+    // Same laundering as a company's own list: unknown keys stay out of the
+    // database, where they would read as a capability nobody can find.
+    grantedModules: normalizeEnabledModules(args.grantedModules),
     isActive: args.isActive,
     createdAt: now,
   };

@@ -10,6 +10,7 @@ import {
   getPlanStatusFromCompany,
   getPlanStatusFromUser,
 } from "./planService";
+import { normalizeEnabledModules } from "./utils/companyModules";
 import { removeGlobalInventoryPlan, upsertGlobalInventoryPlan } from "./utils/inventoryRollupService";
 import { publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 
@@ -105,6 +106,7 @@ export const createPlan = superAdminMutation({
     description: v.optional(v.string()),
     messageLimit: v.number(),
     priceGBP: v.number(),
+    grantedModules: v.optional(v.array(v.string())),
     isActive: v.boolean(),
   },
   handler: async (ctx, args) => {
@@ -113,6 +115,7 @@ export const createPlan = superAdminMutation({
       description: args.description,
       messageLimit: args.messageLimit,
       priceGBP: args.priceGBP,
+      grantedModules: args.grantedModules,
       isActive: args.isActive,
     }));
     const plan = await ctx.db.get(planId);
@@ -131,11 +134,17 @@ export const updatePlan = superAdminMutation({
     description: v.optional(v.string()),
     messageLimit: v.optional(v.number()),
     priceGBP: v.optional(v.number()),
+    grantedModules: v.optional(v.array(v.string())),
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    await ctx.db.patch(id, {
+      ...updates,
+      ...(updates.grantedModules === undefined
+        ? {}
+        : { grantedModules: normalizeEnabledModules(updates.grantedModules) }),
+    });
     const plan = await ctx.db.get(id);
     if (plan) {
       await upsertGlobalInventoryPlan(ctx, plan);

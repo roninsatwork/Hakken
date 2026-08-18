@@ -29,7 +29,7 @@ import {
   requireSuperAdminReader,
 } from "./authz";
 import { requireActionRole, requireActionUser } from "./actionAuth";
-import { isModuleEnabled } from "./utils/companyModules";
+import { normalizeEnabledModules } from "./utils/companyModules";
 
 /**
  * Tenant-aware function builders.
@@ -255,6 +255,31 @@ export const governanceAction = customAction(action, guardedActionCtx("governanc
  */
 export type ModuleGuard = "authenticated" | "admin" | "adminRead" | "governance";
 
+/**
+ * Every capability this company holds: its own list plus its plan's grants.
+ *
+ * The one place the two sources meet. The company's own `enabledModules` is
+ * the override and only ever adds — a company can be given something its tier
+ * does not include, but not have its tier quietly sold out from under it; to
+ * withhold what a plan grants, move the company to a plan without it. Every
+ * reader — the builders below, the workspace query the sidebar and section
+ * gates share, and the soft public surfaces — goes through here, so no two of
+ * them can answer differently.
+ */
+export async function effectiveModulesFor(
+  ctx: Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">,
+  company: Doc<"companies"> | null | undefined,
+): Promise<string[]> {
+  if (!company) return [];
+
+  const own = normalizeEnabledModules(company.enabledModules);
+  if (!company.planId) return own;
+
+  const plan = await ctx.db.get(company.planId);
+  const granted = normalizeEnabledModules(plan?.grantedModules);
+  return [...new Set([...own, ...granted])];
+}
+
 async function requireModuleOn(
   ctx: QueryCtx | MutationCtx,
   identity: TenantIdentity,
@@ -264,7 +289,8 @@ async function requireModuleOn(
   if (!identity.companyId) return;
 
   const company = await ctx.db.get(identity.companyId);
-  if (!isModuleEnabled(company, moduleKey)) {
+  const held = await effectiveModulesFor(ctx, company);
+  if (!held.includes(moduleKey)) {
     throw new Error("This section is switched off for your workspace");
   }
 }

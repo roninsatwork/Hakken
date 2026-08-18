@@ -7,12 +7,12 @@ import {
   getActiveCompanyId,
   getCurrentUser,
   } from "./authz";
-import { isModuleEnabled } from "./utils/companyModules";
 import { CORE_MODULES } from "./utils/coreModules";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";
 import { publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { effectiveModulesFor } from "./tenantFunctions";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
   const seen = new Set<string>();
@@ -54,7 +54,7 @@ export const getRules = publicQuery({
       const ownCompanyId = getActiveCompanyId(user);
       if (ownCompanyId) {
         const company = await ctx.db.get(ownCompanyId);
-        if (!isModuleEnabled(company, CORE_MODULES.governance)) return [];
+        if (!(await effectiveModulesFor(ctx, company)).includes(CORE_MODULES.governance)) return [];
       }
     }
 

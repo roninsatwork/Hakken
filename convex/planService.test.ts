@@ -109,6 +109,7 @@ describe("plan service helpers", () => {
       description: "For growing teams",
       messageLimit: 1000,
       priceGBP: 99,
+      grantedModules: [],
       isActive: true,
       createdAt: 123,
     });

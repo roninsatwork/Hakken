@@ -222,6 +222,7 @@ function CompanyModulesSection({
 }) {
   const t = useTranslations("admin.companies");
   const setCompanyModules = useMutation(api.companies.setCompanyModules);
+  const planGrants = useQuery(api.companies.getPlanGrantsForCompany, { id: companyId });
 
   const [selected, setSelected] = useState<string[]>(enabled ?? []);
   const [isSaving, setIsSaving] = useState(false);
@@ -273,6 +274,17 @@ function CompanyModulesSection({
           Extra sections only this workspace can see. Switching one on adds it to this
           workspace&apos;s navigation; nobody else is affected.
         </p>
+        {planGrants && (
+          <p className="text-[13px] text-secondary">
+            <span className="font-medium text-foreground">{planGrants.planName}</span>{" "}
+            already switches on{" "}
+            <span className="text-foreground">
+              {planGrants.grantedModules.map((key) => t(`modules.${key}.name`)).join(", ")}
+            </span>
+            {" — those stay on whatever the boxes below say. To withhold one, move the"}
+            {" workspace to a plan without it."}
+          </p>
+        )}
       </div>
 
       <div className="p-6 flex flex-col gap-3">

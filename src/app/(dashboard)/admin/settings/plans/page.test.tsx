@@ -155,6 +155,7 @@ describe("SubscriptionPlansPage", () => {
         messageLimit: 250,
         priceGBP: 19,
         isActive: true,
+        grantedModules: [],
       });
     });
 

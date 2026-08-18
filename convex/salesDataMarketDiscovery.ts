@@ -1,4 +1,5 @@
 import { ConvexError, v } from "convex/values";
+import { effectiveModulesFor } from "./tenantFunctions";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -19,7 +20,6 @@ import {
   truncateReasoning,
 } from "./salesDataResearchService";
 import { getBuiltInToolConnector } from "./toolConnectorDefinitions";
-import { isModuleEnabled } from "./utils/companyModules";
 import { SALES_DATA_MODULE_KEY } from "./utils/salesDataModule";
 
 const MARKET_DISCOVERY_CONNECTOR_KEY = "sales-market-discovery";
@@ -81,7 +81,7 @@ async function assertSalesDataCompany(
   companyId: Id<"companies">
 ) {
   const company = await ctx.db.get(companyId);
-  if (!isModuleEnabled(company, SALES_DATA_MODULE_KEY)) {
+  if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
     throw new Error("Sales Data is not enabled for this workspace.");
   }
 }

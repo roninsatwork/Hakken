@@ -795,7 +795,9 @@
       "errors": {
         "saveFailed": "Failed to save plan.",
         "deleteFailed": "Failed to delete plan. Ensure it is not assigned."
-      }
+      },
+      "grantsLabel": "What this plan switches on",
+      "grantsHint": "Every company on this plan gets these, plus anything switched on for it directly."
     },
     "companyDetails": {
       "title": "Dashboard",

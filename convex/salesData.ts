@@ -10,7 +10,7 @@ import {
   type TenantMutationCtx,
   type TenantQueryCtx,
 } from "./tenantFunctions";
-import { isModuleEnabled } from "./utils/companyModules";
+import { effectiveModulesFor } from "./tenantFunctions";
 import { SALES_DATA_MODULE_KEY } from "./utils/salesDataModule";
 import { getActiveCompanyId } from "./authz";
 
@@ -47,7 +47,7 @@ export async function requireSalesDataCompany(
   const companyId = requireTenant(ctx, MODULE_DISABLED_MESSAGE);
   const company = await ctx.db.get(companyId);
 
-  if (!isModuleEnabled(company, SALES_DATA_MODULE_KEY)) {
+  if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
     throw new Error(MODULE_DISABLED_MESSAGE);
   }
 
@@ -101,7 +101,7 @@ export const getSectionOverview = tenantQuery({
     }
 
     const company = await ctx.db.get(companyId);
-    if (!isModuleEnabled(company, SALES_DATA_MODULE_KEY)) {
+    if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
       return { enabled: false as const, companyName: null, currentImport: null };
     }
 
@@ -694,7 +694,7 @@ export const startImportInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.companyId);
-    if (!isModuleEnabled(company, SALES_DATA_MODULE_KEY)) {
+    if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) {
       throw new Error(MODULE_DISABLED_MESSAGE);
     }
 
@@ -1144,7 +1144,7 @@ export const getImportContextInternal = internalQuery({
     if (!companyId) return null;
 
     const company = await ctx.db.get(companyId);
-    if (!isModuleEnabled(company, SALES_DATA_MODULE_KEY)) return null;
+    if (!(await effectiveModulesFor(ctx, company)).includes(SALES_DATA_MODULE_KEY)) return null;
 
     return { companyId };
   },

@@ -2,8 +2,8 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { moduleMutation, moduleQuery, publicQuery, superAdminQuery } from "./tenantFunctions";
+import { effectiveModulesFor } from "./tenantFunctions";
 import { PROPERTIES_MODULE_KEY } from "./utils/coreModules";
-import { isModuleEnabled } from "./utils/companyModules";
 
 function getPropertyScope(user: Doc<"users">) {
   const activeCompanyId = getActiveCompanyId(user);
@@ -158,7 +158,7 @@ export const getLatestRuns = publicQuery({
   // Withheld capability reads as empty, matching this surface's soft contract.
   if (current.user.role !== "SUPER_ADMIN" && activeCompanyId) {
     const company = await ctx.db.get(activeCompanyId);
-    if (!isModuleEnabled(company, PROPERTIES_MODULE_KEY)) return [];
+    if (!(await effectiveModulesFor(ctx, company)).includes(PROPERTIES_MODULE_KEY)) return [];
   }
 
   if (canReadAllCompanies) {

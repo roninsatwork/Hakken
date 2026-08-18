@@ -202,6 +202,69 @@ describe("the deploy that changes the meaning of absence", () => {
   });
 });
 
+describe("a plan grants capabilities", () => {
+  test("moving a company between plans changes what it can reach, and the override still wins", async () => {
+    const t = makeTest();
+    const { companyId, memberId } = await seedCompany(t, []);
+
+    const { starter, pro } = await t.run(async (ctx) => ({
+      starter: await ctx.db.insert("plans", {
+        name: "Starter",
+        messageLimit: 1000,
+        priceGBP: 49,
+        grantedModules: [],
+        isActive: true,
+        createdAt: Date.now(),
+      }),
+      pro: await ctx.db.insert("plans", {
+        name: "Pro",
+        messageLimit: -1,
+        priceGBP: 199,
+        grantedModules: [CORE_MODULES.tasks],
+        isActive: true,
+        createdAt: Date.now(),
+      }),
+    }));
+
+    const listTasks = () =>
+      asUser(t, memberId).query(api.tasks.listTasks, { paginationOpts: { numItems: 5, cursor: null } });
+
+    // On Starter: nothing granted, nothing held.
+    await t.run(async (ctx) => { await ctx.db.patch(companyId, { planId: starter }); });
+    await expect(listTasks()).rejects.toThrow(WITHHELD);
+
+    // Moved to Pro: the tier turns the capability on. No company edit anywhere.
+    await t.run(async (ctx) => { await ctx.db.patch(companyId, { planId: pro }); });
+    await expect(listTasks()).resolves.toBeDefined();
+
+    // Back to Starter, but given the capability directly: the override wins.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(companyId, { planId: starter, enabledModules: [CORE_MODULES.tasks] });
+    });
+    await expect(listTasks()).resolves.toBeDefined();
+  });
+
+  test("the workspace query the sidebar and gates read reports the plan's grants", async () => {
+    const t = makeTest();
+    const { companyId, memberId } = await seedCompany(t, []);
+    await t.run(async (ctx) => {
+      const planId = await ctx.db.insert("plans", {
+        name: "Pro",
+        messageLimit: -1,
+        priceGBP: 199,
+        grantedModules: [CORE_MODULES.calls],
+        isActive: true,
+        createdAt: Date.now(),
+      });
+      await ctx.db.patch(companyId, { planId });
+    });
+
+    const workspace = await asUser(t, memberId).query(api.companies.getMyWorkspaceModules, {});
+    expect(workspace.enabledModules).toContain(CORE_MODULES.calls);
+    expect(workspace.enabledModules).not.toContain(CORE_MODULES.tasks);
+  });
+});
+
 describe("what a company is offered", () => {
   test("the registry names every core capability and the defaults grant them all", () => {
     expect(DEFAULT_COMPANY_MODULE_KEYS).toEqual(

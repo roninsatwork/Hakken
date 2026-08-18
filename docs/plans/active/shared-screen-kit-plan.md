@@ -927,6 +927,29 @@ hidden, proven per module by test.
 **Done when:** moving a company between plans changes what it can reach, with
 the override still honoured.
 
+> **Done 2026-08-18, in the same sitting as Phase 6.** Plans carry
+> `grantedModules`; a company's reach is its own list united with its plan's
+> grants, resolved in one exported function (`effectiveModulesFor` in
+> `tenantFunctions.ts`) that every reader goes through — the module builders,
+> the workspace query the sidebar and gates share, the soft public surfaces,
+> the kiosk, and the Sales Data checks, which moved onto the same resolution so
+> a plan can grant the bespoke module too.
+>
+> The override only ever adds. A company can be given what its tier lacks, but
+> unticking a box the plan covers withholds nothing — the modules card on the
+> company screen says so beside the boxes, naming the plan and what it already
+> switches on. To withhold a plan-granted capability, move the company to a
+> plan without it. Selling below the tier is not a thing this platform says.
+>
+> The plans screen edits grants with the same checkbox list and the same
+> wording keys the company screens use. Proven in
+> `companyModules.gating.test.ts`: moving a company Starter → Pro → Starter
+> changes what its members can call, the direct grant survives the downgrade,
+> and the workspace query reports the plan's grants to the navigation.
+>
+> No migration needed: plans without the field grant nothing, which is what
+> every existing plan meant before the field existed.
+
 ---
 
 ## What this plan deliberately does not do

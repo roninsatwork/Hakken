@@ -296,6 +296,16 @@ export default defineSchema({
     description: v.optional(v.string()),
     messageLimit: v.number(), // -1 indicates unlimited
     priceGBP: v.number(),
+    /**
+     * Capabilities this tier switches on for every company holding it.
+     *
+     * A company reaches a capability if its plan grants it OR its own
+     * `enabledModules` names it — the company list is the override, and it
+     * only ever adds. Selling below the tier is not a thing this platform
+     * says: to withhold what a plan grants, move the company to a plan
+     * without it.
+     */
+    grantedModules: v.optional(v.array(v.string())),
     isActive: v.boolean(),
     createdAt: v.number(),
   }).index("by_active", ["isActive"])

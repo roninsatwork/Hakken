@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalQuery, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
+import { effectiveModulesFor, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import {
   buildCompanyProfilePatch,
   buildCompanyRecord,
@@ -134,10 +134,32 @@ export const getMyWorkspaceModules = tenantQuery({
 
     return {
       companyName: company.name,
-      // Normalised on read as well as on write: a key left behind by a
-      // vertical that has since been dropped must not reach the navigation.
-      enabledModules: normalizeEnabledModules(company.enabledModules),
+      // The effective set — the company's own list plus its plan's grants,
+      // laundered of dropped keys. The sidebar, the section gates and the
+      // server checks all read this one answer.
+      enabledModules: await effectiveModulesFor(ctx, company),
     };
+  },
+});
+
+/**
+ * What a company's plan switches on, for the modules card.
+ *
+ * The card's checkboxes edit the company's own list — the override. Without
+ * this beside them, unticking a box the plan covers reads as withholding, and
+ * it withholds nothing: the plan still grants it. The card says so instead.
+ */
+export const getPlanGrantsForCompany = superAdminQuery({
+  args: { id: v.id("companies") },
+  handler: async (ctx, args) => {
+    const company = await ctx.db.get(args.id);
+    if (!company?.planId) return null;
+
+    const plan = await ctx.db.get(company.planId);
+    if (!plan) return null;
+
+    const granted = normalizeEnabledModules(plan.grantedModules);
+    return granted.length === 0 ? null : { planName: plan.name, grantedModules: granted };
   },
 });
 

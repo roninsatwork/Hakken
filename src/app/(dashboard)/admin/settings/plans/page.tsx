@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc } from "@/convex/_generated/dataModel";
+import { COMPANY_MODULES } from "@/convex/utils/companyModules";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -29,6 +30,7 @@ type Plan = Doc<"plans">;
 
 export default function SubscriptionPlansPage() {
   const t = useTranslations('admin.plans');
+  const tModules = useTranslations('admin.companies.modules');
   const tCommon = useTranslations('common');
   
   const createPlan = useMutation(api.plans.createPlan);
@@ -45,6 +47,7 @@ export default function SubscriptionPlansPage() {
     description: "", 
     messageLimit: 1000, 
     priceGBP: 0,
+    grantedModules: [] as string[],
     isActive: true 
   });
   
@@ -61,7 +64,7 @@ export default function SubscriptionPlansPage() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", description: "", messageLimit: 1000, priceGBP: 0, isActive: true });
+    setFormData({ name: "", description: "", messageLimit: 1000, priceGBP: 0, grantedModules: [], isActive: true });
     setEditingPlan(null);
     setSubmitError("");
     setIsAddModalOpen(true);
@@ -73,6 +76,7 @@ export default function SubscriptionPlansPage() {
         description: plan.description || "", 
         messageLimit: plan.messageLimit,
         priceGBP: plan.priceGBP,
+        grantedModules: plan.grantedModules ?? [],
         isActive: plan.isActive
     });
     setEditingPlan(plan);
@@ -91,6 +95,7 @@ export default function SubscriptionPlansPage() {
             description: formData.description,
             messageLimit: Number(formData.messageLimit),
             priceGBP: Number(formData.priceGBP),
+            grantedModules: formData.grantedModules,
             isActive: formData.isActive
         });
       } else {
@@ -99,6 +104,7 @@ export default function SubscriptionPlansPage() {
             description: formData.description,
             messageLimit: Number(formData.messageLimit),
             priceGBP: Number(formData.priceGBP),
+            grantedModules: formData.grantedModules,
             isActive: formData.isActive
         });
       }
@@ -294,6 +300,34 @@ export default function SubscriptionPlansPage() {
                 placeholder={t('pricePlaceholder')}
                 className="font-mono"
               />
+          </div>
+
+          <div className="flex flex-col gap-2 pt-2">
+            <span className="text-[13px] font-medium text-secondary tracking-wide">{t('grantsLabel')}</span>
+            <p className="text-[12px] text-muted">{t('grantsHint')}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {COMPANY_MODULES.map((module) => {
+                const isOn = formData.grantedModules.includes(module.key);
+                return (
+                  <label key={module.key} className="flex items-center gap-2 text-[13px] text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isOn}
+                      onChange={() =>
+                        setFormData({
+                          ...formData,
+                          grantedModules: isOn
+                            ? formData.grantedModules.filter((key) => key !== module.key)
+                            : [...formData.grantedModules, module.key],
+                        })
+                      }
+                      className="w-4 h-4 rounded border-border-dim text-brand focus:ring-brand"
+                    />
+                    {tModules(`${module.key}.name`)}
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-2">

@@ -4,9 +4,9 @@ import { v } from "convex/values";
 import type { Doc, TableNames } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { GOVERNANCE_READ_ROLES, getActiveCompanyId, getCurrentUser } from "./authz";
-import { isModuleEnabled } from "./utils/companyModules";
 import { CORE_MODULES } from "./utils/coreModules";
 import { publicMutation, publicQuery } from "./tenantFunctions";
+import { effectiveModulesFor } from "./tenantFunctions";
 import {
   withAuditLogActorName,
   auditChangesFrom,
@@ -61,7 +61,7 @@ export const getRecentLogs = publicQuery({
     // Withheld capability reads as empty, matching this surface's soft contract.
     if (!platformWide && companyId) {
       const company = await ctx.db.get(companyId);
-      if (!isModuleEnabled(company, CORE_MODULES.governance)) return [];
+      if (!(await effectiveModulesFor(ctx, company)).includes(CORE_MODULES.governance)) return [];
     }
 
     const logs = platformWide

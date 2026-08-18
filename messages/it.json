@@ -795,7 +795,9 @@
       "errors": {
         "saveFailed": "Errore nel salvataggio.",
         "deleteFailed": "Errore nell'eliminazione. Verifica che non sia assegnato."
-      }
+      },
+      "grantsLabel": "Cosa attiva questo piano",
+      "grantsHint": "Ogni azienda su questo piano le riceve, oltre a ciò che le è stato attivato direttamente."
     },
     "companyDetails": {
       "title": "Telemetria Tenant",
