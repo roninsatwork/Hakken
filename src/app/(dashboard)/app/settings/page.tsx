@@ -283,8 +283,9 @@ export default function CompanySettingsDashboard() {
                           name === 'cost' ? t('charts.estimatedCost') : t('charts.globalMessages')
                         ]}
                       />
-                      <Area yAxisId="left" type="monotone" dataKey="cost" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorCostOrg)" />
-                      <Area yAxisId="right" type="monotone" dataKey="messages" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorMsgOrg)" />
+                      {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                      <Area isAnimationActive={false} yAxisId="left" type="monotone" dataKey="cost" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorCostOrg)" />
+                      <Area isAnimationActive={false} yAxisId="right" type="monotone" dataKey="messages" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorMsgOrg)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (

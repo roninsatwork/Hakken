@@ -254,7 +254,8 @@ export default function CompanyAiUsagePage() {
                         ]}
                       />
 
-                      <Area
+                      {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                      <Area isAnimationActive={false}
                         yAxisId="left"
                         type="monotone"
                         dataKey="internalMessages"
@@ -263,7 +264,7 @@ export default function CompanyAiUsagePage() {
                         fillOpacity={1}
                         fill="url(#colorInternal)"
                       />
-                      <Area
+                      <Area isAnimationActive={false}
                         yAxisId="left"
                         type="monotone"
                         dataKey="externalMessages"

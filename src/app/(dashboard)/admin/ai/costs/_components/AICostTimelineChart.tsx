@@ -78,7 +78,8 @@ export function AICostTimelineChart({
                       t("chart.tooltipLabel") || "COST",
                     ]}
                   />
-                  <Area
+                  {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                  <Area isAnimationActive={false}
                     type="monotone"
                     dataKey="cost"
                     stroke="#f43f5e"

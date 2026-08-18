@@ -84,7 +84,8 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
               ) : (
                 <ResponsiveContainer width="100%" height={260} debounce={50}>
                   <PieChart>
-                    <Pie
+                    {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                    <Pie isAnimationActive={false}
                       data={modelDistribution}
                       cx="50%"
                       cy="45%"
@@ -147,7 +148,7 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
               ) : (
                 <ResponsiveContainer width="100%" height={260} debounce={50}>
                   <PieChart>
-                    <Pie
+                    <Pie isAnimationActive={false}
                       data={providerChartData}
                       cx="50%"
                       cy="45%"
@@ -238,8 +239,8 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                         color: "#888",
                       }}
                     />
-                    <Bar dataKey="inputTokens" name="Input (Context)" stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
-                    <Bar dataKey="outputTokens" name="Output (Gen)" stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
+                    <Bar isAnimationActive={false} dataKey="inputTokens" name="Input (Context)" stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
+                    <Bar isAnimationActive={false} dataKey="outputTokens" name="Output (Gen)" stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

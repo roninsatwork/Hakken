@@ -172,8 +172,9 @@ export default function ReportsPage() {
                             formatter={(value: ValueType | undefined, name: NameType | undefined) => [formatCurrency(Number(value) || 0), name]}
                           />
                           <Legend verticalAlign="top" align="right" height={40} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#888', paddingTop: '0px', paddingBottom: '15px' }} />
-                          <Area type="monotone" dataKey="totalValue" name="Total Pipeline" fill="url(#totalArea)" stroke="var(--color-brand)" strokeOpacity={0.3} strokeWidth={2} />
-                          <Area type="monotone" dataKey="weightedValue" name="Weighted Forecast" fill="url(#weightedArea)" stroke="var(--color-brand)" strokeWidth={3} />
+                          {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                          <Area isAnimationActive={false} type="monotone" dataKey="totalValue" name="Total Pipeline" fill="url(#totalArea)" stroke="var(--color-brand)" strokeOpacity={0.3} strokeWidth={2} />
+                          <Area isAnimationActive={false} type="monotone" dataKey="weightedValue" name="Weighted Forecast" fill="url(#weightedArea)" stroke="var(--color-brand)" strokeWidth={3} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
