@@ -14,6 +14,8 @@ vi.mock("next-intl", () => ({
         createSubtitle: "Create plan",
         createTitle: "Create Plan",
         deleteTitle: "Delete Plan",
+        "table.deletePlan": "Delete plan",
+        "table.editPlan": "Edit plan",
         deleteWarning: "Deleting a plan can affect tenants.",
         descLabel: "Description",
         descPlaceholder: "Describe the plan",
@@ -156,7 +158,11 @@ describe("SubscriptionPlansPage", () => {
       });
     });
 
-    fireEvent.click(screen.getAllByTitle("Delete Plan")[0].parentElement?.querySelector("button") as HTMLButtonElement);
+    // Both row buttons carry their own name now. This step used to reach the
+    // edit button sideways — find the one titled "Delete Plan", then take the
+    // first button in its parent — because neither had an accessible name of
+    // its own.
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit plan" })[0]);
     fireEvent.change(screen.getByDisplayValue("Growth"), { target: { value: "Growth Plus" } });
     fireEvent.click(screen.getByRole("button", { name: "Save Plan" }));
 
@@ -164,7 +170,7 @@ describe("SubscriptionPlansPage", () => {
       expect(updatePlan).toHaveBeenCalledWith(expect.objectContaining({ id: "plan_1", name: "Growth Plus" }));
     });
 
-    fireEvent.click(screen.getAllByTitle("Delete Plan")[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete plan" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "actions.delete" }));
 
     await waitFor(() => {

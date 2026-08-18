@@ -757,7 +757,9 @@
         "limit": "Limite",
         "price": "Prezzo",
         "status": "Stato",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "editPlan": "Modifica piano",
+        "deletePlan": "Elimina piano"
       },
       "unlimited": "Illimitato",
       "infoTitle": "Come Funzionano le Quote",

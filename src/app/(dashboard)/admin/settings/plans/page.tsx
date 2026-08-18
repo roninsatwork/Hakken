@@ -13,20 +13,14 @@ import {
   XCircle,
   Info
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useTranslations } from "next-intl";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import {
   TABLE_PAGE_SIZE,
 } from "@/src/ui/components/screens/pagination";
@@ -165,97 +159,92 @@ export default function SubscriptionPlansPage() {
       <SearchBar value={searchTerm} onChange={handleSearch} placeholder={t('searchPlaceholder')} />
 
       {/* Table */}
-      <TableShell
-        footer={
-          <PaginationFooter
-            page={plans.page}
-            totalPages={plans.totalPages}
-            totalCount={plans.loadedCount}
-            pageSize={itemsPerPage}
-            isLoading={plans.isBusy}
-            onPageChange={plans.goToPage}
-            labels={{ empty: t('emptyState') }}
-          />
-        }
+      <DataTable
+        rows={isLoading ? undefined : paginatedPlans}
+        rowKey={(plan) => plan._id}
         minWidthClassName="min-w-[900px]"
-      >
-            <thead>
-              <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-                <th className="px-4 py-3 font-medium">{t('table.name')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.limit')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.price')}</th>
-                <th className="px-4 py-3 font-medium">{t('table.status')}</th>
-                <th className="px-4 py-3 font-medium text-right">{t('table.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {isLoading ? (
-                  <TableLoadingRow colSpan={5} />
-                ) : paginatedPlans.length === 0 ? (
-                  <TableEmptyRow
-                    colSpan={5}
-                    icon={<CreditCard className="w-8 h-8 text-muted/30" />}
-                    label={t('emptyState')}
-                  />
-                ) : (
-                  <>
-                    {paginatedPlans.map((plan) => (
-                      <motion.tr
-                        key={plan._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group"
-                      >
-                        <td className="px-4 py-2.5">
-                          <div className="flex flex-col">
-                              <span className="font-medium text-[13px] text-foreground block leading-tight">
-                                {plan.name}
-                              </span>
-                              {plan.description && (
-                                <span className="text-[11px] text-secondary mt-0.5">{plan.description}</span>
-                              )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-[13px] text-foreground font-mono">
-                          {plan.messageLimit === -1 ? (
-                              <span className="text-brand bg-brand/10 px-2 py-0.5 rounded-full text-[11px]">{t('unlimited')}</span>
-                          ) : (
-                              plan.messageLimit.toLocaleString()
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-[13px] text-foreground font-mono">
-                           £{plan.priceGBP.toFixed(2)}/mo
-                        </td>
-                        <td className="px-4 py-2.5">
-                           {plan.isActive ? (
-                               <div className="flex items-center gap-1.5 text-[11px] text-green-500 font-medium">
-                                   <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                               </div>
-                           ) : (
-                               <div className="flex items-center gap-1.5 text-[11px] text-secondary font-medium">
-                                   <XCircle className="w-3.5 h-3.5" /> Inactive
-                               </div>
-                           )}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleOpenEdit(plan)} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors">
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setDeletingPlan(plan)} className="p-2 rounded-full hover:bg-red-500/10 text-secondary hover:text-red-500 transition-colors" title="Delete Plan">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </>
+        empty={{ icon: <CreditCard className="w-8 h-8 text-muted/30" />, label: t('emptyState') }}
+        footer={{
+          mode: "paged",
+          page: plans.page,
+          totalPages: plans.totalPages,
+          totalCount: plans.loadedCount,
+          pageSize: itemsPerPage,
+          isLoading: plans.isBusy,
+          onPageChange: plans.goToPage,
+          labels: { empty: t('emptyState') },
+        }}
+        columns={[
+          {
+            key: "name",
+            header: t('table.name'),
+            cell: (plan) => (
+              <div className="flex flex-col">
+                <span className="font-medium text-[13px] text-foreground block leading-tight">
+                  {plan.name}
+                </span>
+                {plan.description && (
+                  <span className="text-[11px] text-secondary mt-0.5">{plan.description}</span>
                 )}
-              </AnimatePresence>
-            </tbody>
-      </TableShell>
+              </div>
+            ),
+          },
+          {
+            key: "limit",
+            header: t('table.limit'),
+            cell: (plan) =>
+              plan.messageLimit === -1 ? (
+                <span className="text-brand bg-brand/10 px-2 py-0.5 rounded-full text-[11px]">
+                  {t('unlimited')}
+                </span>
+              ) : (
+                <span className="text-[13px] text-foreground font-mono">
+                  {plan.messageLimit.toLocaleString()}
+                </span>
+              ),
+          },
+          {
+            key: "price",
+            header: t('table.price'),
+            cell: (plan) => (
+              <span className="text-[13px] text-foreground font-mono">
+                £{plan.priceGBP.toFixed(2)}/mo
+              </span>
+            ),
+          },
+          {
+            key: "status",
+            header: t('table.status'),
+            /* The word carries the state; the tick and cross are decoration
+               beside it rather than the signal. */
+            cell: (plan) =>
+              plan.isActive ? (
+                <div className="flex items-center gap-1.5 text-[11px] text-foreground font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-[11px] text-secondary font-medium">
+                  <XCircle className="w-3.5 h-3.5" /> Inactive
+                </div>
+              ),
+          },
+          {
+            key: "actions",
+            header: t('table.actions'),
+            align: "right",
+            cell: (plan) => (
+              <RowActions>
+                <RowIconButton onClick={() => handleOpenEdit(plan)} label={t('table.editPlan')}>
+                  <Edit2 className="w-4 h-4" />
+                </RowIconButton>
+                <RowIconButton onClick={() => setDeletingPlan(plan)} tone="danger" label={t('table.deletePlan')}>
+                  <Trash2 className="w-4 h-4" />
+                </RowIconButton>
+              </RowActions>
+            ),
+          },
+        ]}
+      />
 
       {/* Add/Edit Modal */}
       <SonaeModal

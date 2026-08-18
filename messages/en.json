@@ -757,7 +757,9 @@
         "limit": "Message Limit",
         "price": "Price",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "editPlan": "Edit plan",
+        "deletePlan": "Delete plan"
       },
       "unlimited": "Unlimited",
       "infoTitle": "How Quotas Work",
