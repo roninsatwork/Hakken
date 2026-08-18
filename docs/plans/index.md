@@ -7,6 +7,13 @@ completed work.
 
 ## Active Plans
 
+- [The Governance Screens Read A Summary, Not The Estate](./active/governance-screens-read-a-summary-plan.md) —
+  why the governance overview is the one admin screen that is not instant, and
+  the fix: count as things happen into day buckets and an estate snapshot, the
+  way the skills panel and the company inventory already do, so the screen
+  reads a handful of rows instead of sweeping up to ~34,500 — and the
+  compliance figures stop being silently capped. Agreed 2026-08-18; ~2.5 days.
+
 - [The Wiki's Staff](./active/wiki-agents-plan.md) — agents that tend, check
   and file, drawn from Anthony's own Second-Brain playbook: contradiction
   finding, freshness checking, the full-import-first source-note layer, a
