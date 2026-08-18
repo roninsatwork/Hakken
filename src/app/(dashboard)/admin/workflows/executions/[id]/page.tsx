@@ -6,13 +6,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 import { ArrowLeft, CheckCircle2, History, XCircle } from "lucide-react";
@@ -21,7 +15,6 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-const COLUMN_COUNT = 4;
 
 function safeFormatJson(value?: string) {
   if (!value) return null;
@@ -101,97 +94,109 @@ export default function WorkflowExecutionDetailPage() {
 
       <SaveError>{action.error}</SaveError>
 
-      <TableShell minWidthClassName="min-w-[820px]">
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("detail.columns.node")}</TableHeaderCell>
-            <TableHeaderCell>{t("detail.columns.status")}</TableHeaderCell>
-            <TableHeaderCell>{t("detail.columns.started")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("detail.columns.decision")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {execution === undefined ? (
-            <TableLoadingRow colSpan={COLUMN_COUNT} />
-          ) : steps.length === 0 ? (
-            <TableEmptyRow
-              colSpan={COLUMN_COUNT}
-              icon={<History className="w-8 h-8 text-muted/30" />}
-              label={t("detail.noSteps")}
-            />
-          ) : (
-            steps.map((step) => {
+      <DataTable
+        rows={execution === undefined ? undefined : steps}
+        rowKey={(step) => step._id}
+        minWidthClassName="min-w-[820px]"
+        empty={{ icon: <History className="w-8 h-8 text-muted/30" />, label: t("detail.noSteps") }}
+        footer={{
+          mode: "paged",
+          page: 1,
+          totalPages: 1,
+          totalCount: steps.length,
+          pageSize: Math.max(steps.length, 1),
+          isLoading: execution === undefined,
+          onPageChange: () => {},
+          labels: {
+            empty: t("detail.noSteps"),
+            showing: (_start, _end, total) => `${total} step${total === 1 ? "" : "s"}`,
+          },
+        }}
+        columns={[
+          {
+            key: "node",
+            header: t("detail.columns.node"),
+            cell: (step) => {
               const isHalted = step.status === "PENDING_APPROVAL";
               const output = safeFormatJson(step.output);
               const parsedOutput = step.output ? safeParse(step.output) : null;
 
               return (
-                <tr key={step._id} className="border-b border-border-dim/40 last:border-0 align-top">
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-2 max-w-[420px]">
-                      <span className="text-[13px] font-medium text-foreground">{step.nodeId}</span>
+                <div className="flex flex-col gap-2 max-w-[420px]">
+                  <span className="text-[13px] font-medium text-foreground">{step.nodeId}</span>
 
-                      {/* What the approval node asked, and the preview it resolved.
-                          Both are destroyed on approval unless the engine keeps
-                          them, which is why they are shown here while it waits. */}
-                      {isHalted && parsedOutput?.message ? (
-                        <p className="text-[12px] text-secondary leading-relaxed">{String(parsedOutput.message)}</p>
-                      ) : null}
-                      {isHalted && parsedOutput?.previewData !== undefined ? (
-                        <pre className="max-h-[160px] overflow-auto rounded-[8px] border border-border-dim bg-background/60 p-3 text-[11px] leading-relaxed text-secondary">
-                          {typeof parsedOutput.previewData === "string"
-                            ? parsedOutput.previewData
-                            : JSON.stringify(parsedOutput.previewData, null, 2)}
-                        </pre>
-                      ) : null}
-                      {!isHalted && output ? (
-                        <pre className="max-h-[140px] overflow-auto rounded-[8px] border border-border-dim bg-background/60 p-3 text-[11px] leading-relaxed text-muted">
-                          {output}
-                        </pre>
-                      ) : null}
-                      {step.error ? (
-                        <p className="text-[12px] text-red-400 leading-relaxed">{step.error}</p>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${stepToneClass(step.status)}`}>
-                      {t(`stepStatus.${step.status}`)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[12px] text-muted whitespace-nowrap">
-                    {formatDateTime(step.startedAt)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {isHalted ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => decide(step.nodeId, "APPROVED")}
-                          disabled={action.isBusy(step.nodeId)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] bg-brand text-background text-[12px] font-semibold hover:opacity-90 disabled:opacity-50"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          {t("detail.approve")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPendingRejection({ nodeId: step.nodeId })}
-                          disabled={action.isBusy(step.nodeId)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] border border-red-500/30 bg-red-500/10 text-red-500 text-[12px] font-semibold hover:bg-red-500/15 disabled:opacity-50"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          {t("detail.reject")}
-                        </button>
-                      </div>
-                    ) : null}
-                  </td>
-                </tr>
+                  {/* What the approval node asked, and the preview it resolved.
+                      Both are destroyed on approval unless the engine keeps
+                      them, which is why they are shown here while it waits. */}
+                  {isHalted && parsedOutput?.message ? (
+                    <p className="text-[12px] text-secondary leading-relaxed">{String(parsedOutput.message)}</p>
+                  ) : null}
+                  {isHalted && parsedOutput?.previewData !== undefined ? (
+                    <pre className="max-h-[160px] overflow-auto rounded-[8px] border border-border-dim bg-background/60 p-3 text-[11px] leading-relaxed text-secondary">
+                      {typeof parsedOutput.previewData === "string"
+                        ? parsedOutput.previewData
+                        : JSON.stringify(parsedOutput.previewData, null, 2)}
+                    </pre>
+                  ) : null}
+                  {!isHalted && output ? (
+                    <pre className="max-h-[140px] overflow-auto rounded-[8px] border border-border-dim bg-background/60 p-3 text-[11px] leading-relaxed text-muted">
+                      {output}
+                    </pre>
+                  ) : null}
+                  {step.error ? (
+                    <p className="text-[12px] text-red-400 leading-relaxed">{step.error}</p>
+                  ) : null}
+                </div>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+          {
+            key: "status",
+            header: t("detail.columns.status"),
+            cell: (step) => (
+              <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-bold tracking-[0.1em] uppercase border ${stepToneClass(step.status)}`}>
+                {t(`stepStatus.${step.status}`)}
+              </span>
+            ),
+          },
+          {
+            key: "started",
+            header: t("detail.columns.started"),
+            className: "whitespace-nowrap",
+            cell: (step) => (
+              <span className="text-[12px] text-muted">{formatDateTime(step.startedAt)}</span>
+            ),
+          },
+          {
+            key: "decision",
+            header: t("detail.columns.decision"),
+            align: "right",
+            cell: (step) =>
+              step.status === "PENDING_APPROVAL" ? (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => decide(step.nodeId, "APPROVED")}
+                    disabled={action.isBusy(step.nodeId)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] bg-brand text-background text-[12px] font-semibold hover:opacity-90 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {t("detail.approve")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingRejection({ nodeId: step.nodeId })}
+                    disabled={action.isBusy(step.nodeId)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-[8px] border border-red-500/30 bg-red-500/10 text-red-500 text-[12px] font-semibold hover:bg-red-500/15 disabled:opacity-50"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    {t("detail.reject")}
+                  </button>
+                </div>
+              ) : null,
+          },
+        ]}
+      />
 
       <ConfirmationModal
         isOpen={pendingRejection !== null}
