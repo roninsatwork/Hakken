@@ -17,15 +17,8 @@ import {
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import {
   ModalFormError,
@@ -338,97 +331,108 @@ export default function AgentEvalsPage() {
         placeholder="Search evals by what they ask"
       />
 
-      <TableShell
+      <DataTable
+        rows={fixtures === undefined ? undefined : paged.pageRows}
+        rowKey={(fixture) => fixture._id}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={paged.page}
-            totalPages={paged.totalPages}
-            totalCount={paged.loadedCount}
-            pageSize={paged.pageSize}
-            isLoading={false}
-            onPageChange={paged.goToPage}
-            labels={{ empty: "No evals" }}
-          />
-        }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>Eval</TableHeaderCell>
-            <TableHeaderCell className="w-[130px]">Status</TableHeaderCell>
-            <TableHeaderCell className="w-[120px]">Must pass</TableHeaderCell>
-            <TableHeaderCell className="w-[170px]">Last run</TableHeaderCell>
-            <TableHeaderCell align="right" className="w-[150px]">{""}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {fixtures === undefined ? (
-            <TableLoadingRow colSpan={5} />
-          ) : paged.pageRows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<ClipboardCheck className="h-8 w-8 text-muted/30" />}
-              label="No evals yet — add one to catch this agent getting it wrong"
-            />
-          ) : paged.pageRows.map((fixture) => {
-            const latest = latestByFixture.get(fixture._id);
-            const status = describeStatus(latest);
-            const isRunning = runAction.isBusy(`run:${fixture._id}`);
-
-            return (
-              <tr key={fixture._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/agents/${agentId}/evals/${fixture._id}`}
-                    className="block text-[13px] font-semibold text-foreground line-clamp-1 max-w-[480px] hover:text-brand transition-colors"
-                  >
-                    {fixture.objective}
-                  </Link>
-                  <div className="text-[12px] text-secondary line-clamp-1 max-w-[480px]">{fixture.expectedFinalOutputRubric}</div>
-                </td>
-                <td className={`px-4 py-3 text-[13px] font-semibold ${status.tone}`}>{status.label}</td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {fixture.tags.includes(MUST_PASS_TAG) ? "Yes" : "No"}
-                </td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
+        empty={{
+          icon: <ClipboardCheck className="h-8 w-8 text-muted/30" />,
+          label: "No evals yet — add one to catch this agent getting it wrong",
+        }}
+        footer={{
+          mode: "paged",
+          page: paged.page,
+          totalPages: paged.totalPages,
+          totalCount: paged.loadedCount,
+          pageSize: paged.pageSize,
+          isLoading: fixtures === undefined,
+          onPageChange: paged.goToPage,
+          labels: { empty: "No evals" },
+        }}
+        columns={[
+          {
+            key: "eval",
+            header: "Eval",
+            cell: (fixture) => (
+              <>
+                <Link
+                  href={`/admin/agents/${agentId}/evals/${fixture._id}`}
+                  className="block text-[13px] font-semibold text-foreground line-clamp-1 max-w-[480px] hover:text-brand transition-colors"
+                >
+                  {fixture.objective}
+                </Link>
+                <div className="text-[12px] text-secondary line-clamp-1 max-w-[480px]">
+                  {fixture.expectedFinalOutputRubric}
+                </div>
+              </>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            className: "w-[130px]",
+            cell: (fixture) => {
+              const status = describeStatus(latestByFixture.get(fixture._id));
+              return <span className={`text-[13px] font-semibold ${status.tone}`}>{status.label}</span>;
+            },
+          },
+          {
+            key: "mustPass",
+            header: "Must pass",
+            className: "w-[120px]",
+            cell: (fixture) => (
+              <span className="text-[12px] text-secondary">
+                {fixture.tags.includes(MUST_PASS_TAG) ? "Yes" : "No"}
+              </span>
+            ),
+          },
+          {
+            key: "lastRun",
+            header: "Last run",
+            className: "w-[170px]",
+            cell: (fixture) => {
+              const latest = latestByFixture.get(fixture._id);
+              return (
+                <span className="text-[12px] text-secondary">
                   {latest?.completedAt ? formatDateTime(latest.completedAt) : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleRun(fixture._id)}
-                      disabled={isRunning}
-                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
-                    >
-                      {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                      Run
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Edit ${fixture.objective}`}
-                      title="Edit"
-                      onClick={() => openEdit(fixture)}
-                      className="p-2 rounded-md text-muted hover:text-foreground hover:bg-foreground/5 transition-colors"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <WriteButton
-                      type="button"
-                      aria-label={`Remove ${fixture.objective}`}
-                      title="Remove"
-                      onClick={() => setArchiveTarget(fixture)}
-                      className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </WriteButton>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </TableShell>
+                </span>
+              );
+            },
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            className: "w-[150px]",
+            cell: (fixture) => {
+              const isRunning = runAction.isBusy(`run:${fixture._id}`);
+              return (
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleRun(fixture._id)}
+                    disabled={isRunning}
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
+                  >
+                    {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                    Run
+                  </button>
+                  <RowIconButton label={`Edit ${fixture.objective}`} onClick={() => openEdit(fixture)}>
+                    <Pencil className="h-4 w-4" />
+                  </RowIconButton>
+                  <RowIconButton
+                    label={`Remove ${fixture.objective}`}
+                    tone="danger"
+                    onClick={() => setArchiveTarget(fixture)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </RowIconButton>
+                </div>
+              );
+            },
+          },
+        ]}
+      />
 
       {/* Two questions and a toggle, where there were six fields including a nested
           JSON blob whose required keys were documented nowhere and which the shipped

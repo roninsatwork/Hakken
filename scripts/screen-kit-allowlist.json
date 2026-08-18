@@ -14,7 +14,6 @@
     "src/app/(dashboard)/admin/_features/evals/EvalsScreen.tsx",
     "src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx",
     "src/app/(dashboard)/admin/_features/wiki/WikiPagesListScreen.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/evals/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/logs/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/runs/page.tsx",
