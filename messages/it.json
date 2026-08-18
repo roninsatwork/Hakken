@@ -736,10 +736,6 @@
           "name": "Wiki",
           "description": "Il quaderno dell'assistente su questo spazio di lavoro: cosa ha imparato e da dove viene."
         },
-        "governance": {
-          "name": "Governance",
-          "description": "Le pagine di controllo dello spazio di lavoro: cosa può fare l'IA, cosa ha fatto e le regole che segue."
-        },
         "reports": {
           "name": "Report",
           "description": "Report di vendita scritti per il team, aggiornati man mano che arrivano nuovi numeri."

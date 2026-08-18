@@ -896,11 +896,18 @@ hidden, proven per module by test.
 > more declared fact — which capability the function belongs to — checked
 > before the handler runs, the way `publicQuery` declares its reason. Every
 > capability's client-callable functions now declare their module: tasks,
-> calls (telephony), reception (kiosk), properties, reports, governance's
-> register, and the wiki's tenant surfaces. The three soft public surfaces
-> (AI rules, the audit trail, the properties dashboard) answer empty instead
-> of erroring, keeping their stated contract; the anonymous kiosk answers the
-> same quiet null as a widget not on kiosk duty.
+> calls (telephony), reception (kiosk), properties, reports, and the wiki's
+> tenant surfaces. The properties dashboard read answers empty instead of
+> erroring, keeping its stated contract; the anonymous kiosk answers the same
+> quiet null as a widget not on kiosk duty.
+>
+> **Governance is not among them, by Anthony's ruling of 2026-08-18:**
+> *"governance is not something to turn on or off per company, it's a platform
+> feature for super admins."* It was briefly built as a company capability and
+> was taken back out the same day — the platform console is the super admin's
+> own, and a workspace's governance pages stay gated on the role that opens
+> them, which is what an oversight surface should hang on rather than a
+> purchasable switch.
 >
 > Super admins pass without any flag — the console is where withholding is
 > administered — and so do platform-scoped oversight roles, which have no

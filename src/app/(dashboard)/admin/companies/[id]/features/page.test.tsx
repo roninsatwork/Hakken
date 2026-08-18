@@ -3,15 +3,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import CompanyOverviewPage from "./page";
+import CompanyFeaturesPage from "./page";
 
 /**
- * The optional-modules card on the company overview screen.
+ * The company's Features screen.
  *
- * Worth its own test because this control is the only thing standing between a
- * workspace and a section built for someone else, and because it saves through
- * its own mutation rather than the profile save beside it — a wiring mistake
- * would look identical on screen and do nothing.
+ * Worth its own test because these switches are the only thing standing between
+ * a workspace and a section it was not given, and because the screen saves
+ * through its own mutation — a wiring mistake would look identical on screen
+ * and do nothing. Lived as a card on the Overview screen until Anthony moved it
+ * out on 2026-08-18; the tests moved with it.
  */
 
 type HookMock = {
@@ -39,7 +40,7 @@ function getConvexPath(functionReference: unknown) {
   }
 }
 
-describe("CompanyOverviewPage — optional modules", () => {
+describe("CompanyFeaturesPage", () => {
   const setCompanyModules = vi.fn();
   const otherMutation = vi.fn();
 
@@ -74,33 +75,45 @@ describe("CompanyOverviewPage — optional modules", () => {
     mockQueries();
   });
 
-  it("shows the registered modules to a super admin", () => {
-    render(<CompanyOverviewPage />);
+  it("shows every feature to a super admin", () => {
+    render(<CompanyFeaturesPage />);
 
-    expect(screen.getByText("Optional Modules")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Features" })).toBeInTheDocument();
     expect(screen.getByText("modules.salesData.name")).toBeInTheDocument();
   });
 
-  it("hides the card from anyone who is not a super admin", () => {
-    // A workspace admin choosing their own workspace's modules would defeat
-    // the point of the flag.
+  it("refuses anyone who is not a super admin", () => {
+    // A workspace admin choosing their own workspace's features would defeat
+    // the point of the flag. The tab is hidden from them too, so this is the
+    // second lock rather than the only one.
     mockQueries({ role: "ADMIN" });
-    render(<CompanyOverviewPage />);
+    render(<CompanyFeaturesPage />);
 
-    expect(screen.queryByText("Optional Modules")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Only a platform administrator can change which features/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows nothing at all until it knows who is asking", () => {
+    // A flash of "not allowed" at the person who is allowed reads as a fault.
+    (useQuery as unknown as HookMock).mockImplementation(() => undefined);
+    const { container } = render(<CompanyFeaturesPage />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("reflects what the company already has switched on", () => {
     mockQueries({ enabledModules: ["salesData"] });
-    render(<CompanyOverviewPage />);
+    render(<CompanyFeaturesPage />);
 
     expect(screen.getByRole("checkbox", { name: /salesData/ })).toBeChecked();
   });
 
   it("saves through its own mutation, not the profile save", async () => {
-    render(<CompanyOverviewPage />);
+    render(<CompanyFeaturesPage />);
 
-    const save = screen.getByRole("button", { name: /Save Modules/i });
+    const save = screen.getByRole("button", { name: /Save Features/i });
     expect(save).toBeDisabled();
 
     fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
@@ -120,10 +133,10 @@ describe("CompanyOverviewPage — optional modules", () => {
 
   it("can switch a module back off", async () => {
     mockQueries({ enabledModules: ["salesData"] });
-    render(<CompanyOverviewPage />);
+    render(<CompanyFeaturesPage />);
 
     fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Modules/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
 
     await waitFor(() => {
       expect(setCompanyModules).toHaveBeenCalledWith({
@@ -135,13 +148,13 @@ describe("CompanyOverviewPage — optional modules", () => {
 
   it("surfaces a failed save rather than looking successful", async () => {
     setCompanyModules.mockRejectedValue(new Error("Unauthorized"));
-    render(<CompanyOverviewPage />);
+    render(<CompanyFeaturesPage />);
 
     fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Modules/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Unauthorized|Failed to update modules/)).toBeInTheDocument();
+      expect(screen.getByText(/Unauthorized|Failed to update features/)).toBeInTheDocument();
     });
   });
 });

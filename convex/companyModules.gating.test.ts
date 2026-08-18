@@ -125,16 +125,6 @@ describe("a withheld capability refuses by URL, not by menu", () => {
     await expect(asUser(t, adminId).query(api.salesReports.getLatestReport, {})).rejects.toThrow(WITHHELD);
   });
 
-  test("governance", async () => {
-    const t = makeTest();
-    const { adminId } = await seedCompany(t, []);
-
-    await expect(asUser(t, adminId).query(api.governanceRegister.getAiRegister, {})).rejects.toThrow(WITHHELD);
-    // The two soft surfaces read as empty, matching their stated contract.
-    expect(await asUser(t, adminId).query(api.aiRules.getRules, {})).toEqual([]);
-    expect(await asUser(t, adminId).query(api.auditLogs.getRecentLogs, {})).toEqual([]);
-  });
-
   test("wiki", async () => {
     const t = makeTest();
     const { memberId } = await seedCompany(t, []);
@@ -164,7 +154,7 @@ describe("who still passes", () => {
     await expect(
       asUser(t, superId).query(api.tasks.listTasks, { paginationOpts: { numItems: 5, cursor: null } })
     ).resolves.toBeDefined();
-    await expect(asUser(t, superId).query(api.governanceRegister.getAiRegister, {})).resolves.toBeDefined();
+    await expect(asUser(t, superId).query(api.telephony.listCalls, {})).resolves.toBeDefined();
   });
 });
 
@@ -270,5 +260,13 @@ describe("what a company is offered", () => {
     expect(DEFAULT_COMPANY_MODULE_KEYS).toEqual(
       expect.arrayContaining([...Object.values(CORE_MODULES), REPORTS_MODULE_KEY, PROPERTIES_MODULE_KEY])
     );
+  });
+
+  test("governance is not one of them — it is a platform surface, not a purchase", () => {
+    // Anthony, 2026-08-18: "governance is not something to turn on or off per
+    // company, it's a platform feature for super admins." The workspace's own
+    // governance pages stay gated on the role that opens them.
+    expect(DEFAULT_COMPANY_MODULE_KEYS).not.toContain("governance");
+    expect(Object.values(CORE_MODULES)).not.toContain("governance");
   });
 });

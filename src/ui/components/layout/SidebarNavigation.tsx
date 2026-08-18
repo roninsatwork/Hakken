@@ -845,7 +845,7 @@ export default function SidebarNavigation() {
                       this whole layer exists for is one of the latter, and
                       never a platform administrator.
                     */}
-                    {(user?.role === "ADMIN" || user?.role === "AUDITOR") && hasCapability(CORE_MODULES.governance) && (
+                    {(user?.role === "ADMIN" || user?.role === "AUDITOR") && (
                       <NavItem
                         icon={ShieldCheck}
                         label={t('governance')}

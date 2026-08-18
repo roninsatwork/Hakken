@@ -49,15 +49,6 @@ export const getRules = publicQuery({
     if (!current) return [];
     const { user } = current;
 
-    // Withheld capability reads as empty, matching this surface's soft contract.
-    if (user.role !== "SUPER_ADMIN") {
-      const ownCompanyId = getActiveCompanyId(user);
-      if (ownCompanyId) {
-        const company = await ctx.db.get(ownCompanyId);
-        if (!(await effectiveModulesFor(ctx, company)).includes(CORE_MODULES.governance)) return [];
-      }
-    }
-
     if (user.role !== "SUPER_ADMIN") {
         if (args.companyId && !canAccessCompany(user, args.companyId)) {
             return []; // Unauthorized to view another company's rules

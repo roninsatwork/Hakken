@@ -736,10 +736,6 @@
           "name": "Wiki",
           "description": "The assistant's growing notebook about this workspace — what it has learned and where it came from."
         },
-        "governance": {
-          "name": "Governance",
-          "description": "The workspace's own oversight pages: what the AI may do, what it did, and the rules it follows."
-        },
         "reports": {
           "name": "Reports",
           "description": "Sales reports written for the team, refreshed as new figures arrive."

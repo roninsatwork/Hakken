@@ -58,12 +58,6 @@ export const getRecentLogs = publicQuery({
 
     if (!platformWide && !companyId) return [];
 
-    // Withheld capability reads as empty, matching this surface's soft contract.
-    if (!platformWide && companyId) {
-      const company = await ctx.db.get(companyId);
-      if (!(await effectiveModulesFor(ctx, company)).includes(CORE_MODULES.governance)) return [];
-    }
-
     const logs = platformWide
       ? await ctx.db.query("auditLogs").withIndex("by_timestamp").order("desc").take(500)
       : await ctx.db

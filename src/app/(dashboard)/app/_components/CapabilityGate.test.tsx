@@ -9,7 +9,6 @@ import CallsLayout from "../calls/layout";
 import ReceptionLayout from "../reception/layout";
 import PropertiesLayout from "../properties/layout";
 import ReportsLayout from "../reports/layout";
-import GovernanceLayout from "../governance/layout";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
@@ -29,7 +28,6 @@ const SECTIONS = [
   { name: "reception", Layout: ReceptionLayout, key: "reception" },
   { name: "properties", Layout: PropertiesLayout, key: "properties" },
   { name: "reports", Layout: ReportsLayout, key: "reports" },
-  { name: "governance", Layout: GovernanceLayout, key: "governance" },
 ] as const;
 
 describe("capability section gates", () => {

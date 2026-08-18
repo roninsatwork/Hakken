@@ -40,7 +40,6 @@ export const COMPANY_MODULES: readonly CompanyModuleDefinition[] = [
   { key: CORE_MODULES.calls, vertical: "base" },
   { key: CORE_MODULES.reception, vertical: "base" },
   { key: CORE_MODULES.wiki, vertical: "base" },
-  { key: CORE_MODULES.governance, vertical: "base" },
   // template:remove:start salesReports
   { key: REPORTS_MODULE_KEY, vertical: "salesReports" },
   // template:remove:end

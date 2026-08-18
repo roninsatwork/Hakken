@@ -30,7 +30,10 @@ vi.mock("next/link", () => ({
 }));
 
 describe("CompanyDashboardLayout navigation", () => {
+  let currentRole = "ADMIN";
+
   beforeEach(() => {
+    currentRole = "ADMIN";
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue("/admin/companies/company123/ai/models");
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
@@ -43,7 +46,7 @@ describe("CompanyDashboardLayout navigation", () => {
         };
       }
 
-      return { role: "ADMIN" };
+      return { role: currentRole };
     });
   });
 
@@ -151,5 +154,37 @@ describe("CompanyDashboardLayout navigation", () => {
     );
     expect(within(menu).getByRole("menuitem", { name: /Integration/ })).toHaveClass("bg-brand");
     expect(within(menu).getByLabelText("Integration selected")).toBeInTheDocument();
+  });
+
+  it("offers Features to a platform administrator, after Widget", () => {
+    currentRole = "SUPER_ADMIN";
+    render(
+      <CompanyDashboardLayout>
+        <section>Company body</section>
+      </CompanyDashboardLayout>
+    );
+
+    const features = screen.getByRole("link", { name: "Features" });
+    expect(features).toHaveAttribute("href", "/admin/companies/company123/features");
+
+    // Position matters: Anthony asked for it after Widget, and a tab row is
+    // read in order.
+    const tabRow = features.closest("div");
+    const labels = Array.from(tabRow?.querySelectorAll("a, button") ?? []).map(
+      (element) => element.textContent?.trim()
+    );
+    expect(labels.indexOf("Features")).toBe(labels.indexOf("Widget") + 1);
+    expect(labels.at(-1)).toBe("Features");
+  });
+
+  it("does not offer Features to a workspace administrator", () => {
+    // They would only find a refusal behind it — the screen locks them out too.
+    render(
+      <CompanyDashboardLayout>
+        <section>Company body</section>
+      </CompanyDashboardLayout>
+    );
+
+    expect(screen.queryByRole("link", { name: "Features" })).not.toBeInTheDocument();
   });
 });

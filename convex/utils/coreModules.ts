@@ -17,8 +17,19 @@ export const CORE_MODULES = {
   calls: "calls",
   reception: "reception",
   wiki: "wiki",
-  governance: "governance",
 } as const;
+
+/**
+ * Governance is deliberately absent.
+ *
+ * It was briefly a company capability and should not have been: Anthony's
+ * ruling, 2026-08-18 — *"governance is not something to turn on or off per
+ * company, it's a platform feature for super admins."* The platform console at
+ * `/admin/governance` is the super admin's own oversight, and a workspace's
+ * `/app/governance` pages stay gated on the role that opens them — a company
+ * administrator or an auditor brought in to examine them — which is what an
+ * oversight surface should hang on rather than a purchasable switch.
+ */
 
 // template:remove:start salesReports
 export const REPORTS_MODULE_KEY = "reports";

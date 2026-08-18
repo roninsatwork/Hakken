@@ -73,7 +73,10 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
             {call.matchedCustomerKey && (
               <span className="inline-flex items-center gap-2 rounded-full border border-border-dim px-4 py-1.5 text-[12px] text-foreground">
                 <UserRound aria-hidden className="w-3.5 h-3.5 text-brand" />
-                {t("matchedCustomer")}: {call.matchedCustomerKey}
+                {/* One flex item, not three: the label, the colon and the value are
+                    one sentence, and as separate children the row's `gap` pushes the
+                    colon away from the word it belongs to. */}
+                <span>{t("matchedCustomer")}: {call.matchedCustomerKey}</span>
               </span>
             )}
             {call.taskId && (

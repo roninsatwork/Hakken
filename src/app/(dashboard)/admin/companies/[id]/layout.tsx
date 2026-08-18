@@ -9,6 +9,7 @@ import Link from "next/link";
 import {
   Activity,
   AppWindow,
+  Blocks,
   ArrowLeft,
   BookOpen,
   BrainCircuit,
@@ -277,6 +278,15 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
         },
       ],
     },
+    // What this workspace can reach. Super admin only, so the tab is not
+    // offered to anyone who would only find a refusal behind it.
+    ...(currentUser?.role === "SUPER_ADMIN"
+      ? [{
+          label: "Features",
+          href: `${companyHref}/features`,
+          icon: Blocks,
+        }]
+      : []),
   ];
 
   return (

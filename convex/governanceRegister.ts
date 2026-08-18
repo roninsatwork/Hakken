@@ -1,6 +1,5 @@
 import type { Doc, Id } from "./_generated/dataModel";
-import { governanceQuery, moduleQuery } from "./tenantFunctions";
-import { CORE_MODULES } from "./utils/coreModules";
+import { governanceQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import {
   sortRegister,
@@ -79,9 +78,7 @@ export const getOwnerCandidates = governanceQuery({
   },
 });
 
-export const getAiRegister = moduleQuery({
-  module: CORE_MODULES.governance,
-  guard: "governance",
+export const getAiRegister = governanceQuery({
   args: {},
   handler: async (ctx) => {
     const scopeCompanyId = ctx.user.role === "SUPER_ADMIN" || ctx.user.role === "READ_ONLY"
