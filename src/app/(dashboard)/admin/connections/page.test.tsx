@@ -57,7 +57,6 @@ describe("ConnectionsPage", () => {
       emptyText: "connections.noConnections",
       tableCount: 2,
       tableIndex: 0,
-      hasFooter: false,
     });
   });
 });

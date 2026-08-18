@@ -64,7 +64,6 @@ describe("AgentRunsPage", () => {
       sampleRows: runs,
       sampleRowText: "Draft this week's exam questions",
       emptyText: "This agent has not run any jobs yet",
-      hasFooter: false,
     });
   });
 });

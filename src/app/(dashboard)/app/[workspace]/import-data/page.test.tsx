@@ -54,10 +54,15 @@ describe("SalesDataImportPage", () => {
         vi.mocked(useQuery).mockImplementation((...args) =>
           getFunctionName(args[0]) === "salesData:listImports" ? rows : undefined);
       },
+      // Genuinely missing, not an oversight: this table ends where its last row
+      // does, so a short list has nothing under it saying how many there are.
+      // It is one of the client-facing screens Anthony held back from the
+      // screen-kit plan on 2026-08-17, so it keeps its own shape until that half
+      // of the app comes into scope. Turn this on when it moves onto DataTable.
+      hasFooter: false,
       sampleRows: imports,
       sampleRowText: "july-sales.xlsx",
       emptyText: "salesData.historyEmptyTitle",
-      hasFooter: false,
     });
   });
 });

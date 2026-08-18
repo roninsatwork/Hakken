@@ -53,7 +53,6 @@ describe("ScrapedDataPage", () => {
       searchPlaceholder: "Search properties by address...",
       // The footer is hidden when there is nothing to page through, which is a
       // decision this screen made before the numbered footer became standard.
-      hasFooter: false,
     });
   });
 });
