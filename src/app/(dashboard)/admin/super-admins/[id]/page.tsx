@@ -4,11 +4,11 @@ import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
-import { ArrowLeft, User, ShieldCheck, ShieldAlert, Loader2, MonitorSmartphone, MapPin } from "lucide-react";
+import { ArrowLeft, User, ShieldCheck, ShieldAlert, Loader2, MessageSquare, MonitorSmartphone, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { TableShell, TableHeaderRow, TableHeaderCell, PaginationFooter } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -175,88 +175,88 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          <TableShell
+          <DataTable
+            rows={status === "LoadingFirstPage" ? undefined : pagedLogins.pageRows}
+            rowKey={(login) => login._id}
             variant="panel"
-            footer={
-              <PaginationFooter
-                page={pagedLogins.page}
-                totalPages={pagedLogins.totalPages}
-                totalCount={pagedLogins.loadedCount}
-                pageSize={pagedLogins.pageSize}
-                isLoading={status === "LoadingMore"}
-                onPageChange={pagedLogins.goToPage}
-              />
-            }
-          >
-                <thead>
-                  <TableHeaderRow variant="strip">
-                    <TableHeaderCell>Device</TableHeaderCell>
-                    <TableHeaderCell>Location &amp; IP</TableHeaderCell>
-                    <TableHeaderCell>Status</TableHeaderCell>
-                    <TableHeaderCell align="right">Timestamp</TableHeaderCell>
-                  </TableHeaderRow>
-                </thead>
-                <tbody>
-                  {status === "LoadingFirstPage" && (
-                    <tr>
-                      <td colSpan={4} className="px-5 py-8 text-center text-secondary">
-                        <Loader2 className="w-5 h-5 animate-spin mx-auto opacity-50" />
-                      </td>
-                    </tr>
-                  )}
-                  
-                  {/* Was `status === "CanLoadMore"`, so the message only appeared when the list was not empty. Same fault on the profile screen and on Manage Team. */}
-                  {logins.length === 0 && status !== "LoadingFirstPage" && status !== "LoadingMore" && (
-                     <tr>
-                      <td colSpan={4} className="px-5 py-8 text-center text-secondary text-[13px]">
-                        No login records found for this user.
-                      </td>
-                    </tr>
-                  )}
-
-                  {pagedLogins.pageRows.map((login) => (
-                    <tr key={login._id} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-foreground/5 border border-border-dim flex items-center justify-center">
-                            <MonitorSmartphone className="w-4 h-4 text-foreground/70" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-medium text-foreground tracking-wide">{describeDevice(login.device)}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-secondary" />
-                          <div className="flex flex-col">
-                            <span className="text-[13px] text-foreground">{login.location}</span>
-                            <span className="text-[11px] font-mono text-muted">{login.ip}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          {/* Blue for a sign-in that worked, amber for one that did not. Green
-                                against red is the one pairing this platform does not use,
-                                and the word beside it carries the answer regardless. */}
-                            <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-info' : 'bg-warning'}`} />
-                          <span className="text-[12px] text-secondary font-medium tracking-wide">
-                            {login.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-[12px] text-secondary tracking-wide">
-                          {formatDateTime(login.timestamp, {
-                            options: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
-                          })}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-          </TableShell>
+            headerVariant="strip"
+            empty={{
+              icon: <MonitorSmartphone className="w-8 h-8 text-muted/30" />,
+              label: "No login records found for this user.",
+            }}
+            footer={{
+              mode: "paged",
+              page: pagedLogins.page,
+              totalPages: pagedLogins.totalPages,
+              totalCount: pagedLogins.loadedCount,
+              pageSize: pagedLogins.pageSize,
+              isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+              onPageChange: pagedLogins.goToPage,
+              labels: { empty: "No login records found for this user." },
+            }}
+            columns={[
+              {
+                key: "device",
+                header: "Device",
+                cell: (login) => (
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-foreground/5 border border-border-dim flex items-center justify-center">
+                      <MonitorSmartphone className="w-4 h-4 text-foreground/70" />
+                    </div>
+                    {/* The raw browser string stays in the tooltip as evidence;
+                        the row shows what a person can read. */}
+                    <span
+                      className="text-[13px] font-medium text-foreground tracking-wide"
+                      title={login.device}
+                    >
+                      {describeDevice(login.device)}
+                    </span>
+                  </div>
+                ),
+              },
+              {
+                key: "location",
+                header: "Location & IP",
+                cell: (login) => (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-secondary" />
+                    <div className="flex flex-col">
+                      <span className="text-[13px] text-foreground">{login.location}</span>
+                      <span className="text-[11px] font-mono text-muted">{login.ip}</span>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "status",
+                header: "Status",
+                cell: (login) => (
+                  <div className="flex items-center gap-1.5">
+                    {/* Blue for a sign-in that worked, amber for one that did
+                        not. Green against red is the one pairing this platform
+                        does not use, and the word beside it carries the answer
+                        regardless. */}
+                    <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-info' : 'bg-warning'}`} />
+                    <span className="text-[12px] text-secondary font-medium tracking-wide">
+                      {login.status}
+                    </span>
+                  </div>
+                ),
+              },
+              {
+                key: "timestamp",
+                header: "Timestamp",
+                align: "right",
+                cell: (login) => (
+                  <span className="text-[12px] text-secondary tracking-wide">
+                    {formatDateTime(login.timestamp, {
+                      options: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
+                    })}
+                  </span>
+                ),
+              },
+            ]}
+          />
         </div>
         </div>
       )}
@@ -311,10 +311,13 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
         </div>
       </div>
 
-      <TableShell
+      <DataTable
+        rows={pagedThreads.pageRows}
+        rowKey={(thread) => thread.threadId}
         variant="panel"
+        headerVariant="strip"
         className="mt-2"
-        header={
+        cardHeader={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border-b border-border-dim/50 bg-background/50">
             <div>
               <h3 className="text-[14px] font-medium text-foreground tracking-wide">AI Usage Log</h3>
@@ -331,58 +334,60 @@ function AIUserCosts({ userId }: { userId: Id<"users"> }) {
             </div>
           </div>
         }
-        footer={
-          <PaginationFooter
-            page={pagedThreads.page}
-            totalPages={pagedThreads.totalPages}
-            totalCount={pagedThreads.loadedCount}
-            pageSize={pagedThreads.pageSize}
-            isLoading={costThreadStatus === "LoadingMore"}
-            onPageChange={pagedThreads.goToPage}
-          />
-        }
-      >
-            <thead>
-              <TableHeaderRow variant="strip">
-                <TableHeaderCell>Conversation</TableHeaderCell>
-                <TableHeaderCell>Date Started</TableHeaderCell>
-                <TableHeaderCell>Messages</TableHeaderCell>
-                <TableHeaderCell>Tokens Used</TableHeaderCell>
-                <TableHeaderCell align="right">Cost ($)</TableHeaderCell>
-              </TableHeaderRow>
-            </thead>
-            <tbody>
-              {pagedThreads.pageRows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-secondary text-[13px]">
-                    {costThreads.length === 0 ? "No AI conversations logged for this user." : "No conversations match your search."}
-                  </td>
-                </tr>
-              ) : (
-                pagedThreads.pageRows.map((thread) => (
-                  <tr key={thread.threadId} className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-[13px] text-secondary">
-                        {formatDate(thread.createdAt, { options: { month: 'short', day: 'numeric', year: 'numeric' } })}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-[13px] text-secondary">{thread.messageCount}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-[13px] text-secondary">{thread.threadTokens.toLocaleString()}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="text-[13px] font-medium text-brand">${thread.costGBP.toFixed(4)}</span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-      </TableShell>
+        empty={{
+          icon: <MessageSquare className="w-8 h-8 text-muted/30" />,
+          label: costThreads.length === 0
+            ? "No AI conversations logged for this user."
+            : "No conversations match your search.",
+        }}
+        footer={{
+          mode: "paged",
+          page: pagedThreads.page,
+          totalPages: pagedThreads.totalPages,
+          totalCount: pagedThreads.loadedCount,
+          pageSize: pagedThreads.pageSize,
+          isLoading: costThreadStatus === "LoadingMore",
+          onPageChange: pagedThreads.goToPage,
+        }}
+        columns={[
+          {
+            key: "conversation",
+            header: "Conversation",
+            cell: (thread) => (
+              <span className="text-[13px] font-medium text-foreground">{thread.title}</span>
+            ),
+          },
+          {
+            key: "date",
+            header: "Date Started",
+            cell: (thread) => (
+              <span className="text-[13px] text-secondary">
+                {formatDate(thread.createdAt, { options: { month: 'short', day: 'numeric', year: 'numeric' } })}
+              </span>
+            ),
+          },
+          {
+            key: "messages",
+            header: "Messages",
+            cell: (thread) => <span className="text-[13px] text-secondary">{thread.messageCount}</span>,
+          },
+          {
+            key: "tokens",
+            header: "Tokens Used",
+            cell: (thread) => (
+              <span className="text-[13px] text-secondary">{thread.threadTokens.toLocaleString()}</span>
+            ),
+          },
+          {
+            key: "cost",
+            header: "Cost ($)",
+            align: "right",
+            cell: (thread) => (
+              <span className="text-[13px] font-medium text-brand">${thread.costGBP.toFixed(4)}</span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
