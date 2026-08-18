@@ -7,12 +7,7 @@ import { AudioLines, Check, Loader2, Play, Square } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
-import {
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { getErrorMessage } from "@/src/lib/errors";
 import { LIVE_OUTPUT_SAMPLE_RATE, readLiveServerMessage } from "@/src/lib/googleLiveVoice";
@@ -182,84 +177,98 @@ export default function SpokenVoicePage() {
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">{t("hint")}</p>
 
-      <TableShell minWidthClassName="min-w-[640px]">
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.voice")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.sound")}</TableHeaderCell>
-            <TableHeaderCell align="right">{t("columns.actions")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={3} />
-          ) : (
-            setting.options.map((option) => {
-              const isCurrent = option.key === setting.voice;
+      <DataTable
+        rows={isLoading ? undefined : setting.options}
+        rowKey={(option) => option.key}
+        minWidthClassName="min-w-[640px]"
+        /* The voices are a fixed list the platform offers, so there is no state
+           in which none exist. The empty label is here because the shared table
+           asks for one, not because it can be reached. */
+        empty={{ icon: <Play className="w-5 h-5" />, label: t("columns.voice") }}
+        footer={{
+          mode: "paged",
+          page: 1,
+          totalPages: 1,
+          totalCount: isLoading ? 0 : setting.options.length,
+          pageSize: Math.max(isLoading ? 1 : setting.options.length, 1),
+          isLoading,
+          onPageChange: () => {},
+          labels: {
+            showing: (_start, _end, total) => `${total} ${total === 1 ? "voice" : "voices"}`,
+          },
+        }}
+        columns={[
+          {
+            key: "voice",
+            header: t("columns.voice"),
+            cell: (option) => (
+              <span className="flex items-center gap-2 text-[14px] font-medium text-foreground">
+                {option.key}
+                {option.key === setting?.voice && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
+                    <Check className="w-3 h-3" />
+                    {t("current")}
+                  </span>
+                )}
+              </span>
+            ),
+          },
+          {
+            key: "sound",
+            header: t("columns.sound"),
+            cell: (option) => (
+              <span className="text-[13px] text-secondary">{t(`voices.${option.key}`)}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: t("columns.actions"),
+            align: "right",
+            cell: (option) => {
+              const isCurrent = option.key === setting?.voice;
               const isPreviewing = previewVoice === option.key;
               return (
-                <tr
-                  key={option.key}
-                  className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2 text-[14px] font-medium text-foreground">
-                      {option.key}
-                      {isCurrent && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
-                          <Check className="w-3 h-3" />
-                          {t("current")}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[13px] text-secondary">
-                    {t(`voices.${option.key}`)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => (isPreviewing ? stopPreview() : playPreview(option.key))}
-                        disabled={previewVoice !== null && !isPreviewing}
-                        className={cn(
-                          "flex items-center gap-2 px-3 py-1.5 rounded-[10px] border text-[12px] font-medium transition-colors disabled:opacity-40",
-                          isPreviewing
-                            ? "border-brand/60 text-brand bg-brand/5"
-                            : "border-border-dim text-secondary hover:bg-hover"
-                        )}
-                      >
-                        {isPreviewing ? (
-                          previewPhase === "connecting" ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Square className="w-3.5 h-3.5" />
-                          )
-                        ) : (
-                          <Play className="w-3.5 h-3.5" />
-                        )}
-                        <span>{isPreviewing ? t("stop") : t("listen")}</span>
-                      </button>
-                      {!isCurrent && (
-                        <WriteButton
-                          onClick={() => chooseVoice(option.key)}
-                          disabled={savingVoice !== null}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12px] bg-foreground text-background font-medium hover:opacity-90 transition-all disabled:opacity-50"
-                        >
-                          {savingVoice === option.key ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : null}
-                          <span>{t("use")}</span>
-                        </WriteButton>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => (isPreviewing ? stopPreview() : playPreview(option.key))}
+                    disabled={previewVoice !== null && !isPreviewing}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-[10px] border text-[12px] font-medium transition-colors disabled:opacity-40",
+                      isPreviewing
+                        ? "border-brand/60 text-brand bg-brand/5"
+                        : "border-border-dim text-secondary hover:bg-hover"
+                    )}
+                  >
+                    {isPreviewing ? (
+                      previewPhase === "connecting" ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Square className="w-3.5 h-3.5" />
+                      )
+                    ) : (
+                      <Play className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isPreviewing ? t("stop") : t("listen")}</span>
+                  </button>
+                  {!isCurrent && (
+                    <WriteButton
+                      onClick={() => chooseVoice(option.key)}
+                      disabled={savingVoice !== null}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[12px] bg-foreground text-background font-medium hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {savingVoice === option.key ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : null}
+                      <span>{t("use")}</span>
+                    </WriteButton>
+                  )}
+                </div>
               );
-            })
-          )}
-        </tbody>
-      </TableShell>
+            },
+          },
+        ]}
+      />
     </div>
   );
 }
