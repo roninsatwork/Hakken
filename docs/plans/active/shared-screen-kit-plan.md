@@ -688,6 +688,37 @@ actually use `DataTable` — the rest import its parts and assemble them by hand
 which is how a list screen ended up with no paging controls while passing every
 check. Step 4's real measure is `DataTable` adoption.
 
+### Step 4 finished — 2026-08-18
+
+**Every admin screen with a table now hands `DataTable` its columns.** The frozen
+list of hand-assembled tables is down to six, and not one of them is an admin
+screen:
+
+| Still frozen | Why it stays |
+|---|---|
+| `admin/settings` retention rules | A fixed list of settings, not a data table. Nothing pages it and nothing searches it. Settled, not deferred. |
+| The five under `app/` | The client-facing half, which Anthony held back from this plan on 2026-08-17. They come off when that half comes into scope. |
+
+The last three were the wiki page list, an agent's memories and an agent's job
+history. The job history needed a footer the kit did not have: it steps by
+cursor, because counting every job to say "page 3 of 40" means reading the whole
+table before drawing a row of it. So `CursorFooter` joined the other two, and all
+three now sit on one bar with one count rule — the rule that had been wrong in
+both footers and had to be fixed twice in the same afternoon.
+
+**Two cursor footers now exist, on purpose and temporarily.**
+`CursorPaginationFooter` is the older answer to the same question and does not
+sit on the shared bar — different padding, no background, icon-only buttons,
+nothing to say about an empty list. Its only two callers are the customer list
+and the spreadsheet import, both out of scope. Folding them onto `CursorFooter`
+and deleting the old one is the first job when the client-facing half is picked
+up. Both files point at each other so the next person finds one and not a third.
+
+**One real gap is parked, not closed.** The sales data import has no footer at
+all — its table ends where its last row does, so a short list never says how many
+there are. It is a client-facing screen, so it keeps its shape for now, and its
+test says why rather than sitting on an unexplained exemption.
+
 ### The reference
 
 `/admin/ai/evals` is the screen this converges on: search box on its own row,
