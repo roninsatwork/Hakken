@@ -11,12 +11,8 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { BarChart3, BrainCircuit, FileText, Loader2, Pencil, Trash2 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -328,88 +324,79 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           not — it was still the card grid this argues against, and stayed that
           way until the approvals queue was rebuilt. Both are now in the drift
           guard, so the claim is checked rather than asserted. */}
-      <TableShell
+      <DataTable
+        rows={status === "LoadingFirstPage" ? undefined : pageSkills}
+        rowKey={(skill) => skill._id}
         minWidthClassName="min-w-[640px]"
-        footer={
-          <PaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={knownTotal}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={status === "LoadingMore"}
-            onPageChange={goToPage}
-            labels={{
-              empty: "No skills yet",
-              showing: (start, end, total) =>
-                isFiltered
-                  ? `Showing ${start}-${end} of ${total} matching`
-                  : `Showing ${start}-${end} of ${total} skills`,
-            }}
-          />
-        }
-      >
-        <thead>
-          {/* A skill is a name and a file. Category, status, risk and the
-              description were four columns of things nobody was going to act
-              on. */}
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium">Skill</th>
-            <th className="px-4 py-3 font-medium w-[220px]">File</th>
-            <th className="px-4 py-3 font-medium w-[190px]">Uploaded</th>
-            <th className="px-4 py-3 font-medium w-[120px] text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {status === "LoadingFirstPage" ? (
-            <TableLoadingRow colSpan={4} />
-          ) : skills.length === 0 ? (
-            <TableEmptyRow
-              colSpan={4}
-              icon={<BrainCircuit className="w-8 h-8 text-muted/30" />}
-              label="No skills yet — upload a SKILL.md file to add your first one"
-            />
-          ) : pageSkills.map((skill) => (
-            <tr
-              key={skill._id}
-              onClick={() => openEdit(skill)}
-              className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors cursor-pointer"
-            >
-              <td className="px-4 py-3">
-                <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
-              </td>
-              <td className="px-4 py-3 text-[12px] text-secondary truncate">
-                {skill.sourceFilename || "—"}
-              </td>
-              <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</td>
-              <td className="px-4 py-3 text-right whitespace-nowrap">
-                <button
-                  type="button"
-                  aria-label={`Edit ${skill.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openEdit(skill);
-                  }}
-                  className="p-2 rounded-md text-muted hover:text-foreground hover:bg-foreground/10 transition-colors"
-                >
+        onRowClick={(skill) => openEdit(skill)}
+        empty={{
+          icon: <BrainCircuit className="w-8 h-8 text-muted/30" />,
+          label: "No skills yet — upload a SKILL.md file to add your first one",
+        }}
+        footer={{
+          mode: "paged",
+          page,
+          totalPages,
+          totalCount: knownTotal,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: status === "LoadingMore" || status === "LoadingFirstPage",
+          onPageChange: goToPage,
+          labels: {
+            empty: "No skills yet",
+            showing: (start, end, total) =>
+              isFiltered
+                ? `Showing ${start}-${end} of ${total} matching`
+                : `Showing ${start}-${end} of ${total} skills`,
+          },
+        }}
+        /* A skill is a name and a file. Category, status, risk and the
+           description were four columns of things nobody was going to act on. */
+        columns={[
+          {
+            key: "skill",
+            header: "Skill",
+            cell: (skill) => (
+              <div className="text-[13px] font-semibold text-foreground">{skill.name}</div>
+            ),
+          },
+          {
+            key: "file",
+            header: "File",
+            className: "w-[220px] truncate",
+            cell: (skill) => (
+              <span className="text-[12px] text-secondary">{skill.sourceFilename || "—"}</span>
+            ),
+          },
+          {
+            key: "uploaded",
+            header: "Uploaded",
+            className: "w-[190px]",
+            cell: (skill) => (
+              <span className="text-[12px] text-secondary">{formatDateTime(skill.updatedAt)}</span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            className: "w-[120px] whitespace-nowrap",
+            cell: (skill) => (
+              <RowActions>
+                <RowIconButton label={`Edit ${skill.name}`} onClick={() => openEdit(skill)}>
                   <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete ${skill.name}`}
-                  onClick={(event) => {
-                    // The row navigates; the button must not.
-                    event.stopPropagation();
-                    setDeleteTarget({ id: skill._id, name: skill.name });
-                  }}
-                  className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                </RowIconButton>
+                <RowIconButton
+                  label={`Delete ${skill.name}`}
+                  tone="danger"
+                  onClick={() => setDeleteTarget({ id: skill._id, name: skill.name })}
                 >
                   <Trash2 className="w-4 h-4" />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+                </RowIconButton>
+              </RowActions>
+            ),
+          },
+        ]}
+      />
 
       <SonaeModal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Edit skill" size="lg">
         <form onSubmit={saveEdit} className="flex flex-col gap-4 px-1 pb-2">

@@ -1,5 +1,5 @@
 {
-  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/, or that assemble a table from the kit's loose parts instead of taking DataTable whole. Each list may shrink, never grow \u2014 move the screen onto the kit instead of adding to it. The `tables` and `inputs` lists are finished: every entry left in them is a settled decision rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md \u2014 the opportunity report stays hand-written (Anthony, 2026-08-17); WidgetPreviewPanel draws a mock-up of the customer's own chat widget rather than a form; MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them; SettingBlock's opacity box is the same shape; and app/tasks is a grouped list with its own due-date row. The `assembled` list is the live one: 61 screens frozen on 2026-08-17, to be worked down as each moves onto DataTable.",
+  "note": "Screens that hand-write a table or a text field instead of using the kit in src/ui/components/screens/, or that assemble a table from the kit's loose parts instead of taking DataTable whole. Each list may shrink, never grow \u2014 move the screen onto the kit instead of adding to it. The `tables` and `inputs` lists are finished: every entry left in them is a settled decision rather than unfinished work, each carrying its reason as a comment in the file itself and written up in docs/plans/active/shared-screen-kit-plan.md \u2014 the opportunity report stays hand-written (Anthony, 2026-08-17); WidgetPreviewPanel draws a mock-up of the customer's own chat widget rather than a form; MoneyViewScreen's two boxes sit inside a sentence, already labelled by the words around them; SettingBlock's opacity box is the same shape; and app/tasks is a grouped list with its own due-date row. The `assembled` list is the live one: 61 screens frozen on 2026-08-17, worked down as each moves onto DataTable. From 2026-08-18 the remaining work is admin-only (Anthony: \"it's an admin only plan\"), so the six entries under app/ and demos/ are not a queue \u2014 they stay frozen until somebody works on that screen for its own reasons. The rule is unchanged for them: the list may shrink, never grow.",
   "tables": [
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx"
   ],
@@ -18,7 +18,6 @@
     "src/app/(dashboard)/admin/agents/[id]/logs/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/runs/page.tsx",
-    "src/app/(dashboard)/admin/agents/skills/page.tsx",
     "src/app/(dashboard)/admin/ai/chat-logs/page.tsx",
     "src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",

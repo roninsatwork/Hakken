@@ -92,6 +92,37 @@ wants Starter / Pro / Enterprise tiers has to invent tiering for itself.
 
 ## Decisions
 
+### The remaining work is admin-only
+
+**Anthony, 2026-08-18: *"please do not touch the posture studio or the user front
+end in this plan — it's an admin only plan."*** Everything still to be converted
+lives under `src/app/(dashboard)/admin/`. Nothing under `app/` or `demos/` is to
+be worked in this plan, and the six screens still on the frozen list from those
+areas stay frozen rather than becoming a queue:
+
+- `app/[workspace]/customers`, `import-data`, `spreadsheet-import`
+- `app/[workspace]/opportunity-report` — already a settled decision
+- `app/profile/ProfileTabs`
+- `app/tasks`
+
+Frozen is the right resting place for them. The build check refuses any *new*
+hand-assembled table anywhere, so these cannot get worse; they simply will not
+get better under this plan. Whoever next works on one of those screens for its
+own reasons can move it across then.
+
+**What was already touched before this was said**, and is left as it stands
+rather than reverted — say if you would rather it came back out:
+
+- `app/governance/policies` and `app/governance/register` — converted, and given
+  the search box, filters and page numbers their platform twins already had.
+- `app/settings/team` — converted; also where two sentences of hardcoded Italian
+  were found and removed.
+- `app/properties/scraped-data` and `app/arcade/ronins-run` — converted.
+- `demos/movements/_components/MovementLibraryTable` — converted, and its
+  "Loading posture studio..." text row replaced with the kit's spinner.
+- `app/profile/ProfileTabs` — not converted, but its device column was fixed
+  (every iPhone sign-in had been reported as a Mac) and it gained a search box.
+
 ### Promote what works; do not design a new kit
 
 The admin kit has been used across 220 screens and has tests. It moves to the
