@@ -18,13 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 
 type EngagementPerson = {
@@ -326,60 +320,81 @@ export default function CompanyDashboardPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-foreground">People</h2>
 
-        <TableShell minWidthClassName="min-w-[820px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>Person</TableHeaderCell>
-              <TableHeaderCell>Last seen</TableHeaderCell>
-              <TableHeaderCell>Sign-ins</TableHeaderCell>
-              <TableHeaderCell>Questions</TableHeaderCell>
-              <TableHeaderCell>Agents run</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {engagement === undefined ? (
-              <TableLoadingRow colSpan={5} />
-            ) : everyone.length === 0 ? (
-              <TableEmptyRow
-                colSpan={5}
-                icon={<Users className="h-8 w-8 text-muted/30" />}
-                label="Nobody here yet"
-                action={
-                  <Link
-                    href={`/admin/companies/${companyId}/directory/invites`}
-                    className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
-                  >
-                    Invite someone
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                }
-              />
-            ) : (
-              everyone.map((person) => {
+        <DataTable
+          rows={engagement === undefined ? undefined : everyone}
+          rowKey={(person) => person.userId}
+          minWidthClassName="min-w-[820px]"
+          empty={{
+            icon: <Users className="h-8 w-8 text-muted/30" />,
+            label: "Nobody here yet",
+            action: (
+              <Link
+                href={`/admin/companies/${companyId}/directory/invites`}
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
+              >
+                Invite someone
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            ),
+          }}
+          footer={{
+            mode: "paged",
+            page: 1,
+            totalPages: 1,
+            totalCount: everyone.length,
+            pageSize: Math.max(everyone.length, 1),
+            isLoading: engagement === undefined,
+            onPageChange: () => {},
+            labels: {
+              empty: "Nobody here yet",
+              showing: (_start, _end, total) => `${total} ${total === 1 ? "person" : "people"}`,
+            },
+          }}
+          columns={[
+            {
+              key: "person",
+              header: "Person",
+              cell: (person) => (
+                <>
+                  <div className="text-[13px] font-medium text-foreground">
+                    {person.name}
+                    {person.isAdmin ? <span className="ml-2 text-[12px] text-muted">Admin</span> : null}
+                  </div>
+                  <div className="text-[12px] text-muted">{person.email}</div>
+                </>
+              ),
+            },
+            {
+              key: "lastSeen",
+              header: "Last seen",
+              /* Least recently seen sorts to the top, so the people worth a call
+                 are the first thing read. */
+              cell: (person) => {
                 const lastSeen = describeLastSeen(person.lastSeenAt);
                 return (
-                  <tr key={person.userId} className="border-b border-border-dim/50">
-                    <td className="px-4 py-3 align-top">
-                      <div className="text-[13px] font-medium text-foreground">
-                        {person.name}
-                        {person.isAdmin ? <span className="ml-2 text-[12px] text-muted">Admin</span> : null}
-                      </div>
-                      <div className="text-[12px] text-muted">{person.email}</div>
-                    </td>
-                    {/* Least recently seen sorts to the top, so the people worth
-                        a call are the first thing read. */}
-                    <td className={cn("px-4 py-3 align-top text-[13px]", lastSeen.stale ? "text-[#f59e0b]" : "text-secondary")}>
-                      {lastSeen.label}
-                    </td>
-                    <td className="px-4 py-3 align-top text-[13px] text-secondary">{person.signIns}</td>
-                    <td className="px-4 py-3 align-top text-[13px] text-secondary">{person.questions}</td>
-                    <td className="px-4 py-3 align-top text-[13px] text-secondary">{person.agentRuns}</td>
-                  </tr>
+                  <span className={cn("text-[13px]", lastSeen.stale ? "text-[#f59e0b]" : "text-secondary")}>
+                    {lastSeen.label}
+                  </span>
                 );
-              })
-            )}
-          </tbody>
-        </TableShell>
+              },
+            },
+            {
+              key: "signIns",
+              header: "Sign-ins",
+              cell: (person) => <span className="text-[13px] text-secondary">{person.signIns}</span>,
+            },
+            {
+              key: "questions",
+              header: "Questions",
+              cell: (person) => <span className="text-[13px] text-secondary">{person.questions}</span>,
+            },
+            {
+              key: "agentRuns",
+              header: "Agents run",
+              cell: (person) => <span className="text-[13px] text-secondary">{person.agentRuns}</span>,
+            },
+          ]}
+        />
       </section>
 
       {/* Only when somebody has been invited and has not arrived. A permanent

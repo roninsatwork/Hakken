@@ -154,7 +154,9 @@ describe("CompanyDashboardPage", () => {
     render(<CompanyDashboardPage />);
 
     expect(screen.getByText("Nobody has been added to this company yet.")).toBeInTheDocument();
-    expect(screen.getByText("Nobody here yet")).toBeInTheDocument();
+    // Said twice on purpose since the screen gained page numbers: once in the
+    // table and once in the footer's count slot.
+    expect(screen.getAllByText("Nobody here yet").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /Invite someone/ }))
       .toHaveAttribute("href", "/admin/companies/company_1/directory/invites");
   });

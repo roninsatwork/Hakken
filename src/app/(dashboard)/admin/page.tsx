@@ -21,13 +21,7 @@ import {
   YAxis,
 } from "recharts";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 
 type ClientState = "HEALTHY" | "NEEDS_ATTENTION" | "UNUSED";
@@ -439,55 +433,81 @@ export default function AdminDashboardPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-[15px] font-semibold text-foreground">Clients</h2>
 
-        <TableShell minWidthClassName="min-w-[900px]">
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell>Client</TableHeaderCell>
-              <TableHeaderCell>State</TableHeaderCell>
-              <TableHeaderCell>Active this week</TableHeaderCell>
-              <TableHeaderCell>Gone quiet</TableHeaderCell>
-              <TableHeaderCell>Revenue</TableHeaderCell>
-              <TableHeaderCell align="right">{""}</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {overview === undefined ? (
-              <TableLoadingRow colSpan={6} />
-            ) : portfolio.length === 0 ? (
-              <TableEmptyRow
-                colSpan={6}
-                icon={<LayoutDashboard className="h-8 w-8 text-muted/30" />}
-                label="No clients yet"
-              />
-            ) : (
-              portfolio.map((client) => (
-                <tr key={client.companyId} className="border-b border-border-dim/50">
-                  <td className="px-4 py-3 align-top">
-                    <div className="text-[13px] font-medium text-foreground">{client.name}</div>
-                    <div className="text-[12px] text-muted">{client.planName ?? "No plan"}</div>
-                  </td>
-                  <td className={cn("px-4 py-3 align-top text-[13px]", STATE_CLASSES[client.state])}>
-                    {STATE_LABELS[client.state]}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">
-                    {client.activeRecently} of {client.people}
-                  </td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{client.quiet}</td>
-                  <td className="px-4 py-3 align-top text-[13px] text-secondary">{formatRevenue(client.mrrGBP)}</td>
-                  <td className="px-4 py-3 align-top text-right">
-                    <Link
-                      href={`/admin/companies/${client.companyId}`}
-                      className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
-                    >
-                      Open
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </TableShell>
+        <DataTable
+          rows={overview === undefined ? undefined : portfolio}
+          rowKey={(client) => client.companyId}
+          minWidthClassName="min-w-[900px]"
+          empty={{ icon: <LayoutDashboard className="h-8 w-8 text-muted/30" />, label: "No clients yet" }}
+          footer={{
+            mode: "paged",
+            page: 1,
+            totalPages: 1,
+            totalCount: portfolio.length,
+            pageSize: Math.max(portfolio.length, 1),
+            isLoading: overview === undefined,
+            onPageChange: () => {},
+            labels: {
+              empty: "No clients yet",
+              showing: (_start, _end, total) => `${total} client${total === 1 ? "" : "s"}`,
+            },
+          }}
+          columns={[
+            {
+              key: "client",
+              header: "Client",
+              cell: (client) => (
+                <>
+                  <div className="text-[13px] font-medium text-foreground">{client.name}</div>
+                  <div className="text-[12px] text-muted">{client.planName ?? "No plan"}</div>
+                </>
+              ),
+            },
+            {
+              key: "state",
+              header: "State",
+              cell: (client) => (
+                <span className={cn("text-[13px]", STATE_CLASSES[client.state])}>
+                  {STATE_LABELS[client.state]}
+                </span>
+              ),
+            },
+            {
+              key: "active",
+              header: "Active this week",
+              cell: (client) => (
+                <span className="text-[13px] text-secondary">
+                  {client.activeRecently} of {client.people}
+                </span>
+              ),
+            },
+            {
+              key: "quiet",
+              header: "Gone quiet",
+              cell: (client) => <span className="text-[13px] text-secondary">{client.quiet}</span>,
+            },
+            {
+              key: "revenue",
+              header: "Revenue",
+              cell: (client) => (
+                <span className="text-[13px] text-secondary">{formatRevenue(client.mrrGBP)}</span>
+              ),
+            },
+            {
+              key: "open",
+              header: "",
+              align: "right",
+              cell: (client) => (
+                <Link
+                  href={`/admin/companies/${client.companyId}`}
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand hover:underline"
+                >
+                  Open
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              ),
+            },
+          ]}
+        />
       </section>
 
       {/* Only when there is something to do. A permanent panel of zeroes is the
