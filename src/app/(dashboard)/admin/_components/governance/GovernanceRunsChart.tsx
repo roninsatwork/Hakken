@@ -85,9 +85,13 @@ export function GovernanceRunsChart({ data, labels }: GovernanceRunsChartProps) 
         />
         {/* Ordered so the band a reader cares about most sits at the top of the
             column, where its height is easiest to judge against the gridline. */}
-        <Bar dataKey="finished" stackId="runs" fill={RUN_OUTCOME_COLOURS.finished} />
-        <Bar dataKey="waited" stackId="runs" fill={RUN_OUTCOME_COLOURS.waited} />
-        <Bar dataKey="unfinished" stackId="runs" fill={RUN_OUTCOME_COLOURS.unfinished} radius={[3, 3, 0, 0]} />
+        {/* No entrance animation: recharts' Animate can wedge under React 19's
+            double-invoked effects, leaving every rectangle rendered as nothing —
+            grid and axes drawn, bars absent. A compliance chart has no business
+            animating anyway. */}
+        <Bar dataKey="finished" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.finished} />
+        <Bar dataKey="waited" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.waited} />
+        <Bar dataKey="unfinished" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.unfinished} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

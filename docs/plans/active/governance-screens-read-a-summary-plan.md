@@ -173,7 +173,26 @@ the tree is clean.
   7,936; the "floor rather than a total" warning is gone because it stopped
   being true.
 
-### Outstanding
+### Outstanding — CLOSED 2026-08-18 evening
+
+All three items below were closed the same evening, when Anthony got home and
+said finish it:
+
+1. **The empty chart was recharts' entrance animation wedging** — nothing to do
+   with the rollup at all. The DOM showed nineteen bar wrappers each rendering
+   as nothing; the animation never fired under React 19's double-invoked
+   effects, and two screens in this codebase (the admin dashboard and the
+   company detail page) already carried `isAnimationActive={false}` for exactly
+   this reason. The governance chart now does too, and the four other charts
+   still exposed are flagged as their own task rather than swept into this
+   plan.
+2. **The 90-day view verified live** — the full window draws instantly, quiet
+   months honestly flat. The workspace-scoped view cannot be reached from a
+   super admin's session (the app URL bounces to the console, as it always
+   has); its scope rule is pinned by the integration tests instead.
+3. The deploy-day steps stand as written below.
+
+### Outstanding (as recorded overnight)
 
 1. **The runs-per-day bar chart draws empty on the real screen.** Every number
    around it is right, and the chart's y-axis scales as if the data is there,
