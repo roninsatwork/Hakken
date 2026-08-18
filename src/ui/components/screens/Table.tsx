@@ -317,6 +317,69 @@ export function RowIconButton({
   );
 }
 
+/**
+ * The bar every footer sits in, and the sentence on its left.
+ *
+ * Both of these were written out twice, once per footer, and the count rule was
+ * wrong in both: a list said "No entries found" for the moment before its rows
+ * arrived, under a table that was showing a spinner at the time. A count of zero
+ * before an answer is not the same as an answer of zero. Fixing that meant
+ * editing two places that had to agree and had no way of knowing they disagreed,
+ * which is the whole argument for it living here once.
+ */
+function FooterBar({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
+      {children}
+    </div>
+  );
+}
+
+/** Nothing while the query is still out; the spinner is already doing the talking. */
+function FooterCount({
+  isLoading,
+  hasRows,
+  showing,
+  empty,
+}: {
+  isLoading: boolean;
+  hasRows: boolean;
+  showing: () => string;
+  empty?: string;
+}) {
+  return (
+    <div className="text-[12px] font-medium text-secondary">
+      {isLoading ? null : hasRows ? (
+        <span>{showing()}</span>
+      ) : (
+        <span>{empty ?? "No entries found"}</span>
+      )}
+    </div>
+  );
+}
+
+/** A step-a-page button, so all three footers step alike. */
+function FooterStepButton({
+  onClick,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
+    >
+      {children}
+    </button>
+  );
+}
+
 type AdminPaginationFooterProps = {
   page: number;
   totalPages: number;
@@ -348,46 +411,101 @@ export function PaginationFooter({
   const end = Math.min(safePage * pageSize, totalCount);
 
   return (
-    <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
-      {/*
-        Nothing at all while the query is still out. A count of zero before an
-        answer is not the same as an answer of zero, and this slot used to say
-        "No entries found" on every list screen for the moment before the rows
-        arrived — under a table that was showing a spinner at the time. Saying
-        nothing is honest; the spinner is already doing the talking.
-      */}
-      <div className="text-[12px] font-medium text-secondary">
-        {isLoading ? null : totalCount > 0 ? (
-          <span>{labels?.showing?.(start, end, totalCount) ?? `Showing ${start}-${end} of ${totalCount}`}</span>
-        ) : (
-          <span>{labels?.empty ?? "No entries found"}</span>
-        )}
-      </div>
+    <FooterBar>
+      <FooterCount
+        isLoading={isLoading}
+        hasRows={totalCount > 0}
+        showing={() => labels?.showing?.(start, end, totalCount) ?? `Showing ${start}-${end} of ${totalCount}`}
+        empty={labels?.empty}
+      />
 
       <div className="flex items-center gap-3">
-        <button
+        <FooterStepButton
           onClick={() => onPageChange(Math.max(1, safePage - 1))}
           disabled={safePage === 1 || isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
         >
           <ChevronLeft className="w-4 h-4" />
           {labels?.previous ?? "Previous"}
-        </button>
+        </FooterStepButton>
 
         <div className="flex items-center justify-center min-w-[100px] text-[12px] font-medium tracking-wide">
           {labels?.page?.(safePage, safeTotalPages) ?? `Page ${safePage} of ${safeTotalPages}`}
         </div>
 
-        <button
+        <FooterStepButton
           onClick={() => onPageChange(Math.min(safeTotalPages, safePage + 1))}
           disabled={safePage >= safeTotalPages || isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim"
         >
           {labels?.next ?? "Next"}
           <ChevronRight className="w-4 h-4" />
-        </button>
+        </FooterStepButton>
       </div>
-    </div>
+    </FooterBar>
+  );
+}
+
+type AdminCursorFooterProps = {
+  /** Which page this is. There is no last page to count towards. */
+  page: number;
+  visibleCount: number;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  isLoading: boolean;
+  onStep: (direction: "back" | "forward") => void;
+  labels?: {
+    previous?: string;
+    next?: string;
+    empty?: string;
+    showing?: (count: number, page: number) => string;
+  };
+};
+
+/**
+ * Previous and Next over a list too big to count.
+ *
+ * The numbered footer needs a total, and a total means counting every row in the
+ * table before drawing the first one. An agent's job history is the one list
+ * where that is not worth doing, so it steps by cursor and says which page it is
+ * on rather than how many there are. It had drawn its own footer for this, close
+ * enough to the shared one to look deliberate and different enough to be wrong:
+ * different button shape, different border, and a count that read "Loading jobs…"
+ * where every other list shows nothing and lets the spinner speak.
+ *
+ * `CursorPaginationFooter` in `CursorPagination.tsx` is the older answer to the
+ * same question and does not sit on this bar. Its two callers are out of the
+ * current plan's scope; when they come in, they move here and it goes. Pair this
+ * with `useCursorPagination` from that file for the cursor stack itself.
+ */
+export function CursorFooter({
+  page,
+  visibleCount,
+  canGoBack,
+  canGoForward,
+  isLoading,
+  onStep,
+  labels,
+}: AdminCursorFooterProps) {
+  return (
+    <FooterBar>
+      <FooterCount
+        isLoading={isLoading}
+        hasRows={visibleCount > 0}
+        showing={() => labels?.showing?.(visibleCount, page) ?? `Showing ${visibleCount} · page ${page}`}
+        empty={labels?.empty}
+      />
+
+      <div className="flex items-center gap-3">
+        <FooterStepButton onClick={() => onStep("back")} disabled={!canGoBack || isLoading}>
+          <ChevronLeft className="w-4 h-4" />
+          {labels?.previous ?? "Previous"}
+        </FooterStepButton>
+
+        <FooterStepButton onClick={() => onStep("forward")} disabled={!canGoForward || isLoading}>
+          {labels?.next ?? "Next"}
+          <ChevronRight className="w-4 h-4" />
+        </FooterStepButton>
+      </div>
+    </FooterBar>
   );
 }
 
@@ -412,16 +530,13 @@ export function LoadMoreFooter({
   labels,
 }: AdminLoadMoreFooterProps) {
   return (
-    <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
-      {/* Nothing at all while the query is still out — same reason as the
-          numbered footer above. */}
-      <div className="text-[12px] font-medium text-secondary">
-        {isLoading ? null : visibleCount > 0 ? (
-          <span>{labels?.showing?.(visibleCount) ?? `Showing ${visibleCount}`}</span>
-        ) : (
-          <span>{labels?.empty ?? "No entries found"}</span>
-        )}
-      </div>
+    <FooterBar>
+      <FooterCount
+        isLoading={isLoading}
+        hasRows={visibleCount > 0}
+        showing={() => labels?.showing?.(visibleCount) ?? `Showing ${visibleCount}`}
+        empty={labels?.empty}
+      />
 
       {canLoadMore && (
         <button
@@ -434,6 +549,6 @@ export function LoadMoreFooter({
           {isLoading ? labels?.loading ?? "Loading..." : labels?.loadMore ?? "Load more"}
         </button>
       )}
-    </div>
+    </FooterBar>
   );
 }

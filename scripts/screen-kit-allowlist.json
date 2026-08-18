@@ -10,9 +10,6 @@
     "src/app/(dashboard)/app/tasks/page.tsx"
   ],
   "assembled": [
-    "src/app/(dashboard)/admin/_features/wiki/WikiPagesListScreen.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/runs/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
     "src/app/(dashboard)/app/[workspace]/customers/page.tsx",
     "src/app/(dashboard)/app/[workspace]/import-data/page.tsx",

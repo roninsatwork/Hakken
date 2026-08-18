@@ -22,17 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import {
-  PaginationFooter,
-  RowActions,
-  RowIconButton,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import {
   ModalFormActions,
   ModalFormError,
@@ -501,17 +492,21 @@ export default function AgentMemoryPage() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="flex-1">
-            <SearchBar
-              value={searchTerm}
-              onChange={(value) => {
-                setSearchTerm(value);
-                setPage(1);
-              }}
-              placeholder="Search memories"
-            />
-          </div>
+      </header>
+
+      <DataTable
+        rows={isLoading ? undefined : pageMemories}
+        rowKey={(memory) => memory._id}
+        minWidthClassName="min-w-[720px]"
+        search={{
+          value: searchTerm,
+          onChange: (value) => {
+            setSearchTerm(value);
+            setPage(1);
+          },
+          placeholder: "Search memories",
+        }}
+        filters={
           <div className="flex items-center gap-1 rounded-[10px] border border-border-dim bg-sidebar/30 p-1">
             {[
               { label: "In use", removed: false },
@@ -534,51 +529,36 @@ export default function AgentMemoryPage() {
               </button>
             ))}
           </div>
-        </div>
-      </header>
-
-      <TableShell
-        minWidthClassName="min-w-[720px]"
-        // No pager over an empty list: it would only repeat the empty row
-        // above it in fewer words.
-        footer={knownTotal > 0 ? (
-          <PaginationFooter
-            page={page}
-            totalPages={totalPages}
-            totalCount={knownTotal}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={memories.status === "LoadingMore"}
-            onPageChange={goToPage}
-            labels={{
-              showing: (start, end, total) => `Showing ${start}-${end} of ${total} loaded`,
-            }}
-          />
-        ) : undefined}
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>What the agent knows</TableHeaderCell>
-            <TableHeaderCell className="w-[150px]">Applies</TableHeaderCell>
-            <TableHeaderCell className="w-[150px]">Track record</TableHeaderCell>
-            <TableHeaderCell className="w-[190px]">Added</TableHeaderCell>
-            <TableHeaderCell className="w-[110px]" align="right"> </TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={5} />
-          ) : pageMemories.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<Brain className="h-8 w-8 text-muted/30" />}
-              label={showRemoved ? "Nothing has been removed" : "No memories yet — add what the agent should know"}
-            />
-          ) : pageMemories.map((memory) => (
-            <tr
-              key={memory._id}
-              className="group border-b border-border-dim/50 transition-colors hover:bg-foreground/[0.02]"
-            >
-              <td className="px-4 py-3">
+        }
+        empty={{
+          icon: <Brain className="h-8 w-8 text-muted/30" />,
+          label: showRemoved
+            ? "Nothing has been removed"
+            : "No memories yet — add what the agent should know",
+        }}
+        /* The pager used to be hidden whenever the list was empty. It now stays,
+           because it is the only thing on the screen that says how many there
+           are, and a table that grows a footer the moment it has rows reads as a
+           layout jump rather than a count. */
+        footer={{
+          mode: "paged",
+          page,
+          totalPages,
+          totalCount: knownTotal,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: memories.status === "LoadingMore",
+          onPageChange: goToPage,
+          labels: {
+            showing: (start, end, total) => `Showing ${start}-${end} of ${total} loaded`,
+            empty: showRemoved ? "Nothing has been removed" : "No memories yet",
+          },
+        }}
+        columns={[
+          {
+            key: "content",
+            header: "What the agent knows",
+            cell: (memory) => (
+              <>
                 {memory.autoApplied && (
                   <StatusPill tone="warning" className="mb-1">
                     Saved by the AI
@@ -587,45 +567,62 @@ export default function AgentMemoryPage() {
                 <p className="whitespace-pre-line text-[12px] leading-relaxed text-secondary line-clamp-3">
                   {memory.content}
                 </p>
-              </td>
-              <td className="px-4 py-3">
-                <MemoryApplyModeBadge applyMode={resolveApplyMode(memory)} />
-              </td>
-              <td className="px-4 py-3">
-                <MemoryTrackRecord memory={memory} />
-              </td>
-              <td className="px-4 py-3 text-[12px] text-secondary">{formatDateTime(memory.createdAt)}</td>
-              <td className="px-4 py-3">
-                <RowActions>
-                  {showRemoved ? (
-                    <RowIconButton label="Put this memory back" onClick={() => handleRestore(memory)}>
-                      {action.isBusy(memory._id)
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <RotateCcw className="h-4 w-4" />}
+              </>
+            ),
+          },
+          {
+            key: "applies",
+            header: "Applies",
+            className: "w-[150px]",
+            cell: (memory) => <MemoryApplyModeBadge applyMode={resolveApplyMode(memory)} />,
+          },
+          {
+            key: "trackRecord",
+            header: "Track record",
+            className: "w-[150px]",
+            cell: (memory) => <MemoryTrackRecord memory={memory} />,
+          },
+          {
+            key: "added",
+            header: "Added",
+            className: "w-[190px] text-[12px] text-secondary",
+            cell: (memory) => formatDateTime(memory.createdAt),
+          },
+          {
+            key: "actions",
+            header: " ",
+            align: "right",
+            className: "w-[110px]",
+            cell: (memory) => (
+              <RowActions>
+                {showRemoved ? (
+                  <RowIconButton label="Put this memory back" onClick={() => handleRestore(memory)}>
+                    {action.isBusy(memory._id)
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <RotateCcw className="h-4 w-4" />}
+                  </RowIconButton>
+                ) : (
+                  <>
+                    <RowIconButton label="Edit memory" onClick={() => openEditor(memory)}>
+                      <Edit2 className="h-4 w-4" />
                     </RowIconButton>
-                  ) : (
-                    <>
-                      <RowIconButton label="Edit memory" onClick={() => openEditor(memory)}>
-                        <Edit2 className="h-4 w-4" />
-                      </RowIconButton>
-                      <RowIconButton
-                        label="Remove memory"
-                        tone="danger"
-                        onClick={() => {
-                          action.clearError();
-                          setDeleteTarget(memory);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </RowIconButton>
-                    </>
-                  )}
-                </RowActions>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableShell>
+                    <RowIconButton
+                      label="Remove memory"
+                      tone="danger"
+                      onClick={() => {
+                        action.clearError();
+                        setDeleteTarget(memory);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </RowIconButton>
+                  </>
+                )}
+              </RowActions>
+            ),
+          },
+        ]}
+      />
 
       <section className="overflow-hidden rounded-[16px] border border-border-dim/80 bg-sidebar/20">
         <div className="flex items-center justify-between gap-3 border-b border-border-dim px-4 py-3">

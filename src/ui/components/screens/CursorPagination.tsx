@@ -72,6 +72,23 @@ export function useCursorPagination(resetKey: string = "") {
   );
 }
 
+/**
+ * The older of the two cursor footers, and the one that does not match.
+ *
+ * `CursorFooter` in `Table.tsx` does the same job on the shared footer bar, so
+ * it sits flush with the numbered and load-more footers and says the same thing
+ * about an empty list that they do. This one has its own padding, no background,
+ * icon-only buttons and nothing to say when the list is empty.
+ *
+ * It survives only because its two callers — the customer list and the
+ * spreadsheet import — are in the client-facing half of the app, which Anthony
+ * ruled out of this plan on 2026-08-17. Folding them onto `CursorFooter` and
+ * deleting this is the first job when that half comes into scope. Until then:
+ * do not add a caller here, and do not write a third.
+ *
+ * The hook above is not affected — it is the cursor stack, not the chrome, and
+ * `CursorFooter` is happy to be driven by it.
+ */
 export function CursorPaginationFooter({
   pageIndex,
   rowsOnPage,

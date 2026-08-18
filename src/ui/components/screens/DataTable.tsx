@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import {
+  CursorFooter,
   LoadMoreFooter,
   PaginationFooter,
   SearchBar,
@@ -36,9 +37,9 @@ import {
  * no arranging left to do.
  *
  * **It changes no behaviour.** A screen that pages keeps paging and a screen that
- * loads more keeps loading more — that is what `footer` selects. The two footers
- * stay two footers because they follow two behaviours; they are one bar, always
- * present, in one style.
+ * loads more keeps loading more — that is what `footer` selects. The three
+ * footers stay three because they follow three behaviours; they are one bar,
+ * always present, in one style.
  */
 
 export type DataTableColumn<Row> = {
@@ -62,6 +63,23 @@ type LoadMoreFooterSpec = {
     showing?: (count: number) => string;
     loadMore?: string;
     loading?: string;
+  };
+};
+
+/** Previous and Next over a list too big to count. See `CursorFooter`. */
+type CursorFooterSpec = {
+  mode: "cursor";
+  page: number;
+  visibleCount: number;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  isLoading: boolean;
+  onStep: (direction: "back" | "forward") => void;
+  labels?: {
+    empty?: string;
+    showing?: (count: number, page: number) => string;
+    previous?: string;
+    next?: string;
   };
 };
 
@@ -92,7 +110,7 @@ type DataTableProps<Row> = {
   empty: { icon: ReactNode; label: ReactNode; action?: ReactNode };
 
   /** Omit for a table with no footer — rare, and worth a second thought. */
-  footer?: LoadMoreFooterSpec | PagedFooterSpec;
+  footer?: LoadMoreFooterSpec | PagedFooterSpec | CursorFooterSpec;
 
   /** The house search box, above the table. Omit for a table nobody searches. */
   search?: { value: string; onChange: (next: string) => void; placeholder: string };
@@ -241,7 +259,7 @@ export function DataTable<Row>({
   );
 }
 
-function renderFooter(footer: LoadMoreFooterSpec | PagedFooterSpec) {
+function renderFooter(footer: LoadMoreFooterSpec | PagedFooterSpec | CursorFooterSpec) {
   if (footer.mode === "loadMore") {
     return (
       <LoadMoreFooter
@@ -249,6 +267,20 @@ function renderFooter(footer: LoadMoreFooterSpec | PagedFooterSpec) {
         canLoadMore={footer.canLoadMore}
         isLoading={footer.isLoading}
         onLoadMore={footer.onLoadMore}
+        labels={footer.labels}
+      />
+    );
+  }
+
+  if (footer.mode === "cursor") {
+    return (
+      <CursorFooter
+        page={footer.page}
+        visibleCount={footer.visibleCount}
+        canGoBack={footer.canGoBack}
+        canGoForward={footer.canGoForward}
+        isLoading={footer.isLoading}
+        onStep={footer.onStep}
         labels={footer.labels}
       />
     );

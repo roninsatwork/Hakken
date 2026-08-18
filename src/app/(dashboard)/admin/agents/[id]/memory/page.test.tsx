@@ -3,6 +3,8 @@ import { renderWithProviders as render, screen } from "@/src/test/renderWithProv
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
+import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
+import { pagedResult } from "@/src/test/screenMocks";
 import AgentMemoryPage from "./page";
 
 vi.mock("convex/react", () => ({
@@ -133,6 +135,20 @@ describe("AgentMemoryPage", () => {
       return undefined as unknown as ReturnType<typeof useQuery>;
     });
     vi.mocked(useMutation).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useMutation>);
+  });
+
+  describe("as a standard table screen", () => {
+    itBehavesLikeAStandardTableScreen({
+      renderScreen: () => render(<AgentMemoryPage />),
+      withRows: (rows) => {
+        vi.mocked(usePaginatedQuery).mockReturnValue(
+          pagedResult(rows) as unknown as ReturnType<typeof usePaginatedQuery>);
+      },
+      sampleRows: memories,
+      sampleRowText: "Returns are accepted within 30 days.",
+      emptyText: "No memories yet — add what the agent should know",
+      searchPlaceholder: "Search memories",
+    });
   });
 
   it("says of each memory whether it always applies", () => {

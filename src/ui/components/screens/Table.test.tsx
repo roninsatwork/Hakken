@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
+  CursorFooter,
   PaginationFooter,
   RowActions,
   RowIconButton,
@@ -34,6 +35,59 @@ describe("PaginationFooter", () => {
     fireEvent.click(screen.getByText("Previous"));
 
     expect(onPageChange).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("CursorFooter", () => {
+  const base = {
+    page: 2,
+    visibleCount: 15,
+    canGoBack: true,
+    canGoForward: true,
+    isLoading: false,
+    onStep: vi.fn(),
+  };
+
+  it("says which page it is on, since there is no last page to count towards", () => {
+    render(<CursorFooter {...base} />);
+
+    expect(screen.getByText("Showing 15 · page 2")).toBeInTheDocument();
+  });
+
+  // The hand-drawn footer this replaced said "Loading jobs…" here, under a table
+  // that was already showing a spinner.
+  it("says nothing at all while the query is still out", () => {
+    render(<CursorFooter {...base} visibleCount={0} isLoading />);
+
+    expect(screen.queryByText("No entries found")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+  });
+
+  it("says the list is empty once the query answers with nothing", () => {
+    render(<CursorFooter {...base} visibleCount={0} labels={{ empty: "No jobs to show" }} />);
+
+    expect(screen.getByText("No jobs to show")).toBeInTheDocument();
+  });
+
+  it("steps back and forward", () => {
+    const onStep = vi.fn();
+    render(<CursorFooter {...base} onStep={onStep} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Previous/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Next/ }));
+
+    expect(onStep).toHaveBeenNthCalledWith(1, "back");
+    expect(onStep).toHaveBeenNthCalledWith(2, "forward");
+  });
+
+  it("will not step past either end, or while the query is out", () => {
+    const { rerender } = render(<CursorFooter {...base} canGoBack={false} canGoForward={false} />);
+    expect(screen.getByRole("button", { name: /Previous/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
+
+    rerender(<CursorFooter {...base} isLoading />);
+    expect(screen.getByRole("button", { name: /Previous/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
   });
 });
 

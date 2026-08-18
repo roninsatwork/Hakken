@@ -10,15 +10,7 @@ import { strToU8, zipSync } from "fflate";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WikiImportBox } from "./WikiImportBox";
@@ -381,55 +373,101 @@ export function WikiPagesListScreen({
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <SearchBar
-            value={search}
-            onChange={(value) => {
-              setSearch(value);
-              rows.goToPage(1);
-            }}
-            placeholder={t("searchPlaceholder")}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => void downloadVault()}
-          disabled={isExporting}
-          className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap disabled:opacity-50"
-        >
-          <Download className="w-4 h-4" />
-          {isExporting ? t("export.exporting") : t("export.button")}
-        </button>
-        <Link
-          href={`${basePath}/map`}
-          className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap"
-        >
-          <Network className="w-4 h-4" />
-          {t("map.open")}
-        </Link>
-      </div>
-
-      <TableShell
+      <DataTable
+        rows={isLoading ? undefined : visibleRows}
+        rowKey={(row) => row.pageId}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={rows.page}
-            totalPages={rows.totalPages}
-            totalCount={rows.loadedCount}
-            pageSize={PAGE_SIZE}
-            isLoading={rows.isBusy}
-            onPageChange={rows.goToPage}
-            labels={{ empty: t("empty") }}
-          />
+        search={{
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
+            rows.goToPage(1);
+          },
+          placeholder: t("searchPlaceholder"),
+        }}
+        filters={
+          <>
+            <button
+              type="button"
+              onClick={() => void downloadVault()}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              {isExporting ? t("export.exporting") : t("export.button")}
+            </button>
+            <Link
+              href={`${basePath}/map`}
+              className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-foreground hover:border-brand/50 hover:text-brand transition-colors whitespace-nowrap"
+            >
+              <Network className="w-4 h-4" />
+              {t("map.open")}
+            </Link>
+          </>
         }
-      >
-        <thead>
-          <TableHeaderRow>
-            <TableHeaderCell>{t("columns.customer")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.remembers")}</TableHeaderCell>
-            <TableHeaderCell>{t("columns.lastChange")}</TableHeaderCell>
-            <TableHeaderCell align="right">
+        empty={{
+          icon: <BookOpen className="w-5 h-5" />,
+          label: search.trim()
+            ? t("emptySearch")
+            : companyId
+              ? t("emptyState")
+              : t("globalEmptyState"),
+        }}
+        footer={{
+          mode: "paged",
+          page: rows.page,
+          totalPages: rows.totalPages,
+          totalCount: rows.loadedCount,
+          pageSize: PAGE_SIZE,
+          isLoading: rows.isBusy,
+          onPageChange: rows.goToPage,
+          labels: { empty: t("empty") },
+        }}
+        columns={[
+          {
+            key: "customer",
+            header: t("columns.customer"),
+            cell: (row) => (
+              <Link
+                href={`${basePath}/${row.pageId}`}
+                className="flex items-center gap-2 text-[14px] font-medium text-foreground hover:text-brand transition-colors"
+              >
+                {row.title}
+                <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-medium">
+                  {t(`kinds.${row.kind}`)}
+                </span>
+                {row.pinnedCount > 0 && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
+                    <Pin className="w-3 h-3" />
+                    {row.pinnedCount}
+                  </span>
+                )}
+              </Link>
+            ),
+          },
+          {
+            key: "remembers",
+            header: t("columns.remembers"),
+            className: "max-w-[380px]",
+            cell: (row) => (
+              <span className="line-clamp-2 text-[13px] text-secondary">{row.preview}</span>
+            ),
+          },
+          {
+            key: "lastChange",
+            header: t("columns.lastChange"),
+            className: "whitespace-nowrap",
+            cell: (row) => (
+              <span className="text-[13px] text-secondary">
+                {describeSource(row.lastRewriteSource)} · {new Date(row.updatedAt).toLocaleDateString()}
+              </span>
+            ),
+          },
+          {
+            key: "used",
+            /* The only sortable column here, so the button is the header rather
+               than a control beside it. */
+            header: (
               <button
                 type="button"
                 onClick={() => {
@@ -442,75 +480,34 @@ export function WikiPagesListScreen({
                 {t("columns.used")}
                 {sortByUse ? " ↓" : ""}
               </button>
-            </TableHeaderCell>
-            <TableHeaderCell align="right">{t("columns.sources")}</TableHeaderCell>
-          </TableHeaderRow>
-        </thead>
-        <tbody>
-          {isLoading ? (
-            <TableLoadingRow colSpan={5} />
-          ) : visibleRows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<BookOpen className="w-5 h-5" />}
-              label={
-                search.trim()
-                  ? t("emptySearch")
-                  : companyId
-                    ? t("emptyState")
-                    : t("globalEmptyState")
-              }
-            />
-          ) : (
-            visibleRows.map((row) => (
-              <tr
-                key={row.pageId}
-                className="group border-b border-border-dim/50 last:border-b-0 hover:bg-hover/40 transition-colors"
-              >
-                <td className="px-4 py-3">
-                  <Link
-                    href={`${basePath}/${row.pageId}`}
-                    className="flex items-center gap-2 text-[14px] font-medium text-foreground hover:text-brand transition-colors"
-                  >
-                    {row.title}
-                    <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-medium">
-                      {t(`kinds.${row.kind}`)}
-                    </span>
-                    {row.pinnedCount > 0 && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
-                        <Pin className="w-3 h-3" />
-                        {row.pinnedCount}
-                      </span>
-                    )}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary max-w-[380px]">
-                  <span className="line-clamp-2">{row.preview}</span>
-                </td>
-                <td className="px-4 py-3 text-[13px] text-secondary whitespace-nowrap">
-                  {describeSource(row.lastRewriteSource)} · {new Date(row.updatedAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-right text-[13px] whitespace-nowrap">
-                  {row.usageCount > 0 ? (
-                    <span className="text-foreground font-medium tabular-nums">
-                      {t("used.count", { count: row.usageCount })}
-                    </span>
-                  ) : Date.now() - row.createdAt > NEVER_USED_AGE_MS ? (
-                    <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-muted text-[11px]">
-                      {t("used.never")}
-                    </span>
-                  ) : (
-                    <span className="text-secondary">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right text-[13px] text-secondary tabular-nums">
-                  {row.sourceCount > 0 ? row.sourceCount : "—"}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+            ),
+            align: "right",
+            className: "whitespace-nowrap",
+            cell: (row) =>
+              row.usageCount > 0 ? (
+                <span className="text-[13px] text-foreground font-medium tabular-nums">
+                  {t("used.count", { count: row.usageCount })}
+                </span>
+              ) : Date.now() - row.createdAt > NEVER_USED_AGE_MS ? (
+                <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-muted text-[11px]">
+                  {t("used.never")}
+                </span>
+              ) : (
+                <span className="text-[13px] text-secondary">—</span>
+              ),
+          },
+          {
+            key: "sources",
+            header: t("columns.sources"),
+            align: "right",
+            cell: (row) => (
+              <span className="text-[13px] text-secondary tabular-nums">
+                {row.sourceCount > 0 ? row.sourceCount : "—"}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

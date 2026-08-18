@@ -8,13 +8,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Ban, Brain, Check, ClipboardCheck, Eye, Lightbulb, Loader2, MessageSquare, MinusCircle, MoreHorizontal, PlayCircle, RotateCcw, SlidersHorizontal, ThumbsDown, ThumbsUp, Timer } from "lucide-react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import {
-  TableEmptyRow,
-  TableHeaderCell,
-  TableHeaderRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { formatDateTime } from "@/src/lib/dates";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
 import {
@@ -401,160 +395,153 @@ export default function AgentRunsPage() {
 
 
 
-        <TableShell
+        <DataTable
+          rows={isLoading ? undefined : runs}
+          rowKey={(run) => run._id}
           minWidthClassName="min-w-[860px]"
-          footer={
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-border-dim text-[12px] text-muted">
-              <span>
-                {isLoading
-                  ? "Loading jobs…"
-                  : runs.length === 0
-                    ? "No jobs to show"
-                    : `Showing ${runs.length} ${runs.length === 1 ? "job" : "jobs"} · page ${pageNumber}`}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => goToPage("back")}
-                  disabled={!canGoBack}
-                  className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToPage("forward")}
-                  disabled={!canGoForward}
-                  className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          }
-        >
-          <thead>
-            <TableHeaderRow>
-              <TableHeaderCell className="w-[110px]">Outcome</TableHeaderCell>
-              <TableHeaderCell>What it was asked to do</TableHeaderCell>
-              <TableHeaderCell className="w-[150px]">When</TableHeaderCell>
-              <TableHeaderCell align="right" className="w-[130px]">Took / cost</TableHeaderCell>
-              <TableHeaderCell align="right" className="w-[150px]">&nbsp;</TableHeaderCell>
-            </TableHeaderRow>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <TableLoadingRow colSpan={5} />
-            ) : runs.length === 0 ? (
-              <TableEmptyRow
-                colSpan={5}
-                icon={<Timer className="w-9 h-9 text-brand opacity-60" />}
-                label={
-                  statusFilter === "ALL"
-                    ? "This agent has not run any jobs yet"
-                    : "No jobs match that filter"
-                }
-              />
-            ) : (
-              runs.map((run) => (
-                <tr
-                  key={run._id}
-                  className="group border-b border-border-dim/50 last:border-b-0 hover:bg-white/[0.02] transition-colors"
-                >
-                  <td className="px-4 py-3 align-top">
-                    <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${STATUS_TONE_CLASSES[getStatusTone(run.status, Boolean(run.continuedByRunId))]}`}>
-                      {describeRunStatus(run.status, Boolean(run.continuedByRunId))}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3 align-top min-w-0">
-                    <p className="text-[13.5px] text-foreground truncate max-w-[46ch]">{run.objective}</p>
-                    {/* One line, and only when it says something the row does
-                        not already. A job's full output belongs on its own
-                        screen, not wrapped across three lines of a list. */}
-                    {(run.error || run.finalOutput) && (
-                      <p className="text-[11.5px] text-muted truncate max-w-[46ch] mt-0.5">
-                        {run.error || run.finalOutput}
-                      </p>
-                    )}
-                    {(run.markers.feedback
-                      || run.markers.reflected
-                      || run.markers.usedAsCheck
-                      || run.markers.memoryCandidateIds.length > 0
-                      || run.markers.suggestionIds.length > 0) && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        {run.markers.feedback && (
-                          <RowMarker>you rated this {run.markers.feedback.rating.toLowerCase()}</RowMarker>
-                        )}
-                        {run.markers.reflected && <RowMarker>looked back on</RowMarker>}
-                        {run.markers.usedAsCheck && <RowMarker>used as a check</RowMarker>}
-                        {run.markers.memoryCandidateIds.length > 0 && (
-                          <RowMarker tone="attention">something to remember</RowMarker>
-                        )}
-                        {run.markers.suggestionIds.length > 0 && (
-                          <RowMarker tone="attention">has a suggested change</RowMarker>
-                        )}
-                      </div>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 align-top text-[12px] text-secondary whitespace-nowrap">
-                    {formatRelativeTime(run.startedAt, now)}
-                    <span className="block text-[11px] text-muted">
-                      {describeTrigger(run.triggerType)}
-                      {run.isRehearsal && (
-                        // Text, not colour: a drill must be readable as a drill
-                        // by everyone, on every screen.
-                        <span className="ml-1.5 rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
-                          Rehearsal
-                        </span>
+          empty={{
+            icon: <Timer className="w-9 h-9 text-brand opacity-60" />,
+            label:
+              statusFilter === "ALL"
+                ? "This agent has not run any jobs yet"
+                : "No jobs match that filter",
+          }}
+          /* By cursor, not by number: see the note on the query. The footer used
+             to be drawn here by hand, in buttons a shade off the shared ones. */
+          footer={{
+            mode: "cursor",
+            page: pageNumber,
+            visibleCount: runs.length,
+            canGoBack,
+            canGoForward,
+            isLoading,
+            onStep: goToPage,
+            labels: {
+              empty: "No jobs to show",
+              showing: (count, page) => `Showing ${count} ${count === 1 ? "job" : "jobs"} · page ${page}`,
+            },
+          }}
+          columns={[
+            {
+              key: "outcome",
+              header: "Outcome",
+              className: "w-[110px] align-top",
+              cell: (run) => (
+                <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${STATUS_TONE_CLASSES[getStatusTone(run.status, Boolean(run.continuedByRunId))]}`}>
+                  {describeRunStatus(run.status, Boolean(run.continuedByRunId))}
+                </span>
+              ),
+            },
+            {
+              key: "objective",
+              header: "What it was asked to do",
+              className: "align-top min-w-0",
+              cell: (run) => (
+                <>
+                  <p className="text-[13.5px] text-foreground truncate max-w-[46ch]">{run.objective}</p>
+                  {/* One line, and only when it says something the row does
+                      not already. A job's full output belongs on its own
+                      screen, not wrapped across three lines of a list. */}
+                  {(run.error || run.finalOutput) && (
+                    <p className="text-[11.5px] text-muted truncate max-w-[46ch] mt-0.5">
+                      {run.error || run.finalOutput}
+                    </p>
+                  )}
+                  {(run.markers.feedback
+                    || run.markers.reflected
+                    || run.markers.usedAsCheck
+                    || run.markers.memoryCandidateIds.length > 0
+                    || run.markers.suggestionIds.length > 0) && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {run.markers.feedback && (
+                        <RowMarker>you rated this {run.markers.feedback.rating.toLowerCase()}</RowMarker>
                       )}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3 align-top text-right text-[12px] text-secondary tabular-nums whitespace-nowrap">
-                    {run.completedAt ? formatDuration(run.completedAt - run.startedAt) : "—"}
-                    {run.costGBP !== undefined && (
-                      <span className="block text-[11px] text-muted">{formatMoney(run.costGBP)}</span>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3 align-top">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/admin/agents/${agentId}/observability/${run._id}`)}
-                        className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all"
-                      >
-                        Open
-                      </button>
-                      {/* Everything else lives behind one control. Seven bare
-                          icons in a row told nobody what any of them did. */}
-                      <RowMenu
-                        runId={run._id}
-                        status={run.status}
-                        isOpen={menuRunId === run._id}
-                        isBusy={action.isBusy(run._id)}
-                        onToggle={() => setMenuRunId(menuRunId === run._id ? null : run._id)}
-                        pendingCandidateId={run.markers.memoryCandidateIds[0]}
-                        pendingSuggestionId={run.markers.suggestionIds[0]}
-                        onDecideCandidate={handleCandidateDecision}
-                        onDecideSuggestion={handleSuggestionDecision}
-                        onRate={() => openFeedback(run)}
-                        onRemember={() => handleGenerateMemoryCandidates(run._id)}
-                        onMakeCheck={() => handleCreateEvalFixture(run._id)}
-                        onSuggest={() => handleGenerateSuggestions(run._id)}
-                        onReflect={() => handleReflect(run._id)}
-                        onReplay={() => handleReplay(run._id, "CURRENT_ACTIVE")}
-                        onCancel={() => handleCancel(run._id)}
-                      />
+                      {run.markers.reflected && <RowMarker>looked back on</RowMarker>}
+                      {run.markers.usedAsCheck && <RowMarker>used as a check</RowMarker>}
+                      {run.markers.memoryCandidateIds.length > 0 && (
+                        <RowMarker tone="attention">something to remember</RowMarker>
+                      )}
+                      {run.markers.suggestionIds.length > 0 && (
+                        <RowMarker tone="attention">has a suggested change</RowMarker>
+                      )}
                     </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </TableShell>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: "when",
+              header: "When",
+              className: "w-[150px] align-top text-[12px] text-secondary whitespace-nowrap",
+              cell: (run) => (
+                <>
+                  {formatRelativeTime(run.startedAt, now)}
+                  <span className="block text-[11px] text-muted">
+                    {describeTrigger(run.triggerType)}
+                    {run.isRehearsal && (
+                      // Text, not colour: a drill must be readable as a drill
+                      // by everyone, on every screen.
+                      <span className="ml-1.5 rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
+                        Rehearsal
+                      </span>
+                    )}
+                  </span>
+                </>
+              ),
+            },
+            {
+              key: "cost",
+              header: "Took / cost",
+              align: "right",
+              className: "w-[130px] align-top text-[12px] text-secondary tabular-nums whitespace-nowrap",
+              cell: (run) => (
+                <>
+                  {run.completedAt ? formatDuration(run.completedAt - run.startedAt) : "—"}
+                  {run.costGBP !== undefined && (
+                    <span className="block text-[11px] text-muted">{formatMoney(run.costGBP)}</span>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: "actions",
+              header: "\u00a0",
+              align: "right",
+              className: "w-[150px] align-top",
+              cell: (run) => (
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/admin/agents/${agentId}/observability/${run._id}`)}
+                    className="px-3 py-1.5 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all"
+                  >
+                    Open
+                  </button>
+                  {/* Everything else lives behind one control. Seven bare
+                      icons in a row told nobody what any of them did. */}
+                  <RowMenu
+                    runId={run._id}
+                    status={run.status}
+                    isOpen={menuRunId === run._id}
+                    isBusy={action.isBusy(run._id)}
+                    onToggle={() => setMenuRunId(menuRunId === run._id ? null : run._id)}
+                    pendingCandidateId={run.markers.memoryCandidateIds[0]}
+                    pendingSuggestionId={run.markers.suggestionIds[0]}
+                    onDecideCandidate={handleCandidateDecision}
+                    onDecideSuggestion={handleSuggestionDecision}
+                    onRate={() => openFeedback(run)}
+                    onRemember={() => handleGenerateMemoryCandidates(run._id)}
+                    onMakeCheck={() => handleCreateEvalFixture(run._id)}
+                    onSuggest={() => handleGenerateSuggestions(run._id)}
+                    onReflect={() => handleReflect(run._id)}
+                    onReplay={() => handleReplay(run._id, "CURRENT_ACTIVE")}
+                    onCancel={() => handleCancel(run._id)}
+                  />
+                </div>
+              ),
+            },
+          ]}
+        />
 
         <div className="border border-border-dim rounded-[14px] bg-card px-4 py-4 flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
