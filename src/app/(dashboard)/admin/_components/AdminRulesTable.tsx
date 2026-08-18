@@ -5,12 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Edit2, Power, Trash2 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
-import {
-  PaginationFooter,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { STATUS_TONE_CLASSES, toneForStatus, type StatusTone } from "@/src/ui/atoms/statusTone";
 
 export type AdminRuleTableRow = {
@@ -81,94 +77,77 @@ export function AdminRulesTable({
   const router = useRouter();
 
   return (
-    <TableShell
-      footer={
-        <PaginationFooter
-          page={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          isLoading={isLoading}
-          onPageChange={onPageChange}
-        />
-      }
-    >
-      <thead>
-        <tr className="border-b border-border-dim/50 bg-sidebar/40">
-          <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[120px]">
-            {labels.priority}
-          </th>
-          <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[250px]">
-            {labels.rule}
-          </th>
-          <th className="px-5 py-3.5 text-[11px] font-mono tracking-widest text-muted uppercase w-[100px] text-right">
-            {labels.status}
-          </th>
-          <th className="w-[100px] px-5 py-3.5"></th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-white/5">
-        {isLoading ? (
-          <TableLoadingRow colSpan={4} />
-        ) : rules.length === 0 ? (
-          <TableEmptyRow colSpan={4} icon={emptyIcon} label={emptyLabel} />
-        ) : (
-          rules.map((rule) => (
-            <tr
-              key={rule._id}
-              onClick={() => router.push(getRowHref(rule))}
-              className="group hover:bg-white/[0.02] transition-colors items-center cursor-pointer"
+    <DataTable
+      rows={isLoading ? undefined : rules}
+      rowKey={(rule) => rule._id}
+      onRowClick={(rule) => router.push(getRowHref(rule))}
+      empty={{ icon: emptyIcon, label: emptyLabel }}
+      footer={{
+        mode: "paged",
+        page,
+        totalPages,
+        totalCount,
+        pageSize,
+        isLoading,
+        onPageChange,
+      }}
+      columns={[
+        {
+          key: "priority",
+          header: labels.priority,
+          className: "w-[120px]",
+          cell: (rule) => (
+            <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${STATUS_TONE_CLASSES[priorityTone(rule.priority)]}`}>
+              {rule.priority}
+            </div>
+          ),
+        },
+        {
+          key: "rule",
+          header: labels.rule,
+          className: "w-[250px]",
+          cell: (rule) => (
+            <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
+              {rule.name || `"${rule.trigger}"`}
+            </h3>
+          ),
+        },
+        {
+          key: "status",
+          header: labels.status,
+          align: "right",
+          className: "w-[100px]",
+          cell: (rule) => (
+            <RowIconButton
+              label={rule.isActive ? labels.deactivate : labels.activate}
+              onClick={() => onToggleActive(rule)}
             >
-              <td className="px-5 py-4 align-middle">
-                <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${STATUS_TONE_CLASSES[priorityTone(rule.priority)]}`}>
-                  {rule.priority}
-                </div>
-              </td>
-              <td className="px-5 py-4 align-middle">
-                <h3 className="text-[13px] font-bold text-foreground group-hover:text-brand transition-colors line-clamp-1">
-                  {rule.name || `"${rule.trigger}"`}
-                </h3>
-              </td>
-              <td className="px-5 py-4 align-middle text-right border-r border-white/5">
-                <button
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onToggleActive(rule);
-                  }}
-                  className="hover:text-foreground transition-colors p-1 flex justify-end w-full"
-                  title={rule.isActive ? labels.deactivate : labels.activate}
-                >
-                  <Power className={`w-4 h-4 ${rule.isActive ? "text-warning" : "opacity-40"}`} />
-                </button>
-              </td>
-              <td className="px-5 py-4 align-middle text-right">
-                <div className="flex items-center justify-end gap-3 text-secondary">
-                  <Link
-                    href={getEditHref(rule)}
-                    onClick={(event) => event.stopPropagation()}
-                    className="hover:text-foreground transition-colors p-1"
-                    title={labels.edit}
-                  >
-                    <Edit2 className="w-4 h-4 opacity-70 hover:opacity-100" />
-                  </Link>
-                  <button
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onDelete(rule);
-                    }}
-                    className="transition-colors group/trash p-1"
-                    title={labels.delete}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive/60 group-hover/trash:text-destructive" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))
-        )}
-      </tbody>
-    </TableShell>
+              <Power className={`w-4 h-4 ${rule.isActive ? "text-warning" : "opacity-40"}`} />
+            </RowIconButton>
+          ),
+        },
+        {
+          key: "actions",
+          header: "",
+          align: "right",
+          className: "w-[100px]",
+          cell: (rule) => (
+            <RowActions>
+              <Link
+                href={getEditHref(rule)}
+                onClick={(event) => event.stopPropagation()}
+                aria-label={labels.edit}
+                className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+              </Link>
+              <RowIconButton label={labels.delete} tone="danger" onClick={() => onDelete(rule)}>
+                <Trash2 className="w-4 h-4" />
+              </RowIconButton>
+            </RowActions>
+          ),
+        },
+      ]}
+    />
   );
 }

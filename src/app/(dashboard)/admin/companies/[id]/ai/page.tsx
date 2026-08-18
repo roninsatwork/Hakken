@@ -3,11 +3,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import {
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 import { useQuery } from "convex/react";
 import { AlertTriangle, ArrowRight, CircleCheck, Sparkles } from "lucide-react";
@@ -133,45 +129,58 @@ export default function CompanyAiOverviewPage() {
         </div>
       )}
 
-      <TableShell minWidthClassName="min-w-[720px]">
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="w-[24%] px-4 py-3 font-medium">Area</th>
-            <th className="w-[47%] px-4 py-3 font-medium">What this company has</th>
-            <th className="w-[29%] px-4 py-3 font-medium">State</th>
-          </tr>
-        </thead>
-        <tbody>
-          {readiness === undefined ? (
-            <TableLoadingRow colSpan={3} />
-          ) : sortedAreas.length === 0 ? (
-            <TableEmptyRow
-              colSpan={3}
-              icon={<Sparkles className="h-8 w-8 text-muted/30" />}
-              label="Nothing to report yet"
-            />
-          ) : (
-            sortedAreas.map((area) => (
-              <tr key={area.key} className="border-b border-border-dim/50">
-                <td className="px-4 py-3 align-top">
-                  <Link
-                    href={linkTo(area.href)}
-                    className="text-[13px] text-foreground transition-colors hover:text-brand"
-                  >
-                    {area.label}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 align-top text-[13px] leading-relaxed text-secondary">
-                  {area.summary}
-                </td>
-                <td className={cn("px-4 py-3 align-top text-[13px]", getStateClassName(area.state))}>
-                  {getStateLabel(area.state)}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </TableShell>
+      <DataTable
+        rows={readiness === undefined ? undefined : sortedAreas}
+        rowKey={(area) => area.key}
+        minWidthClassName="min-w-[720px]"
+        empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: "Nothing to report yet" }}
+        footer={{
+          mode: "paged",
+          page: 1,
+          totalPages: 1,
+          totalCount: sortedAreas.length,
+          pageSize: Math.max(sortedAreas.length, 1),
+          isLoading: readiness === undefined,
+          onPageChange: () => {},
+          labels: {
+            empty: "Nothing to report yet",
+            showing: (_start, _end, total) => `${total} area${total === 1 ? "" : "s"}`,
+          },
+        }}
+        columns={[
+          {
+            key: "area",
+            header: "Area",
+            className: "w-[24%]",
+            cell: (area) => (
+              <Link
+                href={linkTo(area.href)}
+                className="text-[13px] text-foreground transition-colors hover:text-brand"
+              >
+                {area.label}
+              </Link>
+            ),
+          },
+          {
+            key: "summary",
+            header: "What this company has",
+            className: "w-[47%]",
+            cell: (area) => (
+              <span className="text-[13px] leading-relaxed text-secondary">{area.summary}</span>
+            ),
+          },
+          {
+            key: "state",
+            header: "State",
+            className: "w-[29%]",
+            cell: (area) => (
+              <span className={cn("text-[13px]", getStateClassName(area.state))}>
+                {getStateLabel(area.state)}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
