@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
@@ -10,8 +11,8 @@ describe("Properties", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { adminAId, adminBId, superAdminId, propertyAId, propertyBId, runAId, runBId } = await t.run(async (ctx) => {
-      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
-      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      const companyAId = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
+      const companyBId = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const adminAId = await ctx.db.insert("users", {
         email: "admin-a@example.com",
         role: "ADMIN",
@@ -102,7 +103,7 @@ describe("Properties", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { adminId, orphanUserId } = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const adminId = await ctx.db.insert("users", {
         email: "admin@example.com",
         role: "ADMIN",

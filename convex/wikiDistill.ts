@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminQuery, tenantQuery } from "./tenantFunctions";
+import { adminQuery, moduleQuery } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany } from "./authz";
 
 /**
@@ -262,7 +263,8 @@ async function distillProgressFor(
   };
 }
 
-export const getDistillProgress = tenantQuery({
+export const getDistillProgress = moduleQuery({
+  module: CORE_MODULES.wiki,
   args: {},
   handler: async (ctx) => {
     const { companyId } = ctx;

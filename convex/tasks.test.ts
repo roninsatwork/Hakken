@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
@@ -20,8 +21,8 @@ async function seedWorkspaces() {
   const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
   const ids = await t.run(async (ctx) => {
-    const companyA = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
-    const companyB = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+    const companyA = await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
+    const companyB = await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
 
     const userA = await ctx.db.insert("users", {
       email: "a@test.com",

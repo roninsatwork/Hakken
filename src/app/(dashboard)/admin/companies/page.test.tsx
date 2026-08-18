@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import CompaniesPage from "./page";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 
 type HookMock = {
   mockImplementation: (implementation: (...args: unknown[]) => unknown) => void;
@@ -158,9 +159,9 @@ describe("CompaniesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /New Company/i }));
     fireEvent.change(screen.getByPlaceholderText("Enter company name"), { target: { value: "Comax" } });
 
-    const moduleToggles = screen.getAllByRole("checkbox");
-    expect(moduleToggles.length).toBeGreaterThan(0);
-    fireEvent.click(moduleToggles[0]);
+    // By name, not by position: the card lists every capability now, and the
+    // first checkbox is no longer the bespoke one this test is about.
+    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
 
     fireEvent.click(screen.getByRole("button", { name: "Provision Tenant" }));
 
@@ -168,7 +169,9 @@ describe("CompaniesPage", () => {
       expect(createCompany).toHaveBeenCalledWith({
         name: "Comax",
         systemPrompt: "",
-        enabledModules: ["salesData"],
+        // Every capability is pre-ticked on a fresh form; the click added the
+        // bespoke module on top.
+        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS, "salesData"],
       });
     });
   });
@@ -185,7 +188,8 @@ describe("CompaniesPage", () => {
       expect(createCompany).toHaveBeenCalledWith({
         name: "Delta",
         systemPrompt: "Be useful",
-        enabledModules: [],
+        // A company provisioned without unticking anything starts whole.
+        enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS],
       });
     });
 

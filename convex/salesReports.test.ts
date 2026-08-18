@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
@@ -15,10 +16,10 @@ describe("Sales report access controls", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const companyAId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const companyBId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const agentId = await t.run(async (ctx) => {
       return await ctx.db.insert("agents", {

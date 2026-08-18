@@ -4,8 +4,11 @@ import type { Doc } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
+  getActiveCompanyId,
   getCurrentUser,
   } from "./authz";
+import { isModuleEnabled } from "./utils/companyModules";
+import { CORE_MODULES } from "./utils/coreModules";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";
@@ -45,6 +48,15 @@ export const getRules = publicQuery({
     const current = await getCurrentUser(ctx);
     if (!current) return [];
     const { user } = current;
+
+    // Withheld capability reads as empty, matching this surface's soft contract.
+    if (user.role !== "SUPER_ADMIN") {
+      const ownCompanyId = getActiveCompanyId(user);
+      if (ownCompanyId) {
+        const company = await ctx.db.get(ownCompanyId);
+        if (!isModuleEnabled(company, CORE_MODULES.governance)) return [];
+      }
+    }
 
     if (user.role !== "SUPER_ADMIN") {
         if (args.companyId && !canAccessCompany(user, args.companyId)) {

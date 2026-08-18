@@ -1,5 +1,6 @@
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
-import { adminQuery, tenantQuery } from "./tenantFunctions";
+import { adminQuery, moduleQuery } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany } from "./authz";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -610,7 +611,8 @@ export const handleCallStatus = httpAction(async (ctx, request) => {
  * this display, and the demo is a stranger's number appearing on it. The
  * full number exists in exactly one place: the call's own detail view.
  */
-export const listCalls = tenantQuery({
+export const listCalls = moduleQuery({
+  module: CORE_MODULES.calls,
   args: {},
   handler: async (
     ctx
@@ -650,7 +652,8 @@ export const listCalls = tenantQuery({
   },
 });
 
-export const getCall = tenantQuery({
+export const getCall = moduleQuery({
+  module: CORE_MODULES.calls,
   // A string, not an id: this value arrives straight from the address bar,
   // and a mistyped link must read as "not found" rather than an error page.
   args: { callId: v.string() },
@@ -745,7 +748,8 @@ export const getCallForCompany = adminQuery({
  * The company's own number, read from the same setting that routes calls to
  * it — so the screen and the switchboard cannot disagree about what to dial.
  */
-export const getCompanyPhoneNumber = tenantQuery({
+export const getCompanyPhoneNumber = moduleQuery({
+  module: CORE_MODULES.calls,
   args: {},
   handler: async (ctx): Promise<string | null> => {
     const { companyId } = ctx;

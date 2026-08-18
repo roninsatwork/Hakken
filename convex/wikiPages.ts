@@ -3,7 +3,8 @@ import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery, tenantQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import {
   WIKI_PAGE_MAX_CHARS,
@@ -993,7 +994,8 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
   };
 }
 
-export const listCompanyPages = tenantQuery({
+export const listCompanyPages = moduleQuery({
+  module: CORE_MODULES.wiki,
   args: { search: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const { companyId } = ctx;
@@ -1010,7 +1012,8 @@ export const listCompanyPages = tenantQuery({
   },
 });
 
-export const getPageDetail = tenantQuery({
+export const getPageDetail = moduleQuery({
+  module: CORE_MODULES.wiki,
   args: { pageId: v.id("wikiPages") },
   handler: async (ctx, args) => {
     const { companyId } = ctx;

@@ -43,6 +43,13 @@ import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 // template:remove:start salesData
 import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
+import { CORE_MODULES } from "@/convex/utils/coreModules";
+// template:remove:start salesReports
+import { REPORTS_MODULE_KEY } from "@/convex/utils/coreModules";
+// template:remove:end
+// template:remove:start properties
+import { PROPERTIES_MODULE_KEY } from "@/convex/utils/coreModules";
+// template:remove:end
 import { isWorkspaceSectionPath, workspaceSlug } from "@/src/lib/workspaceSlug";
 // template:remove:end
 
@@ -424,6 +431,22 @@ export default function SidebarNavigation() {
 
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+
+  /**
+   * Whether this workspace holds a capability. The same source the section
+   * layouts and the server checks read, so the menu, the URL and the data
+   * cannot disagree. `undefined` while loading reads as "not yet", the way
+   * the Sales Data section has always behaved — a link that appears when the
+   * answer lands, never one that flashes at a workspace that does not get it.
+   * Skipped while signed out for the same reason the Sales Data item skips:
+   * asking the server a question it cannot answer logs a failure per sign-out.
+   */
+  const workspaceModules = useQuery(
+    api.companies.getMyWorkspaceModules,
+    user ? {} : "skip"
+  );
+  const hasCapability = (key: string) =>
+    Boolean(workspaceModules?.enabledModules?.includes(key));
   /**
    * Whether the admin menu shows its sections.
    *
@@ -718,6 +741,7 @@ export default function SidebarNavigation() {
                       onClick={() => setActiveItem('Assistant')}
                     />
 
+                    {hasCapability(CORE_MODULES.tasks) && (
                     <NavItem
                       icon={ListChecks}
                       label="Tasks"
@@ -725,7 +749,9 @@ export default function SidebarNavigation() {
                       isActive={activeItem === 'Tasks' || pathname.startsWith('/app/tasks')}
                       onClick={() => setActiveItem('Tasks')}
                     />
+                    )}
 
+                    {hasCapability(CORE_MODULES.calls) && (
                     <NavItem
                       icon={Phone}
                       label="Calls"
@@ -733,7 +759,9 @@ export default function SidebarNavigation() {
                       isActive={activeItem === 'Calls' || pathname.startsWith('/app/calls')}
                       onClick={() => setActiveItem('Calls')}
                     />
+                    )}
 
+                    {hasCapability(CORE_MODULES.reception) && (
                     <NavItem
                       icon={MonitorSpeaker}
                       label="Reception"
@@ -741,8 +769,10 @@ export default function SidebarNavigation() {
                       isActive={activeItem === 'Reception' || pathname.startsWith('/app/reception')}
                       onClick={() => setActiveItem('Reception')}
                     />
+                    )}
 
                     {/* template:remove:start salesReports */}
+                    {hasCapability(REPORTS_MODULE_KEY) && (
                     <NavItem
                       icon={LineChart}
                       label="Reports"
@@ -755,9 +785,11 @@ export default function SidebarNavigation() {
                       <SubNavItem label="Information" href="/app/reports/information" isActive={pathname.startsWith('/app/reports/information')} onClick={() => setActiveItem('Reports')} />
                       <SubNavItem label="Sales Report" href="/app/reports" isActive={pathname === '/app/reports'} onClick={() => setActiveItem('Reports')} />
                     </NavItem>
+                    )}
                     {/* template:remove:end */}
 
                     {/* template:remove:start properties */}
+                    {hasCapability(PROPERTIES_MODULE_KEY) && (
                     <NavItem
                       icon={Home}
                       label={t('properties')}
@@ -772,6 +804,7 @@ export default function SidebarNavigation() {
                       <SubNavItem label={t('propertiesScrapedData')} href="/app/properties/scraped-data" isActive={pathname === '/app/properties/scraped-data'} onClick={() => setActiveItem('Properties')} />
                       <SubNavItem label="Logs" href="/app/properties/logs" isActive={pathname === '/app/properties/logs'} onClick={() => setActiveItem('Properties')} />
                     </NavItem>
+                    )}
                     {/* template:remove:end */}
 
                     {/* template:remove:start salesData */}
@@ -812,7 +845,7 @@ export default function SidebarNavigation() {
                       this whole layer exists for is one of the latter, and
                       never a platform administrator.
                     */}
-                    {(user?.role === "ADMIN" || user?.role === "AUDITOR") && (
+                    {(user?.role === "ADMIN" || user?.role === "AUDITOR") && hasCapability(CORE_MODULES.governance) && (
                       <NavItem
                         icon={ShieldCheck}
                         label={t('governance')}

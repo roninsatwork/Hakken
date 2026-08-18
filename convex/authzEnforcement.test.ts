@@ -33,6 +33,8 @@ const TENANT_BUILDERS = [
   "governanceQuery",
   "superAdminQuery",
   "superAdminMutation",
+  "moduleQuery",
+  "moduleMutation",
   "tenantAction",
   "adminAction",
   "governanceAction",

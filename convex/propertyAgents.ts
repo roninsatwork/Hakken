@@ -2,7 +2,8 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { TenantMutationCtx } from "./tenantFunctions";
-import { requireTenant, tenantMutation } from "./tenantFunctions";
+import { PROPERTIES_MODULE_KEY } from "./utils/coreModules";
+import { moduleMutation, requireTenant } from "./tenantFunctions";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 
 const RIGHTMOVE_AGENT_NAME = "Rightmove Agent";
@@ -102,7 +103,8 @@ function buildRightmoveObjective(args: { rightmoveUrl: string; maxProperties: nu
   return objective;
 }
 
-export const startRightmoveCollection = tenantMutation({
+export const startRightmoveCollection = moduleMutation({
+  module: PROPERTIES_MODULE_KEY,
   args: {
     rightmoveUrl: v.string(),
     maxProperties: v.number(),

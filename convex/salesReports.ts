@@ -1,9 +1,12 @@
 import { internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { adminQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { REPORTS_MODULE_KEY } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 
-export const getLatestReport = adminQuery({
+export const getLatestReport = moduleQuery({
+  module: REPORTS_MODULE_KEY,
+  guard: "adminRead",
   args: {},
   handler: async (ctx) => {
       const { user } = ctx;

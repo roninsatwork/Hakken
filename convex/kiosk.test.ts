@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
@@ -13,7 +14,7 @@ import schema from "./schema";
 
 async function seedKioskWidget(t: ReturnType<typeof convexTest>, kioskEnabled: boolean) {
   return await t.run(async (ctx) => {
-    const companyId = await ctx.db.insert("companies", { name: "Front Desk Co", createdAt: Date.now() });
+    const companyId = await ctx.db.insert("companies", { name: "Front Desk Co", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     const widgetId = await ctx.db.insert("widgets", {
       companyId,
       name: "Reception",

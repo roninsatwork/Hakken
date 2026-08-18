@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
@@ -67,8 +68,8 @@ describe("audit trail tenancy", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { adminId, companyA, companyB } = await t.run(async (ctx) => {
-      const companyA = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
-      const companyB = await ctx.db.insert("companies", { name: "Other", createdAt: Date.now() });
+      const companyA = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
+      const companyB = await ctx.db.insert("companies", { name: "Other", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const adminId = await ctx.db.insert("users", {
         email: "admin@acme.test",
         role: "ADMIN",
@@ -128,7 +129,7 @@ describe("reading the trail without opening every row", () => {
         name: "Admin User",
         role: "SUPER_ADMIN",
       });
-      const companyId = await ctx.db.insert("companies", { name: "Comax", createdAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Comax", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const agentId = await ctx.db.insert("agents", {
         name: "Housekeeping Agent",
         modelId: "model-test",
@@ -180,7 +181,7 @@ describe("reading the trail without opening every row", () => {
       .toHaveLength(1);
 
     const otherCompanyId = await t.run(
-      async (ctx) => await ctx.db.insert("companies", { name: "Elsewhere", createdAt: Date.now() }),
+      async (ctx) => await ctx.db.insert("companies", { name: "Elsewhere", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], }),
     );
     expect(
       (await client.query(api.auditLogs.getAuditPage, { ...page, companyId: otherCompanyId })).page,

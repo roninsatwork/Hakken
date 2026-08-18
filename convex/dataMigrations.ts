@@ -10,6 +10,7 @@ import { normalizeKey } from "./salesDataImportService";
 import { buildGapProducts } from "./salesOpportunityService";
 // template:remove:end
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import {
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
@@ -90,6 +91,43 @@ type MigrationRunner = (
  * dead code indefinitely.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
+  /**
+   * Seeds every company with the platform's own capabilities (shared-screen-kit
+   * plan, Phase 6).
+   *
+   * `enabledModules` used to name only bespoke extras, so absence meant "never
+   * bought one". Phase 6 makes the same list carry the platform's core
+   * capabilities, where absence means "withheld" — and that reading, applied to
+   * rows written before the switch existed, would turn the whole platform off
+   * for every existing company in one deploy. This runs in that deploy and
+   * writes down what was already true: every company had every capability.
+   *
+   * Idempotent: a company that has the full set is left alone. It adds and
+   * never removes, so a bespoke module like Sales Data survives untouched.
+   * One-shot by the framework — a completed run does not repeat, which is
+   * what keeps a later, deliberate withholding from being quietly undone.
+   */
+  "2026-08-18-core-company-modules-backfill": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("companies").paginate({ cursor, numItems: batchSize });
+    let updated = 0;
+
+    for (const company of page.page) {
+      const current = company.enabledModules ?? [];
+      const missing = DEFAULT_COMPANY_MODULE_KEYS.filter((key) => !current.includes(key));
+      if (missing.length === 0) continue;
+
+      await ctx.db.patch(company._id, { enabledModules: [...current, ...missing] });
+      updated += 1;
+    }
+
+    return {
+      cursor: page.continueCursor,
+      isDone: page.isDone,
+      processed: page.page.length,
+      updated,
+    };
+  },
+
   /**
    * Backfills enabled COMPANY_CHAT and WIDGET bindings for every ACTIVE
    * company skill that lacks them (company-skills-surfaces plan, step 2).

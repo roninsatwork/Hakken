@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
@@ -21,11 +22,11 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     
     const companyAId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     
     const companyBId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
 
     const adminAId = await t.run(async (ctx) => {
@@ -85,11 +86,11 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     
     const companyAId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     
     const companyBId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company B", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
 
     const adminAId = await t.run(async (ctx) => {
@@ -149,7 +150,7 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const companyAId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Company A", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
 
     const adminAId = await t.run(async (ctx) => {
@@ -186,8 +187,7 @@ describe("OWASP: BOLA / Data Isolation Shield — product verticals", () => {
       });
       const withoutModule = await ctx.db.insert("companies", {
         name: "Without Module",
-        createdAt: Date.now(),
-      });
+        createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
 
       const userWith = await ctx.db.insert("users", {
         email: "with@test.com",

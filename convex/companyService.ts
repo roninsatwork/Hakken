@@ -1,6 +1,7 @@
 import type { Doc } from "./_generated/dataModel";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { normalizeEnabledModules } from "./utils/companyModules";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 
 export function buildCompanyRecord(
   args: { name: string; systemPrompt?: string; enabledModules?: string[] },
@@ -9,7 +10,10 @@ export function buildCompanyRecord(
   return {
     name: args.name,
     systemPrompt: args.systemPrompt,
-    enabledModules: normalizeEnabledModules(args.enabledModules),
+    // A new company starts with every capability. `undefined` means the caller
+    // did not choose, and choosing nothing is a withholding decision someone
+    // has to make on purpose, on the company screen, after it exists.
+    enabledModules: normalizeEnabledModules(args.enabledModules ?? [...DEFAULT_COMPANY_MODULE_KEYS]),
     createdAt: now,
   };
 }

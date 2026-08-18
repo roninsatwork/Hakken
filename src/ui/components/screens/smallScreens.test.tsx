@@ -84,7 +84,7 @@ describe("the kit at phone width", () => {
 
   it("the page header stacks its action under the title", () => {
     const { container } = render(
-      <PageHeader title="Companies" description="Everyone on the platform" action={<button type="button">Add</button>} />
+      <PageHeader icon={<Database className="w-6 h-6" />} title="Companies" description="Everyone on the platform" action={<button type="button">Add</button>} />
     );
 
     expect(container.firstElementChild?.className).toContain("flex-col");

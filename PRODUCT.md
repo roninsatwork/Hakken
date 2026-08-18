@@ -170,4 +170,4 @@ Listed so that nothing above has to be hedged. These are tracked in
 | Per-agent runtime limits | Step, tool, cost, and timeout ceilings are platform-wide constants, not per-agent settings. |
 | Workflow resilience | No automatic retries, dead-letter queue, or compensating actions; a failed node fails its execution. |
 | Observability | No error tracking, tracing, alerting, or health endpoint. |
-| Schema migrations | No migration or backfill tooling; schema changes are pushed unversioned ahead of the application image. |
+| Schema migrations | Schema changes are pushed ahead of the application image, but data migrations have tooling: named, resumable, idempotent backfills in `convex/dataMigrations.ts`, run one page at a time with progress recorded so a completed migration never re-runs. Corrected 2026-08-18 — this row previously said no tooling existed, which had stopped being true. |

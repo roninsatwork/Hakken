@@ -4,7 +4,8 @@ import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { publicMutation, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, publicMutation } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 import { getCurrentUser } from "./authz";
 import { assertCanAccessThread } from "./chatService";
 
@@ -112,7 +113,8 @@ async function notifyAssignee(
   });
 }
 
-export const listTasks = tenantQuery({
+export const listTasks = moduleQuery({
+  module: CORE_MODULES.tasks,
   args: {
     paginationOpts: paginationOptsValidator,
     status: v.optional(taskStatusValidator),
@@ -151,7 +153,8 @@ export const listTasks = tenantQuery({
   },
 });
 
-export const countOpenTasks = tenantQuery({
+export const countOpenTasks = moduleQuery({
+  module: CORE_MODULES.tasks,
   args: {},
   handler: async (ctx) => {
     const { companyId } = ctx;
@@ -176,7 +179,8 @@ export const countOpenTasks = tenantQuery({
  * without being an administrator. Only the fields a picker needs are
  * returned, so this never becomes a back door to the user directory.
  */
-export const listAssignableMembers = tenantQuery({
+export const listAssignableMembers = moduleQuery({
+  module: CORE_MODULES.tasks,
   args: {},
   handler: async (ctx) => {
     const { companyId } = ctx;
@@ -247,7 +251,8 @@ async function filePersonTask(
   return taskId;
 }
 
-export const createTask = tenantMutation({
+export const createTask = moduleMutation({
+  module: CORE_MODULES.tasks,
   args: {
     title: v.string(),
     detail: v.optional(v.string()),
@@ -336,7 +341,8 @@ export const confirmPhotoAction = publicMutation({
   },
 });
 
-export const completeTask = tenantMutation({
+export const completeTask = moduleMutation({
+  module: CORE_MODULES.tasks,
   args: { taskId: v.id("tasks") },
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
@@ -358,7 +364,8 @@ export const completeTask = tenantMutation({
   },
 });
 
-export const reopenTask = tenantMutation({
+export const reopenTask = moduleMutation({
+  module: CORE_MODULES.tasks,
   args: { taskId: v.id("tasks") },
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
@@ -382,7 +389,8 @@ export const reopenTask = tenantMutation({
   },
 });
 
-export const cancelTask = tenantMutation({
+export const cancelTask = moduleMutation({
+  module: CORE_MODULES.tasks,
   args: { taskId: v.id("tasks") },
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;

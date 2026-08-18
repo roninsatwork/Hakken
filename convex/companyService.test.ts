@@ -10,6 +10,7 @@ import {
   shouldContinueCompanyPurge,
   withCompanyUserCount,
 } from "./companyService";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 
 describe("company service helpers", () => {
   test("builds company creation records", () => {
@@ -18,7 +19,7 @@ describe("company service helpers", () => {
       systemPrompt: "Be helpful",
       // A new workspace starts with no optional modules, written explicitly
       // rather than left absent so the field always reads the same way.
-      enabledModules: [],
+      enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS],
       createdAt: 123,
     });
   });

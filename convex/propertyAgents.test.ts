@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
@@ -8,7 +9,7 @@ describe("Rightmove property agent trigger", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { companyId, userId, agentId } = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Property Co", createdAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Property Co", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const userId = await ctx.db.insert("users", {
         email: "agent-user@example.com",
         role: "USER",
@@ -51,7 +52,7 @@ describe("Rightmove property agent trigger", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const userId = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Property Co", createdAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Property Co", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       return await ctx.db.insert("users", {
         email: "agent-user@example.com",
         role: "USER",

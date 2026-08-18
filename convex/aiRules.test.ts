@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import { buildPricingProtocolInstruction } from "./aiRules";
@@ -11,10 +12,10 @@ describe("AI Rules Validation", () => {
 
     // Set up standard user + company
     const companyId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Test Corp", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Test Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const foreignCompanyId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
 
     const userId = await t.run(async (ctx) => {
@@ -75,10 +76,10 @@ describe("AI Rules Validation", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const companyId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Test Corp", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Test Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const foreignCompanyId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const adminId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
@@ -128,10 +129,10 @@ describe("AI Rules Validation", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const companyId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Test Corp", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Test Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const foreignCompanyId = await t.run(async (ctx) => {
-      return await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now() });
+      return await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
     });
     const adminId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
@@ -293,8 +294,8 @@ describe("AI Rules Validation", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { companyId, foreignCompanyId, adminId, superAdminId, agentId, globalRuleId, companyRuleId, agentCompanyRuleId, agentGlobalRuleId } = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Tenant Corp", createdAt: Date.now() });
-      const foreignCompanyId = await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Tenant Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
+      const foreignCompanyId = await ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const adminId = await ctx.db.insert("users", {
         email: "admin@test.com",
         role: "ADMIN",
@@ -400,7 +401,7 @@ describe("AI Rules Validation", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const { companyId, agentId, globalRuleId, companyRuleId, agentRuleId } = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Tenant Corp", createdAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Tenant Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
       const userId = await ctx.db.insert("users", {
         email: "super@test.com",
         role: "SUPER_ADMIN",

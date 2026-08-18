@@ -2,6 +2,7 @@ import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 import SidebarNavigation from "./SidebarNavigation";
 
 /**
@@ -31,7 +32,7 @@ vi.mock("@/convex/_generated/api", () => ({
   api: {
     agentRuns: { getPendingApprovalCount: "agentRuns:getPendingApprovalCount" },
     scheduler: { getPendingWorkflowApprovalCount: "scheduler:getPendingWorkflowApprovalCount" },
-    companies: { getCompanyById: "companies:getCompanyById" },
+    companies: { getCompanyById: "companies:getCompanyById", getMyWorkspaceModules: "companies:getMyWorkspaceModules" },
     users: { getMe: "users:getMe", impersonateCompany: "users:impersonateCompany" },
   },
 }));
@@ -145,9 +146,16 @@ function captureAllReachableNavigation() {
 }
 
 function renderFor(role: string, pathname: string) {
-  useQueryMock.mockImplementation((queryRef: unknown) =>
-    queryRef === "users:getMe" ? { role } : undefined,
-  );
+  useQueryMock.mockImplementation((queryRef: unknown) => {
+    if (queryRef === "users:getMe") return { role };
+    // A workspace with everything, which is what the migration makes of every
+    // company that existed before capabilities could be withheld — so these
+    // snapshots keep proving the navigation is unchanged for a full workspace.
+    if (queryRef === "companies:getMyWorkspaceModules") {
+      return { companyName: "Acme", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] };
+    }
+    return undefined;
+  });
   vi.mocked(usePathname).mockReturnValue(pathname);
   render(<SidebarNavigation />);
   return captureAllReachableNavigation();
@@ -171,6 +179,10 @@ describe("sidebar navigation characterisation", () => {
     expect(renderFor("USER", "/app")).toMatchSnapshot();
   });
 
+  // Snapshot updated 2026-08-18, on purpose: capability sections (Tasks,
+  // Calls, Reception, Reports, Properties, workspace Governance) now wait for
+  // the workspace's module list, so a signed-out render no longer offers
+  // links that would only bounce. The signed-in snapshots above are untouched.
   it("signed-out navigation is unchanged", () => {
     useQueryMock.mockImplementation(() => undefined);
     vi.mocked(usePathname).mockReturnValue("/app");

@@ -1,4 +1,5 @@
 import { convexTest } from "convex-test";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -34,8 +35,7 @@ async function seedCompany(t: ReturnType<typeof convexTest>) {
     return await t.run(async (ctx) => {
         const companyId = await ctx.db.insert("companies", {
             name: "Ronins",
-            createdAt: Date.now(),
-        });
+            createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], });
         await ctx.db.insert("aiModels", {
             modelId: "test-live-audio-model",
             displayName: "Test Live Audio",
@@ -294,7 +294,7 @@ describe("answering the phone", () => {
     test("no live-audio model configured means a polite apology, not a dead line", async () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         const companyId = await t.run(async (ctx) =>
-            ctx.db.insert("companies", { name: "Ronins", createdAt: Date.now() })
+            ctx.db.insert("companies", { name: "Ronins", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], })
         );
         vi.stubEnv("TELEPHONY_NUMBER_OWNERS", JSON.stringify({ [CALLED_NUMBER]: companyId }));
 
@@ -353,7 +353,7 @@ describe("the transcript arriving mid-call", () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         await answeredCall(t);
         const otherCompanyId = await t.run(async (ctx) =>
-            ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now() })
+            ctx.db.insert("companies", { name: "Other Corp", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], })
         );
 
         const response = await t.fetch("/api/telephony/turns", {
@@ -667,7 +667,7 @@ describe("the call screen's queries", () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         const companyId = await seedCompany(t);
         const otherCompanyId = await t.run(async (ctx) =>
-            ctx.db.insert("companies", { name: "Other", createdAt: Date.now() })
+            ctx.db.insert("companies", { name: "Other", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], })
         );
         await seedCallFor(t, companyId, "CA-mine");
         await seedCallFor(t, otherCompanyId, "CA-theirs");
@@ -687,7 +687,7 @@ describe("the call screen's queries", () => {
         const t = convexTest(schema, import.meta.glob("./**/*.*s"));
         const companyId = await seedCompany(t);
         const otherCompanyId = await t.run(async (ctx) =>
-            ctx.db.insert("companies", { name: "Other", createdAt: Date.now() })
+            ctx.db.insert("companies", { name: "Other", createdAt: Date.now(), enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS], })
         );
         const theirCallId = await seedCallFor(t, otherCompanyId, "CA-theirs");
         const userId = await memberOf(t, companyId, "member@ronins.test");

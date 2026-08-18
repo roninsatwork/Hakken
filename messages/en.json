@@ -719,6 +719,34 @@
         "salesData": {
           "name": "Sales Data",
           "description": "Spreadsheet import and browsable sales, category and frequency tables. The section is labelled with the workspace's own name."
+        },
+        "tasks": {
+          "name": "Tasks",
+          "description": "The shared to-do list: things to chase, who is chasing them, and what is already done."
+        },
+        "calls": {
+          "name": "Calls",
+          "description": "The phone line's history — every call, who rang, and what the assistant did with it."
+        },
+        "reception": {
+          "name": "Reception",
+          "description": "The front-desk screen visitors use to say they have arrived."
+        },
+        "wiki": {
+          "name": "Wiki",
+          "description": "The assistant's growing notebook about this workspace — what it has learned and where it came from."
+        },
+        "governance": {
+          "name": "Governance",
+          "description": "The workspace's own oversight pages: what the AI may do, what it did, and the rules it follows."
+        },
+        "reports": {
+          "name": "Reports",
+          "description": "Sales reports written for the team, refreshed as new figures arrive."
+        },
+        "properties": {
+          "name": "Properties",
+          "description": "Property search and the collected listings, gathered by the assistant."
         }
       },
       "errors": {

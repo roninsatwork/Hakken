@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { publicMutation, publicQuery, tenantQuery } from "./tenantFunctions";
+import { moduleQuery, publicMutation, publicQuery } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
+import { isModuleEnabled } from "./utils/companyModules";
 import { canAccessThread, digestWidgetAccessToken } from "./chatService";
 
 /**
@@ -39,6 +41,9 @@ export const getKioskConfig = publicQuery({
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) return null;
     const company = widget.companyId ? await ctx.db.get(widget.companyId) : null;
+    // A withheld Reception renders nothing, exactly like a widget not on
+    // kiosk duty. Sessions already open idle out on their own cap.
+    if (!isModuleEnabled(company, CORE_MODULES.reception)) return null;
     return {
       widgetId: widget._id,
       name: widget.name,
@@ -135,6 +140,10 @@ export const createKioskThread = publicMutation({
   ): Promise<{ threadId: Id<"threads">; accessToken: string } | null> => {
     const widget = await ctx.db.get(args.widgetId);
     if (!widget || !widget.isActive || !widget.kioskEnabled) return null;
+
+    // The same quiet no as the config door: a withheld Reception mints nothing.
+    const kioskCompany = widget.companyId ? await ctx.db.get(widget.companyId) : null;
+    if (!isModuleEnabled(kioskCompany, CORE_MODULES.reception)) return null;
 
     const now = Date.now();
 
@@ -234,7 +243,8 @@ export const reserveKioskSession = internalMutation({
  * switched on, with its health — so finding and opening the demo is one
  * click from the main menu, not an admin scavenger hunt.
  */
-export const listMyReceptionScreens = tenantQuery({
+export const listMyReceptionScreens = moduleQuery({
+  module: CORE_MODULES.reception,
   args: {},
   handler: async (ctx) => {
     const { companyId } = ctx;

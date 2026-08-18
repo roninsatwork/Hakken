@@ -213,6 +213,7 @@ import type * as userManagementService from "../userManagementService.js";
 import type * as users from "../users.js";
 import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupService.js";
 import type * as utils_companyModules from "../utils/companyModules.js";
+import type * as utils_coreModules from "../utils/coreModules.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
 import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
@@ -484,6 +485,7 @@ declare const fullApi: ApiFromModules<{
   users: typeof users;
   "utils/agentSkillRollupService": typeof utils_agentSkillRollupService;
   "utils/companyModules": typeof utils_companyModules;
+  "utils/coreModules": typeof utils_coreModules;
   "utils/fileParser": typeof utils_fileParser;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;
   "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;

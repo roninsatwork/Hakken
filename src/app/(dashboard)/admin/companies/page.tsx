@@ -35,6 +35,7 @@ import {
 } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
+import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
 
 type CompanyRow = Doc<"companies"> & { userCount: number; userCountIsCapped?: boolean };
 type CompanyFormData = {
@@ -59,7 +60,7 @@ export default function CompaniesPage() {
   const [editingCompany, setEditingCompany] = useState<CompanyRow | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<CompanyRow | null>(null);
 
-  const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "", enabledModules: [] });
+  const [formData, setFormData] = useState<CompanyFormData>({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -79,7 +80,7 @@ export default function CompaniesPage() {
   };
 
   const handleOpenAdd = () => {
-    setFormData({ name: "", systemPrompt: "", planId: "", enabledModules: [] });
+    setFormData({ name: "", systemPrompt: "", planId: "", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] });
     setEditingCompany(null);
     setSubmitError("");
     setIsAddModalOpen(true);

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery, tenantQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 
 /**
@@ -121,7 +122,8 @@ function questionForScreen(question: {
   };
 }
 
-export const listOpenQuestions = tenantQuery({
+export const listOpenQuestions = moduleQuery({
+  module: CORE_MODULES.wiki,
   args: {},
   handler: async (ctx) => {
     const { companyId } = ctx;

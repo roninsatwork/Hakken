@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery, tenantQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
+import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { internal } from "./_generated/api";
 
@@ -87,7 +88,8 @@ function reviewForScreen(review: {
   return { reviewId: review._id, title: review.title, claims, requestedAt: review.requestedAt };
 }
 
-export const listPendingReviews = tenantQuery({
+export const listPendingReviews = moduleQuery({
+  module: CORE_MODULES.wiki,
   args: {},
   handler: async (ctx) => {
     const { companyId } = ctx;

@@ -882,6 +882,41 @@ Properties, Reports, Wiki, Governance, Tasks.
 **Done when:** a capability switched off is unreachable by URL, not merely
 hidden, proven per module by test.
 
+> **Done 2026-08-18.** The switch is structural, not sprinkled: `moduleQuery`
+> and `moduleMutation` in `tenantFunctions.ts` are the tenant builders with one
+> more declared fact — which capability the function belongs to — checked
+> before the handler runs, the way `publicQuery` declares its reason. Every
+> capability's client-callable functions now declare their module: tasks,
+> calls (telephony), reception (kiosk), properties, reports, governance's
+> register, and the wiki's tenant surfaces. The three soft public surfaces
+> (AI rules, the audit trail, the properties dashboard) answer empty instead
+> of erroring, keeping their stated contract; the anonymous kiosk answers the
+> same quiet null as a widget not on kiosk duty.
+>
+> Super admins pass without any flag — the console is where withholding is
+> administered — and so do platform-scoped oversight roles, which have no
+> company for a switch to apply to.
+>
+> Six section layouts share one `CapabilityGate`, and the sidebar's seven
+> entries read the same query the gates and the server read, so the menu, the
+> URL and the data cannot disagree. `companyModules.gating.test.ts` proves
+> refusal per module, the bypasses, and the migration; `CapabilityGate.test.tsx`
+> proves each layout bounces.
+>
+> **The deploy that lands this must run the one-shot migration**
+> `2026-08-18-core-company-modules-backfill`, which seeds every existing
+> company with the full capability set — absence used to mean "the flag
+> predates the switch" and now means "withheld". New companies start whole:
+> the provisioning form pre-ticks every capability, and unticking is the
+> withholding decision, made on purpose.
+>
+> Left alone, recorded: `apify.syncRunStatus` reports on already-started runs
+> and stays ungated — starting a new collection is gated, and a status read on
+> an old run leaks no withheld capability. The assistant's internal wiki reads
+> are internal functions, not client-callable, so a withheld wiki removes the
+> browsing surfaces without silencing Ask Sonae — making the assistant forget
+> the wiki is a different decision nobody has made.
+
 ## Phase 7 — A plan grants capabilities (1.5 days)
 
 - Add capability grants to the plan record; a tier turns modules on.

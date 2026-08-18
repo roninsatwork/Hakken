@@ -94,7 +94,7 @@ describe("CompanyOverviewPage — optional modules", () => {
     mockQueries({ enabledModules: ["salesData"] });
     render(<CompanyOverviewPage />);
 
-    expect(screen.getByRole("checkbox")).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /salesData/ })).toBeChecked();
   });
 
   it("saves through its own mutation, not the profile save", async () => {
@@ -103,7 +103,7 @@ describe("CompanyOverviewPage — optional modules", () => {
     const save = screen.getByRole("button", { name: /Save Modules/i });
     expect(save).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
     expect(save).toBeEnabled();
     fireEvent.click(save);
 
@@ -122,7 +122,7 @@ describe("CompanyOverviewPage — optional modules", () => {
     mockQueries({ enabledModules: ["salesData"] });
     render(<CompanyOverviewPage />);
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save Modules/i }));
 
     await waitFor(() => {
@@ -137,7 +137,7 @@ describe("CompanyOverviewPage — optional modules", () => {
     setCompanyModules.mockRejectedValue(new Error("Unauthorized"));
     render(<CompanyOverviewPage />);
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /salesData/ }));
     fireEvent.click(screen.getByRole("button", { name: /Save Modules/i }));
 
     await waitFor(() => {

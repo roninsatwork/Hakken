@@ -4,7 +4,7 @@ import {
   customMutation,
   customQuery,
 } from "convex-helpers/server/customFunctions";
-import type { ObjectType, PropertyValidators } from "convex/values";
+import type { GenericValidator, ObjectType, PropertyValidators } from "convex/values";
 import {
   action,
   mutation,
@@ -29,6 +29,7 @@ import {
   requireSuperAdminReader,
 } from "./authz";
 import { requireActionRole, requireActionUser } from "./actionAuth";
+import { isModuleEnabled } from "./utils/companyModules";
 
 /**
  * Tenant-aware function builders.
@@ -224,6 +225,87 @@ export const superAdminAction = customAction(action, guardedActionCtx("superAdmi
  * side effects beyond the audit record of the export itself.
  */
 export const governanceAction = customAction(action, guardedActionCtx("governance"));
+
+/**
+ * A capability that can be withheld from a company.
+ *
+ * `moduleQuery` and `moduleMutation` are `tenantQuery`/`tenantMutation` with
+ * one more structural fact: the function belongs to a switchable capability,
+ * named in the declaration the way `publicQuery` names its reason. The check
+ * runs before the handler, so a company with the module withheld cannot reach
+ * the data by URL, by API call, or by any screen the navigation forgot to hide
+ * — the menu is not the gate, this is.
+ *
+ * Who passes without the flag:
+ *
+ * - **Super admins.** The admin console is where a withheld capability is
+ *   administered; a switch that locked out the person holding it would be a
+ *   door that closes from the outside. This holds while impersonating too —
+ *   impersonation exists so a super admin can see a company's workspace, and
+ *   the sidebar still hides what the company cannot reach, so the view stays
+ *   honest while the console keeps working.
+ * - **Platform-scoped readers** — an auditor or oversight role with no active
+ *   company. The role guard has already admitted them; there is no company
+ *   whose switch could apply.
+ *
+ * `guard` defaults to `authenticated` and accepts the read/write admin guards
+ * and `governance`, so a function keeps exactly the role check it had before
+ * it named its module. Loosening a guard to gain a module check would be a
+ * trade nobody asked for.
+ */
+export type ModuleGuard = "authenticated" | "admin" | "adminRead" | "governance";
+
+async function requireModuleOn(
+  ctx: QueryCtx | MutationCtx,
+  identity: TenantIdentity,
+  moduleKey: string,
+): Promise<void> {
+  if (identity.user.role === "SUPER_ADMIN") return;
+  if (!identity.companyId) return;
+
+  const company = await ctx.db.get(identity.companyId);
+  if (!isModuleEnabled(company, moduleKey)) {
+    throw new Error("This section is switched off for your workspace");
+  }
+}
+
+export function moduleQuery<ArgsValidator extends PropertyValidators, Output>(config: {
+  module: string;
+  guard?: ModuleGuard;
+  args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
+  handler: (ctx: TenantQueryCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
+}) {
+  return query({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: async (ctx: QueryCtx, args: ObjectType<ArgsValidator>) => {
+      const identity = await resolveTenantIdentity(ctx, config.guard ?? "authenticated");
+      await requireModuleOn(ctx, identity, config.module);
+      return config.handler({ ...ctx, ...identity }, args);
+    },
+  });
+}
+
+export function moduleMutation<ArgsValidator extends PropertyValidators, Output>(config: {
+  module: string;
+  guard?: ModuleGuard;
+  args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: GenericValidator;
+  handler: (ctx: TenantMutationCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
+}) {
+  return mutation({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: async (ctx: MutationCtx, args: ObjectType<ArgsValidator>) => {
+      const identity = await resolveTenantIdentity(ctx, config.guard ?? "authenticated");
+      await requireModuleOn(ctx, identity, config.module);
+      return config.handler({ ...ctx, ...identity }, args);
+    },
+  });
+}
 
 /**
  * Deliberately unauthenticated surface.

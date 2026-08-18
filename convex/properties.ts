@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser } from "./authz";
-import { publicQuery, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, publicQuery, superAdminQuery } from "./tenantFunctions";
+import { PROPERTIES_MODULE_KEY } from "./utils/coreModules";
+import { isModuleEnabled } from "./utils/companyModules";
 
 function getPropertyScope(user: Doc<"users">) {
   const activeCompanyId = getActiveCompanyId(user);
@@ -11,7 +13,8 @@ function getPropertyScope(user: Doc<"users">) {
   };
 }
 
-export const listProperties = tenantQuery({
+export const listProperties = moduleQuery({
+  module: PROPERTIES_MODULE_KEY,
   args: {
     paginationOpts: v.any(),
     searchTerm: v.optional(v.string()),
@@ -101,7 +104,8 @@ export const getPropertiesCount = publicQuery({
   }
 });
 
-export const getProperty = tenantQuery({
+export const getProperty = moduleQuery({
+  module: PROPERTIES_MODULE_KEY,
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
     const { user } = ctx;
@@ -120,7 +124,8 @@ export const getProperty = tenantQuery({
   },
 });
 
-export const deleteProperty = tenantMutation({
+export const deleteProperty = moduleMutation({
+  module: PROPERTIES_MODULE_KEY,
   args: { id: v.id("properties") },
   handler: async (ctx, args) => {
     const { user } = ctx;
@@ -149,6 +154,12 @@ export const getLatestRuns = publicQuery({
   if (!current) return [];
 
   const { activeCompanyId, canReadAllCompanies } = getPropertyScope(current.user);
+
+  // Withheld capability reads as empty, matching this surface's soft contract.
+  if (current.user.role !== "SUPER_ADMIN" && activeCompanyId) {
+    const company = await ctx.db.get(activeCompanyId);
+    if (!isModuleEnabled(company, PROPERTIES_MODULE_KEY)) return [];
+  }
 
   if (canReadAllCompanies) {
     return await ctx.db.query("apifyRuns")
