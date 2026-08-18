@@ -2,7 +2,7 @@
 
 The screen kit provides the table, pagination, modal, detail-layout, settings-section, empty-state, save-feedback, rule-list, and schema-builder patterns used across Sonae. Use them before adding another page-specific table, modal, confirmation flow, or settings block.
 
-**It serves both halves of the app.** The kit began inside the admin folder and moved to `src/ui/components/screens/` on 2026-08-16 so the screens under `/app` — the ones a client actually uses — can reach it too, and so a product cloned from this repo inherits a kit rather than rebuilding one. Nothing here is admin-only; a name carrying `Admin` means the part is genuinely specific to an administration surface. See [Every Screen Is Built From The Same Parts](../plans/active/shared-screen-kit-plan.md).
+**It serves both halves of the app.** The kit began inside the admin folder and moved to `src/ui/components/screens/` on 2026-08-16 so the screens under `/app` — the ones a client actually uses — can reach it too, and so a product cloned from this repo inherits a kit rather than rebuilding one. Nothing here is admin-only; a name carrying `Admin` means the part is genuinely specific to an administration surface. See [Every Screen Is Built From The Same Parts](../plans/completed/shared-screen-kit-plan.md).
 
 Read this before changing `src/ui/components/screens/**`, `src/hooks/useServerPagedTable.ts`, `src/ui/components/feedback/SonaeModal.tsx`, `src/ui/components/feedback/SonaeEmptyState.tsx`, `src/ui/components/settings/JsonSchemaBuilder.tsx`, or any page that repeats table/search/pagination/form patterns. For the route and role model around admin pages, see [Administration](./administration.md). For global styling guidance, see [Frontend](./frontend.md).
 

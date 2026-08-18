@@ -1,5 +1,10 @@
 # Handover — the shared screen kit
 
+> **Historical — the work this hands over finished on 2026-08-18.** The plan
+> lives at `docs/plans/completed/shared-screen-kit-plan.md`, complete except
+> page headers, which Anthony closed out for a future plan of their own. Do
+> not pick work up from this file.
+
 **Written 2026-08-16, at the end of Phase 3 and the start of Phase 3.5.**
 
 > **Picking up after 2026-08-17.** Phase 3.5 is over half done. Read the Phase
@@ -17,7 +22,7 @@ check and he has not asked for one.
 
 ## Read first
 
-`docs/plans/active/shared-screen-kit-plan.md` — the whole plan, with Phases 1
+`docs/plans/completed/shared-screen-kit-plan.md` — the whole plan, with Phases 1
 and 2 written up: what was built, why each decision, and what was deliberately
 not done. Phases 3 to 7 are still to do.
 

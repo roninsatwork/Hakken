@@ -1,5 +1,10 @@
 # Handover prompt — paste this into a fresh session
 
+> **Historical — the work this hands over finished on 2026-08-18.** The plan
+> lives at `docs/plans/completed/shared-screen-kit-plan.md`, complete except
+> page headers, which Anthony closed out for a future plan of their own. Do
+> not pick work up from this file.
+
 Copy everything below the line.
 
 ---
@@ -12,7 +17,7 @@ Pick up the Sonae shared screen kit work. Phase 3.5 is a little over half done.
    "Hard-won" sections. Read both before touching a screen. The second one is
    from 2026-08-17's afternoon and its first entry is the most useful sentence
    in this whole handover.
-2. `docs/plans/active/shared-screen-kit-plan.md` — the full plan. Phases 1–3 are
+2. `docs/plans/completed/shared-screen-kit-plan.md` — the full plan. Phases 1–3 are
    done and written up; 3.5 is in progress; 3.6 is deferred by Anthony. The goal
    of 3.5 changed twice and the reasons matter more than the diff.
 3. `docs/developer/screen-kit.md` — the kit itself.

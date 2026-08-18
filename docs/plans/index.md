@@ -7,17 +7,6 @@ completed work.
 
 ## Active Plans
 
-- [Screen Kit Handover](./active/SCREEN-KIT-HANDOVER.md) — read this before
-  picking the screen-kit work up: state, next phase in detail, the traps, and
-  what was raised for Anthony rather than fixed. Written 2026-08-16 at the end
-  of Phase 2.
-- [Every Screen Is Built From The Same Parts](./active/shared-screen-kit-plan.md) —
-  the base-layer plan: promote the admin screen kit into the shared layer so the
-  client-facing screens can reach it, enforce it with a shrinking allowlist, build
-  accessibility and small-screen support into the kit once, and extend the
-  capability switch so a module can be withheld or granted by plan. Agreed
-  2026-08-16; 14.5 build-days; build not started. Owns the shared kit, the
-  capability switch and plan capability grants. Read it before adding a screen.
 - [The Wiki's Staff](./active/wiki-agents-plan.md) — agents that tend, check
   and file, drawn from Anthony's own Second-Brain playbook: contradiction
   finding, freshness checking, the full-import-first source-note layer, a
@@ -390,3 +379,11 @@ Completed platform plans such as provider-neutral model work, analytics scale
 optimization, platform scale hardening, post-scale hardening, Replay repair, and
 Replay/Game alignment should not be treated as current implementation
 instructions unless they are deliberately reopened.
+
+## Completed
+
+- [Every Screen Is Built From The Same Parts](./completed/shared-screen-kit-plan.md) —
+  the base-layer plan, completed 2026-08-18: every admin screen on the shared
+  kit, the kit accessible and phone-safe, capabilities withheld per company and
+  granted by plan. Page headers were closed out of it for a future plan of
+  their own. Still the document to read before adding a screen.

@@ -1,5 +1,11 @@
 # Every Screen Is Built From The Same Parts
 
+> **COMPLETE — 2026-08-18.** Every phase is done except 3.6 (page headers),
+> which Anthony closed out of this plan on 2026-08-18 to be revisited in a
+> separate plan. One deploy-day step remains and is not build work: the
+> one-shot migration `2026-08-18-core-company-modules-backfill` must run in
+> the deploy that takes the capability switch live.
+
 **Agreed 2026-08-16.** Sonae is the base layer that gets cloned to build the next
 product on top. This plan is about what a clone would otherwise have to build
 again: a screen kit both halves of the app can reach, accessibility and small
@@ -725,10 +731,13 @@ test says why rather than sitting on an unexplained exemption.
 table, footer bar always present. `/admin/agents` is the same pattern in
 load-more form.
 
-## Phase 3.6 — One page header, everywhere (2.5 days) — DEFERRED 2026-08-17
+## Phase 3.6 — One page header, everywhere (2.5 days) — OUT OF THIS PLAN
 
-> **Parked by Anthony on 2026-08-17:** "leave the header this time and lets
-> proceed with the plan." The measurements below stand and do not need redoing.
+> **Closed out of this plan by Anthony on 2026-08-18:** "ignore page titles for
+> now, we will revisit those in another plan." Earlier, 2026-08-17: "leave the
+> header this time and lets proceed with the plan." So this phase is not
+> pending and nobody should pick it up from here — a future plan of its own
+> starts from the measurements below, which stand and do not need redoing.
 > Phase 3.5 runs first.
 
 **Raised by Anthony:** *"we seem to have issues with page headers too — being
