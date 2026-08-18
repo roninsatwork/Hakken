@@ -38,6 +38,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runMutation(internal.workflowEngine.expireStaleWorkflowApprovals, {}),
   "agent-skill-rollup-rebuild": (ctx) =>
     ctx.runMutation(internal.agentSkills.rebuildSkillCatalogRollupInternal, {}),
+  "governance-rollup-rebuild": (ctx) =>
+    ctx.runMutation(internal.governanceRollups.rebuildGovernanceRollups, {}),
   "company-memory-suggestion-sweep": (ctx) =>
     ctx.runAction(internal.companyMemorySuggestionActions.sweepDispatcher, {}),
   "wiki-tending-sweep": (ctx) => ctx.runAction(internal.wikiTendingActions.tendDispatcher, {}),
@@ -72,6 +74,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "gmail-mailbox-watcher": 1,
   "agent-run-stall-recovery": 2,
   "agent-skill-rollup-rebuild": 10,
+  "governance-rollup-rebuild": 10,
   "purge-stall-reaper": 10,
   "agent-approval-expiry": 15,
   "workflow-approval-expiry": 15,

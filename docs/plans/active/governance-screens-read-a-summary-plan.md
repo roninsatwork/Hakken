@@ -148,3 +148,56 @@ directly stays cheap and stays exactly right.
 - The rollup-versus-raw agreement test, proved by breaking it.
 - The page opened in Anthony's own browser and compared against a fast admin
   screen, with the truncation warning confirmed gone.
+
+
+---
+
+## Where this stands — end of 2026-08-18, picked up tomorrow
+
+Anthony called time here: *"mark whatever is outstanding in the plan as
+outstanding and I can pick this up tomorrow."* Everything below is committed;
+the tree is clean.
+
+### Built and verified
+
+- Both rollup tables, the pure fold service, the cron rebuild (every ten
+  minutes, beside the skills rollup), and the day-cursor backfill migration.
+- Both queries rewritten onto the rollups. Approvals and retention config stay
+  live, as decided.
+- 21 new tests, all green in a 5,391-test suite. The agreement tests check the
+  screens' figures against hand-counts of seeded rows, and were proved by
+  breaking the fold and watching them fail.
+- Run for real against dev: the backfill is COMPLETED there, the rebuild has
+  run, and the page reads buckets. **The figures became exact on the real
+  screen** — "actions taken" was silently capped at 2,007 and truthfully reads
+  7,936; the "floor rather than a total" warning is gone because it stopped
+  being true.
+
+### Outstanding
+
+1. **The runs-per-day bar chart draws empty on the real screen.** Every number
+   around it is right, and the chart's y-axis scales as if the data is there,
+   but no bars render. The unit tests say `mergeBucketsForWindow` produces a
+   correct timeline, and the chart component is untouched — so the first move
+   tomorrow is to look at what `getGovernanceActivity` actually returns in the
+   browser (log `activity.timeline`, compare against the
+   `governanceDayRollups` rows, which can be listed with
+   `npx convex data governanceDayRollups`). Ruled out already: date-format
+   mismatch (both sides use the same UTC `dayKey`), the empty-state branch
+   (`runs.total` is 239, so the chart path is taken).
+2. **Browser verification is incomplete.** Only the 30-day view was looked at.
+   The 7- and 90-day ranges, and the workspace-scoped view at `/app/governance`,
+   still need eyes once the chart is fixed.
+3. **Deploy day now needs three steps, not one**, all one-shot: the company
+   modules backfill (Phase 6 of the screen-kit plan), this plan's
+   `2026-08-18-governance-day-rollups-backfill`, and one manual
+   `governanceRollups:rebuildGovernanceRollups` so the estate snapshot exists
+   before the cron's first tick.
+
+### Worth knowing tomorrow
+
+The `npx convex dev` watcher (running since Sunday) pushed a mid-edit state
+during this build, which briefly broke the live page with a
+`readBucketsForWindow is not defined` error; `npx convex dev --once` cleared
+it. If the page misbehaves in a way the code cannot explain, force a clean
+push first and re-judge.

@@ -265,6 +265,83 @@ export default defineSchema({
     computedAt: v.number(),
   }).index("by_key", ["key"]),
 
+  /**
+   * One day of governance activity for one scope, counted as it happens.
+   *
+   * The governance screens used to count the estate on every visit — up to
+   * ~34,500 rows across nineteen reads, capped at 2,000 per status, so the
+   * compliance figures were already a floor rather than a total. These buckets
+   * are rebuilt for the recent window by the cron and read whole by the
+   * screen, the same trade the skills rollup already makes.
+   *
+   * `companyKey` is a company id, or "none" for rows belonging to nobody —
+   * the register's scope rule, kept identical: companyless rows are in
+   * everybody's scope. Buckets also outlive the 180-day purge of raw runs, so
+   * the governance history stops being quietly erased with them.
+   */
+  governanceDayRollups: defineTable({
+    companyKey: v.string(),
+    /** ISO date, UTC — the same day key the timeline draws. */
+    date: v.string(),
+    finished: v.number(),
+    waited: v.number(),
+    unfinished: v.number(),
+    runsTotal: v.number(),
+    actions: v.object({
+      read: v.number(),
+      write: v.number(),
+      external: v.number(),
+      destructive: v.number(),
+      total: v.number(),
+    }),
+    /** Who ran that day, for "busiest systems" and conformance — small: only agents that acted. */
+    perAgent: v.array(v.object({
+      agentId: v.string(),
+      name: v.string(),
+      risk: v.string(),
+      runs: v.number(),
+      /** Side-effect levels actually observed, for conformance checking. */
+      observed: v.array(v.string()),
+    })),
+    /** True when a day held more rows than one rebuild reads — never expected. */
+    truncated: v.boolean(),
+    computedAt: v.number(),
+  })
+    .index("by_company_date", ["companyKey", "date"])
+    .index("by_date", ["date"]),
+
+  /**
+   * The state of one scope's AI estate, snapshotted by the same cron.
+   *
+   * Everything here only moves when somebody changes a setting, so it is
+   * rebuilt on the timer and read as a document — approvals and retention
+   * config stay live reads on the dashboard, being few and indexed.
+   */
+  governanceEstateRollups: defineTable({
+    companyKey: v.string(),
+    systems: v.number(),
+    riskMix: v.object({
+      high: v.number(),
+      medium: v.number(),
+      low: v.number(),
+      unrated: v.number(),
+    }),
+    unrated: v.number(),
+    incomplete: v.number(),
+    publicFacing: v.number(),
+    unattendedHighRisk: v.number(),
+    conformance: v.array(v.object({
+      agentId: v.string(),
+      agentName: v.string(),
+      rating: v.string(),
+      observed: v.array(v.string()),
+      suggested: v.string(),
+    })),
+    /** True when the estate outgrew one rebuild's read — the skills rollup's own honesty flag. */
+    isPartial: v.boolean(),
+    computedAt: v.number(),
+  }).index("by_company", ["companyKey"]),
+
   inventoryRollups: defineTable({
     key: v.string(),
     totalProvisionedUsers: v.number(),
@@ -926,6 +1003,9 @@ export default defineSchema({
     // bound below with gt(0) to exclude still-running rows.
     .index("by_completed", ["completedAt"])
     .index("by_status_started", ["status", "startedAt"])
+    // The rollup rebuild reads "everything since yesterday" regardless of
+    // status; without this that read is a fan-out across every status.
+    .index("by_started", ["startedAt"])
     .index("by_thread_started", ["threadId", "startedAt"])
     .index("by_workflow_started", ["workflowId", "startedAt"])
     .index("by_schedule_started", ["scheduleId", "startedAt"]),
@@ -1106,6 +1186,10 @@ export default defineSchema({
     .index("by_agent_started", ["agentId", "startedAt"])
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_status_started", ["status", "startedAt"])
+    // The rollup rebuild reads "everything since yesterday" regardless of
+    // status; the governance dashboard used to walk this table backwards with
+    // no index at all.
+    .index("by_started", ["startedAt"])
     // startedAt in the key so the batch comes back in request order rather than
     // relying on insertion order as a happy accident.
     .index("by_run_turn", ["runId", "turnIndex", "startedAt"]),

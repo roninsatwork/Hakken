@@ -11,6 +11,8 @@ import { buildGapProducts } from "./salesOpportunityService";
 // template:remove:end
 import { agentKindToApplyMode, companyCategoryToApplyMode } from "./utils/memoryApplication";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
+import { dayKey as governanceDayKey } from "./governanceActivityService";
+import { foldWindowIntoBuckets } from "./governanceRollupService";
 import {
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
@@ -107,6 +109,104 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * One-shot by the framework — a completed run does not repeat, which is
    * what keeps a later, deliberate withholding from being quietly undone.
    */
+  /**
+   * Builds every historical governance day bucket, so the charts are full on
+   * the day the rollup lands rather than starting empty
+   * (governance-screens-read-a-summary plan, Phase 3).
+   *
+   * The cursor is a date, not a row: each batch recomputes one UTC day from
+   * the raw tables and SETS its buckets — delete the day's rows, insert the
+   * recomputed ones — so a resumed or re-triggered run converges on the same
+   * answer instead of double-counting. Days after the cursor date are the
+   * cron's to keep fresh; days it has already written are simply rewritten
+   * with the same figures.
+   */
+  "2026-08-18-governance-day-rollups-backfill": async (ctx, cursor, _batchSize) => {
+    const today = governanceDayKey(Date.now());
+
+    let date = cursor;
+    if (!date) {
+      const earliest = await ctx.db.query("agentRuns").withIndex("by_started").order("asc").first();
+      const earliestCall = await ctx.db.query("agentToolCalls").withIndex("by_started").order("asc").first();
+      const starts = [earliest?.startedAt, earliestCall?.startedAt].filter(
+        (at): at is number => at !== undefined,
+      );
+      if (starts.length === 0) {
+        return { cursor: null, isDone: true, processed: 0, updated: 0 };
+      }
+      date = governanceDayKey(Math.min(...starts));
+    }
+
+    const dayStart = Date.parse(`${date}T00:00:00.000Z`);
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    const DAY_ROW_LIMIT = 10000;
+
+    const [runs, calls, approvalsByStatus, agents] = await Promise.all([
+      ctx.db
+        .query("agentRuns")
+        .withIndex("by_started", (q) => q.gte("startedAt", dayStart).lt("startedAt", dayEnd))
+        .take(DAY_ROW_LIMIT),
+      ctx.db
+        .query("agentToolCalls")
+        .withIndex("by_started", (q) => q.gte("startedAt", dayStart).lt("startedAt", dayEnd))
+        .take(DAY_ROW_LIMIT),
+      Promise.all(
+        (["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"] as const).map((status) =>
+          ctx.db
+            .query("agentRunApprovals")
+            .withIndex("by_status_requested", (q) =>
+              q.eq("status", status).gte("requestedAt", dayStart).lt("requestedAt", dayEnd))
+            .take(DAY_ROW_LIMIT),
+        ),
+      ),
+      ctx.db.query("agents").take(500),
+    ]);
+
+    const agentsById = new Map(
+      agents.map((agent) => [
+        agent._id as string,
+        { id: agent._id as string, name: agent.name, risk: agent.riskLevel ?? "UNRATED" },
+      ]),
+    );
+
+    const buckets = foldWindowIntoBuckets({
+      runs: runs.map((run) => ({
+        id: run._id as string,
+        companyId: run.companyId as string | undefined,
+        agentId: run.agentId as string,
+        startedAt: run.startedAt,
+        status: run.status,
+      })),
+      calls: calls.map((call) => ({
+        companyId: call.companyId as string | undefined,
+        agentId: call.agentId as string,
+        startedAt: call.startedAt,
+        sideEffectLevel: call.sideEffectLevel,
+      })),
+      neededAPerson: new Set(approvalsByStatus.flat().map((approval) => approval.runId as string)),
+      agentsById,
+      truncated: runs.length >= DAY_ROW_LIMIT || calls.length >= DAY_ROW_LIMIT,
+    });
+
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("governanceDayRollups")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .collect();
+    for (const row of existing) await ctx.db.delete(row._id);
+    for (const bucket of buckets) {
+      await ctx.db.insert("governanceDayRollups", { ...bucket, computedAt: now });
+    }
+
+    const nextDate = governanceDayKey(dayEnd);
+    return {
+      cursor: nextDate,
+      isDone: date >= today,
+      processed: runs.length + calls.length,
+      updated: buckets.length,
+    };
+  },
+
   "2026-08-18-core-company-modules-backfill": async (ctx, cursor, batchSize) => {
     const page = await ctx.db.query("companies").paginate({ cursor, numItems: batchSize });
     let updated = 0;

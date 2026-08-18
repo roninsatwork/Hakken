@@ -120,6 +120,8 @@ import type * as governanceDashboardService from "../governanceDashboardService.
 import type * as governancePolicyService from "../governancePolicyService.js";
 import type * as governanceRegister from "../governanceRegister.js";
 import type * as governanceRegisterService from "../governanceRegisterService.js";
+import type * as governanceRollupService from "../governanceRollupService.js";
+import type * as governanceRollups from "../governanceRollups.js";
 import type * as http from "../http.js";
 import type * as httpConnectorPolicy from "../httpConnectorPolicy.js";
 import type * as inventoryRollups from "../inventoryRollups.js";
@@ -392,6 +394,8 @@ declare const fullApi: ApiFromModules<{
   governancePolicyService: typeof governancePolicyService;
   governanceRegister: typeof governanceRegister;
   governanceRegisterService: typeof governanceRegisterService;
+  governanceRollupService: typeof governanceRollupService;
+  governanceRollups: typeof governanceRollups;
   http: typeof http;
   httpConnectorPolicy: typeof httpConnectorPolicy;
   inventoryRollups: typeof inventoryRollups;

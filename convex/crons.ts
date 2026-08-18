@@ -82,6 +82,20 @@ crons.interval(
 // indexed away, so it happens here instead. Ten minutes keeps the panel close
 // enough to live while leaving the read path a single document lookup, and the
 // screen shows how old the numbers are either way.
+// Recompute the governance day buckets and estate snapshot. The overview used
+// to count the whole estate on every visit — up to ~34,500 rows, capped and
+// therefore already inexact — and recomputed reactively whenever any agent did
+// anything. Counting cannot be indexed away, so it happens here instead, and
+// the screens read a handful of rows. Same trade, same cadence, as the skills
+// rollup below; each tick recomputes only the last two days, so the work stays
+// constant however much history accumulates.
+crons.interval(
+  "governance-rollup-rebuild",
+  { minutes: 10 },
+  internal.jobLedger.runJob,
+  { job: "governance-rollup-rebuild" }
+);
+
 crons.interval(
   "agent-skill-rollup-rebuild",
   { minutes: 10 },
