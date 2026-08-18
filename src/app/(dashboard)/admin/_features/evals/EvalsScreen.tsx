@@ -15,13 +15,8 @@ import {
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import {
-  PaginationFooter,
-  SearchBar,
-  TableEmptyRow,
-  TableLoadingRow,
-  TableShell,
-} from "@/src/ui/components/screens/Table";
+import { RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
@@ -300,116 +295,129 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
         </div>
       </div>
 
-      <TableShell
+      <DataTable
+        rows={cases.isLoading ? undefined : cases.rows}
+        rowKey={(evalCase) => evalCase._id}
         minWidthClassName="min-w-[760px]"
-        footer={
-          <PaginationFooter
-            page={cases.page}
-            totalPages={cases.totalPages}
-            totalCount={cases.loadedCount}
-            pageSize={TABLE_PAGE_SIZE}
-            isLoading={cases.isBusy}
-            onPageChange={cases.goToPage}
-            labels={{ empty: "No evals" }}
-          />
-        }
-      >
-        <thead>
-          <tr className="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
-            <th className="px-4 py-3 font-medium">Eval</th>
-            <th className="px-4 py-3 font-medium w-[130px]">Status</th>
-            <th className="px-4 py-3 font-medium w-[120px]">Must pass</th>
-            <th className="px-4 py-3 font-medium w-[170px]">Last run</th>
-            <th className="px-4 py-3 font-medium w-[150px] text-right"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {cases.isLoading ? (
-            <TableLoadingRow colSpan={5} />
-          ) : cases.rows.length === 0 ? (
-            <TableEmptyRow
-              colSpan={5}
-              icon={<ClipboardCheck className="h-8 w-8 text-muted/30" />}
-              label="No evals yet"
-              action={
-                <div className="flex flex-col items-center gap-3">
-                  <p className="max-w-sm text-[13px] normal-case tracking-normal text-secondary">
-                    A eval catches your AI saying something wrong before a customer sees it.
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    {companyId && (
-                      <WriteButton
-                        type="button"
-                        onClick={handleAddStarters}
-                        disabled={starterAction.isBusy()}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
-                      >
-                        {starterAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                        Add 3 starter evals
-                      </WriteButton>
-                    )}
-                    <Link
-                      href={`${evalsHref}/new?returnTo=${encodeURIComponent(evalsHref)}`}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold normal-case tracking-normal text-foreground transition-colors hover:bg-foreground/5"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Write my own
-                    </Link>
-                  </div>
-                </div>
-              }
-            />
-          ) : cases.rows.map((evalCase) => {
-            // Read straight off the case. The list used to fetch a thousand runs to
-            // work out this one status and date per row.
-            const status = describeStatus(evalCase.lastRunStatus);
-            const isRunning = runAction.isBusy(`run:${evalCase._id}`);
-
-            return (
-              <tr key={evalCase._id} className="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`${evalsHref}/${evalCase._id}?returnTo=${encodeURIComponent(evalsHref)}`}
-                    className="text-[13px] font-semibold text-foreground hover:text-brand transition-colors"
+        empty={{
+          icon: <ClipboardCheck className="h-8 w-8 text-muted/30" />,
+          label: "No evals yet",
+          action: (
+            <div className="flex flex-col items-center gap-3">
+              <p className="max-w-sm text-[13px] normal-case tracking-normal text-secondary">
+                A eval catches your AI saying something wrong before a customer sees it.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {companyId && (
+                  <WriteButton
+                    type="button"
+                    onClick={handleAddStarters}
+                    disabled={starterAction.isBusy()}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
                   >
-                    {evalCase.name}
-                  </Link>
-                  <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">{evalCase.prompt}</div>
-                </td>
-                <td className={`px-4 py-3 text-[13px] font-semibold ${status.tone}`}>{status.label}</td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {evalCase.severity === "BLOCKER" ? "Yes" : "No"}
-                </td>
-                <td className="px-4 py-3 text-[12px] text-secondary">
-                  {evalCase.lastRunAt ? formatDateTime(evalCase.lastRunAt) : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleRunCheck(evalCase._id)}
-                      disabled={isRunning}
-                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
-                    >
-                      {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-                      Run
-                    </button>
-                    <WriteButton
-                      type="button"
-                      aria-label={`Delete ${evalCase.name}`}
-                      title="Delete"
-                      onClick={() => setDeleteTarget(evalCase)}
-                      className="p-2 rounded-md text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </WriteButton>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </TableShell>
+                    {starterAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    Add 3 starter evals
+                  </WriteButton>
+                )}
+                <Link
+                  href={`${evalsHref}/new?returnTo=${encodeURIComponent(evalsHref)}`}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] border border-border-dim px-4 text-[13px] font-semibold normal-case tracking-normal text-foreground transition-colors hover:bg-foreground/5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Write my own
+                </Link>
+              </div>
+            </div>
+          ),
+        }}
+        footer={{
+          mode: "paged",
+          page: cases.page,
+          totalPages: cases.totalPages,
+          totalCount: cases.loadedCount,
+          pageSize: TABLE_PAGE_SIZE,
+          isLoading: cases.isBusy,
+          onPageChange: cases.goToPage,
+          labels: { empty: "No evals" },
+        }}
+        columns={[
+          {
+            key: "eval",
+            header: "Eval",
+            cell: (evalCase) => (
+              <>
+                <Link
+                  href={`${evalsHref}/${evalCase._id}?returnTo=${encodeURIComponent(evalsHref)}`}
+                  className="text-[13px] font-semibold text-foreground hover:text-brand transition-colors"
+                >
+                  {evalCase.name}
+                </Link>
+                <div className="text-[12px] text-secondary line-clamp-1 max-w-[520px]">{evalCase.prompt}</div>
+              </>
+            ),
+          },
+          {
+            key: "status",
+            header: "Status",
+            className: "w-[130px]",
+            // Read straight off the case. The list used to fetch a thousand runs
+            // to work out this one status and date per row.
+            cell: (evalCase) => {
+              const status = describeStatus(evalCase.lastRunStatus);
+              return <span className={`text-[13px] font-semibold ${status.tone}`}>{status.label}</span>;
+            },
+          },
+          {
+            key: "mustPass",
+            header: "Must pass",
+            className: "w-[120px]",
+            cell: (evalCase) => (
+              <span className="text-[12px] text-secondary">
+                {evalCase.severity === "BLOCKER" ? "Yes" : "No"}
+              </span>
+            ),
+          },
+          {
+            key: "lastRun",
+            header: "Last run",
+            className: "w-[170px]",
+            cell: (evalCase) => (
+              <span className="text-[12px] text-secondary">
+                {evalCase.lastRunAt ? formatDateTime(evalCase.lastRunAt) : "—"}
+              </span>
+            ),
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            className: "w-[150px]",
+            cell: (evalCase) => {
+              const isRunning = runAction.isBusy(`run:${evalCase._id}`);
+              return (
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleRunCheck(evalCase._id)}
+                    disabled={isRunning}
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] px-2.5 text-[12px] font-semibold text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
+                  >
+                    {isRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                    Run
+                  </button>
+                  <RowIconButton
+                    label={`Delete ${evalCase.name}`}
+                    tone="danger"
+                    onClick={() => setDeleteTarget(evalCase)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </RowIconButton>
+                </div>
+              );
+            },
+          },
+        ]}
+      />
 
       {/* Running is real provider work, so it says what it will do before it does
           it. The old batch button spent nothing, which is why it proved nothing. */}
