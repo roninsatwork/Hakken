@@ -4,15 +4,12 @@ import type { Doc } from "./_generated/dataModel";
 import {
   assertAdminCanAccessCompany,
   canAccessCompany,
-  getActiveCompanyId,
   getCurrentUser,
   } from "./authz";
-import { CORE_MODULES } from "./utils/coreModules";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { DEFAULT_SETTINGS } from "./settingsService";
 import { publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
-import { effectiveModulesFor } from "./tenantFunctions";
 
 function uniqueRulesById(rules: Doc<"aiRules">[]) {
   const seen = new Set<string>();

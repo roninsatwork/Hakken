@@ -4,9 +4,7 @@ import { v } from "convex/values";
 import type { Doc, TableNames } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { GOVERNANCE_READ_ROLES, getActiveCompanyId, getCurrentUser } from "./authz";
-import { CORE_MODULES } from "./utils/coreModules";
 import { publicMutation, publicQuery } from "./tenantFunctions";
-import { effectiveModulesFor } from "./tenantFunctions";
 import {
   withAuditLogActorName,
   auditChangesFrom,

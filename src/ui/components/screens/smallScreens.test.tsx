@@ -48,7 +48,7 @@ describe("the kit at phone width", () => {
   });
 
   it("the search row wraps rather than squeezing the box", () => {
-    const { container } = render(
+    render(
       <DataTable
         rows={rows}
         rowKey={(row) => row.id}

@@ -5,7 +5,6 @@ import {
   dayKeysBack,
   foldEstateRows,
   foldWindowIntoBuckets,
-  type DayBucketRow,
 } from "./governanceRollupService";
 import type { SideEffectLevel } from "./conformanceService";
 import {

@@ -94,11 +94,12 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
     });
   }, []);
 
+  // No clearing on close: the menu only renders while a tab is open, so a
+  // stale anchor is never visible, and this runs before paint — a reopened
+  // menu is measured before the browser draws it. Clearing here instead set
+  // state inside an effect, which cascades a render for no gain.
   useLayoutEffect(() => {
-    if (!openTabHref) {
-      setAnchor(null);
-      return;
-    }
+    if (!openTabHref) return;
     measure();
   }, [openTabHref, measure]);
 
