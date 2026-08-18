@@ -106,8 +106,16 @@ const RULES = {
 /**
  * Parts that only make sense as pieces of a table.
  *
- * `SearchBar` is deliberately not here: a screen can legitimately put one above
- * a set of cards, and failing that would be a build error with no correct fix.
+ * Three things are deliberately absent, each because failing on it would be a
+ * build error with no correct fix:
+ *
+ * - `SearchBar`, which a screen may legitimately put above a set of cards.
+ * - `PaginationFooter` and `LoadMoreFooter`, which page a list of anything. Both
+ *   chat-log screens are a scrolling column of conversations with a pager under
+ *   it — no table anywhere — and this rule called them hand-assembled tables
+ *   until 2026-08-18. Nothing is lost by dropping them: a table assembled by
+ *   hand always has a shell, a `<thead>`, or a header cell, so it is still
+ *   caught by the entries that remain.
  */
 const TABLE_PARTS = [
   "TableShell",
@@ -115,8 +123,6 @@ const TABLE_PARTS = [
   "TableHeaderCell",
   "TableLoadingRow",
   "TableEmptyRow",
-  "PaginationFooter",
-  "LoadMoreFooter",
 ];
 
 const ALLOWLIST_FILE = path.join(rootDir, "scripts", "screen-kit-allowlist.json");

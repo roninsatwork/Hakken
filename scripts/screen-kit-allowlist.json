@@ -10,20 +10,14 @@
     "src/app/(dashboard)/app/tasks/page.tsx"
   ],
   "assembled": [
-    "src/app/(dashboard)/admin/_components/CompanySkillCheckboxPicker.tsx",
-    "src/app/(dashboard)/admin/_features/knowledge/KnowledgeManager.tsx",
     "src/app/(dashboard)/admin/_features/wiki/WikiPagesListScreen.tsx",
-    "src/app/(dashboard)/admin/agents/[id]/logs/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/runs/page.tsx",
-    "src/app/(dashboard)/admin/ai/chat-logs/page.tsx",
-    "src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx",
     "src/app/(dashboard)/admin/settings/_components/RetentionRulesSection.tsx",
     "src/app/(dashboard)/app/[workspace]/customers/page.tsx",
     "src/app/(dashboard)/app/[workspace]/import-data/page.tsx",
     "src/app/(dashboard)/app/[workspace]/opportunity-report/page.tsx",
     "src/app/(dashboard)/app/[workspace]/spreadsheet-import/page.tsx",
-    "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
-    "src/app/(dashboard)/app/tasks/page.tsx"
+    "src/app/(dashboard)/app/profile/ProfileTabs.tsx"
   ]
 }
