@@ -45,7 +45,17 @@ import {
 export type DataTableColumn<Row> = {
   /** Stable identity, and the React key for the header and body cells. */
   key: string;
-  header: ReactNode;
+  /**
+   * Omit for a column that should not show a heading — a row's buttons, most
+   * often. The column still gets a name for screen readers (`hiddenHeader`,
+   * "Actions" unless said otherwise): a `<th>` with nothing in it names a
+   * column of buttons nothing, which is the one axe finding every list screen
+   * shared. Screens that spell the omission `""` or `" "` mean the same thing
+   * and are treated the same way.
+   */
+  header?: ReactNode;
+  /** What a screen reader calls a column whose heading is not shown. */
+  hiddenHeader?: string;
   align?: "left" | "right";
   /** Width or wrapping the column needs, applied to header and body alike. */
   className?: string;
@@ -203,7 +213,9 @@ export function DataTable<Row>({
                 align={column.align}
                 className={column.className}
               >
-                {column.header}
+                {visibleHeader(column) ?? (
+                  <span className="sr-only">{column.hiddenHeader ?? "Actions"}</span>
+                )}
               </TableHeaderCell>
             ))}
           </TableHeaderRow>
@@ -257,6 +269,14 @@ export function DataTable<Row>({
       </TableShell>
     </div>
   );
+}
+
+/** The heading as written, or null where it is missing or only spacing. */
+function visibleHeader<Row>(column: DataTableColumn<Row>) {
+  const { header } = column;
+  if (header === undefined || header === null) return null;
+  if (typeof header === "string" && header.replace(/\u00a0/g, " ").trim() === "") return null;
+  return header;
 }
 
 function renderFooter(footer: LoadMoreFooterSpec | PagedFooterSpec | CursorFooterSpec) {
