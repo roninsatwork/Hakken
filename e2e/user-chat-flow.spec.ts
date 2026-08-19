@@ -10,7 +10,7 @@ test.describe('End-User Chat Journey @smoke', () => {
     // 1. Ensure the core chat input area is mounted and visible
     const chatInput = page.locator('textarea');
     await expect(chatInput).toBeVisible({ timeout: 10000 });
-    await expect(chatInput).toHaveAttribute('placeholder', /Enter a prompt/i);
+    await expect(chatInput).toHaveAttribute('placeholder', /Ask anything/i);
 
     // 2. Simulate User Input
     const testMessage = `Hello Sonae, run system diagnostic ${Date.now()}`;

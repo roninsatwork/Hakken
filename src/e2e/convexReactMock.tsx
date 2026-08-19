@@ -777,6 +777,32 @@ function writeThreadMessages(threadId: string, content: string) {
   window.localStorage.setItem(`sonae:e2e:thread:${threadId}`, JSON.stringify(messages));
 }
 
+type E2EFeedbackEntry = {
+  rating: "POSITIVE" | "NEGATIVE";
+  labels: Array<"GREAT_ANSWER" | "INCORRECT" | "MISSED_CONTEXT" | "UNHELPFUL">;
+  hasCorrection: boolean;
+};
+
+const FEEDBACK_STORAGE_KEY = "sonae:e2e:feedback";
+
+function readFeedbackStore(): Record<string, E2EFeedbackEntry> {
+  if (typeof window === "undefined") return {};
+  const raw = window.localStorage.getItem(FEEDBACK_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, E2EFeedbackEntry>;
+  } catch {
+    return {};
+  }
+}
+
+function writeFeedbackEntry(messageId: string, entry: E2EFeedbackEntry) {
+  if (typeof window === "undefined") return;
+  const store = readFeedbackStore();
+  store[messageId] = entry;
+  window.localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(store));
+}
+
 function functionPath(functionReference: FunctionReference) {
   try {
     return getFunctionName(functionReference);
@@ -806,6 +832,39 @@ function useHasHydrated() {
   );
 }
 
+/**
+ * The real client pushes a mutation's result to every subscribed query, so a
+ * screen redraws where it stands. The mock's queries are plain functions, so
+ * until now only a navigation could show a write — fine for sending a message,
+ * which navigates, and wrong for rating an answer, which does not.
+ */
+let mockRevision = 0;
+const revisionListeners = new Set<() => void>();
+
+function subscribeToRevision(onStoreChange: () => void) {
+  revisionListeners.add(onStoreChange);
+  return () => {
+    revisionListeners.delete(onStoreChange);
+  };
+}
+
+function getRevisionSnapshot() {
+  return mockRevision;
+}
+
+function getRevisionServerSnapshot() {
+  return 0;
+}
+
+function bumpRevision() {
+  mockRevision += 1;
+  for (const listener of revisionListeners) listener();
+}
+
+function useMockRevision() {
+  return useSyncExternalStore(subscribeToRevision, getRevisionSnapshot, getRevisionServerSnapshot);
+}
+
 export class ConvexReactClient {
   constructor(url: string) {
     void url;
@@ -824,6 +883,7 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
   const path = functionPath(functionReference);
   const queryArgs = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
   const hasHydrated = useHasHydrated();
+  useMockRevision();
 
   if (path === "users:getMe") return hasHydrated ? getCurrentUser() : undefined;
   if (path === "settings:get") return settings;
@@ -1248,6 +1308,19 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
       totalOpexCost: 0,
     };
   }
+  // Without this the controls read `enabled` off the catch-all empty array and
+  // render nothing at all, so the rating journey had no buttons to click.
+  if (path === "messageFeedback:getMineForThread") {
+    const store = readFeedbackStore();
+    const threadMessages = readThreadMessages(String(queryArgs.threadId ?? "")) as Array<{ _id: string }>;
+    return {
+      enabled: true,
+      ratings: threadMessages
+        .filter((message) => Boolean(store[message._id]))
+        .map((message) => ({ messageId: message._id, ...store[message._id] })),
+    };
+  }
+
   if (path.endsWith(":get") || path.endsWith(":list") || path.includes("getAll") || path.includes("getPending")) return [];
 
   return [];
@@ -1266,6 +1339,17 @@ export function useMutation(functionReference: FunctionReference) {
     if (path === "workflows:createWorkflow") return createdWorkflowId;
     if (path === "chat:sendMessage") {
       writeThreadMessages(String(args?.threadId || "thread_e2e_seed"), String(args?.content || ""));
+      return true;
+    }
+    if (path === "messageFeedback:upsertForMessage") {
+      const messageId = String(args?.messageId ?? "");
+      if (!messageId) return true;
+      writeFeedbackEntry(messageId, {
+        rating: args?.rating === "NEGATIVE" ? "NEGATIVE" : "POSITIVE",
+        labels: Array.isArray(args?.labels) ? (args.labels as E2EFeedbackEntry["labels"]) : [],
+        hasCorrection: typeof args?.comment === "string" && args.comment.trim().length > 0,
+      });
+      bumpRevision();
       return true;
     }
     if (path.includes("generateUploadUrl")) return "data:application/json,{}";
