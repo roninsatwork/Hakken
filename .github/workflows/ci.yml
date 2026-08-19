@@ -26,13 +26,18 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  quick-checks:
-    # Runs on every push/PR: fast feedback (~10 minutes) — lint, types, unit
-    # tests. The slow browser-test suite is reserved for the full gate below
-    # and for local runs via `npm run gate`.
-    name: Quick Checks
+  checks:
+    # One runner, not two. Lint, types and unit tests used to sit in one job
+    # and the browser smoke subset in another, and each paid its own checkout,
+    # Node setup and package restore — roughly three minutes of getting ready,
+    # billed twice for a single push. Together they get ready once.
+    #
+    # The trade is wall-clock, deliberately taken: the browser subset now waits
+    # for the unit suite rather than running beside it. The bill is what was
+    # hurting, not the wait.
+    name: Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     steps:
       - name: Checkout repository
@@ -88,6 +93,34 @@ jobs:
       - name: Check coverage thresholds
         run: npm run coverage:check
 
+      # Everything browser-related sits after the cheap checks on purpose: a
+      # failing lint should not first pay to fetch a browser it will never open.
+      - name: Restore Playwright browser
+        id: playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # A cache hit still needs the system libraries Chromium links against;
+      # those live in /usr/lib, not in the cached browser directory. Installing
+      # them alone is seconds, against roughly a minute and a half for the
+      # browser download it replaces.
+      - name: Install Playwright browser
+        if: steps.playwright.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system libraries
+        if: steps.playwright.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # A four-spec browser subset on every push/PR. The full suite used to run
+      # only on PRs into main, which left daily work on dev with no browser
+      # coverage at all — breakage was discovered in a batch at release time
+      # (maintenance plan M3.1).
+      - name: Run browser smoke tests
+        run: npm run test:e2e:smoke
+
       - name: Upload coverage report
         # Only when something failed. A 28MB upload after every green check was
         # paid for and never opened.
@@ -97,46 +130,6 @@ jobs:
           name: coverage-report-quick
           path: coverage/
           if-no-files-found: ignore
-
-  browser-smoke:
-    # A four-spec browser subset on every push/PR (~3 minutes once packages
-    # are cached). The full suite used to run only on PRs into main, which
-    # left daily work on dev with no browser coverage at all — breakage was
-    # discovered in a batch at release time (maintenance plan M3.1).
-    name: Browser Smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Setup Node environment
-        uses: actions/setup-node@v5
-        with:
-          node-version: '24.18.0'
-          cache: 'npm'
-
-      - name: Restore installed packages
-        id: packages
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: steps.packages.outputs.cache-hit != 'true'
-        run: npm ci
-
-      - name: Workaround NPM Optional Dependency Bug
-        if: steps.packages.outputs.cache-hit != 'true'
-        run: npm install @rollup/rollup-linux-x64-gnu --no-save
-
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Run browser smoke tests
-        run: npm run test:e2e:smoke
 
       - name: Upload Playwright report
         if: failure()
@@ -187,8 +180,20 @@ jobs:
         if: steps.packages.outputs.cache-hit != 'true'
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
+      - name: Restore Playwright browser
+        id: playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browser
+        if: steps.playwright.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system libraries
+        if: steps.playwright.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: Run browser tests
         run: npm run test:e2e

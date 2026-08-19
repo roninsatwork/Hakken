@@ -24,16 +24,32 @@ Two GitHub Actions workflows protect the repository:
 
 Both workflows use Node `24.18.0` and `npm ci`. Both currently install `@rollup/rollup-linux-x64-gnu --no-save` after `npm ci` as a workaround for the npm optional dependency issue that can affect Rollup-based builds in CI.
 
+Both restore `node_modules` from a cache keyed on `package-lock.json`, so `npm
+ci` only runs when the lockfile actually moves; CI caches the Playwright browser
+on the same key. The rollup binary is installed before the cache is written, so
+a hit already contains it — if that workaround ever changes, bump the `-v1-`
+suffix in the cache keys, or a stale cache will keep serving the old tree and
+the failure will look unrelated to whatever you changed.
+
 ### CI Workflow
 
 The `CI` workflow has two jobs.
 
-**Quick Checks** — every push and PR to `dev`, and every PR to `main`:
+**Checks** — every push and PR to `dev`, and every PR to `main`:
 
-1. `npm run lint`
-2. `npm run typecheck`
-3. `npm run test:coverage` (runs the full unit/integration suite)
-4. `npm run coverage:check`
+1. `npm run check:guards`
+2. `npm run lint`
+3. `npm run typecheck`
+4. `npm run test:coverage` (runs the full unit/integration suite)
+5. `npm run coverage:check`
+6. `npm run test:e2e:smoke` (the `@smoke` browser subset)
+
+This was two jobs — checks in one, the browser subset in another — until each
+was found paying its own checkout, Node setup and package restore for a single
+push. One runner gets ready once. Everything browser-related runs last so a
+failing lint never pays to fetch a browser it will not open. The trade is
+wall-clock, taken deliberately: the browser subset waits for the unit suite
+instead of running beside it.
 
 **Full Gate** — only on PRs into `main`, adding the browser suite:
 
@@ -63,11 +79,24 @@ way.
 
 The deployment sequence is managed by `.github/workflows/deploy.yml`:
 
-1. Testing firewall: `npm audit --omit=dev --audit-level=high`, `npm run check:guards`, `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run coverage:check`, and `npm run build`. The guards and the coverage gate are the same ones every PR passes — production is never held to a lower bar than a review branch.
+1. Testing firewall: `npm audit --omit=dev --audit-level=high` always, then `npm run check:guards`, `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run coverage:check` — but only when this commit has no passing `CI` run. `main` only ever carries commit SHAs that were already checked on `dev` against the same files, so repeating them buys no new information and costs about eleven minutes a release. When no passing run can be found the deploy runs them itself, so the bar never drops; it is only ever paid for once. The audit is never skipped: an advisory published since the dev run applies to code that has not changed.
 2. Convex synchrony: `npx convex deploy` with `CONVEX_DEPLOY_KEY`.
-3. Container build: Docker image built with `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` build args.
-4. Registry push: image pushed to Google Artifact Registry.
+3. Container build: Docker image built by buildx with `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` build args. Layers are cached between releases in the registry under a third tag, `:buildcache`, so the `npm ci` layer is reused whenever the lockfile has not moved. That tag is machine-written and carries no releases — never deploy it, and do not prune it unless you want the next build to start cold.
+4. Registry push: buildx publishes straight to Google Artifact Registry with `--push`, so the image is never loaded into the local daemon only to be uploaded again.
 5. Cloud Run rollout: image deployed to the `sonae-app` service in `us-central1` with port `3000`.
+
+There is no `npm run build` step on the runner. It produced a `.next/` that
+nothing read — `.dockerignore` excludes `.next` from the build context, and the
+image builds the app itself in its builder stage — so it was about five minutes
+a release spent on output that was thrown away.
+
+Deploys are serialised: `concurrency: deploy-to-cloud-run` with
+`cancel-in-progress: false`. Two pushes to `main` minutes apart used to start
+two full deploys side by side, which doubled the billed minutes and let the
+older one finish last and win the service. Queued rather than cancelled, because
+a half-finished deploy is worse than a slow one. The job also carries a
+45-minute timeout; without one, a wedged deploy runs to GitHub's six-hour
+default and bills the whole way.
 
 Every image is tagged twice: with the commit SHA and with `latest`. Cloud Run is
 deployed from the **SHA tag**, so each revision records exactly which image is

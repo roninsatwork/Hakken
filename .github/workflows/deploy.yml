@@ -5,6 +5,20 @@ on:
     branches:
       - main
 
+# One deploy at a time. Two pushes to main a few minutes apart used to start
+# two full deploys side by side: double the billed minutes, and whichever
+# finished last won the service — not necessarily the newer commit. Queued,
+# never cancelled: a half-finished deploy is worse than a slow one.
+concurrency:
+  group: deploy-to-cloud-run
+  cancel-in-progress: false
+
+# `actions: read` is what lets the step below ask whether this commit already
+# passed CI. Everything else the deploy needs comes from the GCP secrets.
+permissions:
+  contents: read
+  actions: read
+
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT }}
   REGION: us-central1
@@ -15,6 +29,9 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Without a limit a wedged deploy runs to GitHub's six-hour default and
+    # bills the whole way.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -35,10 +52,21 @@ jobs:
           node-version: '24.18.0'
           cache: 'npm'
 
+      # Same cache as CI. This job used to reinstall 1.1GB from scratch on
+      # every release even though the lockfile rarely moves.
+      - name: Restore installed packages
+        id: packages
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-v1-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.packages.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Workaround NPM Optional Dependency Bug
+        if: steps.packages.outputs.cache-hit != 'true'
         run: npm install @rollup/rollup-linux-x64-gnu --no-save
 
       # Scoped to runtime dependencies: this gate exists to block shipping a
@@ -52,30 +80,65 @@ jobs:
       # so the dev chain cannot currently be made clean. The weekly
       # security-audit workflow tracks it so it is fixed when upstream lands,
       # rather than silently ignored here.
+      #
+      # Never conditional: an advisory published since the dev run applies to
+      # code that has not changed, so a green CI run says nothing about it.
       - name: Run production audit
         run: npm audit --omit=dev --audit-level=high
+
+      # main only ever carries commits that were already on dev, at the same
+      # SHA, where CI ran these exact checks against these exact files. Running
+      # them again buys no new information and costs about eleven minutes a
+      # release. When no passing run can be found the deploy does them itself,
+      # so the bar never drops — it is only ever paid for once.
+      - name: Look for a passing CI run on this commit
+        id: verified
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          passed=$(gh api \
+            "repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&per_page=100" \
+            --jq '[.workflow_runs[] | select(.name == "CI" and .conclusion == "success")] | length' \
+            2>/dev/null || true)
+          case "$passed" in
+            ''|*[!0-9]*) passed=0 ;;
+          esac
+          if [ "$passed" -gt 0 ]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+            echo "Checks passed on this commit during CI — not repeating them here." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+            echo "No passing CI run found for this commit — running the full checks here." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       # The production deploy used to skip the four source guards and the
       # coverage gate that block every PR, so main was held to a lower bar
       # than a review branch (maintenance plan M3.2).
       - name: Run source guards
+        if: steps.verified.outputs.value != 'true'
         run: npm run check:guards
 
       - name: Run lint
+        if: steps.verified.outputs.value != 'true'
         run: npm run lint
 
       - name: Run typecheck
+        if: steps.verified.outputs.value != 'true'
         run: npm run typecheck
 
       - name: Run unit and integration tests with coverage
+        if: steps.verified.outputs.value != 'true'
         run: npm run test:coverage
 
       - name: Check coverage thresholds
+        if: steps.verified.outputs.value != 'true'
         run: npm run coverage:check
 
-      - name: Run production build
-        run: npm run build
-          
+      # There is no `npm run build` here any more. It produced a .next/ that
+      # nothing read: .dockerignore excludes .next from the build context, and
+      # the image builds the app itself in its builder stage. Five minutes a
+      # release, spent on output that was thrown away.
+
       - name: Sync Backend Schema to Convex Production
         run: npx convex deploy
         env:
@@ -85,25 +148,44 @@ jobs:
         run: |-
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
+      # Buildx so the image layers survive between releases. The `npm ci` layer
+      # is the expensive one and it only changes when the lockfile does, but a
+      # plain `docker build` starts every release with an empty slate.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       # Tag every image with the commit SHA as well as :latest. :latest alone
       # is not rollback-able — once it is overwritten the previous image has no
       # name left to deploy. The SHA tag is the immutable handle used by the
       # rollback procedure in docs/developer/deployment.md.
+      #
+      # `--push` publishes straight from the builder, so the image is never
+      # loaded into the local daemon only to be uploaded again.
+      #
+      # The layer cache lives in the registry, under a `:buildcache` tag, not in
+      # GitHub's Actions cache: `type=gha` needs ACTIONS_RUNTIME_TOKEN, which is
+      # handed to JavaScript actions and not to a `run:` step, so it would have
+      # cached nothing here while appearing to work. Registry cache uses the
+      # credentials configured above and outlives the branch that wrote it.
+      # `ignore-error=true` keeps a cache problem from failing a release that
+      # otherwise built cleanly — including the first run, when there is no
+      # `:buildcache` tag to read yet.
       - name: Build and Push Docker image
         env:
           IMAGE_BASE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}
         run: |-
-          docker build --progress=plain \
+          docker buildx build --progress=plain \
             --build-arg NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }} \
             --build-arg NEXT_PUBLIC_CONTACT_URL=${{ secrets.NEXT_PUBLIC_CONTACT_URL }} \
             --build-arg CONVEX_SITE_URL=${{ secrets.CONVEX_SITE_URL }} \
             --build-arg CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }} \
             --build-arg BUILD_SHA=${{ github.sha }} \
+            --cache-from type=registry,ref="$IMAGE_BASE:buildcache" \
+            --cache-to type=registry,ref="$IMAGE_BASE:buildcache",mode=max,ignore-error=true \
             -t "$IMAGE_BASE:${{ github.sha }}" \
             -t "$IMAGE_BASE:latest" \
+            --push \
             . > docker_build.log 2>&1 || (echo '### Docker Build Failed! :x:' >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; tail -n 50 docker_build.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; cat docker_build.log; exit 1)
-          docker push "$IMAGE_BASE:${{ github.sha }}"
-          docker push "$IMAGE_BASE:latest"
 
       # Deploy the immutable SHA tag, not :latest, so the revision records
       # exactly which image is serving traffic.
