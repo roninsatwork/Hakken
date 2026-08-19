@@ -773,7 +773,7 @@ describe("agent skills", () => {
     expect(JSON.parse(preview.suggestedEvalFixturesJson)).toHaveLength(1);
     expect(preview.validation.warnings).toContain("A skill named \"Invoice Ops\" already exists.");
     expect(preview.validation.warnings).not.toContain("High-risk language was detected without explicit approval guidance.");
-    expect(preview.validation.warnings.some((warning) => warning.includes("Some tool hints do not match active Sonae tool mappings"))).toBe(false);
+    expect(preview.validation.warnings.some((warning) => warning.includes("Some tool hints do not match active platform tool mappings"))).toBe(false);
   });
 
   test("starter skills seed idempotently, bind to agents, seed evals, and gate high-risk activation", async () => {
@@ -1085,7 +1085,7 @@ describe("agent skills", () => {
     });
     expect(riskyMarkdownPreview.validation.warnings).toContain("High-risk language was detected without explicit approval guidance.");
     expect(riskyMarkdownPreview.validation.warnings).toContain("The source may contain tenant-specific or sensitive facts.");
-    expect(riskyMarkdownPreview.validation.warnings).toContain("Some tool hints do not match active Sonae tool mappings: client.dispatch.send.");
+    expect(riskyMarkdownPreview.validation.warnings).toContain("Some tool hints do not match active platform tool mappings: client.dispatch.send.");
     expect(riskyMarkdownPreview.validation.suggestions).toContain("Add approval handoff language for side-effecting actions.");
 
     const markdownImport = await client.mutation(api.agentSkills.importSkillMarkdown, {

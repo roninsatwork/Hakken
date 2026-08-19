@@ -2,10 +2,10 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent, resolveCompanyAiDriftEvents } from "./companyReadiness";
 
 const CASE_NAME_MAX_CHARS = 140;
@@ -356,23 +356,6 @@ async function hasCompleteBlockerEvidence(ctx: MutationCtx, companyId: Id<"compa
   if (mustPassCases.length === 0) return false;
 
   return mustPassCases.every((evalCase) => evalCase.lastRunStatus === "PASSED");
-}
-
-async function requireCompanyAccess(
-  ctx: QueryCtx | MutationCtx,
-  companyId: Id<"companies"> | undefined
-) {
-  const { user, userId } = await requireAdmin(ctx);
-  // A platform check belongs to no company (Anthony's SaaS ruling,
-  // 2026-08-17): it is the super admin's alone.
-  if (!companyId) {
-    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to platform checks");
-    return { userId, company: null };
-  }
-  const company = await ctx.db.get(companyId);
-  if (!company) throw new Error("Company not found");
-  assertAdminCanAccessCompany(user, companyId);
-  return { userId, company };
 }
 
 export const getSummary = adminQuery({

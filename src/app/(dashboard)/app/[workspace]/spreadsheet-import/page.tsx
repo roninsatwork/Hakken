@@ -563,11 +563,16 @@ function formatMoney(value: number | undefined) {
  */
 function ClearAllButton() {
   const t = useTranslations("salesData");
+  const me = useQuery(api.users.getMe);
   const clearAll = useAction(api.salesDataReset.clearAllSalesData);
   const [state, setState] = useState<"idle" | "confirming" | "clearing" | "cleared" | "error">(
     "idle"
   );
   const [message, setMessage] = useState<string | null>(null);
+
+  // The backend refuses non-admins (adminAction); hiding the button keeps a
+  // member who couldn't use it from meeting it as an error instead.
+  if (me?.role !== "ADMIN" && me?.role !== "SUPER_ADMIN") return null;
 
   const onConfirm = async () => {
     setState("clearing");

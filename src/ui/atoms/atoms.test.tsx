@@ -1,20 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import Input from "./input";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import Typography, { TypographyVariant } from "./typography";
 
 describe("ui atoms", () => {
-  it("associates input labels with controls and forwards native props", () => {
-    const onChange = vi.fn();
-
-    render(<Input id="email" label="Email" value="ada@example.com" onChange={onChange} className="custom-class" />);
-
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "grace@example.com" } });
-
-    expect(screen.getByLabelText("Email")).toHaveClass("custom-class");
-    expect(onChange).toHaveBeenCalled();
-  });
-
   it("renders typography variants with expected styles and passthrough attributes", () => {
     const { rerender } = render(
       <Typography variant={TypographyVariant.H1} data-testid="copy" className="extra">

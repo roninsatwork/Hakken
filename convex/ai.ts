@@ -22,9 +22,13 @@ import {
   rankAssistantKnowledgeMatches,
   selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
-import { evaluateAssistantSafety } from "./aiSafetyPolicy";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
-import { shouldFlushStreamedText } from "./streamingService";
+import {
+  createModelTurnStream,
+  finishAssistantReply,
+  guardModelTurn,
+  runModelTurn,
+} from "./modelTurnService";
 import { adminAction, tenantAction } from "./tenantFunctions";
 import { getOpenAIApiKey } from "./openaiProviderService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
@@ -216,14 +220,19 @@ export const generateSonaeResponse = internalAction({
 
     await setStage("CHECKING");
 
-    const safetyDecision = evaluateAssistantSafety(args.content);
+    // The deployment's configured name, resolved once: the refusal copy, the
+    // fallback assistant identity, and the failure notice below all speak as
+    // this platform rather than as the shipped default.
+    const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
+
+    // The shared safety gate (modelTurnService): evaluate and, when refused,
+    // save the refusal into the thread attributed to this runtime.
+    const safetyDecision = await guardModelTurn(ctx, {
+        content: args.content,
+        refusal: { threadId: args.threadId, source: "assistant" },
+        platformName,
+    });
     if (!safetyDecision.allowed) {
-        await ctx.runMutation(internal.chat.saveAssistantSafetyRefusal, {
-            threadId: args.threadId,
-            content: safetyDecision.response,
-            category: safetyDecision.category,
-            source: "assistant",
-        });
         await setStage(undefined);
         return;
     }
@@ -234,7 +243,7 @@ export const generateSonaeResponse = internalAction({
     // Above the try so the catch can close a stream the failure interrupted —
     // a reply left marked as streaming shows a caret against an answer that is
     // never coming.
-    const streamState = { text: "", flushedText: "", lastFlushAt: 0, messageId: undefined as Id<"messages"> | undefined };
+    const streamState = createModelTurnStream();
 
     try {
         const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
@@ -350,6 +359,7 @@ export const generateSonaeResponse = internalAction({
             // Always memories are configuration, so they sit in the system
             // instruction; only the looked-up ones go in the per-message block.
             companyMemories: alwaysMemories,
+            platformName,
         });
 
         const companyMemoryContext = buildCompanyMemoryContext(relevantMemories);
@@ -550,50 +560,25 @@ User Prompt: ${args.content}`;
         payloadContents.push({ type: "text", text: combinedPrompt });
 
         // --- STREAMED GENERATION ---
-        // The same flush discipline the agent runtime uses: accumulate text as
-        // the provider produces it, write the partial reply at a bounded rate
-        // (every subscribed client re-renders per write), and always finalize
-        // so no reply is left showing a caret. Providers whose adapter cannot
-        // stream simply never call onText, and the reply lands in one write at
-        // the end exactly as before.
-        const flushStream = async () => {
-            const pendingChars = streamState.text.length - streamState.flushedText.length;
-            const flushNow = Date.now();
-            if (!shouldFlushStreamedText({
-                pendingChars,
-                msSinceLastFlush: flushNow - streamState.lastFlushAt,
-                isFinal: false,
-            })) return;
-
-            if (streamState.messageId === undefined) {
-                streamState.messageId = await ctx.runMutation(internal.chat.startStreamingAssistantMessage, {
-                    threadId: args.threadId,
-                    content: streamState.text,
-                    modelUsed: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                });
-            } else {
-                await ctx.runMutation(internal.chat.appendStreamingAssistantMessage, {
-                    messageId: streamState.messageId,
-                    content: streamState.text,
-                });
-            }
-            streamState.flushedText = streamState.text;
-            streamState.lastFlushAt = flushNow;
-        };
-
+        // The shared turn (modelTurnService) owns the flush discipline —
+        // the very same one the agent runtime streams through: partial text
+        // written at a bounded rate, always finalized so no reply is left
+        // showing a caret. Providers whose adapter cannot stream simply never
+        // call onText, and the reply lands in one write at the end exactly as
+        // before.
         await setStage("WRITING");
 
-        const response = await generateTextWithResolvedModel({
+        const response = await runModelTurn(ctx, {
+            threadId: args.threadId,
+            stream: streamState,
             model: modelConfig,
-            contents: payloadContents,
-            systemInstruction: activeSystemInstruction,
-            thinkingLevel: args.thinkingLevel,
-            onText: async (fragment) => {
-                streamState.text += fragment;
-                await flushStream();
-            },
+            callModel: ({ onText }) => generateTextWithResolvedModel({
+                model: modelConfig,
+                contents: payloadContents,
+                systemInstruction: activeSystemInstruction,
+                thinkingLevel: args.thinkingLevel,
+                onText,
+            }),
         });
 
         const assistantReply = `${response.text || "I was unable to assemble a coherent analysis."}${visionNotice}`;
@@ -632,41 +617,22 @@ User Prompt: ${args.content}`;
 
         // Finalize the streamed row, or fall back to the single write when no
         // flush ever happened (short answer, or a non-streaming provider).
-        let messageId: Id<"messages">;
-        if (streamState.messageId !== undefined) {
-            await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-                messageId: streamState.messageId,
-                content: assistantReply,
-                inputTokens: response.inputTokens,
-                outputTokens: response.outputTokens,
-                modelUsed: modelConfig.modelId,
-                providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId,
-                companyMemoryEvidenceJson,
-                companyRuntimeEvidenceJson,
-                photoTurn: photoTurn || undefined,
-            });
-            messageId = streamState.messageId;
-        } else {
-            messageId = await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                threadId: args.threadId,
-                content: assistantReply,
-                inputTokens: response.inputTokens,
-                outputTokens: response.outputTokens,
-                modelUsed: modelConfig.modelId,
-                providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId,
-                companyMemoryEvidenceJson,
-                companyRuntimeEvidenceJson,
-                photoTurn: photoTurn || undefined,
-            });
-        }
+        // Both branches live in the shared turn's delivery.
+        const messageId = await finishAssistantReply(ctx, {
+            threadId: args.threadId,
+            stream: streamState,
+            content: assistantReply,
+            usage: { inputTokens: response.inputTokens, outputTokens: response.outputTokens },
+            model: modelConfig,
+            evidence: { companyMemoryEvidenceJson, companyRuntimeEvidenceJson },
+            photoTurn: photoTurn || undefined,
+        });
 
         // Both lists count as used: an always memory reached the model just as
         // surely as a looked-up one, and the screen's "uses" column would
         // otherwise read zero for exactly the memories that apply most.
         const usedMemories = [...alwaysMemories, ...relevantMemories];
-        if (thread?.companyId && usedMemories.length > 0) {
+        if (thread?.companyId && usedMemories.length > 0 && messageId !== undefined) {
             await ctx.runMutation(internal.companyMemories.recordRuntimeUsageInternal, {
                 companyId: thread.companyId,
                 threadId: args.threadId,
@@ -684,20 +650,17 @@ User Prompt: ${args.content}`;
     } catch (error) {
         console.error("AI Orchestrator Error:", normalizeAiRuntimeError(error, "Core assistant generation failed."));
 
-        const failureNotice = "Sonae Core Offline: An error occurred communicating with the selected AI provider. Please try again shortly.";
-        if (streamState.messageId !== undefined) {
-            // The partial answer stays visible — the reader already saw it —
-            // with the failure notice appended, and the caret stops.
-            await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-                messageId: streamState.messageId,
-                content: `${streamState.text}\n\n${failureNotice}`,
-            });
-        } else {
-            await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                threadId: args.threadId,
-                content: failureNotice,
-            });
-        }
+        const failureNotice = `${platformName} Core Offline: An error occurred communicating with the selected AI provider. Please try again shortly.`;
+        // The partial answer stays visible — the reader already saw it — with
+        // the failure notice appended, and the caret stops. A run that never
+        // streamed gets the notice alone in a fresh message.
+        await finishAssistantReply(ctx, {
+            threadId: args.threadId,
+            stream: streamState,
+            content: streamState.messageId !== undefined
+                ? `${streamState.text}\n\n${failureNotice}`
+                : failureNotice,
+        });
         // Best-effort: the failure message above already replaced the pill on
         // screen, and the stale guard would catch a stage this leaves behind.
         try {
@@ -874,7 +837,7 @@ export const generateNodeConfig = adminAction({
         model: modelConfig,
         contents: [{ type: "text", text: `User Prompt: "${prompt}"` }],
         temperature: 0.1,
-        systemInstruction: `You are Sonae's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.
+        systemInstruction: `You are the platform's structural orchestration engineer. You configure backend JSON bindings and String templates for visual Workflow Builder nodes securely and reliably.
 The user wants to configure an isolated logic node of type: ${nodeType}.
 
 Available upstream node context in the graph (You MUST use these explicit IDs when mathematically binding variables):
@@ -1177,7 +1140,7 @@ export async function buildSpokenSessionInstructions(
   companyId: Id<"companies"> | undefined
 ): Promise<string> {
   const run = ctx.runQuery as unknown as (reference: unknown, args: unknown) => Promise<never>;
-  const [globalSystemPrompt, activeRules, company, companySkills, companyMemories] =
+  const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding] =
     await Promise.all([
       run(internal.system.getInternalSystemPrompt, {}),
       run(internal.aiRules.getActiveRulesInternal, { companyId }),
@@ -1201,6 +1164,7 @@ export async function buildSpokenSessionInstructions(
             limit: 5,
           })
         : Promise.resolve(null),
+      run(internal.settings.getEmailBranding, {}),
     ]);
 
   type InstructionInput = Parameters<typeof buildAssistantSystemInstruction>[0];
@@ -1211,6 +1175,7 @@ export async function buildSpokenSessionInstructions(
     companySkills: (companySkills as { skills?: InstructionInput["companySkills"] } | null)?.skills,
     companyMemories: (companyMemories as { always?: InstructionInput["companyMemories"] } | null)
       ?.always,
+    platformName: (emailBranding as { platformName?: string } | null)?.platformName,
   })}
 
 ====================
@@ -1365,7 +1330,7 @@ export const createRealtimeVoiceSession = tenantAction({
     const companyId = thread.companyId ?? user.companyId;
 
     // The same company voice the typed assistant uses, plus the speech style.
-    const [globalSystemPrompt, activeRules, company, companySkills, companyMemories] =
+    const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding] =
       await Promise.all([
         ctx.runQuery(internal.system.getInternalSystemPrompt),
         ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId }),
@@ -1389,6 +1354,7 @@ export const createRealtimeVoiceSession = tenantAction({
               limit: 5,
             })
           : Promise.resolve(null),
+        ctx.runQuery(internal.settings.getEmailBranding, {}),
       ]);
 
     const instructions = `${buildAssistantSystemInstruction({
@@ -1397,6 +1363,7 @@ export const createRealtimeVoiceSession = tenantAction({
       activeRules: activeRules ?? [],
       companySkills: companySkills?.skills,
       companyMemories: companyMemories?.always,
+      platformName: emailBranding.platformName,
     })}
 
 ====================

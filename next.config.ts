@@ -4,6 +4,16 @@ import createNextIntlPlugin from 'next-intl/plugin';
 import { createSecureHeaders } from 'next-secure-headers';
 import path from 'node:path';
 
+// The e2e auth bypass must never ship armed. It is correctly gated at every
+// consumer (src/proxy.ts and the fixture routes all check this env var), but
+// that safety rested entirely on nobody ever setting it in production. Fail
+// the build instead of trusting the fleet's env config forever.
+if (process.env.E2E_AUTH_ENABLED === '1' && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'E2E_AUTH_ENABLED=1 in a production build: this would ship a working auth bypass. Unset it.'
+  );
+}
+
 const nextConfig: NextConfig = {
   env: {
     CONVEX_SITE_URL: process.env.CONVEX_SITE_URL,

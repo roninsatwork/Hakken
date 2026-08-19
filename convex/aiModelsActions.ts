@@ -16,10 +16,8 @@ import { listOpenAIModels } from "./openaiProviderService";
 import { listOpenRouterModels } from "./openrouterProviderService";
 import { buildVertexProviderConfig, createVertexGenAIClient, isVertexTextGenerationModel, listVertexModels } from "./vertexProviderService";
 import { superAdminAction } from "./tenantFunctions";
+import { getErrorMessage } from "./utils/lang";
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unknown error";
-}
 
 function getProviderDisplayName(providerKey: string) {
   if (providerKey === GOOGLE_VERTEX_PROVIDER_KEY) return "Google Vertex AI";
@@ -348,7 +346,7 @@ export const syncGoogleModels = superAdminAction({
     try {
       return await syncGoogleVertexModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync Google Vertex AI models: ${getErrorMessage(e)}`);
+      throw new Error(`Failed to sync Google Vertex AI models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -359,7 +357,7 @@ export const syncOpenAIModels = superAdminAction({
     try {
       return await syncOpenAIModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync OpenAI models: ${getErrorMessage(e)}`);
+      throw new Error(`Failed to sync OpenAI models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -370,7 +368,7 @@ export const syncOpenRouterModels = superAdminAction({
     try {
       return await syncOpenRouterModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync OpenRouter models: ${getErrorMessage(e)}`);
+      throw new Error(`Failed to sync OpenRouter models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -381,7 +379,7 @@ export const syncAnthropicModels = superAdminAction({
     try {
       return await syncAnthropicModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync Anthropic models: ${getErrorMessage(e)}`);
+      throw new Error(`Failed to sync Anthropic models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -392,7 +390,7 @@ export const syncVertexModels = superAdminAction({
     try {
       return await syncGoogleVertexModelCatalogue(ctx);
     } catch (e: unknown) {
-      throw new Error(`Failed to sync Vertex Models: ${getErrorMessage(e)}`);
+      throw new Error(`Failed to sync Vertex Models: ${getErrorMessage(e, "Unknown error")}`);
     }
   },
 });
@@ -454,7 +452,7 @@ export const probeProviderInternal = internalAction({
 
       return { ok: true, providerKey: args.providerKey, message: detail };
     } catch (error) {
-      const message = getErrorMessage(error);
+      const message = getErrorMessage(error, "Unknown error");
       await ctx.runMutation(internal.aiModels.internalUpdateProviderHealth, {
         providerKey: args.providerKey,
         displayName,

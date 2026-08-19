@@ -117,7 +117,7 @@ export default function AgentOverviewPage() {
 
   // So a blank box can name the window it will actually follow, rather than
   // leaving the reader to guess.
-  const approvalExpiry = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
+  const approvalExpiry = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
   const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const updateAgent = useMutation(api.agents.updateAgent);
 

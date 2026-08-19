@@ -6,19 +6,10 @@ import { Id } from "./_generated/dataModel";
 import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
 import { superAdminAction, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
+import { constantTimeEqual } from "./utils/security";
+import { getErrorMessage } from "./utils/lang";
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown error";
-}
 
-function constantTimeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
-}
 
 const PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH = 20_000;
 
@@ -422,7 +413,7 @@ export const handleWebhook = httpAction(async (ctx, request) => {
      });
   } catch (error: unknown) {
     console.error("Webhook error:", error);
-    return new Response(JSON.stringify({ error: getErrorMessage(error) }), { status: 500 });
+    return new Response(JSON.stringify({ error: getErrorMessage(error, "Unknown error") }), { status: 500 });
   }
 });
 

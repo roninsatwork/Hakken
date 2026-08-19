@@ -74,7 +74,7 @@ Model changes must go through stored model configuration. Inherit mode resolves 
 
 Agent runs can be triggered from chat, manual admin actions, schedules, workflows, webhooks, and events. Internal creation paths in `agentRuns.ts` insert queued runs with trigger metadata and company scope. The runtime records run steps, tool calls, approvals, costs, tokens, final output, and errors.
 
-Approval-sensitive tool calls create `agentRunApprovals` and move the run to `PENDING_APPROVAL`. The approvals page calls `api.agentRuns.decideApproval` with approved, rejected, or cancelled decisions. The mutation checks admin access to the run company, records reviewer metadata, updates the linked tool call, and schedules or records the follow-up behavior for the run.
+Approval-sensitive tool calls create `agentRunApprovals` and move the run to `PENDING_APPROVAL`. The approvals page calls `api.agentRunApprovals.decideApproval` with approved, rejected, or cancelled decisions. The mutation checks admin access to the run company, records reviewer metadata, updates the linked tool call, and schedules or records the follow-up behavior for the run.
 
 Run detail and analytics are intentionally operational. `getRunDetail` returns steps, tool calls, approvals, replay runs, timeline, and eval fixtures. `getAnalyticsForAgent` aggregates recent runs, tool calls, approvals, feedback, status distribution, token/cost/runtime metrics, and observability next actions. `getRunObservatory` supplies platform or company-scoped run observatory data for the separate admin observability surface.
 

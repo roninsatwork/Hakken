@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { collectPageErrors, gotoWithoutServerCrash } from './helpers/navigation';
 
-test.describe('Admin Dashboard: Layout & Render Stability', () => {
+test.describe('Admin Dashboard: Layout & Render Stability @smoke', () => {
   const criticalAdminRoutes = [
     '/admin',
     '/admin/companies',

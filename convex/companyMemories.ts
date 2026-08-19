@@ -4,7 +4,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { requireCompanyAccess } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import {
@@ -126,14 +126,6 @@ function getRuntimeMemoryLimit(limit: number | undefined) {
 
 function getRejectedFingerprint(content: string) {
   return normalizeContent(content).toLowerCase();
-}
-
-async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx);
-  const company = await ctx.db.get(companyId);
-  if (!company) throw new Error("Company not found");
-  assertAdminCanAccessCompany(user, companyId);
-  return { user, userId, company };
 }
 
 async function assertNoRejectedCandidateMatch(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">, content: string) {

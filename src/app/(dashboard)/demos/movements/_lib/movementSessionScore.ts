@@ -10,6 +10,13 @@ import type { MovementGameplayEventFrame } from "./movementGameplayEvents";
 
 const REP_ENTER_STRENGTH = 0.28;
 const REP_EXIT_STRENGTH = 0.15;
+/**
+ * The bar for "this person did something", which is far lower than the bar for
+ * a counted rep. A session that never clears a rep used to score a flat zero,
+ * so a gentle or arm-led routine read as no performance at all. The headline is
+ * now withheld only from a body that genuinely never moved.
+ */
+const MINIMAL_MOVEMENT_STRENGTH = 0.08;
 
 export type MovementSessionScoreState = {
   activeTickCount: number;
@@ -18,6 +25,7 @@ export type MovementSessionScoreState = {
   isInRep: boolean;
   matchQualityTotal: number;
   matchTickCount: number;
+  movedTickCount: number;
   points: number;
   repCount: number;
   repPeakStrength: number;
@@ -63,6 +71,7 @@ export function createMovementSessionScoreState(): MovementSessionScoreState {
     isInRep: false,
     matchQualityTotal: 0,
     matchTickCount: 0,
+    movedTickCount: 0,
     points: 0,
     repCount: 0,
     repPeakStrength: 0,
@@ -140,6 +149,9 @@ export function accumulateMovementSessionScoreFrame(
   }
 
   state.scoreableTickCount += 1;
+  if (gameplayEventFrame.scoredMovementStrength >= MINIMAL_MOVEMENT_STRENGTH) {
+    state.movedTickCount += 1;
+  }
   accumulateRep(state, gameplayEventFrame.scoredMovementStrength);
 
   if (gameplayEventFrame.effortQuality > 0) {
@@ -209,7 +221,10 @@ export function resolveMovementSessionScoreResult(
       + 0.20 * activeShare
       + 0.15 * spineShare
       + 0.10 * trackingShare;
-  const overallPercent = repCount === 0 ? 0 : percent(overallShare);
+  // Zero is reserved for a body that never moved while the camera could see it.
+  // Falling short of a counted rep lowers the headline through the components
+  // above; it no longer wipes it out.
+  const overallPercent = state.movedTickCount === 0 ? 0 : percent(overallShare);
 
   return {
     activePercent: percent(activeShare),

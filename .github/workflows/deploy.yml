@@ -55,14 +55,23 @@ jobs:
       - name: Run production audit
         run: npm audit --omit=dev --audit-level=high
 
+      # The production deploy used to skip the four source guards and the
+      # coverage gate that block every PR, so main was held to a lower bar
+      # than a review branch (maintenance plan M3.2).
+      - name: Run source guards
+        run: npm run check:guards
+
       - name: Run lint
         run: npm run lint
 
       - name: Run typecheck
         run: npm run typecheck
 
-      - name: Run unit and integration tests
-        run: npm run test:run
+      - name: Run unit and integration tests with coverage
+        run: npm run test:coverage
+
+      - name: Check coverage thresholds
+        run: npm run coverage:check
 
       - name: Run production build
         run: npm run build

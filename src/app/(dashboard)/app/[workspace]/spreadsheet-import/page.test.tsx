@@ -1,5 +1,6 @@
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, vi } from "vitest";
+import { screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
@@ -75,6 +76,54 @@ describe("SalesDataPage", () => {
       sampleRowText: "Oak internal door",
       emptyText: "salesData.emptyTitle",
       searchPlaceholder: "salesData.searchPlaceholder.sales",
+    });
+  });
+
+  /**
+   * Clearing everything is admin-only on the backend (maintenance plan
+   * M1.2), so the button hides rather than greeting an ordinary member with
+   * an authorization error on press.
+   */
+  describe("the clear-all button", () => {
+    const withRole = (role: string) => {
+      vi.mocked(useQuery).mockImplementation((...args) => {
+        const name = getFunctionName(args[0]);
+        if (name === "users:getMe") return { role };
+        if (name === "salesData:listSalesRows") {
+          return { page: salesRows, isDone: true, continueCursor: null };
+        }
+        if (name === "salesData:getSectionOverview") {
+          return {
+            sales: 2,
+            categories: 0,
+            areasOfInterest: 0,
+            frequency: 0,
+            periodLabels: ["May", "Jun", "Jul"],
+            currentImport: {
+              _id: "import_1",
+              fileName: "sample.xlsx",
+              salesRowCount: 2,
+              periodLabels: ["May", "Jun", "Jul"],
+            },
+          };
+        }
+        if (name === "salesData:listSalesFilterOptions" || name === "salesData:listTableFilterOptions") {
+          return { groups: [], types: [], categories: [] };
+        }
+        return undefined;
+      });
+    };
+
+    it("hides from an ordinary member", () => {
+      withRole("USER");
+      render(<SalesDataPage />);
+      expect(screen.queryByText("salesData.clearAllStart")).toBeNull();
+    });
+
+    it("shows for an admin", () => {
+      withRole("ADMIN");
+      render(<SalesDataPage />);
+      expect(screen.getByText("salesData.clearAllStart")).toBeInTheDocument();
     });
   });
 });

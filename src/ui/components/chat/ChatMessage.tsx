@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
@@ -18,6 +19,25 @@ interface ChatMessageProps {
   // The list query attaches viewable URLs for image attachments; older
   // callers pass plain rows and simply render no thumbnails.
   message: Doc<"messages"> & { imageAttachments?: Array<{ url: string }> };
+  /**
+   * Who asked, for a reader who is not the asker. The admin chat logs read
+   * other people's conversations — sometimes an anonymous website visitor's —
+   * where "You asked" would be a plain lie.
+   */
+  askedByLabel?: string;
+  /**
+   * A finished conversation being read back rather than a live one. Nothing
+   * types itself out, nothing can be rated and no proposed action can be
+   * confirmed: an admin marking an answer wrong would be indistinguishable
+   * from the customer doing it.
+   */
+  isReadOnly?: boolean;
+  /**
+   * Extra detail belonging to the answer, set just above its timestamp. The
+   * admin chat logs put the memories behind a reply here — they can read those
+   * straight off the row, without the query that serves the full workings.
+   */
+  footer?: ReactNode;
 }
 
 /**
@@ -28,7 +48,12 @@ interface ChatMessageProps {
  * comfortable reading width. Long replies used to run the full width of a
  * large monitor, which makes the eye travel a long way back for every line.
  */
-export default function ChatMessage({ message }: ChatMessageProps) {
+export default function ChatMessage({
+  message,
+  askedByLabel,
+  isReadOnly = false,
+  footer,
+}: ChatMessageProps) {
   const isAssistant = message.role === "assistant";
   const t = useTranslations("ai.assistant");
   const settings = useSystemSettings();
@@ -41,12 +66,14 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   // types those lumps out at a readable pace.
   const reveal = useSmoothStreamText({
     content: message.content,
-    isStreaming: presentation === "streaming",
+    isStreaming: !isReadOnly && presentation === "streaming",
   });
   // An abandoned reply must never blink a caret, even if the reveal had not
   // finished typing out what did arrive before the run died.
   const isStreaming =
-    presentation !== "stalled" && (presentation === "streaming" || (isAssistant && reveal.isRevealing));
+    !isReadOnly
+    && presentation !== "stalled"
+    && (presentation === "streaming" || (isAssistant && reveal.isRevealing));
 
   if (!isAssistant) {
     return (
@@ -57,7 +84,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         className="flex flex-col gap-1 mb-6"
       >
         <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">
-          {t("you")}
+          {askedByLabel ?? t("you")}
         </span>
         <p className="text-[15px] leading-snug tracking-[-0.01em] text-foreground whitespace-pre-wrap">
           {message.content}
@@ -116,7 +143,7 @@ export default function ChatMessage({ message }: ChatMessageProps) {
 
       {/* The follow-up the model read out of an attached photo, waiting for
           the confirming tap. Only once the reply has finished writing. */}
-      {!isStreaming && presentation !== "stalled" && message.photoActionProposal && (
+      {!isReadOnly && !isStreaming && presentation !== "stalled" && message.photoActionProposal && (
         <PhotoActionChip
           message={message}
           labels={{
@@ -134,10 +161,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           platform notices — a quota message is not an answer. */}
       {!isStreaming && presentation !== "stalled" && !message.systemKey && (
         <>
-          <MessageFeedbackControls message={message} />
+          {!isReadOnly && <MessageFeedbackControls message={message} />}
           <AnswerEvidence messageId={message._id} />
         </>
       )}
+
+      {footer}
 
       {!isStreaming && (
         <span className="text-[10px] font-mono uppercase tracking-widest text-muted/60">

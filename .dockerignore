@@ -6,3 +6,22 @@ README.md
 .next
 .git
 .env*.local
+
+# The build needs src/, convex/, public/, config and package files — nothing
+# below is reachable from `next build`, and together these were ~100MB of
+# build-context upload on every deploy (maintenance plan M4.3).
+docs
+e2e
+scripts/movement-debug
+coverage
+test-results
+playwright-report
+tmp
+bespoke-installation
+services
+messages/*.orig
+*.test.ts
+*.test.tsx
+tsconfig.tsbuildinfo
+.claude
+.github

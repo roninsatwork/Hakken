@@ -5,6 +5,7 @@ import {
   type EmailStat,
   type RenderedEmail,
 } from "./emailLayoutService";
+import { resolvePlatformName } from "./settingsService";
 
 export type AnalyticsHealthSnapshotDuplicateGroup = {
   count: number;
@@ -149,6 +150,13 @@ export type SystemHealthReport = {
   checkedAt: number;
   checkedDate: string;
   daysBack: number;
+  /**
+   * Retention pipelines a stored config has switched off. Platform scope
+   * only (the purge config is global); empty on company-scoped reports.
+   * Pipelines ship enabled, so anything listed here is a deliberate switch
+   * — the alert keeps that decision visible rather than second-guessing it.
+   */
+  disabledPurgePipelines?: string[];
   highCostAgentThresholdGBP: number;
   operations: OperationalHealthReport;
   pendingApprovalThresholdMinutes: number;
@@ -174,6 +182,7 @@ export type PlatformAlertSignal = {
   occurrences?: PlatformAlertOccurrence[];
   key:
     | "agentErrorLogs"
+    | "disabledPurgePipelines"
     | "duplicateSnapshots"
     | "failedAgentTransactions"
     | "failedToolCalls"
@@ -618,7 +627,11 @@ function buildBudgetHealthSignals(report: BudgetHealthReport) {
   return signals;
 }
 
-export function buildAnalyticsHealthPlatformAlertDecision(report: AnalyticsHealthReport): PlatformAlertDecision {
+export function buildAnalyticsHealthPlatformAlertDecision(
+  report: AnalyticsHealthReport,
+  options: { platformName?: string } = {}
+): PlatformAlertDecision {
+  const platformName = resolvePlatformName(options.platformName);
   const signals = buildAnalyticsHealthSignals(report);
   const issueCount = signals.reduce((sum, signal) => sum + signal.count, 0);
   const range = report.checkedDates.length > 0
@@ -630,20 +643,36 @@ export function buildAnalyticsHealthPlatformAlertDecision(report: AnalyticsHealt
     shouldAlert: signals.length > 0,
     signals,
     subject: signals.length > 0
-      ? `[Sonae] Platform alert: analytics health (${formatNumber(issueCount)} signal${issueCount === 1 ? "" : "s"})`
-      : "[Sonae] Platform alerts healthy: analytics health",
+      ? `[${platformName}] Platform alert: analytics health (${formatNumber(issueCount)} signal${issueCount === 1 ? "" : "s"})`
+      : `[${platformName}] Platform alerts healthy: analytics health`,
     summary: signals.length > 0
       ? `${formatNumber(issueCount)} analytics health signal${issueCount === 1 ? "" : "s"} detected across ${range}.`
       : `Analytics health is clean across ${range}.`,
   };
 }
 
-export function buildSystemHealthPlatformAlertDecision(report: SystemHealthReport): PlatformAlertDecision {
+export function buildSystemHealthPlatformAlertDecision(
+  report: SystemHealthReport,
+  options: { platformName?: string } = {}
+): PlatformAlertDecision {
+  const platformName = resolvePlatformName(options.platformName);
   const signals = [
     ...buildAnalyticsHealthSignals(report.analytics),
     ...buildOperationalHealthSignals(report.operations),
     ...buildBudgetHealthSignals(report.budgetHealth),
   ];
+
+  const disabledPipelines = report.disabledPurgePipelines ?? [];
+  if (disabledPipelines.length > 0) {
+    signals.push({
+      count: disabledPipelines.length,
+      details: [`Switched off: ${disabledPipelines.join(", ")}.`],
+      key: "disabledPurgePipelines",
+      label: "Retention pipelines switched off",
+      runbook:
+        "Open Settings → Security → Retention. Every pipeline ships enabled; anything off here means the deployment keeps that data forever, so either re-enable it or record why it stays off.",
+    });
+  }
   const issueCount = signals.reduce((sum, signal) => sum + signal.count, 0);
   const range = `${report.windowStartDate} to ${report.checkedDate}`;
 
@@ -652,8 +681,8 @@ export function buildSystemHealthPlatformAlertDecision(report: SystemHealthRepor
     shouldAlert: signals.length > 0,
     signals,
     subject: signals.length > 0
-      ? `[Sonae] Platform alert: system health (${formatNumber(issueCount)} signal${issueCount === 1 ? "" : "s"})`
-      : "[Sonae] Platform alerts healthy: system health",
+      ? `[${platformName}] Platform alert: system health (${formatNumber(issueCount)} signal${issueCount === 1 ? "" : "s"})`
+      : `[${platformName}] Platform alerts healthy: system health`,
     summary: signals.length > 0
       ? `${formatNumber(issueCount)} system health signal${issueCount === 1 ? "" : "s"} detected across ${range}.`
       : `System health is clean across ${range}.`,
@@ -674,6 +703,7 @@ export function buildSystemHealthPlatformAlertDecision(report: SystemHealthRepor
 const HEALTH_CHECK_LABELS: Record<PlatformAlertSignal["key"], string> = {
   agentCostBudgetPressure: "agent budgets",
   agentErrorLogs: "agent errors",
+  disabledPurgePipelines: "retention pipelines",
   duplicateSnapshots: "duplicate snapshots",
   failedAgentTransactions: "failed agent transactions",
   failedScheduledExecutions: "failed scheduled runs",
@@ -758,7 +788,7 @@ export function buildSystemHealthAlertSubject(
   decision: PlatformAlertDecision,
   options: SystemHealthAlertEmailOptions = {}
 ) {
-  const name = (options.platformName || "Sonae").trim() || "Sonae";
+  const name = resolvePlatformName(options.platformName);
   const issues = decision.signals.length;
 
   // The old subject counted summed occurrences — "6 signals" for two problems.
@@ -780,7 +810,7 @@ export function buildSystemHealthAlertEmail(
   decision: PlatformAlertDecision,
   options: SystemHealthAlertEmailOptions = {}
 ): RenderedEmail & { subject: string } {
-  const platformName = (options.platformName || "Sonae").trim() || "Sonae";
+  const platformName = resolvePlatformName(options.platformName);
   const baseUrl = options.baseUrl?.replace(/\/+$/, "");
   const signals = decision.signals;
   const passedKeys = (Object.keys(HEALTH_CHECK_LABELS) as PlatformAlertSignal["key"][])

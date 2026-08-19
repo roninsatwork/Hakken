@@ -388,7 +388,7 @@ export const deleteRule = tenantMutation({
     const { userId, user } = ctx;
     const existingRule = await ctx.db.get(args.id);
     if (!existingRule) throw new Error("Entities not found");
-    assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: Sonae architectural deletion prevented.");
+    assertAdminCanAccessCompany(user, existingRule.companyId, "Unauthorized: architectural deletion prevented.");
 
     await ctx.db.delete(args.id);
 

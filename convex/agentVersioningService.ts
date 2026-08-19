@@ -1,19 +1,11 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { stableStringify } from "./utils/lang";
 
 const VERSION_SNAPSHOT_LIMIT = 200;
 
 type VersioningCtx = Pick<MutationCtx, "db">;
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, entryValue]) => entryValue !== undefined)
-    .sort(([left], [right]) => left.localeCompare(right));
-  return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`).join(",")}}`;
-}
 
 function hashString(value: string) {
   let hash = 5381;

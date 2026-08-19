@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import { adminQuery, superAdminAction } from "./tenantFunctions";
 import { resolveConnectorSecret } from "./connectorSecretResolver";
 import { TWILIO_AUTH_TOKEN_SECRET_REF } from "./toolConnectorDefinitions";
+import { getErrorMessage } from "./utils/lang";
 
 /**
  * Connections that are really checked (seven-gaps plan, phase 2).
@@ -25,9 +26,6 @@ import { TWILIO_AUTH_TOKEN_SECRET_REF } from "./toolConnectorDefinitions";
 const CONNECTOR_CEILING = 500;
 const PROVIDER_CEILING = 100;
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export const listProbeTargetsInternal = internalQuery({
   args: {},

@@ -30,11 +30,19 @@ export function TableSearchInput({
   onChange,
   placeholder,
   clearLabel,
+  variant = "boxed",
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder: string;
   clearLabel: string;
+  /**
+   * "boxed" sits above a table, where it needs an edge of its own to read as a
+   * control. "underline" sits at the head of a reading column — Ask Sonae's
+   * conversation list and the chat logs that mirror it — where a second border
+   * inside the panel is the thing that makes a screen look busy.
+   */
+  variant?: "boxed" | "underline";
 }) {
   const [draft, setDraft] = useState(value);
   const [lastValue, setLastValue] = useState(value);
@@ -55,15 +63,23 @@ export function TableSearchInput({
   }, [draft, value, onChange]);
 
   return (
-    <div className="flex-1 min-w-[220px] flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all">
-      <Search className="w-[18px] h-[18px] shrink-0" />
+    <div
+      className={
+        variant === "underline"
+          ? "flex-1 min-w-[220px] flex items-center gap-2.5 pl-0 pr-1 pb-2 border-b border-border-dim text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-colors"
+          : "flex-1 min-w-[220px] flex items-center gap-3 px-3 py-2 bg-background border border-border-dim rounded-[10px] text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-all"
+      }
+    >
+      <Search className={variant === "underline" ? "w-3.5 h-3.5 shrink-0" : "w-[18px] h-[18px] shrink-0"} />
       <input
         type="search"
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="bg-transparent border-none outline-none w-full text-[14px] placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
+        className={`bg-transparent border-none outline-none w-full placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none ${
+          variant === "underline" ? "text-[13px]" : "text-[14px]"
+        }`}
       />
       {draft !== "" && (
         <button

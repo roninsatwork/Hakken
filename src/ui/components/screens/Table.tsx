@@ -327,7 +327,27 @@ export function RowIconButton({
  * editing two places that had to agree and had no way of knowing they disagreed,
  * which is the whole argument for it living here once.
  */
-function FooterBar({ children }: { children: ReactNode }) {
+function FooterBar({
+  children,
+  variant = "bar",
+}: {
+  children: ReactNode;
+  /**
+   * "bar" sits under a full-width table, where a tinted strip separates the
+   * rows from the controls. "quiet" sits under a narrow reading column — the
+   * chat logs' conversation list — where that strip is wider than it is tall
+   * and the words inside it wrap. Same parts, less furniture.
+   */
+  variant?: "bar" | "quiet";
+}) {
+  if (variant === "quiet") {
+    return (
+      <div className="w-full pt-3 pl-3 pr-1 flex items-center justify-between gap-3">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
       {children}
@@ -514,6 +534,7 @@ type AdminLoadMoreFooterProps = {
   canLoadMore: boolean;
   isLoading: boolean;
   onLoadMore: () => void;
+  variant?: "bar" | "quiet";
   labels?: {
     empty?: string;
     showing?: (count: number) => string;
@@ -528,9 +549,18 @@ export function LoadMoreFooter({
   isLoading,
   onLoadMore,
   labels,
+  variant = "bar",
 }: AdminLoadMoreFooterProps) {
+  // A quiet footer sits directly under the column it counts, with no bar of its
+  // own, so an empty one would simply repeat the column's own empty state two
+  // lines below it. The barred footer keeps saying it: there, the strip is
+  // drawn either way and an unlabelled strip reads as a fault.
+  if (variant === "quiet" && visibleCount === 0 && !canLoadMore && !isLoading) {
+    return null;
+  }
+
   return (
-    <FooterBar>
+    <FooterBar variant={variant}>
       <FooterCount
         isLoading={isLoading}
         hasRows={visibleCount > 0}
@@ -543,7 +573,11 @@ export function LoadMoreFooter({
           type="button"
           onClick={onLoadMore}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-40 disabled:pointer-events-none text-foreground border border-border-dim"
+          className={
+            variant === "quiet"
+              ? "flex items-center gap-2 text-[12px] text-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              : "flex items-center gap-2 px-4 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-40 disabled:pointer-events-none text-foreground border border-border-dim"
+          }
         >
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
           {isLoading ? labels?.loading ?? "Loading..." : labels?.loadMore ?? "Load more"}

@@ -29,6 +29,7 @@ import {
   requireSuperAdminReader,
 } from "./authz";
 import { requireActionRole, requireActionUser } from "./actionAuth";
+import { appError } from "./utils/appError";
 import { normalizeEnabledModules } from "./utils/companyModules";
 
 /**
@@ -126,16 +127,16 @@ export function assertTenantAccess(
   document: { companyId?: Id<"companies"> } | null | undefined,
   message = "Unauthorized",
 ): void {
-  if (!document) throw new Error(message);
+  if (!document) throw appError("UNAUTHORIZED", message);
   if (ctx.user.role === "SUPER_ADMIN") return;
   if (!document.companyId || document.companyId !== ctx.companyId) {
-    throw new Error(message);
+    throw appError("UNAUTHORIZED", message);
   }
 }
 
 /** The caller's company, when the operation cannot proceed without one. */
 export function requireTenant(ctx: TenantIdentity, message = "No active company"): Id<"companies"> {
-  if (!ctx.companyId) throw new Error(message);
+  if (!ctx.companyId) throw appError("NO_ACTIVE_COMPANY", message);
   return ctx.companyId;
 }
 
@@ -291,7 +292,7 @@ async function requireModuleOn(
   const company = await ctx.db.get(identity.companyId);
   const held = await effectiveModulesFor(ctx, company);
   if (!held.includes(moduleKey)) {
-    throw new Error("This section is switched off for your workspace");
+    throw appError("MODULE_DISABLED", "This section is switched off for your workspace");
   }
 }
 

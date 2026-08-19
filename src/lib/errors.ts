@@ -23,7 +23,63 @@
 /** Convex placeholders that carry no information for a reader. */
 const EMPTY_ENVELOPE = /^(server error|internal server error|error)$/i;
 
+/**
+ * The payload thrown by `appError` in convex/utils/appError.ts: a stable
+ * machine-readable `code` and the English sentence written for the reader.
+ */
+type StructuredErrorPayload = { code: string; message: string };
+
+function isStructuredPayload(value: unknown): value is StructuredErrorPayload {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { code?: unknown }).code === 'string' &&
+    (value as { code: string }).code.length > 0 &&
+    typeof (value as { message?: unknown }).message === 'string' &&
+    (value as { message: string }).message.length > 0
+  );
+}
+
+/**
+ * Recover a structured `{ code, message }` payload, if this error carries one.
+ *
+ * Two shapes exist. On the client a ConvexError arrives as an Error whose
+ * `data` property is the payload itself. In production Convex also serializes
+ * the payload into the message text — "Uncaught ConvexError: {...}" inside the
+ * envelope — so when `data` is absent (the error was re-wrapped, or only the
+ * text survived) the JSON is parsed back out of the message, line by line,
+ * since the stringified payload never spans lines.
+ */
+function structuredErrorPayload(error: unknown): StructuredErrorPayload | null {
+  if (typeof error === 'object' && error !== null && 'data' in error) {
+    const data = (error as { data?: unknown }).data;
+    if (isStructuredPayload(data)) return data;
+  }
+
+  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  for (const line of raw.split('\n')) {
+    const start = line.indexOf('{');
+    const end = line.lastIndexOf('}');
+    if (start === -1 || end <= start) continue;
+
+    try {
+      const parsed: unknown = JSON.parse(line.slice(start, end + 1));
+      if (isStructuredPayload(parsed)) return parsed;
+    } catch {
+      // Braces without JSON between them — keep scanning.
+    }
+  }
+
+  return null;
+}
+
 export function toUserFacingMessage(error: unknown, fallbackMessage: string) {
+  // Structured errors first: the message inside the payload IS the sentence
+  // the author wrote, so no unwrapping heuristics are needed or wanted.
+  const structured = structuredErrorPayload(error);
+  if (structured) return structured.message;
+
   const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
 
   for (const line of raw.split('\n')) {

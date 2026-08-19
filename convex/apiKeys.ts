@@ -5,6 +5,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
+import { constantTimeEqual } from "./utils/security";
 
 const API_KEY_NAME_MAX_LENGTH = 80;
 const API_KEY_REASON_MAX_LENGTH = 240;
@@ -22,14 +23,6 @@ const apiKeyScopeValidator = v.union(
 type ApiKeyScope = Doc<"apiKeys">["scopes"][number];
 type PublicApiRequestStatus = Doc<"publicApiRequests">["status"];
 
-function constantTimeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
-}
 
 function normalizeName(name: string) {
   const normalized = name.trim().replace(/\s+/g, " ");

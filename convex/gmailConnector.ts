@@ -396,11 +396,12 @@ export const replyToMessage = internalAction({
         ? await ctx.runQuery(internal.telephony.findCallAssignee, { companyId: connector.companyId })
         : null;
       if (connector.companyId) {
+        const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
         await ctx.runMutation(internal.tasks.createTaskInternal, {
           companyId: connector.companyId,
           title: `Mailbox: reply needed to "${subject.slice(0, 120)}"`,
           detail:
-            `Sonae wanted to reply to ${senderAddress} but held back: ${rails.reason}\n\n` +
+            `${platformName} wanted to reply to ${senderAddress} but held back: ${rails.reason}\n\n` +
             `Open the mailbox to answer them yourself.`,
           ...(assignee ? { assigneeUserId: assignee } : {}),
           createdBySource: "AGENT" as const,

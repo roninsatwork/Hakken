@@ -801,7 +801,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     key: "google-gmail",
     name: "Gmail Mailbox",
     description:
-      "Connects one dedicated Gmail mailbox by consent — never a person's own. Sonae can read "
+      "Connects one dedicated Gmail mailbox by consent — never a person's own. The platform can read "
       + "new mail in it and reply from it, so the whole exchange sits in the inbox for any "
       + "colleague to open and inspect. The platform holds a scoped, revocable key, never a "
       + "password; disconnecting revokes the key at Google.",
@@ -876,7 +876,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     key: TWILIO_VOICE_CONNECTOR_KEY,
     name: "Twilio Phone Line",
     description:
-      "The phone number Sonae answers. Claiming a number here routes its calls to this "
+      "The phone number the platform answers. Claiming a number here routes its calls to this "
       + "workspace's voice agent; the connector's switch is the off button — turned off, every "
       + "caller hears a polite refusal and nothing is spent.",
     category: "VOICE",

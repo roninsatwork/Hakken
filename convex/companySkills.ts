@@ -5,9 +5,10 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import { MAX_SKILLS_PER_COMPANY } from "./utils/skillLimits";
+import { parseStoredStringArray, stableStringify } from "./utils/lang";
 
 const TEXT_MAX_CHARS = 8000;
 const DESCRIPTION_MAX_CHARS = 1200;
@@ -46,15 +47,6 @@ const skillSurfaceValidator = v.union(
   v.literal("APP_KIT")
 );
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, entryValue]) => entryValue !== undefined)
-    .sort(([left], [right]) => left.localeCompare(right));
-  return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`).join(",")}}`;
-}
 
 function normalizeText(value: string | undefined, label: string, maxChars = TEXT_MAX_CHARS) {
   const normalized = value?.trim();
@@ -104,17 +96,6 @@ function normalizeOptionalJson(value: string | undefined, label: string) {
   return parsed === undefined ? undefined : stableStringify(parsed);
 }
 
-function parseStoredStringArray(value: string | undefined) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? Array.from(new Set(parsed.filter((entry): entry is string => typeof entry === "string").map((entry) => entry.trim()).filter(Boolean)))
-      : [];
-  } catch {
-    return [];
-  }
-}
 
 function hasStoredJson(value: string | undefined) {
   if (!value) return false;
@@ -158,14 +139,6 @@ function buildSkillPatch(args: {
     ...(args.recommendedKnowledgeJson !== undefined ? { recommendedKnowledgeJson: normalizeOptionalJson(args.recommendedKnowledgeJson, "Recommended knowledge") } : {}),
     ...(args.versionLabel !== undefined ? { versionLabel: normalizeOptionalText(args.versionLabel, VERSION_MAX_CHARS) } : {}),
   };
-}
-
-async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx);
-  const company = await ctx.db.get(companyId);
-  if (!company) throw new Error("Company not found");
-  assertAdminCanAccessCompany(user, companyId);
-  return { userId, company };
 }
 
 async function requireSkillAccess(ctx: QueryCtx | MutationCtx, skillId: Id<"companySkills">) {

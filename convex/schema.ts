@@ -3372,6 +3372,11 @@ export default defineSchema({
    * A row exists only once somebody has entered something. No row means nothing
    * has been filled in yet, not that the customer is unknown.
    */
+  // template:remove:end
+  // The wiki tables are base-module schema. They sat inside the salesData
+  // fence above until 2026-08-19, when the first real strip build showed a
+  // salesData-free template losing its entire wiki (24 files failing to
+  // compile). The fence closes here and reopens after wikiPageRevisions.
   /**
    * The self-improving wiki: whole pages Sonae writes and tends itself, one
    * per subject, rewritten after conversations — never chunked, never
@@ -3599,6 +3604,7 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_page", ["pageId", "createdAt"]),
 
+  // template:remove:start salesData
   salesDataCustomers: defineTable({
     companyId: v.id("companies"),
     accountNameKey: v.string(),

@@ -41,9 +41,12 @@ import { useTheme } from "next-themes";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
+// CORE_MODULES is base-platform (used by the workspace switchboard below,
+// outside any fence); it sat inside the salesData fence until the first
+// strip build failed on it, 2026-08-19.
+import { CORE_MODULES } from "@/convex/utils/coreModules";
 // template:remove:start salesData
 import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
-import { CORE_MODULES } from "@/convex/utils/coreModules";
 // template:remove:start salesReports
 import { REPORTS_MODULE_KEY } from "@/convex/utils/coreModules";
 // template:remove:end
@@ -476,7 +479,7 @@ export default function SidebarNavigation() {
   // at zero for the first thirty minutes. Skipped unless this is an admin area
   // super admin, because the query is super-admin only and the page is too.
   const pendingApprovals = useQuery(
-    api.agentRuns.getPendingApprovalCount,
+    api.agentRunApprovals.getPendingApprovalCount,
     isAdmin && canSeeAdminSections ? {} : "skip"
   );
   // Same reasoning as the agent queue: a workflow halted on a Human Approval node

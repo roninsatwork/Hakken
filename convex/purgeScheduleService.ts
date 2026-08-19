@@ -27,7 +27,7 @@ export interface PipelineConfig {
 }
 
 const DAILY_2AM: Omit<PipelineConfig, "retentionDays"> = {
-  enabled: false,
+  enabled: true,
   interval: "Daily",
   hourUtc: 2,
   dayOfWeek: 0,
@@ -36,10 +36,15 @@ const DAILY_2AM: Omit<PipelineConfig, "retentionDays"> = {
 };
 
 /**
- * Every pipeline ships disabled — except `purgeHistory`, which cleans only
- * the purge system's own log. Switching anything else on is the owner's
- * decision, made per deployment on the retention screen (see the enablement
- * runbook in docs/plans/active/retention-and-purge-plan.md).
+ * Every pipeline ships ENABLED (owner decision, 2026-08-19, maintenance
+ * plan M1.1). They used to ship disabled, which meant a fresh deployment
+ * kept phone transcripts and mailbox records forever unless a human ticked
+ * fourteen boxes — a privacy exposure, not just a cost. A deployment that
+ * wants longer retention raises the days on the retention screen; turning a
+ * pipeline off entirely is surfaced on the daily platform alert so the
+ * decision stays visible. Deployments whose saved config predates the flip
+ * keep their stored `enabled: false` — the merge honours it — which is
+ * exactly what the alert exists to catch.
  *
  * Defaults encode what each table is for: operational logs 90 days,
  * person-linked records 180, finance/analytics history 400 so year-on-year
@@ -67,14 +72,24 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // the same short window as the phone records it mirrors. The mail itself
   // lives in Gmail under Gmail's own retention, untouched by this.
   mailboxMessages: { ...DAILY_2AM, retentionDays: 90 },
-  // The one pipeline that ships ENABLED: it cleans only the purge system's
-  // own log, which the hourly dispatcher grows even when everything else is
-  // off. The newest 200 entries are always kept regardless of retention.
-  purgeHistory: { ...DAILY_2AM, enabled: true, retentionDays: 365 },
+  // Cleans only the purge system's own log, which the hourly dispatcher
+  // grows even when everything else is off. The newest 200 entries are
+  // always kept regardless of retention.
+  purgeHistory: { ...DAILY_2AM, retentionDays: 365 },
 };
 
 export const PURGE_PIPELINE_KEYS = Object.keys(DEFAULT_PURGE_CONFIGS) as PurgePipelineKey[];
 export const MIN_PURGE_RETENTION_DAYS = 30;
+
+/**
+ * The pipelines a stored config has switched off. Fed to the system health
+ * report so a deployment that never prunes personal data says so on the
+ * daily alert instead of staying silent (maintenance plan M1.1).
+ */
+export function listDisabledPurgePipelines(configStr: string | undefined): PurgePipelineKey[] {
+  const configs = parsePurgePipelineConfig(configStr);
+  return PURGE_PIPELINE_KEYS.filter((key) => !configs[key].enabled);
+}
 
 const VALID_INTERVALS: PurgeScheduleInterval[] = ["Hourly", "Daily", "Weekly", "Monthly"];
 

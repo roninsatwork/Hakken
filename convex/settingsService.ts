@@ -47,6 +47,20 @@ export const DEFAULT_SETTINGS = {
   diagnosticRoutingEnabled: false as boolean,
 };
 
+/**
+ * The platform's display name, resolved from a stored settings value.
+ *
+ * Every surface that says the platform's name out loud — emails, AI prompts,
+ * refusals, spoken previews, the Gmail label — resolves it through here (or
+ * through `internal.settings.getEmailBranding`, which applies the same rule),
+ * so a deployment renamed in Settings is renamed everywhere at once. The
+ * default is the shipped name, kept so an unconfigured deployment behaves
+ * exactly as before.
+ */
+export function resolvePlatformName(name?: string | null) {
+  return name?.trim() || DEFAULT_SETTINGS.platformName;
+}
+
 export type SettingsPatchInput = Record<string, string | number | boolean | undefined>;
 
 export function isStorageLogoReference(value: string | undefined) {

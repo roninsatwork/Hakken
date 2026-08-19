@@ -53,10 +53,6 @@ vi.mock("framer-motion", () => ({
   },
 }));
 
-vi.mock("../../ui/components/layout/FluidBackground", () => ({
-  FluidBackground: () => <div data-testid="fluid-background" />,
-}));
-
 function renderLoginPage() {
   return render(
     <NextIntlClientProvider locale="en" messages={messages}>

@@ -98,6 +98,53 @@ describe("chat status components", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("names the asker instead of saying \"you\" when a log is read back", () => {
+    useQueryMock.mockReturnValue(null);
+
+    render(
+      <ChatMessage
+        message={{ ...baseMessage, role: "user", content: "Tell me about Brian" } as Doc<"messages">}
+        askedByLabel="Ada Lovelace"
+        isReadOnly
+      />
+    );
+
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.queryByText("You asked")).toBeNull();
+  });
+
+  it("withholds the rating controls from a log, and keeps the workings", () => {
+    useQueryMock.mockReturnValue(null);
+
+    render(
+      <ChatMessage
+        message={{ ...baseMessage, role: "assistant", content: "Brian is a customer." } as Doc<"messages">}
+        isReadOnly
+      />
+    );
+
+    // An admin marking somebody else's answer wrong would be indistinguishable
+    // from the customer doing it, so the buttons are simply not there.
+    expect(screen.queryByText("Helpful")).toBeNull();
+    expect(screen.queryByText("Not right")).toBeNull();
+    // Reading why an answer was given stays available.
+    expect(screen.getByText("why")).toBeInTheDocument();
+  });
+
+  it("sets a caller's own detail with the answer it belongs to", () => {
+    useQueryMock.mockReturnValue(null);
+
+    render(
+      <ChatMessage
+        message={{ ...baseMessage, role: "assistant", content: "Answer" } as Doc<"messages">}
+        isReadOnly
+        footer={<span>Memories used</span>}
+      />
+    );
+
+    expect(screen.getByText("Memories used")).toBeInTheDocument();
+  });
+
   it("hides swarm status for loading or empty logs", () => {
     useQueryMock.mockReturnValue(undefined);
     const { container, rerender } = render(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);

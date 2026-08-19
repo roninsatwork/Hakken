@@ -35,7 +35,7 @@ const FIXTURES = [
       "Summary: The refurbishment has finished early and all rooms are back in service. " +
       "They now want the winter-season linen contract discussed with pricing.\n\n" +
       "Transcript:\nCaller: Good news, the refurb wrapped up last week, everything's open again.\n" +
-      "Sonae: Wonderful — shall I have the team call about the winter contract?\n" +
+      "Assistant: Wonderful — shall I have the team call about the winter contract?\n" +
       "Caller: Yes please, and they should bring the pricing this time.",
     mustMention: ["winter", "refurbishment finished OR rooms back in service"],
     mustNotMention: ["12 rooms out of service"],
@@ -50,7 +50,7 @@ const FIXTURES = [
     eventLabel: "email exchange",
     eventText:
       "Subject: Invoice\n\nThey wrote: Please send the invoice straight over to us at the school office.\n\n" +
-      "Sonae replied: Of course — the team will arrange the invoice.",
+      "Assistant replied: Of course — the team will arrange the invoice.",
     mustMention: [],
     mustNotMention: ["invoice will be sent to the school directly"],
   },

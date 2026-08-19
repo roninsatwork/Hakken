@@ -24,6 +24,7 @@ import {
   resolveNotificationContent,
   resolveNotificationRecipients,
 } from "./aiToolNotificationService";
+import { getErrorMessage, isRecord } from "./utils/lang";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -109,13 +110,7 @@ export type ToolArgumentValidationResult = {
   errors: string[];
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error && error.message ? error.message : "Unknown tool execution error.";
-}
 
 function getJsonSchemaType(value: unknown) {
   if (value === null) return "null";
@@ -288,7 +283,7 @@ export function buildToolResultPayload(args: { status: "success" | "error"; data
 export function buildToolFailureResult(error: unknown) {
   return buildToolResultPayload({
     status: "error",
-    error: getErrorMessage(error),
+    error: getErrorMessage(error, "Unknown tool execution error."),
   });
 }
 
@@ -1122,7 +1117,7 @@ export async function executeRegisteredTool(args: ToolHandlerExecutionInput) {
 }
 
 export function normalizeAiRuntimeError(error: unknown, fallback = "AI runtime request failed.") {
-  const message = getErrorMessage(error);
+  const message = getErrorMessage(error, "Unknown tool execution error.");
 
   return {
     ok: false,

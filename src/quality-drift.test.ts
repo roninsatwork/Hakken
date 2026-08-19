@@ -109,7 +109,6 @@ const ignoredRepoPathPrefixes = [
   // older commit — so this guardrail would fail on language already fixed here.
   '.claude/worktrees/',
   '.next/',
-  'adk-python/',
   'node_modules/',
   'package-lock.json',
   'playwright-report/',
@@ -564,7 +563,7 @@ describe('Quality Drift Guardrails', () => {
     const pages = [
       'src/app/(dashboard)/admin/ai/rules/page.tsx',
       'src/app/(dashboard)/admin/agents/[id]/rules/page.tsx',
-      'src/app/(dashboard)/admin/companies/[id]/rules/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/ai/rules/page.tsx',
     ];
 
     const offenders = pages.filter((filePath) => {
@@ -579,9 +578,14 @@ describe('Quality Drift Guardrails', () => {
   test('Ask Sonae assistant runtimes keep the shared safety spine', () => {
     const assistantBody = extractDeclarationBody('convex/ai.ts', 'generateSonaeResponse');
 
+    // The safety check and refusal write moved behind `guardModelTurn` in
+    // `convex/modelTurnService.ts` (maintenance plan, Phase 8), so the spine
+    // is now pinned by that one name; `convex/modelTurnService.test.ts` holds
+    // the fuller guard that neither runtime re-grows a private copy.
     const assistantRequirements = [
-      'evaluateAssistantSafety',
-      'saveAssistantSafetyRefusal',
+      'guardModelTurn',
+      'runModelTurn',
+      'finishAssistantReply',
       'buildAssistantSystemInstruction',
       'buildUntrustedConversationHistory',
       'buildUntrustedKnowledgeContext',
@@ -603,8 +607,7 @@ describe('Quality Drift Guardrails', () => {
       {
         declaration: 'runAgentObjective',
         requirements: [
-          'evaluateAssistantSafety',
-          'saveAssistantSafetyRefusal',
+          'guardModelTurn',
           'buildUntrustedKnowledgeContext',
           'buildLoopExecutionContext',
           'executeObjectiveLoop',
@@ -651,8 +654,8 @@ describe('Quality Drift Guardrails', () => {
       'src/app/(dashboard)/admin/ai/rules/[id]/page.tsx',
       'src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx',
       'src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx',
-      'src/app/(dashboard)/admin/companies/[id]/rules/new/page.tsx',
-      'src/app/(dashboard)/admin/companies/[id]/rules/[ruleId]/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/ai/rules/[ruleId]/page.tsx',
     ];
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
@@ -672,7 +675,7 @@ describe('Quality Drift Guardrails', () => {
     const pages = [
       'src/app/(dashboard)/admin/ai/system-prompt/page.tsx',
       'src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx',
-      'src/app/(dashboard)/admin/companies/[id]/system-prompt/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/ai/prompt/page.tsx',
     ];
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
@@ -696,7 +699,7 @@ describe('Quality Drift Guardrails', () => {
     expect(globalRedirect).toContain('redirect("/admin/ai/knowledge")');
 
     const pages = [
-      'src/app/(dashboard)/admin/companies/[id]/knowledge/page.tsx',
+      'src/app/(dashboard)/admin/companies/[id]/ai/knowledge/page.tsx',
     ];
 
     const offenders = pages.filter((filePath) => {
@@ -744,9 +747,14 @@ describe('Quality Drift Guardrails', () => {
       // brace-expansion@1. See the comment in deploy.yml and the weekly
       // security-audit workflow, which tracks the dev chain separately.
       'npm audit --omit=dev --audit-level=high',
+      // The guards and coverage gate joined the deploy firewall on 2026-08-19
+      // (maintenance plan M3.2): production had been skipping the checks that
+      // gate every PR.
+      'npm run check:guards',
       'npm run lint',
       'npm run typecheck',
-      'npm run test:run',
+      'npm run test:coverage',
+      'npm run coverage:check',
       'npm run build',
     ];
 
@@ -1103,15 +1111,15 @@ describe('Quality Drift Guardrails', () => {
   });
 
   test('admin chat log pages use cursor-paginated thread rosters', () => {
-    const globalChatLogs = readRepoFile('src/app/(dashboard)/admin/ai/chat-logs/page.tsx');
-    const companyChatLogs = readRepoFile('src/app/(dashboard)/admin/companies/[id]/chat-logs/page.tsx');
+    // Both routes render the shared ChatLogsScreen (maintenance plan, phase
+    // 5), so the roster's pagination contract lives in one file now.
+    const chatLogsScreen = readRepoFile('src/app/(dashboard)/admin/_features/chat-logs/ChatLogsScreen.tsx');
 
-    expect(globalChatLogs).toMatch(PAGES_ON_THE_SERVER);
-    expect(globalChatLogs).toContain('api.chatAdmin.getPaginatedThreads');
-    expect(globalChatLogs).not.toContain('api.chatAdmin.getOffsetPaginatedThreads');
-    expect(companyChatLogs).toMatch(PAGES_ON_THE_SERVER);
-    expect(companyChatLogs).toContain('api.chatAdmin.getPaginatedCompanyThreads');
-    expect(companyChatLogs).not.toContain('api.chatAdmin.getOffsetPaginatedCompanyThreads');
+    expect(chatLogsScreen).toMatch(PAGES_ON_THE_SERVER);
+    expect(chatLogsScreen).toContain('api.chatAdmin.getPaginatedThreads');
+    expect(chatLogsScreen).not.toContain('api.chatAdmin.getOffsetPaginatedThreads');
+    expect(chatLogsScreen).toContain('api.chatAdmin.getPaginatedCompanyThreads');
+    expect(chatLogsScreen).not.toContain('api.chatAdmin.getOffsetPaginatedCompanyThreads');
   });
 
   test('new Gemini-era language must be classified before it spreads', () => {
@@ -1248,7 +1256,10 @@ describe('Quality Drift Guardrails', () => {
       'convex/aiModels.test.ts',
       'convex/aiModelsActions.test.ts',
       'convex/aiModelsActions.ts',
+      'convex/anthropicAgentProvider.test.ts',
       'convex/anthropicProviderService.test.ts',
+      'convex/googleAgentProvider.test.ts',
+      'convex/openrouterAgentProvider.test.ts',
       'convex/chat.test.ts',
       'convex/globalSystems.test.ts',
       'convex/knowledge.test.ts',

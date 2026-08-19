@@ -277,8 +277,8 @@ export const getWikiAnswerContextInternal = internalQuery({
       context: parts.length
         ? `${
             args.companyId
-              ? "Company wiki pages that apply here (tended by Sonae, corrected by staff)"
-              : "Platform wiki pages that apply to every company (tended by Sonae)"
+              ? "Company wiki pages that apply here (tended by the AI, corrected by staff)"
+              : "Platform wiki pages that apply to every company (tended by the AI)"
           }:\n\n${parts.join("\n\n---\n\n")}`
         : "",
       pageKeys,
@@ -461,8 +461,8 @@ export const getPagesByKeysInternal = internalQuery({
       context: parts.length
         ? `${
             args.companyId
-              ? "Company wiki pages that apply here (tended by Sonae, corrected by staff)"
-              : "Platform wiki pages that apply to every company (tended by Sonae)"
+              ? "Company wiki pages that apply here (tended by the AI, corrected by staff)"
+              : "Platform wiki pages that apply to every company (tended by the AI)"
           }:\n\n${parts.join("\n\n---\n\n")}`
         : "",
       pageKeys,

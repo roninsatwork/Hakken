@@ -135,6 +135,24 @@ describe("platform alert service", () => {
     expect(decision.summary).toContain("clean");
   });
 
+  test("alerts when retention pipelines are switched off", () => {
+    const decision = buildSystemHealthPlatformAlertDecision(
+      buildSystemReport({ disabledPurgePipelines: ["phoneCalls", "mailboxMessages"] })
+    );
+
+    expect(decision.shouldAlert).toBe(true);
+    const signal = decision.signals.find((s) => s.key === "disabledPurgePipelines");
+    expect(signal).toMatchObject({ count: 2, label: "Retention pipelines switched off" });
+    expect(signal?.details[0]).toContain("phoneCalls");
+
+    // A report with every pipeline running stays clean — the signal exists to
+    // surface the deliberate switch-off, not to nag healthy deployments.
+    expect(
+      buildSystemHealthPlatformAlertDecision(buildSystemReport({ disabledPurgePipelines: [] }))
+        .shouldAlert
+    ).toBe(false);
+  });
+
   test("alerts for operational health failures", () => {
     const decision = buildSystemHealthPlatformAlertDecision(buildSystemReport({
       operations: buildOperationalReport({

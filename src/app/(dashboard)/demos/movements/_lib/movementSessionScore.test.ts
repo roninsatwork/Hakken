@@ -170,4 +170,16 @@ describe("movementSessionScore", () => {
     expect(result.overallPercent).toBe(0);
     expect(result.grade).toBe("Keep practising");
   });
+
+  it("scores a gentle session that never clears a rep rather than wiping it to zero", () => {
+    const state = feed(createMovementSessionScoreState(), [
+      { effortQuality: 0, scoredMovementStrength: 0.18, spineScore: 80 },
+      { effortQuality: 0, scoredMovementStrength: 0.2, spineScore: 80 },
+      { effortQuality: 0, scoredMovementStrength: 0.16, spineScore: 80 },
+    ]);
+    const result = resolveMovementSessionScoreResult(state);
+
+    expect(result.repCount).toBe(0);
+    expect(result.overallPercent).toBeGreaterThan(0);
+  });
 });

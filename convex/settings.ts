@@ -1,4 +1,5 @@
 import { internalQuery } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -12,7 +13,20 @@ import {
   DEFAULT_SETTINGS,
   isStorageLogoReference,
   mergeSettingsWithDefaults,
+  resolvePlatformName,
 } from "./settingsService";
+
+/**
+ * The configured platform name, for queries and mutations that have `ctx.db`.
+ *
+ * Actions have no database handle; they read the same value through
+ * `internal.settings.getEmailBranding` instead. Both paths resolve through
+ * `resolvePlatformName`, so the fallback cannot drift.
+ */
+export async function getPlatformName(ctx: Pick<QueryCtx, "db">): Promise<string> {
+  const settings = await ctx.db.query("systemSettings").first();
+  return resolvePlatformName(settings?.platformName);
+}
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 export const get = publicQuery({
@@ -171,7 +185,7 @@ export const getEmailBranding = internalQuery({
   handler: async (ctx) => {
     const settings = await ctx.db.query("systemSettings").first();
     return {
-      platformName: settings?.platformName || DEFAULT_SETTINGS.platformName,
+      platformName: resolvePlatformName(settings?.platformName),
       emailSenderName: settings?.emailSenderName,
       emailSenderAddress: settings?.emailSenderAddress,
     };

@@ -32,7 +32,6 @@ const coverageConfig = {
   all: true,
   include: ['src/**/*.{ts,tsx}', 'convex/**/*.ts'],
   exclude: [
-    'adk-python/**',
     'convex/_generated/**',
     'convex/crons.ts',
     'convex/http.ts',

@@ -1,4 +1,5 @@
 import type { Id } from "../_generated/dataModel";
+import { isRecord } from "./lang";
 
 export type JsonValue =
   | string
@@ -52,9 +53,6 @@ export type WorkflowNodeOutput = {
 const WORKFLOW_TRIGGER_TYPES = new Set(["MANUAL", "WEBHOOK", "SCHEDULE"]);
 const MERGE_MODES = new Set(["WAIT_FOR_ANY", "WAIT_FOR_ALL"]);
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function parseJson<T>(json: string | undefined, fallback: T): T {
   if (!json) return fallback;

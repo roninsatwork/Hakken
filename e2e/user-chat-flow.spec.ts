@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { gotoWithoutServerCrash, skipWhenRedirectedToLogin } from './helpers/navigation';
 
-test.describe('End-User Chat Journey', () => {
+test.describe('End-User Chat Journey @smoke', () => {
   test('User can type a message, submit, and transition to a thread', async ({ page }) => {
     await gotoWithoutServerCrash(page, '/app/assistant');
     await skipWhenRedirectedToLogin(page, 'Chat execution requires an authenticated user storage state.');

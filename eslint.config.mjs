@@ -83,7 +83,6 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "tsconfig.tsbuildinfo",
     "convex/_generated/**",
-    "adk-python/**",
     // Gitignored local scratch (movement proof runs, generated bundles).
     // Linting it produced warnings nobody can act on and forced Babel to
     // deoptimise on >500KB generated bundles.

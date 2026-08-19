@@ -3,10 +3,8 @@ import { internalAction, internalMutation } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { adminQuery } from "./tenantFunctions";
+import { getErrorMessage } from "./utils/lang";
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * The scheduled work, on the record (seven-gaps plan, phase 2).
@@ -33,7 +31,7 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "agent-run-stall-recovery": (ctx) =>
     ctx.runMutation(internal.agentRunCheckpoints.recoverStalledRuns, {}),
   "agent-approval-expiry": (ctx) =>
-    ctx.runMutation(internal.agentRuns.expireStalePendingApprovals, {}),
+    ctx.runMutation(internal.agentRunApprovals.expireStalePendingApprovals, {}),
   "workflow-approval-expiry": (ctx) =>
     ctx.runMutation(internal.workflowEngine.expireStaleWorkflowApprovals, {}),
   "agent-skill-rollup-rebuild": (ctx) =>

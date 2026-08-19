@@ -19,6 +19,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
+import { listDisabledPurgePipelines } from "./purgeScheduleService";
 import { sendResendEmail } from "./resendEmailService";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 
@@ -882,6 +883,17 @@ async function getSystemHealthReport(ctx: QueryCtx, args: AnalyticsDataHealthArg
   const budgetHealth = await getBudgetHealthReport(ctx, { daysBack, scope });
   const alertRules = buildAlertRules({ budgetHealth, operations });
 
+  // The purge config is one global row, so it only belongs on the
+  // platform-scoped report; a company report would just repeat it.
+  let disabledPurgePipelines: string[] | undefined;
+  if (scope.type === "platform") {
+    const purgeConfig = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG"))
+      .first();
+    disabledPurgePipelines = listDisabledPurgePipelines(purgeConfig?.value);
+  }
+
   return {
     analytics,
     alertRules,
@@ -889,6 +901,7 @@ async function getSystemHealthReport(ctx: QueryCtx, args: AnalyticsDataHealthArg
     checkedAt,
     checkedDate: formatHealthWindowStart(checkedAt),
     daysBack,
+    disabledPurgePipelines,
     operations,
     highCostAgentThresholdGBP: HIGH_COST_AGENT_THRESHOLD_GBP,
     overdueScheduleThresholdMinutes: OVERDUE_SCHEDULE_THRESHOLD_MINUTES,
@@ -1422,7 +1435,12 @@ export const dispatchPlatformAlerts = internalAction({
   },
   handler: async (ctx, args) => {
     const report = await ctx.runQuery(internal.analyticsCron.getSystemHealth, { daysBack: args.daysBack ?? 7 });
-    const decision = buildSystemHealthPlatformAlertDecision(report);
+    // Branding first: the decision's own subject line carries the platform
+    // name too, and must not fall back to a hardcoded one.
+    const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
+    const decision = buildSystemHealthPlatformAlertDecision(report, {
+      platformName: emailBranding?.platformName,
+    });
 
     if (!decision.shouldAlert) {
       return {
@@ -1462,9 +1480,6 @@ export const dispatchPlatformAlerts = internalAction({
       };
     }
 
-    // Branding is resolved before the email is built, because the subject line
-    // carries the platform name and must not fall back to a hardcoded one.
-    const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
     const email = buildSystemHealthAlertEmail(report, decision, {
       platformName: emailBranding?.platformName,
       baseUrl: process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL,
@@ -1487,7 +1502,7 @@ export const dispatchPlatformAlerts = internalAction({
 
     const fromAddress = buildEmailFromAddress({
       envFromAddress: resolveEnvFromAddress(process.env),
-      fallbackName: "Sonae Operations",
+      fallbackName: `${emailBranding.platformName} Operations`,
       settings: emailBranding,
     });
     const data = await sendResendEmail({

@@ -36,6 +36,13 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
         {isOpen ? t("hide") : t("why")}
       </button>
 
+      {/* A reader who may not see the workings — an admin reading somebody
+          else's conversation — gets the same honest line as an answer that
+          recorded none, rather than a control that opens onto nothing. */}
+      {isOpen && evidence === null && (
+        <p className="text-[12px] text-muted leading-relaxed max-w-[34rem]">{t("none")}</p>
+      )}
+
       {isOpen && evidence && (
         <div className="flex flex-col gap-3 border-l border-border-dim pl-3 text-[12px]">
           {!evidence.hasAny && <p className="text-muted leading-relaxed max-w-[34rem]">{t("none")}</p>}

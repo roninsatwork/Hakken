@@ -4,8 +4,10 @@ import {
   calculatePurgeCutoffTimestamp,
   DEFAULT_PURGE_CONFIGS,
   getPurgeRetentionDays,
+  listDisabledPurgePipelines,
   normalizePurgePipelineConfigForUpdate,
   parsePurgePipelineConfig,
+  PURGE_PIPELINE_KEYS,
 } from "./purgeScheduleService";
 
 describe("purge schedule service", () => {
@@ -42,6 +44,33 @@ describe("purge schedule service", () => {
     expect(calculateNextPurgeRun("Monthly", 2, undefined, 15, now)).toBe(
       Date.parse("2026-06-15T02:00:00.000Z")
     );
+  });
+
+  /**
+   * Owner decision, 2026-08-19 (maintenance plan M1.1): every pipeline ships
+   * enabled. Shipping them off meant a fresh deployment kept phone
+   * transcripts and mailbox records forever unless a human ticked fourteen
+   * boxes. Naming every key here means adding a pipeline that ships disabled
+   * fails this test and forces the decision into the open.
+   */
+  test("every pipeline ships enabled", () => {
+    for (const key of PURGE_PIPELINE_KEYS) {
+      expect(DEFAULT_PURGE_CONFIGS[key].enabled, key).toBe(true);
+    }
+  });
+
+  test("lists the pipelines a stored config has switched off", () => {
+    expect(listDisabledPurgePipelines(undefined)).toEqual([]);
+    expect(listDisabledPurgePipelines("not-json")).toEqual([]);
+    expect(
+      listDisabledPurgePipelines(
+        JSON.stringify({
+          phoneCalls: { enabled: false },
+          mailboxMessages: { enabled: false },
+          agentLogs: { enabled: true },
+        })
+      )
+    ).toEqual(["phoneCalls", "mailboxMessages"]);
   });
 
   test("parses missing or invalid pipeline config as defaults", () => {

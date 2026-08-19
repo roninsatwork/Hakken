@@ -1,5 +1,6 @@
 import { renderWithProviders as render } from "@/src/test/renderWithProviders";
-import { beforeEach, describe, vi } from "vitest";
+import { screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
@@ -61,6 +62,38 @@ describe("CustomersPage", () => {
       sampleRowText: "Kingsley & Co",
       emptyText: "salesData.customers.emptyTitle",
       searchPlaceholder: "salesData.customers.searchPlaceholder",
+    });
+  });
+
+  /**
+   * Clearing the workspace is admin-only on the backend (maintenance plan
+   * M1.2), so the button hides rather than greeting an ordinary member with
+   * an authorization error on press.
+   */
+  describe("the clear-database button", () => {
+    const withRole = (role: string) => {
+      vi.mocked(useQuery).mockImplementation((...args) => {
+        const name = getFunctionName(args[0]);
+        if (name === "users:getMe") return { role };
+        if (name === "salesDataCustomers:listCustomers") {
+          return { page: customers, isDone: true, continueCursor: null };
+        }
+        if (name === "salesDataCustomers:countCustomers") return { customers: 2, prospects: 1 };
+        if (name === "salesDataCustomers:listCustomerFilterOptions") return { groups: [], types: [] };
+        return undefined;
+      });
+    };
+
+    it("hides from an ordinary member", () => {
+      withRole("USER");
+      render(<CustomersPage />);
+      expect(screen.queryByText("salesData.customers.clearStart")).toBeNull();
+    });
+
+    it("shows for an admin", () => {
+      withRole("ADMIN");
+      render(<CustomersPage />);
+      expect(screen.getByText("salesData.customers.clearStart")).toBeInTheDocument();
     });
   });
 });

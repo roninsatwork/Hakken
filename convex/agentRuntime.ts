@@ -17,7 +17,6 @@ import {
   buildToolResultPayload,
   canExecuteTool,
   executeRegisteredTool,
-  isNotImplementedToolResult,
   normalizeAiRuntimeError,
   parseToolCallPayload,
   validateToolCallArgsAgainstSchema,
@@ -25,20 +24,24 @@ import {
   type ToolSideEffectLevel,
 } from "./aiToolExecutionService";
 import { buildAgentSystemInstruction, buildUntrustedKnowledgeContext } from "./aiPromptAssembly";
-import { evaluateAssistantSafety } from "./aiSafetyPolicy";
+import {
+  createModelTurnStream,
+  finishAssistantReply,
+  guardModelTurn,
+  runModelTurn,
+  type ModelTurnStream,
+} from "./modelTurnService";
 import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
-import { shouldFlushStreamedText } from "./streamingService";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence, type MessageEvidence } from "./utils/messageEvidence";
 import { calculateModelCostGBP as calculateCostGBP } from "./aiCostService";
 import {
   EXPLICIT_CACHE_TTL_SECONDS,
-  estimatePromptTokens,
   getPromptCacheStyle,
   resolvePromptCacheSegments,
   shouldCreateExplicitCache,
@@ -53,11 +56,19 @@ import {
 } from "./agentRunContinuationService";
 import {
   DEFAULT_AGENT_OBJECTIVE_LIMITS,
+  buildModelStepRecord,
   buildRefusedToolCallKey,
-  getRefusedToolCallMessage,
+  buildRunUsagePayload,
+  buildToolDispatchLogEntry,
+  classifyExecutedToolResult,
+  estimateStablePrefixTokens,
   isModelCostMeasurable,
+  parseAgentOutputSchema,
   parseRefusedToolCalls,
   resolveAgentObjectiveLimits,
+  resolveToolCallWithoutExecution,
+  shouldRequestToolApproval,
+  shouldRetryTurnWithoutPromptCache,
   type ExecutedAgentToolCall,
   buildToolInteractionTurns,
   getAgentStepStatusFromToolStatus,
@@ -71,10 +82,8 @@ import {
   shouldStopForTokenBudget,
   shouldStopForToolBudget,
 } from "./agentRuntimeService";
+import { getErrorMessage, isRecord } from "./utils/lang";
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unknown Engine Exception";
-}
 
 type RuntimeToolMetadata = {
     toolId: Id<"aiTools">;
@@ -142,7 +151,7 @@ async function settleBatchAndContinue(ctx: ActionCtx, args: {
 
             const { serialized } = trimConversationForCheckpoint(transcript);
             if (isCheckpointStorable(serialized)) {
-                const resumed = await ctx.runMutation(internal.agentRuns.continueRunAfterApprovalInternal, {
+                const resumed = await ctx.runMutation(internal.agentRunApprovals.continueRunAfterApprovalInternal, {
                     approvalId: args.approvalId,
                     transcriptJson: serialized,
                     stepIndex: args.settlement.stepIndex,
@@ -155,7 +164,7 @@ async function settleBatchAndContinue(ctx: ActionCtx, args: {
     // No transcript to resume into — a triggered run with no chat thread, or a
     // conversation too large to have been checkpointed. Conclude the run and
     // report the outcome rather than leaving it open.
-    const completion = await ctx.runMutation(internal.agentRuns.completeApprovalResumeInternal, {
+    const completion = await ctx.runMutation(internal.agentRunApprovals.completeApprovalResumeInternal, {
         approvalId: args.approvalId,
         status: args.status,
         finalOutput: args.finalOutput,
@@ -265,14 +274,6 @@ function calculateModelCostGBP(args: {
     });
 }
 
-function isConfirmationRequiredDenial(reason?: string) {
-    return reason === "Tool execution requires explicit user confirmation.";
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function getApprovalRequiredMessage(toolName: string) {
     return `Approval required before continuing. The agent requested "${toolName}", and an administrator must approve or reject that tool call.`;
 }
@@ -320,30 +321,6 @@ function buildHistoricalReplaySystemPrompt(args: {
         .join("\n\n---\n\n");
 
     return `${configuredPrompt}${skillInstruction}\n\n====================\nHISTORICAL ACTIVE AGENT RULES FROM THE REPLAYED VERSION SNAPSHOT:\n\n${compiledRules}`;
-}
-
-/**
- * The reply being written token by token.
- *
- * Held in one mutable object so every exit path — success, budget stop,
- * cancellation, provider failure, handover to a continuation — can reach the
- * same row. A row left marked as streaming shows a caret against an answer that
- * is never coming.
- *
- * `text` holds only the current model turn. A turn that requests tools may
- * narrate first ("let me look that up"), and that narration is superseded by the
- * next turn rather than accumulating, so what the reader ends up with matches
- * the final answer.
- */
-type StreamState = {
-  messageId: Id<"messages"> | undefined;
-  text: string;
-  flushedText: string;
-  lastFlushAt: number;
-};
-
-function createStreamState(messageId?: Id<"messages">): StreamState {
-  return { messageId, text: "", flushedText: "", lastFlushAt: 0 };
 }
 
 /**
@@ -458,7 +435,7 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
           ),
         });
       } catch (error) {
-        console.error("Failed to parse tool schema for:", toolDef.name, getErrorMessage(error));
+        console.error("Failed to parse tool schema for:", toolDef.name, getErrorMessage(error, "Unknown Engine Exception"));
       }
     }
   }
@@ -466,18 +443,26 @@ async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   // The agent's own always-on memories, plus the company's. The company's were
   // read nowhere on this path, so giving a company a memory did nothing on any
   // widget with an agent attached.
-  const [agentAlwaysMemories, companyAlwaysMemories] = await Promise.all([
+  const [agentAlwaysMemories, companyAlwaysMemories, emailBranding] = await Promise.all([
     ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
     owner.companyId
       ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: owner.companyId })
       : Promise.resolve([]),
+    // The deployment's configured name: an agent with no prompt of its own
+    // introduces itself as this platform's agent, not the shipped default's.
+    ctx.runQuery(internal.settings.getEmailBranding, {}),
   ]);
   const alwaysMemories = [
     ...companyAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
     ...agentAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
   ];
 
-  const systemInstruction = buildAgentSystemInstruction(agent.systemPrompt, runtimeSkills, alwaysMemories);
+  const systemInstruction = buildAgentSystemInstruction(
+    agent.systemPrompt,
+    runtimeSkills,
+    alwaysMemories,
+    emailBranding.platformName
+  );
   // Deterministic logic routing.
   const temperature = 0.1;
 
@@ -534,7 +519,7 @@ async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
   agentId: Id<"agents">;
   objective: string;
   companyId?: Id<"companies">;
-  stream: StreamState;
+  stream: ModelTurnStream;
   promptCache?: { name?: string };
   provider?: AgentProviderAdapter;
   error: unknown;
@@ -576,18 +561,13 @@ async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
 
   // If text was already streaming, close that row instead of adding a second
   // message: the reader would otherwise be left with a half-written answer
-  // marked as still typing, plus an error underneath it.
-  if (args.stream.messageId !== undefined) {
-    await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-      messageId: args.stream.messageId,
-      content: failureMessage,
-    });
-  } else if (args.threadId !== undefined) {
-    await ctx.runMutation(internal.chat.saveAssistantMessage, {
-      threadId: args.threadId,
-      content: failureMessage,
-    });
-  }
+  // marked as still typing, plus an error underneath it. The shared delivery
+  // makes that choice, and writes nothing for work nobody is watching.
+  await finishAssistantReply(ctx, {
+    threadId: args.threadId,
+    stream: args.stream,
+    content: failureMessage,
+  });
 }
 
 export const runAgentObjective = internalAction({
@@ -600,22 +580,21 @@ export const runAgentObjective = internalAction({
   handler: async (ctx, args) => {
     let agentRunId: Id<"agentRuns"> | undefined;
     let companyId: Id<"companies"> | undefined;
-    const stream = createStreamState();
+    const stream = createModelTurnStream();
     const promptCache: { name?: string } = {};
     // Hoisted so the failure handler can release a provider-side cache through
     // the same adapter that created it.
     let execution: LoopExecutionContext | undefined;
 
-    const safetyDecision = evaluateAssistantSafety(args.content);
-    if (!safetyDecision.allowed) {
-        await ctx.runMutation(internal.chat.saveAssistantSafetyRefusal, {
-            threadId: args.threadId,
-            content: safetyDecision.response,
-            category: safetyDecision.category,
-            source: "agent",
-        });
-        return;
-    }
+    // The shared safety gate (modelTurnService): evaluate and, when refused,
+    // save the refusal into the thread attributed to this runtime — worded as
+    // the deployment's configured platform, not the shipped default.
+    const safetyDecision = await guardModelTurn(ctx, {
+        content: args.content,
+        refusal: { threadId: args.threadId, source: "agent" },
+        platformName: (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName,
+    });
+    if (!safetyDecision.allowed) return;
 
     // Embeddings only, and pinned to the region that serves the embedding model.
 
@@ -954,7 +933,7 @@ export const continueAgentObjective = internalAction({
     // first segment handover, leaving it marked RUNNING with nothing left for
     // the stall sweeper to find.
     const threadId = checkpoint.threadId;
-    const stream = createStreamState(checkpoint.streamMessageId);
+    const stream = createModelTurnStream(checkpoint.streamMessageId);
     const promptCache: { name?: string } = { name: checkpoint.promptCacheName };
     let execution: LoopExecutionContext | undefined;
 
@@ -1044,7 +1023,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
     objective: string;
     execution: LoopExecutionContext;
     conversationHistory: Content[];
-    stream: StreamState;
+    stream: ModelTurnStream;
     /**
      * The provider-side cache this run is using, if any.
      *
@@ -1096,27 +1075,13 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
         promptCache.name = state.promptCacheName;
         const cacheStyle = getPromptCacheStyle(modelConfig.providerKey);
 
-        /**
-         * The fixed answer shape this agent asks for, if it asks for one.
-         *
-         * Parsed once per segment rather than per turn. An unparseable schema is
-         * ignored rather than failing the run: it is a configuration mistake on
-         * a screen, and refusing to run the agent at all would be a worse answer
-         * than running it unconstrained.
-         */
-        const agentResponseJsonSchema = (() => {
-            const stored = execution.agent.outputSchema;
-            if (!stored) return undefined;
-            try {
-                const parsed = JSON.parse(stored) as unknown;
-                return parsed && typeof parsed === "object"
-                    ? parsed as Record<string, unknown>
-                    : undefined;
-            } catch {
-                console.warn("Agent output schema is not valid JSON; running without it", { runId });
-                return undefined;
-            }
-        })();
+        // The fixed answer shape this agent asks for, if it asks for one.
+        // Parsed once per segment rather than per turn.
+        const parsedOutputSchema = parseAgentOutputSchema(execution.agent.outputSchema);
+        if (parsedOutputSchema.invalidJson) {
+            console.warn("Agent output schema is not valid JSON; running without it", { runId });
+        }
+        const agentResponseJsonSchema = parsedOutputSchema.schema;
 
         /**
          * Release the provider-side cache, if this run made one.
@@ -1221,88 +1186,26 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId });
             await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
                 runId,
-                inputTokens: inTokens,
-                outputTokens: outTokens,
-                costGBP: calculateModelCostGBP({
+                ...buildRunUsagePayload({
                     inputTokens: inTokens,
                     outputTokens: outTokens,
                     cachedInputTokens: cachedInTokens,
-                    config,
+                    rates: config,
+                    model: modelConfig,
                 }),
-                modelId: modelConfig.modelId,
-                providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId,
             });
 
-            if (stream.messageId !== undefined) {
-                await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-                    messageId: stream.messageId,
-                    content: message,
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    modelUsed: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                });
-                stream.messageId = undefined;
-            } else if (threadId !== undefined) {
-                // Nothing streamed yet, so the thread's last message is the
-                // user's and the surface is showing a thinking indicator that
-                // would otherwise never clear.
-                await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                    threadId,
-                    content: message,
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    modelUsed: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                });
-            }
-        };
-
-        /**
-         * Push the partial reply to the database, throttled.
-         *
-         * Convex queries are reactive, so a patch here is what makes the text
-         * appear for every subscribed client. Each patch is a real transaction
-         * fanned out to all of them, so `shouldFlushStreamedText` decides when a
-         * chunk is worth writing rather than writing per token.
-         */
-        const flushStream = async (isFinal: boolean) => {
-            const pendingChars = stream.text.length - stream.flushedText.length;
-            const now = Date.now();
-            if (!shouldFlushStreamedText({
-                pendingChars,
-                msSinceLastFlush: now - stream.lastFlushAt,
-                isFinal,
-            })) return;
-
-            if (threadId === undefined) {
-                // Nowhere to stream to, and nothing to create. The reply is
-                // still recorded on the run itself, which is where anyone
-                // reading a scheduled job looks for it.
-            } else if (stream.messageId === undefined) {
-                // Created on the first fragment, not at run start: the chat
-                // surfaces infer "thinking" from the last message being the
-                // user's, so an empty row up front would swap the thinking
-                // indicator for a blank bubble while the model warms up.
-                stream.messageId = await ctx.runMutation(internal.chat.startStreamingAssistantMessage, {
-                    threadId,
-                    content: stream.text,
-                    modelUsed: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
-                });
-            } else {
-                await ctx.runMutation(internal.chat.appendStreamingAssistantMessage, {
-                    messageId: stream.messageId,
-                    content: stream.text,
-                });
-            }
-
-            stream.flushedText = stream.text;
-            stream.lastFlushAt = now;
+            // Nothing streamed yet means the thread's last message is the
+            // user's and the surface is showing a thinking indicator that
+            // would otherwise never clear — the shared delivery covers that
+            // branch too.
+            await finishAssistantReply(ctx, {
+                threadId,
+                stream,
+                content: message,
+                usage: { inputTokens: inTokens, outputTokens: outTokens },
+                model: modelConfig,
+            });
         };
 
         let turnsThisSegment = 0;
@@ -1332,14 +1235,6 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
 
             turnsThisSegment += 1;
 
-            // Each turn's text replaces the last, so tool-call narration does not
-            // accumulate in front of the answer that follows it. `flushedText`
-            // resets with it: it records how much of *this* turn has been
-            // written, and leaving the previous turn's value behind would make
-            // the pending-character count negative and suppress every write.
-            stream.text = "";
-            stream.flushedText = "";
-
             // The system instruction, the tool declarations and everything
             // retrieved for this objective are re-sent on every turn. Once a run
             // has shown it is the multi-turn kind, upload that prefix once and
@@ -1347,13 +1242,12 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             // gets here, and so never pays for a cache it would not reuse.
             if (shouldCreateExplicitCache({
                 style: cacheStyle,
-                estimatedPrefixTokens: stablePrefixTurns > 0
-                    ? estimatePromptTokens(
-                        JSON.stringify(conversationHistory.slice(0, stablePrefixTurns))
-                        + JSON.stringify(systemInstruction)
-                        + JSON.stringify(providerTools ?? []),
-                    )
-                    : 0,
+                estimatedPrefixTokens: estimateStablePrefixTokens({
+                    turns: conversationHistory,
+                    stablePrefixTurns,
+                    systemInstruction,
+                    providerTools,
+                }),
                 completedTurns: loopIndex,
                 alreadyCached: promptCache.name !== undefined,
             })) {
@@ -1399,43 +1293,50 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 webSearch: execution.agent.allowInternetAccess === true,
                 responseJsonSchema: agentResponseJsonSchema,
             };
-            const onText = async (fragment: string) => {
-                stream.text += fragment;
-                await flushStream(false);
-            };
+            // The shared turn (modelTurnService) owns the streaming discipline:
+            // each turn's text replaces the last, so tool-call narration does
+            // not accumulate in front of the answer that follows it, and the
+            // partial reply is written to the thread at a bounded rate. The
+            // adapter call — with its cache-rejection retry — is this
+            // runtime's own strategy, handed in whole.
+            const response = await runModelTurn(ctx, {
+                threadId,
+                stream,
+                model: modelConfig,
+                callModel: async ({ onText }) => {
+                    try {
+                        return await provider.streamTurn(turnRequest, {
+                            operation: toolCallCount === 0 ? "agentGeneratePassOne" : "agentGenerateToolSynthesis",
+                            onText,
+                        });
+                    } catch (error) {
+                        // A cached request the provider will not accept must not end the
+                        // run. Retry it once in full, when the policy allows it.
+                        if (!shouldRetryTurnWithoutPromptCache({
+                            usedPromptCache: Boolean(promptCache.name),
+                            streamedChars: stream.text.length,
+                        })) throw error;
 
-            let response;
-            try {
-                response = await provider.streamTurn(turnRequest, {
-                    operation: toolCallCount === 0 ? "agentGeneratePassOne" : "agentGenerateToolSynthesis",
-                    onText,
-                });
-            } catch (error) {
-                // A cached request the provider will not accept must not end the
-                // run. Retry it once in full, but only while nothing has been
-                // shown to the reader — after that a retry would replay the
-                // answer from the start, which is the same rule the streaming
-                // retry policy follows.
-                if (!promptCache.name || stream.text.length > 0) throw error;
+                        console.warn("Cached prompt request rejected; retrying without the cache", {
+                            runId,
+                            error: error instanceof Error ? error.message : String(error),
+                        });
+                        await releasePromptCache();
+                        stablePrefixTurns = 0;
+                        stream.text = "";
+                        stream.flushedText = "";
 
-                console.warn("Cached prompt request rejected; retrying without the cache", {
-                    runId,
-                    error: error instanceof Error ? error.message : String(error),
-                });
-                await releasePromptCache();
-                stablePrefixTurns = 0;
-                stream.text = "";
-                stream.flushedText = "";
-
-                response = await provider.streamTurn({
-                    ...turnRequest,
-                    cacheName: undefined,
-                    cachedPrefixTurns: 0,
-                }, {
-                    operation: "agentGenerateUncachedRetry",
-                    onText,
-                });
-            }
+                        return await provider.streamTurn({
+                            ...turnRequest,
+                            cacheName: undefined,
+                            cachedPrefixTurns: 0,
+                        }, {
+                            operation: "agentGenerateUncachedRetry",
+                            onText,
+                        });
+                    }
+                },
+            });
 
             const responseInputTokens = response.inputTokens;
             const responseOutputTokens = response.outputTokens;
@@ -1451,6 +1352,12 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
 
             const requestedToolCalls = response.toolCalls.length;
             stepIndex += 1;
+            const modelStepRecord = buildModelStepRecord({
+                loopIndex,
+                completedToolCalls: toolCallCount,
+                responseText: response.text,
+                toolCallNames: response.toolCalls.map((call: { name: string }) => call.name),
+            });
             await ctx.runMutation(internal.agentRuns.appendStepInternal, {
                 runId,
                 agentId: agentId,
@@ -1458,10 +1365,8 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 stepIndex,
                 kind: "MODEL",
                 status: "SUCCESS",
-                input: JSON.stringify({ loopIndex, completedToolCalls: toolCallCount }),
-                output: response.text || JSON.stringify({
-                    functionCalls: response.toolCalls.map((call: { name: string }) => ({ name: call.name })),
-                }),
+                input: modelStepRecord.input,
+                output: modelStepRecord.output,
                 modelId: modelConfig.modelId,
                 providerKey: modelConfig.providerKey,
                 providerModelId: modelConfig.providerModelId,
@@ -1602,12 +1507,13 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 const wasRefused = refusedToolCalls.includes(refusedKey);
 
                 if (
-                    !isRehearsalRun &&
-                    !wasRefused &&
-                    schemaValidation.ok &&
                     toolMetadata &&
-                    !accessDecision.allowed &&
-                    isConfirmationRequiredDenial(accessDecision.reason)
+                    shouldRequestToolApproval({
+                        isRehearsalRun,
+                        wasRefused,
+                        schemaValidationOk: schemaValidation.ok,
+                        accessDecision,
+                    })
                 ) {
                     toolCallCount += 1;
                     const approvalMessage = getApprovalRequiredMessage(toolCall.name);
@@ -1654,7 +1560,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         output: approvalMessage,
                     });
 
-                    await ctx.runMutation(internal.agentRuns.insertApprovalInternal, {
+                    await ctx.runMutation(internal.agentRunApprovals.insertApprovalInternal, {
                         runId,
                         stepId: approvalStepId,
                         toolCallId,
@@ -1702,50 +1608,28 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
 
                 let toolStatus: "SUCCESS" | "NOT_IMPLEMENTED" | "FAILED" | "DENIED" | "CANCELLED" | "REHEARSED" = "FAILED";
                 let toolError: string | undefined;
-                let toolResponsePayload;
+                let toolResponsePayload: unknown;
 
-                if (wasRefused) {
-                    toolStatus = "DENIED";
-                    toolError = getRefusedToolCallMessage(toolCall.name);
-                    toolResponsePayload = buildToolResultPayload({
-                        status: "error",
-                        error: toolError,
-                    });
-                } else if (!schemaValidation.ok) {
-                    toolError = schemaValidation.errors.join(" ");
-                    toolResponsePayload = buildToolResultPayload({
-                        status: "error",
-                        error: toolError,
-                    });
-                } else if (
-                    isRehearsalRun &&
-                    toolMetadata &&
-                    toolMetadata.sideEffectLevel !== "READ" &&
-                    (accessDecision.allowed || isConfirmationRequiredDenial(accessDecision.reason))
-                ) {
-                    // Rehearsal: the write is recorded with its arguments, not
-                    // performed — including writes an autonomous agent would
-                    // have been allowed to make without asking. Reads execute
-                    // for real; hard denials (role, tenant) still deny below.
-                    toolStatus = "REHEARSED";
-                    toolResponsePayload = buildToolResultPayload({
-                        status: "success",
-                        data: {
-                            rehearsed: true,
-                            note: "Rehearsal run: this action was recorded as would-execute and NOT performed. Continue as if it succeeded.",
-                        },
-                    });
-                } else if (!accessDecision.allowed) {
-                    toolStatus = "DENIED";
-                    toolError = accessDecision.reason;
-                    toolResponsePayload = buildToolFailureResult(new Error(accessDecision.reason));
-                } else if (!toolMetadata) {
-                    toolError = "Unknown tool requested by model.";
-                    toolResponsePayload = buildToolResultPayload({
-                        status: "error",
-                        error: toolError,
-                    });
-                } else {
+                // Everything that can be decided without side effects is decided
+                // in one place: refusals, invalid arguments, rehearsed writes,
+                // denials and unknown tools. Only a call that passes every gate
+                // reaches the execution below — which also means the classifier
+                // has always answered by the time `toolMetadata` is absent, so
+                // the else-branch may rely on it being present.
+                const preResolved = resolveToolCallWithoutExecution({
+                    toolName: toolCall.name,
+                    wasRefused,
+                    schemaValidation,
+                    isRehearsalRun,
+                    toolMetadata,
+                    accessDecision,
+                });
+
+                if (preResolved) {
+                    toolStatus = preResolved.status;
+                    toolError = preResolved.error;
+                    toolResponsePayload = preResolved.responsePayload;
+                } else if (toolMetadata) {
                     try {
                         const result = await executeRegisteredTool({
                             ctx,
@@ -1758,25 +1642,15 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                             toolId: toolMetadata.toolId,
                             fallbackQuery: objective,
                         });
-                        // A declared connector with nothing behind it returns
-                        // normally, so without this check the run log recorded a
-                        // green tick against a call that did nothing at all.
-                        const notImplemented = isNotImplementedToolResult(result);
-                        toolStatus = notImplemented ? "NOT_IMPLEMENTED" : "SUCCESS";
-                        if (notImplemented) {
-                            toolError = "Connector is declared but has no implementation.";
-                        }
-                        toolResponsePayload = buildToolResultPayload({
-                            status: notImplemented ? "error" : "success",
-                            data: notImplemented ? undefined : result,
-                            // The model is told plainly, so it stops trying and
-                            // says so rather than reporting the job done.
-                            error: notImplemented
-                                ? `The ${toolCall.name} tool is not available on this platform. Do not retry it; tell the user this capability is not connected.`
-                                : undefined,
+                        const classified = classifyExecutedToolResult({
+                            toolName: toolCall.name,
+                            result,
                         });
+                        toolStatus = classified.status;
+                        toolError = classified.error;
+                        toolResponsePayload = classified.responsePayload;
                     } catch (error: unknown) {
-                        toolError = getErrorMessage(error);
+                        toolError = getErrorMessage(error, "Unknown Engine Exception");
                         toolResponsePayload = buildToolFailureResult(error);
                     }
                 }
@@ -1830,23 +1704,23 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 });
 
                 // Log Telemetry: Tool Dispatch, now that it has resolved.
-                //
-                // On failure the error is what gets stored, because that is what
-                // the failure key is derived from — storing the request here
-                // instead would key every failure on the arguments and group
-                // nothing with anything.
                 if (agentId) {
+                    const dispatchLog = buildToolDispatchLogEntry({
+                        toolName: toolCall.name,
+                        toolStatus,
+                        toolError,
+                        redactedArgsJson: redactedArgsString,
+                    });
                     await ctx.runMutation(internal.agentLogs.insertAgentLogInternal, {
                         agentId,
                         threadId,
-                        interactionType: `TOOL DISPATCH: ${toolCall.name}`,
+                        interactionType: dispatchLog.interactionType,
                         promptContent: objective,
-                        responseContent: toolError
-                            ?? `{"functionCall": {"name": "${toolCall.name}", "args": ${redactedArgsString}}}`,
+                        responseContent: dispatchLog.responseContent,
                         companyId,
                         runId,
                         stepId: toolStepId,
-                        outcome: toolStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
+                        outcome: dispatchLog.outcome,
                         durationMs: Date.now() - toolStartedAt,
                     });
                 }
@@ -1876,53 +1750,33 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 // by `turnIndex`, and the resume that settles the last approval
                 // assembles the whole batch into one turn in request order.
                 const parkMessage = firstApprovalMessage ?? getApprovalRequiredMessage("tool");
-                const calculatedCost = calculateModelCostGBP({
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    cachedInputTokens: cachedInTokens,
-                    config,
-                });
                 await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
                     runId,
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    costGBP: calculatedCost,
-                    modelId: modelConfig.modelId,
-                    providerKey: modelConfig.providerKey,
-                    providerModelId: modelConfig.providerModelId,
+                    ...buildRunUsagePayload({
+                        inputTokens: inTokens,
+                        outputTokens: outTokens,
+                        cachedInputTokens: cachedInTokens,
+                        rates: config,
+                        model: modelConfig,
+                    }),
                 });
                 await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
                     runId,
                     status: "PENDING_APPROVAL",
                     finalOutput: parkMessage,
                 });
-                if (stream.messageId !== undefined) {
-                    // A turn that requests a tool often narrates first. That
-                    // half-sentence is on screen marked as typing, and the run is
-                    // now parked indefinitely waiting for a human, so it has to be
-                    // closed here rather than at the end of a loop that is not
-                    // going to reach its end.
-                    await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-                        messageId: stream.messageId,
-                        content: parkMessage,
-                        inputTokens: inTokens,
-                        outputTokens: outTokens,
-                        modelUsed: modelConfig.modelId,
-                        providerKey: modelConfig.providerKey,
-                        providerModelId: modelConfig.providerModelId,
-                    });
-                    stream.messageId = undefined;
-                } else if (threadId !== undefined) {
-                    await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                        threadId,
-                        content: parkMessage,
-                        inputTokens: inTokens,
-                        outputTokens: outTokens,
-                        modelUsed: modelConfig.modelId,
-                        providerKey: modelConfig.providerKey,
-                        providerModelId: modelConfig.providerModelId,
-                    });
-                }
+                // A turn that requests a tool often narrates first. That
+                // half-sentence is on screen marked as typing, and the run is
+                // now parked indefinitely waiting for a human, so it has to be
+                // closed here rather than at the end of a loop that is not
+                // going to reach its end.
+                await finishAssistantReply(ctx, {
+                    threadId,
+                    stream,
+                    content: parkMessage,
+                    usage: { inputTokens: inTokens, outputTokens: outTokens },
+                    model: modelConfig,
+                });
 
                 // A person may take hours to decide, and a prompt cache lives for
                 // minutes. Release it now rather than paying to store a prefix that
@@ -1977,11 +1831,12 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
             outputTokens: outTokens,
         });
         
-        const calculatedCost = calculateModelCostGBP({
+        const runUsage = buildRunUsagePayload({
             inputTokens: inTokens,
             outputTokens: outTokens,
             cachedInputTokens: cachedInTokens,
-            config,
+            rates: config,
+            model: modelConfig,
         });
 
         if (params.replyNotice) {
@@ -1989,46 +1844,23 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
         }
 
         // Write response back to DB. When text was streamed the row already
-        // exists, so close it rather than inserting a duplicate reply. The final
-        // content is authoritative: a budget stop replaces whatever partial text
-        // the reader saw with the explanation of why the run ended.
-        if (stream.messageId !== undefined) {
-            await ctx.runMutation(internal.chat.finishStreamingAssistantMessage, {
-                messageId: stream.messageId,
-                content: assistantReply,
-                inputTokens: inTokens,
-                outputTokens: outTokens,
-                modelUsed: modelConfig.modelId,
-                providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId,
-                companyMemoryEvidenceJson: messageEvidence?.companyMemoryEvidenceJson,
-                companyRuntimeEvidenceJson: messageEvidence?.companyRuntimeEvidenceJson,
-                photoTurn: params.photoTurn,
-            });
-            stream.messageId = undefined;
-        } else if (threadId !== undefined) {
-            await ctx.runMutation(internal.chat.saveAssistantMessage, {
-                threadId: threadId,
-                content: assistantReply,
-                inputTokens: inTokens,
-                outputTokens: outTokens,
-                modelUsed: modelConfig.modelId,
-                providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId,
-                companyMemoryEvidenceJson: messageEvidence?.companyMemoryEvidenceJson,
-                companyRuntimeEvidenceJson: messageEvidence?.companyRuntimeEvidenceJson,
-                photoTurn: params.photoTurn,
-            });
-        }
+        // exists, so the shared delivery closes it rather than inserting a
+        // duplicate reply. The final content is authoritative: a budget stop
+        // replaces whatever partial text the reader saw with the explanation
+        // of why the run ended.
+        await finishAssistantReply(ctx, {
+            threadId,
+            stream,
+            content: assistantReply,
+            usage: { inputTokens: inTokens, outputTokens: outTokens },
+            model: modelConfig,
+            evidence: messageEvidence,
+            photoTurn: params.photoTurn,
+        });
 
         await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
             runId,
-            inputTokens: inTokens,
-            outputTokens: outTokens,
-            costGBP: calculatedCost,
-            modelId: modelConfig.modelId,
-            providerKey: modelConfig.providerKey,
-            providerModelId: modelConfig.providerModelId,
+            ...runUsage,
         });
 
         await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
@@ -2072,7 +1904,7 @@ async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 providerModelId: modelConfig.providerModelId,
                 inputTokens: inTokens,
                 outputTokens: outTokens,
-                costGBP: calculatedCost,
+                costGBP: runUsage.costGBP,
                 status: finalStepStatus,
             });
         }
@@ -2119,7 +1951,7 @@ async function runTriggeredOnAgentLoop(ctx: ActionCtx, args: {
   userId?: Id<"users">;
   rehearsal?: boolean;
 }): Promise<{ output: string; runId: Id<"agentRuns"> }> {
-  const stream = createStreamState();
+  const stream = createModelTurnStream();
   const promptCache: { name?: string } = {};
   let execution: LoopExecutionContext | undefined;
   let runId = args.runId;
@@ -2221,7 +2053,13 @@ export const runTriggeredAgentObjective = internalAction({
   },
   handler: async (ctx, args): Promise<{ output: string; runId: Id<"agentRuns"> }> => {
     let runId = args.runId;
-    const safetyDecision = evaluateAssistantSafety(args.objective);
+    // The shared safety gate (modelTurnService). No refusal sink: a triggered
+    // run has no conversation to refuse into, so the decision is recorded on
+    // the run record below instead.
+    const safetyDecision = await guardModelTurn(ctx, {
+      content: args.objective,
+      platformName: (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName,
+    });
 
     try {
       const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
@@ -2524,11 +2362,12 @@ export const runTriggeredAgentObjective = internalAction({
 
       // Always-on memories: the agent's own, and the company's — which this
       // path, like the chat path, never read.
-      const [triggeredAgentAlways, triggeredCompanyAlways] = await Promise.all([
+      const [triggeredAgentAlways, triggeredCompanyAlways, triggeredEmailBranding] = await Promise.all([
         ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: args.agentId }),
         args.companyId
           ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: args.companyId })
           : Promise.resolve([]),
+        ctx.runQuery(internal.settings.getEmailBranding, {}),
       ]);
       const triggeredAlwaysMemories = [
         ...triggeredCompanyAlways.map((memory) => ({ title: memory.title, content: memory.content })),
@@ -2540,7 +2379,12 @@ export const runTriggeredAgentObjective = internalAction({
       const modelStartedAt = Date.now();
       const response = await generateTextWithResolvedModel({
         model: modelConfig,
-        systemInstruction: buildAgentSystemInstruction(executionSystemPrompt, runtimeSkills, triggeredAlwaysMemories),
+        systemInstruction: buildAgentSystemInstruction(
+          executionSystemPrompt,
+          runtimeSkills,
+          triggeredAlwaysMemories,
+          triggeredEmailBranding.platformName
+        ),
         contents: [{ type: "text", text: objectiveContent }],
         temperature: executionTemperature,
       });
@@ -2665,7 +2509,7 @@ export const resumeApprovedToolCall = internalAction({
     approvalId: v.id("agentRunApprovals"),
   },
   handler: async (ctx, args) => {
-    const context = await ctx.runQuery(internal.agentRuns.getApprovalResumeContextInternal, {
+    const context = await ctx.runQuery(internal.agentRunApprovals.getApprovalResumeContextInternal, {
       approvalId: args.approvalId,
     });
     if (!context?.approval || !context.run || !context.toolCall) {
@@ -2708,7 +2552,7 @@ export const resumeApprovedToolCall = internalAction({
         result,
       });
     } catch (toolError: unknown) {
-      error = getErrorMessage(toolError);
+      error = getErrorMessage(toolError, "Unknown Engine Exception");
       resultPayload = buildToolFailureResult(toolError);
       finalOutput = `Approved tool call failed: ${error}`;
     }
@@ -2716,7 +2560,7 @@ export const resumeApprovedToolCall = internalAction({
     // Record the outcome and find out whether the batch is settled. A single
     // model turn can request several tools, so this run may be holding other
     // approvals that nobody has decided yet.
-    const settlement = await ctx.runMutation(internal.agentRuns.recordApprovedToolResultInternal, {
+    const settlement = await ctx.runMutation(internal.agentRunApprovals.recordApprovedToolResultInternal, {
       approvalId: args.approvalId,
       status,
       resultJson: JSON.stringify(resultPayload),
@@ -2747,13 +2591,13 @@ export const resumeAfterRefusedToolCall = internalAction({
     approvalId: v.id("agentRunApprovals"),
   },
   handler: async (ctx, args) => {
-    const context = await ctx.runQuery(internal.agentRuns.getApprovalResumeContextInternal, {
+    const context = await ctx.runQuery(internal.agentRunApprovals.getApprovalResumeContextInternal, {
       approvalId: args.approvalId,
     });
     if (!context?.approval || !context.run) return;
     if (context.approval.status !== "REJECTED") return;
 
-    const settlement = await ctx.runQuery(internal.agentRuns.getSettlementAfterDecisionInternal, {
+    const settlement = await ctx.runQuery(internal.agentRunApprovals.getSettlementAfterDecisionInternal, {
       approvalId: args.approvalId,
     });
     if (!settlement) return;

@@ -8,6 +8,7 @@ import {
   type WorkflowNodeOutput,
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
+import { isRecord } from "./utils/lang";
 
 export type HeaderConfig = {
   key?: string;
@@ -130,9 +131,6 @@ export type WorkflowScheduleDecision = {
   }>;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function isHeaderConfig(value: unknown): value is HeaderConfig {
   if (!isRecord(value)) return false;

@@ -26,6 +26,7 @@ read "GOOGLE_CLIENT_ID?Enter Google OAuth Client ID: "
 read "GOOGLE_CLIENT_SECRET?Enter Google OAuth Client Secret: "
 read "RESEND_API_KEY?Enter Resend API Key: "
 read "RESEND_FROM?Enter Resend From Email (e.g. ai@acme.com): "
+read "SUPER_ADMIN_EMAIL?Enter the client's super-admin email (first sign-in with this address becomes SUPER_ADMIN): "
 
 PROJECT_ID="sonae-prod-$CLIENT_NAME"
 CONVEX_SITE_URL="${CONVEX_URL/convex.cloud/convex.site}" 
@@ -59,15 +60,27 @@ npx convex env set CONVEX_SITE_URL "$CONVEX_SITE_URL" --prod
 npx convex env set RESEND_API_KEY "$RESEND_API_KEY" --prod
 npx convex env set RESEND_FROM_EMAIL "$RESEND_FROM" --prod
 
+# First admin. The old runbook said to edit convex/auth.ts by hand; that
+# setting no longer exists there, and following it left a deployment with no
+# reachable admin. convex/authUserProvisioning.ts promotes the first sign-in
+# from this address to SUPER_ADMIN, invite-only rules untouched.
+npx convex env set INITIAL_SUPER_ADMIN_EMAIL "$SUPER_ADMIN_EMAIL" --prod
+
 # 5. GitHub Secret Injection
 echo "\n${BOLD}${BLUE}Step 4: Configuring GitHub Secrets...${RESET}"
 ./provision-github.zsh "$PROJECT_ID" "$GCP_KEY_FILE" "$CONVEX_DEPLOY_KEY" "$CONVEX_URL" "$CONVEX_DEPLOYMENT"
+
+# 6. Coverage check. The script above sets the core keys; the backend reads
+# ~44. This names anything required that is still missing and lists which
+# optional features stay off, instead of letting them fail silently later.
+echo "\n${BOLD}${BLUE}Step 5: Verifying deployment environment coverage...${RESET}"
+(cd .. && npm run verify:deployment -- --prod)
 
 echo "\n${GREEN}${BOLD}✅ Bespoke Installation for $CLIENT_NAME initialized!${RESET}"
 echo "-----------------------------------------------"
 echo "Next Steps:"
 echo "1. ${YELLOW}GCP Console:${RESET} Manually configure OAuth Consent Screen for '$PROJECT_ID'."
 echo "2. ${YELLOW}Resend:${RESET} Ensure '$CLIENT_DOMAIN' is verified in Resend Dashboard."
-echo "3. ${YELLOW}Code:${RESET} Update SUPER_ADMIN email in 'convex/auth.ts'."
+echo "3. ${YELLOW}Sign-in:${RESET} '$SUPER_ADMIN_EMAIL' becomes SUPER_ADMIN on first sign-in (INITIAL_SUPER_ADMIN_EMAIL is already set)."
 echo "4. ${YELLOW}Deploy:${RESET} Merge 'dev' to 'main' and push."
 echo "-----------------------------------------------"

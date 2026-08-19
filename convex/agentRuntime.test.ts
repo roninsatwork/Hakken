@@ -1585,7 +1585,7 @@ describe("human-in-the-loop approval", () => {
     expect(generateMock).toHaveBeenCalledTimes(1);
 
     const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "APPROVED",
     });
@@ -1628,7 +1628,7 @@ describe("human-in-the-loop approval", () => {
     expect(parked[0].thoughtSignature).toBe("signature-knowledge_search-0");
 
     const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "APPROVED",
     });
@@ -1657,7 +1657,7 @@ describe("human-in-the-loop approval", () => {
     const { approval } = await runUntilApprovalRequested(t);
 
     const reviewer = t.withIdentity({ subject: await seedApprovalReviewer(t) });
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "REJECTED",
       decisionReason: "Customer data stays put.",
@@ -1696,7 +1696,7 @@ describe("human-in-the-loop approval", () => {
       .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "refunds" } }]))
       .mockResolvedValue(textResponse("Understood, I cannot look that up."));
 
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "REJECTED",
       decisionReason: "No.",
@@ -1724,7 +1724,7 @@ describe("human-in-the-loop approval", () => {
       .mockResolvedValueOnce(toolCallResponse([{ name: "knowledge_search", args: { query: "cancellations" } }]))
       .mockResolvedValue(textResponse("Waiting on approval."));
 
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approval!._id,
       decision: "REJECTED",
       decisionReason: "Not that one.",
@@ -1858,7 +1858,7 @@ describe("a batch of approvals", () => {
     const t = makeTest();
     const { approvals, reviewer } = await runRequestingBothTools(t, { gateTheRead: true });
 
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approvals[0]._id,
       decision: "APPROVED",
     });
@@ -1888,7 +1888,7 @@ describe("a batch of approvals", () => {
     const { approvals, reviewer } = await runRequestingBothTools(t, { gateTheRead: true });
 
     for (const approval of approvals) {
-      await reviewer.mutation(api.agentRuns.decideApproval, {
+      await reviewer.mutation(api.agentRunApprovals.decideApproval, {
         approvalId: approval._id,
         decision: "APPROVED",
       });
@@ -1920,7 +1920,7 @@ describe("a batch of approvals", () => {
 
     // Second one first.
     for (const approval of [approvals[1], approvals[0]]) {
-      await reviewer.mutation(api.agentRuns.decideApproval, {
+      await reviewer.mutation(api.agentRunApprovals.decideApproval, {
         approvalId: approval._id,
         decision: "APPROVED",
       });
@@ -1952,7 +1952,7 @@ describe("a batch of approvals", () => {
     expect(parkedCalls.filter((call) => call.status === "APPROVAL_REQUIRED")).toHaveLength(1);
     expect(parkedCalls.filter((call) => call.resultJson !== undefined)).toHaveLength(1);
 
-    await reviewer.mutation(api.agentRuns.decideApproval, {
+    await reviewer.mutation(api.agentRunApprovals.decideApproval, {
       approvalId: approvals[0]._id,
       decision: "APPROVED",
     });

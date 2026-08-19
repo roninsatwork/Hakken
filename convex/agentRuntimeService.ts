@@ -1,3 +1,12 @@
+import { calculateModelCostGBP, type ModelCostRates } from "./aiCostService";
+import { estimatePromptTokens } from "./promptCacheService";
+import {
+  buildToolFailureResult,
+  buildToolResultPayload,
+  isNotImplementedToolResult,
+  type ToolSideEffectLevel,
+} from "./aiToolExecutionService";
+
 /**
  * Default budget for a run.
  *
@@ -426,4 +435,306 @@ export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
       })),
     },
   ];
+}
+
+/**
+ * Does denying this tool call mean "ask a person", rather than "no"?
+ *
+ * `canExecuteTool` refuses for several reasons — wrong role, wrong tenant, or
+ * simply that the tool wants a human to confirm before it runs. Only the last
+ * one is an invitation: the run parks and waits for an approval instead of
+ * failing the call. The sentence is matched in full because it is the contract
+ * with `canExecuteTool`; a substring match would one day catch a differently
+ * worded hard denial and park a run nobody is coming to approve.
+ */
+export function isConfirmationRequiredDenial(reason?: string) {
+  return reason === "Tool execution requires explicit user confirmation.";
+}
+
+/**
+ * Should this tool call park the run and wait for a person?
+ *
+ * Only a call that is otherwise sound gets to ask: a refused call is answered
+ * with the standing refusal, invalid arguments are answered with the validation
+ * errors, and a rehearsal records the write instead of asking anyone. What is
+ * left is a well-formed call whose only obstacle is that the tool wants a human
+ * to confirm — the one denial that means "not yet" rather than "no".
+ */
+export function shouldRequestToolApproval(args: {
+  isRehearsalRun: boolean;
+  wasRefused: boolean;
+  schemaValidationOk: boolean;
+  accessDecision: { allowed: boolean; reason?: string };
+}) {
+  return (
+    !args.isRehearsalRun &&
+    !args.wasRefused &&
+    args.schemaValidationOk &&
+    !args.accessDecision.allowed &&
+    isConfirmationRequiredDenial(args.accessDecision.reason)
+  );
+}
+
+/**
+ * A tool outcome that was decided without running anything.
+ *
+ * `responsePayload` is what the model is told, `error` is what the run's own
+ * records say, and `status` is how the call appears on the timeline. All three
+ * are decided together so a branch cannot tell the model one thing and the
+ * operator another.
+ */
+export type ResolvedToolCallOutcome = {
+  status: "DENIED" | "FAILED" | "REHEARSED";
+  error?: string;
+  responsePayload: unknown;
+};
+
+/**
+ * Decide a tool call's outcome without executing it, where that is possible.
+ *
+ * Most of what happens to a requested tool call is decided before any tool
+ * runs: a call a person already refused is answered with that refusal, bad
+ * arguments are answered with the validation errors, a rehearsal records a
+ * write instead of performing it, a denial is a denial, and a tool the
+ * platform has never heard of cannot run at all. Returns undefined only when
+ * every one of those gates has passed — the call must actually execute, and
+ * execution is the caller's job because it has side effects.
+ *
+ * The order of the checks is part of the behaviour. A refusal wins over
+ * everything — the person's decision stands even when the arguments are also
+ * invalid — and the unknown-tool check comes last so a refused or denied call
+ * is reported as refused or denied, not as unknown.
+ */
+export function resolveToolCallWithoutExecution(args: {
+  toolName: string;
+  wasRefused: boolean;
+  schemaValidation: { ok: boolean; errors: string[] };
+  isRehearsalRun: boolean;
+  toolMetadata: { sideEffectLevel: ToolSideEffectLevel } | undefined;
+  accessDecision: { allowed: boolean; reason?: string };
+}): ResolvedToolCallOutcome | undefined {
+  if (args.wasRefused) {
+    const error = getRefusedToolCallMessage(args.toolName);
+    return {
+      status: "DENIED",
+      error,
+      responsePayload: buildToolResultPayload({ status: "error", error }),
+    };
+  }
+
+  if (!args.schemaValidation.ok) {
+    const error = args.schemaValidation.errors.join(" ");
+    return {
+      status: "FAILED",
+      error,
+      responsePayload: buildToolResultPayload({ status: "error", error }),
+    };
+  }
+
+  if (
+    args.isRehearsalRun &&
+    args.toolMetadata &&
+    args.toolMetadata.sideEffectLevel !== "READ" &&
+    (args.accessDecision.allowed || isConfirmationRequiredDenial(args.accessDecision.reason))
+  ) {
+    // Rehearsal: the write is recorded with its arguments, not performed —
+    // including writes an autonomous agent would have been allowed to make
+    // without asking. Reads execute for real; hard denials (role, tenant)
+    // still deny below.
+    return {
+      status: "REHEARSED",
+      responsePayload: buildToolResultPayload({
+        status: "success",
+        data: {
+          rehearsed: true,
+          note: "Rehearsal run: this action was recorded as would-execute and NOT performed. Continue as if it succeeded.",
+        },
+      }),
+    };
+  }
+
+  if (!args.accessDecision.allowed) {
+    return {
+      status: "DENIED",
+      error: args.accessDecision.reason,
+      responsePayload: buildToolFailureResult(new Error(args.accessDecision.reason)),
+    };
+  }
+
+  if (!args.toolMetadata) {
+    const error = "Unknown tool requested by model.";
+    return {
+      status: "FAILED",
+      error,
+      responsePayload: buildToolResultPayload({ status: "error", error }),
+    };
+  }
+
+  return undefined;
+}
+
+/**
+ * Classify what a tool that actually ran came back with.
+ *
+ * A declared connector with nothing behind it returns normally, so without the
+ * not-implemented check the run log recorded a green tick against a call that
+ * did nothing at all. The model is told plainly, so it stops trying and says so
+ * rather than reporting the job done.
+ */
+export function classifyExecutedToolResult(args: { toolName: string; result: unknown }): {
+  status: "SUCCESS" | "NOT_IMPLEMENTED";
+  error?: string;
+  responsePayload: unknown;
+} {
+  const notImplemented = isNotImplementedToolResult(args.result);
+  return {
+    status: notImplemented ? "NOT_IMPLEMENTED" : "SUCCESS",
+    error: notImplemented ? "Connector is declared but has no implementation." : undefined,
+    responsePayload: buildToolResultPayload({
+      status: notImplemented ? "error" : "success",
+      data: notImplemented ? undefined : args.result,
+      error: notImplemented
+        ? `The ${args.toolName} tool is not available on this platform. Do not retry it; tell the user this capability is not connected.`
+        : undefined,
+    }),
+  };
+}
+
+/**
+ * What the MODEL step row records for one completed model turn.
+ *
+ * The input says where in the loop the turn happened; the output is the model's
+ * own words, or — when the turn was pure tool requests with no narration — the
+ * list of calls it made, so the timeline never shows a blank step.
+ */
+export function buildModelStepRecord(args: {
+  loopIndex: number;
+  completedToolCalls: number;
+  responseText: string | undefined;
+  toolCallNames: string[];
+}) {
+  return {
+    input: JSON.stringify({ loopIndex: args.loopIndex, completedToolCalls: args.completedToolCalls }),
+    output: args.responseText || JSON.stringify({
+      functionCalls: args.toolCallNames.map((name) => ({ name })),
+    }),
+  };
+}
+
+/**
+ * The raw-log entry for a tool call that has resolved, whichever way.
+ *
+ * On failure the error is what gets stored, because that is what the failure
+ * key is derived from — storing the request instead would key every failure on
+ * the arguments and group nothing with anything. The outcome is SUCCESS only
+ * for an actual success: a rehearsed or denied call did not do the work, and
+ * the log must not say it did.
+ */
+export function buildToolDispatchLogEntry(args: {
+  toolName: string;
+  toolStatus: string;
+  toolError: string | undefined;
+  redactedArgsJson: string;
+}) {
+  return {
+    interactionType: `TOOL DISPATCH: ${args.toolName}`,
+    responseContent: args.toolError
+      ?? `{"functionCall": {"name": "${args.toolName}", "args": ${args.redactedArgsJson}}}`,
+    outcome: args.toolStatus === "SUCCESS" ? ("SUCCESS" as const) : ("FAILED" as const),
+  };
+}
+
+/**
+ * Read the fixed answer shape an agent asks for, if it asks for one.
+ *
+ * An unparseable schema is reported rather than thrown: it is a configuration
+ * mistake on a screen, and refusing to run the agent at all would be a worse
+ * answer than running it unconstrained. The caller decides what to do with
+ * `invalidJson` — today, a warning in the run's log. JSON that parses to
+ * something other than an object is simply ignored: there is nothing to warn
+ * about, it just is not a schema.
+ */
+export function parseAgentOutputSchema(stored: string | null | undefined): {
+  schema: Record<string, unknown> | undefined;
+  invalidJson: boolean;
+} {
+  if (!stored) return { schema: undefined, invalidJson: false };
+  try {
+    const parsed = JSON.parse(stored) as unknown;
+    return {
+      schema: parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : undefined,
+      invalidJson: false,
+    };
+  } catch {
+    return { schema: undefined, invalidJson: true };
+  }
+}
+
+/**
+ * How big the never-changing head of the prompt is, in estimated tokens.
+ *
+ * This is the number that decides whether an explicit provider-side cache is
+ * worth paying for: the stable turns plus the system instruction plus the tool
+ * declarations, because all three are re-sent on every turn of the run. Zero
+ * stable turns means zero — there is nothing to cache, whatever else the
+ * prompt carries.
+ */
+export function estimateStablePrefixTokens(args: {
+  turns: unknown[];
+  stablePrefixTurns: number;
+  systemInstruction: unknown;
+  providerTools: unknown;
+}) {
+  if (args.stablePrefixTurns <= 0) return 0;
+  return estimatePromptTokens(
+    JSON.stringify(args.turns.slice(0, args.stablePrefixTurns))
+      + JSON.stringify(args.systemInstruction)
+      + JSON.stringify(args.providerTools ?? []),
+  );
+}
+
+/**
+ * Is a rejected model call worth retrying without the prompt cache?
+ *
+ * Only when the cache could be the culprit — the request actually referenced
+ * one — and only while nothing has been shown to the reader. After that a
+ * retry would replay the answer from the start, which is the same rule the
+ * streaming retry policy follows.
+ */
+export function shouldRetryTurnWithoutPromptCache(args: {
+  usedPromptCache: boolean;
+  streamedChars: number;
+}) {
+  return args.usedPromptCache && args.streamedChars === 0;
+}
+
+/**
+ * Assemble the usage record a run writes about itself.
+ *
+ * Every terminal path — success, budget stop, cancellation, parking for an
+ * approval — records the same shape, and the cost figure inside it must be
+ * computed the same way each time or two screens would disagree about what one
+ * run spent. Built here once so a path cannot drift.
+ */
+export function buildRunUsagePayload(args: {
+  inputTokens: number;
+  outputTokens: number;
+  /** The share of `inputTokens` the provider served from cache, priced separately. */
+  cachedInputTokens: number;
+  rates: ModelCostRates | null | undefined;
+  model: { modelId: string; providerKey: string; providerModelId?: string };
+}) {
+  return {
+    inputTokens: args.inputTokens,
+    outputTokens: args.outputTokens,
+    costGBP: calculateModelCostGBP({
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      cachedInputTokens: args.cachedInputTokens,
+      rates: args.rates,
+    }),
+    modelId: args.model.modelId,
+    providerKey: args.model.providerKey,
+    providerModelId: args.model.providerModelId,
+  };
 }

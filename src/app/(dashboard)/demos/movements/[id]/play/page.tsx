@@ -1487,6 +1487,7 @@ export default function MatchPlayPage({ params }: { params: Promise<{ id: string
           debugRegistryRole="instructor"
           frameApplicationProofRef={isDebugGamePacketRoute ? instructorFrameApplicationProofRef : undefined}
           frameWarmupSequenceRef={isDebugGamePacketRoute ? instructorInitialFrameSequenceRef : undefined}
+          holdPoseUntilPlaying={!isDebugGamePacketRoute && !isDebugMovementInjectionRoute && !isDebugTracking}
           landmarksRef={effectiveInstructorCurrentLmRef}
           motionFrameRef={instructorMotionFrameRef}
           positionOffset={[-5, 0, 0]}

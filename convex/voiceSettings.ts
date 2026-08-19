@@ -56,7 +56,7 @@ export const setSpokenVoice = adminMutation({
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     if (!SPEECH_VOICE_KEYS.includes(args.voice as SpeechVoiceKey)) {
-      throw new Error("That voice is not one Sonae can speak with.");
+      throw new Error("That voice is not one the platform can speak with.");
     }
     const companyId = getActiveCompanyId(user);
     if (!companyId) throw new Error("No workspace to set the voice for.");

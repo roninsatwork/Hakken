@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
  * so it is in reach from both halves of the app; this check is what stops the
  * next screen drifting back off it.
  *
- * Three rules, each about a part that already exists:
+ * Four rules, each about a part that already exists:
  *
  * - A `<table>` written by hand. `TableShell` owns the shell, the overflow, the
  *   header row and cells, the loading and empty rows, and both footers.
@@ -37,6 +37,15 @@ import { fileURLToPath } from "node:url";
  *   state written as a sentence, an empty message conditioned so it never
  *   showed when the list was actually empty. Sixty-one screens are frozen here
  *   at the moment the rule was written.
+ * - A `<button>` written by hand. Added 2026-08-19, and it works by count, not
+ *   by file: 387 raw buttons existed the day `Button` (src/ui/atoms/Button.tsx)
+ *   did, each inventing its own padding and hover, so a file cannot be asked to
+ *   reach zero in one sitting. Instead every file's count is frozen and may
+ *   only fall — one more raw button than a file had is the failure. This rule
+ *   alone reads all of `src/app` and `src/ui`, because buttons live in shared
+ *   components as much as in screens; the movement demos are left out, frozen
+ *   whole by owner decision, and so is `Button` itself, which draws the one
+ *   `<button>` the rest are meant to use.
  *
  * A tick box, a file picker, a colour swatch and a slider are deliberately not
  * covered. The kit has no replacement for them, so flagging one would be a
@@ -50,6 +59,18 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = process.cwd();
 const SCAN_DIR = path.join("src", "app", "(dashboard)");
+
+/**
+ * The buttons rule reads wider than the other three: shared components under
+ * src/ui hand-draw as many buttons as the screens that use them do.
+ */
+const BUTTON_SCAN_DIRS = [path.join("src", "app"), path.join("src", "ui")];
+
+/** The movement demos are frozen whole by owner decision; Button draws the one <button> the rest should use. */
+const BUTTON_EXEMPT = [
+  path.join("src", "app", "(dashboard)", "demos") + path.sep,
+  path.join("src", "ui", "atoms", "Button.tsx"),
+];
 
 /**
  * Input types the kit has no part for, so the rule leaves them alone.
@@ -101,6 +122,16 @@ const RULES = {
       "A screen should say its columns, its rows, what its empty state says, and which\n" +
       "footer it uses. Nothing else is left to arrange.",
   },
+  buttons: {
+    part: "a raw <button>",
+    headline: "These draw more raw <button>s than their frozen count allows:",
+    fix:
+      "Use Button from src/ui/atoms/Button.tsx — pick the variant whose look the screen\n" +
+      "wants (primary, pill, quiet, ghost, accent, destructive, icon) and adjust size\n" +
+      "through className if it must. A button whose colours or behaviour genuinely match\n" +
+      "no variant may stay raw, but only inside a file's frozen count: the counts may\n" +
+      "fall, never rise.",
+  },
 };
 
 /**
@@ -143,6 +174,10 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     tables: new Set(allowlist.tables ?? []),
     inputs: new Set(allowlist.inputs ?? []),
     assembled: new Set(allowlist.assembled ?? []),
+    // Unlike the lists above this freezes a count per file, because a file
+    // with eleven raw buttons cannot be asked to reach zero in one sitting —
+    // it is only asked never to reach twelve.
+    buttons: new Map(Object.entries(allowlist.buttons ?? {})),
   };
 }
 
@@ -188,6 +223,26 @@ function readOpeningTag(text, start) {
   }
 
   return text.slice(start);
+}
+
+/** How many raw `<button>`s a file draws. `<Button` is the kit's own and does not count. */
+export function countRawButtons(text) {
+  return (text.match(/<button\b/g) ?? []).length;
+}
+
+/** Every file the buttons rule reads, already relative to the repo root. */
+function listButtonFiles() {
+  const files = [];
+  for (const dir of BUTTON_SCAN_DIRS) {
+    for (const file of listFiles(path.join(rootDir, dir))) {
+      const relative = path.relative(rootDir, file);
+      if (BUTTON_EXEMPT.some((exempt) => relative === exempt || relative.startsWith(exempt))) {
+        continue;
+      }
+      files.push(relative);
+    }
+  }
+  return files;
 }
 
 const TYPE_ATTRIBUTE = /\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|\{([^}]*)\})/;
@@ -271,6 +326,18 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
     }
   }
 
+  // The buttons rule reads wider and counts rather than lists: a file may keep
+  // the raw buttons it already had, and fails the moment it draws one more.
+  for (const relative of listButtonFiles()) {
+    const count = countRawButtons(fs.readFileSync(path.join(rootDir, relative), "utf8"));
+    if (count === 0) continue;
+
+    const ceiling = frozen.buttons.get(relative) ?? 0;
+    if (count > ceiling) {
+      offenders.push({ rule: "buttons", file: relative, count, frozen: ceiling });
+    }
+  }
+
   return offenders;
 }
 
@@ -278,7 +345,18 @@ export function findHandWrittenParts(frozen = loadFrozen()) {
 export function findStaleFreezes(frozen = loadFrozen()) {
   const stale = [];
 
-  for (const rule of Object.keys(RULES)) {
+  for (const relative of frozen.buttons.keys()) {
+    const full = path.join(rootDir, relative);
+    if (!fs.existsSync(full)) {
+      stale.push({ rule: "buttons", file: relative, reason: "no longer exists" });
+      continue;
+    }
+    if (countRawButtons(fs.readFileSync(full, "utf8")) === 0) {
+      stale.push({ rule: "buttons", file: relative, reason: "no longer hand-writes a raw <button>" });
+    }
+  }
+
+  for (const rule of ["tables", "inputs", "assembled"]) {
     for (const relative of frozen[rule]) {
       const full = path.join(rootDir, relative);
       if (!fs.existsSync(full)) {
@@ -302,9 +380,11 @@ function main() {
   const stale = findStaleFreezes(frozen);
 
   if (offenders.length === 0 && stale.length === 0) {
+    const buttonCount = [...frozen.buttons.values()].reduce((sum, count) => sum + count, 0);
     console.log(
-      `Screen kit: ${frozen.tables.size} tables, ${frozen.inputs.size} fields and ` +
-        `${frozen.assembled.size} hand-assembled tables frozen, no new ones.`
+      `Screen kit: ${frozen.tables.size} tables, ${frozen.inputs.size} fields, ` +
+        `${frozen.assembled.size} hand-assembled tables and ${buttonCount} raw buttons ` +
+        `(across ${frozen.buttons.size} files) frozen, no new ones.`
     );
     return;
   }
@@ -315,7 +395,11 @@ function main() {
 
     console.error(`\n${RULES[rule].headline}\n`);
     for (const offender of forRule) {
-      console.error(`  ${offender.file}:${offender.line}`);
+      if (offender.count !== undefined) {
+        console.error(`  ${offender.file} — ${offender.count} raw <button>s, frozen at ${offender.frozen}`);
+      } else {
+        console.error(`  ${offender.file}:${offender.line}`);
+      }
     }
     console.error(`\n${RULES[rule].fix}`);
     process.exitCode = 1;

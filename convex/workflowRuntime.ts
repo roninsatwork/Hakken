@@ -115,7 +115,7 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
     globalStatePayload: args.globalStatePayload,
     defaultFromAddress: buildEmailFromAddress({
       envFromAddress: resolveEnvFromAddress(process.env),
-      fallbackName: "Sonae Automations",
+      fallbackName: `${emailBranding.platformName} Automations`,
       settings: emailBranding,
     }),
   });

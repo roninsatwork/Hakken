@@ -95,11 +95,11 @@ The platform ingests multimodal documents and processes them into conversational
 
 - **Host Env:** Deploys natively to **Google Cloud Run**.
 - **Branching Protocol:** All active development/tickets are strictly executed on the `dev` branch as a safe workspace. The `main` branch is explicitly reserved for production. Merging `dev` into `main` is what triggers the automated rollout.
-- **CI/CD Pipeline Sequence:** Governed strictly via **GitHub Actions** (`.github/workflows/deploy.yml`).
-  1. **Testing Firewall:** The `test` job boots `vitest` to verify component integrity.
-  2. **Deployment Block:** The `deploy` job is gated by `needs: test`. If any test fails, deployment halts immediately to protect production.
-  3. **Convex Synchrony:** Executes `npx convex deploy` to push the database schema concurrently with the Github Actions flow.
-  4. **Container Build:** Compiles the Next.js app via Docker and pushes directly to Cloud Run.
+- **CI/CD Pipeline Sequence:** Governed via **GitHub Actions**, split across two workflows.
+  1. **CI (`.github/workflows/ci.yml`):** On every push to `dev` and every PR into `dev` or `main`, the `quick-checks` job runs lint, typecheck, and the unit tests, and the `browser-smoke` job runs a four-spec browser subset. PRs into `main` additionally run the `full-gate` job: the complete browser-test suite plus coverage.
+  2. **Deploy (`.github/workflows/deploy.yml`):** A push to `main` runs a single `deploy` job whose early steps are the production firewall — `npm audit --omit=dev --audit-level=high`, `npm run check:guards`, `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run coverage:check`, `npm run build`. Any failure halts the job before anything ships.
+  3. **Convex Synchrony:** The same job then executes `npx convex deploy` to push the database schema.
+  4. **Container Build:** Finally it compiles the Next.js app via Docker and pushes directly to Cloud Run.
 
 > [!IMPORTANT]
 > **GitHub Secrets Matrix:** The automated deployment requires `CONVEX_DEPLOY_KEY` configured within the GitHub Account's "Actions Secrets" interface. Failure to supply this will result in a hard pipeline crash during the Convex synchrony step.

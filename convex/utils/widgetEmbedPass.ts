@@ -25,6 +25,8 @@
  * `WIDGET_THREADS_PER_HOUR` caps how fast threads can be minted at all.
  */
 
+import { constantTimeEqual } from "./security";
+
 const HOUR_MS = 60 * 60 * 1000;
 
 /** A pass outlives any plausible visit: threads are created lazily, sometimes
@@ -74,14 +76,6 @@ async function signPayload(secret: string, payload: string): Promise<string> {
   return toBase64Url(new Uint8Array(signature));
 }
 
-function constantTimeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
-}
 
 export async function mintWidgetEmbedPass(args: {
   widgetId: string;

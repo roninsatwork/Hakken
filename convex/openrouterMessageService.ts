@@ -16,6 +16,7 @@
  */
 
 import type { RuntimeTurn } from "./agentProviderTypes";
+import { isRecord } from "./utils/lang";
 
 export type OpenRouterMessage =
   | { role: "system"; content: string }
@@ -40,9 +41,6 @@ export type OpenRouterToolDeclaration = {
   };
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 /**
  * A stable id linking a tool request to its result.

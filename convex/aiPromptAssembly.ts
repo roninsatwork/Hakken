@@ -1,7 +1,20 @@
 import type { Doc } from "./_generated/dataModel";
 
-export const FALLBACK_ASSISTANT_SYSTEM_PROMPT =
-  "You are Sonae Assistant. You are a highly intelligent, premium AI embedded in the Sonae productivity dashboard.\nYou are concise, highly analytical, and maintain a starkly elegant tone. Do NOT use emojis.\nNever hallucinate system capabilities you do not have. Answer formatting should use markdown for readability.";
+import { resolvePlatformName } from "./settingsService";
+
+/**
+ * The assistant's identity when no global system prompt is configured.
+ *
+ * Named after the deployment, not the builder: a platform renamed in Settings
+ * must introduce itself by that name. The zero-argument form keeps the
+ * shipped default for anything that has no settings to hand.
+ */
+export function buildFallbackAssistantSystemPrompt(platformName?: string) {
+  const name = resolvePlatformName(platformName);
+  return `You are ${name} Assistant. You are a highly intelligent, premium AI embedded in the ${name} productivity dashboard.\nYou are concise, highly analytical, and maintain a starkly elegant tone. Do NOT use emojis.\nNever hallucinate system capabilities you do not have. Answer formatting should use markdown for readability.`;
+}
+
+export const FALLBACK_ASSISTANT_SYSTEM_PROMPT = buildFallbackAssistantSystemPrompt();
 
 type AssistantRule = Pick<Doc<"aiRules">, "priority" | "trigger" | "instruction">;
 type ConversationMessage = Pick<Doc<"messages">, "role" | "content">;
@@ -48,11 +61,17 @@ export function buildAssistantSystemInstruction(args: {
    * — not untrusted retrieved data.
    */
   companyMemories?: Array<{ title: string; content: string }>;
+  /**
+   * The deployment's configured name (systemSettings.platformName). Only the
+   * fallback identity uses it — a configured global prompt already says who
+   * the assistant is. Omitted, the shipped default applies.
+   */
+  platformName?: string;
 }) {
   const configuredPlatformPrompt =
     args.globalSystemPrompt && args.globalSystemPrompt.trim().length > 0
       ? args.globalSystemPrompt
-      : FALLBACK_ASSISTANT_SYSTEM_PROMPT;
+      : buildFallbackAssistantSystemPrompt(args.platformName);
 
   let instruction = `${ASK_SONAE_PLATFORM_SAFETY_CONTRACT}
 
@@ -113,12 +132,14 @@ export function buildAgentSystemInstruction(
    * — which is every normal widget — ignored everything a company had been
    * given. Same fault, same place, as the company skills fix.
    */
-  alwaysMemories: Array<{ title: string; content: string }> = []
+  alwaysMemories: Array<{ title: string; content: string }> = [],
+  /** The deployment's configured name; only the fallback identity uses it. */
+  platformName?: string
 ) {
   const configuredAgentPrompt =
     agentSystemPrompt && agentSystemPrompt.trim().length > 0
       ? agentSystemPrompt
-      : "You are an autonomous Sonae Agent. Use available tools to fulfill user requests.";
+      : `You are an autonomous ${resolvePlatformName(platformName)} Agent. Use available tools to fulfill user requests.`;
 
   let instruction = `${ASK_SONAE_PLATFORM_SAFETY_CONTRACT}
 

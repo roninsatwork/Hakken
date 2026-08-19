@@ -6,6 +6,7 @@ import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
 import { renderEmail } from "./emailLayoutService";
 import { sendResendEmail } from "./resendEmailService";
+import { getPlatformName } from "./settings";
 import { adminAction, adminMutation, adminQuery, publicQuery, superAdminMutation } from "./tenantFunctions";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -54,10 +55,13 @@ export const getActiveTemplate = publicQuery({
       // page offers a one-time code, an emailed link, and Google, and the old
       // wording sent everyone looking for Google credentials to "synchronize".
       // Voice matches the invite sample in src/app/api/email-preview.
+      // Named after the deployment, not the shipped default: the invite is the
+      // first thing a customer's staff ever read from this platform.
+      const platformName = await getPlatformName(ctx);
       return {
-        subject: "You have been invited to Sonae Workspace",
+        subject: `You have been invited to ${platformName} Workspace`,
         headline: "Welcome to the Team",
-        body: "You have been added to the Sonae workspace. Use the button below and sign in with this email address — it will pick you up automatically, and there is no password to set.",
+        body: `You have been added to the ${platformName} workspace. Use the button below and sign in with this email address — it will pick you up automatically, and there is no password to set.`,
         ctaText: "Accept Invitation",
       };
     }
@@ -352,7 +356,7 @@ export const dispatchInviteEmail = adminAction({
     try {
       const fromAddress = buildEmailFromAddress({
         envFromAddress: process.env.RESEND_FROM_EMAIL,
-        fallbackName: "Sonae Team",
+        fallbackName: `${emailBranding.platformName} Team`,
         settings: storedEmailBranding,
       });
 

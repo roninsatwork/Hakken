@@ -5,6 +5,7 @@ import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { buildSignatureHeaders } from "./webhookSignatureService";
+import { getErrorMessage } from "./utils/lang";
 
 const WEBHOOK_DELIVERY_RESPONSE_READ_LIMIT = 2000;
 const WEBHOOK_DELIVERY_RETRY_BASE_MS = 60_000;
@@ -24,9 +25,6 @@ type DispatchResult = {
   nextAttemptAt?: number;
 };
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
 
 function getRetryDelayMs(attemptNumber: number) {
   const exponential = WEBHOOK_DELIVERY_RETRY_BASE_MS * 2 ** Math.max(attemptNumber - 1, 0);

@@ -25,7 +25,7 @@ export const routeAgentIntent = tenantAction({
         }
 
         // Build the routing context
-        let contextBlock = "Available Sonae Agents:\n\n";
+        let contextBlock = "Available Agents:\n\n";
         agents.forEach((agent: Doc<"agents">) => {
             contextBlock += `[ID: ${agent._id}]\nName: ${agent.name}\nDescription: ${agent.description || 'No description provided'}\nSystem Rules: ${agent.systemPrompt || 'None'}\n\n`;
         });
@@ -50,7 +50,7 @@ export const routeAgentIntent = tenantAction({
         };
 
         const routingPrompt = `
-You are the Sonae Intent Router. Your job is to read a user's prompt and determine if one of the custom specialized Agents should handle it instead of the global assistant.
+You are the platform's Intent Router. Your job is to read a user's prompt and determine if one of the custom specialized Agents should handle it instead of the global assistant.
 
 ${contextBlock}
 

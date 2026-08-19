@@ -2,35 +2,31 @@ import { internalMutation } from "./_generated/server";
 
 /**
  * seedSuperAdmins
- * Manually inserts or updates the critical Super Admin accounts.
- * This bypasses the "invite-only" restriction by pre-populating the users table.
+ * Inserts or promotes the builder's Super Admin accounts, bypassing the
+ * invite-only restriction by pre-populating the users table.
+ *
+ * Deliberate, owner decision 2026-08-19 (maintenance plan, phase 2): Anthony
+ * keeps SUPER_ADMIN on deployments he operates. This file is the recorded
+ * exemption in no-client-specific-fallbacks.test.ts — the emails live here
+ * and nowhere else. A client's own first admin comes from
+ * INITIAL_SUPER_ADMIN_EMAIL (see authUserProvisioning.ts), not from here.
  */
 export const seedSuperAdmins = internalMutation({
   args: {},
   handler: async (ctx) => {
     const now = Date.now();
-    
-    // Attempt to find the ACME Inc company created by the migration
-    const acme = await ctx.db
-      .query("companies")
-      .withIndex("by_name", (q) => q.eq("name", "ACME Inc"))
-      .first();
-    
-    const companyId = acme?._id;
 
     const usersToSeed = [
       {
         email: "anthony@ronins.co.uk",
         name: "Anthony",
         role: "SUPER_ADMIN" as const,
-        companyId,
         createdAt: now,
       },
       {
         email: "allessandro.merola@ronins.co.uk",
         name: "Alessandro",
         role: "SUPER_ADMIN" as const,
-        companyId,
         createdAt: now,
       },
     ];
@@ -43,25 +39,22 @@ export const seedSuperAdmins = internalMutation({
         .query("users")
         .withIndex("email", (q) => q.eq("email", u.email))
         .first();
-      
+
       if (existing) {
-        // If the user already exists (e.g. from a failed login attempt), update their role
-        await ctx.db.patch(existing._id, { 
-            role: "SUPER_ADMIN", 
-            companyId: companyId || existing.companyId 
-        });
+        // Already present (e.g. from a failed login attempt): promote, and
+        // leave whatever company they already belong to alone.
+        await ctx.db.patch(existing._id, { role: "SUPER_ADMIN" });
         updatedCount++;
       } else {
-        // Create the user from scratch
+        // Super admins are platform-scoped; no company membership needed.
         await ctx.db.insert("users", u);
         seededCount++;
       }
     }
 
     return {
-        status: "SUCCESS",
-        message: `Seeded ${seededCount} new users and promoted ${updatedCount} existing users to SUPER_ADMIN.`,
-        company: acme?.name || "None"
+      status: "SUCCESS",
+      message: `Seeded ${seededCount} new users and promoted ${updatedCount} existing users to SUPER_ADMIN.`,
     };
   },
 });

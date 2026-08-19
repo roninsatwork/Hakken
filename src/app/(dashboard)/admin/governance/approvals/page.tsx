@@ -47,7 +47,7 @@ function sideEffectToneClass(level?: string) {
 
 export default function AgentApprovalsPage() {
   const t = useTranslations("admin.agents.approvals");
-  const decideApproval = useMutation(api.agentRuns.decideApproval);
+  const decideApproval = useMutation(api.agentRunApprovals.decideApproval);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedId, setExpandedId] = useState<Id<"agentRunApprovals"> | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
@@ -57,14 +57,14 @@ export default function AgentApprovalsPage() {
   } | null>(null);
 
   const paged = useServerPagedTable(
-    api.agentRuns.getPendingApprovals,
+    api.agentRunApprovals.getPendingApprovals,
     { searchTerm: searchTerm.trim() || undefined },
     TABLE_PAGE_SIZE,
   );
   const approvals = paged.rows;
   // The total, not the loaded count. The header used to read `approvals.length`,
   // which silently under-reported as soon as there were more than one page.
-  const pendingCount = useQuery(api.agentRuns.getPendingApprovalCount, {});
+  const pendingCount = useQuery(api.agentRunApprovals.getPendingApprovalCount, {});
   const action = useAdminAction({ scope: "admin-agent-approvals" });
 
   const isLoading = paged.isLoading;

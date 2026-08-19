@@ -1287,36 +1287,50 @@ that is the recurring per-product cost.
 Extract the repeated list/detail/form patterns into data-driven components. Target
 the top 5 offenders first.
 
-### P4.3 — Template branch — DONE 2026-07-25
+### P4.3 — Template branch — rebuilt 2026-08-19 (fences only)
 
-`npm run template:build -- --out <dir>` writes the platform template: the repo
-with `properties`, `salesReports`, `arcade` and `movement` removed. 2,428 files
-kept, 615 dropped.
+**What exists today.** `npm run template:build -- --keep <verticals> --out
+<dir>` (`scripts/strip-verticals.mjs`) copies the repo into a fresh directory
+with the fenced blocks of every vertical not kept removed. `npm run
+check:fences` (the same script's `--check` mode, wired into `check:guards`)
+fails the build on any unbalanced fence or unregistered vertical name, so the
+markers can no longer rot in silence. The vertical names are read from
+`COMPANY_MODULES` in `convex/utils/companyModules.ts`, plus the moduleless
+demos `movement` and `arcade`. `scripts/strip-verticals.test.mjs` covers the
+stripping and the validation against probe repos in a temp directory.
 
-**Generated, not tagged by hand.** A `template/main` cut by deleting folders and
-committing answers the question once. Six months on, nobody can say what the
-template is missing or how to refresh it, so it is refreshed by redoing the same
-deletions from memory. Generating it from `template.manifest.json` makes the
-split a reviewable list of paths and table names, makes it testable in the normal
-suite, and makes refreshing it one command — so it can happen every release.
+**What no longer exists.** The original build described below —
+`template.manifest.json`, `scripts/build-template.mjs`,
+`src/template-boundary.test.ts` — was DONE on 2026-07-25 and then removed
+whole on 2026-08-09 (`a7199b8f`, see the public-website plan: the repo is now
+cloned whole, not generated). Between those dates and 2026-08-19 the fence
+markers had no executor at all. The manifest and its file-level removal have
+not been rebuilt: today's stripper removes fenced blocks only, so a stripped
+vertical's own files stay in the tree and the output does not typecheck until
+they are deleted by hand — the build prints exactly that warning.
 
-**Two removal mechanisms.** Whole files cover almost everything, and cannot
-half-work. Fence markers — `template:remove:start <vertical>` …
-`template:remove:end` — cover the seven shared files a vertical unavoidably
-touches: the schema, the HTTP router, the workflow engine, the sidebar, and three
-test files. A marker sits where the code is, so it is visible to whoever edits
-that code next, and the boundary test checks every marker is balanced and names a
-declared vertical. `package.json` takes neither: 12 dependencies and 104 scripts
-go by name.
+**History — the 2026-07-25 build, for the record.** `npm run template:build --
+--out <dir>` wrote the repo with `properties`, `salesReports`, `arcade` and
+`movement` removed: 2,428 files kept, 615 dropped by manifest, fences covering
+the seven shared files a vertical unavoidably touches. That build typechecked
+clean, passed 1,223 tests across 219 files, linted with 0 errors, and built —
+130 routes against the product's 150.
 
-**Verified by building it and running its own gate**, which is the only check
-that means anything here: the generated template typechecks clean, passes 1,223
-tests across 219 files, lints with 0 errors (89 warnings, down from 103), and
-builds — 130 routes against the product's 150, and 5.4MB of static output against
-12MB, the difference being three.js and MediaPipe leaving with the demo.
+**Fence-coverage gaps found by the 2026-08-19 rebuild**, by building with
+`--keep base` and typechecking the output:
 
-**Four couplings only the build could find**, each a platform file quietly
-depending on a vertical:
+1. `convex/schema.ts` — the `salesData` fence (≈ lines 3127–4225) wrongly
+   swallows all eight `wiki*` tables (base module), so stripping salesData
+   breaks 24 wiki files.
+2. `src/ui/components/layout/SidebarNavigation.tsx` — the `CORE_MODULES`
+   import sits inside the `salesData` fence but is used outside any fence.
+3. Unfenced platform files reference fenced tables: `convex/webhooks.ts`
+   queries `apifyRuns` (inside the `properties` fence); `convex/knowledge.ts`,
+   `companyMemories.ts`, `memoryMigration.ts`, `messageEvidence.ts` and
+   `telephony.ts` also break.
+
+**Four couplings only the 2026-07-25 build could find**, each a platform file
+quietly depending on a vertical:
 
 1. `convex/workflowEngine.ts` allowlisted `properties`, `arcadeScores` and
    `salesReports` as workflow-queryable tables, and had a whole `case
@@ -1331,19 +1345,15 @@ depending on a vertical:
    on the one difference that is the point of the exercise, so the build drops the
    file and the template's first test run records its own.
 
-**The template ships the machinery with an empty manifest.** It keeps the build
-script and the boundary test, but declares no verticals — it has none. The guard
-reads green from day one and starts working the moment the new product grows
-something that will not belong in the next template.
+**The template shipped the machinery with an empty manifest.** It kept the
+build script and the boundary test, but declared no verticals — it had none.
 
-**Deliberately not done: the script does not touch git.** It writes a directory
-and prints the `git init`/`tag` commands. Force-pushing a shared `template/main`
-is not something a build script should be able to do by accident.
+**Deliberately not done then, still true now: the script does not touch git.**
+It writes a directory. Force-pushing a shared `template/main` is not something
+a build script should be able to do by accident.
 
-**Also not done: `convex codegen` is not run.** It contacts the Convex API for
-deployment details, which a fresh template directory has none of. The generated
-API index is pruned directly instead — two mechanical lines per module — and the
-operator's first `npx convex dev` confirms it matches.
+**Also not done then: `convex codegen` was not run.** It contacts the Convex
+API for deployment details, which a fresh template directory has none of.
 
 **Superseded 2026-08-10:** the navigation profiles that named `properties` and
 `arcade` in their `hide` lists were deleted with the white-label feature.

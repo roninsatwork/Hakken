@@ -136,6 +136,35 @@ async function seed() {
   return { t, client: t.withIdentity({ subject: userId }) };
 }
 
+describe("who may clear", () => {
+  /**
+   * Both resets are admin-only (maintenance plan M1.2). They used to accept
+   * any signed-in member, which meant anyone reading the customer list was
+   * one confirm away from deleting the workspace's entire sales dataset.
+   */
+  test("an ordinary member is refused, an admin is not", async () => {
+    const { t, client } = await seed();
+
+    const memberId = await t.run(async (ctx) => {
+      const company = await ctx.db.query("companies").first();
+      return await ctx.db.insert("users", {
+        email: "member@test.com",
+        role: "USER",
+        companyId: company!._id,
+      });
+    });
+    const member = t.withIdentity({ subject: memberId });
+
+    await expect(member.action(api.salesDataReset.resetSalesData, {})).rejects.toThrow();
+    await expect(member.action(api.salesDataReset.clearAllSalesData, {})).rejects.toThrow();
+
+    // The admin path still works — the guard tightened, the feature didn't break.
+    await expect(client.action(api.salesDataReset.resetSalesData, {})).resolves.toMatchObject({
+      deleted: expect.any(Number),
+    });
+  });
+});
+
 describe("clearing the workspace", () => {
   test("takes the researched details and prospects a re-import would have kept", async () => {
     const { t, client } = await seed();

@@ -33,7 +33,6 @@
   ],
   "exclude": [
     "node_modules",
-    "adk-python",
     "playwright-report",
     "convex/_generated"
   ]

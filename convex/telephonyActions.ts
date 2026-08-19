@@ -27,8 +27,11 @@ export const runAfterCallStep = internalAction({
     // is the whole of what happened.
     if (call.turns.length === 0) return;
 
+    // The transcript lands in a staff-visible task, so our side of the call
+    // is named as the deployment's configured platform.
+    const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
     const transcript = call.turns
-      .map((turn) => `${turn.role === "CALLER" ? "Caller" : "Sonae"}: ${turn.text}`)
+      .map((turn) => `${turn.role === "CALLER" ? "Caller" : platformName}: ${turn.text}`)
       .join("\n");
 
     // One model call, on the cheap fast tier — a call summary is two

@@ -113,7 +113,7 @@ export const executeSwarmObjective = internalAction({
                    const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
                    if (chunk) ragContext += chunk.text + "\\n\\n";
                  }
-                 memoryPayload += `\\n[INTERNAL SONAE KNOWLEDGE CONTEXT]:\\n${ragContext}\\n\\n`;
+                 memoryPayload += `\\n[INTERNAL PLATFORM KNOWLEDGE CONTEXT]:\\n${ragContext}\\n\\n`;
                }
            }
 

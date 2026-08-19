@@ -13,6 +13,7 @@
  * the model answering as though a tool returned nothing, or being handed a
  * result for a call it never made.
  */
+import { isRecord } from "./utils/lang";
 
 export type AnthropicTextBlock = { type: "text"; text: string; cache_control?: CacheControl };
 export type AnthropicToolUseBlock = {
@@ -57,9 +58,6 @@ export type RuntimeTurn = {
   }>;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 /**
  * A stable id linking a tool request to its result.

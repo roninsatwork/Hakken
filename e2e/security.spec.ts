@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { gotoWithoutServerCrash } from './helpers/navigation';
 
-test.describe('OWASP: Security & Routing Protections', () => {
+test.describe('OWASP: Security & Routing Protections @smoke', () => {
 
   test('Unauthenticated users are redirected from Admin interfaces to Login', async ({ page }) => {
     await gotoWithoutServerCrash(page, '/admin/agents');

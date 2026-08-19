@@ -26,6 +26,15 @@ const repoRoot = process.cwd();
 /** Domains owned by the platform's authors, not by its deployments. */
 const BUILDER_DOMAINS = ["ronins.co.uk"];
 
+/**
+ * Builder-chosen names that must not be hardcoded into customer-visible
+ * strings. `systemSettings.platformName` is configurable, so every email,
+ * AI prompt, refusal, and end-user error should resolve the name through
+ * `resolvePlatformName` / `getEmailBranding` rather than baking in the
+ * shipped default.
+ */
+const BUILDER_STRINGS = ["Sonae"];
+
 const SEARCH_ROOTS = ["src", "convex", "scripts", "messages", "public"];
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mjs", ".js", ".json"]);
 
@@ -34,6 +43,129 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mjs", ".js", ".json"]);
  * a request path.
  */
 const ALLOWED_FILES = new Set(["convex/seedUsers.ts"]);
+
+/**
+ * Where "Sonae" may still appear inside a string literal in convex/, and how
+ * many times. SHRINK-ONLY: entries exist for the deliberate sites below and
+ * for nothing else — remove or reduce them as sites are converted, never add
+ * or raise one without the same review the site itself had.
+ *
+ * The deliberate sites, and why they stay:
+ * - settingsService.ts: `DEFAULT_SETTINGS.platformName` — the single source of
+ *   the shipped default every fallback resolves through.
+ * - emailLayoutService.ts: the shared email shell's own fallback default
+ *   (same value, kept local so the shell stays dependency-light).
+ * - gmailWatcher.ts: `PROCESSED_LABEL_NAME` — the default Gmail label; the
+ *   label actually written is the configured platform name.
+ * - webhookSignatureService.ts / webhookDeliveryActions.ts: outbound header
+ *   names and User-Agent — wire protocol existing consumers parse; renaming
+ *   them breaks every receiver in production.
+ * - localDemoSeed.ts / memoryMigration.ts: operator-run seed and one-time
+ *   migration, not on any request path.
+ *
+ * Scope is convex/ (the backend builders); src/ still resolves branding via
+ * `useSystemSettings` and its residual literals are a follow-up phase.
+ */
+const ALLOWED_BUILDER_STRING_COUNTS: Record<string, number> = {
+  "convex/emailLayoutService.ts": 2,
+  "convex/gmailWatcher.ts": 1,
+  "convex/localDemoSeed.ts": 2,
+  "convex/memoryMigration.ts": 1,
+  "convex/settingsService.ts": 1,
+  "convex/webhookDeliveryActions.ts": 1,
+  "convex/webhookSignatureService.ts": 2,
+};
+
+/**
+ * The text of every string literal in a TS/JS source, comments and regex
+ * literals excluded. A small state machine rather than a parser dependency:
+ * it understands line and block comments, single/double/backtick strings with
+ * escapes, `${}` interpolation (the literal parts count, the expressions are
+ * re-scanned as code), and regex literals (via the standard
+ * operator-precedes-regex heuristic) so an escaper like `/"/g` cannot flip
+ * the string state.
+ */
+function extractStringLiteralText(source: string): string[] {
+  const collected: string[] = [];
+  let state:
+    | "code"
+    | "line"
+    | "block"
+    | "single"
+    | "double"
+    | "template"
+    | "regex"
+    | "regexClass" = "code";
+  let current = "";
+  const templateDepth: number[] = [];
+  let lastCodeChar = "";
+
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    const next = source[i + 1];
+
+    if (state === "code") {
+      if (ch === "/" && next === "/") { state = "line"; i++; continue; }
+      if (ch === "/" && next === "*") { state = "block"; i++; continue; }
+      if (ch === "/") {
+        if (lastCodeChar === "" || "([{,;:=!&|?+-*%<>~^".includes(lastCodeChar)) {
+          state = "regex";
+        } else {
+          lastCodeChar = ch;
+        }
+        continue;
+      }
+      if (ch === "'") { state = "single"; current = ""; continue; }
+      if (ch === '"') { state = "double"; current = ""; continue; }
+      if (ch === "`") { state = "template"; current = ""; templateDepth.push(0); continue; }
+      if (ch === "}" && templateDepth.length > 0) {
+        if (templateDepth[templateDepth.length - 1] === 0) {
+          state = "template";
+          current = "";
+        } else {
+          templateDepth[templateDepth.length - 1]--;
+          lastCodeChar = ch;
+        }
+        continue;
+      }
+      if (ch === "{" && templateDepth.length > 0) {
+        templateDepth[templateDepth.length - 1]++;
+        lastCodeChar = ch;
+        continue;
+      }
+      if (!/\s/.test(ch)) lastCodeChar = ch;
+      continue;
+    }
+    if (state === "line") { if (ch === "\n") state = "code"; continue; }
+    if (state === "block") { if (ch === "*" && next === "/") { state = "code"; i++; } continue; }
+    if (state === "regex") {
+      if (ch === "\\") { i++; continue; }
+      if (ch === "[") { state = "regexClass"; continue; }
+      if (ch === "/" || ch === "\n") { state = "code"; lastCodeChar = "x"; }
+      continue;
+    }
+    if (state === "regexClass") {
+      if (ch === "\\") { i++; continue; }
+      if (ch === "]") state = "regex";
+      continue;
+    }
+    if (ch === "\\") { current += ch + (next ?? ""); i++; continue; }
+    if (state === "single") {
+      if (ch === "'") { collected.push(current); state = "code"; lastCodeChar = "x"; } else current += ch;
+      continue;
+    }
+    if (state === "double") {
+      if (ch === '"') { collected.push(current); state = "code"; lastCodeChar = "x"; } else current += ch;
+      continue;
+    }
+    // template
+    if (ch === "`") { collected.push(current); state = "code"; lastCodeChar = "x"; templateDepth.pop(); continue; }
+    if (ch === "$" && next === "{") { collected.push(current); current = ""; state = "code"; lastCodeChar = "{"; i++; continue; }
+    current += ch;
+  }
+
+  return collected;
+}
 
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
@@ -82,6 +214,48 @@ describe("no client-specific fallbacks", () => {
         "deployment fail visibly rather than fall back to a real address.",
         "",
         ...violations,
+      ].join("\n"),
+    ).toEqual([]);
+  });
+
+  test("builder names appear in backend strings only at the reviewed sites", () => {
+    const failures: string[] = [];
+
+    for (const filePath of walk(path.join(repoRoot, "convex"))) {
+      const relativePath = toRepoRelative(filePath);
+      if (/\.test\.(ts|tsx)$/.test(relativePath)) continue;
+      if (![".ts", ".tsx", ".mjs", ".js"].includes(path.extname(relativePath))) continue;
+
+      const strings = extractStringLiteralText(fs.readFileSync(filePath, "utf8"));
+      let count = 0;
+      for (const literal of strings) {
+        for (const name of BUILDER_STRINGS) {
+          count += literal.split(name).length - 1;
+        }
+      }
+
+      const allowed = ALLOWED_BUILDER_STRING_COUNTS[relativePath] ?? 0;
+      if (count > allowed) {
+        failures.push(
+          `${relativePath} has ${count} builder-name string(s), allowance is ${allowed}. ` +
+            `Customer-visible copy must resolve the platform name from settings ` +
+            `(resolvePlatformName / internal.settings.getEmailBranding), not hardcode the shipped default.`,
+        );
+      } else if (count < allowed) {
+        failures.push(
+          `${relativePath} has ${count} builder-name string(s) but the allowance says ${allowed}. ` +
+            `The allowlist is shrink-only: lower this file's entry in ALLOWED_BUILDER_STRING_COUNTS so it cannot grow back.`,
+        );
+      }
+    }
+
+    expect(
+      failures,
+      [
+        "The platform name is configurable (systemSettings.platformName); a hardcoded builder name",
+        "in a backend string ships the wrong identity to every deployment made from this repo.",
+        "",
+        ...failures,
       ].join("\n"),
     ).toEqual([]);
   });

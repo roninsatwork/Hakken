@@ -18,7 +18,7 @@ vi.mock("convex/react", () => ({
 
 vi.mock("@/convex/_generated/api", () => ({
   api: {
-    agentRuns: { getPendingApprovalCount: "agentRuns:getPendingApprovalCount" },
+    agentRunApprovals: { getPendingApprovalCount: "agentRunApprovals:getPendingApprovalCount" },
     scheduler: { getPendingWorkflowApprovalCount: "scheduler:getPendingWorkflowApprovalCount" },
     companies: {
       getCompanyById: "companies:getCompanyById",
@@ -193,7 +193,7 @@ describe("SidebarNavigation AI guardrails", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/governance");
     useQueryMock.mockImplementation((queryRef: unknown) => {
       if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
-      if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 3, atLimit: false };
+      if (queryRef === "agentRunApprovals:getPendingApprovalCount") return { count: 3, atLimit: false };
       return undefined;
     });
 
@@ -209,7 +209,7 @@ describe("SidebarNavigation AI guardrails", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/governance");
     useQueryMock.mockImplementation((queryRef: unknown) => {
       if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
-      if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 0, atLimit: false };
+      if (queryRef === "agentRunApprovals:getPendingApprovalCount") return { count: 0, atLimit: false };
       return undefined;
     });
 
@@ -224,7 +224,7 @@ describe("SidebarNavigation AI guardrails", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/governance");
     useQueryMock.mockImplementation((queryRef: unknown) => {
       if (queryRef === "users:getMe") return { role: "SUPER_ADMIN" };
-      if (queryRef === "agentRuns:getPendingApprovalCount") return { count: 99, atLimit: true };
+      if (queryRef === "agentRunApprovals:getPendingApprovalCount") return { count: 99, atLimit: true };
       return undefined;
     });
 
@@ -245,7 +245,7 @@ describe("SidebarNavigation AI guardrails", () => {
 
     // The query is super-admin only. Asking anyway would throw on every admin
     // page load for a company admin.
-    const countCalls = useQueryMock.mock.calls.filter(([ref]) => ref === "agentRuns:getPendingApprovalCount");
+    const countCalls = useQueryMock.mock.calls.filter(([ref]) => ref === "agentRunApprovals:getPendingApprovalCount");
     expect(countCalls.every(([, args]) => args === "skip")).toBe(true);
     expect(screen.queryByRole("link", { name: /Approvals/ })).not.toBeInTheDocument();
   });

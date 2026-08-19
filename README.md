@@ -99,7 +99,7 @@ Future coding agents should read [AGENTS.md](./AGENTS.md) first. `GEMINI.md` is 
 
 ## 📜 Scripts
 
-`npm run help` lists the platform scripts, grouped. `npm run` shows all 132, of which 101 belong to the movement demo and are prefixed `movement:`.
+`npm run help` lists the platform scripts, grouped. `npm run` shows all 145, of which 101 belong to the movement demo and are prefixed `movement:`.
 
 - `npm run dev`: Starts the Next.js development server.
 - `npm run convex:dev`: Starts the Convex development environment.

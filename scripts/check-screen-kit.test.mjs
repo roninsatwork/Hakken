@@ -175,6 +175,111 @@ describe("the screen kit guard", () => {
   });
 });
 
+describe("the buttons rule", () => {
+  const oneButton = 'export const Probe = () => <button type="button">probe</button>;\n';
+  const twoButtons =
+    "export const Probe = () => (\n" +
+    "  <>\n" +
+    '    <button type="button">one</button>\n' +
+    '    <button type="button">two</button>\n' +
+    "  </>\n" +
+    ");\n";
+
+  it("catches a raw button in a file with no frozen count", () => {
+    write(oneButton);
+
+    expect(findHandWrittenParts()).toContainEqual({
+      rule: "buttons",
+      file: probeRelative,
+      count: 1,
+      frozen: 0,
+    });
+  });
+
+  it("lets a file keep exactly the raw buttons it had", () => {
+    write(twoButtons);
+
+    const offenders = findHandWrittenParts(
+      loadFrozen({ tables: [], inputs: [], assembled: [], buttons: { [probeRelative]: 2 } })
+    ).filter((offender) => offender.file === probeRelative);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("fails the moment a file draws one more than it had", () => {
+    write(twoButtons);
+
+    expect(
+      findHandWrittenParts(
+        loadFrozen({ tables: [], inputs: [], assembled: [], buttons: { [probeRelative]: 1 } })
+      )
+    ).toContainEqual({ rule: "buttons", file: probeRelative, count: 2, frozen: 1 });
+  });
+
+  it("allows a shrink without complaint", () => {
+    write(oneButton);
+
+    const frozen = loadFrozen({
+      tables: [],
+      inputs: [],
+      assembled: [],
+      buttons: { [probeRelative]: 3 },
+    });
+
+    expect(findHandWrittenParts(frozen).some((o) => o.file === probeRelative)).toBe(false);
+    expect(findStaleFreezes(frozen).some((s) => s.file === probeRelative)).toBe(false);
+  });
+
+  it("leaves the movement demos alone — frozen whole by owner decision", () => {
+    const demoProbe = path.join(
+      process.cwd(),
+      "src",
+      "app",
+      "(dashboard)",
+      "demos",
+      "__screen_kit_probe__.tsx"
+    );
+    fs.writeFileSync(demoProbe, oneButton);
+
+    try {
+      const demoRelative = path.relative(process.cwd(), demoProbe);
+      expect(findHandWrittenParts().some((o) => o.file === demoRelative)).toBe(false);
+    } finally {
+      fs.rmSync(demoProbe);
+    }
+  });
+
+  it("does not count the kit's own <Button>", () => {
+    write(
+      'import { Button } from "@/src/ui/atoms/Button";\n' +
+        'export const Probe = () => <Button variant="ghost">probe</Button>;\n'
+    );
+
+    expect(findHandWrittenParts().some((o) => o.file === probeRelative)).toBe(false);
+  });
+
+  it("reports a freeze whose file has lost its last raw button", () => {
+    write("export const Probe = () => <div>no buttons here</div>;\n");
+
+    const stale = findStaleFreezes(
+      loadFrozen({ tables: [], inputs: [], assembled: [], buttons: { [probeRelative]: 2 } })
+    );
+
+    expect(stale).toEqual([
+      { rule: "buttons", file: probeRelative, reason: "no longer hand-writes a raw <button>" },
+    ]);
+  });
+
+  it("reports a freeze whose file has gone", () => {
+    const gone = "src/app/(dashboard)/__deleted_screen__.tsx";
+    const stale = findStaleFreezes(
+      loadFrozen({ tables: [], inputs: [], assembled: [], buttons: { [gone]: 4 } })
+    );
+
+    expect(stale).toEqual([{ rule: "buttons", file: gone, reason: "no longer exists" }]);
+  });
+});
+
 describe("the frozen lists", () => {
   it("names only files that exist", () => {
     const frozen = loadFrozen();

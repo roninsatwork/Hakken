@@ -1,3 +1,5 @@
+import { resolvePlatformName } from "./settingsService";
+
 export type AssistantSafetyDecision =
   | { allowed: true }
   | { allowed: false; category: "hidden_instructions" | "permission_bypass" | "cross_tenant_access"; response: string };
@@ -47,7 +49,18 @@ export function getAssistantSafetyWarnings(input: string): AssistantSafetyWarnin
   return warnings;
 }
 
-export function evaluateAssistantSafety(input: string): AssistantSafetyDecision {
+export function evaluateAssistantSafety(
+  input: string,
+  options: {
+    /**
+     * The deployment's configured name (systemSettings.platformName), so a
+     * refusal speaks for the platform the reader is actually using. Omitted,
+     * the shipped default applies.
+     */
+    platformName?: string;
+  } = {}
+): AssistantSafetyDecision {
+  const platformName = resolvePlatformName(options.platformName);
   const warningCategories = new Set(getAssistantSafetyWarnings(input).map((warning) => warning.category));
 
   if (warningCategories.has("hidden_instructions")) {
@@ -55,7 +68,7 @@ export function evaluateAssistantSafety(input: string): AssistantSafetyDecision 
       allowed: false,
       category: "hidden_instructions",
       response:
-        "I can't reveal hidden system instructions, platform policy, internal tool schemas, secrets, or private configuration. I can still explain Sonae's visible behavior or help with the task using information you are allowed to access.",
+        `I can't reveal hidden system instructions, platform policy, internal tool schemas, secrets, or private configuration. I can still explain ${platformName}'s visible behavior or help with the task using information you are allowed to access.`,
     };
   }
 
@@ -64,7 +77,7 @@ export function evaluateAssistantSafety(input: string): AssistantSafetyDecision 
       allowed: false,
       category: "permission_bypass",
       response:
-        "I can't ignore or bypass Sonae's safety rules, tenant isolation, role permissions, or backend authorization. I can help with the request within the permissions available to this account.",
+        `I can't ignore or bypass ${platformName}'s safety rules, tenant isolation, role permissions, or backend authorization. I can help with the request within the permissions available to this account.`,
     };
   }
 

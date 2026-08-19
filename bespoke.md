@@ -82,9 +82,10 @@ Add these to **GitHub Settings > Secrets and variables > Actions**:
 
 ## 🚀 4. Initial Deployment & Sonae Polish
 
-1.  **Hardcoded Admin Update:** In `convex/auth.ts`, update the `isSuperAdmin` check to the client's primary email.
-2.  **Code Check:** Ensure no hardcoded strings from previous clients remain in the UI.
-3.  **Deployment:** Merge `dev` to `main`. `git push origin main`.
+1.  **First Admin:** Set the client's primary email as the initial super admin — `master-setup.zsh` does this for you, or run it by hand: `npx convex env set INITIAL_SUPER_ADMIN_EMAIL <client-email> --prod`. Their first sign-in with that address becomes SUPER_ADMIN. (There is no super-admin setting in `convex/auth.ts` — an older version of this runbook pointed there and left deployments with no admin at all.)
+2.  **Environment Coverage:** Run `npm run verify:deployment -- --prod`. It names any required key still missing and lists which optional features (telephony, research, voice, alerts) stay off.
+3.  **Code Check:** Ensure no hardcoded strings from previous clients remain in the UI.
+4.  **Deployment:** Merge `dev` to `main`. `git push origin main`.
 
 ---
 

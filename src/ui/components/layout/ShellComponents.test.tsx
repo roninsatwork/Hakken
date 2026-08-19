@@ -1,8 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import Header from "../header";
-import Footer from "../footer";
 import { AnalyticsProvider } from "./AnalyticsProvider";
 import FluidWorkspace from "./FluidWorkspace";
 import { ThemeProvider } from "../../providers/ThemeProvider";
@@ -97,15 +95,4 @@ describe("shell layout components", () => {
     );
   });
 
-  it("renders basic header and footer navigation", () => {
-    render(
-      <>
-        <Header />
-        <Footer />
-      </>
-    );
-
-    expect(screen.getAllByRole("link", { name: "Sonae" })).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Demos" })).toHaveAttribute("href", "/demos/movement-capture/deep");
-  });
 });

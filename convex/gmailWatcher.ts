@@ -6,6 +6,7 @@ import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { isNoReplyAddress, parseAddress } from "./gmailConnector";
+import { resolvePlatformName } from "./settingsService";
 
 /**
  * The mailbox that answers itself: Phase C of the Gmail plan.
@@ -23,7 +24,14 @@ import { isNoReplyAddress, parseAddress } from "./gmailConnector";
  * recorded as SKIPPED and never answered.
  */
 
-/** What a human sees in Gmail on mail the agent handled. */
+/**
+ * What a human sees in Gmail on mail the agent handled.
+ *
+ * The default only: the label actually written is the deployment's configured
+ * platform name (resolved per poll), so a renamed platform labels mail as
+ * itself. A rename starts labelling under the new name from then on — Gmail
+ * keeps the old label on old mail, which is the honest history.
+ */
 export const PROCESSED_LABEL_NAME = "Sonae";
 
 /**
@@ -157,6 +165,8 @@ export function dressReply(args: {
   companyName?: string;
   /** Two-letter code of the language the reply is written in; English otherwise. */
   language?: string;
+  /** The deployment's configured name; the sign-off names this platform. */
+  platformName?: string;
 }) {
   const dressing =
     MAIL_DRESSING_BY_LANGUAGE[args.language?.trim().toLowerCase() ?? "en"] ??
@@ -170,7 +180,7 @@ export function dressReply(args: {
   const workspace = args.companyName?.trim();
   return (
     `${opening}\n\n` +
-    `Ask Sonae\n` +
+    `Ask ${resolvePlatformName(args.platformName)}\n` +
     `${workspace ? `${workspace} ` : ""}${dressing.assistant}\n` +
     dressing.disclosure
   );
@@ -189,9 +199,13 @@ export const pollMailboxes = internalAction({
   args: {},
   handler: async (ctx) => {
     const connectors = await ctx.runQuery(internal.gmailWatcherStore.listConnectedMailboxes, {});
+    // Resolved once per poll: the transcript labels, the sign-off, the Gmail
+    // label, and the follow-up tasks all name the deployment's configured
+    // platform, not the shipped default.
+    const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
     for (const connector of connectors) {
       try {
-        await processMailbox(ctx, connector);
+        await processMailbox(ctx, connector, platformName);
         // The poll's own verdict, on the record (seven-gaps plan, phase 2).
         // Until now a mailbox that had silently stopped answering left its
         // only trace in console.error, so the Connections screen could not
@@ -233,7 +247,7 @@ function skipReason(summary: MessageSummary): string | null {
   return null;
 }
 
-async function processMailbox(ctx: ActionCtx, connector: Doc<"toolConnectors">) {
+async function processMailbox(ctx: ActionCtx, connector: Doc<"toolConnectors">, platformName: string) {
   const listing = (await ctx.runAction(internal.gmailConnector.readMailbox, {
     connectorId: connector._id,
     query: "in:inbox",
@@ -252,7 +266,7 @@ async function processMailbox(ctx: ActionCtx, connector: Doc<"toolConnectors">) 
     if (verdict !== "PROCESS") continue;
 
     try {
-      await processMessage(ctx, connector, summary);
+      await processMessage(ctx, connector, summary, platformName);
     } catch (error) {
       console.error("Mailbox message processing failed", summary.id, error);
       // The row stays PENDING; the next poll retries it.
@@ -263,7 +277,8 @@ async function processMailbox(ctx: ActionCtx, connector: Doc<"toolConnectors">) 
 async function processMessage(
   ctx: ActionCtx,
   connector: Doc<"toolConnectors">,
-  summary: MessageSummary
+  summary: MessageSummary,
+  platformName: string
 ) {
   const reasonToSkip = skipReason(summary);
   if (reasonToSkip) {
@@ -303,7 +318,7 @@ async function processMessage(
   const retrievalQuery = `${summary.subject}\n\n${senderTexts.join("\n\n")}`.slice(0, 6000);
 
   const transcript = threadResult.messages
-    .map((message) => `${message.fromMailbox ? "Sonae" : "Customer"}: ${message.body.trim()}`)
+    .map((message) => `${message.fromMailbox ? platformName : "Customer"}: ${message.body.trim()}`)
     .filter((line) => line.length > "Customer: ".length)
     .join("\n\n")
     .slice(-8000);
@@ -358,6 +373,7 @@ async function processMessage(
     conversation: transcript,
     knowledgeContext: knowledge.context ?? "",
     companyId: connector.companyId,
+    platformName,
     ...(customerPage ? { customerPage } : {}),
   });
 
@@ -373,6 +389,7 @@ async function processMessage(
     body: decision.reply?.trim() || FALLBACK_HOLDING_REPLY,
     senderFirstName: senderFirstName(summary.from),
     companyName: company?.name,
+    platformName,
     // The fallback text is English, so its dressing must be too.
     ...(decision.reply ? { language: decision.language } : {}),
   });
@@ -395,12 +412,12 @@ async function processMessage(
       eventText:
         `Subject: ${summary.subject || "(no subject)"}\n\n` +
         `They wrote:\n${newestBody.slice(0, 3000)}\n\n` +
-        `Sonae replied:\n${replyBody.slice(0, 3000)}`,
+        `${platformName} replied:\n${replyBody.slice(0, 3000)}`,
     });
   }
 
   if (sent.ok && !decision.needsHuman) {
-    await labelProcessed(ctx, connector, summary.id);
+    await labelProcessed(ctx, connector, summary.id, platformName);
     // recordReply set REPLIED; nothing more to mark.
     return;
   }
@@ -416,10 +433,10 @@ async function processMessage(
     // the task, never fail it (the first over-length mail killed the filing
     // while the reply had already gone, leaving no task at all).
     const detail = (
-      `Sonae replied with what the company knowledge covers and told the sender a ` +
+      `${platformName} replied with what the company knowledge covers and told the sender a ` +
       `colleague will follow up with the specifics.\n\nFrom: ${summary.from}\n` +
       `Their message:\n${newestBody.slice(0, 900)}\n\n` +
-      `What Sonae sent:\n${replyBody.slice(0, 900)}`
+      `What ${platformName} sent:\n${replyBody.slice(0, 900)}`
     ).slice(0, 2000);
     taskId = await ctx.runMutation(internal.tasks.createTaskInternal, {
       companyId: connector.companyId,
@@ -437,7 +454,7 @@ async function processMessage(
     reason: sent.ok ? "A person follows up with the specifics." : sent.error,
     ...(taskId ? { taskId } : {}),
   });
-  await labelProcessed(ctx, connector, summary.id);
+  await labelProcessed(ctx, connector, summary.id, platformName);
 }
 
 /**
@@ -455,6 +472,8 @@ async function decideReply(
     conversation: string;
     knowledgeContext: string;
     companyId?: Id<"companies">;
+    /** The deployment's configured name — how the transcript labels our side. */
+    platformName?: string;
     /** The sender's rendered wiki page, when they matched a customer
      * (wiki plan, phase 2): recorded history, read whole, never chunked. */
     customerPage?: string;
@@ -481,7 +500,7 @@ async function decideReply(
         "paragraphs. " +
         "Use the knowledge fully: published facts, price ranges, and how the company works may be stated " +
         "exactly as the knowledge states them. Never invent a fact or figure, and never commit to a specific " +
-        "bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier Sonae " +
+        `bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier ${resolvePlatformName(args.platformName)} ` +
         "message in the conversation already said; move the conversation forward. " +
         "needsHuman is true when the sender needs something beyond what the knowledge settles (a bespoke " +
         "quote, a complaint, anything account-specific); the reply must then still give whatever the knowledge " +
@@ -521,12 +540,17 @@ async function decideReply(
  * Label handled mail so a human opening Gmail sees at a glance what the
  * agent dealt with. Failure to label is never worth failing the message.
  */
-async function labelProcessed(ctx: ActionCtx, connector: Doc<"toolConnectors">, messageId: string) {
+async function labelProcessed(
+  ctx: ActionCtx,
+  connector: Doc<"toolConnectors">,
+  messageId: string,
+  platformName?: string
+) {
   try {
     await ctx.runAction(internal.gmailConnector.applyProcessedLabel, {
       connectorId: connector._id,
       messageId,
-      labelName: PROCESSED_LABEL_NAME,
+      labelName: resolvePlatformName(platformName),
     });
   } catch (error) {
     console.error("Mailbox labelling failed", messageId, error);

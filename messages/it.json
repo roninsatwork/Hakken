@@ -2795,6 +2795,30 @@
         "loadMore": "Load More",
         "noTraces": "No logs found.",
         "logEmpty": "This conversation is empty."
+      },
+      "company": {
+        "title": "Registri chat",
+        "subtitle": "Visualizza le conversazioni specifiche di questo spazio di lavoro e dei suoi widget incorporabili.",
+        "searchPlaceholder": "Cerca trascrizioni o IP...",
+        "clearSearch": "Cancella ricerca",
+        "noTraces": "Nessun dato di interazione trovato.",
+        "widgetLabel": "Widget del sito",
+        "widgetSource": "Widget: {url}",
+        "widgetVisitor": "Visitatore del widget",
+        "visitorLabel": "Visitatore",
+        "traceIntercept": "Sessione intercettata",
+        "emptyTitle": "Sandbox di controllo accessi",
+        "emptyDesc": "Seleziona una conversazione dall'elenco per esaminare l'interazione completa in sicurezza.",
+        "actions": {
+          "memoryCandidate": "Candidato memoria",
+          "createEval": "Crea valutazione",
+          "copy": "Copia trascrizione",
+          "copied": "Copiato"
+        }
+      },
+      "copyAction": {
+        "copy": "Copia trascrizione chat",
+        "copied": "Copiato"
       }
     },
     "systemPrompt": {

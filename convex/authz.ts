@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { appError } from "./utils/appError";
 
 /**
  * Uses the standalone `getAuthUserId` rather than the local `auth` object,
@@ -54,7 +55,7 @@ export async function getCurrentUser(ctx: AuthCtx): Promise<CurrentUser | null> 
 
 export async function requireCurrentUser(ctx: AuthCtx, message = "Unauthenticated"): Promise<CurrentUser> {
   const current = await getCurrentUser(ctx);
-  if (!current) throw new Error(message);
+  if (!current) throw appError("UNAUTHENTICATED", message);
   return current;
 }
 
@@ -68,7 +69,7 @@ export async function requireRole(
   const role = current.user.role;
 
   if (!role || !roles.includes(role)) {
-    throw new Error(message);
+    throw appError("UNAUTHORIZED", message);
   }
 
   return current as RoleCheckedUser;
@@ -188,6 +189,42 @@ export function canAccessCompany(user: Doc<"users">, companyId: Id<"companies">)
 }
 
 /**
+ * Admin access to one company's records: role check, existence check, and
+ * scope check in one call.
+ *
+ * This lived as five near-identical private copies (companyLearningLoop,
+ * companyMemories, companyReadiness, companySkills, companyEvals) until
+ * 2026-08-19 — an authorization helper forked five ways is how one copy
+ * quietly falls behind a fix. This is the only copy now; import it.
+ *
+ * An `undefined` companyId is the platform scope: it belongs to no company
+ * (Anthony's SaaS ruling, 2026-08-17) and is the super admin's alone — the
+ * overloads keep `company` non-null for callers that always pass an id.
+ */
+export async function requireCompanyAccess(
+  ctx: QueryCtx | MutationCtx,
+  companyId: Id<"companies">
+): Promise<{ user: RoleCheckedUser["user"]; userId: Id<"users">; company: Doc<"companies"> }>;
+export async function requireCompanyAccess(
+  ctx: QueryCtx | MutationCtx,
+  companyId: Id<"companies"> | undefined
+): Promise<{ user: RoleCheckedUser["user"]; userId: Id<"users">; company: Doc<"companies"> | null }>;
+export async function requireCompanyAccess(
+  ctx: QueryCtx | MutationCtx,
+  companyId: Id<"companies"> | undefined
+) {
+  const { user, userId } = await requireAdmin(ctx);
+  if (!companyId) {
+    if (user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized access to platform checks");
+    return { user, userId, company: null };
+  }
+  const company = await ctx.db.get(companyId);
+  if (!company) throw appError("NOT_FOUND", "Company not found");
+  assertAdminCanAccessCompany(user, companyId);
+  return { user, userId, company };
+}
+
+/**
  * Scoped company access for anyone reading or writing admin surfaces.
  *
  * The oversight roles are company-scoped exactly as `ADMIN` is: a read-only or
@@ -207,5 +244,5 @@ export function assertAdminCanAccessCompany(
     return;
   }
 
-  throw new Error(message);
+  throw appError("UNAUTHORIZED", message);
 }

@@ -30,6 +30,7 @@ import {
   History,
 } from "lucide-react";
 import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { InlineSearchInput, PaginationFooter } from "@/src/ui/components/screens/Table";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -1141,12 +1142,13 @@ export function KnowledgeManager({
                   Supports .PDF, .DOCX, .MD, .TXT, and .CSV. Drop a whole folder to load an OKF bundle — up to {MAX_BULK_UPLOAD_FILES} files at a time.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-3">
-                  <button
+                  <Button
+                    variant="pill"
                     onClick={(event) => { event.preventDefault(); inputRef.current?.click(); }}
-                    className="px-6 py-2.5 rounded-full bg-foreground text-background font-bold tracking-wide text-[13px] hover:opacity-90 transition-all pointer-events-auto shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                    className="px-6 py-2.5 pointer-events-auto shadow-[0_0_20px_rgba(255,255,255,0.05)]"
                   >
                     Browse Files
-                  </button>
+                  </Button>
                   <button
                     onClick={(event) => { event.preventDefault(); folderInputRef.current?.click(); }}
                     className="px-6 py-2.5 rounded-full border border-white/15 text-foreground font-bold tracking-wide text-[13px] hover:bg-white/5 transition-all pointer-events-auto"

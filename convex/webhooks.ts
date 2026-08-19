@@ -2,15 +2,8 @@ import { httpAction, internalMutation, internalQuery } from "./_generated/server
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { producesPropertyListings } from "./apifyActors";
+import { constantTimeEqual } from "./utils/security";
 
-function constantTimeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
-}
 
 const getUrlValue = (value: unknown) => {
   if (typeof value === "string") return value;

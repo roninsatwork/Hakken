@@ -63,13 +63,13 @@ describe("the spoken voice setting", () => {
     expect(entry?.metadata).toContain("Charon");
   });
 
-  test("a voice Sonae cannot speak with is refused", async () => {
+  test("a voice the platform cannot speak with is refused", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { client } = await seedAdmin(t);
 
     await expect(
       client.mutation(api.voiceSettings.setSpokenVoice, { voice: "Barry" })
-    ).rejects.toThrow(/not one Sonae can speak with/);
+    ).rejects.toThrow(/not one the platform can speak with/);
   });
 
   test("a workspace's voice is its own — another company still hears the default", async () => {

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { tenantAction } from "./tenantFunctions";
+import { adminAction } from "./tenantFunctions";
 
 /**
  * Empty the CRM side of one workspace: customers, prospects, and findings.
@@ -94,7 +94,7 @@ export const deleteWorkspaceSalesDataBatchInternal = internalMutation({
  */
 const MAX_BATCHES = 5000;
 
-export const resetSalesData = tenantAction({
+export const resetSalesData = adminAction({
   args: {},
   handler: async (ctx): Promise<{ deleted: number }> => {
     const context = await ctx.runQuery(internal.salesData.getImportContextInternal, {
@@ -312,7 +312,7 @@ export const clearAllWorkspaceSalesDataBatchInternal = internalMutation({
   },
 });
 
-export const clearAllSalesData = tenantAction({
+export const clearAllSalesData = adminAction({
   args: {},
   handler: async (ctx): Promise<{ deleted: number }> => {
     const context = await ctx.runQuery(internal.salesData.getImportContextInternal, {

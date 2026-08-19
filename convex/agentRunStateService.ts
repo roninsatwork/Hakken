@@ -1,5 +1,6 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { buildAgentActionAuditMetadata, isAuditableAgentAction } from "./auditLogService";
 
 /**
  * Shared writes against a run's durable state.
@@ -11,6 +12,61 @@ import type { Id } from "./_generated/dataModel";
  */
 
 export const AGENT_RUN_MEMORY_USAGE_LIMIT = 500;
+
+/**
+ * What an agent did on its own account, on the trail.
+ *
+ * A person changing an agent's purpose was recorded and the agent then acting
+ * was not, which on a platform sold as AI governance is the conspicuous hole in
+ * it.
+ *
+ * Reads never reach here. An agent answering a question by looking something up
+ * is the bulk of what agents do, and putting all of it on the trail would bury
+ * the entries that matter within a week. What is recorded is what an agent
+ * changed, deleted, or sent outside.
+ *
+ * No actor. An agent is not a person, and naming whoever started the run as the
+ * one who did this would put a human name against an action they did not take —
+ * which is the precise thing an accountability record must not do. The run and
+ * the agent are both on the entry, so the person who set it going is one hop
+ * away.
+ *
+ * See docs/plans/active/audit-trail-plan.md.
+ */
+export async function recordAgentAction(
+  ctx: MutationCtx,
+  args: {
+    agentId: Id<"agents">;
+    companyId?: Id<"companies">;
+    runId: Id<"agentRuns">;
+    tool: string;
+    sideEffectLevel: string;
+    status: string;
+    error?: string;
+    wasApproved?: boolean;
+    timestamp: number;
+  },
+) {
+  if (!isAuditableAgentAction(args.sideEffectLevel)) return;
+
+  const agent = await ctx.db.get(args.agentId);
+
+  await ctx.db.insert("auditLogs", {
+    actionType: "AGENT_ACTION",
+    entityType: "agents",
+    entityId: args.agentId,
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    timestamp: args.timestamp,
+    metadata: buildAgentActionAuditMetadata({
+      agentName: agent?.name,
+      tool: args.tool,
+      sideEffectLevel: args.sideEffectLevel,
+      status: args.status,
+      wasApproved: args.wasApproved,
+      error: args.error,
+    }),
+  });
+}
 
 export type TerminalRunStatus = "SUCCESS" | "FAILED" | "CANCELLED";
 

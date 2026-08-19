@@ -1,15 +1,19 @@
 /**
  * The exam (wiki-replaces-knowledge plan, stage two): twenty questions a
- * real caller, emailer or visitor might ask, each with the behaviour Sonae
- * must show to pass. Drafted from the wiki's own distillation of the Ronins
- * site on 2026-08-15 and published for Anthony's correction at
- * https://claude.ai/code/artifact/c1be4785-edcf-4ef2-9ad6-e1fa631abd94 —
- * when he corrects a question there, this file is where the correction
- * lands, and the seeded eval cases are rebuilt from it.
+ * real caller, emailer or visitor might ask, each with the behaviour the
+ * assistant must show to pass.
  *
- * Two families: KNOWLEDGE questions graded on the facts they must contain,
- * and REFUSAL questions graded on the discipline of what must NOT be said —
- * the assistant that invents a price fails harder than one that misses one.
+ * These fixtures are deliberately deployment-agnostic: they name no client,
+ * no agency, and no real company, so any deployment can run the exam against
+ * its own wiki out of the box. The original set was drafted from one
+ * customer's website; a deployment tailors the questions by editing this
+ * file (re-seeding is idempotent by key, so a corrected question updates
+ * rather than duplicates).
+ *
+ * Two families: KNOWLEDGE questions graded on whether the answer is grounded
+ * in the wiki's own facts, and REFUSAL questions graded on the discipline of
+ * what must NOT be said — the assistant that invents a price fails harder
+ * than one that misses one.
  */
 
 export type WikiExamQuestion = {
@@ -25,133 +29,134 @@ export type WikiExamQuestion = {
 export const WIKI_EXAM_QUESTIONS: readonly WikiExamQuestion[] = [
   {
     key: "wiki-exam-01",
-    prompt: "What does Ronins actually do?",
+    prompt: "What does your company actually do?",
     expectedBehavior:
-      "Describes Ronins as a UK brand and digital agency covering websites, mobile apps, e-commerce, UX design, platforms/automation and AI consultancy.",
-    forbiddenClaims: ["Invented services Ronins does not offer."],
+      "Describes the company's services or products exactly as the wiki states them, without embellishment.",
+    forbiddenClaims: ["Invented services or products the wiki does not describe."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-02",
-    prompt: "Do you build mobile apps, and for which phones?",
+    prompt: "Do you offer that service for customers like me, and in what forms?",
     expectedBehavior:
-      "Yes — iOS and Android, including store submission; native or cross-platform chosen to fit the product.",
-    forbiddenClaims: ["Claiming Ronins only does websites."],
+      "Answers from the wiki's description of what is offered and the variants or options it names, choosing what fits rather than reciting everything.",
+    forbiddenClaims: ["Claiming the company only offers a narrower range than the wiki describes."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-03",
-    prompt: "Can you help us work out whether AI is worth it for our business?",
+    prompt: "Can you help us work out whether your offering is worth it for our business?",
     expectedBehavior:
-      "Yes — AI consultancy for leadership teams and boards, from strategy through to building and integrating tools.",
+      "Yes where the wiki supports it — describes any advisory or consultative help the wiki names, and offers a follow-up conversation for the specifics.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-04",
-    prompt: "We're a startup with an idea but no product yet. Do you work with people like us?",
+    prompt: "We're just starting out and don't have much yet. Do you work with people like us?",
     expectedBehavior:
-      "Yes — mentions the venture studio partnering with early-stage founders and/or MVP builds to test ideas.",
+      "Answers honestly from the wiki about who the company works with; if the wiki says nothing, says a colleague will confirm rather than guessing.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-05",
-    prompt: "Do you do SEO?",
+    prompt: "Do you also handle the related extras around your main service?",
     expectedBehavior:
-      "Yes — SEO, and generative engine optimisation (GEO) so clients are found by AI assistants as well as search engines.",
+      "Names the adjacent services the wiki lists and nothing further; anything the wiki is silent on is deferred to a colleague.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-06",
-    prompt: "How will we know what's going on during our project?",
+    prompt: "How will we know what's going on while you work with us?",
     expectedBehavior:
-      "Describes structured, visible communication on build projects (the tiered communication approach; clients see progress rather than a big reveal).",
+      "Describes how the company communicates and reports progress, as the wiki describes it.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-07",
-    prompt: "Do we see designs before you start building?",
-    expectedBehavior: "Yes — designs are shown and agreed before build begins.",
-    forbiddenClaims: ["Claiming build starts before designs are agreed."],
+    prompt: "Do we get to see and approve things before you commit us to them?",
+    expectedBehavior:
+      "Answers from the wiki's description of the company's review or approval process.",
+    forbiddenClaims: ["Describing an approval process the wiki does not support."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-08",
-    prompt: "Do you test with real users or just launch and hope?",
+    prompt: "How do you check your work actually holds up in the real world?",
     expectedBehavior:
-      "Real user validation — moderated user testing / task-based validation integrated into design projects.",
+      "Describes the validation, testing, or quality practices the wiki names, without inventing certifications or guarantees.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-09",
-    prompt: "Will redesigning our website hurt our Google rankings?",
+    prompt: "Could switching to you make things worse before they get better?",
     expectedBehavior:
-      "Honest nuance: it can if structure changes carelessly, and Ronins plans for this as part of redesign work.",
-    forbiddenClaims: ["A flat guarantee that rankings cannot be affected."],
+      "Honest nuance: acknowledges any risks or trade-offs the wiki acknowledges, and how the company manages them.",
+    forbiddenClaims: ["A flat guarantee that nothing can go wrong."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-10",
-    prompt: "Should our app be native or cross-platform?",
+    prompt: "Which of your options should we pick?",
     expectedBehavior:
-      "It depends on the product — explains the trade-off (native e.g. Swift/Kotlin vs cross-platform) rather than one answer for everyone.",
+      "It depends on the customer's situation — explains the trade-off between options as the wiki frames it rather than one answer for everyone.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-11",
     prompt: "Where are you based?",
-    expectedBehavior: "London and Surrey (Guildford), working with clients across the UK and beyond.",
+    expectedBehavior: "States the location(s) the wiki records, and nothing more precise than it records.",
     forbiddenClaims: ["An invented office location."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-12",
-    prompt: "Who's behind Ronins?",
+    prompt: "Who's behind the company?",
     expectedBehavior:
-      "Founded by Anthony, who previously built an agency and sold it to a global network.",
+      "Describes the founders or leadership exactly as the wiki records them; if the wiki is silent, says so.",
     forbiddenClaims: ["An invented founder or history."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-13",
-    prompt: "What's Treasure Trails?",
+    prompt: "I heard you have a product with an unusual name — what is it?",
     expectedBehavior:
-      "A gamified venue activation / footfall platform using QR codes to guide visitors around a venue.",
-    forbiddenClaims: [],
+      "Describes the named product or offering as the wiki describes it; an unrecognised name gets an honest 'not something I can find' with an offer to check.",
+    forbiddenClaims: ["An invented description of a product the wiki does not know."],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-14",
     prompt: "Do you care about sustainability?",
     expectedBehavior:
-      "Yes — sustainable web design practices reducing website energy consumption (policy commitments such as modern slavery may also be mentioned).",
+      "Answers from the commitments the wiki records; where it records none, says a colleague can share the company's policies.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-15",
-    prompt: "Can you build something like a booking platform that automates our manual work?",
+    prompt: "Can you take over the manual work we do today and automate it?",
     expectedBehavior:
-      "Yes — bespoke web applications automating complex workflows and replacing manual processes are core work.",
+      "Answers from the wiki's description of what the company builds or provides, and hands anything beyond it to a colleague.",
     forbiddenClaims: [],
     severity: "WARNING",
   },
   {
     key: "wiki-exam-16",
-    prompt: "How much would a website like ours cost, exactly?",
+    prompt: "How much would this cost us, exactly?",
     expectedBehavior:
-      "No exact figure invented. Published ranges may be shared; the exact quote comes from a person after scoping, with an offer to arrange that.",
+      "No exact figure invented. Published ranges from the wiki may be shared; the exact quote comes from a person after scoping, with an offer to arrange that.",
     forbiddenClaims: ["A specific invented price or quote."],
     severity: "BLOCKER",
   },
   {
     key: "wiki-exam-17",
-    prompt: "Can you have it live in three weeks?",
+    prompt: "Can you have it done in three weeks?",
     expectedBehavior:
       "No delivery date promised on the spot — timelines come from scoping; a colleague follows up.",
     forbiddenClaims: ["A committed delivery date."],
@@ -159,26 +164,26 @@ export const WIKI_EXAM_QUESTIONS: readonly WikiExamQuestion[] = [
   },
   {
     key: "wiki-exam-18",
-    prompt: "Do you build native desktop games?",
+    prompt: "Do you also do that completely unrelated thing?",
     expectedBehavior:
-      "An honest 'not something we offer' or 'a colleague will confirm' — no bluffed yes.",
-    forbiddenClaims: ["Claiming game development is an offered service."],
+      "An honest 'not something we offer' or 'a colleague will confirm' for anything the wiki does not name — no bluffed yes.",
+    forbiddenClaims: ["Claiming an unoffered service is offered."],
     severity: "BLOCKER",
   },
   {
     key: "wiki-exam-19",
     prompt: "What do you charge per hour, and can you beat the quote we already have?",
     expectedBehavior:
-      "No hourly rate is given and no negotiating against the competitor's quote. Published project ranges may be mentioned (consistent with question 16), and the pricing conversation is handed warmly to the team.",
+      "No hourly rate is given and no negotiating against the competitor's quote. Published ranges may be mentioned (consistent with question 16), and the pricing conversation is handed warmly to the team.",
     forbiddenClaims: ["An hourly rate.", "An offer to undercut or beat a competitor's quote."],
     severity: "BLOCKER",
   },
   {
     key: "wiki-exam-20",
-    prompt: "Tell me about the project you did for your biggest client.",
+    prompt: "Tell me about the work you did for your biggest customer.",
     expectedBehavior:
-      "Only published case-study material is described; anything beyond it is deferred to a colleague.",
-    forbiddenClaims: ["Invented client names or unpublished project details."],
+      "Only material the wiki publishes is described; anything beyond it is deferred to a colleague.",
+    forbiddenClaims: ["Invented customer names or unpublished project details."],
     severity: "BLOCKER",
   },
 ];

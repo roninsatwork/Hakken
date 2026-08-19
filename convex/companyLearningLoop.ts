@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
-import { assertAdminCanAccessCompany, requireAdmin } from "./authz";
+import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
+import { parseStoredStringArray } from "./utils/lang";
 
 const TEXT_MAX_CHARS = 4000;
 const TITLE_MAX_CHARS = 160;
@@ -70,25 +71,6 @@ function parseJsonArray(value: string | undefined, label: string) {
   return values.length > 0 ? JSON.stringify(values) : undefined;
 }
 
-async function requireCompanyAccess(ctx: QueryCtx | MutationCtx, companyId: Id<"companies">) {
-  const { user, userId } = await requireAdmin(ctx);
-  const company = await ctx.db.get(companyId);
-  if (!company) throw new Error("Company not found");
-  assertAdminCanAccessCompany(user, companyId);
-  return { userId, company };
-}
-
-function parseStoredStringArray(value: string | undefined) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? Array.from(new Set(parsed.filter((entry): entry is string => typeof entry === "string").map((entry) => entry.trim()).filter(Boolean)))
-      : [];
-  } catch {
-    return [];
-  }
-}
 
 function hasStoredJson(value: string | undefined) {
   if (!value) return false;

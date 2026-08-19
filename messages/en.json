@@ -2795,6 +2795,30 @@
         "loadMore": "Load More",
         "noTraces": "No logs found.",
         "logEmpty": "This conversation is empty."
+      },
+      "company": {
+        "title": "Chat Logs",
+        "subtitle": "View conversations specific to this workspace and its embeddable widgets.",
+        "searchPlaceholder": "Search transcripts or IPs...",
+        "clearSearch": "Clear search",
+        "noTraces": "No interaction data found.",
+        "widgetLabel": "Website Widget",
+        "widgetSource": "Widget: {url}",
+        "widgetVisitor": "Widget Visitor",
+        "visitorLabel": "Visitor",
+        "traceIntercept": "Intercepted Session",
+        "emptyTitle": "Access Control Sandbox",
+        "emptyDesc": "Select a thread from the roster to decrypt and parse the full interaction safely.",
+        "actions": {
+          "memoryCandidate": "Memory candidate",
+          "createEval": "Create eval",
+          "copy": "Copy transcript",
+          "copied": "Copied"
+        }
+      },
+      "copyAction": {
+        "copy": "Copy Chat Transcript",
+        "copied": "Copied"
       }
     },
     "systemPrompt": {

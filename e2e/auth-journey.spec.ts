@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { setE2ERole } from "./helpers/auth";
 
-test.describe("Deterministic auth journey", () => {
+test.describe("Deterministic auth journey @smoke", () => {
   test("login redirects authenticated roles and logout clears protected access", async ({ page, context }) => {
     await page.goto("/login");
     await expect(page).toHaveURL(/\/login/);

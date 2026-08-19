@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,route,error,global-error,not-found,loading,template,default}.tsx",
+    "src/app/**/{route,proxy}.ts",
+    "src/proxy.ts",
+    "src/instrumentation.ts",
+    "src/instrumentation-client.ts",
+    "convex/**/*.ts!",
+    "scripts/**/*.{mjs,ts}",
+    "services/**/*.mjs",
+    "e2e/**/*.ts",
+    "*.{ts,mjs}",
+    "src/e2e/convexReactMock.tsx"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "convex/**/*.ts"
+  ],
+  "ignore": [
+    "convex/_generated/**",
+    "src/test/**",
+    "**/*.test.{ts,tsx}",
+    "**/*.testFixtures.ts"
+  ],
+  "ignoreDependencies": [
+    ".*"
+  ],
+  "ignoreBinaries": [
+    ".*"
+  ]
+}

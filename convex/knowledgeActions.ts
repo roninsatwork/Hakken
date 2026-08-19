@@ -13,10 +13,8 @@ import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction } from "./tenantFunctions";
+import { getErrorMessage } from "./utils/lang";
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Shared by the direct single-file path and the bulk file queue. Swallows its

@@ -18,8 +18,8 @@ import { Field } from "@/src/ui/components/screens/Field";
  * system health screen can only display.
  */
 export function ApprovalExpirySection() {
-  const config = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
-  const updateConfig = useMutation(api.agentRuns.updateApprovalExpiryConfig);
+  const config = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
+  const updateConfig = useMutation(api.agentRunApprovals.updateApprovalExpiryConfig);
 
   const [hours, setHours] = useState("");
   const [isSaving, setIsSaving] = useState(false);

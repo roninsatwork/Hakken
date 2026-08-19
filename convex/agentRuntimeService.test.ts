@@ -4,9 +4,19 @@ import {
   AGENT_OBJECTIVE_LIMIT_CEILINGS,
   DEFAULT_AGENT_OBJECTIVE_LIMITS,
   UNPRICED_MODEL_OBJECTIVE_LIMITS,
+  buildModelStepRecord,
+  buildRunUsagePayload,
+  buildToolDispatchLogEntry,
   clampAgentLimitOverride,
+  classifyExecutedToolResult,
+  estimateStablePrefixTokens,
+  isConfirmationRequiredDenial,
   isModelCostMeasurable,
+  parseAgentOutputSchema,
   resolveAgentObjectiveLimits,
+  resolveToolCallWithoutExecution,
+  shouldRequestToolApproval,
+  shouldRetryTurnWithoutPromptCache,
   buildToolInteractionTurns,
   getAgentStepStatusFromToolStatus,
   getCostBudgetStopMessage,
@@ -22,6 +32,20 @@ import {
   AGENT_RUN_MAX_SEGMENTS,
   AGENT_RUN_SEGMENT_BUDGET_MS,
 } from "./agentRunContinuationService";
+import { estimatePromptTokens } from "./promptCacheService";
+
+/** The exact sentence `canExecuteTool` uses for "ask a person first". */
+const CONFIRMATION_DENIAL = "Tool execution requires explicit user confirmation.";
+
+/** A tool call with every gate open: nothing refused, valid args, access granted. */
+const cleanToolCall = {
+  toolName: "knowledge.search",
+  wasRefused: false,
+  schemaValidation: { ok: true, errors: [] as string[] },
+  isRehearsalRun: false,
+  toolMetadata: { sideEffectLevel: "READ" as const },
+  accessDecision: { allowed: true },
+};
 
 describe("agentRuntimeService", () => {
   test("exposes default loop budgets with room for real work", () => {
@@ -353,6 +377,403 @@ describe("agentRuntimeService", () => {
           "maxCostGBP",
         ]);
       });
+    });
+  });
+
+  describe("asking a person before a tool runs", () => {
+    test("only the confirmation sentence reads as an invitation", () => {
+      // A substring match would one day catch a differently worded hard denial
+      // and park a run nobody is coming to approve.
+      expect(isConfirmationRequiredDenial(CONFIRMATION_DENIAL)).toBe(true);
+      expect(isConfirmationRequiredDenial("Tool requires a higher role.")).toBe(false);
+      expect(isConfirmationRequiredDenial(undefined)).toBe(false);
+    });
+
+    test("a sound call blocked only by confirmation parks the run", () => {
+      expect(shouldRequestToolApproval({
+        isRehearsalRun: false,
+        wasRefused: false,
+        schemaValidationOk: true,
+        accessDecision: { allowed: false, reason: CONFIRMATION_DENIAL },
+      })).toBe(true);
+    });
+
+    test("a call that would be answered some other way never asks", () => {
+      const base = {
+        isRehearsalRun: false,
+        wasRefused: false,
+        schemaValidationOk: true,
+        accessDecision: { allowed: false, reason: CONFIRMATION_DENIAL },
+      };
+
+      // A rehearsal records the write instead of asking anyone.
+      expect(shouldRequestToolApproval({ ...base, isRehearsalRun: true })).toBe(false);
+      // A person already refused this exact call; asking again burns their
+      // attention on a decision they have made.
+      expect(shouldRequestToolApproval({ ...base, wasRefused: true })).toBe(false);
+      // Invalid arguments are answered with the validation errors.
+      expect(shouldRequestToolApproval({ ...base, schemaValidationOk: false })).toBe(false);
+      // An allowed call just runs.
+      expect(shouldRequestToolApproval({ ...base, accessDecision: { allowed: true } })).toBe(false);
+      // A hard denial is a "no", not a "not yet".
+      expect(shouldRequestToolApproval({
+        ...base,
+        accessDecision: { allowed: false, reason: "Tool requires a higher role." },
+      })).toBe(false);
+    });
+  });
+
+  describe("deciding a tool call without running it", () => {
+    test("a call with every gate open must actually execute", () => {
+      // undefined is the classifier saying "this is the caller's job now" —
+      // execution has side effects, and the pure layer never performs them.
+      expect(resolveToolCallWithoutExecution(cleanToolCall)).toBeUndefined();
+    });
+
+    test("a refused call is answered with the standing refusal", () => {
+      const outcome = resolveToolCallWithoutExecution({ ...cleanToolCall, wasRefused: true });
+
+      expect(outcome?.status).toBe("DENIED");
+      expect(outcome?.error).toContain("Do not call knowledge.search with these arguments again.");
+      // The model is told the same thing the records say.
+      expect(outcome?.responsePayload).toEqual({ status: "error", error: outcome?.error });
+    });
+
+    test("the refusal wins over every other gate", () => {
+      // The person's decision stands even when the arguments are also invalid
+      // and the tool is unknown — the reviewer must not be asked to re-litigate
+      // a call they already refused because it was also malformed.
+      const outcome = resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        wasRefused: true,
+        schemaValidation: { ok: false, errors: ["Missing required tool argument 'query'."] },
+        toolMetadata: undefined,
+      });
+
+      expect(outcome?.status).toBe("DENIED");
+      expect(outcome?.error).toContain("A person reviewed this request and refused it.");
+    });
+
+    test("invalid arguments are answered with the validation errors, joined", () => {
+      const outcome = resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        schemaValidation: {
+          ok: false,
+          errors: ["Missing required tool argument 'query'.", "Tool argument 'limit' must be an integer."],
+        },
+      });
+
+      expect(outcome?.status).toBe("FAILED");
+      expect(outcome?.error).toBe(
+        "Missing required tool argument 'query'. Tool argument 'limit' must be an integer."
+      );
+      expect(outcome?.responsePayload).toEqual({ status: "error", error: outcome?.error });
+    });
+
+    test("a rehearsal records a write instead of performing it", () => {
+      const outcome = resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        isRehearsalRun: true,
+        toolMetadata: { sideEffectLevel: "WRITE" },
+      });
+
+      expect(outcome?.status).toBe("REHEARSED");
+      // No error: the drill going to plan is not a failure.
+      expect(outcome?.error).toBeUndefined();
+      expect(outcome?.responsePayload).toEqual({
+        status: "success",
+        data: {
+          rehearsed: true,
+          note: "Rehearsal run: this action was recorded as would-execute and NOT performed. Continue as if it succeeded.",
+        },
+      });
+    });
+
+    test("a rehearsal still reads for real", () => {
+      // Recording reads as would-execute would leave the drill grounded in
+      // nothing; only side effects are held back.
+      expect(resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        isRehearsalRun: true,
+        toolMetadata: { sideEffectLevel: "READ" },
+      })).toBeUndefined();
+    });
+
+    test("a rehearsal covers writes that would otherwise ask for approval", () => {
+      const outcome = resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        isRehearsalRun: true,
+        toolMetadata: { sideEffectLevel: "WRITE" },
+        accessDecision: { allowed: false, reason: CONFIRMATION_DENIAL },
+      });
+
+      expect(outcome?.status).toBe("REHEARSED");
+    });
+
+    test("a rehearsal does not waive a hard denial", () => {
+      // Autonomy and rehearsals remove the human, not the permissions: a call
+      // the role or tenant boundary forbids stays forbidden in a drill.
+      const outcome = resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        isRehearsalRun: true,
+        toolMetadata: { sideEffectLevel: "WRITE" },
+        accessDecision: { allowed: false, reason: "Tool requires a higher role." },
+      });
+
+      expect(outcome?.status).toBe("DENIED");
+      expect(outcome?.error).toBe("Tool requires a higher role.");
+      expect(outcome?.responsePayload).toEqual({
+        status: "error",
+        error: "Tool requires a higher role.",
+      });
+    });
+
+    test("a tool the platform has never heard of cannot run", () => {
+      const outcome = resolveToolCallWithoutExecution({
+        ...cleanToolCall,
+        toolMetadata: undefined,
+      });
+
+      expect(outcome?.status).toBe("FAILED");
+      expect(outcome?.error).toBe("Unknown tool requested by model.");
+    });
+  });
+
+  describe("classifying what an executed tool came back with", () => {
+    test("a real result is a success carrying the data", () => {
+      const classified = classifyExecutedToolResult({
+        toolName: "knowledge.search",
+        result: { hits: 3 },
+      });
+
+      expect(classified.status).toBe("SUCCESS");
+      expect(classified.error).toBeUndefined();
+      expect(classified.responsePayload).toEqual({ status: "success", data: { hits: 3 } });
+    });
+
+    test("a declared-but-empty connector is not a green tick", () => {
+      // The regression: a connector with nothing behind it returns normally, so
+      // the run log recorded a success against a call that did nothing at all.
+      const classified = classifyExecutedToolResult({
+        toolName: "hubspot.contacts.sync",
+        result: { status: "not_implemented", message: "nothing implements it" },
+      });
+
+      expect(classified.status).toBe("NOT_IMPLEMENTED");
+      expect(classified.error).toBe("Connector is declared but has no implementation.");
+      // The model is told plainly, so it stops trying and says so rather than
+      // reporting the job done.
+      expect(classified.responsePayload).toEqual({
+        status: "error",
+        error: "The hubspot.contacts.sync tool is not available on this platform. Do not retry it; tell the user this capability is not connected.",
+      });
+    });
+  });
+
+  describe("what a model turn writes into the timeline", () => {
+    test("a narrated turn stores the model's own words", () => {
+      const record = buildModelStepRecord({
+        loopIndex: 2,
+        completedToolCalls: 3,
+        responseText: "Here is the answer.",
+        toolCallNames: [],
+      });
+
+      expect(record.input).toBe(JSON.stringify({ loopIndex: 2, completedToolCalls: 3 }));
+      expect(record.output).toBe("Here is the answer.");
+    });
+
+    test("a silent tool-request turn stores the calls it made", () => {
+      // Without this the timeline showed a blank step wherever the model went
+      // straight to its tools without narrating first.
+      const record = buildModelStepRecord({
+        loopIndex: 0,
+        completedToolCalls: 0,
+        responseText: "",
+        toolCallNames: ["knowledge.search", "web.fetch"],
+      });
+
+      expect(record.output).toBe(JSON.stringify({
+        functionCalls: [{ name: "knowledge.search" }, { name: "web.fetch" }],
+      }));
+    });
+  });
+
+  describe("the raw log entry for a resolved tool call", () => {
+    test("a success stores the request and logs SUCCESS", () => {
+      const entry = buildToolDispatchLogEntry({
+        toolName: "knowledge.search",
+        toolStatus: "SUCCESS",
+        toolError: undefined,
+        redactedArgsJson: "{\"query\":\"pricing\"}",
+      });
+
+      expect(entry.interactionType).toBe("TOOL DISPATCH: knowledge.search");
+      expect(entry.responseContent).toBe(
+        "{\"functionCall\": {\"name\": \"knowledge.search\", \"args\": {\"query\":\"pricing\"}}}"
+      );
+      expect(entry.outcome).toBe("SUCCESS");
+    });
+
+    test("a failure stores the error, because that is what the failure key reads", () => {
+      // Storing the request instead would key every failure on the arguments
+      // and group nothing with anything.
+      const entry = buildToolDispatchLogEntry({
+        toolName: "web.fetch",
+        toolStatus: "FAILED",
+        toolError: "Connection refused.",
+        redactedArgsJson: "{}",
+      });
+
+      expect(entry.responseContent).toBe("Connection refused.");
+      expect(entry.outcome).toBe("FAILED");
+    });
+
+    test("only a real success logs SUCCESS", () => {
+      // A denied or rehearsed call did not do the work, and the log must not
+      // say it did.
+      for (const status of ["DENIED", "REHEARSED", "NOT_IMPLEMENTED", "CANCELLED"]) {
+        expect(buildToolDispatchLogEntry({
+          toolName: "any.tool",
+          toolStatus: status,
+          toolError: undefined,
+          redactedArgsJson: "{}",
+        }).outcome).toBe("FAILED");
+      }
+    });
+  });
+
+  describe("reading an agent's answer schema", () => {
+    test("no stored schema means an unconstrained run, with nothing to report", () => {
+      expect(parseAgentOutputSchema(undefined)).toEqual({ schema: undefined, invalidJson: false });
+      expect(parseAgentOutputSchema(null)).toEqual({ schema: undefined, invalidJson: false });
+      expect(parseAgentOutputSchema("")).toEqual({ schema: undefined, invalidJson: false });
+    });
+
+    test("a valid schema comes back as an object", () => {
+      const stored = JSON.stringify({ type: "object", properties: { score: { type: "number" } } });
+      expect(parseAgentOutputSchema(stored)).toEqual({
+        schema: { type: "object", properties: { score: { type: "number" } } },
+        invalidJson: false,
+      });
+    });
+
+    test("JSON that is not an object is ignored without complaint", () => {
+      // "42" parses fine; it just is not a schema. There is nothing to warn
+      // the operator about.
+      expect(parseAgentOutputSchema("42")).toEqual({ schema: undefined, invalidJson: false });
+      expect(parseAgentOutputSchema("\"text\"")).toEqual({ schema: undefined, invalidJson: false });
+    });
+
+    test("unparseable JSON is reported rather than thrown", () => {
+      // A configuration mistake on a screen must not fail the run; the caller
+      // warns and the agent runs unconstrained.
+      expect(parseAgentOutputSchema("{not json")).toEqual({ schema: undefined, invalidJson: true });
+    });
+  });
+
+  describe("sizing the cacheable prompt prefix", () => {
+    const turns = [
+      { role: "user", parts: [{ text: "First question" }] },
+      { role: "model", parts: [{ text: "First answer" }] },
+      { role: "user", parts: [{ text: "Second question" }] },
+    ];
+
+    test("no stable turns means nothing to cache, whatever else the prompt carries", () => {
+      expect(estimateStablePrefixTokens({
+        turns,
+        stablePrefixTurns: 0,
+        systemInstruction: "You are an agent.",
+        providerTools: [{ name: "knowledge.search" }],
+      })).toBe(0);
+    });
+
+    test("counts exactly the stable turns plus the parts re-sent every turn", () => {
+      const estimate = estimateStablePrefixTokens({
+        turns,
+        stablePrefixTurns: 2,
+        systemInstruction: "You are an agent.",
+        providerTools: [{ name: "knowledge.search" }],
+      });
+
+      expect(estimate).toBe(estimatePromptTokens(
+        JSON.stringify(turns.slice(0, 2))
+          + JSON.stringify("You are an agent.")
+          + JSON.stringify([{ name: "knowledge.search" }]),
+      ));
+      expect(estimate).toBeGreaterThan(0);
+    });
+
+    test("a provider with no tool declarations counts as an empty list", () => {
+      expect(estimateStablePrefixTokens({
+        turns,
+        stablePrefixTurns: 2,
+        systemInstruction: "You are an agent.",
+        providerTools: undefined,
+      })).toBe(estimateStablePrefixTokens({
+        turns,
+        stablePrefixTurns: 2,
+        systemInstruction: "You are an agent.",
+        providerTools: [],
+      }));
+    });
+  });
+
+  describe("retrying a rejected turn without the cache", () => {
+    test("retries only when the cache could be the culprit and nothing was shown", () => {
+      expect(shouldRetryTurnWithoutPromptCache({ usedPromptCache: true, streamedChars: 0 })).toBe(true);
+
+      // No cache referenced: the rejection is something else's fault, and a
+      // blind retry would repeat it.
+      expect(shouldRetryTurnWithoutPromptCache({ usedPromptCache: false, streamedChars: 0 })).toBe(false);
+
+      // Text already reached the reader: a retry would replay the answer from
+      // the start.
+      expect(shouldRetryTurnWithoutPromptCache({ usedPromptCache: true, streamedChars: 1 })).toBe(false);
+    });
+  });
+
+  describe("the usage record a run writes about itself", () => {
+    const model = { modelId: "vertex-test-model", providerKey: "google", providerModelId: "models/vertex-test-model" };
+
+    test("carries the model identity and the computed spend", () => {
+      // Rates are quoted per million tokens: a million input at £1 plus half a
+      // million output at £2 is £2 all told.
+      expect(buildRunUsagePayload({
+        inputTokens: 1_000_000,
+        outputTokens: 500_000,
+        cachedInputTokens: 0,
+        rates: { standardInputCostBelow200k: 1, outputResponseCost: 2 },
+        model,
+      })).toEqual({
+        inputTokens: 1_000_000,
+        outputTokens: 500_000,
+        costGBP: 2,
+        modelId: "vertex-test-model",
+        providerKey: "google",
+        providerModelId: "models/vertex-test-model",
+      });
+    });
+
+    test("prices the cached share of input at the cached rate", () => {
+      // Kept under the 200k tier boundary, where these rates apply.
+      expect(buildRunUsagePayload({
+        inputTokens: 100_000,
+        outputTokens: 0,
+        cachedInputTokens: 100_000,
+        rates: { standardInputCostBelow200k: 1, cachedInputCostBelow200k: 0.1 },
+        model,
+      }).costGBP).toBeCloseTo(0.01, 10);
+    });
+
+    test("no rates means spend cannot be measured, so the cost is zero", () => {
+      expect(buildRunUsagePayload({
+        inputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+        cachedInputTokens: 0,
+        rates: undefined,
+        model,
+      }).costGBP).toBe(0);
     });
   });
 });

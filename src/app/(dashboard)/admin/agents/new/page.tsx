@@ -142,7 +142,7 @@ export default function NewAgentPage() {
   const createAgent = useMutation(api.agents.createAgent);
   const accountablePeople = useQuery(api.users.getAccountablePeople) ?? [];
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
-  const approvalExpiry = useQuery(api.agentRuns.getApprovalExpiryConfig, {});
+  const approvalExpiry = useQuery(api.agentRunApprovals.getApprovalExpiryConfig, {});
 
   const activeModels = useMemo(
     () => (activeModelsData ?? []) as Doc<"aiModels">[],

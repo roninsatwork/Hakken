@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { convexHttpActionsUrl } from "@/src/lib/convexHttpActionsUrl";
+import { Button } from "@/src/ui/atoms/Button";
 import type {
   WorkflowActionConfig,
   WorkflowApprovalConfig,
@@ -337,9 +338,9 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
         >
           <div className="flex items-center justify-between p-6 border-b border-border-dim">
         <h3 className="text-lg font-bold tracking-tight text-foreground">{node.type.replace('Node', ' Module')}</h3>
-        <button onClick={onClose} className="p-2 rounded-full hover:bg-foreground/5 text-secondary hover:text-foreground transition-all">
+        <Button variant="icon" onClick={onClose} aria-label="Close configuration">
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -1036,14 +1037,14 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
                  placeholder="e.g. Save the summary from the previous AI Agent and inject it into the Marketing database."
                  className="w-full bg-background border border-border-dim rounded-[12px] p-4 text-sm focus:border-foreground/50 outline-none resize-none min-h-[120px] shadow-inner mt-2"
                />
-               <button
-                 type="button"
+               <Button
+                 variant="primary"
                  disabled={isGenerating || !aiPrompt.trim()}
                  onClick={handleAutoConfigure}
-                 className="w-full mt-2 py-3 rounded-[12px] bg-foreground text-background text-sm font-semibold hover:bg-foreground/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-foreground/20"
+                 className="w-full mt-2 py-3 rounded-[12px] font-semibold shadow-foreground/20 flex items-center justify-center gap-2"
                >
                  {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing Graph Context...</> : <><Wand2 className="w-4 h-4" /> Auto-Configure Mapping</>}
-               </button>
+               </Button>
             </div>
           )}
           
@@ -1084,13 +1085,14 @@ export function ConfigDrawer({ node, allNodes = [], edges = [], onClose, onUpdat
       </div>
 
       <div className="p-4 border-t border-border-dim bg-sidebar/50">
-        <button
+        <Button
+          variant="primary"
           type="submit"
           form="configForm"
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-[12px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/20 text-sm"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-[12px] shadow-foreground/20"
         >
           <Save className="w-4 h-4" /> Save Configuration
-        </button>
+        </Button>
         </div>
       </motion.div>
       )}

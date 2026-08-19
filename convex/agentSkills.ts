@@ -11,6 +11,7 @@ import {
   replaceAgentSkillRollup,
 } from "./utils/agentSkillRollupService";
 import { MAX_SKILLS_PER_AGENT } from "./utils/skillLimits";
+import { isRecord, stableStringify } from "./utils/lang";
 
 const SKILL_CATALOG_LIMIT = 250;
 const SKILL_BINDING_LIMIT = 100;
@@ -252,15 +253,6 @@ const starterSkillDefinitions: StarterSkillDefinition[] = [
   },
 ];
 
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, entryValue]) => entryValue !== undefined)
-    .sort(([left], [right]) => left.localeCompare(right));
-  return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`).join(",")}}`;
-}
 
 function hashString(value: string) {
   let hash = 5381;
@@ -324,9 +316,6 @@ function validateOptionalJson(value: string | undefined, label: string) {
   return stableStringify(parsed);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function normalizeTags(tags: unknown, fixtureType: EvalFixtureType) {
   const rawTags = Array.isArray(tags) ? tags : [];
@@ -853,7 +842,7 @@ async function addMarkdownImportCatalogWarnings(ctx: Pick<QueryCtx, "db"> | Pick
     suggestions.push("Review whether this should be a new draft, a clone, or an update to the existing skill.");
   }
   if (unresolvedMappings.length > 0) {
-    warnings.push(`Some tool hints do not match active Sonae tool mappings: ${unresolvedMappings.slice(0, 6).join(", ")}.`);
+    warnings.push(`Some tool hints do not match active platform tool mappings: ${unresolvedMappings.slice(0, 6).join(", ")}.`);
     suggestions.push("Map imported tool names to active AI tool handler mappings before production use.");
   }
 

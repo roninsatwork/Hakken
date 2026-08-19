@@ -18,6 +18,13 @@
  * See docs/plans/active/governance-and-trust-plan.md.
  */
 
+/**
+ * Wire protocol, deliberately NOT renamed with the configurable platform name:
+ * existing webhook consumers verify deliveries by reading these exact header
+ * names, so changing them (or making them follow a settings value) would
+ * silently break every receiver already in production. Treat them as protocol
+ * identifiers, like the User-Agent in webhookDeliveryActions.ts.
+ */
 export const SIGNATURE_HEADER = "X-Sonae-Signature";
 export const TIMESTAMP_HEADER = "X-Sonae-Timestamp";
 

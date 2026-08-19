@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./utils/lang";
 export type RetryHeaders = Pick<Headers, "get">;
 
 export type ProviderRetryPolicy = {
@@ -91,9 +92,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : null;
 }
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error && error.message ? error.message : "Provider request failed.";
-}
 
 function getNestedErrorRecord(error: unknown) {
   const record = asRecord(error);
@@ -201,7 +199,7 @@ export function classifyProviderError(error: unknown): ProviderErrorMetadata {
 
   const status = extractStatus(error);
   const code = extractCode(error);
-  const message = getErrorMessage(error);
+  const message = getErrorMessage(error, "Provider request failed.");
   const normalizedCode = code?.toUpperCase();
 
   let retryable = false;
@@ -283,7 +281,7 @@ export async function withProviderRetry<T>(
         && Date.now() - startedAt + delayMs > policy.maxElapsedMs;
 
       if (!canRetry || wouldExceedElapsed) {
-        const message = classification.safeProviderMessage ?? getErrorMessage(error);
+        const message = classification.safeProviderMessage ?? getErrorMessage(error, "Provider request failed.");
         throw error instanceof ProviderRuntimeError
           ? error
           : new ProviderRuntimeError(message, {
@@ -306,7 +304,7 @@ export async function withProviderRetry<T>(
         delayMs,
         status: classification.status,
         code: classification.code,
-        message: classification.safeProviderMessage ?? getErrorMessage(error),
+        message: classification.safeProviderMessage ?? getErrorMessage(error, "Provider request failed."),
       });
       await sleepImpl(delayMs);
     }

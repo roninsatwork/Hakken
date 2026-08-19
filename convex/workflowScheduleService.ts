@@ -1,3 +1,4 @@
+import { isRecord } from "./utils/lang";
 type LegacyScheduleMode = "interval" | "daily" | "weekly" | "monthly";
 
 type LegacyScheduleConfig = {
@@ -62,9 +63,6 @@ const LEGACY_SCHEDULE_MODES = new Set<LegacyScheduleMode>(["interval", "daily", 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TIMEZONE = "UTC";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function isValidTime(value: unknown): value is string {
   return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);

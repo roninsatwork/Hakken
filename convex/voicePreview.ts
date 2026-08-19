@@ -28,13 +28,17 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 /**
  * What the preview session is allowed to be: one fixed sentence, no tools,
  * no company knowledge — the point is the sound of the voice, not a
- * conversation.
+ * conversation. The voice introduces itself by the deployment's configured
+ * name, because that is the name it will use with real customers.
  */
-const PREVIEW_INSTRUCTIONS =
-  "You are demonstrating your voice on a settings screen. When the user says " +
-  'anything, reply with exactly: "Hello — I\'m Sonae. This is how I\'ll sound ' +
-  'when I speak with your customers." Say nothing else, and do not continue ' +
-  "the conversation.";
+function buildPreviewInstructions(platformName: string) {
+  return (
+    "You are demonstrating your voice on a settings screen. When the user says " +
+    `anything, reply with exactly: "Hello — I'm ${platformName}. This is how I'll sound ` +
+    'when I speak with your customers." Say nothing else, and do not continue ' +
+    "the conversation."
+  );
+}
 
 export const mintVoicePreviewTicket = tenantAction({
   args: { voice: v.string() },
@@ -44,7 +48,7 @@ export const mintVoicePreviewTicket = tenantAction({
       throw new Error("Only an administrator can preview voices.");
     }
     if (!SPEECH_VOICE_KEYS.includes(args.voice as SpeechVoiceKey)) {
-      throw new Error("That voice is not one Sonae can speak with.");
+      throw new Error("That voice is not one the platform can speak with.");
     }
 
     await ctx.runMutation(internal.aiActionRequests.reserve, {
@@ -77,11 +81,12 @@ export const mintVoicePreviewTicket = tenantAction({
       );
     }
 
+    const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
     const ticket = signVoiceTicket(
       {
         model: modelConfig.providerModelId,
         voice: args.voice,
-        instructions: PREVIEW_INSTRUCTIONS,
+        instructions: buildPreviewInstructions(platformName),
         tools: [],
         companyId: user.companyId ?? null,
         expiresAt: Date.now() + 60_000,
