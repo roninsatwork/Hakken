@@ -36,6 +36,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # The step below walks back through recent commits looking for one
+          # that passed CI. A default checkout fetches exactly one commit and
+          # that walk would see nothing.
+          fetch-depth: 50
 
       - name: Authenticate to Google Cloud
         id: auth
@@ -89,27 +94,51 @@ jobs:
       # main only ever carries commits that were already on dev, at the same
       # SHA, where CI ran these exact checks against these exact files. Running
       # them again buys no new information and costs about eleven minutes a
-      # release. When no passing run can be found the deploy does them itself,
-      # so the bar never drops — it is only ever paid for once.
-      - name: Look for a passing CI run on this commit
+      # release. When nothing can be found to vouch for the code the deploy
+      # does them itself, so the bar never drops — it is only ever paid for
+      # once.
+      #
+      # The question is about the code, not the commit. CI skips pushes that
+      # touch only documents, so a release whose newest commit is a plan or a
+      # note has no run of its own and the first version of this step made it
+      # pay in full — which, on a repository where plans are written constantly,
+      # was most releases. So: walk back for a commit that did run, then ask
+      # whether anything CI actually reads has changed since. The two filters
+      # below mirror the paths-ignore list in ci.yml and must move with it.
+      - name: Look for a passing CI run covering this code
         id: verified
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |-
-          passed=$(gh api \
-            "repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&per_page=100" \
-            --jq '[.workflow_runs[] | select(.name == "CI" and .conclusion == "success")] | length' \
+          passing=$(gh api \
+            "repos/${{ github.repository }}/actions/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.name == "CI" and .conclusion == "success") | .head_sha' \
             2>/dev/null || true)
-          case "$passed" in
-            ''|*[!0-9]*) passed=0 ;;
-          esac
-          if [ "$passed" -gt 0 ]; then
-            echo "value=true" >> "$GITHUB_OUTPUT"
-            echo "Checks passed on this commit during CI — not repeating them here." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "value=false" >> "$GITHUB_OUTPUT"
-            echo "No passing CI run found for this commit — running the full checks here." >> "$GITHUB_STEP_SUMMARY"
+
+          decide() {
+            echo "value=$1" >> "$GITHUB_OUTPUT"
+            echo "$2" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+
+          if [ -z "$passing" ]; then
+            decide false "Could not read the CI history — running the full checks here."
           fi
+
+          if printf '%s\n' "$passing" | grep -qxF "${{ github.sha }}"; then
+            decide true "This commit passed CI — not repeating the checks here."
+          fi
+
+          for sha in $(git rev-list --max-count=50 HEAD); do
+            printf '%s\n' "$passing" | grep -qxF "$sha" || continue
+            changed=$(git diff --name-only "$sha" HEAD | grep -Ev '^docs/|\.md$' || true)
+            if [ -z "$changed" ]; then
+              decide true "Code unchanged since ${sha:0:9}, which passed CI — not repeating the checks here. Only documents have changed since."
+            fi
+            decide false "Code has changed since ${sha:0:9}, the last commit to pass CI — running the full checks here."
+          done
+
+          decide false "No passing CI run found for this code — running the full checks here."
 
       # The production deploy used to skip the four source guards and the
       # coverage gate that block every PR, so main was held to a lower bar

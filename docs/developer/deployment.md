@@ -79,7 +79,19 @@ way.
 
 The deployment sequence is managed by `.github/workflows/deploy.yml`:
 
-1. Testing firewall: `npm audit --omit=dev --audit-level=high` always, then `npm run check:guards`, `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run coverage:check` — but only when this commit has no passing `CI` run. `main` only ever carries commit SHAs that were already checked on `dev` against the same files, so repeating them buys no new information and costs about eleven minutes a release. When no passing run can be found the deploy runs them itself, so the bar never drops; it is only ever paid for once. The audit is never skipped: an advisory published since the dev run applies to code that has not changed.
+1. Testing firewall: `npm audit --omit=dev --audit-level=high` always, then `npm run check:guards`, `npm run lint`, `npm run typecheck`, `npm run test:coverage` and `npm run coverage:check` — but only when nothing can vouch for the code already. `main` only ever carries commit SHAs that were already checked on `dev` against the same files, so repeating them buys no new information and costs about eleven minutes a release. When nothing can be found the deploy runs them itself, so the bar never drops; it is only ever paid for once. The audit is never skipped: an advisory published since the dev run applies to code that has not changed.
+
+   The question the deploy asks is about the **code**, not the commit. CI skips
+   pushes that touch only documents, so a release whose newest commit is a plan
+   or a note has no run of its own — and the first version of this step made
+   such a release pay in full, which on a repository where plans are written
+   constantly was most releases. The step now walks back up to 50 commits for
+   one that did run, then asks whether anything CI actually reads has changed
+   since. If only documents have, the earlier pass still stands. **The two
+   filters in that step (`^docs/` and `\.md$`) mirror the `paths-ignore` list
+   in `ci.yml` and must be changed together** — widening one without the other
+   would let unchecked code through. The walk is why the deploy checks out with
+   `fetch-depth: 50` rather than the default single commit.
 2. Convex synchrony: `npx convex deploy` with `CONVEX_DEPLOY_KEY`.
 3. Container build: Docker image built by buildx with `NEXT_PUBLIC_CONVEX_URL`, `CONVEX_SITE_URL`, and `CONVEX_DEPLOYMENT` build args. Layers are cached between releases in the registry under a third tag, `:buildcache`, so the `npm ci` layer is reused whenever the lockfile has not moved. That tag is machine-written and carries no releases — never deploy it, and do not prune it unless you want the next build to start cold.
 4. Registry push: buildx publishes straight to Google Artifact Registry with `--push`, so the image is never loaded into the local daemon only to be uploaded again.
