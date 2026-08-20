@@ -1151,11 +1151,44 @@ export const searchKnowledgeForVoiceInternal = internalAction({
         });
       }
 
+      // The same net the typed assistant has: a wiki that names no pages for
+      // this question does not mean the company's own documents have nothing
+      // to say. Without this, a caller asking about a document whose wiki
+      // pages were never written is told "I cannot check" about a file
+      // sitting on the company's own shelf.
+      let voiceFallbackTexts: string[] = [];
+      if (companyId && knowledgeMode === "wiki" && !wikiAnswer.context && chunkTexts.length === 0) {
+        try {
+          const fallbackChunks = await searchKnowledgeScope(ctx, {
+            queryVector,
+            queryText: query,
+            scope: { kind: "company", companyId },
+            limit: 30,
+            priorCompanyId: companyId,
+          });
+          if (fallbackChunks.length > 0) {
+            const picked = await selectKnowledgeChunksWithinBudget({
+              ranked: rankAssistantKnowledgeMatches({
+                globalMatches: [],
+                companyMatches: fallbackChunks,
+                threadMatches: [],
+              }),
+              maxChars: 6000,
+              threadReserveRatio: 0,
+              loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+            });
+            voiceFallbackTexts = picked.chunkTexts;
+          }
+        } catch (error) {
+          console.error("Voice document fallback failed; answering without it", error);
+        }
+      }
+
       // Nothing found is reported as nothing found. Returning the wrapper
       // around an empty list reads to the model as "here is your evidence",
       // and a model handed an empty evidence block invents rather than
       // admits — which is the one thing this must never do out loud.
-      if (chunkTexts.length === 0 && !relevantMemories && !wikiAnswer.context) {
+      if (chunkTexts.length === 0 && voiceFallbackTexts.length === 0 && !relevantMemories && !wikiAnswer.context) {
         return { context: "" };
       }
 
@@ -1163,10 +1196,13 @@ export const searchKnowledgeForVoiceInternal = internalAction({
         context: `${
           wikiAnswer.context ? `${wikiAnswer.context}\n\n` : ""
         }${
-          chunkTexts.length > 0
+          chunkTexts.length > 0 || voiceFallbackTexts.length > 0
             ? buildUntrustedKnowledgeContext({
-                sourceLabel: "global, company, and thread-scoped knowledge",
-                chunks: chunkTexts,
+                sourceLabel:
+                  chunkTexts.length > 0
+                    ? "global, company, and thread-scoped knowledge"
+                    : "the company's own filed documents",
+                chunks: chunkTexts.length > 0 ? chunkTexts : voiceFallbackTexts,
                 maxChars: 6000,
               })
             : ""

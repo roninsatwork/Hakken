@@ -284,7 +284,20 @@ export function RealtimeVoiceOverlay({
 
       const playbackAnalyser = context.createAnalyser();
       playbackAnalyser.fftSize = 256;
-      playbackAnalyser.connect(context.destination);
+      // Through an <audio> element, never straight to the speakers: the
+      // browser's echo canceller only subtracts what plays through media
+      // elements, so WebAudio routed to context.destination comes back in
+      // through the microphone. The model then hears its own reply, treats
+      // it as the caller speaking, interrupts itself and answers itself —
+      // heard as several voices talking over each other and replies that
+      // keep cutting out. The WebRTC path below already plays through an
+      // element for exactly this reason.
+      const speaker = context.createMediaStreamDestination();
+      playbackAnalyser.connect(speaker);
+      const playbackElement = new Audio();
+      playbackElement.autoplay = true;
+      playbackElement.srcObject = speaker.stream;
+      audioElementRef.current = playbackElement;
       remoteAnalyserRef.current = playbackAnalyser;
 
       const socket = new WebSocket(session.relayUrl);
@@ -359,7 +372,15 @@ export function RealtimeVoiceOverlay({
             const source = context.createBufferSource();
             source.buffer = buffer;
             source.connect(playbackAnalyser);
-            const startAt = Math.max(context.currentTime, playheadRef.current);
+            // A fresh stretch of speech starts a beat behind real time on
+            // purpose: chunks arrive over the network with jitter, and a
+            // playhead with no slack turns every late packet into an audible
+            // gap mid-word. 150ms is below what a caller notices as delay
+            // and above what the network usually mis-times.
+            const freshStart = playheadRef.current <= context.currentTime;
+            const startAt = freshStart
+              ? context.currentTime + 0.15
+              : playheadRef.current;
             source.start(startAt);
             playheadRef.current = startAt + buffer.duration;
             playingSourcesRef.current.add(source);
@@ -386,7 +407,11 @@ export function RealtimeVoiceOverlay({
   );
 
   const start = useCallback(async () => {
-    if (connecting || peerRef.current) return;
+    // The relay socket counts as a live session the same as a peer
+    // connection: without it a second press of Start opened a second
+    // microphone and a second session over the first — two conversations
+    // answering at once.
+    if (connecting || peerRef.current || relaySocketRef.current) return;
     setConnecting(true);
     setNotice(null);
     try {

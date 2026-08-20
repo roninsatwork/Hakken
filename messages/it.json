@@ -3627,6 +3627,22 @@
       "noPages": "Il wiki non aveva pagine per questa domanda - apparirà nella schermata Senza risposta.",
       "platform": "(piattaforma)",
       "error": "La domanda non è andata a buon fine. Riprova."
+    },
+    "delete": {
+      "button": "Elimina pagina",
+      "title": "Elimina Pagina",
+      "confirm": "Rimuovere \"{title}\" da questo wiki? L'assistente non risponderà più usando questa pagina. Non si può annullare.",
+      "action": "Elimina Pagina",
+      "cancel": "Annulla",
+      "failed": "Non è stato possibile eliminare la pagina."
+    },
+    "clear": {
+      "button": "Svuota wiki",
+      "title": "Svuota Questo Wiki",
+      "confirm": "Questo rimuove ogni pagina di questo wiki, in modo permanente, così può essere ricostruito da documenti nuovi. La schermata dei documenti non viene toccata. Confermi?",
+      "action": "Svuota il wiki",
+      "clearing": "Svuotamento...",
+      "failed": "Non è stato possibile svuotare del tutto il wiki. Premi di nuovo per finire."
     }
   },
   "calls": {

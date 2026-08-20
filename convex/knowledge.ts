@@ -979,6 +979,31 @@ export const deleteDocument = tenantMutation({
     // Eradicate associated memory chunks in an isolated transaction
     await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
 
+    // The document's own wiki note goes with it. Deleting a file used to
+    // leave its source page standing in the wiki, describing a document
+    // that no longer existed — a workspace could never truly be cleared
+    // (Anthony, 2026-08-20). Only the SOURCE note is swept: topic pages
+    // the document taught hold knowledge in their own right and keep
+    // their receipts trail for the freshness checker to judge.
+    if (!doc.threadId) {
+      const sourcePage = await ctx.db
+        .query("wikiPages")
+        .withIndex("by_company_kind_subject", (q) =>
+          q.eq("companyId", doc.companyId).eq("kind", "SOURCE").eq("subjectKey", args.documentId)
+        )
+        .first();
+      if (sourcePage) {
+        const receipts = await ctx.db
+          .query("wikiPageSources")
+          .withIndex("by_page", (q) => q.eq("pageId", sourcePage._id))
+          .take(500);
+        for (const receipt of receipts) {
+          await ctx.db.delete(receipt._id);
+        }
+        await ctx.db.delete(sourcePage._id);
+      }
+    }
+
     // Delete base document record
     await ctx.db.delete(args.documentId);
 

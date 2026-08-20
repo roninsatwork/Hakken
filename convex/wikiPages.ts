@@ -1346,6 +1346,83 @@ async function applyUnpin(
   });
 }
 
+/**
+ * Remove one page outright, receipts and all.
+ *
+ * The wiki had no way to take a page off the shelf: documents could be
+ * deleted, pages could not, so clearing a workspace's knowledge left every
+ * page standing and pointing at files that no longer existed (Anthony,
+ * 2026-08-20: "the wiki is still full"). Links from other pages to the
+ * deleted one are left for the nightly tending pass, which already repairs
+ * dangling links — deleting must not require reading every other page.
+ */
+async function applyDelete(
+  ctx: MutationCtx,
+  args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages"> }
+): Promise<void> {
+  const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  const receipts = await ctx.db
+    .query("wikiPageSources")
+    .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
+    .take(500);
+  for (const receipt of receipts) {
+    await ctx.db.delete(receipt._id);
+  }
+  await ctx.db.delete(page._id);
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "WIKI_PAGE_DELETE",
+    entityId: page._id.toString(),
+    entityType: "wikiPages",
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    timestamp: Date.now(),
+    metadata: JSON.stringify({ kind: page.kind, subjectKey: page.subjectKey, title: page.title }),
+  });
+}
+
+export const deletePageForCompany = adminMutation({
+  args: { companyId: v.id("companies"), pageId: v.id("wikiPages") },
+  handler: async (ctx, args) => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    await applyDelete(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+export const deletePageForGlobal = adminMutation({
+  args: { pageId: v.id("wikiPages") },
+  handler: async (ctx, args) => {
+    assertPlatformWikiWrite(ctx.user);
+    await applyDelete(ctx, { companyId: undefined, userId: ctx.userId, ...args });
+  },
+});
+
+/**
+ * Empty one company's wiki in a single press — every page, every receipt.
+ *
+ * For starting a workspace's knowledge over: today's need was a wiki built
+ * by the broken distiller that had to go before the documents were fed in
+ * again. Batched because a mutation cannot delete without bound; the screen
+ * calls it until `remaining` reaches zero.
+ */
+export const clearWikiForCompany = adminMutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args): Promise<{ deleted: number; remaining: number }> => {
+    assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(50);
+    for (const page of pages) {
+      await applyDelete(ctx, { companyId: args.companyId, userId: ctx.userId, pageId: page._id });
+    }
+    const left = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
+      .take(1);
+    return { deleted: pages.length, remaining: left.length };
+  },
+});
+
 function requireActiveCompany(user: Doc<"users">): Id<"companies"> {
   const companyId = getActiveCompanyId(user);
   if (!companyId) throw new Error("No workspace selected.");

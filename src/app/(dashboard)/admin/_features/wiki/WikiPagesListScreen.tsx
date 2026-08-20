@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, BookOpen, Download, Network, Pin, X } from "lucide-react";
+import { AlertTriangle, BookOpen, Download, Network, Pin, Trash2, X } from "lucide-react";
+import SonaeModal from "@/src/ui/components/feedback/SonaeModal";
+import { Button } from "@/src/ui/atoms/Button";
 import { strToU8, zipSync } from "fflate";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -102,6 +104,53 @@ export function WikiPagesListScreen({
   const decideCompany = useMutation(api.wikiReviews.decideReviewForCompany);
   const decideReview = (reviewId: (typeof pendingReviews)[number]["reviewId"], approve: boolean) =>
     companyId ? decideCompany({ companyId, reviewId, approve }) : decideGlobal({ reviewId, approve });
+
+  // Taking pages off the shelf (Anthony, 2026-08-20: clearing a workspace's
+  // documents left "the wiki still full" with no way to empty it).
+  const deletePageCompany = useMutation(api.wikiPages.deletePageForCompany);
+  const deletePageGlobal = useMutation(api.wikiPages.deletePageForGlobal);
+  const clearWikiCompany = useMutation(api.wikiPages.clearWikiForCompany);
+  const [pageToDelete, setPageToDelete] = useState<{ pageId: Id<"wikiPages">; title: string } | null>(null);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [deletePageError, setDeletePageError] = useState("");
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [isClearingWiki, setIsClearingWiki] = useState(false);
+  const [clearWikiError, setClearWikiError] = useState("");
+
+  const handleConfirmPageDelete = async () => {
+    if (!pageToDelete || isDeletingPage) return;
+    setIsDeletingPage(true);
+    setDeletePageError("");
+    try {
+      if (companyId) await deletePageCompany({ companyId, pageId: pageToDelete.pageId });
+      else await deletePageGlobal({ pageId: pageToDelete.pageId });
+      setPageToDelete(null);
+    } catch {
+      setDeletePageError(t("delete.failed"));
+    } finally {
+      setIsDeletingPage(false);
+    }
+  };
+
+  const handleConfirmClearWiki = async () => {
+    if (!companyId || isClearingWiki) return;
+    setIsClearingWiki(true);
+    setClearWikiError("");
+    try {
+      // Batched on the server; pressed once here. The loop ends when the
+      // wiki reports itself empty, however many pages it held.
+      let remaining = 1;
+      while (remaining > 0) {
+        const result = await clearWikiCompany({ companyId });
+        remaining = result.remaining;
+      }
+      setIsClearConfirmOpen(false);
+    } catch {
+      setClearWikiError(t("clear.failed"));
+    } finally {
+      setIsClearingWiki(false);
+    }
+  };
 
   const isLoading = rows.isLoading;
   // Sorting by use orders the page in hand; the list itself arrives newest
@@ -403,6 +452,15 @@ export function WikiPagesListScreen({
               <Network className="w-4 h-4" />
               {t("map.open")}
             </Link>
+            {companyId && rows.rows.length > 0 && (
+              <WriteButton
+                onClick={() => setIsClearConfirmOpen(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-[12px] border border-border-dim bg-card/40 text-[13px] font-medium text-secondary hover:border-destructive/50 hover:text-destructive transition-colors whitespace-nowrap"
+              >
+                <Trash2 className="w-4 h-4" />
+                {t("clear.button")}
+              </WriteButton>
+            )}
           </>
         }
         empty={{
@@ -506,8 +564,100 @@ export function WikiPagesListScreen({
               </span>
             ),
           },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            cell: (row) => (
+              <WriteButton
+                onClick={() => setPageToDelete({ pageId: row.pageId, title: row.title })}
+                className="p-2 rounded-lg border border-transparent text-secondary hover:text-destructive hover:bg-destructive/10 transition-colors"
+                title={t("delete.button")}
+              >
+                <Trash2 className="w-4 h-4" />
+              </WriteButton>
+            ),
+          },
         ]}
       />
+
+      <SonaeModal
+        isOpen={!!pageToDelete}
+        onClose={() => {
+          if (!isDeletingPage) {
+            setPageToDelete(null);
+            setDeletePageError("");
+          }
+        }}
+        title={t("delete.title")}
+        size="sm"
+      >
+        <div className="flex flex-col gap-6 w-full pt-4">
+          <p className="text-[14px] text-secondary">
+            {t("delete.confirm", { title: pageToDelete?.title ?? "" })}
+          </p>
+          {deletePageError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">{deletePageError}</span>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setPageToDelete(null)}
+              disabled={isDeletingPage}
+            >
+              {t("delete.cancel")}
+            </Button>
+            <WriteButton
+              onClick={handleConfirmPageDelete}
+              disabled={isDeletingPage}
+              className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {t("delete.action")}
+            </WriteButton>
+          </div>
+        </div>
+      </SonaeModal>
+
+      <SonaeModal
+        isOpen={isClearConfirmOpen}
+        onClose={() => {
+          if (!isClearingWiki) {
+            setIsClearConfirmOpen(false);
+            setClearWikiError("");
+          }
+        }}
+        title={t("clear.title")}
+        size="sm"
+      >
+        <div className="flex flex-col gap-6 w-full pt-4">
+          <p className="text-[14px] text-secondary">{t("clear.confirm")}</p>
+          {clearWikiError && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-[13px] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">{clearWikiError}</span>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setIsClearConfirmOpen(false)}
+              disabled={isClearingWiki}
+            >
+              {t("delete.cancel")}
+            </Button>
+            <WriteButton
+              onClick={handleConfirmClearWiki}
+              disabled={isClearingWiki}
+              className="px-4 py-2 rounded-md bg-destructive text-white transition-colors text-[13px] font-medium hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {isClearingWiki ? t("clear.clearing") : t("clear.action")}
+            </WriteButton>
+          </div>
+        </div>
+      </SonaeModal>
     </div>
   );
 }

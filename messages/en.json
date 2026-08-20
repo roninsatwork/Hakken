@@ -3627,6 +3627,22 @@
       "noPages": "The wiki had no pages for this - it will appear on the Unanswered screen.",
       "platform": "(platform)",
       "error": "The ask could not be completed. Try again."
+    },
+    "delete": {
+      "button": "Delete page",
+      "title": "Delete Page",
+      "confirm": "Remove \"{title}\" from this wiki? The assistant will no longer answer from it. This cannot be undone.",
+      "action": "Delete Page",
+      "cancel": "Cancel",
+      "failed": "The page could not be deleted."
+    },
+    "clear": {
+      "button": "Clear wiki",
+      "title": "Clear This Wiki",
+      "confirm": "This removes every page in this wiki, permanently, so it can be rebuilt from fresh documents. The documents screen is not touched. Are you sure?",
+      "action": "Clear the wiki",
+      "clearing": "Clearing...",
+      "failed": "The wiki could not be fully cleared. Press it again to finish."
     }
   },
   "calls": {
