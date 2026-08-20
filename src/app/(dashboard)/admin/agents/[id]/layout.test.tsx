@@ -175,6 +175,27 @@ describe("AgentDashboardLayout navigation", () => {
     expect(screen.queryByRole("button", { name: "Stop Agent" })).not.toBeInTheDocument();
   });
 
+  /**
+   * The mocked agent carries no standing job, which is exactly the case that
+   * used to open a "what should it do?" form instead of starting anything
+   * (Anthony, 2026-08-20: *"i want it to run"*).
+   */
+  it("starts the agent straight away rather than asking what it should do", async () => {
+    render(
+      <AgentDashboardLayout>
+        <section>Agent body</section>
+      </AgentDashboardLayout>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Run Agent" }));
+
+    await waitFor(() => {
+      expect(manualRunMock).toHaveBeenCalledWith({ agentId: "agent_1" });
+    });
+    expect(screen.queryByText("This agent has no job of its own, so tell it what you want this time.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run it" })).not.toBeInTheDocument();
+  });
+
   it("turns the header Run Agent action into Stop Agent for an active job", async () => {
     activeRunMock = {
       _id: "run_1",

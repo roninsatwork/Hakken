@@ -68,6 +68,21 @@ export const considerAnswer = internalAction({
           },
         ],
       });
+      await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+        systemKey: "WIKI_FILING_CLERK",
+        companyId: args.companyId,
+        actionContext: "Wiki Filing: deciding whether to file",
+        modelId: model.modelId,
+        providerKey: model.providerKey,
+        providerModelId: model.providerModelId,
+        inputTokens: decisionResponse.inputTokens ?? 0,
+        outputTokens: decisionResponse.outputTokens ?? 0,
+        promptContent:
+          `Question: ${args.question.slice(0, 500)}\n\n` +
+          `Answer given:\n${args.answer.slice(0, 3000)}\n\n` +
+          `Pages the answer drew on: ${args.pageKeys.join(", ")}`,
+        responseContent: decisionResponse.text ?? "",
+      });
       const jsonMatch = (decisionResponse.text ?? "").match(/\{[\s\S]*\}/);
       const parsed = jsonMatch
         ? (JSON.parse(jsonMatch[0]) as { file?: unknown; kind?: unknown; slug?: unknown; note?: unknown })
@@ -92,22 +107,30 @@ export const considerAnswer = internalAction({
       )
         .map((entry) => entry.key.slice(entry.key.indexOf(":") + 1))
         .filter((name) => !name.endsWith("-index"));
+      const rewritePrompt = buildRewriteUserContent({
+        title: slug,
+        currentContent: page?.content ?? "",
+        pinnedCorrections: page?.pinnedCorrections ?? [],
+        eventLabel: "a durable insight from an answered question",
+        eventText: note,
+        otherPages: linkableNames,
+      });
       const rewriteResponse = await generateTextWithResolvedModel({
         model,
         systemInstruction: buildRewriteSystemInstruction(),
-        contents: [
-          {
-            type: "text",
-            text: buildRewriteUserContent({
-              title: slug,
-              currentContent: page?.content ?? "",
-              pinnedCorrections: page?.pinnedCorrections ?? [],
-              eventLabel: "a durable insight from an answered question",
-              eventText: note,
-              otherPages: linkableNames,
-            }),
-          },
-        ],
+        contents: [{ type: "text", text: rewritePrompt }],
+      });
+      await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+        systemKey: "WIKI_FILING_CLERK",
+        companyId: args.companyId,
+        actionContext: `Wiki Filing: writing "${slug}"`,
+        modelId: model.modelId,
+        providerKey: model.providerKey,
+        providerModelId: model.providerModelId,
+        inputTokens: rewriteResponse.inputTokens ?? 0,
+        outputTokens: rewriteResponse.outputTokens ?? 0,
+        promptContent: rewritePrompt,
+        responseContent: rewriteResponse.text ?? "",
       });
       const verdict = validateRewrittenPage(rewriteResponse.text ?? "");
       if (!verdict.ok) return;

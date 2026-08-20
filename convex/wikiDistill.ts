@@ -46,12 +46,20 @@ function isDistillable(document: Doc<"knowledgeDocuments">): boolean {
   );
 }
 
+/** How many failed attempts a document gets before the wiki gives up on it. */
+export const WIKI_DISTILL_MAX_ATTEMPTS = 3;
+
 /**
  * Claim-first, then read: the claim (stamping `wikiDistilledAt`) happens in
  * a transaction before any model call, so the on-ready hook and the catch-up
- * sweep can never read the same document twice, whatever the timing. A
- * distillation that fails after its claim is logged and left — a rare lost
- * lesson beats an infinite retry loop of model spend.
+ * sweep can never read the same document twice, whatever the timing.
+ *
+ * A failure after the claim used to be logged and left, on the reasoning
+ * that a rare lost lesson beat an infinite retry loop of model spend. It is
+ * not rare: one bad model call leaves the document filed, listed on screen,
+ * and permanently unanswerable, with nothing anywhere saying so. The claim
+ * is released instead (`releaseDistillClaimInternal`), and
+ * `WIKI_DISTILL_MAX_ATTEMPTS` is what keeps the retry loop finite.
  */
 export const claimDocumentForDistillInternal = internalMutation({
   args: { documentId: v.id("knowledgeDocuments") },
@@ -70,6 +78,31 @@ export const claimDocumentForDistillInternal = internalMutation({
       sourceUrl: document.sourceUrl ?? null,
       text,
     };
+  },
+});
+
+/**
+ * A claim handed back after the distillation failed, so the catch-up sweep
+ * picks the document up again. Gives up quietly once the document has had
+ * `WIKI_DISTILL_MAX_ATTEMPTS` goes — a document that fails every time is a
+ * document something else is wrong with, and it stays claimed rather than
+ * burning model spend forever.
+ */
+export const releaseDistillClaimInternal = internalMutation({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (ctx, args): Promise<{ released: boolean; attempts: number }> => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document) return { released: false, attempts: 0 };
+    const attempts = (document.wikiDistillAttempts ?? 0) + 1;
+    if (attempts >= WIKI_DISTILL_MAX_ATTEMPTS) {
+      await ctx.db.patch(document._id, { wikiDistillAttempts: attempts });
+      return { released: false, attempts };
+    }
+    await ctx.db.patch(document._id, {
+      wikiDistillAttempts: attempts,
+      wikiDistilledAt: undefined,
+    });
+    return { released: true, attempts };
   },
 });
 

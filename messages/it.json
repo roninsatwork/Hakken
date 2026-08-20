@@ -736,6 +736,10 @@
           "name": "Wiki",
           "description": "Il quaderno dell'assistente su questo spazio di lavoro: cosa ha imparato e da dove viene."
         },
+        "postureStudio": {
+          "name": "Posture Studio",
+          "description": "Cattura del movimento, libreria dello studio e allineamento dei replay, per gli spazi di lavoro che insegnano come si muove il corpo."
+        },
         "reports": {
           "name": "Report",
           "description": "Report di vendita scritti per il team, aggiornati man mano che arrivano nuovi numeri."

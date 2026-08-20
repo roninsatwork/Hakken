@@ -695,15 +695,30 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
       .query("wikiPages")
       .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
       .take(500);
+    const now = Date.now();
+    const restMs = 7 * 24 * 60 * 60 * 1000;
     return pages
-      .filter(
-        (page) =>
-          page.kind !== "CUSTOMER" &&
-          // Source notes get their links mechanically from the distiller.
-          page.kind !== "SOURCE" &&
-          !page.subjectKey.endsWith("-index") &&
-          page.links.length < 3
-      )
+      .filter((page) => {
+        if (page.kind === "CUSTOMER") return false;
+        // Source notes get their links mechanically from the distiller.
+        if (page.kind === "SOURCE") return false;
+        if (page.subjectKey.endsWith("-index")) return false;
+        // Only links to *other topics* count as connections. A page's link
+        // down to the document it came from is mechanical — the distiller
+        // writes it — and says nothing about how connected the page is to
+        // the rest of the wiki.
+        //
+        // Counting those is what left the map as islands. A document
+        // yielding three topics gave each of them two siblings and one
+        // source note: three links on the day it was written, at the
+        // threshold, so the Linker never looked at any of them again and no
+        // bridge between documents was ever built.
+        const bridges = page.links.filter((link) => !link.startsWith("SOURCE:"));
+        if (bridges.length >= 3) return false;
+        // Rested like the orphan notes: a page the model genuinely cannot
+        // place is not re-read every night for ever.
+        return now - (page.lastTendedAt ?? 0) >= restMs;
+      })
       .slice(0, args.limit)
       .map((page) => ({
         kind: page.kind,

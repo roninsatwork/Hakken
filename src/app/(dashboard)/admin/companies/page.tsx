@@ -233,16 +233,27 @@ export default function CompaniesPage() {
       />
 
       {/* Add/Edit Modal */}
+      {/*
+        Wide, and the fields laid out across it. As a single narrow column
+        the seven module cards ran far past the fold: a form of four short
+        fields that needed scrolling to reach its own Save button (Anthony,
+        2026-08-20). The name, directives and plan take one column; the
+        modules take the other and wrap into two of their own on a wide
+        screen.
+      */}
       <SonaeModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title={editingCompany ? t('editTitle') : t('createTitle')}
+        size="lg"
       >
         <div className="flex flex-col gap-2 mb-6">
           <p className="text-secondary text-[15px]">{editingCompany ? t('editSubtitle') : t('createSubtitle')}</p>
           <ModalFormError>{submitError}</ModalFormError>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="grid gap-5 md:grid-cols-2 md:items-start">
+          <div className="flex flex-col gap-5">
           <ModalField
             label={t('nameLabel')}
             type="text"
@@ -275,10 +286,11 @@ export default function CompaniesPage() {
                   ))}
              </select>
           </ModalFormField>
+          </div>
 
           {COMPANY_MODULES.length > 0 && (
             <ModalFormField label={t('modulesLabel')} hint={t('modulesHint')}>
-              <div className="flex flex-col gap-2">
+              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
                 {COMPANY_MODULES.map((module) => (
                   <label
                     key={module.key}
@@ -303,6 +315,7 @@ export default function CompaniesPage() {
               </div>
             </ModalFormField>
           )}
+          </div>
 
           <ModalFormActions
             cancelLabel={tCommon('cancel')}

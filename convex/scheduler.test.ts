@@ -195,12 +195,14 @@ describe("Scheduler Authorization", () => {
       await ctx.db.patch(superAdminId, { impersonatingCompanyId: undefined });
     });
 
-    // An agent with nothing to do is not started. It used to be sent its own
-    // database id as the instruction, spend money on a model call, and reply
-    // asking what was wanted.
-    await expect(
-      superAdminClient.mutation(api.scheduler.manualRunSchedule, { agentId: agentWithNoJobId })
-    ).rejects.toThrow("no job yet");
+    // Run runs. An agent with no job line of its own is started on what it
+    // says it is for, rather than refused — the refusal is what put a "what
+    // should it do?" form in front of the button (Anthony, 2026-08-20).
+    // It used to be sent its own database id as the instruction.
+    const noJobExecutionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, {
+      agentId: agentWithNoJobId,
+    });
+    expect(noJobExecutionId).toBeTruthy();
     const executionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { workflowId });
     const agentExecutionId = await superAdminClient.mutation(api.scheduler.manualRunSchedule, { agentId });
     await t.mutation(internal.scheduler.completeSimulation, { executionId, success: false });
@@ -259,6 +261,7 @@ describe("Scheduler Authorization", () => {
         modelId: "safe-model",
         thinkingMode: false,
         isActive: true,
+        standingObjective: "Collect the listings from the saved search and file them.",
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -296,9 +299,63 @@ describe("Scheduler Authorization", () => {
       triggerType: "SCHEDULE",
       status: "QUEUED",
       userId: superAdminId,
-      objective: "Scheduled run: Daily Agent",
+      // The agent's standing job, not the schedule's name. The name is a
+      // label; sending it as the objective woke the agent with nothing to do.
+      objective: "Collect the listings from the saved search and file them.",
+      title: "Daily Agent",
     });
     expect(state.executions.some((execution) => execution.agentRunId === state.runs[0]._id)).toBe(true);
+  });
+
+  test("a scheduled agent with no standing job is still started, on what it is for", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    const { scheduleId } = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", {
+        name: "Super Admin",
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        createdAt: Date.now(),
+      });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Jobless Agent",
+        description: "Watches the mailbox and files what arrives.",
+        modelId: "safe-model",
+        thinkingMode: false,
+        isActive: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      const scheduleId = await ctx.db.insert("schedules", {
+        name: "Nightly",
+        agentId,
+        intervalStr: "daily",
+        isActive: true,
+        nextRunAt: Date.now() - 1000,
+        createdAt: Date.now() - 2000,
+        createdBy: superAdminId,
+      });
+      return { scheduleId };
+    });
+
+    await t.mutation(internal.workflowEngine.scheduleDispatcher, {});
+
+    const { schedule, runs } = await t.run(async (ctx) => ({
+      schedule: await ctx.db.get(scheduleId),
+      runs: await ctx.db
+        .query("agentRuns")
+        .withIndex("by_schedule_started", (q) => q.eq("scheduleId", scheduleId))
+        .collect(),
+    }));
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({
+      status: "QUEUED",
+      // What it is for, never the schedule's name — that is a label.
+      objective: "Watches the mailbox and files what arrives.",
+      title: "Nightly",
+    });
+    expect(schedule?.nextRunAt).toBeGreaterThan(Date.now());
   });
 
   test("schedule and execution admin lists stay bounded and newest first", async () => {
@@ -406,6 +463,7 @@ describe("Scheduler Authorization", () => {
         modelId: "safe-model",
         thinkingMode: false,
         isActive: true,
+        standingObjective: "Check the mailbox and file anything new.",
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });

@@ -44,9 +44,6 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
   const cancelRun = useMutation(api.agentRuns.cancelRun);
   const [isManualRunning, setIsManualRunning] = useState(false);
   const [isStoppingAgent, setIsStoppingAgent] = useState(false);
-  // Opened only when the agent has no standing job of its own, which is the
-  // case its Instructions screen tells you means "somebody has to say".
-  const [askDraft, setAskDraft] = useState<string | null>(null);
   const [stopRunId, setStopRunId] = useState<Id<"agentRuns"> | null>(null);
   const [modalState, setModalState] = useState<{ title: string; message: string } | null>(null);
 
@@ -54,7 +51,6 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
     setIsManualRunning(true);
     try {
       await runManualSchedule({ agentId, ...(objective ? { objective } : {}) });
-      setAskDraft(null);
       // Lands on Activity rather than Overview, because Activity is where the
       // new job appears — top row, marked Running. Overview looks identical
       // the instant a job starts, so pressing the button read as doing nothing.
@@ -180,11 +176,11 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
                   setStopRunId(activeRun._id);
                   return;
                 }
-                if (agent.standingObjective?.trim()) {
-                  void handleManualRun();
-                  return;
-                }
-                setAskDraft("");
+                // Run runs. It does not stop to ask (Anthony, 2026-08-20:
+                // *"i want it to run"*). An agent with no job line of its own
+                // is started on what it says it is for — see
+                // convex/agentObjectiveService.ts.
+                void handleManualRun();
               }}
               disabled={isPrimaryActionBusy}
               className={`px-5 py-2 rounded-[10px] text-white font-medium hover:opacity-90 transition-all text-[13px] flex items-center gap-2 shadow-sm disabled:opacity-50 ${
@@ -211,43 +207,6 @@ export default function AgentDashboardLayout({ children }: { children: ReactNode
       }
     >
       {children}
-
-      <SonaeModal
-        isOpen={askDraft !== null}
-        onClose={() => setAskDraft(null)}
-        title="What should it do?"
-        size="sm"
-      >
-        <div className="pt-2 pb-4 px-1 flex flex-col gap-4">
-          <p className="text-[13px] text-secondary">
-            This agent has no job of its own, so tell it what you want this time.
-          </p>
-          <textarea
-            value={askDraft ?? ""}
-            onChange={(event) => setAskDraft(event.target.value)}
-            rows={4}
-            autoFocus
-            placeholder="Collect the listings from this Rightmove search and file them."
-            className="w-full resize-none p-4 rounded-[10px] border border-border-dim bg-transparent text-foreground/90 font-mono text-[13px] leading-relaxed placeholder:text-muted/50 focus:outline-none focus:border-foreground/30 transition-colors"
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setAskDraft(null)}
-              className="px-4 py-2.5 rounded-[10px] border border-border-dim text-secondary font-medium text-[13px] hover:text-foreground transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleManualRun((askDraft ?? "").trim())}
-              disabled={!askDraft?.trim() || isManualRunning}
-              className="px-5 py-2.5 rounded-[10px] bg-brand text-white font-medium text-[13px] hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isManualRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-              Run it
-            </button>
-          </div>
-        </div>
-      </SonaeModal>
 
       <SonaeModal
         isOpen={stopRunId !== null}

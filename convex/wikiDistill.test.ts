@@ -2,7 +2,9 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
-import { WIKI_DISTILL_BATCH_SIZE } from "./wikiDistill";
+import { WIKI_DISTILL_BATCH_SIZE, WIKI_DISTILL_MAX_ATTEMPTS } from "./wikiDistill";
+import { WIKI_STAFF } from "./wikiStaff";
+import { isWikiStaffKey } from "./wikiStaffRunActions";
 import { parseDocumentTopicSuggestions, parseSourceKey } from "./wikiRewriteService";
 
 /**
@@ -213,5 +215,98 @@ describe("the document topic contract", () => {
       "how-we-work",
       "hosting-questions",
     ]);
+  });
+});
+
+/**
+ * The lost-document bug (2026-08-20). The claim was stamped before the
+ * model was called and never handed back, so one bad model call left the
+ * document filed, listed on screen, and permanently unread by the wiki —
+ * with nothing anywhere saying so.
+ */
+describe("a claim handed back after a failure", () => {
+  test("the document goes back in the queue and the sweep can find it again", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const documentId = await seedDocument(t, companyId, { textContent: "The deck." });
+
+    const claimed = await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, {
+      documentId,
+    });
+    expect(claimed).not.toBeNull();
+
+    const released = await t.mutation(internal.wikiDistill.releaseDistillClaimInternal, {
+      documentId,
+    });
+    expect(released).toEqual({ released: true, attempts: 1 });
+
+    // Claimable again — which is the whole point.
+    const reclaimed = await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, {
+      documentId,
+    });
+    expect(reclaimed).not.toBeNull();
+  });
+
+  test("it gives up after the third failure rather than retrying for ever", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const documentId = await seedDocument(t, companyId, { textContent: "The deck." });
+
+    for (let attempt = 1; attempt < WIKI_DISTILL_MAX_ATTEMPTS; attempt += 1) {
+      await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, { documentId });
+      const outcome = await t.mutation(internal.wikiDistill.releaseDistillClaimInternal, {
+        documentId,
+      });
+      expect(outcome).toEqual({ released: true, attempts: attempt });
+    }
+
+    await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, { documentId });
+    expect(
+      await t.mutation(internal.wikiDistill.releaseDistillClaimInternal, { documentId })
+    ).toEqual({ released: false, attempts: WIKI_DISTILL_MAX_ATTEMPTS });
+
+    // Stays claimed: a document that fails every time is not a retry
+    // problem, and the run history is where that now shows.
+    expect(
+      await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, { documentId })
+    ).toBeNull();
+  });
+});
+
+/**
+ * Pressing Run on a wiki agent (2026-08-20).
+ *
+ * The staff's work is a sweep over every wiki on the platform, not a model
+ * call with a prompt. Starting one on the ordinary agent loop produced a
+ * paragraph about the work and filed nothing, which on screen is
+ * indistinguishable from an agent that never runs.
+ */
+describe("a wiki agent's Run does its round", () => {
+  test("every staff member carries a standing job, so nothing asks what to do", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.mutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+
+    const staff = await t.run(async (ctx) =>
+      ctx.db
+        .query("agents")
+        .withIndex("by_active_created", (q) => q.eq("isActive", true))
+        .take(100)
+    );
+
+    const wikiStaff = staff.filter((agent) => agent.systemKey?.startsWith("WIKI_"));
+    expect(wikiStaff.length).toBe(WIKI_STAFF.length);
+    for (const agent of wikiStaff) {
+      expect(agent.standingObjective?.trim()).toBeTruthy();
+    }
+  });
+
+  test("the staff are routed to their round rather than the ordinary agent loop", async () => {
+    // Every member the registry names has a round or an honest reason it has
+    // none, so Run can never land on a staff key nothing handles.
+    for (const member of WIKI_STAFF) {
+      expect(isWikiStaffKey(member.systemKey)).toBe(true);
+    }
+    expect(isWikiStaffKey("SOME_OTHER_AGENT")).toBe(false);
+    expect(isWikiStaffKey(undefined)).toBe(false);
   });
 });

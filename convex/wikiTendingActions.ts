@@ -22,17 +22,25 @@ export const tendDispatcher = internalAction({
     // The staff exist before they work; a stood-down Tidier spends nothing
     // (wiki-agents plan, phase 0).
     await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
-    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_TIDIER" }))) {
-      return { companies: 0 };
-    }
+    const tidierActive = await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, {
+      systemKey: "WIKI_TIDIER",
+    });
+    // The Linker's round covers every wiki on the platform, each one its own
+    // separate brain (Anthony, 2026-08-20: *"the wikis are all separate and
+    // independent"*). Kept beside the Tidier's round rather than inside it,
+    // so pressing Run on the Linker does exactly what the night does.
+    await ctx.scheduler.runAfter(0, internal.wikiTendingActions.linkDispatcher, {});
+
     const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
     let visited = 0;
     for (const scope of companies) {
+      const companyId = scope ?? undefined;
+
       // Only gardens with weeds get a visit: a brain whose pages are all
       // tidy and correctly linked costs nothing tonight — and a scheduler
       // asked to drain (as the tests do) genuinely drains. `null` is the
       // global shelf's round (global-wiki-plan.md, phase 4).
-      const companyId = scope ?? undefined;
+      if (!tidierActive) continue;
       const candidates = await ctx.runQuery(internal.wikiTending.getTendingCandidatesInternal, {
         companyId,
       });
@@ -41,6 +49,39 @@ export const tendDispatcher = internalAction({
       visited += 1;
     }
     return { companies: visited };
+  },
+});
+
+/**
+ * One linking round over every wiki on the platform.
+ *
+ * `crossLinkSweep` had no caller at all — the only reference to it anywhere
+ * was its own chaining line — so after the single manual run that seeded the
+ * graph on 2026-08-15 it never ran again. Every link on the map since then
+ * came from the Distiller, which only ever joins a document to the topics it
+ * taught. That is why the map is pairs and small islands with nothing
+ * between them: nothing was building bridges (Anthony, 2026-08-20).
+ *
+ * Each company's wiki is its own separate brain, so the round visits them
+ * one at a time. Cheap for a quiet wiki — the sweep reads its two candidate
+ * lists and returns before touching a model when both are empty — and the
+ * sweep checks the Linker's own switch, so a stood-down Linker spends
+ * nothing anywhere.
+ */
+export const linkDispatcher = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ companies: number }> => {
+    await ctx.runMutation(internal.wikiStaff.ensureWikiStaffAgentsInternal, {});
+    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_LINKER" }))) {
+      return { companies: 0 };
+    }
+    const companies = await ctx.runQuery(internal.wikiTending.listCompaniesWithPagesInternal, {});
+    for (const scope of companies) {
+      await ctx.scheduler.runAfter(0, internal.wikiTendingActions.crossLinkSweep, {
+        companyId: scope ?? undefined,
+      });
+    }
+    return { companies: companies.length };
   },
 });
 
@@ -91,18 +132,26 @@ export const crossLinkSweep = internalAction({
     let linked = 0;
     for (const page of [...sparse, ...orphans]) {
       try {
+        const prompt =
+          `Page "${page.subjectKey}":\n${page.excerpt}\n\n` +
+          `All page names:\n${names.join(", ")}`;
         const response = await generateTextWithResolvedModel({
           model,
           systemInstruction:
             'You connect one wiki page to its genuinely related pages. Reply with strict JSON, nothing else: {"related": [string]} — up to five names exactly as they appear in the list, best first. Related means a reader of this page would plausibly open that one next. Never force a connection: if nothing in the list is genuinely related, reply {"related": []}.',
-          contents: [
-            {
-              type: "text",
-              text:
-                `Page "${page.subjectKey}":\n${page.excerpt}\n\n` +
-                `All page names:\n${names.join(", ")}`,
-            },
-          ],
+          contents: [{ type: "text", text: prompt }],
+        });
+        await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+          systemKey: "WIKI_LINKER",
+          companyId: args.companyId,
+          actionContext: "Wiki Linking Round",
+          modelId: model.modelId,
+          providerKey: model.providerKey,
+          providerModelId: model.providerModelId,
+          inputTokens: response.inputTokens ?? 0,
+          outputTokens: response.outputTokens ?? 0,
+          promptContent: prompt,
+          responseContent: response.text ?? "",
         });
         const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
         const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { related?: unknown }) : {};
@@ -130,33 +179,41 @@ export const crossLinkSweep = internalAction({
           });
           linked += 1;
         }
-        if (page.kind === "SOURCE") {
-          // Visited, whatever the outcome: an unrelatable page rests a week
-          // instead of costing a model call every night for ever.
-          const orphanPage = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
-            companyId: args.companyId,
-            kind: "SOURCE",
-            subjectKey: page.subjectKey,
+        // Visited, whatever the outcome: an unrelatable page rests a week
+        // instead of costing a model call every night for ever. Every kind
+        // rests, not only the orphan notes — topic pages are now re-read
+        // until they have real bridges, and without a rest a page nothing
+        // relates to would be asked about nightly for ever.
+        const visited = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
+          companyId: args.companyId,
+          kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE",
+          subjectKey: page.subjectKey,
+        });
+        if (visited) {
+          await ctx.runMutation(internal.wikiTending.markTendedInternal, {
+            pageId: visited._id,
           });
-          if (orphanPage) {
-            await ctx.runMutation(internal.wikiTending.markTendedInternal, {
-              pageId: orphanPage._id,
-            });
-          }
         }
       } catch (error) {
         console.error("Cross-linking could not read a page; moving on", error);
       }
     }
+    // Recorded whatever happened. A pass that read pages and connected none
+    // of them is a real result — and recording only the productive passes is
+    // why a Linker that had never once succeeded showed an empty history and
+    // read as an agent that never ran.
+    await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+      systemKey: "WIKI_LINKER",
+      companyId: args.companyId,
+      trigger: "SCHEDULE",
+      objective: "Connect sparsely linked pages to their related pages.",
+      summary:
+        linked > 0
+          ? `Added ${linked} connections between related pages.`
+          : `Read ${sparse.length + orphans.length} pages and found nothing genuinely related to connect.`,
+      startedAt: passStartedAt,
+    });
     if (linked > 0) {
-      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
-        systemKey: "WIKI_LINKER",
-        companyId: args.companyId,
-        trigger: "SCHEDULE",
-        objective: "Connect sparsely linked pages to their related pages.",
-        summary: `Added ${linked} connections between related pages.`,
-        startedAt: passStartedAt,
-      });
       // More sparse pages may remain past the limit; keep going while the
       // passes make progress. A pass that linked nothing stops the chain —
       // a page the model cannot relate to anything must not loop forever.
@@ -193,6 +250,14 @@ export const tendCompany = internalAction({
         const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
           useCase: "fast-chat",
         });
+        const prompt =
+          `Customer: ${page.title}\n\n` +
+          (page.pinnedCorrections.length
+            ? `Pinned corrections from staff (ground truth, do not contradict, do not repeat):\n${page.pinnedCorrections
+                .map((correction) => `- ${correction.text}`)
+                .join("\n")}\n\n`
+            : "") +
+          `The page as it stands:\n${page.content}`;
         const response = await generateTextWithResolvedModel({
           model,
           systemInstruction: [
@@ -203,19 +268,19 @@ export const tendCompany = internalAction({
             `- At most ${WIKI_PAGE_MAX_CHARS} characters, and shorter than the old page.`,
             "Reply with the complete tidied page text and nothing else.",
           ].join("\n"),
-          contents: [
-            {
-              type: "text",
-              text:
-                `Customer: ${page.title}\n\n` +
-                (page.pinnedCorrections.length
-                  ? `Pinned corrections from staff (ground truth, do not contradict, do not repeat):\n${page.pinnedCorrections
-                      .map((correction) => `- ${correction.text}`)
-                      .join("\n")}\n\n`
-                  : "") +
-                `The page as it stands:\n${page.content}`,
-            },
-          ],
+          contents: [{ type: "text", text: prompt }],
+        });
+        await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+          systemKey: "WIKI_TIDIER",
+          companyId: args.companyId,
+          actionContext: "Wiki Tidying Round",
+          modelId: model.modelId,
+          providerKey: model.providerKey,
+          providerModelId: model.providerModelId,
+          inputTokens: response.inputTokens ?? 0,
+          outputTokens: response.outputTokens ?? 0,
+          promptContent: prompt,
+          responseContent: response.text ?? "",
         });
         const verdict = validateRewrittenPage(response.text ?? "");
         // A tidy that grew the page is not a tidy; the page stands.
@@ -237,16 +302,19 @@ export const tendCompany = internalAction({
       await ctx.runMutation(internal.wikiTending.markTendedInternal, { pageId: page.pageId });
     }
 
-    if (repairedLinks > 0 || tidiedPages > 0) {
-      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
-        systemKey: "WIKI_TIDIER",
-        companyId: args.companyId,
-        trigger: "SCHEDULE",
-        objective: "Nightly tending: tidy overgrown pages and repair links.",
-        summary: `Repaired ${repairedLinks} pages' links; tidied ${tidiedPages} overgrown pages.`,
-        startedAt: visitStartedAt,
-      });
-    }
+    // Recorded whatever happened: a quiet night is a result, and silence
+    // was indistinguishable from an agent that had never run.
+    await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+      systemKey: "WIKI_TIDIER",
+      companyId: args.companyId,
+      trigger: "SCHEDULE",
+      objective: "Nightly tending: tidy overgrown pages and repair links.",
+      summary:
+        repairedLinks > 0 || tidiedPages > 0
+          ? `Repaired ${repairedLinks} pages' links; tidied ${tidiedPages} overgrown pages.`
+          : "Nothing needed tidying and no links were broken.",
+      startedAt: visitStartedAt,
+    });
     return { repairedLinks, tidiedPages };
   },
 });

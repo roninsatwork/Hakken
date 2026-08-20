@@ -38,11 +38,24 @@ export const prepareReview = internalAction({
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
         useCase: "fast-chat",
       });
+      const prompt = `Document: ${document.title}\n\n${document.text}`;
       const response = await generateTextWithResolvedModel({
         model,
         systemInstruction:
           'You review one document before a wiki is allowed to learn from it. Reply with strict JSON, nothing else: {"claims": [string]} — up to six plain sentences stating the main things this document claims. No judgement, no summary of style: just what it asserts.',
-        contents: [{ type: "text", text: `Document: ${document.title}\n\n${document.text}` }],
+        contents: [{ type: "text", text: prompt }],
+      });
+      await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+        systemKey: "WIKI_REVIEWER",
+        companyId: document.companyId ?? undefined,
+        actionContext: "Wiki Review: reading a marked document",
+        modelId: model.modelId,
+        providerKey: model.providerKey,
+        providerModelId: model.providerModelId,
+        inputTokens: response.inputTokens ?? 0,
+        outputTokens: response.outputTokens ?? 0,
+        promptContent: prompt,
+        responseContent: response.text ?? "",
       });
       const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
       const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { claims?: unknown }) : {};

@@ -10,6 +10,7 @@ import {
   type WorkflowStatePayload,
 } from "./utils/workflowTypes";
 import { getNextWorkflowScheduleRunAt, shouldRunWorkflowSchedule } from "./workflowScheduleService";
+import { resolveRunObjective } from "./agentObjectiveService";
 import {
   APPROVAL_EXPIRY_CONFIG_KEY,
   getApprovalExpiredMessage,
@@ -942,11 +943,33 @@ export const scheduleDispatcher = internalMutation({
                 const agent = await ctx.db.get(schedule.agentId);
                 if (!agent || agent.isActive === false) continue;
                 const creator = schedule.createdBy ? await ctx.db.get(schedule.createdBy) : null;
+
+                // The agent's standing job is the instruction, exactly as it
+                // is on the manual path. This used to send the schedule's own
+                // name — an agent woken at 3am and told "Scheduled run:
+                // Nightly listings", which is a label, not an instruction. It
+                // burned a model call working out that it had not been asked
+                // anything, every night, and the standing job it did have was
+                // never read. The manual path was fixed for this; this one
+                // was missed.
+                // Resolved the same way the manual path resolves it, through
+                // the one helper both now share. These two drifted apart once
+                // — the manual path was taught to use the agent's own job and
+                // this one was not — and that drift is the bug.
+                const objective = resolveRunObjective({
+                  standingObjective: agent.standingObjective,
+                  description: agent.description,
+                });
+
                 const agentRunId = await ctx.db.insert("agentRuns", {
                   agentId: schedule.agentId,
                   scheduleId: schedule._id,
                   triggerType: "SCHEDULE",
-                  objective: `Scheduled run: ${schedule.name}`,
+                  objective,
+                  // The schedule's name is what this run is *about*; the
+                  // objective is what it was told. They are different things,
+                  // and the runs screen wants the short one.
+                  title: schedule.name,
                   status: "QUEUED",
                   companyId: creator?.companyId,
                   userId: schedule.createdBy,
@@ -965,7 +988,7 @@ export const scheduleDispatcher = internalMutation({
 
                 await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
                   agentId: schedule.agentId,
-                  objective: `Scheduled run: ${schedule.name}`,
+                  objective,
                   triggerType: "SCHEDULE",
                   runId: agentRunId,
                   scheduleId: schedule._id,

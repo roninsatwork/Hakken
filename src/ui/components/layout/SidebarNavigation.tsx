@@ -51,7 +51,7 @@ import { SALES_DATA_MODULE_KEY } from "@/convex/utils/salesDataModule";
 import { REPORTS_MODULE_KEY } from "@/convex/utils/coreModules";
 // template:remove:end
 // template:remove:start properties
-import { PROPERTIES_MODULE_KEY } from "@/convex/utils/coreModules";
+import { PROPERTIES_MODULE_KEY, POSTURE_STUDIO_MODULE_KEY } from "@/convex/utils/coreModules";
 // template:remove:end
 import { isWorkspaceSectionPath, workspaceSlug } from "@/src/lib/workspaceSlug";
 // template:remove:end
@@ -825,6 +825,7 @@ export default function SidebarNavigation() {
                     {/* template:remove:end */}
 
                     {/* template:remove:start movement */}
+                    {hasCapability(POSTURE_STUDIO_MODULE_KEY) && (
                     <NavItem
                       icon={Globe}
                       label="Posture Studio"
@@ -839,6 +840,7 @@ export default function SidebarNavigation() {
                       <SubNavItem label="Replay Alignment" href="/demos/movements/replay-lab" isActive={pathname.startsWith('/demos/movements/replay-lab')} onClick={() => setActiveItem('Demos')} />
 
                     </NavItem>
+                    )}
                     {/* template:remove:end */}
 
                     {/*

@@ -36,33 +36,40 @@ export const selectWikiContextForQuery = internalAction({
     ctx,
     args
   ): Promise<{ context: string; pageKeys: string[] }> => {
-    const companyIndex = args.companyId
-      ? await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
-          companyId: args.companyId,
-          includeCustomerPages: args.includeCustomerPages,
-          // Synthesis first (the playbook's query order): the chooser picks
-          // from the tended pages. Fine print arrives through the hop — chosen
-          // pages link down to their source notes, and the reader follows.
-          // Offering all the source notes here was tried and measurably
-          // diluted the choosing (exam 16→14, 2026-08-15); do not repeat it.
-          includeSourceNotes: false,
+    // Synthesis first (the playbook's query order): the chooser picks from
+    // the tended pages. Fine print arrives through the hop — chosen pages
+    // link down to their source notes, and the reader follows. Offering all
+    // the source notes alongside them was tried and measurably diluted the
+    // choosing (exam 16→14, 2026-08-15); do not put them in the same pass.
+    //
+    // They are offered in a *second* pass instead, when the first found
+    // nothing at all. A document whose synthesis never got written — the
+    // distiller failed after claiming it, or wrote no topics — would
+    // otherwise sit in the wiki permanently unreadable, and the surface
+    // would answer "I don't have access" about a document on its own shelf.
+    const buildIndex = async (includeSourceNotes: boolean) => {
+      const companyIndex = args.companyId
+        ? await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+            companyId: args.companyId,
+            includeCustomerPages: args.includeCustomerPages,
+            includeSourceNotes,
+          })
+        : [];
+      // The global brain fills gaps and never overrules (global-wiki-plan.md,
+      // rule 3): a global page on a subject the company's own wiki covers is
+      // dropped before the chooser ever sees it.
+      const companyKeys = new Set(companyIndex.map((entry) => entry.key));
+      const globalIndex = (
+        await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
+          includeCustomerPages: false,
+          includeSourceNotes,
         })
-      : [];
-    // The global brain fills gaps and never overrules (global-wiki-plan.md,
-    // rule 3): a global page on a subject the company's own wiki covers is
-    // dropped before the chooser ever sees it.
-    const companyKeys = new Set(companyIndex.map((entry) => entry.key));
-    const globalIndex = (
-      await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
-        includeCustomerPages: false,
-        includeSourceNotes: false,
-      })
-    ).filter((entry) => !companyKeys.has(entry.key));
-    const index = [
-      ...companyIndex,
-      ...globalIndex.map((entry) => ({ ...entry, key: `${GLOBAL_KEY_PREFIX}${entry.key}` })),
-    ];
-    if (index.length === 0) return { context: "", pageKeys: [] };
+      ).filter((entry) => !companyKeys.has(entry.key));
+      return [
+        ...companyIndex,
+        ...globalIndex.map((entry) => ({ ...entry, key: `${GLOBAL_KEY_PREFIX}${entry.key}` })),
+      ];
+    };
 
     const budget = args.maxChars ?? 14_000;
     // Both shelves opened, the company's first and with first claim on the
@@ -103,27 +110,44 @@ export const selectWikiContextForQuery = internalAction({
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
         useCase: "fast-chat",
       });
-      const response = await generateTextWithResolvedModel({
-        model,
-        systemInstruction:
-          'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Keys starting "global/" are the platform\'s shared pages — real answers, used when the company\'s own pages do not cover the question. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
-        contents: [
-          {
-            type: "text",
-            text:
-              `Question: ${args.query.slice(0, 400)}\n\nIndex:\n` +
-              index.map((entry) => `${entry.key} — ${entry.hint}`).join("\n"),
-          },
-        ],
-      });
-      const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
-      const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { pages?: unknown }) : {};
-      const valid = new Set(index.map((entry) => entry.key));
-      const keys = (Array.isArray(parsed.pages) ? parsed.pages : [])
-        .filter((key): key is string => typeof key === "string" && valid.has(key))
-        .slice(0, 4);
-      if (keys.length > 0) return await openBothShelves(keys);
-      // The model read the index and found nothing: believe it.
+      const chooseFrom = async (
+        index: Array<{ key: string; title: string; hint: string }>
+      ): Promise<string[]> => {
+        if (index.length === 0) return [];
+        const response = await generateTextWithResolvedModel({
+          model,
+          systemInstruction:
+            'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Keys starting "global/" are the platform\'s shared pages — real answers, used when the company\'s own pages do not cover the question. Keys starting "SOURCE:" are whole documents the company has filed. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
+          contents: [
+            {
+              type: "text",
+              text:
+                `Question: ${args.query.slice(0, 400)}\n\nIndex:\n` +
+                index.map((entry) => `${entry.key} — ${entry.hint}`).join("\n"),
+            },
+          ],
+        });
+        const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { pages?: unknown }) : {};
+        const valid = new Set(index.map((entry) => entry.key));
+        return (Array.isArray(parsed.pages) ? parsed.pages : [])
+          .filter((key): key is string => typeof key === "string" && valid.has(key))
+          .slice(0, 4);
+      };
+
+      const tended = await buildIndex(false);
+      const tendedKeys = await chooseFrom(tended);
+      if (tendedKeys.length > 0) return await openBothShelves(tendedKeys);
+
+      // Nothing among the tended pages covers it. Before believing the wiki
+      // has no answer, look again with the filed documents themselves in
+      // view — a shelf that holds the document but not a page about it is
+      // still a shelf that holds the answer.
+      const withSources = await buildIndex(true);
+      if (withSources.length === tended.length) return { context: "", pageKeys: [] };
+      const sourceKeys = await chooseFrom(withSources);
+      if (sourceKeys.length > 0) return await openBothShelves(sourceKeys);
+      // Both passes read the index and found nothing: believe it.
       return { context: "", pageKeys: [] };
     } catch (error) {
       console.error("Wiki index reading failed; falling back to word match", error);
@@ -136,8 +160,11 @@ export const selectWikiContextForQuery = internalAction({
           })
         : { context: "", pageKeys: [] };
       const remaining = budget - own.context.length;
+      // The index this path used to read is no longer in scope, so the
+      // "is there a platform shelf at all" guard asks directly.
+      const hasGlobalShelf = await ctx.runQuery(internal.wikiPages.hasGlobalWikiPagesInternal, {});
       const globalPart =
-        globalIndex.length > 0 && remaining > 400
+        hasGlobalShelf && remaining > 400
           ? await ctx.runQuery(internal.wikiPages.getWikiAnswerContextInternal, {
               query: args.query,
               includeCustomerPages: false,

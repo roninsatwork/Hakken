@@ -58,19 +58,27 @@ export const findContradictionsForCompany = internalAction({
       });
       if (cluster.length < 2) continue;
       try {
+        const prompt = cluster
+          .map((page) => `=== ${page.pageKey} ===\n${page.excerpt}`)
+          .join("\n\n");
         const response = await generateTextWithResolvedModel({
           model,
           systemInstruction:
             "You read a set of related wiki pages together and report claims that GENUINELY disagree — the same fact stated two incompatible ways. Different emphasis or different level of detail is NOT a contradiction. " +
             'Reply with strict JSON, nothing else: {"contradictions": [{"pageA": string, "claimA": string, "pageB": string, "claimB": string}]} — pageA/pageB exactly as named, claimA/claimB quoting each page\'s own sentence. An empty list is the right answer for most healthy wikis.',
-          contents: [
-            {
-              type: "text",
-              text: cluster
-                .map((page) => `=== ${page.pageKey} ===\n${page.excerpt}`)
-                .join("\n\n"),
-            },
-          ],
+          contents: [{ type: "text", text: prompt }],
+        });
+        await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+          systemKey: "WIKI_CONTRADICTION_FINDER",
+          companyId: args.companyId,
+          actionContext: "Wiki Contradiction Round",
+          modelId: model.modelId,
+          providerKey: model.providerKey,
+          providerModelId: model.providerModelId,
+          inputTokens: response.inputTokens ?? 0,
+          outputTokens: response.outputTokens ?? 0,
+          promptContent: prompt,
+          responseContent: response.text ?? "",
         });
         const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
         const parsed = jsonMatch
@@ -116,16 +124,20 @@ export const findContradictionsForCompany = internalAction({
       }
     }
 
-    if (raised > 0 || autoResolved > 0) {
-      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
-        systemKey: "WIKI_CONTRADICTION_FINDER",
-        companyId: args.companyId,
-        trigger: "SCHEDULE",
-        objective: "Read related pages together and flag claims that disagree.",
-        summary: `Raised ${raised} open questions; ${autoResolved} closed because the pages changed.`,
-        startedAt,
-      });
-    }
+    // Recorded whatever happened. A round that found nothing used to write
+    // nothing, so an agent doing its job nightly and an agent that had never
+    // once run looked identical on screen — both simply "Active".
+    await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+      systemKey: "WIKI_CONTRADICTION_FINDER",
+      companyId: args.companyId,
+      trigger: "SCHEDULE",
+      objective: "Read related pages together and flag claims that disagree.",
+      summary:
+        raised > 0 || autoResolved > 0
+          ? `Raised ${raised} open questions; ${autoResolved} closed because the pages changed.`
+          : "Read the related pages and found nothing that disagrees.",
+      startedAt,
+    });
     return { raised, autoResolved };
   },
 });

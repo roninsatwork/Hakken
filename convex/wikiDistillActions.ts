@@ -26,6 +26,12 @@ import {
 
 type DistilResult = { pagesWritten: number; pagesImproved: number };
 
+/** A failure in one short line, safe to show on the agent's run history. */
+function errorSummary(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/\s+/g, " ").trim().slice(0, 200) || "no detail given";
+}
+
 async function distilOne(
   ctx: ActionCtx,
   args: {
@@ -54,10 +60,23 @@ async function distilOne(
   const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
     useCase: "fast-chat",
   });
+  const suggestionPrompt = `Document: ${args.title}\n\n${args.text}`;
   const suggestionResponse = await generateTextWithResolvedModel({
     model,
     systemInstruction: buildDocumentTopicInstruction(),
-    contents: [{ type: "text", text: `Document: ${args.title}\n\n${args.text}` }],
+    contents: [{ type: "text", text: suggestionPrompt }],
+  });
+  await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+    systemKey: "WIKI_DISTILLER",
+    companyId: args.companyId,
+    actionContext: "Wiki Distilling: choosing topics",
+    modelId: model.modelId,
+    providerKey: model.providerKey,
+    providerModelId: model.providerModelId,
+    inputTokens: suggestionResponse.inputTokens ?? 0,
+    outputTokens: suggestionResponse.outputTokens ?? 0,
+    promptContent: suggestionPrompt,
+    responseContent: suggestionResponse.text ?? "",
   });
   const topics = parseDocumentTopicSuggestions(suggestionResponse.text ?? "");
   // What a person sees on the page's receipts: the address for a website
@@ -82,22 +101,30 @@ async function distilOne(
       kind: topic.kind,
       subjectKey: topic.slug,
     });
+    const rewritePrompt = buildRewriteUserContent({
+      title: topic.slug,
+      currentContent: page?.content ?? "",
+      pinnedCorrections: page?.pinnedCorrections ?? [],
+      eventLabel: "company document",
+      eventText: `${topic.learned}\n\nFrom the document "${args.title}":\n${args.text.slice(0, 4000)}`,
+      otherPages: linkableNames,
+    });
     const rewriteResponse = await generateTextWithResolvedModel({
       model,
       systemInstruction: buildRewriteSystemInstruction(),
-      contents: [
-        {
-          type: "text",
-          text: buildRewriteUserContent({
-            title: topic.slug,
-            currentContent: page?.content ?? "",
-            pinnedCorrections: page?.pinnedCorrections ?? [],
-            eventLabel: "company document",
-            eventText: `${topic.learned}\n\nFrom the document "${args.title}":\n${args.text.slice(0, 4000)}`,
-            otherPages: linkableNames,
-          }),
-        },
-      ],
+      contents: [{ type: "text", text: rewritePrompt }],
+    });
+    await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+      systemKey: "WIKI_DISTILLER",
+      companyId: args.companyId,
+      actionContext: `Wiki Distilling: writing "${topic.slug}"`,
+      modelId: model.modelId,
+      providerKey: model.providerKey,
+      providerModelId: model.providerModelId,
+      inputTokens: rewriteResponse.inputTokens ?? 0,
+      outputTokens: rewriteResponse.outputTokens ?? 0,
+      promptContent: rewritePrompt,
+      responseContent: rewriteResponse.text ?? "",
     });
     const verdict = validateRewrittenPage(rewriteResponse.text ?? "");
     if (!verdict.ok) continue;
@@ -232,6 +259,25 @@ export const distilNewDocument = internalAction({
       });
     } catch (error) {
       console.error("The wiki could not learn from a new document; the library still has it", error);
+      // The claim goes back, so the catch-up sweep tries this document
+      // again rather than leaving it filed and permanently unanswerable.
+      const { released, attempts } = await ctx.runMutation(
+        internal.wikiDistill.releaseDistillClaimInternal,
+        { documentId: args.documentId }
+      );
+      // Recorded as a run either way. A failing Distiller used to write
+      // nothing anywhere, so an agent that had never once succeeded still
+      // showed "Active" with an empty history and looked merely idle.
+      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+        systemKey: "WIKI_DISTILLER",
+        companyId: document.companyId ?? undefined,
+        trigger: "EVENT",
+        objective: `A document finished importing: ${document.title.slice(0, 120)}`,
+        summary: released
+          ? `Failed on attempt ${attempts} — ${errorSummary(error)}. The document goes back in the queue.`
+          : `Failed on attempt ${attempts} — ${errorSummary(error)}. Given up on; it will not be read again.`,
+        startedAt: hookStartedAt,
+      });
       return;
     }
     await ctx.runMutation(internal.wikiDistill.recordDistillProgressInternal, {
@@ -316,16 +362,19 @@ export const distilCompanyBatch = internalAction({
       pagesImproved,
       ...(lastDocumentTitle ? { lastDocumentTitle } : {}),
     });
-    if (documentsRead > 0) {
-      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
-        systemKey: "WIKI_DISTILLER",
-        companyId: args.companyId,
-        trigger: "SCHEDULE",
-        objective: "Catch-up: read imported documents the wiki has not learned from yet.",
-        summary: `Read ${documentsRead} documents; wrote ${pagesWritten} pages, improved ${pagesImproved}.`,
-        startedAt: batchStartedAt,
-      });
-    }
+    // Recorded whatever happened, so an empty backlog reads as an empty
+    // backlog rather than as an agent that never ran.
+    await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+      systemKey: "WIKI_DISTILLER",
+      companyId: args.companyId,
+      trigger: "SCHEDULE",
+      objective: "Catch-up: read imported documents the wiki has not learned from yet.",
+      summary:
+        documentsRead > 0
+          ? `Read ${documentsRead} documents; wrote ${pagesWritten} pages, improved ${pagesImproved}.`
+          : "No documents were waiting to be read.",
+      startedAt: batchStartedAt,
+    });
 
     // More to do? The next batch schedules itself, so an import of any size
     // finishes without anyone watching it.

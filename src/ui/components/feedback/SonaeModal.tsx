@@ -49,6 +49,22 @@ export default function SonaeModal({
   const titleId = useId();
 
   /**
+   * `onClose` held in a ref so the focus effect below does not depend on it.
+   *
+   * Nearly every caller passes an inline arrow — `onClose={() => setOpen(false)}`
+   * — which is a new function on every render. With `onClose` in that effect's
+   * dependencies, every keystroke in a modal form re-rendered the parent, tore
+   * the effect down (restoring focus to whatever opened the dialog) and set it
+   * up again (focusing the first field). The result was a form you could only
+   * type one character into at a time, on every modal in the app (Anthony,
+   * 2026-08-20). The effect belongs to opening and closing, not to re-rendering.
+   */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  /**
    * The three things a dialog owes a keyboard.
    *
    * This is the app's only modal, used for delete confirmations, the agent
@@ -70,7 +86,7 @@ export default function SonaeModal({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -104,7 +120,8 @@ export default function SonaeModal({
       // the page.
       returnFocusTo.current?.focus?.();
     };
-  }, [isOpen, onClose]);
+    // `isOpen` alone: see the note on `onCloseRef` above.
+  }, [isOpen]);
 
   const modalContent = (
     <AnimatePresence>

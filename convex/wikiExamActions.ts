@@ -44,17 +44,25 @@ export const runWikiExam = internalAction({
         internal.ai.searchKnowledgeForVoiceInternal,
         { query: prompt, fallbackCompanyId: args.companyId, forceKnowledgeMode: mode }
       );
+      const answerPrompt = `Company knowledge:\n${knowledge.context || "(none found)"}\n\nCustomer question: ${prompt}`;
       const response = await generateTextWithResolvedModel({
         model,
         systemInstruction:
           "You are this company's assistant answering a prospective customer. Use ONLY the company knowledge provided. " +
           "Never invent facts, figures, prices, dates or services. If the knowledge does not settle the question, say a colleague will follow up with the specifics. Plain text, a short paragraph.",
-        contents: [
-          {
-            type: "text",
-            text: `Company knowledge:\n${knowledge.context || "(none found)"}\n\nCustomer question: ${prompt}`,
-          },
-        ],
+        contents: [{ type: "text", text: answerPrompt }],
+      });
+      await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+        systemKey: "WIKI_EXAMINER",
+        companyId: args.companyId,
+        actionContext: `Wiki Exam: answering as the assistant (${mode})`,
+        modelId: model.modelId,
+        providerKey: model.providerKey,
+        providerModelId: model.providerModelId,
+        inputTokens: response.inputTokens ?? 0,
+        outputTokens: response.outputTokens ?? 0,
+        promptContent: answerPrompt,
+        responseContent: response.text ?? "",
       });
       return response.text?.trim() ?? "";
     };
@@ -65,21 +73,29 @@ export const runWikiExam = internalAction({
       forbiddenClaims: string[],
       answer: string
     ): Promise<{ pass: boolean; reason: string }> => {
+      const judgePrompt =
+        `Question: ${prompt}\n\nRequired behaviour to pass:\n${expectedBehavior}\n\n` +
+        (forbiddenClaims.length
+          ? `The answer FAILS if it contains any of these:\n${forbiddenClaims.map((claim) => `- ${claim}`).join("\n")}\n\n`
+          : "") +
+        `The answer to grade:\n${answer || "(no answer was produced)"}`;
       const response = await generateTextWithResolvedModel({
         model,
         systemInstruction:
           'You grade one customer-service answer against a required behaviour. Reply with strict JSON, nothing else: {"pass": boolean, "reason": string} — reason is one sentence.',
-        contents: [
-          {
-            type: "text",
-            text:
-              `Question: ${prompt}\n\nRequired behaviour to pass:\n${expectedBehavior}\n\n` +
-              (forbiddenClaims.length
-                ? `The answer FAILS if it contains any of these:\n${forbiddenClaims.map((claim) => `- ${claim}`).join("\n")}\n\n`
-                : "") +
-              `The answer to grade:\n${answer || "(no answer was produced)"}`,
-          },
-        ],
+        contents: [{ type: "text", text: judgePrompt }],
+      });
+      await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+        systemKey: "WIKI_EXAMINER",
+        companyId: args.companyId,
+        actionContext: "Wiki Exam: grading an answer",
+        modelId: model.modelId,
+        providerKey: model.providerKey,
+        providerModelId: model.providerModelId,
+        inputTokens: response.inputTokens ?? 0,
+        outputTokens: response.outputTokens ?? 0,
+        promptContent: judgePrompt,
+        responseContent: response.text ?? "",
       });
       const raw = response.text ?? "";
       const jsonMatch = raw.match(/\{[\s\S]*\}/);

@@ -39,6 +39,10 @@ export const REPORTS_MODULE_KEY = "reports";
 export const PROPERTIES_MODULE_KEY = "properties";
 // template:remove:end
 
+// template:remove:start movement
+export const POSTURE_STUDIO_MODULE_KEY = "postureStudio";
+// template:remove:end
+
 /**
  * Every capability a company gets unless someone withholds it.
  *
@@ -54,5 +58,8 @@ export const DEFAULT_COMPANY_MODULE_KEYS: readonly string[] = [
   // template:remove:end
   // template:remove:start properties
   PROPERTIES_MODULE_KEY,
+  // template:remove:end
+  // template:remove:start movement
+  POSTURE_STUDIO_MODULE_KEY,
   // template:remove:end
 ];

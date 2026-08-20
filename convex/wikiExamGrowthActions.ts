@@ -31,21 +31,29 @@ export const growExamForCompany = internalAction({
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
         useCase: "fast-chat",
       });
+      const prompt =
+        `Real questions customers asked (most asked first):\n` +
+        growth.candidates.map((c) => `- ${c.question} (asked ${c.askCount}×)`).join("\n") +
+        `\n\nThe existing exam already covers:\n` +
+        growth.existingPrompts.map((p) => `- ${p}`).join("\n");
       const response = await generateTextWithResolvedModel({
         model,
         systemInstruction:
           "You draft exam questions for a company's AI from real questions its customers asked. Propose ONLY questions the existing exam does not already cover — up to three. " +
           'Reply with strict JSON, nothing else: {"drafts": [{"grewFrom": string, "prompt": string, "expected": string}]} — grewFrom is the real question exactly as given, prompt the exam wording, expected a plain statement of what a correct answer must get right. An empty list is a fine answer.',
-        contents: [
-          {
-            type: "text",
-            text:
-              `Real questions customers asked (most asked first):\n` +
-              growth.candidates.map((c) => `- ${c.question} (asked ${c.askCount}×)`).join("\n") +
-              `\n\nThe existing exam already covers:\n` +
-              growth.existingPrompts.map((p) => `- ${p}`).join("\n"),
-          },
-        ],
+        contents: [{ type: "text", text: prompt }],
+      });
+      await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+        systemKey: "WIKI_EXAMINER",
+        ...(args.companyId ? { companyId: args.companyId } : {}),
+        actionContext: "Wiki Exam Growth Round",
+        modelId: model.modelId,
+        providerKey: model.providerKey,
+        providerModelId: model.providerModelId,
+        inputTokens: response.inputTokens ?? 0,
+        outputTokens: response.outputTokens ?? 0,
+        promptContent: prompt,
+        responseContent: response.text ?? "",
       });
       const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
       const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { drafts?: unknown }) : {};
@@ -72,16 +80,19 @@ export const growExamForCompany = internalAction({
       console.error("The Examiner could not draft this month; nothing was proposed", error);
     }
 
-    if (drafted > 0) {
-      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
-        systemKey: "WIKI_EXAMINER",
-        ...(args.companyId ? { companyId: args.companyId } : {}),
-        trigger: "SCHEDULE",
-        objective: "Draft exam questions from the questions real people asked.",
-        summary: `Drafted ${drafted} exam questions for a person's decision. Nothing was activated.`,
-        startedAt,
-      });
-    }
+    // Recorded whatever happened, so a month with nothing to draft still
+    // proves the Examiner ran.
+    await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+      systemKey: "WIKI_EXAMINER",
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      trigger: "SCHEDULE",
+      objective: "Draft exam questions from the questions real people asked.",
+      summary:
+        drafted > 0
+          ? `Drafted ${drafted} exam questions for a person's decision. Nothing was activated.`
+          : "No new questions worth drafting an exam from this month.",
+      startedAt,
+    });
     return { drafted };
   },
 });

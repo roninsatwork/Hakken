@@ -28,6 +28,9 @@ import { REPORTS_MODULE_KEY } from "./coreModules";
 // template:remove:start properties
 import { PROPERTIES_MODULE_KEY } from "./coreModules";
 // template:remove:end
+// template:remove:start movement
+import { POSTURE_STUDIO_MODULE_KEY } from "./coreModules";
+// template:remove:end
 
 export type CompanyModuleDefinition = {
   key: string;
@@ -45,6 +48,9 @@ export const COMPANY_MODULES: readonly CompanyModuleDefinition[] = [
   // template:remove:end
   // template:remove:start properties
   { key: PROPERTIES_MODULE_KEY, vertical: "properties" },
+  // template:remove:end
+  // template:remove:start movement
+  { key: POSTURE_STUDIO_MODULE_KEY, vertical: "movement" },
   // template:remove:end
   // template:remove:start salesData
   { key: SALES_DATA_MODULE_KEY, vertical: "salesData" },

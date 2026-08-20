@@ -736,6 +736,10 @@
           "name": "Wiki",
           "description": "The assistant's growing notebook about this workspace — what it has learned and where it came from."
         },
+        "postureStudio": {
+          "name": "Posture Studio",
+          "description": "Movement capture, the studio library and replay alignment, for workspaces that coach how a body moves."
+        },
         "reports": {
           "name": "Reports",
           "description": "Sales reports written for the team, refreshed as new figures arrive."

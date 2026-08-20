@@ -2049,6 +2049,12 @@ export default defineSchema({
     // knowledge plan, stage one). Absent means the wiki has not learned
     // from it yet — the catch-up sweep and the on-ready hook both key on it.
     wikiDistilledAt: v.optional(v.number()),
+    // How many times distilling this document has been claimed and then
+    // failed. The claim is released after a failure so the sweep tries
+    // again — a document that imports but never becomes answerable is worse
+    // than a retry — and this counter is what stops that becoming an
+    // endless retry loop of model spend.
+    wikiDistillAttempts: v.optional(v.number()),
     // Marked at import when a person wants the checkpoint (wiki-agents
     // plan, phase 4): the wiki must not learn from this document until the
     // review is approved. The Reviewer prepares the claims; a person decides.

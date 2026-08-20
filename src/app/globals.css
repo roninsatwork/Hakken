@@ -168,7 +168,14 @@ button * {
  * `scrollbar-hide` was used in nine places — the transcript, the history
  * rail, the composer — but was never defined, so it silently did nothing and
  * every one of those surfaces showed a scroll thumb the design never
- * intended. Defining it once makes the existing markup mean what it says.
+ * intended. Defining it once made the existing markup mean what it says.
+ *
+ * That was right for the small surfaces and wrong for the long ones. The
+ * chat transcript and the history rail scroll for hundreds of messages, and
+ * a reader with no thumb cannot see how far down they are or drag to get
+ * back (Anthony, 2026-08-20). Both now keep the thin 6px thumb above; this
+ * class is for the composer textarea and the short dropdowns, where a thumb
+ * is noise rather than orientation.
  */
 .scrollbar-hide {
   scrollbar-width: none;

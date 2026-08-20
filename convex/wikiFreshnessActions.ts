@@ -70,19 +70,27 @@ export const checkCompanyFreshness = internalAction({
         continue;
       }
       try {
+        const prompt =
+          `The page (${page.pageKey}):\n${page.content}\n\n` +
+          `The kept sources:\n${sources.texts.join("\n\n---\n\n")}`;
         const response = await generateTextWithResolvedModel({
           model,
           systemInstruction:
             "You check whether a wiki page's claims are still supported by the source documents it was written from. " +
             'Reply with strict JSON, nothing else: {"supported": boolean, "unsupportedClaim": string} — supported=true when the sources still back the page (unsupportedClaim then empty); when false, unsupportedClaim quotes the page\'s own sentence the sources no longer support. Claims from conversations rather than documents do not count against the page.',
-          contents: [
-            {
-              type: "text",
-              text:
-                `The page (${page.pageKey}):\n${page.content}\n\n` +
-                `The kept sources:\n${sources.texts.join("\n\n---\n\n")}`,
-            },
-          ],
+          contents: [{ type: "text", text: prompt }],
+        });
+        await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
+          systemKey: "WIKI_FRESHNESS_CHECKER",
+          companyId: args.companyId,
+          actionContext: "Wiki Freshness Round",
+          modelId: model.modelId,
+          providerKey: model.providerKey,
+          providerModelId: model.providerModelId,
+          inputTokens: response.inputTokens ?? 0,
+          outputTokens: response.outputTokens ?? 0,
+          promptContent: prompt,
+          responseContent: response.text ?? "",
         });
         const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
         const parsed = jsonMatch

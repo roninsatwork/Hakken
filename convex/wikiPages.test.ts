@@ -731,3 +731,83 @@ describe("the rewrite contract", () => {
     expect(content).toContain("Dana, not Sam.");
   });
 });
+
+/**
+ * The islands bug (2026-08-20). Every topic a document establishes is born
+ * linked to its siblings and down to its source note. Counting that source
+ * link as a connection put a three-topic document's pages at the old
+ * threshold of three on the day they were written, so the Linker never
+ * looked at them again and no bridge between documents was ever built. The
+ * map showed exactly that: tight per-document clusters, no lines between.
+ */
+describe("the catch-up linker's list", () => {
+  async function seedLinkedPage(
+    t: ReturnType<typeof convexTest>,
+    companyId: Awaited<ReturnType<typeof seedCompany>>,
+    subjectKey: string,
+    links: string[],
+    lastTendedAt?: number
+  ) {
+    await t.mutation(internal.wikiPages.applyRewriteInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey,
+      title: subjectKey,
+      content: `About ${subjectKey}.`,
+      source: "DOCUMENT:doc-1",
+    });
+    await t.mutation(internal.wikiPages.addLinksInternal, {
+      companyId,
+      kind: "POLICY",
+      subjectKey,
+      add: links,
+    });
+    if (lastTendedAt !== undefined) {
+      const page = await t.query(internal.wikiPages.getPageOfKindInternal, {
+        companyId,
+        kind: "POLICY",
+        subjectKey,
+      });
+      if (page) await t.run(async (ctx) => ctx.db.patch(page._id, { lastTendedAt }));
+    }
+  }
+
+  test("a page linked only to its siblings and its own document is still sparse", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+
+    // Exactly what the distiller writes for one of three topics.
+    await seedLinkedPage(t, companyId, "iffo-ai-usage-policy", [
+      "POLICY:iffo-ai-governance",
+      "POLICY:iffo-approved-ai-tools",
+      "SOURCE:doc-1",
+    ]);
+
+    const sparse = await t.query(internal.wikiPages.listSparselyLinkedTopicsInternal, {
+      companyId,
+      limit: 10,
+    });
+    expect(sparse.map((page) => page.subjectKey)).toContain("iffo-ai-usage-policy");
+  });
+
+  test("three links to other topics is genuinely connected, and rests", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t, "Wiki Corp");
+
+    await seedLinkedPage(t, companyId, "well-connected", [
+      "POLICY:a",
+      "POLICY:b",
+      "POLICY:c",
+      "SOURCE:doc-1",
+    ]);
+    // Sparse, but read within the week — it waits its turn rather than
+    // costing a model call every night.
+    await seedLinkedPage(t, companyId, "recently-read", ["SOURCE:doc-2"], Date.now());
+
+    const sparse = await t.query(internal.wikiPages.listSparselyLinkedTopicsInternal, {
+      companyId,
+      limit: 10,
+    });
+    expect(sparse.map((page) => page.subjectKey)).toEqual([]);
+  });
+});

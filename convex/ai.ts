@@ -370,10 +370,14 @@ export const generateSonaeResponse = internalAction({
         // Populated only when retrieval admits chunks, so an answer with no
         // grounding records none rather than recording what was merely available.
         let retrievedChunkIds: string[] = [];
+        // Held beyond this block: when the wiki comes back with nothing, the
+        // company's own documents are searched below, and the question should
+        // only ever be embedded once per turn.
+        let queryVector: number[] | null = null;
 
         try {
             await setStage("SEARCHING_KNOWLEDGE");
-            const queryVector = await embedRetrievalQuery(ctx, {
+            queryVector = await embedRetrievalQuery(ctx, {
                 query: args.content,
                 companyId: thread?.companyId,
                 operation: "assistantRagEmbedding",
@@ -487,6 +491,54 @@ export const generateSonaeResponse = internalAction({
             }
         }
 
+        // The floor under the whole arrangement: the wiki came back with
+        // nothing, so the company's own documents are searched directly —
+        // the path the wiki switch normally retires.
+        //
+        // Without this, a document whose wiki pages were never written (the
+        // distiller failed after claiming it, or named no topics) is filed,
+        // listed on screen, and permanently unanswerable — the surface says
+        // "I don't have access" about a document sitting on its own shelf.
+        // Uploaded knowledge is answerable knowledge; that is the contract.
+        let companyFallbackContext = "";
+        if (!wikiAnswerContext && queryVector && thread?.companyId && companyAnswersFromWiki(company)) {
+            try {
+                const FALLBACK_MAX_CHARS = 32000;
+                const companyChunks = await searchKnowledgeScope(ctx, {
+                    queryVector,
+                    queryText: args.content,
+                    scope: { kind: "company", companyId: thread.companyId },
+                    limit: 50,
+                    priorCompanyId: thread.companyId,
+                });
+                if (companyChunks.length > 0) {
+                    const { chunkTexts, chunkIds } = await selectKnowledgeChunksWithinBudget({
+                        ranked: rankAssistantKnowledgeMatches({
+                            globalMatches: [],
+                            companyMatches: companyChunks,
+                            threadMatches: [],
+                        }),
+                        maxChars: FALLBACK_MAX_CHARS,
+                        // No thread arm in this pass, so nothing to hold back for.
+                        threadReserveRatio: 0,
+                        loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+                    });
+                    if (chunkTexts.length > 0) {
+                        // Added to, never replacing: chunks the pass above
+                        // admitted are still under this answer.
+                        retrievedChunkIds = [...retrievedChunkIds, ...chunkIds];
+                        companyFallbackContext = buildUntrustedKnowledgeContext({
+                            sourceLabel: "the company's own filed documents",
+                            chunks: chunkTexts,
+                            maxChars: FALLBACK_MAX_CHARS,
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Company document fallback failed; replying without it", e);
+            }
+        }
+
         // A widget visitor who gave their email at the gateway is a known
         // customer like any other (wiki plan, phase 2): their page is read
         // whole. Fail-open — a page lookup must never cost a reply.
@@ -511,6 +563,10 @@ User Prompt: ${args.content}`;
 
         if (ragContext) {
             combinedPrompt += ragContext;
+        }
+
+        if (companyFallbackContext) {
+            combinedPrompt += companyFallbackContext;
         }
 
         // --- Ad-hoc File Parsing for Chat Uploads ---

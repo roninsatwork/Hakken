@@ -108,7 +108,7 @@ export default function ChatHistoryList() {
       </div>
 
       {/* Intelligence Pipeline Loop */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide flex flex-col gap-1.5 relative px-1 pb-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-1.5 relative px-1 pb-4">
         {threadsStatus === "LoadingFirstPage" ? (
           <div className="flex items-center justify-center h-20 opacity-50">
             <Loader2 className="w-4 h-4 animate-spin text-secondary" />

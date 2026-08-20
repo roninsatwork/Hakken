@@ -84,7 +84,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto w-full scrollbar-hide relative"
+        className="flex-1 min-h-0 overflow-y-auto w-full relative"
       >
         <div className="w-full flex justify-center px-6 sm:px-8 pt-8">
           <div ref={contentRef} className="w-full max-w-[660px] flex flex-col">

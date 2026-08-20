@@ -1,10 +1,12 @@
 import { paginationOptsValidator } from "convex/server";
-import { v, ConvexError } from "convex/values";
+import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
+import { resolveRunObjective } from "./agentObjectiveService";
+import { WIKI_STAFF } from "./wikiStaff";
 
 const SCHEDULE_LIST_LIMIT = 100;
 /** Counting cannot be indexed away, so the badge stops here and says it did. */
@@ -179,26 +181,26 @@ export const manualRunSchedule = superAdminMutation({
      */
     const runCompanyId = ctx.companyId ?? user?.companyId;
     let agentRunId: Id<"agentRuns"> | undefined;
-    let standingObjective: string | undefined;
+    let standingObjective = "";
+    /** Set when the agent is one of the wiki staff, whose Run is a sweep. */
+    let wikiStaffKey: string | undefined;
 
     if (args.agentId) {
       const agent = await ctx.db.get(args.agentId);
       if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
 
-      // The agent's standing job is the instruction. Without one there is
-      // nothing to run: the old behaviour sent the agent its own database id,
-      // so it spent money to reply asking what was wanted.
-      // What the caller asked for wins. An agent with a standing job can still
-      // be sent somewhere else once without its settings being rewritten.
-      standingObjective = args.objective?.trim() || agent.standingObjective?.trim();
-      if (!standingObjective) {
-        // ConvexError rather than Error: a plain throw reaches the browser as
-        // "Server Error" with the message stripped, which is exactly the
-        // unhelpful thing this check exists to replace.
-        throw new ConvexError(
-          "This agent has no job yet. Give it one under Instructions, or start it from a conversation."
-        );
-      }
+      // What the caller asked for wins, then the agent's own standing job,
+      // then what it says it is for. Never a refusal: pressing Run runs the
+      // agent (see agentObjectiveService). An older version sent the agent
+      // its own database id, which is why this resolution exists at all.
+      standingObjective = resolveRunObjective({
+        requested: args.objective,
+        standingObjective: agent.standingObjective,
+        description: agent.description,
+      });
+      wikiStaffKey = WIKI_STAFF.some((member) => member.systemKey === agent.systemKey)
+        ? agent.systemKey
+        : undefined;
 
       agentRunId = await ctx.db.insert("agentRuns", {
         agentId: args.agentId,
@@ -226,12 +228,28 @@ export const manualRunSchedule = superAdminMutation({
     // In a real execution environment, we would queue the workflow runtime here:
     // await ctx.scheduler.runAfter(0, internal.workflowRuntime.executeNodeGraph, { workflowId: args.workflowId, executionId });
 
+    if (args.agentId && wikiStaffKey) {
+       /**
+        * A wiki agent's Run does its round, not a model call about its
+        * round. The staff's work is a sweep over every wiki on the platform
+        * — see wikiStaffRunActions — and putting them on the ordinary agent
+        * loop produced a paragraph of text and changed nothing, which is why
+        * they read as agents that never work.
+        */
+       await ctx.scheduler.runAfter(0, internal.wikiStaffRunActions.runStaffNow, {
+           systemKey: wikiStaffKey,
+           runId: agentRunId as Id<"agentRuns">,
+           workflowExecutionId: executionId,
+       });
+       return executionId;
+    }
+
     if (args.agentId) {
        await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
            agentId: args.agentId,
            // Set above, in the same `if (args.agentId)` branch that refuses
            // to start an agent without one.
-           objective: standingObjective as string,
+           objective: standingObjective,
            triggerType: "MANUAL",
            runId: agentRunId,
            workflowExecutionId: executionId,

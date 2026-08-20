@@ -40,15 +40,10 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
 {
   "links": [
     "Ask Sonae -> /app/assistant",
-    "Information -> /demos/movements/information",
-    "Replay Alignment -> /demos/movements/replay-lab",
     "Sonae -> /",
-    "Studio Library -> /demos/movements",
     "dashboard -> /app",
   ],
-  "sections": [
-    "Posture Studio",
-  ],
+  "sections": [],
 }
 `;
 
