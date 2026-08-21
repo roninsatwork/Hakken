@@ -41,7 +41,7 @@ export const runWikiExam = internalAction({
 
     const answerWith = async (mode: "chunks" | "wiki", prompt: string): Promise<string> => {
       const knowledge: { context: string } = await ctx.runAction(
-        internal.ai.searchKnowledgeForVoiceInternal,
+        internal.aiVoiceSession.searchKnowledgeForVoiceInternal,
         { query: prompt, fallbackCompanyId: args.companyId, forceKnowledgeMode: mode }
       );
       const answerPrompt = `Company knowledge:\n${knowledge.context || "(none found)"}\n\nCustomer question: ${prompt}`;

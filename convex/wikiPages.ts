@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery, moduleQuery } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 import {
   WIKI_PAGE_MAX_CHARS,
   extractWikiLinkSlugs,
@@ -1148,13 +1149,13 @@ export const getExportForGlobal = adminQuery({
  * ruling, 2026-08-16). */
 function assertPlatformWikiRead(user: Doc<"users">) {
   if (user.role !== "SUPER_ADMIN" && user.role !== "READ_ONLY") {
-    throw new Error("Unauthorized access to the platform wiki");
+    throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
   }
 }
 
 function assertPlatformWikiWrite(user: Doc<"users">) {
   if (user.role !== "SUPER_ADMIN") {
-    throw new Error("Unauthorized access to the platform wiki");
+    throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
   }
 }
 
@@ -1250,7 +1251,7 @@ async function requirePageInCompany(
   pageId: Id<"wikiPages">
 ): Promise<Doc<"wikiPages">> {
   const page = await ctx.db.get(pageId);
-  if (!page || page.companyId !== companyId) throw new Error("Page not found.");
+  if (!page || page.companyId !== companyId) throw appError("NOT_FOUND", "Page not found.");
   return page;
 }
 
@@ -1260,7 +1261,7 @@ async function applyHumanEdit(
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
   const content = args.content.trim().slice(0, WIKI_PAGE_MAX_CHARS);
-  if (!content) throw new Error("A page cannot be emptied — pin a correction instead.");
+  if (!content) throw appError("INVALID_INPUT", "A page cannot be emptied — pin a correction instead.");
   if (content === page.content) return;
 
   const now = Date.now();
@@ -1303,7 +1304,7 @@ async function applyPin(
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
   const text = args.text.trim().slice(0, 500);
-  if (!text) throw new Error("A pinned correction needs words.");
+  if (!text) throw appError("INVALID_INPUT", "A pinned correction needs words.");
 
   const now = Date.now();
   // Attribution lives in the audit row below, not on the pin: the pin is
@@ -1425,7 +1426,7 @@ export const clearWikiForCompany = adminMutation({
 
 function requireActiveCompany(user: Doc<"users">): Id<"companies"> {
   const companyId = getActiveCompanyId(user);
-  if (!companyId) throw new Error("No workspace selected.");
+  if (!companyId) throw appError("NO_ACTIVE_COMPANY", "No workspace selected.");
   return companyId;
 }
 

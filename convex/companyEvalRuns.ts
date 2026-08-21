@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { appError } from "./utils/appError";
 
 import { internal } from "./_generated/api";
 import { adminAction } from "./tenantFunctions";
@@ -32,13 +33,13 @@ export const runCheck = adminAction({
     const evalCase = await ctx.runQuery(internal.companyEvals.getCaseForRunInternal, {
       evalCaseId: args.evalCaseId,
     });
-    if (!evalCase) throw new Error("Eval case not found");
+    if (!evalCase) throw appError("NOT_FOUND", "Eval case not found");
     // A platform check belongs to no company and is the super admin's
     // alone (Anthony's SaaS ruling, 2026-08-17).
     if (evalCase.companyId) {
       assertAdminCanAccessCompany(ctx.user, evalCase.companyId);
     } else if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to platform checks");
+      throw appError("UNAUTHORIZED", "Unauthorized access to platform checks");
     }
 
     const result = await ctx.runAction(internal.companyEvalRunActions.runCompanyCheck, {
@@ -70,7 +71,7 @@ export const runBatch = adminAction({
     // admin's alone — the same wall the single-check door keeps.
     if (args.companyId) assertAdminCanAccessCompany(ctx.user, args.companyId);
     else if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to the global AI's checks");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the global AI's checks");
     }
 
     const evalCaseIds = await ctx.runQuery(internal.companyEvals.getBatchCaseIdsInternal, {

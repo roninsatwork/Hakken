@@ -7,6 +7,7 @@ import { internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
+import { appError } from "./utils/appError";
 import { MAX_SKILLS_PER_COMPANY } from "./utils/skillLimits";
 import { parseStoredStringArray, stableStringify } from "./utils/lang";
 
@@ -50,15 +51,15 @@ const skillSurfaceValidator = v.union(
 
 function normalizeText(value: string | undefined, label: string, maxChars = TEXT_MAX_CHARS) {
   const normalized = value?.trim();
-  if (!normalized) throw new Error(`${label} is required.`);
-  if (normalized.length > maxChars) throw new Error(`${label} cannot exceed ${maxChars} characters.`);
+  if (!normalized) throw appError("INVALID_INPUT", `${label} is required.`);
+  if (normalized.length > maxChars) throw appError("INVALID_INPUT", `${label} cannot exceed ${maxChars} characters.`);
   return normalized;
 }
 
 function normalizeOptionalText(value: string | undefined, maxChars = TEXT_MAX_CHARS) {
   const normalized = value?.trim();
   if (!normalized) return undefined;
-  if (normalized.length > maxChars) throw new Error(`Text cannot exceed ${maxChars} characters.`);
+  if (normalized.length > maxChars) throw appError("INVALID_INPUT", `Text cannot exceed ${maxChars} characters.`);
   return normalized;
 }
 
@@ -73,7 +74,7 @@ function parseJson(value: string | undefined, label: string) {
   try {
     return JSON.parse(normalized) as unknown;
   } catch {
-    throw new Error(`${label} must be valid JSON.`);
+    throw appError("INVALID_INPUT", `${label} must be valid JSON.`);
   }
 }
 
@@ -81,7 +82,7 @@ function parseStringArrayJson(value: string | undefined, label: string) {
   const parsed = parseJson(value, label);
   if (parsed === undefined) return { json: undefined, values: [] as string[] };
   if (!Array.isArray(parsed) || parsed.some((entry) => typeof entry !== "string")) {
-    throw new Error(`${label} must be a JSON array of strings.`);
+    throw appError("INVALID_INPUT", `${label} must be a JSON array of strings.`);
   }
 
   const values = Array.from(new Set(parsed.map((entry) => entry.trim()).filter(Boolean))).slice(0, 50);
@@ -143,7 +144,7 @@ function buildSkillPatch(args: {
 
 async function requireSkillAccess(ctx: QueryCtx | MutationCtx, skillId: Id<"companySkills">) {
   const skill = await ctx.db.get(skillId);
-  if (!skill) throw new Error("Company skill not found");
+  if (!skill) throw appError("NOT_FOUND", "Company skill not found");
   const access = await requireCompanyAccess(ctx, skill.companyId);
   return { ...access, skill };
 }
@@ -487,7 +488,7 @@ export const createSkill = adminMutation({
   },
   handler: async (ctx, args) => {
     await requireCompanyAccess(ctx, args.companyId);
-    throw new Error(CENTRAL_SKILL_ONLY_ERROR);
+    throw appError("INVALID_INPUT", CENTRAL_SKILL_ONLY_ERROR);
   },
 });
 
@@ -500,7 +501,7 @@ export const importGlobalSkill = adminMutation({
     const { userId } = await requireCompanyAccess(ctx, args.companyId);
     const globalSkill = await ctx.db.get(args.skillId);
     if (!globalSkill || globalSkill.status !== "ACTIVE") {
-      throw new Error("Only active global skills can be imported.");
+      throw appError("INVALID_INPUT", "Only active global skills can be imported.");
     }
     const existing = await ctx.db
       .query("companySkills")
@@ -515,7 +516,7 @@ export const importGlobalSkill = adminMutation({
         .withIndex("by_company_status_updated", (q) => q.eq("companyId", args.companyId).eq("status", "ACTIVE"))
         .take(MAX_SKILLS_PER_COMPANY + 1);
       if (active.length >= MAX_SKILLS_PER_COMPANY) {
-        throw new Error(
+        throw appError("INVALID_INPUT", 
           `A company can have ${MAX_SKILLS_PER_COMPANY} skills. Remove one before adding another.`,
         );
       }
@@ -662,7 +663,7 @@ export const updateSkill = adminMutation({
   },
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
-    if (skill.status === "ARCHIVED") throw new Error("Archived skills cannot be edited.");
+    if (skill.status === "ARCHIVED") throw appError("INVALID_INPUT", "Archived skills cannot be edited.");
     if (skill.sourceAgentSkillId) {
       const changedCentralFields = CENTRAL_SKILL_FIELDS.filter((field) => {
         if (field === "name") return args.name !== undefined;
@@ -675,7 +676,7 @@ export const updateSkill = adminMutation({
         if (field === "versionLabel") return args.versionLabel !== undefined;
         return false;
       });
-      if (changedCentralFields.length > 0) throw new Error(CENTRAL_SKILL_ONLY_ERROR);
+      if (changedCentralFields.length > 0) throw appError("INVALID_INPUT", CENTRAL_SKILL_ONLY_ERROR);
     }
     const now = Date.now();
     const patch = buildSkillPatch({
@@ -857,7 +858,7 @@ export const setBinding = adminMutation({
   },
   handler: async (ctx, args) => {
     const { userId, skill } = await requireSkillAccess(ctx, args.skillId);
-    if (skill.status === "ARCHIVED") throw new Error("Archived skills cannot be bound to surfaces.");
+    if (skill.status === "ARCHIVED") throw appError("INVALID_INPUT", "Archived skills cannot be bound to surfaces.");
 
     const bindingId = await writeSkillBinding(ctx, {
       skill,

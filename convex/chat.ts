@@ -3,6 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { redactPII } from "./utils/pii";
+import { appError } from "./utils/appError";
 import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { publicMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
@@ -231,14 +232,14 @@ export const sendMessage = publicMutation({
   },
   handler: async (ctx, args) => {
     if (args.content.length > 10000) {
-      throw new Error("Payload size limit exceeded: Message cannot exceed 10000 characters.");
+      throw appError("INVALID_INPUT", "Payload size limit exceeded: Message cannot exceed 10000 characters.");
     }
 
     // 🛡️ SECURITY: Run Auth and Thread verification BEFORE heavy file metadata lookups
     const current = await getCurrentUser(ctx);
     const thread = await ctx.db.get(args.threadId);
     if (!thread) {
-      throw new Error("Thread not found");
+      throw appError("NOT_FOUND", "Thread not found");
     }
 
     await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
@@ -314,7 +315,7 @@ export const sendMessage = publicMutation({
     // Determine if we need to hot-swap the agent mid-conversation
     const targetAgentId = resolveTargetAgentId(thread.agentId, args.dynamicAgentId);
     if (isAnonymousWidgetThread(thread) && args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
-      throw new Error("Unauthorized: Widget conversations cannot switch agents");
+      throw appError("UNAUTHORIZED", "Unauthorized: Widget conversations cannot switch agents");
     }
     if (args.dynamicAgentId !== undefined && targetAgentId !== thread.agentId) {
         await ctx.db.patch(args.threadId, { agentId: targetAgentId });
@@ -334,7 +335,7 @@ export const sendMessage = publicMutation({
          content: safeContent,
        });
     } else {
-       await ctx.scheduler.runAfter(0, internal.ai.generateSonaeResponse, {
+       await ctx.scheduler.runAfter(0, internal.aiChat.generateSonaeResponse, {
          threadId: args.threadId,
          content: safeContent,
          modelId: args.modelId,
@@ -345,7 +346,7 @@ export const sendMessage = publicMutation({
 
     // 4. If this is exactly "New Conversation", asynchronously spawn a title generator
     if (thread.title === "New Conversation") {
-      await ctx.scheduler.runAfter(0, internal.ai.generateThreadTitle, {
+      await ctx.scheduler.runAfter(0, internal.aiChat.generateThreadTitle, {
         threadId: args.threadId,
         content: safeContent,
       });
@@ -539,7 +540,7 @@ export const deleteThread = tenantMutation({
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     // Cascade: Retrieve and eradicate all intelligence messages
@@ -569,7 +570,7 @@ export const renameThread = tenantMutation({
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     await ctx.db.patch(args.threadId, {
@@ -617,7 +618,7 @@ export const recordVoiceTurn = tenantMutation({
   },
   handler: async (ctx, args): Promise<null> => {
     const thread = await ctx.db.get(args.threadId);
-    if (!thread) throw new Error("Thread not found");
+    if (!thread) throw appError("NOT_FOUND", "Thread not found");
     const current = await getCurrentUser(ctx);
     await assertCanAccessThread(ctx, thread, current, undefined);
 

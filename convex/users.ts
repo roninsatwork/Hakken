@@ -5,6 +5,7 @@ import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getActiveCompanyId, getCurrentUser, userRoleValidator } from "./authz";
+import { appError } from "./utils/appError";
 import {
   assertCanCreateManagedUser,
   assertCanDeleteManagedUser,
@@ -199,7 +200,7 @@ export const getPaginatedUsers = tenantQuery({
   },
   handler: async (ctx, args) => {
     const { user: caller } = ctx;
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
     
     const activeCompanyId = getActiveCompanyId(caller);
 
@@ -235,7 +236,7 @@ export const getPaginatedUsers = tenantQuery({
 
     if (!platformScoped
       && (caller.role === "ADMIN" || (caller.role === "SUPER_ADMIN" && caller.impersonatingCompanyId))) {
-      if (!activeCompanyId) throw new Error("Unauthorized");
+      if (!activeCompanyId) throw appError("UNAUTHORIZED", "Unauthorized");
       // Admins are locked to their specific tenant scope
       if (args.searchTerm && args.searchTerm.trim() !== "") {
         return await withCompanyNames(await ctx.db
@@ -265,7 +266,7 @@ export const getPaginatedUsers = tenantQuery({
       }
     }
 
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   },
 });
 
@@ -273,7 +274,7 @@ export const getAllUsers = tenantQuery({
   args: {},
   handler: async (ctx) => {
     const { user: caller } = ctx;
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
     
     const activeCompanyId = getActiveCompanyId(caller);
 
@@ -288,7 +289,7 @@ export const getAllUsers = tenantQuery({
         .take(1000);
     }
     
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   },
 });
 
@@ -299,7 +300,7 @@ export const getUsersByCompany = tenantQuery({
   },
   handler: async (ctx, args) => {
     const { user: caller } = ctx;
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
     
     const activeCompanyId = getActiveCompanyId(caller);
 
@@ -311,7 +312,7 @@ export const getUsersByCompany = tenantQuery({
          .paginate(args.paginationOpts);
     }
     
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   },
 });
 
@@ -344,7 +345,7 @@ export const getUserById = tenantQuery({
        return targetUser;
     }
 
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   },
 });
 
@@ -358,7 +359,7 @@ export const addUser = tenantMutation({
   },
   handler: async (ctx, args) => {
     const { userId: callerId, user: caller } = ctx;
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
     
     const activeCompanyId = getActiveCompanyId(caller);
 
@@ -406,12 +407,12 @@ export const updateUser = tenantMutation({
   },
   handler: async (ctx, args) => {
     const { userId: callerId, user: caller } = ctx;
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
     
     const activeCompanyId = getActiveCompanyId(caller);
 
     const targetUser = await ctx.db.get(args.id);
-    if (!targetUser) throw new Error("User not found");
+    if (!targetUser) throw appError("NOT_FOUND", "User not found");
 
     assertCanUpdateManagedUser({
       caller,
@@ -489,7 +490,7 @@ export const deleteUser = tenantMutation({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
     const { userId: callerId, user: caller } = ctx;
-    if (!caller || !caller.role) throw new Error("Unauthorized");
+    if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
     
     const activeCompanyId = getActiveCompanyId(caller);
 
@@ -597,13 +598,13 @@ export const getUserLogins = tenantQuery({
     const { userId: callerId, user: caller } = ctx;
 
     if (callerId !== args.userId) {
-      if (!caller || !caller.role) throw new Error("Unauthorized");
+      if (!caller || !caller.role) throw appError("UNAUTHORIZED", "Unauthorized");
       
       const activeCompanyId = getActiveCompanyId(caller);
       
       const targetUser = await ctx.db.get(args.userId);
       if (!targetUser || (caller.role !== "SUPER_ADMIN" && activeCompanyId !== targetUser.companyId)) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
 
@@ -805,7 +806,7 @@ export const assignSuperAdminToCompany = superAdminMutation({
 
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser || targetUser.role !== "SUPER_ADMIN") {
-      throw new Error("Invalid target user");
+      throw appError("NOT_FOUND", "Invalid target user");
     }
 
     await ctx.db.patch(args.userId, { companyId: args.companyId });
@@ -830,7 +831,7 @@ export const detachSuperAdminFromCompany = superAdminMutation({
 
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser || targetUser.role !== "SUPER_ADMIN") {
-      throw new Error("Invalid target user");
+      throw appError("NOT_FOUND", "Invalid target user");
     }
 
     await ctx.db.patch(args.userId, { companyId: undefined });

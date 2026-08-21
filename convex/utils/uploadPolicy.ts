@@ -1,5 +1,6 @@
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
+import { appError } from "./appError";
 
 export const CHAT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 export const CHAT_DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
@@ -123,7 +124,7 @@ export function validateUploadMetadata(metadata: StorageMetadata, policy: Upload
   if (policy.allowImages && isChatImageContentType(metadata.contentType)) {
     const maxBytes = policy.imageMaxBytes ?? CHAT_IMAGE_MAX_BYTES;
     if (metadata.size > maxBytes) {
-      throw new Error(`File exceeds the maximum size limit of ${formatBytes(maxBytes)} for images`);
+      throw appError("INVALID_INPUT", `File exceeds the maximum size limit of ${formatBytes(maxBytes)} for images`);
     }
     return "image";
   }
@@ -133,13 +134,13 @@ export function validateUploadMetadata(metadata: StorageMetadata, policy: Upload
   if (policy.allowDocuments && documentContentTypes.includes(normalizeContentType(metadata.contentType))) {
     const maxBytes = policy.documentMaxBytes ?? CHAT_DOCUMENT_MAX_BYTES;
     if (metadata.size > maxBytes) {
-      throw new Error(`File exceeds the maximum size limit of ${formatBytes(maxBytes)} for documents`);
+      throw appError("INVALID_INPUT", `File exceeds the maximum size limit of ${formatBytes(maxBytes)} for documents`);
     }
     return "document";
   }
 
   if (policy.invalidTypeMessage) {
-    throw new Error(policy.invalidTypeMessage);
+    throw appError("INVALID_INPUT", policy.invalidTypeMessage);
   }
 
   const allowsMarkdown = MARKDOWN_CONTENT_TYPES.every((type) => documentContentTypes.includes(type));
@@ -152,7 +153,7 @@ export function validateUploadMetadata(metadata: StorageMetadata, policy: Upload
       : null,
   ].filter(Boolean);
 
-  throw new Error(`Invalid file type: only ${allowedKinds.join(" and ")} are allowed`);
+  throw appError("INVALID_INPUT", `Invalid file type: only ${allowedKinds.join(" and ")} are allowed`);
 }
 
 function formatBytes(bytes: number) {
@@ -191,7 +192,7 @@ export async function validateStoredUpload(
 ) {
   const metadata = await getStoredUploadMetadata(ctx, storageId);
   if (!metadata) {
-    throw new Error("Attached file not found in storage");
+    throw appError("NOT_FOUND", "Attached file not found in storage");
   }
 
   try {
@@ -199,6 +200,6 @@ export async function validateStoredUpload(
   } catch (error) {
     await deleteRejectedUpload(ctx, storageId);
     if (error instanceof Error) throw error;
-    throw new Error("Invalid attachment");
+    throw appError("INVALID_INPUT", "Invalid attachment");
   }
 }

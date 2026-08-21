@@ -1,6 +1,7 @@
 "use node";
 
 import { internalAction } from "./_generated/server";
+import { appErrorMessage } from "./utils/appError";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -221,7 +222,7 @@ export const pollMailboxes = internalAction({
         await ctx.runMutation(internal.gmailWatcherStore.recordPollOutcomeInternal, {
           connectorId: connector._id,
           ok: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: appErrorMessage(error, String(error)),
         });
       }
     }
@@ -331,11 +332,11 @@ async function processMessage(
   // away, and the reply talked around the number it should have given.
   const pointQuery = `${summary.subject}\n\n${newestBody}`.slice(0, 2000);
   const [topicKnowledge, pointKnowledge] = (await Promise.all([
-    ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
+    ctx.runAction(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, {
       query: retrievalQuery,
       fallbackCompanyId: connector.companyId,
     }),
-    ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
+    ctx.runAction(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, {
       query: pointQuery,
       fallbackCompanyId: connector.companyId,
     }),
@@ -440,7 +441,10 @@ async function processMessage(
     ).slice(0, 2000);
     taskId = await ctx.runMutation(internal.tasks.createTaskInternal, {
       companyId: connector.companyId,
-      title: `Answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 120)}"`,
+      // Sliced whole, not just the subject: the sender address is unbounded,
+      // and the task-title ceiling is 200 — same promise as `detail` above,
+      // a long email must shorten the task, never fail it.
+      title: `Answer ${parseAddress(summary.from)}: "${(summary.subject || "(no subject)").slice(0, 120)}"`.slice(0, 200),
       detail,
       ...(assignee ? { assigneeUserId: assignee } : {}),
       createdBySource: "AGENT" as const,

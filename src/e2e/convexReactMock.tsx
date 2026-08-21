@@ -1321,6 +1321,19 @@ export function useQuery(functionReference: FunctionReference, args?: unknown): 
     };
   }
 
+  // The analytics-health screen dereferences nested report fields, so the
+  // catch-all empty array below (truthy) crashed it rather than rendering the
+  // loading state. A healthy, empty report keeps the screen inspectable.
+  if (path === "systemHealth:getAnalyticsDataHealthForAdmin") {
+    return {
+      daysBack: 7,
+      checkedDates: ["2026-08-15", "2026-08-21"],
+      snapshotCoverage: { missingGlobalDates: [], duplicateSnapshotGroups: [], totalSnapshots: 0 },
+      messageDimensions: { missingDimensions: 0, mismatched: 0, missingThreads: 0, scanned: 0, examples: [] },
+      liveToday: { date: "2026-08-21", assistantMessages: 0, agentTransactions: 0 },
+    };
+  }
+
   if (path.endsWith(":get") || path.endsWith(":list") || path.includes("getAll") || path.includes("getPending")) return [];
 
   return [];

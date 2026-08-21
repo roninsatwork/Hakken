@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { tenantAction } from "./tenantFunctions";
-import { signVoiceTicket } from "./ai";
+import { signVoiceTicket } from "./aiVoiceSession";
 import {
   GOOGLE_VERTEX_PROVIDER_KEY,
   isSpeechToSpeechModelId,

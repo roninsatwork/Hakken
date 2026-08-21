@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { buildAgentRunAuditMetadata } from "./auditLogService";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
 import {
   getNextStepIndex,
@@ -437,7 +438,7 @@ export const getPageForAgent = adminQuery({
           .filter((q) => q.eq(q.field("agentId"), args.agentId))
       : ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", args.agentId));
 
-    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
+    if (user.role === "ADMIN" && !user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
 
     const scoped = user.role === "ADMIN"
       ? baseQuery.filter((q) => q.eq(q.field("companyId"), user.companyId))
@@ -527,7 +528,7 @@ export const getForAgent = adminQuery({
       : ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", args.agentId));
 
     if (user.role === "ADMIN") {
-      if (!user.companyId) throw new Error("Unauthorized");
+      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
       return await baseQuery
         .filter((q) => q.eq(q.field("companyId"), user.companyId))
         .order("desc")
@@ -902,20 +903,20 @@ export const replayRun = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
     if (!isReplayableRunStatus(run.status)) {
-      throw new Error("Only failed or cancelled runs can be replayed");
+      throw appError("INVALID_INPUT", "Only failed or cancelled runs can be replayed");
     }
 
     const agent = await ctx.db.get(run.agentId);
-    if (!agent) throw new Error("Agent not found");
-    if (agent.isActive === false) throw new Error("Agent is inactive");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
+    if (agent.isActive === false) throw appError("INVALID_INPUT", "Agent is inactive");
 
     const now = Date.now();
     const replayMode = args.mode || "CURRENT_ACTIVE";
     if (replayMode === "SAME_VERSION" && !run.agentVersionId) {
-      throw new Error("Same-version replay requires the source run to have an agent version snapshot.");
+      throw appError("INVALID_INPUT", "Same-version replay requires the source run to have an agent version snapshot.");
     }
     const agentVersionId = replayMode === "SAME_VERSION"
       ? run.agentVersionId
@@ -995,10 +996,10 @@ export const cancelRun = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
     if (!isCancelableRunStatus(run.status)) {
-      throw new Error("Only queued, running, or pending approval runs can be cancelled");
+      throw appError("INVALID_INPUT", "Only queued, running, or pending approval runs can be cancelled");
     }
 
     const now = Date.now();
@@ -1117,15 +1118,15 @@ export const createPublicAgentRunInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const objective = args.objective.trim();
-    if (!objective) throw new Error("Objective is required.");
+    if (!objective) throw appError("INVALID_INPUT", "Objective is required.");
     if (objective.length > PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH) {
-      throw new Error(`Objective cannot exceed ${PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH} characters.`);
+      throw appError("INVALID_INPUT", `Objective cannot exceed ${PUBLIC_AGENT_RUN_OBJECTIVE_MAX_LENGTH} characters.`);
     }
 
     const agent = await ctx.db.get(args.agentId);
-    if (!agent || agent.isActive === false) throw new Error("Agent not found or inactive.");
+    if (!agent || agent.isActive === false) throw appError("NOT_FOUND", "Agent not found or inactive.");
     if (agent.companyId !== args.companyId) {
-      throw new Error("Agent not found or inactive.");
+      throw appError("NOT_FOUND", "Agent not found or inactive.");
     }
 
     const runId = await ctx.db.insert("agentRuns", {
@@ -1166,7 +1167,7 @@ export const updateRunStatusInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const existingRun = await ctx.db.get(args.runId);
-    if (!existingRun) throw new Error("Run not found");
+    if (!existingRun) throw appError("NOT_FOUND", "Run not found");
     if (existingRun.status === "CANCELLED" && args.status !== "CANCELLED") {
       return;
     }

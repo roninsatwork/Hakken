@@ -4,6 +4,7 @@ import { internalQuery, internalMutation, httpAction } from "./_generated/server
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { validateWorkflowEdgesJson, validateWorkflowNodesJson } from "./utils/workflowTypes";
+import { appError } from "./utils/appError";
 import { superAdminAction, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { getNextWorkflowScheduleRunAt } from "./workflowScheduleService";
 import { constantTimeEqual } from "./utils/security";
@@ -54,7 +55,7 @@ export const get = superAdminQuery({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.id);
-    if (!workflow) throw new Error("Workflow not found");
+    if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
 
     return workflow;
   },
@@ -64,7 +65,7 @@ export const internalGet = internalQuery({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.id);
-    if (!workflow) throw new Error("Workflow not found");
+    if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
     return workflow;
   },
 });
@@ -118,7 +119,7 @@ export const updateWorkflow = superAdminMutation({
     const { id, ...updates } = args;
 
     const workflow = await ctx.db.get(id);
-    if (!workflow) throw new Error("Workflow not found");
+    if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
 
     let webhookSecret = workflow.webhookSecret;
     if ((updates.triggerType === "WEBHOOK" || (workflow.triggerType === "WEBHOOK" && !updates.triggerType)) && !webhookSecret) {
@@ -243,15 +244,15 @@ export const createPublicWorkflowRunInternal = internalMutation({
   handler: async (ctx, args): Promise<{ executionId: Id<"workflowExecutions">; status: "RUNNING" }> => {
     const workflow = await ctx.db.get(args.workflowId);
     if (!workflow || !workflow.isActive || workflow.triggerType !== "WEBHOOK") {
-      throw new Error("Workflow not found or not configured for public triggers.");
+      throw appError("NOT_FOUND", "Workflow not found or not configured for public triggers.");
     }
     if (workflow.companyId !== args.companyId) {
-      throw new Error("Workflow not found or not configured for public triggers.");
+      throw appError("NOT_FOUND", "Workflow not found or not configured for public triggers.");
     }
 
     const initialInput = args.initialInput?.trim();
     if (initialInput && initialInput.length > PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH) {
-      throw new Error(`Workflow input cannot exceed ${PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH} characters.`);
+      throw appError("INVALID_INPUT", `Workflow input cannot exceed ${PUBLIC_WORKFLOW_RUN_INPUT_MAX_LENGTH} characters.`);
     }
 
     const executionId = await ctx.runMutation(internal.workflowExecutions.createExecution, {
@@ -421,7 +422,7 @@ export const getWebhookSecret = superAdminQuery({
   args: { id: v.id("workflows") },
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.id);
-    if (!workflow) throw new Error("Workflow not found");
+    if (!workflow) throw appError("NOT_FOUND", "Workflow not found");
 
     return workflow.webhookSecret || null;
   },

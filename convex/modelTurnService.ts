@@ -8,7 +8,7 @@ import type { MessageEvidence } from "./utils/messageEvidence";
 /**
  * The turn both assistants share.
  *
- * Ask Sonae (`convex/ai.ts`) and the agent runtime (`convex/agentRuntime.ts`)
+ * Ask Sonae (`convex/aiChat.ts`) and the agent runtime (`convex/agentRuntime.ts`)
  * grew up separately, and each wired the same per-turn plumbing by hand: check
  * the message against the safety policy and refuse it the same way, stream the
  * model's words into the conversation at a bounded rate, and close the reply so

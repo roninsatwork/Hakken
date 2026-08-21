@@ -1,3 +1,6 @@
+// This file predates the 2026-08-21 split of analyticsCron.ts into
+// analyticsSnapshots / systemHealth / platformAlerts (foundation-quality
+// plan, phase 3). It still covers all three; split it when next touched.
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
@@ -7,8 +10,8 @@ describe("analytics cron snapshots", () => {
   test("empty days create one global zero snapshot and duplicate generation is skipped", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
-    await t.mutation(internal.analyticsCron.generateDailySnapshots, { targetDateStr: "2026-05-01" });
-    await t.mutation(internal.analyticsCron.generateDailySnapshots, { targetDateStr: "2026-05-01" });
+    await t.mutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-01" });
+    await t.mutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-01" });
 
     const snapshots = await t.run(async (ctx) => ctx.db.query("analyticsDailySnapshots").collect());
     expect(snapshots).toHaveLength(1);
@@ -25,7 +28,7 @@ describe("analytics cron snapshots", () => {
       uniqueUserIds: [],
     });
 
-    expect(await t.mutation(internal.analyticsCron.wipeSnapshots, {})).toBe(1);
+    expect(await t.mutation(internal.analyticsSnapshots.wipeSnapshots, {})).toBe(1);
     expect(await t.run(async (ctx) => ctx.db.query("analyticsDailySnapshots").collect())).toEqual([]);
   });
 
@@ -113,7 +116,7 @@ describe("analytics cron snapshots", () => {
       return { companyId, userId, agentId };
     });
 
-    await t.mutation(internal.analyticsCron.generateDailySnapshots, { targetDateStr: "2026-05-02" });
+    await t.mutation(internal.analyticsSnapshots.generateDailySnapshots, { targetDateStr: "2026-05-02" });
 
     const snapshots = await t.run(async (ctx) =>
       ctx.db.query("analyticsDailySnapshots").withIndex("by_date", (q) => q.eq("date", "2026-05-02")).collect()
@@ -267,7 +270,7 @@ describe("analytics cron snapshots", () => {
       };
     });
 
-    const firstValidation = await t.query(internal.analyticsCron.validateMessageAnalyticsDimensions, {
+    const firstValidation = await t.query(internal.analyticsSnapshots.validateMessageAnalyticsDimensions, {
       paginationOpts: { numItems: 10, cursor: null },
     });
 
@@ -281,7 +284,7 @@ describe("analytics cron snapshots", () => {
     expect(firstValidation.examples).toContain(setup.legacyAssistantId);
     expect(firstValidation.examples).toContain(setup.orphanMessageId);
 
-    const dryRun = await t.mutation(internal.analyticsCron.backfillMessageAnalyticsDimensions, {
+    const dryRun = await t.mutation(internal.analyticsSnapshots.backfillMessageAnalyticsDimensions, {
       paginationOpts: { numItems: 10, cursor: null },
       dryRun: true,
     });
@@ -296,7 +299,7 @@ describe("analytics cron snapshots", () => {
       dryRun: true,
     });
 
-    const backfill = await t.mutation(internal.analyticsCron.backfillMessageAnalyticsDimensions, {
+    const backfill = await t.mutation(internal.analyticsSnapshots.backfillMessageAnalyticsDimensions, {
       paginationOpts: { numItems: 10, cursor: null },
     });
 
@@ -347,7 +350,7 @@ describe("analytics cron snapshots", () => {
       analyticsDimensionsVersion: 1,
     });
 
-    const secondBackfill = await t.mutation(internal.analyticsCron.backfillMessageAnalyticsDimensions, {
+    const secondBackfill = await t.mutation(internal.analyticsSnapshots.backfillMessageAnalyticsDimensions, {
       paginationOpts: { numItems: 10, cursor: null },
     });
 
@@ -360,7 +363,7 @@ describe("analytics cron snapshots", () => {
       isDone: true,
     });
 
-    const secondValidation = await t.query(internal.analyticsCron.validateMessageAnalyticsDimensions, {
+    const secondValidation = await t.query(internal.analyticsSnapshots.validateMessageAnalyticsDimensions, {
       paginationOpts: { numItems: 10, cursor: null },
     });
 
@@ -454,7 +457,7 @@ describe("analytics cron snapshots", () => {
       return { mismatchedMessageId, missingDimensionMessageId };
     });
 
-    const health = await t.query(internal.analyticsCron.getAnalyticsDataHealth, { daysBack: 3 });
+    const health = await t.query(internal.systemHealth.getAnalyticsDataHealth, { daysBack: 3 });
 
     expect(health.checkedDates).toEqual(dates);
     expect(health.snapshotCoverage.missingGlobalDates).toEqual([dates[1]]);
@@ -644,7 +647,7 @@ describe("analytics cron snapshots", () => {
       return { missingNextRunScheduleId, overdueScheduleId };
     });
 
-    const health = await t.query(internal.analyticsCron.getSystemHealth, { daysBack: 7 });
+    const health = await t.query(internal.systemHealth.getSystemHealth, { daysBack: 7 });
 
     expect(health.operations.agentFailures).toMatchObject({ count: 1 });
     expect(health.operations.agentFailures.examples[0]).toMatchObject({
@@ -731,22 +734,22 @@ describe("analytics cron snapshots", () => {
     });
 
     await expect(
-      t.withIdentity({ subject: adminId }).query(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
+      t.withIdentity({ subject: adminId }).query(api.systemHealth.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
     ).rejects.toThrow("Unauthorized");
 
     await expect(
-      t.withIdentity({ subject: superAdminId }).query(api.analyticsCron.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
+      t.withIdentity({ subject: superAdminId }).query(api.systemHealth.getAnalyticsDataHealthForAdmin, { daysBack: 7 })
     ).resolves.toMatchObject({ daysBack: 7 });
 
     await expect(
-      t.withIdentity({ subject: adminId }).query(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 })
+      t.withIdentity({ subject: adminId }).query(api.systemHealth.getSystemHealthForAdmin, { daysBack: 7 })
     ).resolves.toMatchObject({
       daysBack: 7,
       scope: { companyId, type: "company" },
     });
 
     await expect(
-      t.withIdentity({ subject: superAdminId }).query(api.analyticsCron.getSystemHealthForAdmin, { daysBack: 7 })
+      t.withIdentity({ subject: superAdminId }).query(api.systemHealth.getSystemHealthForAdmin, { daysBack: 7 })
     ).resolves.toMatchObject({
       daysBack: 7,
       scope: { type: "platform" },

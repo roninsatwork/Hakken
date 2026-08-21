@@ -30,6 +30,7 @@ import { AGENT_LIMIT_OVERRIDE_FIELDS, clampAgentLimitOverride } from "./agentRun
 import { clampAgentApprovalExpiryHours } from "./approvalExpiryService";
 import { getAgentTemplateById, getAgentTemplates } from "./agentTemplates";
 import { seedFixturesForTemplate } from "./agentEvalFixtures";
+import { appError } from "./utils/appError";
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 
 const AGENT_CATALOG_LIMIT = 500;
@@ -375,11 +376,11 @@ async function bindRecommendedTemplateTools(ctx: MutationCtx, args: {
 async function assertModelOverrideAllowed(ctx: MutationCtx, args: { modelId: string; useCase: AgentModelUseCase }) {
   const model = await getModelByStableId(ctx, args.modelId);
   if (!model?.isEnabled) {
-    throw new Error("Selected AI model is not enabled.");
+    throw appError("INVALID_INPUT", "Selected AI model is not enabled.");
   }
 
   if (!modelSupportsUseCase(model, args.useCase)) {
-    throw new Error(`Selected AI model does not support the ${args.useCase} use case.`);
+    throw appError("INVALID_INPUT", `Selected AI model does not support the ${args.useCase} use case.`);
   }
 
   if (model.providerKey) {
@@ -389,14 +390,14 @@ async function assertModelOverrideAllowed(ctx: MutationCtx, args: { modelId: str
       .first();
 
     if (provider && !provider.isEnabled) {
-      throw new Error("Selected AI model provider is disabled.");
+      throw appError("INVALID_INPUT", "Selected AI model provider is disabled.");
     }
   }
 }
 
 export async function buildAgentReadiness(ctx: Pick<QueryCtx, "db">, agentId: Id<"agents">) {
   const agent = await ctx.db.get(agentId);
-  if (!agent) throw new Error("Agent not found");
+  if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
   const [toolBindings, activeEvalFixtures, recentRuns, skillBindings, allTools] = await Promise.all([
     ctx.db
@@ -823,7 +824,7 @@ export const get = superAdminQuery({
   args: { id: v.id("agents") },
   handler: async (ctx, args) => {
     const agent = await ctx.db.get(args.id);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     // We can also fetch populated rules and knowledge documents here if needed
     const populatedRules = agent.ruleIds && agent.ruleIds.length > 0
@@ -854,11 +855,11 @@ export const getAgentReadiness = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.id);
-    if (!agent) throw new Error("Agent not found");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
 
     if (user.role !== "SUPER_ADMIN") {
       if (!user.companyId || agent.companyId !== user.companyId) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
 
@@ -914,9 +915,9 @@ export const createAgent = superAdminMutation({
       risk: args.riskLevel,
       autonomous: args.autonomousToolExecution,
     });
-    if (autonomyRefusal) throw new Error(autonomyRefusal);
+    if (autonomyRefusal) throw appError("INVALID_INPUT", autonomyRefusal);
     if (args.ownerId && !(await ctx.db.get(args.ownerId))) {
-      throw new Error("Choose the person accountable for this.");
+      throw appError("INVALID_INPUT", "Choose the person accountable for this.");
     }
 
     const now = Date.now();
@@ -1023,7 +1024,7 @@ export const createAgentFromTemplate = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const template = getAgentTemplateById(args.templateId);
-    if (!template) throw new Error("Agent template not found.");
+    if (!template) throw appError("NOT_FOUND", "Agent template not found.");
 
     const now = Date.now();
     const defaultModelId = await resolveDefaultModelIdForUseCase(ctx, "agent");
@@ -1119,9 +1120,9 @@ export const updateAgent = superAdminMutation({
 
     const { id, storageId, ...updates } = args;
     const existingAgent = await ctx.db.get(id);
-    if (!existingAgent) throw new Error("Agent not found");
+    if (!existingAgent) throw appError("NOT_FOUND", "Agent not found");
     if (updates.ownerId !== undefined && !(await ctx.db.get(updates.ownerId))) {
-      throw new Error("Choose the person accountable for this.");
+      throw appError("INVALID_INPUT", "Choose the person accountable for this.");
     }
     const useCase: AgentModelUseCase = existingAgent.workflowId ? "workflow" : "agent";
     const modelSelectionMode: AgentModelSelectionMode | undefined = updates.modelSelectionMode;
@@ -1145,12 +1146,12 @@ export const updateAgent = superAdminMutation({
     }
     if (updates.releaseGateMode === "PRESET") {
       if (!updates.releaseGateSuitePresetId && !existingAgent.releaseGateSuitePresetId) {
-        throw new Error("Release gate preset is required when preset mode is enabled.");
+        throw appError("INVALID_INPUT", "Release gate preset is required when preset mode is enabled.");
       }
       const presetId = updates.releaseGateSuitePresetId ?? existingAgent.releaseGateSuitePresetId;
       const preset = presetId ? await ctx.db.get(presetId) : null;
       if (!preset || preset.agentId !== id || preset.status !== "ACTIVE") {
-        throw new Error("Release gate preset not found.");
+        throw appError("NOT_FOUND", "Release gate preset not found.");
       }
     }
     if (updates.releaseGateMode === "NONE") {
@@ -1209,7 +1210,7 @@ export const updateAgent = superAdminMutation({
 
     if (updates.autonomousToolExecution === true) {
       const refusal = refusalForAutonomy({ risk: nextRisk, autonomous: true });
-      if (refusal) throw new Error(refusal);
+      if (refusal) throw appError("INVALID_INPUT", refusal);
     }
 
     const autonomyNow = updates.autonomousToolExecution ?? existingAgent.autonomousToolExecution;
@@ -1279,7 +1280,7 @@ export const deleteAgent = superAdminMutation({
     // (wiki-agents plan, phase 0): a deleted staff agent would leave its
     // sweeps running with no face, which is exactly what the plan forbids.
     if (agent?.systemKey) {
-      throw new Error("This is a built-in member of the wiki's staff. Switch it off instead of deleting it.");
+      throw appError("INVALID_INPUT", "This is a built-in member of the wiki's staff. Switch it off instead of deleting it.");
     }
 
     // Cleanse tool bindings

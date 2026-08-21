@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { adminAction } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * The Ask box (watch-it-think plan, phase 3): ask the brain a question
@@ -37,7 +38,8 @@ type AskResult = {
   pages: Array<{ title: string; pageId: string; isPlatform: boolean }>;
 };
 
-async function askCore(
+// Exported for wikiAsk.test.ts; not a registered Convex function.
+export async function askCore(
   // The generated Convex ctx types don't thread through custom wrappers
   // cleanly; the three run* capabilities are all this needs.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,7 +50,7 @@ async function askCore(
     ...(args.companyId ? { companyId: args.companyId } : {}),
     userId: args.userId,
   });
-  await ctx.runAction(internal.ai.generateSonaeResponse, {
+  await ctx.runAction(internal.aiChat.generateSonaeResponse, {
     threadId,
     content: args.question.slice(0, 500),
   });
@@ -61,7 +63,7 @@ async function askCore(
     const evidence = outcome.evidenceJson
       ? (JSON.parse(outcome.evidenceJson) as { wikiPageKeys?: string[] })
       : {};
-    pageKeys = evidence.wikiPageKeys ?? [];
+    pageKeys = Array.isArray(evidence.wikiPageKeys) ? evidence.wikiPageKeys : [];
   } catch {
     pageKeys = [];
   }
@@ -101,7 +103,7 @@ export const askBrainForGlobal = adminAction({
   args: { question: v.string() },
   handler: async (ctx, args): Promise<AskResult> => {
     if (ctx.user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to the platform wiki");
+      throw appError("UNAUTHORIZED", "Unauthorized access to the platform wiki");
     }
     return await askCore(ctx, { companyId: undefined, userId: ctx.userId, question: args.question });
   },

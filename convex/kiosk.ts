@@ -5,6 +5,7 @@ import { moduleQuery, publicMutation, publicQuery } from "./tenantFunctions";
 import { effectiveModulesFor } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { canAccessThread, digestWidgetAccessToken } from "./chatService";
+import { appError } from "./utils/appError";
 
 /**
  * The receptionist screen's doors: everything the kiosk page may ask of the
@@ -72,9 +73,9 @@ export const recordKioskVoiceTurn = publicMutation({
   },
   handler: async (ctx, args): Promise<null> => {
     const thread = await ctx.db.get(args.threadId);
-    if (!thread) throw new Error("Thread not found");
+    if (!thread) throw appError("NOT_FOUND", "Thread not found");
     if (!(await canAccessThread(ctx, thread, null, args.widgetAccessToken))) {
-      throw new Error("Unauthorized: Invalid widget session");
+      throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
     const userText = args.userText.trim().slice(0, VOICE_TURN_MAX_LENGTH);

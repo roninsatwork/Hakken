@@ -4,6 +4,7 @@ import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { adminQuery } from "./tenantFunctions";
 import { getErrorMessage } from "./utils/lang";
+import { appError } from "./utils/appError";
 
 
 /**
@@ -55,12 +56,12 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runMutation(internal.knowledge.garbageCollectThreadVectors, {}),
   "reset-billing-cycles": (ctx) => ctx.runMutation(internal.plans.resetBillingCycle, {}),
   "generate-daily-analytics-snapshots": (ctx) =>
-    ctx.runMutation(internal.analyticsCron.generateDailySnapshots, {}),
+    ctx.runMutation(internal.analyticsSnapshots.generateDailySnapshots, {}),
   "user-login-count-rollup": (ctx) => ctx.runMutation(internal.users.recomputeLoginCounts, {}),
   // The one job that carries an argument: its seven-day window is the
   // schedule's, not the function's default, so it travels with the entry.
   "dispatch-platform-alerts": (ctx) =>
-    ctx.runAction(internal.analyticsCron.dispatchPlatformAlerts, { daysBack: 7 }),
+    ctx.runAction(internal.platformAlerts.dispatchPlatformAlerts, { daysBack: 7 }),
   "wiki-weekly-report": (ctx) => ctx.runAction(internal.wikiReport.sendWeeklyReports, {}),
   "wiki-exam-growth": (ctx) => ctx.runAction(internal.wikiExamGrowthActions.examGrowthSweep, {}),
 };
@@ -183,7 +184,7 @@ export const listJobRuns = adminQuery({
   args: {},
   handler: async (ctx): Promise<JobRow[]> => {
     if (ctx.user.role !== "SUPER_ADMIN" && ctx.user.role !== "READ_ONLY") {
-      throw new Error("Unauthorized access to platform maintenance");
+      throw appError("UNAUTHORIZED", "Unauthorized access to platform maintenance");
     }
     // One row per job, so this ceiling is comfortably above the whole table.
     const rows = await ctx.db.query("jobRuns").take(200);

@@ -91,7 +91,7 @@ describe("Message Quotas Enforcements", () => {
 
   /**
    * Anonymous widget traffic spends from the company's plan — the decision in
-   * docs/plans/active/widget-plan-quota-plan.md. One pot: a visitor's message
+   * docs/plans/completed/widget-plan-quota-plan.md. One pot: a visitor's message
    * counts exactly like an employee's, and when the pot is empty the visitor
    * is refused before any model call is scheduled.
    */

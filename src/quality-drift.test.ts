@@ -145,14 +145,14 @@ const platformScaleBroadReadAllowlist = [
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'messages', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'global live message overlay is bounded by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'agentTransactions', category: 'analytics_live_overlay', phase: 'Analytics Plan', reason: 'global live transaction overlay is bounded by analytics-specific drift tests' },
   { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics', table: 'analyticsDailySnapshots', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'global snapshot read is protected by analytics-specific drift tests' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'moduleScope', table: 'analyticsDailySnapshots', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'snapshot health helper is analytics maintenance protected by analytics plan' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'moduleScope', table: 'messages', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'message dimension health helper is analytics maintenance protected by analytics plan' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'moduleScope', table: 'agentTransactions', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'transaction health helper is analytics maintenance protected by analytics plan' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'backfillMessageAnalyticsDimensions', table: 'messages', category: 'maintenance', phase: 'Analytics Plan', reason: 'paginated analytics backfill is retained for historical repair and validation' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots', table: 'messages', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily snapshot generation reads bounded day windows for analytics snapshots' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots', table: 'agentTransactions', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily transaction snapshot generation reads bounded day windows' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'daily snapshot generation reads model catalogue for configured cost resolution' },
-  { filePath: 'convex/analyticsCron.ts', exportName: 'wipeSnapshots', table: 'analyticsDailySnapshots', category: 'maintenance', phase: 'Analytics Plan', reason: 'internal destructive snapshot maintenance remains explicitly allowlisted' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'analyticsDailySnapshots', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'snapshot health helper is analytics maintenance protected by analytics plan' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'messages', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'message dimension health helper is analytics maintenance protected by analytics plan' },
+  { filePath: 'convex/systemHealth.ts', exportName: 'moduleScope', table: 'agentTransactions', category: 'analytics_maintenance', phase: 'Analytics Plan', reason: 'transaction health helper is analytics maintenance protected by analytics plan' },
+  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'backfillMessageAnalyticsDimensions', table: 'messages', category: 'maintenance', phase: 'Analytics Plan', reason: 'paginated analytics backfill is retained for historical repair and validation' },
+  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'messages', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily snapshot generation reads bounded day windows for analytics snapshots' },
+  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'agentTransactions', category: 'analytics_snapshot', phase: 'Analytics Plan', reason: 'daily transaction snapshot generation reads bounded day windows' },
+  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots', table: 'aiModels', category: 'analytics_catalogue', phase: 'Analytics Plan', reason: 'daily snapshot generation reads model catalogue for configured cost resolution' },
+  { filePath: 'convex/analyticsSnapshots.ts', exportName: 'wipeSnapshots', table: 'analyticsDailySnapshots', category: 'maintenance', phase: 'Analytics Plan', reason: 'internal destructive snapshot maintenance remains explicitly allowlisted' },
   { filePath: 'convex/arcade.ts', exportName: 'getPaginatedLeaderboard', table: 'arcadeScores', category: 'low_priority_product', phase: 'Phase 1', reason: 'arcade leaderboard uses a capped list and needs pagination if it becomes a real scale surface' },
   { filePath: 'convex/arcade.ts', exportName: 'getScoresCount', table: 'arcadeScores', category: 'low_priority_product', phase: 'Phase 1', reason: 'arcade score count uses capped reads and needs count strategy if it becomes a real scale surface' },
   { filePath: 'convex/chat.ts', exportName: 'getThreads', table: 'threads', category: 'chat_logs', phase: 'Phase 3', reason: 'chat thread list is scheduled for bounded date and pagination contracts' },
@@ -576,7 +576,7 @@ describe('Quality Drift Guardrails', () => {
   });
 
   test('Ask Sonae assistant runtimes keep the shared safety spine', () => {
-    const assistantBody = extractDeclarationBody('convex/ai.ts', 'generateSonaeResponse');
+    const assistantBody = extractDeclarationBody('convex/aiChat.ts', 'generateSonaeResponse');
 
     // The safety check and refusal write moved behind `guardModelTurn` in
     // `convex/modelTurnService.ts` (maintenance plan, Phase 8), so the spine
@@ -651,11 +651,13 @@ describe('Quality Drift Guardrails', () => {
   test('admin AI rule forms keep prompt-injection warning panels', () => {
     const pages = [
       'src/app/(dashboard)/admin/ai/rules/new/page.tsx',
-      'src/app/(dashboard)/admin/ai/rules/[id]/page.tsx',
+      // Both scoped edit pages are thin wrappers over the shared screen
+      // since the admin-clone-readiness plan's phase 2 (2026-08-21), so the
+      // warning contract lives in one file.
+      'src/app/(dashboard)/admin/_features/rules/EditRuleScreen.tsx',
       'src/app/(dashboard)/admin/agents/[id]/rules/new/page.tsx',
       'src/app/(dashboard)/admin/agents/[id]/rules/[ruleId]/page.tsx',
       'src/app/(dashboard)/admin/companies/[id]/ai/rules/new/page.tsx',
-      'src/app/(dashboard)/admin/companies/[id]/ai/rules/[ruleId]/page.tsx',
     ];
     const offenders = pages.filter((filePath) => {
       const contents = readRepoFile(filePath);
@@ -832,7 +834,7 @@ describe('Quality Drift Guardrails', () => {
     const protectedExports = [
       { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics' },
       { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics' },
-      { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots' },
+      { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots' },
     ];
 
     const offenders = protectedExports.flatMap(({ filePath, exportName }) => {
@@ -885,7 +887,7 @@ describe('Quality Drift Guardrails', () => {
       { filePath: 'convex/analytics.ts', exportName: 'getCompanyMetrics' },
       { filePath: 'convex/analytics.ts', exportName: 'getGlobalAnalytics' },
       { filePath: 'convex/analytics.ts', exportName: 'getUserCostOverview' },
-      { filePath: 'convex/analyticsCron.ts', exportName: 'generateDailySnapshots' },
+      { filePath: 'convex/analyticsSnapshots.ts', exportName: 'generateDailySnapshots' },
     ];
 
     const offenders = protectedExports.flatMap(({ filePath, exportName }) => {
@@ -906,14 +908,14 @@ describe('Quality Drift Guardrails', () => {
   test('analytics broad-scan exceptions stay explicitly allowlisted', () => {
     const exceptions = [
       {
-        filePath: 'convex/analyticsCron.ts',
+        filePath: 'convex/analyticsSnapshots.ts',
         exportName: 'wipeSnapshots',
         table: 'analyticsDailySnapshots',
         reason: 'internal destructive maintenance query used only to reset generated analytics snapshots',
       },
     ];
     const allowed = new Set(exceptions.map(({ filePath, exportName, table }) => `${filePath}:${exportName}:${table}`));
-    const files = ['convex/analytics.ts', 'convex/analyticsCron.ts'];
+    const files = ['convex/analytics.ts', 'convex/analyticsSnapshots.ts', 'convex/systemHealth.ts'];
     const broadScanPattern = /ctx\.db\s*\.query\("(threads|users|companies|agents|plans|analyticsDailySnapshots)"\)\s*(?![\s\S]*?\.withIndex\()[\s\S]*?\.take\(10000\)/g;
     const offenders = files.flatMap((filePath) => {
       const contents = readRepoFile(filePath);
@@ -1093,13 +1095,14 @@ describe('Quality Drift Guardrails', () => {
   });
 
   test('widget config pages use primary widget queries instead of full widget catalogues', () => {
-    const globalWidgetPage = readRepoFile('src/app/(dashboard)/admin/ai/widget/page.tsx');
-    const companyWidgetPage = readRepoFile('src/app/(dashboard)/admin/companies/[id]/widget/page.tsx');
+    // Both routes render the shared WidgetConfigScreen (admin-clone-readiness
+    // plan, phase 2, 2026-08-21), so the query contract lives in one file.
+    const widgetScreen = readRepoFile('src/app/(dashboard)/admin/_features/widget-config/WidgetConfigScreen.tsx');
 
-    expect(globalWidgetPage).toContain('api.widgets.getPrimaryGlobalWidget');
-    expect(globalWidgetPage).not.toContain('api.widgets.getGlobalWidgets');
-    expect(companyWidgetPage).toContain('api.widgets.getPrimaryWidgetByCompany');
-    expect(companyWidgetPage).not.toContain('api.widgets.getWidgetsByCompany');
+    expect(widgetScreen).toContain('api.widgets.getPrimaryGlobalWidget');
+    expect(widgetScreen).not.toContain('api.widgets.getGlobalWidgets');
+    expect(widgetScreen).toContain('api.widgets.getPrimaryWidgetByCompany');
+    expect(widgetScreen).not.toContain('api.widgets.getWidgetsByCompany');
   });
 
   test('knowledge manager uses the paginated document inventory query', () => {
@@ -1172,7 +1175,9 @@ describe('Quality Drift Guardrails', () => {
   test('provider SDK imports remain classified while adapters mature', () => {
     const allowedProviderSdkImportFiles = new Set([
       'convex/agentRuntime.ts',
-      'convex/ai.ts',
+      // Of the four ai.ts successors (2026-08-21 split), only aiSpeech still
+      // imports a provider SDK directly (@google/genai Modality for TTS).
+      'convex/aiSpeech.ts',
       // Adapters are where provider SDK usage belongs. `agentRuntime.ts` is
       // still listed below as transitional: the objective loop now goes through
       // the provider seam, but the explicit prompt-cache lifecycle is still

@@ -4,6 +4,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "./_generated/
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { appError } from "./utils/appError";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   MAX_ALWAYS_MEMORIES,
@@ -46,14 +47,14 @@ function normalizeMemoryContent(content: string) {
 
 function validateMemoryContent(content: string) {
   const normalizedContent = normalizeMemoryContent(content);
-  if (normalizedContent.length === 0) throw new Error("Memory content cannot be empty.");
+  if (normalizedContent.length === 0) throw appError("INVALID_INPUT", "Memory content cannot be empty.");
   if (normalizedContent.length > MEMORY_CONTENT_MAX_CHARS) {
-    throw new Error(`Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
+    throw appError("INVALID_INPUT", `Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
   }
 
   const warnings = getAssistantSafetyWarnings(normalizedContent);
   if (warnings.length > 0) {
-    throw new Error(`Memory content rejected by safety policy: ${warnings.map((warning) => warning.category).join(", ")}`);
+    throw appError("INVALID_INPUT", `Memory content rejected by safety policy: ${warnings.map((warning) => warning.category).join(", ")}`);
   }
 
   return normalizedContent;
@@ -81,8 +82,8 @@ export const getForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
-    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
+    if (user.role === "ADMIN" && !user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
 
     const isActive = args.isActive ?? true;
     const companyId = user.role === "ADMIN" ? user.companyId : undefined;
@@ -127,7 +128,7 @@ export const deleteMemory = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);
-    if (!memory || memory.isActive === false) throw new Error("Memory not found");
+    if (!memory || memory.isActive === false) throw appError("NOT_FOUND", "Memory not found");
     assertAdminCanAccessCompany(user, memory.companyId);
 
     const now = Date.now();
@@ -163,8 +164,8 @@ export const getQualityForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
-    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
+    if (user.role === "ADMIN" && !user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
 
     const memories = user.role === "ADMIN"
       ? await ctx.db
@@ -496,7 +497,7 @@ export async function assertAgentAlwaysCapacity(
     .filter((memory) => memory._id !== excludeMemoryId);
 
   if (existing.length >= MAX_ALWAYS_MEMORIES) {
-    throw new Error(
+    throw appError("INVALID_INPUT", 
       `An agent can have ${MAX_ALWAYS_MEMORIES} memories set to Always. Change one to "When relevant" before adding another.`,
     );
   }
@@ -518,8 +519,8 @@ export const createMemory = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found");
-    if (user.role === "ADMIN" && !user.companyId) throw new Error("Unauthorized");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found");
+    if (user.role === "ADMIN" && !user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
     await assertAgentAlwaysCapacity(ctx, args.agentId, args.applyMode);
 
     return await insertAgentMemory(ctx, {
@@ -543,7 +544,7 @@ export const updateMemory = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);
-    if (!memory || memory.isActive === false) throw new Error("Memory not found");
+    if (!memory || memory.isActive === false) throw appError("NOT_FOUND", "Memory not found");
     assertAdminCanAccessCompany(user, memory.companyId);
     await assertAgentAlwaysCapacity(ctx, memory.agentId, args.applyMode, args.memoryId);
 
@@ -586,8 +587,8 @@ export const restoreMemory = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const memory = await ctx.db.get(args.memoryId);
-    if (!memory) throw new Error("Memory not found");
-    if (memory.isActive !== false) throw new Error("This memory is already in use.");
+    if (!memory) throw appError("NOT_FOUND", "Memory not found");
+    if (memory.isActive !== false) throw appError("INVALID_INPUT", "This memory is already in use.");
     assertAdminCanAccessCompany(user, memory.companyId);
     await assertAgentAlwaysCapacity(ctx, memory.agentId, resolveAgentApplyMode(memory), args.memoryId);
 

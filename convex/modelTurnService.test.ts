@@ -326,7 +326,7 @@ describe("both assistants flow through the same shared turn", () => {
       return { threadId, agentId };
     });
 
-    await t.action(internal.ai.generateSonaeResponse, {
+    await t.action(internal.aiChat.generateSonaeResponse, {
       threadId,
       content: UNSAFE_CONTENT,
     });
@@ -379,7 +379,9 @@ describe("both assistants flow through the same shared turn", () => {
 describe("one model turn: the wiring stays shared (source guard)", () => {
   const readRepoFile = (relativePath: string) =>
     fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
-  const runtimeFiles = ["convex/ai.ts", "convex/agentRuntime.ts"];
+  // ai.ts split 2026-08-21 (foundation-quality plan, phase 3): the chat
+  // runtime that calls the shared turn now lives in aiChat.ts.
+  const runtimeFiles = ["convex/aiChat.ts", "convex/agentRuntime.ts"];
 
   test("both runtimes import and call the shared turn", () => {
     for (const file of runtimeFiles) {

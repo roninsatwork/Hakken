@@ -119,7 +119,7 @@ export const handleVoiceKnowledgeLookup = httpAction(async (ctx, request) => {
   // is only a fallback for a thread that belongs to no workspace, so a
   // tampered-with company cannot reach another tenant's documents — and the
   // ticket could not be tampered with anyway, having just been verified.
-  const result = await ctx.runAction(internal.ai.searchKnowledgeForVoiceInternal, {
+  const result = await ctx.runAction(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, {
     query,
     ...(payload.threadId ? { threadId: payload.threadId as Id<"threads"> } : {}),
     ...(payload.companyId ? { fallbackCompanyId: payload.companyId as Id<"companies"> } : {}),

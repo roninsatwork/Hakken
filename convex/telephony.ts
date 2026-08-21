@@ -322,7 +322,7 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   // mints it decides which company is being spoken for.
   let ticket: string;
   try {
-    ticket = await ctx.runAction(internal.ai.createVoiceTicketForCompany, {
+    ticket = await ctx.runAction(internal.aiVoiceSession.createVoiceTicketForCompany, {
       companyId: companyId as Id<"companies">,
       ...(callerPage ? { callerPage } : {}),
     });

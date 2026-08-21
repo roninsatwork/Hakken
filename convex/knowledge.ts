@@ -7,6 +7,7 @@ import { internal } from "./_generated/api";
 import { validateSafeUrl } from "./utils/security";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
+import { appError } from "./utils/appError";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { adminMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
@@ -220,7 +221,7 @@ async function getKnowledgeDocumentsForScope(
 
   if (args.agentId) {
     if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     if (user.role === "ADMIN") {
@@ -242,7 +243,7 @@ async function getKnowledgeDocumentsForScope(
 
   if (!args.companyId) {
     if (user.role !== "SUPER_ADMIN") {
-      throw new Error("Unauthorized access to global knowledge base");
+      throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
     }
     return await ctx.db
       .query("knowledgeDocuments")
@@ -252,7 +253,7 @@ async function getKnowledgeDocumentsForScope(
   }
 
   if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
-    throw new Error("Unauthorized access to company knowledge base");
+    throw appError("UNAUTHORIZED", "Unauthorized access to company knowledge base");
   }
 
   return await ctx.db
@@ -274,7 +275,7 @@ async function getRepairableKnowledgeDocumentsForScope(
   const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
 
   if (args.agentId) {
-    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw new Error("Unauthorized");
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized");
 
     if (user.role === "ADMIN") {
       const activeCompanyId = getActiveCompanyId(user);
@@ -294,7 +295,7 @@ async function getRepairableKnowledgeDocumentsForScope(
   }
 
   if (!args.companyId) {
-    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to global knowledge base");
+    if (user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
     return await ctx.db
       .query("knowledgeDocuments")
       .withIndex("by_global", (q) => q.eq("companyId", undefined).eq("agentId", undefined).eq("threadId", undefined))
@@ -303,7 +304,7 @@ async function getRepairableKnowledgeDocumentsForScope(
   }
 
   if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
-    throw new Error("Unauthorized access to company knowledge base");
+    throw appError("UNAUTHORIZED", "Unauthorized access to company knowledge base");
   }
 
   return await ctx.db
@@ -330,21 +331,21 @@ async function assertCanInspectKnowledgeDocument(
   document: Doc<"knowledgeDocuments">
 ) {
   const current = await getCurrentUser(ctx);
-  if (!current) throw new Error("Unauthenticated request");
+  if (!current) throw appError("UNAUTHENTICATED", "Unauthenticated request");
 
   if (document.threadId) {
     const thread = await ctx.db.get(document.threadId);
-    if (!thread || !canReadThreadKnowledgeDocuments(thread, current)) throw new Error("Unauthorized");
+    if (!thread || !canReadThreadKnowledgeDocuments(thread, current)) throw appError("UNAUTHORIZED", "Unauthorized");
     return;
   }
 
   if (!document.companyId) {
-    if (current.user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to global knowledge base");
+    if (current.user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
     return;
   }
 
   if (current.user.role !== "SUPER_ADMIN" && (current.user.role !== "ADMIN" || getActiveCompanyId(current.user) !== document.companyId)) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 }
 
@@ -355,16 +356,16 @@ async function assertCanRepairKnowledgeDocument(
   const { userId, user } = await requireCurrentUser(ctx, "Unauthenticated request");
 
   if (document.threadId) {
-    throw new Error("Thread-scoped documents are repaired from their source thread.");
+    throw appError("INVALID_INPUT", "Thread-scoped documents are repaired from their source thread.");
   }
 
   if (!document.companyId) {
-    if (user.role !== "SUPER_ADMIN") throw new Error("Unauthorized access to global knowledge base");
+    if (user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
     return { userId, user };
   }
 
   if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== document.companyId)) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 
   return { userId, user };
@@ -417,7 +418,7 @@ export const getDocuments = tenantQuery({
     // Agent-isolated Knowledge Scope (Highest Priority)
     if (args.agentId) {
       if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
 
       if (user.role === "ADMIN") {
@@ -438,7 +439,7 @@ export const getDocuments = tenantQuery({
     // Global Knowledge Check
     if (!args.companyId) {
       if (!user || user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized access to global knowledge base");
+        throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
       }
       return await ctx.db
         .query("knowledgeDocuments")
@@ -448,7 +449,7 @@ export const getDocuments = tenantQuery({
     }
 
     if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
-        throw new Error("Unauthorized access to company knowledge base");
+        throw appError("UNAUTHORIZED", "Unauthorized access to company knowledge base");
     }
 
     return await ctx.db
@@ -474,7 +475,7 @@ export const getPaginatedDocuments = tenantQuery({
 
     if (args.agentId) {
       if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
 
       if (user.role === "ADMIN") {
@@ -497,7 +498,7 @@ export const getPaginatedDocuments = tenantQuery({
 
     if (!args.companyId) {
       if (user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized access to global knowledge base");
+        throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
       }
 
       return await ctx.db
@@ -508,7 +509,7 @@ export const getPaginatedDocuments = tenantQuery({
     }
 
     if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
-      throw new Error("Unauthorized access to company knowledge base");
+      throw appError("UNAUTHORIZED", "Unauthorized access to company knowledge base");
     }
 
     return await ctx.db
@@ -533,7 +534,7 @@ export const getWebsiteDocuments = tenantQuery({
 
     if (args.agentId) {
       if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
 
       if (user.role === "ADMIN") {
@@ -557,7 +558,7 @@ export const getWebsiteDocuments = tenantQuery({
 
     if (!args.companyId) {
       if (user.role !== "SUPER_ADMIN") {
-        throw new Error("Unauthorized access to global knowledge base");
+        throw appError("UNAUTHORIZED", "Unauthorized access to global knowledge base");
       }
 
       return await ctx.db
@@ -568,7 +569,7 @@ export const getWebsiteDocuments = tenantQuery({
     }
 
     if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== args.companyId)) {
-      throw new Error("Unauthorized access to company knowledge base");
+      throw appError("UNAUTHORIZED", "Unauthorized access to company knowledge base");
     }
 
     return await ctx.db
@@ -703,7 +704,7 @@ export const inspectDocument = tenantQuery({
   },
   handler: async (ctx, args) => {
     const document = await ctx.db.get(args.documentId);
-    if (!document) throw new Error("Document not found");
+    if (!document) throw appError("NOT_FOUND", "Document not found");
     await assertCanInspectKnowledgeDocument(ctx, document);
 
     const chunks = await ctx.db
@@ -921,7 +922,7 @@ export const saveChatDocument = tenantMutation({
     // Secure Gate: Prevent malicious injection by verifying thread ownership
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.userId !== userId) {
-      throw new Error("Unauthorized access to thread");
+      throw appError("UNAUTHORIZED", "Unauthorized access to thread");
     }
 
     await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
@@ -953,21 +954,21 @@ export const deleteDocument = tenantMutation({
     const { userId, user } = ctx;
 
     const doc = await ctx.db.get(args.documentId);
-    if (!doc) throw new Error("Document not found");
+    if (!doc) throw appError("NOT_FOUND", "Document not found");
     
     // Allow users to delete their own thread-scoped documents
     if (doc.threadId) {
         const thread = await ctx.db.get(doc.threadId);
         if (!thread || thread.userId !== userId) {
-            throw new Error("Unauthorized to delete this document");
+            throw appError("UNAUTHORIZED", "Unauthorized to delete this document");
         }
     } else if (!doc.companyId) {
        if (user.role !== "SUPER_ADMIN") {
-         throw new Error("Unauthorized to delete global documents");
+         throw appError("UNAUTHORIZED", "Unauthorized to delete global documents");
        }
     } else {
        if (user.role !== "SUPER_ADMIN" && (user.role !== "ADMIN" || getActiveCompanyId(user) !== doc.companyId)) {
-         throw new Error("Unauthorized");
+         throw appError("UNAUTHORIZED", "Unauthorized");
        }
     }
 
@@ -1024,7 +1025,7 @@ export const retryDocumentIngestion = tenantMutation({
   args: { documentId: v.id("knowledgeDocuments") },
   handler: async (ctx, args) => {
     const document = await ctx.db.get(args.documentId);
-    if (!document) throw new Error("Document not found");
+    if (!document) throw appError("NOT_FOUND", "Document not found");
 
     const { userId } = await assertCanRepairKnowledgeDocument(ctx, document);
     const nextStatus = await requeueKnowledgeDocument(ctx, document);
@@ -1324,16 +1325,19 @@ export const saveAnswerToWiki = tenantMutation({
     const { userId, user, companyId: actingCompanyId } = ctx;
 
     const message = await ctx.db.get(args.messageId);
-    if (!message || message.role !== "assistant") throw new Error("Only an answer can be saved.");
+    if (!message || message.role !== "assistant") throw appError("INVALID_INPUT", "Only an answer can be saved.");
 
     const thread = await ctx.db.get(message.threadId);
-    if (!thread) throw new Error("That conversation could not be found.");
+    if (!thread) throw appError("NOT_FOUND", "That conversation could not be found.");
 
     const companyId = message.companyId ?? thread.companyId;
-    if (!companyId) throw new Error("An answer can only be saved into a workspace.");
+    // INVALID_INPUT, not NO_ACTIVE_COMPANY: the *thread* has no workspace (a
+    // platform-level conversation), which no workspace selection by the caller
+    // can fix — the caller-state code would prompt exactly that wrong remedy.
+    if (!companyId) throw appError("INVALID_INPUT", "An answer can only be saved into a workspace.");
     // You save answers from your own workspace, whatever your role.
     if (user.role !== "SUPER_ADMIN" && companyId !== actingCompanyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     if (message.savedToWikiAt) return null;
@@ -1405,11 +1409,11 @@ async function requeueSourceCore(
 ): Promise<void> {
   const page = await ctx.db.get(args.pageId);
   if (!page || page.companyId !== args.companyId || page.kind !== "SOURCE") {
-    throw new Error("Page not found.");
+    throw appError("NOT_FOUND", "Page not found.");
   }
   const document = await ctx.db.get(page.subjectKey as Id<"knowledgeDocuments">).catch(() => null);
-  if (!document || document.companyId !== args.companyId) throw new Error("The original document could not be found.");
-  if (!document.sourceUrl) throw new Error("This page has no web original to re-read.");
+  if (!document || document.companyId !== args.companyId) throw appError("NOT_FOUND", "The original document could not be found.");
+  if (!document.sourceUrl) throw appError("INVALID_INPUT", "This page has no web original to re-read.");
   const now = Date.now();
   await ctx.db.patch(document._id, {
     status: "pending",

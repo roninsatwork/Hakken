@@ -18,6 +18,7 @@ import {
   incrementGlobalInventoryTotals,
 } from "./utils/inventoryRollupService";
 import { normalizeEnabledModules } from "./utils/companyModules";
+import { appError } from "./utils/appError";
 
 const COMPANY_INVENTORY_USER_COUNT_LIMIT = 100;
 const COMPANY_OPTIONS_DEFAULT_LIMIT = 100;
@@ -256,7 +257,7 @@ export const setCompanyModules = superAdminMutation({
     const { userId: adminId } = ctx;
 
     const company = await ctx.db.get(args.id);
-    if (!company) throw new Error("Company not found");
+    if (!company) throw appError("NOT_FOUND", "Company not found");
 
     const previous = normalizeEnabledModules(company.enabledModules);
     const next = normalizeEnabledModules(args.enabledModules);
@@ -374,11 +375,11 @@ export const assignPlanToCompany = superAdminMutation({
   args: { id: v.id("companies"), planId: v.optional(v.id("plans")) },
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.id);
-    if (!company) throw new Error("Company not found");
+    if (!company) throw appError("NOT_FOUND", "Company not found");
 
     const previousPlan = company.planId ? await ctx.db.get(company.planId) : null;
     const nextPlan = args.planId ? await ctx.db.get(args.planId) : null;
-    if (args.planId && !nextPlan) throw new Error("Plan not found");
+    if (args.planId && !nextPlan) throw appError("NOT_FOUND", "Plan not found");
 
     await ctx.db.patch(args.id, { planId: args.planId });
     await adjustGlobalInventoryCompanyPlan(ctx, { previousPlan, nextPlan });

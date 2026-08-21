@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { normalizeSearchTerm } from "./adminQueryService";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 import {
   ANTHROPIC_PROVIDER_KEY,
   DEFAULT_MODEL_USE_CASES,
@@ -416,16 +417,16 @@ async function upsertProviderStatus(ctx: MutationCtx, args: {
 
 async function assertModelCanBeDefaultForUseCase(ctx: MutationCtx, args: { modelId: string; useCase: string }) {
   if (!isSupportedDefaultUseCase(args.useCase)) {
-    throw new Error("Unsupported AI model default use case.");
+    throw appError("INVALID_INPUT", "Unsupported AI model default use case.");
   }
 
   const model = await getModelByStableIdForMutation(ctx, args.modelId);
   if (!model?.isEnabled) {
-    throw new Error("Selected AI model is not enabled.");
+    throw appError("INVALID_INPUT", "Selected AI model is not enabled.");
   }
 
   if (!modelSupportsUseCase(model, args.useCase)) {
-    throw new Error(`Selected AI model does not support the ${args.useCase} use case.`);
+    throw appError("INVALID_INPUT", `Selected AI model does not support the ${args.useCase} use case.`);
   }
 
   // Two capabilities are genuinely Google-only, and two jobs need a provider
@@ -434,7 +435,7 @@ async function assertModelCanBeDefaultForUseCase(ctx: MutationCtx, args: { model
   // is one API call away from the failure this is meant to prevent.
   if (!canProviderServeUseCase(model.providerKey, args.useCase)) {
     const reason = describeUseCaseProviderLimit(args.useCase);
-    throw new Error(
+    throw appError("INVALID_INPUT", 
       `Selected AI model's provider cannot handle the ${args.useCase} job.${reason ? ` ${reason}` : ""}`,
     );
   }
@@ -446,7 +447,7 @@ async function assertModelCanBeDefaultForUseCase(ctx: MutationCtx, args: { model
       .first();
 
     if (provider && !provider.isEnabled) {
-      throw new Error("Selected AI model provider is disabled.");
+      throw appError("INVALID_INPUT", "Selected AI model provider is disabled.");
     }
   }
 
@@ -613,7 +614,7 @@ export const clearGlobalModelDefault = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     if (!isSupportedDefaultUseCase(args.useCase)) {
-      throw new Error("Unsupported AI model default use case.");
+      throw appError("INVALID_INPUT", "Unsupported AI model default use case.");
     }
 
     const existingDefault = await ctx.db
@@ -869,7 +870,7 @@ export const getCompanyModelDefaults = superAdminQuery({
   },
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.companyId);
-    if (!company) throw new Error("Company not found");
+    if (!company) throw appError("NOT_FOUND", "Company not found");
 
     const defaults = await Promise.all(DEFAULT_MODEL_USE_CASES.map(async (useCase) => {
       const [companyDefault, globalDefault] = await Promise.all([
@@ -927,7 +928,7 @@ export const setCompanyModelDefault = superAdminMutation({
     const { userId } = ctx;
 
     const company = await ctx.db.get(args.companyId);
-    if (!company) throw new Error("Company not found");
+    if (!company) throw appError("NOT_FOUND", "Company not found");
 
     const model = await assertModelCanBeDefaultForUseCase(ctx, {
       modelId: args.modelId,
@@ -980,11 +981,11 @@ export const clearCompanyModelDefault = superAdminMutation({
     const { userId } = ctx;
 
     if (!isSupportedDefaultUseCase(args.useCase)) {
-      throw new Error("Unsupported AI model default use case.");
+      throw appError("INVALID_INPUT", "Unsupported AI model default use case.");
     }
 
     const company = await ctx.db.get(args.companyId);
-    if (!company) throw new Error("Company not found");
+    if (!company) throw appError("NOT_FOUND", "Company not found");
 
     const existingDefault = await ctx.db
       .query("aiModelDefaults")
@@ -1024,11 +1025,11 @@ export const resolveEmbeddingModelConfigForExecution = internalQuery({
     if (embeddingDefault) {
       const resolved = withInferredProvider(embeddingDefault);
       if (resolved.providerKey !== GOOGLE_VERTEX_PROVIDER_KEY) {
-        throw new Error("Embedding generation currently requires a Google Vertex model to preserve the 768-dimension vector index.");
+        throw appError("NOT_CONFIGURED", "Embedding generation currently requires a Google Vertex model to preserve the 768-dimension vector index.");
       }
 
       if (!resolved.supportedUseCases?.includes(EMBEDDING_MODEL_USE_CASE)) {
-        throw new Error("Configured embedding model does not support the embedding use case.");
+        throw appError("NOT_CONFIGURED", "Configured embedding model does not support the embedding use case.");
       }
 
       return {

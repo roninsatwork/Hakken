@@ -13,6 +13,7 @@ import {
 } from "./aiToolExecutionService";
 import { BUILT_IN_TOOL_CONNECTORS, getBuiltInToolConnector } from "./toolConnectorDefinitions";
 import { assertSafeSecretRefs } from "./connectorSecretPolicy";
+import { appError } from "./utils/appError";
 import { internal } from "./_generated/api";
 import { adminMutation, adminQuery, publicQuery, superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 
@@ -76,7 +77,7 @@ function getEnabledToolMappings(definition: NonNullable<ReturnType<typeof getBui
 
   for (const mapping of requested) {
     if (!availableMappings.has(mapping)) {
-      throw new Error(`Connector tool mapping is not available for ${definition.name}: ${mapping}`);
+      throw appError("INVALID_INPUT", `Connector tool mapping is not available for ${definition.name}: ${mapping}`);
     }
   }
 
@@ -101,7 +102,7 @@ async function syncConnectorTools(ctx: MutationCtx, args: {
   now: number;
 }) {
   const definition = getBuiltInToolConnector(args.connector.key);
-  if (!definition) throw new Error("Connector definition not found.");
+  if (!definition) throw appError("NOT_FOUND", "Connector definition not found.");
 
   const existingTools = await ctx.db
     .query("aiTools")
@@ -204,11 +205,11 @@ function resolveConnectorTenantAvailability(args: {
   tenantAvailability?: ToolConnectorTenantAvailability;
 }) {
   if (args.definitionAvailability === "GLOBAL" && args.companyId) {
-    throw new Error("Global connectors cannot be restricted to a tenant.");
+    throw appError("INVALID_INPUT", "Global connectors cannot be restricted to a tenant.");
   }
 
   if (args.tenantAvailability === "GLOBAL" && args.companyId) {
-    throw new Error("Global connector installs cannot include a company.");
+    throw appError("INVALID_INPUT", "Global connector installs cannot include a company.");
   }
 
   return args.companyId ? "TENANT_RESTRICTED" : args.tenantAvailability ?? args.definitionAvailability;
@@ -248,7 +249,7 @@ function buildOAuthAuthorizationUrl(args: { state: string }) {
  */
 function assertConnectorOAuthAvailable(provider: string) {
   if (!isConnectorOAuthAvailable(provider)) {
-    throw new Error(CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE);
+    throw appError("NOT_CONFIGURED", CONNECTOR_OAUTH_UNAVAILABLE_MESSAGE);
   }
 }
 
@@ -324,7 +325,7 @@ export async function installBuiltInConnector(
   }
 ) {
   const definition = getBuiltInToolConnector(args.key);
-  if (!definition) throw new Error("Connector definition not found.");
+  if (!definition) throw appError("NOT_FOUND", "Connector definition not found.");
 
   const configuredSecretRefs = normalizeSecretRefKeys(args.configuredSecretRefs);
   assertSafeSecretRefs(configuredSecretRefs);
@@ -363,7 +364,7 @@ export async function installBuiltInConnector(
         createdBy: args.installedBy,
       });
   const connector = await ctx.db.get(connectorId);
-  if (!connector) throw new Error("Connector install failed.");
+  if (!connector) throw appError("UPSTREAM_FAILURE", "Connector install failed.");
 
   await syncConnectorSecretRefs(ctx, {
     connectorId,
@@ -411,7 +412,7 @@ export const getConnectorInstallDetails = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
-    if (!connector) throw new Error("Connector not found.");
+    if (!connector) throw appError("NOT_FOUND", "Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
 
     const tools = await ctx.db
@@ -453,12 +454,12 @@ export const beginConnectorOAuth = adminMutation({
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
-    if (!connector) throw new Error("Connector not found.");
+    if (!connector) throw appError("NOT_FOUND", "Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
 
     const definition = getBuiltInToolConnector(connector.key);
-    if (!definition) throw new Error("Connector definition not found.");
-    if (definition.authMode !== "OAUTH") throw new Error("Connector does not use OAuth.");
+    if (!definition) throw appError("NOT_FOUND", "Connector definition not found.");
+    if (definition.authMode !== "OAUTH") throw appError("INVALID_INPUT", "Connector does not use OAuth.");
     const provider = definition.oauthProvider ?? definition.key;
     assertConnectorOAuthAvailable(provider);
 
@@ -506,7 +507,7 @@ export const disconnectConnectorOAuth = adminMutation({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const connector = await ctx.db.get(args.connectorId);
-    if (!connector) throw new Error("Connector not found.");
+    if (!connector) throw appError("NOT_FOUND", "Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
 
     const now = Date.now();
@@ -562,11 +563,11 @@ export const updateConnectorInstall = adminMutation({
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
-    if (!connector) throw new Error("Connector not found.");
+    if (!connector) throw appError("NOT_FOUND", "Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
 
     const definition = getBuiltInToolConnector(connector.key);
-    if (!definition) throw new Error("Connector definition not found.");
+    if (!definition) throw appError("NOT_FOUND", "Connector definition not found.");
 
     const configuredSecretRefs =
       args.configuredSecretRefs === undefined
@@ -579,7 +580,7 @@ export const updateConnectorInstall = adminMutation({
       ? args.companyId
       : connector.companyId;
     if (companyId && !(await ctx.db.get(companyId))) {
-      throw new Error("Connector tenant not found.");
+      throw appError("NOT_FOUND", "Connector tenant not found.");
     }
     const tenantAvailability = user.role === "SUPER_ADMIN"
       ? resolveConnectorTenantAvailability({
@@ -620,7 +621,7 @@ export const updateConnectorInstall = adminMutation({
     });
 
     const updatedConnector = await ctx.db.get(connector._id);
-    if (!updatedConnector) throw new Error("Connector not found.");
+    if (!updatedConnector) throw appError("NOT_FOUND", "Connector not found.");
     await syncConnectorSecretRefs(ctx, {
       connectorId: connector._id,
       requiredSecretRefs: definition.requiredSecretRefs,
@@ -657,7 +658,7 @@ export const validateConnectorConfiguration = adminMutation({
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     const connector = await ctx.db.get(args.connectorId);
-    if (!connector) throw new Error("Connector not found.");
+    if (!connector) throw appError("NOT_FOUND", "Connector not found.");
     assertAdminCanAccessCompany(user, connector.companyId, "Unauthorized");
 
     // Judged against the definition's current requirements, not the copy
@@ -844,7 +845,7 @@ export const updateTool = superAdminMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id);
-    if (!existing) throw new Error("Tool not found.");
+    if (!existing) throw appError("NOT_FOUND", "Tool not found.");
     const contract = buildToolContractPatch(args);
 
     await ctx.db.patch(args.id, {

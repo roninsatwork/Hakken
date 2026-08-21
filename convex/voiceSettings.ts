@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import { adminMutation, tenantQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 
 /**
  * The Google live voices Sonae can speak with. Declared here — not in
@@ -56,12 +57,12 @@ export const setSpokenVoice = adminMutation({
   handler: async (ctx, args) => {
     const { user, userId } = ctx;
     if (!SPEECH_VOICE_KEYS.includes(args.voice as SpeechVoiceKey)) {
-      throw new Error("That voice is not one the platform can speak with.");
+      throw appError("INVALID_INPUT", "That voice is not one the platform can speak with.");
     }
     const companyId = getActiveCompanyId(user);
-    if (!companyId) throw new Error("No workspace to set the voice for.");
+    if (!companyId) throw appError("NO_ACTIVE_COMPANY", "No workspace to set the voice for.");
     const company = await ctx.db.get(companyId);
-    if (!company) throw new Error("Workspace not found.");
+    if (!company) throw appError("NOT_FOUND", "Workspace not found.");
 
     await ctx.db.patch(companyId, { spokenVoice: args.voice });
     await ctx.db.insert("auditLogs", {

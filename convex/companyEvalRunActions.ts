@@ -124,7 +124,7 @@ export const runCompanyCheck = internalAction({
           userId: args.userId,
         });
 
-        await ctx.runAction(internal.ai.generateSonaeResponse, {
+        await ctx.runAction(internal.aiChat.generateSonaeResponse, {
           threadId,
           content: evalCase.prompt,
         });

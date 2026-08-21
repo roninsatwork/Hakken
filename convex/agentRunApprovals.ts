@@ -119,7 +119,7 @@ export const getPendingApprovals = superAdminQuery({
  * How many runs are waiting on a person, for the nav badge.
  *
  * Counts every pending approval rather than only the stale ones. The 30-minute
- * `PENDING_APPROVAL_THRESHOLD_MINUTES` in `analyticsCron` is right for an alert
+ * `PENDING_APPROVAL_THRESHOLD_MINUTES` in `systemHealth` is right for an alert
  * digest and wrong for the thing telling you a run is waiting: for the first half
  * hour that signal reads zero, which is exactly when someone could still act on it.
  */

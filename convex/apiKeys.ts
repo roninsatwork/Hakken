@@ -4,6 +4,7 @@ import { internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 import { assertAdminCanAccessCompany, getActiveCompanyId } from "./authz";
 import { constantTimeEqual } from "./utils/security";
 
@@ -26,9 +27,9 @@ type PublicApiRequestStatus = Doc<"publicApiRequests">["status"];
 
 function normalizeName(name: string) {
   const normalized = name.trim().replace(/\s+/g, " ");
-  if (!normalized) throw new Error("API key name is required.");
+  if (!normalized) throw appError("INVALID_INPUT", "API key name is required.");
   if (normalized.length > API_KEY_NAME_MAX_LENGTH) {
-    throw new Error(`API key name cannot exceed ${API_KEY_NAME_MAX_LENGTH} characters.`);
+    throw appError("INVALID_INPUT", `API key name cannot exceed ${API_KEY_NAME_MAX_LENGTH} characters.`);
   }
   return normalized;
 }
@@ -43,7 +44,7 @@ function normalizeReason(reason: string | undefined) {
 
 function normalizeScopes(scopes: ApiKeyScope[]) {
   const uniqueScopes = Array.from(new Set(scopes));
-  if (uniqueScopes.length === 0) throw new Error("At least one API key scope is required.");
+  if (uniqueScopes.length === 0) throw appError("INVALID_INPUT", "At least one API key scope is required.");
   return uniqueScopes;
 }
 
@@ -51,20 +52,20 @@ function normalizeRateLimit(value: number | undefined) {
   if (value === undefined) return API_KEY_DEFAULT_RATE_LIMIT_PER_MINUTE;
   const normalized = Math.floor(value);
   if (normalized < 1 || normalized > API_KEY_MAX_RATE_LIMIT_PER_MINUTE) {
-    throw new Error(`API key rate limit must be between 1 and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE} requests per minute.`);
+    throw appError("INVALID_INPUT", `API key rate limit must be between 1 and ${API_KEY_MAX_RATE_LIMIT_PER_MINUTE} requests per minute.`);
   }
   return normalized;
 }
 
 function getManagedCompanyId(user: Doc<"users">, companyId: Id<"companies"> | undefined) {
   if (user.role === "SUPER_ADMIN") {
-    if (!companyId) throw new Error("Company is required for tenant-scoped API keys.");
+    if (!companyId) throw appError("INVALID_INPUT", "Company is required for tenant-scoped API keys.");
     return companyId;
   }
 
   const activeCompanyId = getActiveCompanyId(user);
-  if (!activeCompanyId) throw new Error("Unauthorized");
-  if (companyId && companyId !== activeCompanyId) throw new Error("Unauthorized");
+  if (!activeCompanyId) throw appError("UNAUTHORIZED", "Unauthorized");
+  if (companyId && companyId !== activeCompanyId) throw appError("UNAUTHORIZED", "Unauthorized");
   return activeCompanyId;
 }
 
@@ -167,7 +168,7 @@ export const create = adminMutation({
     assertAdminCanAccessCompany(user, companyId);
 
     if (args.expiresAt !== undefined && args.expiresAt <= Date.now()) {
-      throw new Error("API key expiration must be in the future.");
+      throw appError("INVALID_INPUT", "API key expiration must be in the future.");
     }
 
     const name = normalizeName(args.name);
@@ -206,7 +207,7 @@ export const create = adminMutation({
     });
 
     const record = await ctx.db.get(apiKeyId);
-    if (!record) throw new Error("API key creation failed.");
+    if (!record) throw appError("UPSTREAM_FAILURE", "API key creation failed.");
 
     return {
       apiKey,
@@ -223,7 +224,7 @@ export const revoke = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const apiKey = await ctx.db.get(args.apiKeyId);
-    if (!apiKey) throw new Error("API key not found.");
+    if (!apiKey) throw appError("NOT_FOUND", "API key not found.");
     assertAdminCanAccessCompany(user, apiKey.companyId);
 
     if (apiKey.status === "REVOKED") return await enrichApiKey(ctx, apiKey);
@@ -252,7 +253,7 @@ export const revoke = adminMutation({
     });
 
     const updated = await ctx.db.get(args.apiKeyId);
-    if (!updated) throw new Error("API key not found.");
+    if (!updated) throw appError("NOT_FOUND", "API key not found.");
     return await enrichApiKey(ctx, updated);
   },
 });

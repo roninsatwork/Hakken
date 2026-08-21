@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { moduleMutation, moduleQuery, publicMutation } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
+import { appError } from "./utils/appError";
 import { getCurrentUser } from "./authz";
 import { assertCanAccessThread } from "./chatService";
 
@@ -29,14 +30,14 @@ const TASK_DETAIL_MAX_LENGTH = 2000;
 
 export function assertValidTaskFields(args: { title: string; detail?: string }) {
   const title = args.title.trim();
-  if (!title) throw new Error("A task needs a title.");
+  if (!title) throw appError("INVALID_INPUT", "A task needs a title.");
   if (title.length > TASK_TITLE_MAX_LENGTH) {
-    throw new Error(`A task title cannot exceed ${TASK_TITLE_MAX_LENGTH} characters.`);
+    throw appError("INVALID_INPUT", `A task title cannot exceed ${TASK_TITLE_MAX_LENGTH} characters.`);
   }
 
   const detail = args.detail?.trim();
   if (detail && detail.length > TASK_DETAIL_MAX_LENGTH) {
-    throw new Error(`Task detail cannot exceed ${TASK_DETAIL_MAX_LENGTH} characters.`);
+    throw appError("INVALID_INPUT", `Task detail cannot exceed ${TASK_DETAIL_MAX_LENGTH} characters.`);
   }
 
   return { title, detail: detail || undefined };
@@ -56,11 +57,11 @@ async function assertAssigneeInTenant(
 ) {
   if (!assigneeUserId) return;
   const assignee = await ctx.db.get(assigneeUserId);
-  if (!assignee) throw new Error("That person could not be found.");
+  if (!assignee) throw appError("NOT_FOUND", "That person could not be found.");
 
   const assigneeCompanyId = assignee.impersonatingCompanyId ?? assignee.companyId;
   if (assigneeCompanyId !== companyId) {
-    throw new Error("A task can only be assigned to somebody in this workspace.");
+    throw appError("INVALID_INPUT", "A task can only be assigned to somebody in this workspace.");
   }
 }
 
@@ -262,7 +263,7 @@ export const createTask = moduleMutation({
   },
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
-    if (!companyId) throw new Error("A task needs a workspace.");
+    if (!companyId) throw appError("NO_ACTIVE_COMPANY", "A task needs a workspace.");
 
     return await filePersonTask(ctx, {
       companyId,
@@ -297,21 +298,23 @@ export const confirmPhotoAction = publicMutation({
   handler: async (ctx, args) => {
     const message = await ctx.db.get(args.messageId);
     if (!message || message.role !== "assistant") {
-      throw new Error("That suggestion could not be found.");
+      throw appError("NOT_FOUND", "That suggestion could not be found.");
     }
     const thread = await ctx.db.get(message.threadId);
-    if (!thread) throw new Error("That conversation could not be found.");
+    if (!thread) throw appError("NOT_FOUND", "That conversation could not be found.");
 
     const current = await getCurrentUser(ctx);
     await assertCanAccessThread(ctx, thread, current, args.widgetAccessToken);
 
     const proposal = message.photoActionProposal;
-    if (!proposal) throw new Error("This message has no proposed action to confirm.");
+    if (!proposal) throw appError("NOT_FOUND", "This message has no proposed action to confirm.");
     // A second tap files nothing twice.
     if (message.photoActionTaskId) return message.photoActionTaskId;
 
     const companyId = thread.companyId;
-    if (!companyId) throw new Error("This conversation has no workspace to file a task into.");
+    // INVALID_INPUT, not NO_ACTIVE_COMPANY: it is the conversation that lacks
+    // a workspace, not the caller — selecting one cannot make it fileable.
+    if (!companyId) throw appError("INVALID_INPUT", "This conversation has no workspace to file a task into.");
 
     let taskId: Id<"tasks">;
     if (current?.user) {
@@ -347,7 +350,7 @@ export const completeTask = moduleMutation({
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     const task = await ctx.db.get(args.taskId);
-    if (!task || task.companyId !== companyId) throw new Error("That task could not be found.");
+    if (!task || task.companyId !== companyId) throw appError("NOT_FOUND", "That task could not be found.");
 
     await ctx.db.patch(args.taskId, {
       status: "DONE",
@@ -370,7 +373,7 @@ export const reopenTask = moduleMutation({
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     const task = await ctx.db.get(args.taskId);
-    if (!task || task.companyId !== companyId) throw new Error("That task could not be found.");
+    if (!task || task.companyId !== companyId) throw appError("NOT_FOUND", "That task could not be found.");
 
     // Who finished it is cleared with it; leaving a stale name on a reopened
     // task reads as though that person is still responsible for it.
@@ -395,7 +398,7 @@ export const cancelTask = moduleMutation({
   handler: async (ctx, args) => {
     const { companyId, userId } = ctx;
     const task = await ctx.db.get(args.taskId);
-    if (!task || task.companyId !== companyId) throw new Error("That task could not be found.");
+    if (!task || task.companyId !== companyId) throw appError("NOT_FOUND", "That task could not be found.");
 
     // Cancelled, not deleted: a task that was raised and dropped is part of
     // the history of what the workspace decided not to do.

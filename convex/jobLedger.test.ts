@@ -75,6 +75,67 @@ describe("the job ledger", () => {
     ).rejects.toThrow();
   });
 
+  test("a real job's run through the ledger door leaves an honest success mark", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const before = Date.now();
+    await t.action(internal.jobLedger.runJob, { job: "tool-idempotency-purge" });
+    const row = await t.run(async (ctx) =>
+      ctx.db
+        .query("jobRuns")
+        .withIndex("by_job", (q) => q.eq("job", "tool-idempotency-purge"))
+        .unique()
+    );
+    expect(row?.lastOk).toBe(true);
+    expect(row?.lastError).toBeUndefined();
+    expect(row?.lastSucceededAt).toBeGreaterThanOrEqual(before);
+    expect(row?.lastDurationMs).toBeGreaterThanOrEqual(0);
+    expect(row?.consecutiveFailures).toBe(0);
+  });
+
+  test("a job late by more than three of its intervals reads overdue; a fresh or never-run one does not", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      // The mailbox watcher runs every minute; ten minutes of silence is
+      // more than three intervals and must be flagged.
+      await ctx.db.insert("jobRuns", {
+        job: "gmail-mailbox-watcher",
+        lastRanAt: now - 10 * 60_000,
+        lastOk: true,
+        lastDurationMs: 5,
+        lastSucceededAt: now - 10 * 60_000,
+        consecutiveFailures: 0,
+      });
+      // One minute ago is inside the same job's window.
+      await ctx.db.insert("jobRuns", {
+        job: "workflow-schedule-dispatcher",
+        lastRanAt: now - 60_000,
+        lastOk: true,
+        lastDurationMs: 5,
+        lastSucceededAt: now - 60_000,
+        consecutiveFailures: 0,
+      });
+    });
+    const superAdminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", { email: "super@overdue.test", role: "SUPER_ADMIN" })
+    );
+    const rows = await t
+      .withIdentity({ subject: superAdminId })
+      .query(api.jobLedger.listJobRuns, {});
+
+    const stale = rows.find((row) => row.job === "gmail-mailbox-watcher");
+    expect(stale?.isOverdue).toBe(true);
+    const fresh = rows.find((row) => row.job === "workflow-schedule-dispatcher");
+    expect(fresh?.isOverdue).toBe(false);
+    // Never-run is its own state, not "overdue": the flag means "it used to
+    // run and stopped", and a job with no runs sorts above both.
+    const neverRan = rows.find((row) => row.job === "reset-billing-cycles");
+    expect(neverRan?.isOverdue).toBe(false);
+    expect(rows.indexOf(neverRan!)).toBeLessThan(rows.indexOf(stale!));
+    // The overdue row still outranks the healthy one on the screen.
+    expect(rows.indexOf(stale!)).toBeLessThan(rows.indexOf(fresh!));
+  });
+
   test("an unknown job name is recorded as a failure rather than swallowed", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     await t.action(internal.jobLedger.runJob, { job: "no-such-job" });

@@ -10,6 +10,7 @@ import {
   getAgentSkillRollup,
   replaceAgentSkillRollup,
 } from "./utils/agentSkillRollupService";
+import { appError } from "./utils/appError";
 import { MAX_SKILLS_PER_AGENT } from "./utils/skillLimits";
 import { isRecord, stableStringify } from "./utils/lang";
 
@@ -269,15 +270,15 @@ function hashValue(value: unknown) {
 
 function normalizeText(value: string | undefined, field: string, limit = SKILL_TEXT_LIMIT) {
   const trimmed = value?.trim() ?? "";
-  if (!trimmed) throw new Error(`${field} is required.`);
-  if (trimmed.length > limit) throw new Error(`${field} cannot exceed ${limit} characters.`);
+  if (!trimmed) throw appError("INVALID_INPUT", `${field} is required.`);
+  if (trimmed.length > limit) throw appError("INVALID_INPUT", `${field} cannot exceed ${limit} characters.`);
   return trimmed;
 }
 
 function normalizeOptionalText(value: string | undefined, limit = SKILL_TEXT_LIMIT) {
   const trimmed = value?.trim();
   if (!trimmed) return undefined;
-  if (trimmed.length > limit) throw new Error(`Text cannot exceed ${limit} characters.`);
+  if (trimmed.length > limit) throw appError("INVALID_INPUT", `Text cannot exceed ${limit} characters.`);
   return trimmed;
 }
 
@@ -292,7 +293,7 @@ function parseJson(value: string | undefined, label: string) {
   try {
     return JSON.parse(trimmed) as unknown;
   } catch {
-    throw new Error(`${label} must be valid JSON.`);
+    throw appError("INVALID_INPUT", `${label} must be valid JSON.`);
   }
 }
 
@@ -300,7 +301,7 @@ function getStringArrayJson(value: string | undefined, label: string) {
   const parsed = parseJson(value, label);
   if (parsed === undefined) return { json: undefined, values: [] as string[] };
   if (!Array.isArray(parsed) || !parsed.every((entry) => typeof entry === "string")) {
-    throw new Error(`${label} must be a JSON array of strings.`);
+    throw appError("INVALID_INPUT", `${label} must be a JSON array of strings.`);
   }
 
   const values = Array.from(new Set(parsed.map((entry) => entry.trim()).filter(Boolean))).slice(0, 50);
@@ -331,13 +332,13 @@ function normalizeTags(tags: unknown, fixtureType: EvalFixtureType) {
 function parseSuggestedEvalFixtures(value: string | undefined) {
   const parsed = parseJson(value, "Suggested eval fixtures");
   if (parsed === undefined) return { json: undefined, fixtures: [] as SuggestedEvalFixture[] };
-  if (!Array.isArray(parsed)) throw new Error("Suggested eval fixtures must be a JSON array.");
+  if (!Array.isArray(parsed)) throw appError("INVALID_INPUT", "Suggested eval fixtures must be a JSON array.");
 
   const fixtures = parsed.slice(0, 50).map((entry, index): SuggestedEvalFixture => {
-    if (!isRecord(entry)) throw new Error(`Suggested eval fixture ${index + 1} must be an object.`);
+    if (!isRecord(entry)) throw appError("INVALID_INPUT", `Suggested eval fixture ${index + 1} must be an object.`);
     const type = entry.type;
     if (typeof type !== "string" || !evalFixtureTypes.includes(type as EvalFixtureType)) {
-      throw new Error(`Suggested eval fixture ${index + 1} has an invalid type.`);
+      throw appError("INVALID_INPUT", `Suggested eval fixture ${index + 1} has an invalid type.`);
     }
     const objective = normalizeText(
       typeof entry.objective === "string" ? entry.objective : undefined,
@@ -449,13 +450,13 @@ function parseOptionalStoredJson(value: string | undefined) {
 function getBundleStringArray(value: unknown, field: string) {
   if (value === undefined) return [];
   if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) {
-    throw new Error(`${field} must be an array of strings.`);
+    throw appError("INVALID_INPUT", `${field} must be an array of strings.`);
   }
   return Array.from(new Set(value.map((entry) => entry.trim()).filter(Boolean))).slice(0, 50);
 }
 
 function getBundleRecord(value: unknown, field: string) {
-  if (!isRecord(value)) throw new Error(`${field} must be an object.`);
+  if (!isRecord(value)) throw appError("INVALID_INPUT", `${field} must be an object.`);
   return value;
 }
 
@@ -484,21 +485,21 @@ function buildSkillBundle(skill: Doc<"agentSkills">, latestVersion: Doc<"agentSk
 }
 
 function buildSkillPatchFromBundle(bundleJson: string, nameOverride?: string) {
-  if (bundleJson.length > SKILL_JSON_LIMIT * 2) throw new Error("Skill bundle cannot exceed 48000 characters.");
+  if (bundleJson.length > SKILL_JSON_LIMIT * 2) throw appError("INVALID_INPUT", "Skill bundle cannot exceed 48000 characters.");
   let parsed: unknown;
   try {
     parsed = JSON.parse(bundleJson) as unknown;
   } catch {
-    throw new Error("Skill bundle must be valid JSON.");
+    throw appError("INVALID_INPUT", "Skill bundle must be valid JSON.");
   }
   const bundle = getBundleRecord(parsed, "Skill bundle");
   if (bundle.format !== SKILL_BUNDLE_FORMAT) {
-    throw new Error(`Skill bundle format must be ${SKILL_BUNDLE_FORMAT}.`);
+    throw appError("INVALID_INPUT", `Skill bundle format must be ${SKILL_BUNDLE_FORMAT}.`);
   }
   const skill = getBundleRecord(bundle.skill, "Skill bundle skill");
   const riskLevel = skill.riskLevel;
   if (riskLevel !== "LOW" && riskLevel !== "MEDIUM" && riskLevel !== "HIGH") {
-    throw new Error("Skill bundle riskLevel is invalid.");
+    throw appError("INVALID_INPUT", "Skill bundle riskLevel is invalid.");
   }
   const recommendedKnowledge = skill.recommendedKnowledge;
   const defaultRules = skill.defaultRules;
@@ -670,9 +671,9 @@ function buildEvalFixturesFromMarkdown(name: string, sections: ParsedMarkdownSec
 
 function parseSkillMarkdown(markdown: string, filename?: string): MarkdownSkillDraft {
   const trimmedMarkdown = markdown.trim();
-  if (!trimmedMarkdown) throw new Error("SKILL.md content is required.");
+  if (!trimmedMarkdown) throw appError("INVALID_INPUT", "SKILL.md content is required.");
   if (trimmedMarkdown.length > SKILL_MARKDOWN_LIMIT) {
-    throw new Error(`SKILL.md content cannot exceed ${SKILL_MARKDOWN_LIMIT} characters.`);
+    throw appError("INVALID_INPUT", `SKILL.md content cannot exceed ${SKILL_MARKDOWN_LIMIT} characters.`);
   }
   const { frontmatter, body } = parseSimpleFrontmatter(trimmedMarkdown);
   const sections = splitMarkdownSections(body);
@@ -781,7 +782,7 @@ function buildSkillSnapshot(skill: Doc<"agentSkills">) {
 
 export async function ensureAgentSkillVersionSnapshot(ctx: Pick<MutationCtx, "db">, skillId: Id<"agentSkills">) {
   const skill = await ctx.db.get(skillId);
-  if (!skill) throw new Error("Skill not found.");
+  if (!skill) throw appError("NOT_FOUND", "Skill not found.");
 
   const snapshot = buildSkillSnapshot(skill);
   const snapshotHash = hashString(snapshot.snapshotJson);
@@ -1044,7 +1045,7 @@ export async function refreshSkillBindingsAndEvalFixtures(ctx: Pick<MutationCtx,
   now: number;
 }) {
   const skill = await ctx.db.get(args.skillId);
-  if (!skill) throw new Error("Skill not found.");
+  if (!skill) throw appError("NOT_FOUND", "Skill not found.");
   const bindings = await ctx.db
     .query("agentSkillBindings")
     .withIndex("by_skill_enabled", (q) => q.eq("skillId", args.skillId))
@@ -1406,7 +1407,7 @@ export const exportSkillBundle = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
-    if (!skill) throw new Error("Skill not found.");
+    if (!skill) throw appError("NOT_FOUND", "Skill not found.");
     const latestVersion = await ctx.db
       .query("agentSkillVersions")
       .withIndex("by_skill_created", (q) => q.eq("skillId", args.skillId))
@@ -1425,7 +1426,7 @@ export const getSkillLearningAnalytics = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
-    if (!skill) throw new Error("Skill not found.");
+    if (!skill) throw appError("NOT_FOUND", "Skill not found.");
 
     const suggestionStatuses = ["PROPOSED", "APPROVED", "REJECTED", "APPLIED"] as const;
     const candidateStatuses = ["PROPOSED", "APPROVED", "REJECTED", "APPLIED"] as const;
@@ -1505,7 +1506,7 @@ export const getBindingsForSkill = superAdminQuery({
   args: { skillId: v.id("agentSkills") },
   handler: async (ctx, args) => {
     const skill = await ctx.db.get(args.skillId);
-    if (!skill) throw new Error("Skill not found.");
+    if (!skill) throw appError("NOT_FOUND", "Skill not found.");
     const latestVersion = await ctx.db
       .query("agentSkillVersions")
       .withIndex("by_skill_created", (q) => q.eq("skillId", args.skillId))
@@ -1696,7 +1697,7 @@ export const updateSkill = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const existing = await ctx.db.get(args.skillId);
-    if (!existing) throw new Error("Skill not found.");
+    if (!existing) throw appError("NOT_FOUND", "Skill not found.");
 
     const { skillId, ...updates } = args;
     const patch = buildSkillPatch(updates);
@@ -1734,7 +1735,7 @@ export const cloneSkill = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const source = await ctx.db.get(args.skillId);
-    if (!source) throw new Error("Skill not found.");
+    if (!source) throw appError("NOT_FOUND", "Skill not found.");
     const now = Date.now();
     const patch = buildSkillPatch({
       name: args.name ?? `${source.name} Copy`,
@@ -2009,7 +2010,7 @@ export const deleteSkill = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
-    if (!skill) throw new Error("Skill not found.");
+    if (!skill) throw appError("NOT_FOUND", "Skill not found.");
 
     const bindings = await ctx.db
       .query("agentSkillBindings")
@@ -2048,7 +2049,7 @@ export const archiveSkill = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
-    if (!skill) throw new Error("Skill not found.");
+    if (!skill) throw appError("NOT_FOUND", "Skill not found.");
     const now = Date.now();
     await ctx.db.patch(args.skillId, {
       status: "ARCHIVED",
@@ -2071,7 +2072,7 @@ export const getForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found.");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found.");
 
     const bindings = await ctx.db
       .query("agentSkillBindings")
@@ -2117,9 +2118,9 @@ export const upgradeSkillBindingToLatest = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
-    if (!binding) throw new Error("Skill binding not found.");
+    if (!binding) throw appError("NOT_FOUND", "Skill binding not found.");
     const skill = await ctx.db.get(binding.skillId);
-    if (!skill || skill.status !== "ACTIVE") throw new Error("Only active skills can be upgraded on agents.");
+    if (!skill || skill.status !== "ACTIVE") throw appError("INVALID_INPUT", "Only active skills can be upgraded on agents.");
     const now = Date.now();
     const latestVersionId = await ensureAgentSkillVersionSnapshot(ctx, skill._id);
     await ctx.db.patch(args.bindingId, {
@@ -2167,7 +2168,7 @@ export const upgradeSkillBindingsForSkill = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const skill = await ctx.db.get(args.skillId);
-    if (!skill || skill.status !== "ACTIVE") throw new Error("Only active skills can be upgraded on agents.");
+    if (!skill || skill.status !== "ACTIVE") throw appError("INVALID_INPUT", "Only active skills can be upgraded on agents.");
     const now = Date.now();
     const latestVersionId = await ensureAgentSkillVersionSnapshot(ctx, args.skillId);
     const requestedBindingIds = new Set(args.bindingIds ?? []);
@@ -2240,9 +2241,9 @@ export const bindSkillToAgent = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const agent = await ctx.db.get(args.agentId);
-    if (!agent) throw new Error("Agent not found.");
+    if (!agent) throw appError("NOT_FOUND", "Agent not found.");
     const skill = await ctx.db.get(args.skillId);
-    if (!skill || skill.status !== "ACTIVE") throw new Error("Only active skills can be attached to agents.");
+    if (!skill || skill.status !== "ACTIVE") throw appError("INVALID_INPUT", "Only active skills can be attached to agents.");
 
     const now = Date.now();
     const skillVersionId = await ensureAgentSkillVersionSnapshot(ctx, args.skillId);
@@ -2258,7 +2259,7 @@ export const bindSkillToAgent = superAdminMutation({
         .withIndex("by_agent_enabled", (q) => q.eq("agentId", args.agentId).eq("isEnabled", true))
         .take(MAX_SKILLS_PER_AGENT + 1);
       if (attached.length >= MAX_SKILLS_PER_AGENT) {
-        throw new Error(
+        throw appError("INVALID_INPUT", 
           `An agent can have ${MAX_SKILLS_PER_AGENT} skills. Remove one before adding another.`,
         );
       }
@@ -2329,7 +2330,7 @@ export const setBindingEnabled = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
-    if (!binding) throw new Error("Skill binding not found.");
+    if (!binding) throw appError("NOT_FOUND", "Skill binding not found.");
     const now = Date.now();
     await ctx.db.patch(args.bindingId, {
       isEnabled: args.isEnabled,
@@ -2357,7 +2358,7 @@ export const unbindSkillFromAgent = superAdminMutation({
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const binding = await ctx.db.get(args.bindingId);
-    if (!binding) throw new Error("Skill binding not found.");
+    if (!binding) throw appError("NOT_FOUND", "Skill binding not found.");
     await ctx.db.delete(args.bindingId);
     await ctx.db.insert("auditLogs", {
       actorId: userId,

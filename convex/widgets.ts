@@ -8,6 +8,7 @@ import {
 import { digestWidgetAccessToken } from "./chatService";
 import { allowsAnyDomain, isHostAllowed } from "./utils/widgetOriginPolicy";
 import { verifyWidgetEmbedPass } from "./utils/widgetEmbedPass";
+import { appError } from "./utils/appError";
 import {
   validateAdminImageMetadata,
   validateStoredUpload,
@@ -146,7 +147,7 @@ export const saveWidget = adminMutation({
 
     if (user.role !== "SUPER_ADMIN") {
       if (args.isGlobal || !args.companyId) {
-        throw new Error("Unauthorized: Only Super Admins can manage global widgets.");
+        throw appError("UNAUTHORIZED", "Unauthorized: Only Super Admins can manage global widgets.");
       }
       assertAdminCanAccessCompany(user, args.companyId);
     }
@@ -165,9 +166,9 @@ export const saveWidget = adminMutation({
     if (args.widgetId) {
       // Update
       const existing = await ctx.db.get(args.widgetId);
-      if (!existing) throw new Error("Widget not found");
+      if (!existing) throw appError("NOT_FOUND", "Widget not found");
       if (user.role !== "SUPER_ADMIN" && (!existing.companyId || !canAccessCompany(user, existing.companyId))) {
-        throw new Error("Widget not found");
+        throw appError("NOT_FOUND", "Widget not found");
       }
       
       await ctx.db.patch(args.widgetId, {
@@ -249,11 +250,11 @@ export const deleteWidget = adminMutation({
 
     const widget = await ctx.db.get(args.widgetId);
     
-    if (!widget) throw new Error("Widget not found");
+    if (!widget) throw appError("NOT_FOUND", "Widget not found");
 
     if (user.role !== "SUPER_ADMIN") {
       if (widget.isGlobal || widget.companyId !== user.companyId || args.companyId !== user.companyId) {
-        throw new Error("Unauthorized");
+        throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
 
@@ -282,14 +283,14 @@ export const generateWidgetUploadUrl = publicMutation({
   },
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
-    if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
+    if (!widget || !widget.isActive) throw appError("NOT_FOUND", "Invalid or inactive Widget");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.widgetId !== args.widgetId) {
-      throw new Error("Invalid thread mapping for target widget");
+      throw appError("NOT_FOUND", "Invalid thread mapping for target widget");
     }
     if (!thread.widgetAccessTokenHash || (await digestWidgetAccessToken(args.widgetAccessToken.trim())) !== thread.widgetAccessTokenHash) {
-      throw new Error("Unauthorized: Invalid widget session");
+      throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
     // Rate limiting: Count the number of messages with attachments in this thread
@@ -300,7 +301,7 @@ export const generateWidgetUploadUrl = publicMutation({
 
     const totalUploads = threadMessages.filter((m) => m.attachments && m.attachments.length > 0).length;
     if (totalUploads >= 10) {
-      throw new Error("Upload quota exceeded for this conversation thread");
+      throw appError("INVALID_INPUT", "Upload quota exceeded for this conversation thread");
     }
 
     // Generate an upload URL for widget file attachments (supports anonymous visitors)
@@ -318,14 +319,14 @@ export const finalizeWidgetUpload = publicMutation({
   },
   handler: async (ctx, args) => {
     const widget = await ctx.db.get(args.widgetId);
-    if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
+    if (!widget || !widget.isActive) throw appError("NOT_FOUND", "Invalid or inactive Widget");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread || thread.widgetId !== args.widgetId) {
-      throw new Error("Invalid thread mapping for target widget");
+      throw appError("NOT_FOUND", "Invalid thread mapping for target widget");
     }
     if (!thread.widgetAccessTokenHash || (await digestWidgetAccessToken(args.widgetAccessToken.trim())) !== thread.widgetAccessTokenHash) {
-      throw new Error("Unauthorized: Invalid widget session");
+      throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
     await validateStoredUpload(ctx, args.storageId, validateWidgetAttachmentMetadata);
@@ -352,7 +353,7 @@ export const createWidgetThread = publicMutation({
     const userId = (await getCurrentUser(ctx))?.userId;
 
     const widget = await ctx.db.get(args.widgetId);
-    if (!widget || !widget.isActive) throw new Error("Invalid or inactive Widget");
+    if (!widget || !widget.isActive) throw appError("NOT_FOUND", "Invalid or inactive Widget");
 
     // The embed pass replaces the old caller-reported `sourceUrl` check, which
     // anyone could satisfy by inventing an approved-looking value (2026-08
@@ -363,9 +364,13 @@ export const createWidgetThread = publicMutation({
     // nothing.
     const secret = process.env.WIDGET_EMBED_SIGNING_SECRET?.trim();
     if (!secret) {
-      // Fail closed, and say why in the server log rather than to the caller.
+      // Fail closed. The env var's name stays in the server log only; the
+      // caller gets a deliberately generic sentence plus the NOT_CONFIGURED
+      // code (which survives production redaction), so an embedding site's
+      // own error handling can tell "operator setup incomplete" apart from a
+      // transient failure without learning which secret is missing.
       console.error("WIDGET_EMBED_SIGNING_SECRET is not configured; refusing widget sessions.");
-      throw new Error("Widget sessions are not available right now.");
+      throw appError("NOT_CONFIGURED", "Widget sessions are not available right now.");
     }
 
     const verdict = await verifyWidgetEmbedPass({

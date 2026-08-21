@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
+import { appError } from "./utils/appError";
 import { recordCompanyAiDriftEvent } from "./companyReadiness";
 import {
   MAX_ALWAYS_MEMORIES,
@@ -92,14 +93,14 @@ function normalizeMultilineText(value: string) {
 
 function normalizeContent(content: string) {
   const normalizedContent = normalizeMultilineText(content);
-  if (normalizedContent.length === 0) throw new Error("Memory content cannot be empty.");
+  if (normalizedContent.length === 0) throw appError("INVALID_INPUT", "Memory content cannot be empty.");
   if (normalizedContent.length > MEMORY_CONTENT_MAX_CHARS) {
-    throw new Error(`Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
+    throw appError("INVALID_INPUT", `Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
   }
 
   const warnings = getAssistantSafetyWarnings(normalizedContent);
   if (warnings.length > 0) {
-    throw new Error(`Memory content rejected by safety policy: ${warnings.map((warning) => warning.category).join(", ")}`);
+    throw appError("INVALID_INPUT", `Memory content rejected by safety policy: ${warnings.map((warning) => warning.category).join(", ")}`);
   }
 
   return normalizedContent;
@@ -107,9 +108,9 @@ function normalizeContent(content: string) {
 
 function normalizeTitle(title: string | undefined, content: string) {
   const normalizedTitle = normalizeText(title || content.slice(0, MEMORY_TITLE_MAX_CHARS));
-  if (normalizedTitle.length === 0) throw new Error("Memory title cannot be empty.");
+  if (normalizedTitle.length === 0) throw appError("INVALID_INPUT", "Memory title cannot be empty.");
   if (normalizedTitle.length > MEMORY_TITLE_MAX_CHARS) {
-    throw new Error(`Memory title cannot exceed ${MEMORY_TITLE_MAX_CHARS} characters.`);
+    throw appError("INVALID_INPUT", `Memory title cannot exceed ${MEMORY_TITLE_MAX_CHARS} characters.`);
   }
   return normalizedTitle;
 }
@@ -140,7 +141,7 @@ async function assertNoRejectedCandidateMatch(ctx: QueryCtx | MutationCtx, compa
   if (rejectedCandidate) {
     // Worded for whoever hit it. The old message said "memory candidate" on a
     // form that had never used the word.
-    throw new Error("This was suggested before and turned down, so it cannot be added again. Reword it if it should apply now.");
+    throw appError("INVALID_INPUT", "This was suggested before and turned down, so it cannot be added again. Reword it if it should apply now.");
   }
 }
 
@@ -208,7 +209,7 @@ export const getMemoryById = adminQuery({
   },
   handler: async (ctx, args) => {
     const memory = await ctx.db.get(args.memoryId);
-    if (!memory) throw new Error("Company memory not found");
+    if (!memory) throw appError("NOT_FOUND", "Company memory not found");
     await requireCompanyAccess(ctx, memory.companyId);
     return memory;
   },
@@ -494,7 +495,7 @@ async function assertAlwaysCapacity(
   const existing = await readAlwaysMemories(ctx, companyId);
   const others = existing.filter((memory) => memory._id !== excludeMemoryId);
   if (others.length >= MAX_ALWAYS_MEMORIES) {
-    throw new Error(
+    throw appError("INVALID_INPUT", 
       `A company can have ${MAX_ALWAYS_MEMORIES} memories set to Always. Change one to "When relevant" before adding another.`,
     );
   }
@@ -568,9 +569,9 @@ export const updateMemory = adminMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) throw new Error("Memory not found");
+    if (!existing) throw appError("NOT_FOUND", "Memory not found");
     const { userId } = await requireCompanyAccess(ctx, existing.companyId);
-    if (existing.status !== "APPROVED") throw new Error("Only approved company memories can be edited.");
+    if (existing.status !== "APPROVED") throw appError("INVALID_INPUT", "Only approved company memories can be edited.");
     await assertNoRejectedCandidateMatch(ctx, existing.companyId, args.content);
     // Excluded from its own count, so re-saving an Always memory is not blocked
     // by the memory being saved.
@@ -616,10 +617,10 @@ export const archiveMemory = adminMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) throw new Error("Memory not found");
+    if (!existing) throw appError("NOT_FOUND", "Memory not found");
     // Saying "Memory not found" about a memory that plainly exists sends the
     // reader looking for the wrong problem.
-    if (existing.status === "ARCHIVED") throw new Error("This memory has already been removed.");
+    if (existing.status === "ARCHIVED") throw appError("INVALID_INPUT", "This memory has already been removed.");
     const { userId } = await requireCompanyAccess(ctx, existing.companyId);
     const now = Date.now();
 
@@ -666,8 +667,8 @@ export const restoreMemory = adminMutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) throw new Error("Memory not found");
-    if (existing.status !== "ARCHIVED") throw new Error("This memory is already in use.");
+    if (!existing) throw appError("NOT_FOUND", "Memory not found");
+    if (existing.status !== "ARCHIVED") throw appError("INVALID_INPUT", "This memory is already in use.");
     const { userId } = await requireCompanyAccess(ctx, existing.companyId);
     const applyMode = resolveCompanyApplyMode(existing);
     await assertAlwaysCapacity(ctx, existing.companyId, applyMode, args.memoryId);
@@ -857,9 +858,9 @@ export const approveCandidate = adminMutation({
   },
   handler: async (ctx, args) => {
     const candidate = await ctx.db.get(args.candidateId);
-    if (!candidate) throw new Error("Memory candidate not found");
+    if (!candidate) throw appError("NOT_FOUND", "Memory candidate not found");
     const { userId } = await requireCompanyAccess(ctx, candidate.companyId);
-    if (candidate.status !== "PROPOSED") throw new Error("Memory candidate has already been reviewed.");
+    if (candidate.status !== "PROPOSED") throw appError("INVALID_INPUT", "Memory candidate has already been reviewed.");
     await assertNoRejectedCandidateMatch(ctx, candidate.companyId, candidate.content);
 
     const applyMode = resolveCompanyApplyMode(candidate);
@@ -1001,9 +1002,9 @@ export const rejectCandidate = adminMutation({
   },
   handler: async (ctx, args) => {
     const candidate = await ctx.db.get(args.candidateId);
-    if (!candidate) throw new Error("Memory candidate not found");
+    if (!candidate) throw appError("NOT_FOUND", "Memory candidate not found");
     const { userId } = await requireCompanyAccess(ctx, candidate.companyId);
-    if (candidate.status !== "PROPOSED") throw new Error("Memory candidate has already been reviewed.");
+    if (candidate.status !== "PROPOSED") throw appError("INVALID_INPUT", "Memory candidate has already been reviewed.");
 
     const now = Date.now();
     await ctx.db.patch(args.candidateId, {

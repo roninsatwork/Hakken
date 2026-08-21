@@ -7,6 +7,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { requireCompanyAccess } from "./authz";
 import { recordCompanyAiDriftEvent, resolveCompanyAiDriftEvents } from "./companyReadiness";
+import { appError } from "./utils/appError";
 
 const CASE_NAME_MAX_CHARS = 140;
 const PROMPT_MAX_CHARS = 4000;
@@ -94,6 +95,7 @@ type EvidencePayload = {
   sourceIds?: unknown;
   memoryIds?: unknown;
   skillIds?: unknown;
+  wikiPageKeys?: unknown;
 };
 
 /** Clamped server-side, so a hand-crafted request cannot queue fifty provider calls. */
@@ -104,15 +106,15 @@ function normalizeSampleCount(value: number) {
 
 function normalizeText(value: string, label: string, maxChars: number) {
   const normalized = value.trim().replace(/\s+/g, " ");
-  if (!normalized) throw new Error(`${label} cannot be empty.`);
-  if (normalized.length > maxChars) throw new Error(`${label} cannot exceed ${maxChars} characters.`);
+  if (!normalized) throw appError("INVALID_INPUT", `${label} cannot be empty.`);
+  if (normalized.length > maxChars) throw appError("INVALID_INPUT", `${label} cannot exceed ${maxChars} characters.`);
   return normalized;
 }
 
 function normalizeOptionalText(value: string | undefined, maxChars: number) {
   const normalized = value?.trim();
   if (!normalized) return undefined;
-  if (normalized.length > maxChars) throw new Error(`Value cannot exceed ${maxChars} characters.`);
+  if (normalized.length > maxChars) throw appError("INVALID_INPUT", `Value cannot exceed ${maxChars} characters.`);
   return normalized;
 }
 
@@ -124,11 +126,11 @@ function parseJsonArray(value: string | undefined, label: string) {
   try {
     parsed = JSON.parse(normalized);
   } catch {
-    throw new Error(`${label} must be valid JSON.`);
+    throw appError("INVALID_INPUT", `${label} must be valid JSON.`);
   }
 
   if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== "string" || item.trim().length === 0)) {
-    throw new Error(`${label} must be a JSON array of strings.`);
+    throw appError("INVALID_INPUT", `${label} must be a JSON array of strings.`);
   }
 
   return parsed.map((item) => item.trim());
@@ -142,7 +144,7 @@ function parseEvidence(value: string | undefined) {
     const parsed = JSON.parse(normalized) as EvidencePayload;
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch {
-    throw new Error("Evidence must be valid JSON.");
+    throw appError("INVALID_INPUT", "Evidence must be valid JSON.");
   }
 }
 
@@ -457,7 +459,7 @@ export const getCaseById = adminQuery({
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase) throw new Error("Eval case not found");
+    if (!evalCase) throw appError("NOT_FOUND", "Eval case not found");
     await requireCompanyAccess(ctx, evalCase.companyId);
     return evalCase;
   },
@@ -469,7 +471,7 @@ export const getRunsForCase = adminQuery({
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase) throw new Error("Eval case not found");
+    if (!evalCase) throw appError("NOT_FOUND", "Eval case not found");
     await requireCompanyAccess(ctx, evalCase.companyId);
 
     return await ctx.db
@@ -579,7 +581,7 @@ export const updateCase = adminMutation({
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase || evalCase.status !== "ACTIVE") throw new Error("Eval case not found");
+    if (!evalCase || evalCase.status !== "ACTIVE") throw appError("NOT_FOUND", "Eval case not found");
     const { userId } = await requireCompanyAccess(ctx, evalCase.companyId);
     const now = Date.now();
 
@@ -719,7 +721,7 @@ export const deleteCase = adminMutation({
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase) throw new Error("Check not found");
+    if (!evalCase) throw appError("NOT_FOUND", "Check not found");
     const { userId } = await requireCompanyAccess(ctx, evalCase.companyId);
     const now = Date.now();
 
@@ -819,10 +821,16 @@ export const getEvalThreadOutcomeInternal = internalQuery({
       modelUsed: reply?.modelUsed,
       inputTokens: reply?.inputTokens ?? 0,
       outputTokens: reply?.outputTokens ?? 0,
+      // Spread, not a hand-picked field list: enumerating fields here is what
+      // silently dropped `wikiPageKeys` and left the Ask box's sources list
+      // permanently empty — a new field recorded by the chat path must flow
+      // through without this site knowing about it. `memoryIds` comes last
+      // because it has its own source (the memory evidence JSON), and must
+      // win over any stray `memoryIds` a stored row might carry. Downstream
+      // readers re-guard non-array junk via `stringSet`.
       evidenceJson: JSON.stringify({
-        sourceIds: Array.isArray(runtimeEvidence.sourceIds) ? runtimeEvidence.sourceIds : [],
+        ...runtimeEvidence,
         memoryIds: memoryEvidence,
-        skillIds: Array.isArray(runtimeEvidence.skillIds) ? runtimeEvidence.skillIds : [],
       }),
     };
   },
@@ -914,7 +922,7 @@ export const recordGradedRunInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const evalCase = await ctx.db.get(args.evalCaseId);
-    if (!evalCase || evalCase.status !== "ACTIVE") throw new Error("Eval case not found");
+    if (!evalCase || evalCase.status !== "ACTIVE") throw appError("NOT_FOUND", "Eval case not found");
 
     return await insertCompanyEvalRun(ctx, {
       evalCase,

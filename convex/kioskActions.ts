@@ -4,11 +4,12 @@ import { createHmac } from "node:crypto";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { publicAction } from "./tenantFunctions";
+import { appError } from "./utils/appError";
 import {
   buildSpokenSessionInstructions,
   VOICE_KNOWLEDGE_TOOL_NAME,
   VOICE_KNOWLEDGE_TOOL_DESCRIPTION,
-} from "./ai";
+} from "./aiVoiceSession";
 import {
   GOOGLE_VERTEX_PROVIDER_KEY,
   isSpeechToSpeechModelId,
@@ -48,7 +49,7 @@ export const createKioskVoiceSession = publicAction({
       widgetAccessToken: args.widgetAccessToken,
     });
     if (!access.ok || access.widgetId !== args.widgetId) {
-      throw new Error("Unauthorized: Invalid widget session");
+      throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
 
     // One wake tap reserves one session, counted per widget per hour; the

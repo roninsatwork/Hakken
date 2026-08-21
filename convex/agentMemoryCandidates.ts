@@ -5,6 +5,7 @@ import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import { assertAdminCanAccessCompany } from "./authz";
+import { appError } from "./utils/appError";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { resolveAgentApplyMode } from "./utils/memoryApplication";
 import { getSelfImprovementConfig } from "./selfImprovementConfig";
@@ -68,14 +69,14 @@ function normalizeMemoryContent(content: string) {
 
 function validateMemoryContent(content: string) {
   const normalizedContent = normalizeMemoryContent(content);
-  if (normalizedContent.length === 0) throw new Error("Memory content cannot be empty.");
+  if (normalizedContent.length === 0) throw appError("INVALID_INPUT", "Memory content cannot be empty.");
   if (normalizedContent.length > MEMORY_CONTENT_MAX_CHARS) {
-    throw new Error(`Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
+    throw appError("INVALID_INPUT", `Memory content cannot exceed ${MEMORY_CONTENT_MAX_CHARS} characters.`);
   }
 
   const warnings = getAssistantSafetyWarnings(normalizedContent);
   if (warnings.length > 0) {
-    throw new Error(`Memory content rejected by safety policy: ${warnings.map((warning) => warning.category).join(", ")}`);
+    throw appError("INVALID_INPUT", `Memory content rejected by safety policy: ${warnings.map((warning) => warning.category).join(", ")}`);
   }
 
   return normalizedContent;
@@ -624,7 +625,7 @@ async function generateCandidatesForRun(ctx: MutationCtx, args: {
   autoApplyLowRisk?: boolean;
 }) {
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     // A drill's tool results are fabricated ("continue as if it succeeded"),
     // so nothing it did is experience worth proposing — for the automatic
     // pass and the admin button alike.
@@ -795,7 +796,7 @@ export const generateForRun = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     return await generateCandidatesForRun(ctx, {
@@ -840,10 +841,10 @@ export const decideCandidate = adminMutation({
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
     const candidate = await ctx.db.get(args.candidateId);
-    if (!candidate) throw new Error("Memory candidate not found");
+    if (!candidate) throw appError("NOT_FOUND", "Memory candidate not found");
     assertAdminCanAccessCompany(user, candidate.companyId);
     if (candidate.status !== "PROPOSED" && candidate.status !== "APPROVED") {
-      throw new Error("Memory candidate has already been reviewed");
+      throw appError("INVALID_INPUT", "Memory candidate has already been reviewed");
     }
 
     const now = Date.now();
@@ -882,7 +883,7 @@ export const decideCandidate = adminMutation({
       updatedAt: now,
     });
     const updatedCandidate = await ctx.db.get(args.candidateId);
-    if (!updatedCandidate) throw new Error("Memory candidate not found");
+    if (!updatedCandidate) throw appError("NOT_FOUND", "Memory candidate not found");
     const memoryId = await applyCandidateMemory(ctx, { candidate: updatedCandidate, userId, now });
     return { memoryId };
   },
@@ -896,7 +897,7 @@ export const getForRun = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     const run = await ctx.db.get(args.runId);
-    if (!run) throw new Error("Run not found");
+    if (!run) throw appError("NOT_FOUND", "Run not found");
     assertAdminCanAccessCompany(user, run.companyId);
 
     return await ctx.db
@@ -914,7 +915,7 @@ export const getRecentForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     if (user.role === "SUPER_ADMIN") {
@@ -942,7 +943,7 @@ export const getReviewInboxForAgent = adminQuery({
   handler: async (ctx, args) => {
     const { user } = ctx;
     if (user.role === "ADMIN" && !user.companyId) {
-      throw new Error("Unauthorized");
+      throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
     const mode = args.mode ?? "OPEN";

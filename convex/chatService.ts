@@ -1,6 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
 import { validateChatAttachmentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import type { PiiConfig } from "./utils/pii";
 
@@ -73,15 +74,15 @@ export async function assertCanAccessThread(
 ) {
   if (isAnonymousWidgetThread(thread)) {
     const widget = thread.widgetId ? await ctx.db.get(thread.widgetId) : null;
-    if (!widget?.isActive) throw new Error(inactiveWidgetMessage);
+    if (!widget?.isActive) throw appError("MODULE_DISABLED", inactiveWidgetMessage);
     if (!(await isWidgetAccessTokenValid(thread, widgetAccessToken))) {
-      throw new Error("Unauthorized: Invalid widget session");
+      throw appError("UNAUTHORIZED", "Unauthorized: Invalid widget session");
     }
     return;
   }
 
   if (!current || thread.userId !== current.userId) {
-    throw new Error("Unauthorized");
+    throw appError("UNAUTHORIZED", "Unauthorized");
   }
 }
 
@@ -108,7 +109,7 @@ export function assertWithinMessageRateLimit(
   maxMessages = 10
 ) {
   if (countRecentUserMessages(messages, now) >= maxMessages) {
-    throw new Error("429 Too Many Requests: Please wait a moment before sending more messages.");
+    throw appError("INVALID_INPUT", "429 Too Many Requests: Please wait a moment before sending more messages.");
   }
 }
 

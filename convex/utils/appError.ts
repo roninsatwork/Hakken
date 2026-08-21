@@ -21,8 +21,10 @@ import { ConvexError } from "convex/values";
  *     keeps every `expect(...).rejects.toThrow("Unauthorized")` assertion
  *     green across the conversion.
  *
- * Only the central auth layer uses this so far; the remaining ~780 plain
- * throws in convex/ convert opportunistically as files are touched.
+ * The request-path and admin tiers converted on 2026-08-21 (foundation-quality
+ * plan, phase 2): ~340 call sites now, with ~450 plain throws left in the
+ * internal/vertical tail. `src/app-error-conversion.test.ts` holds the line —
+ * every file off its shrink-only NOT_YET_CONVERTED list must stay clean.
  */
 
 /**
@@ -40,6 +42,16 @@ export const APP_ERROR_CODES = {
   NO_ACTIVE_COMPANY: "NO_ACTIVE_COMPANY",
   /** The capability is switched off for the caller's workspace. */
   MODULE_DISABLED: "MODULE_DISABLED",
+  /** The input is malformed, missing, or violates a stated limit. */
+  INVALID_INPUT: "INVALID_INPUT",
+  /** The model or provider behind this feature failed; the input was fine. */
+  UPSTREAM_FAILURE: "UPSTREAM_FAILURE",
+  /**
+   * The deployment lacks the configuration this feature needs (an env var or
+   * credential an operator must set) — distinct from MODULE_DISABLED, which
+   * is a deliberate per-workspace switch.
+   */
+  NOT_CONFIGURED: "NOT_CONFIGURED",
 } as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[keyof typeof APP_ERROR_CODES];
@@ -52,4 +64,24 @@ export type AppErrorData = {
 /** Build the error; the caller throws it, keeping the throw visible at the site. */
 export function appError(code: AppErrorCode, message: string): ConvexError<AppErrorData> {
   return new ConvexError({ code, message });
+}
+
+/**
+ * The sentence inside a caught error, for storing or logging as text.
+ *
+ * A ConvexError's `.message` is the serialized `{code, message}` payload (plus
+ * the server envelope when it crossed a runQuery/runAction boundary), so code
+ * that persists `error.message` into a table writes a JSON blob a screen later
+ * renders verbatim. This unwraps the payload's own sentence first and falls
+ * back to `.message` for plain errors.
+ */
+export function appErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ConvexError) {
+    const data = error.data as Partial<AppErrorData> | undefined;
+    if (data && typeof data.message === "string" && data.message.length > 0) {
+      return data.message;
+    }
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
 }

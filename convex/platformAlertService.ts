@@ -399,7 +399,7 @@ function buildAnalyticsHealthSignals(report: AnalyticsHealthReport) {
       details: compactDetails(report.snapshotCoverage.missingGlobalDates, "No missing global snapshot dates."),
       key: "missingGlobalSnapshots",
       label: "Missing global snapshots",
-      runbook: "Run analyticsCron:generateDailySnapshots for each missing date after confirming the date is safe to regenerate.",
+      runbook: "Run analyticsSnapshots:generateDailySnapshots for each missing date after confirming the date is safe to regenerate.",
     });
   }
 

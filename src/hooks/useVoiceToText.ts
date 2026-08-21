@@ -25,7 +25,7 @@ export function useVoiceToText({ onTranscribe }: { onTranscribe: (text: string) 
   const audioChunksRef = useRef<BlobPart[]>([]);
   const mimeTypeRef = useRef<string>("audio/webm");
 
-  const transcribeAudio = useAction(api.ai.transcribeAudio);
+  const transcribeAudio = useAction(api.aiSpeech.transcribeAudio);
 
   const startRecording = async () => {
     try {
